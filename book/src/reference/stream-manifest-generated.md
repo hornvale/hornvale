@@ -174,6 +174,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `vessel/agent` | minted agent id draw |
 | `vessel/walk` | walker-battery deterministic walk |
 | `room/furnishing/v1` | which patterns a room draws |
+| `room/chambers/v1` | which chambers a structure has |
 
 ### hornvale-worldgen
 

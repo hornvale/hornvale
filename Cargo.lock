@@ -233,6 +233,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-book",
  "hornvale-historiography",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-locale",

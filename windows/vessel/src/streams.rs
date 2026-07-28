@@ -24,4 +24,15 @@ hornvale_kernel::stream_labels! {
     /// the inventory's ORDER is load-bearing even though the draw keys by name:
     /// inserting a pattern before its requirement silently drops it.
     ROOM_FURNISHING = "room/furnishing/v1" => "which patterns a room draws";
+    /// Stream label for which chambers a structure has (The Lintel).
+    ///
+    /// Deliberately NOT `room/furnishing/v1`, which already exists and is live:
+    /// chamber existence and pattern selection churn independently, and 0073
+    /// splits labels by blast radius before the first bump. Merging them would
+    /// put a frequent bump inside a label whose blast radius includes every
+    /// creature's committed thermal-drive history.
+    ///
+    /// This is the first furnishing-family stream anything actually DRAWS from —
+    /// `selection` takes no seed.
+    ROOM_CHAMBERS = "room/chambers/v1" => "which chambers a structure has";
 }

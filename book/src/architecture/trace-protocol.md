@@ -35,8 +35,8 @@ compiles knowing nothing about any of them.
    time, with periodicity and character,"* consumed by every meaning-making
    system. The two moons and the dragon's monthly flight are both just
    phenomena — recurring lights in the sky with a period and an emotional
-   valence. Religion mythologizes them, language names them, and someday the
-   game's room descriptions render them, all through the same interface.
+   valence. Religion mythologizes them, language names them, and the game's
+   place descriptions render them, all through the same interface.
    Results are salience-ranked with fully deterministic ordering, because
    "what you notice first" must survive the determinism constitution too.
 

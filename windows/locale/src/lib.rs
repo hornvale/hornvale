@@ -218,6 +218,14 @@ impl LocaleContext {
         &self.climate
     }
 
+    /// The cached nearest-cell index — the reuse seam for a caller that must
+    /// resolve an address to a cell itself (the same role `terrain()` plays for
+    /// the terrain provider). Building a second index would duplicate a
+    /// structure this context exists to hold once.
+    pub fn nearest_index(&self) -> &NearestCellIndex {
+        &self.index
+    }
+
     /// The world's placed exotic sites, for findability (derived, not stored).
     pub fn strange_sites(&self) -> Vec<StrangeSite> {
         self.budget.sites()

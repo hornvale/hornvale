@@ -31,6 +31,34 @@ const WILD_COUNT: usize = 4;
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
 const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 
+/// The ways-on name for the aperture leading DEEPER into a structure — a
+/// direction, not a thing, because a chamber address carries no bearing and the
+/// chambers of one structure are prose-identical, so only depth distinguishes
+/// them.
+const FURTHER_IN: &str = "further in";
+
+/// Every token `enter` accepts for [`FURTHER_IN`]. `in` and `on` are here
+/// because a player who read `Ways on: out, further in.` may reasonably type
+/// either half of it.
+const FURTHER_IN_WORDS: [&str; 3] = ["further in", "in", "on"];
+
+/// What `examine` says INDOORS. A chamber's prose names what it holds, but
+/// nothing yet authors a detail for those nouns, so falling through to
+/// `examine`'s ordinary "You see no <noun> here." would deny a thing `look`
+/// had just named, two turns apart. This states the limit in the world's own
+/// voice instead. Authoring real chamber detail is a later campaign's work.
+const INDOOR_EXAMINE_REFUSAL: &str =
+    "Indoors you have only the room's own shape to go by; nothing here rewards a closer look yet.";
+
+/// What lateral movement says INDOORS. Metaplan §1b.6: lateral movement never
+/// changes band, so a compass step from a chamber is not a step at all — a
+/// structure belongs to ONE locale, and a chamber address carries no bearing to
+/// walk along. Both `go` and `back` are walk-band operations (`back` retraces a
+/// walk-band trail), so both are refused here rather than silently teleporting
+/// the possession out of doors.
+const INDOOR_LATERAL_REFUSAL: &str =
+    "Inside, there is no north; say 'further in' to go deeper, or 'out' to leave.";
+
 /// The player-authored disposition-shift predicate (The First Mark): the
 /// first fact the possessing player, not a world system, ever commits.
 /// type-audit: bare-ok(identifier-text)
@@ -87,10 +115,13 @@ const HELP: &str = "\
 verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser)
-  go <dir>         walk a compass exit (n ne e se s sw w nw); the bare
-                   direction works on its own too
-  examine <thing>  anything look mentions
-  back             retrace your last step
+  go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw);
+                   the bare direction works on its own too
+  enter [way]      step inside what is built here; once inside, 'enter further
+                   in' goes deeper and 'out' leaves
+  out              step back out of doors
+  examine <thing>  anything look mentions, out of doors
+  back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
   knows            everything they have seen
@@ -166,6 +197,16 @@ pub struct Session<'w> {
     /// central claim.
     /// type-audit: bare-ok(prose: last_text)
     last_text: String,
+    /// The structure the possession is inside, if any, and which chamber. `None`
+    /// at the walk band. Never serialized: a band change is session state, so
+    /// entering and leaving cannot alter the world (decision 0069's property,
+    /// obtained by construction).
+    ///
+    /// The possessed agent's own `position` stays at the WALK band throughout —
+    /// descent is recorded here, not there — so every walk-band read (`map`,
+    /// `whoami`, `purview`, the snapshot, the NPC layer) is untouched by being
+    /// indoors.
+    inside: Option<(crate::structure::Structure, usize)>,
 }
 
 impl<'w> Session<'w> {
@@ -269,6 +310,7 @@ impl<'w> Session<'w> {
             occupancy: Occupancy::default(),
             turn: 0,
             last_text: String::new(),
+            inside: None,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -563,10 +605,33 @@ impl<'w> Session<'w> {
         }
         let turn = match verb {
             "" => Turn::Out(String::new()),
+            // `look` is the one existing verb that must become band-aware:
+            // inside a structure it renders the chamber, out of doors the
+            // locale. Everything else reads `self.agent.position`, which never
+            // leaves the walk band, so nothing else changes.
+            "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" => self.out(self.describe_here()),
             "map" => self.map(rest),
+            // Lateral movement is walk-band only (§1b.6). Guarded exactly as
+            // `look` and `examine` are: without this, `go n` from a chamber
+            // rendered the NEIGHBOURING LOCALE with no sentence acknowledging
+            // the building had been left.
+            "go" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
             "go" => self.go(rest),
+            // Band-aware, for the same reason `look` is: indoors, the nouns
+            // `look` named have no authored detail behind them, and the outdoor
+            // path would answer "You see no <noun> here." about a thing the
+            // chamber's own prose had just listed. A BARE `examine` is a
+            // different question — the player named nothing — so it still falls
+            // through to `examine`'s own "Examine what?" hint, which is as true
+            // indoors as out.
+            "examine" if self.inside.is_some() && !rest.is_empty() => {
+                Turn::Out(INDOOR_EXAMINE_REFUSAL.to_string())
+            }
             "examine" => self.examine(rest),
+            // `back` retraces the WALK-band trail, so it is the same refusal
+            // for the same reason as `go`.
+            "back" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
             "back" => self.back(),
             "wait" => self.wait(rest),
             "whoami" => Turn::Out(self.whoami()),
@@ -578,7 +643,12 @@ impl<'w> Session<'w> {
             "soothe" => self.act_on_disposition(rest, -1),
             "write" => Turn::Out(self.write(rest)),
             "consult" => Turn::Out(self.consult()),
-            "enter" | "exit" => Turn::Out(
+            "enter" => self.enter(rest),
+            "out" => self.leave(),
+            // Coarse-ward is still refused: possessing a settlement, a culture
+            // or a civilization is a deferred arc of its own (0077). This
+            // sentence is byte-pinned in the galleries — do not reword it.
+            "exit" => Turn::Out(
                 "The grain of the world resists; that way lies another scale of things."
                     .to_string(),
             ),
@@ -588,6 +658,15 @@ impl<'w> Session<'w> {
             // "Ways on: SE, N, SW." and every one of those tokens must be
             // typeable; `parse_compass` already accepted them, and only this
             // dispatch arm was missing.
+            //
+            // It carries `go`'s own indoor guard, and must: this arm dispatches
+            // to `self.go` directly, so without the guard repeated here a bare
+            // `n` typed inside a structure would slip past the refusal that
+            // `"go" if self.inside.is_some()` exists to make, and silently
+            // render the neighbouring locale from indoors.
+            other if self.inside.is_some() && parse_compass(other).is_some() => {
+                Turn::Out(INDOOR_LATERAL_REFUSAL.to_string())
+            }
             other if parse_compass(other).is_some() => self.go(other),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
@@ -630,6 +709,12 @@ impl<'w> Session<'w> {
         ))
     }
 
+    /// A lateral step at the walk band. Reached only out of doors: `handle`
+    /// refuses `go` while `inside` is set ([`INDOOR_LATERAL_REFUSAL`]), which is
+    /// why nothing here clears `inside` — a structure belongs to ONE locale, so
+    /// a step that carried `inside` across would leave the session holding
+    /// chambers descending from the locale behind it, and the guard is what
+    /// makes that unrepresentable rather than merely tidied up afterwards.
     fn go(&mut self, dir: &str) -> Turn {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
@@ -665,6 +750,9 @@ impl<'w> Session<'w> {
         self.out(self.describe_here())
     }
 
+    /// Retrace one step of the walk-band trail. Like [`Self::go`], reached only
+    /// out of doors: the trail holds walk-band addresses, so retracing it is a
+    /// walk-band operation and `handle` refuses it indoors.
     fn back(&mut self) -> Turn {
         let Some(prev) = self.trail.pop() else {
             return Turn::Out("You have not walked anywhere yet.".to_string());
@@ -674,6 +762,245 @@ impl<'w> Session<'w> {
             return Turn::Out(format!("error: {e}"));
         }
         self.out(self.describe_here())
+    }
+
+    /// Descend into the structure at this locale, or move to a named chamber
+    /// within the one already entered. Apertures, not stairs (§7): movement
+    /// inside is by name, never by compass, because a chamber address is
+    /// identity and carries no bearing.
+    fn enter(&mut self, target: &str) -> Turn {
+        // Already inside: `enter <named>` steps through an aperture.
+        if let Some((structure, at)) = self.inside.clone() {
+            let Some(next) = self.named_neighbour(&structure, at, target) else {
+                // Asked for the deeper way where there is none: say which wall
+                // was reached, not "no way to further in", which reads as a
+                // parse failure rather than the end of the place.
+                if FURTHER_IN_WORDS.contains(&target.trim().to_lowercase().as_str()) {
+                    return Turn::Out("This is as far in as the place goes.".to_string());
+                }
+                // A CHOICE of apertures is never "no way" — it is an unanswered
+                // question. Both refusals that land here mean the same thing:
+                // an empty target (`named_neighbour` only defaults with exactly
+                // one neighbour) or a prose noun, which cannot tell two
+                // prose-identical chambers apart. Denying the ways exist would
+                // be as false here as "no way to anywhere" was.
+                let neighbours = Self::neighbours(&structure, at);
+                if neighbours.len() > 1 {
+                    // Count-aware rather than hard-coded: `structure_at` builds
+                    // a path graph, so today every such chamber has exactly two
+                    // apertures — but a richer topology (The Precincts) would
+                    // make a fixed "two" a lie told to a real player, and a
+                    // debug-only assertion would not catch it in release.
+                    let how_many = match neighbours.len() {
+                        2 => "two ways".to_string(),
+                        n => format!("{n} ways"),
+                    };
+                    return Turn::Out(format!(
+                        "There are {how_many} from here; say 'further in' to go deeper, \
+                         or 'out' to leave."
+                    ));
+                }
+                return Turn::Out(format!(
+                    "There is no way to {} from here.",
+                    if target.is_empty() {
+                        "anywhere"
+                    } else {
+                        target
+                    }
+                ));
+            };
+            self.inside = Some((structure, next));
+            return self.out(self.describe_chamber_here());
+        }
+        let brief = self.brief_here();
+        let Some(structure) = crate::structure::structure_at(
+            &crate::band::truncate_to_walk(&self.agent.position, self.walk_depth()),
+            &brief,
+            self.world.seed,
+            self.walk_depth(),
+        ) else {
+            return Turn::Out("Nothing here is built; there is nothing to enter.".to_string());
+        };
+        let at = structure
+            .chambers
+            .iter()
+            .position(|c| *c == structure.threshold)
+            .expect("the threshold is one of the chambers");
+        self.inside = Some((structure, at));
+        self.out(self.describe_chamber_here())
+    }
+
+    /// Step back out of doors: `out` leaves the STRUCTURE, not one chamber —
+    /// there is no chamber trail, so it returns to the locale from wherever
+    /// inside the possession had got to. (A "back one chamber" step would want
+    /// its own trail, the way `back` has one for the walk band; nothing asks
+    /// for it yet, and inventing an unused one would be a second thing to keep
+    /// correct.) Already out of doors, it says so rather than erroring.
+    fn leave(&mut self) -> Turn {
+        match self.inside.take() {
+            None => Turn::Out("You are already out of doors.".to_string()),
+            Some(_) => self.out(self.describe_here()),
+        }
+    }
+
+    /// The world's walk depth, as this session's locale context defines it.
+    /// A free function in `agent`, wrapped here so the handlers read as
+    /// session state rather than as a module path.
+    /// type-audit: bare-ok(count: return)
+    fn walk_depth(&self) -> u32 {
+        crate::agent::walk_depth(&self.ctx)
+    }
+
+    /// The terrain provider, built exactly as every other reader in this module
+    /// builds it. NOT `LocaleTerrain::new`: that leaves `built: None`, which
+    /// reads as *everything unbuilt*, and `enter` would then report nothing
+    /// built anywhere.
+    fn terrain_here(&self) -> LocaleTerrain<'_> {
+        LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+        )
+    }
+
+    /// The brief for wherever the possession currently stands.
+    fn brief_here(&self) -> crate::brief::Brief {
+        let terrain = self.terrain_here();
+        crate::brief::brief_of(
+            self.world,
+            self.ctx.climate().geosphere(),
+            self.ctx.nearest_index(),
+            &self.agent.position,
+            &terrain,
+            self.walk_depth(),
+        )
+    }
+
+    /// The chambers one aperture away from `at`, in `links` order. Undirected:
+    /// a link names its pair either way round.
+    ///
+    /// `structure_at` builds a PATH GRAPH rooted at `chambers[0]`, the
+    /// threshold, so index order is depth order and a chamber has at most two
+    /// neighbours: one back toward the threshold and one further in. Both
+    /// [`Self::further_in`] and the ways-on footer rely on that ordering, but
+    /// read it out of `links` rather than assuming `at ± 1` exists.
+    fn neighbours(structure: &crate::structure::Structure, at: usize) -> Vec<usize> {
+        structure
+            .links
+            .iter()
+            .filter_map(|&(a, b)| {
+                if a == at {
+                    Some(b)
+                } else if b == at {
+                    Some(a)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// The aperture leading DEEPER from `at`: the lowest-numbered neighbour
+    /// above it. The backward aperture needs no name — `out` already walks that
+    /// direction — so this is the only one the footer advertises.
+    fn further_in(structure: &crate::structure::Structure, at: usize) -> Option<usize> {
+        Self::neighbours(structure, at)
+            .into_iter()
+            .filter(|&n| n > at)
+            .min()
+    }
+
+    /// Resolve `target` to a chamber one aperture away.
+    ///
+    /// Two accepted forms, and the split between them is what makes every
+    /// chamber reachable:
+    ///
+    /// 1. A [`FURTHER_IN_WORDS`] token — the DIRECTION, always unambiguous, and
+    ///    the one the footer names. Repeating it walks the path graph to its far
+    ///    end, so no chamber is stranded.
+    /// 2. A case-insensitive substring of the destination's own PROSE nouns
+    ///    (`chamber_nouns`, the same catalogue `describe_chamber` renders from),
+    ///    accepted ONLY where the chamber has exactly one aperture. Every
+    ///    chamber of a structure derives the identical interior — the terrain
+    ///    reads are taken at their shared walk-band ancestor — so noun lists
+    ///    cannot tell two apertures apart, and matching one with a choice still
+    ///    open would silently pick a direction the player never named.
+    ///
+    /// An empty `target` takes the sole neighbour, if there is exactly one; with
+    /// a choice to make, silence is not an answer.
+    fn named_neighbour(
+        &self,
+        structure: &crate::structure::Structure,
+        at: usize,
+        target: &str,
+    ) -> Option<usize> {
+        let neighbours = Self::neighbours(structure, at);
+        let target = target.trim().to_lowercase();
+        if target.is_empty() {
+            return match neighbours.as_slice() {
+                [only] => Some(*only),
+                _ => None,
+            };
+        }
+        if FURTHER_IN_WORDS.contains(&target.as_str()) {
+            return Self::further_in(structure, at);
+        }
+        let [only] = neighbours.as_slice() else {
+            return None;
+        };
+        let terrain = self.terrain_here();
+        crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
+            &structure.chambers[*only],
+            &terrain,
+            self.walk_depth(),
+        ))
+        .iter()
+        .any(|noun| noun.to_lowercase().contains(&target))
+        .then_some(*only)
+    }
+
+    /// The chamber rendering, in `describe_here`'s own shape one band down:
+    /// address, prose, ways on. `[chamber …]` rather than `[room …]` because
+    /// the band word IS the information — an id at depth 21 is not a locale.
+    ///
+    /// The ways are `out`, plus `further in` where a deeper chamber exists.
+    /// Naming apertures by DIRECTION rather than by what lies through them is
+    /// what makes the list navigable: every chamber of a structure derives the
+    /// identical interior, so noun-named apertures all read the same word and a
+    /// deduplicated list would advertise one way where two exist — which is how
+    /// the deeper chambers became unreachable.
+    fn describe_chamber_here(&self) -> Result<String, VesselError> {
+        let Some((structure, at)) = self.inside.as_ref() else {
+            // Unreachable through `handle` (every caller checks first), but a
+            // silent fabrication of chamber prose while out of doors would be
+            // worse than a loud error.
+            return Err(VesselError::Build(
+                "no chamber to describe: the possession is out of doors".to_string(),
+            ));
+        };
+        let chamber = &structure.chambers[*at];
+        let terrain = self.terrain_here();
+        let brief = self.brief_here();
+        let interior = crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth());
+        let id = chamber
+            .pack()
+            // `RoomAddrError` implements `Debug` but not `Display`, the same
+            // constraint `snapshot` documents at its own `pack` call.
+            .map_err(|e| VesselError::Build(format!("{e:?}")))?
+            .0;
+        let mut ways = vec!["out"];
+        if Self::further_in(structure, *at).is_some() {
+            ways.push(FURTHER_IN);
+        }
+        Ok(format!(
+            "[chamber {}, day {}]\n{}\nWays on: {}.",
+            id,
+            self.day.day,
+            crate::chamber_prose::describe_chamber(&interior, &brief),
+            ways.join(", ")
+        ))
     }
 
     fn wait(&mut self, arg: &str) -> Turn {
@@ -1552,6 +1879,377 @@ mod tests {
         assert!(
             snap.narration.prose.starts_with("[room "),
             "after `look` the narration IS the room block"
+        );
+    }
+
+    // ---- The Lintel: the chamber naming and resolution layer -------------
+    //
+    // These cover the layer BETWEEN `structure_at`'s link graph and the
+    // player's typing. It is where a whole-branch review found multi-chamber
+    // structures partly unnavigable: every chamber of a structure derives the
+    // identical interior (terrain is read at their shared walk-band ancestor),
+    // so noun-named apertures were indistinguishable, the ways-on list
+    // deduplicated them to one, and `enter <noun>` from chamber 1 resolved
+    // back to the threshold — stranding chambers 2 and 3 with no input that
+    // could reach them.
+
+    /// A walk-band address to hang a synthetic structure under. Which locale it
+    /// is does not matter to the link graph; the resolution tests pass the
+    /// session's OWN position instead, so the interiors they read are real.
+    fn synthetic_locale() -> RoomAddr {
+        RoomAddr {
+            face: 3,
+            path: (0..12).map(|i| (i % 4) as u8).collect(),
+        }
+    }
+
+    /// A `Structure` of `count` chambers under `base`, linked as the path graph
+    /// rooted at the threshold that `structure_at` builds. Synthetic because
+    /// `structure_at`'s own count is a seed draw, and the naming layer must hold
+    /// for every count — so these tests choose it rather than hoping for it.
+    fn path_structure(base: &RoomAddr, count: usize) -> crate::structure::Structure {
+        assert!(
+            (1..=crate::structure::MAX_CHAMBERS).contains(&count),
+            "a chamber index is one base-4 path digit"
+        );
+        let chambers: Vec<RoomAddr> = (0..count)
+            .map(|i| {
+                let mut path = base.path.clone();
+                path.extend(std::iter::repeat_n(
+                    0u8,
+                    crate::band::CHAMBER_DEPTH_OFFSET as usize,
+                ));
+                let last = path.len() - 1;
+                path[last] = i as u8;
+                RoomAddr {
+                    face: base.face,
+                    path,
+                }
+            })
+            .collect();
+        crate::structure::Structure {
+            threshold: chambers[0].clone(),
+            links: (1..count).map(|i| (i - 1, i)).collect(),
+            chambers,
+        }
+    }
+
+    #[test]
+    fn neighbours_reads_the_link_graph_in_both_directions() {
+        let s = path_structure(&synthetic_locale(), 4);
+        assert_eq!(
+            Session::neighbours(&s, 0),
+            vec![1],
+            "the threshold has one aperture"
+        );
+        assert_eq!(
+            Session::neighbours(&s, 1),
+            vec![0, 2],
+            "a middle chamber has two: back and further in"
+        );
+        assert_eq!(
+            Session::neighbours(&s, 3),
+            vec![2],
+            "the innermost chamber has one"
+        );
+    }
+
+    #[test]
+    fn further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber() {
+        let s = path_structure(&synthetic_locale(), 3);
+        assert_eq!(Session::further_in(&s, 0), Some(1));
+        assert_eq!(
+            Session::further_in(&s, 1),
+            Some(2),
+            "from a middle chamber, deeper is the HIGHER index, never the way back"
+        );
+        assert_eq!(
+            Session::further_in(&s, 2),
+            None,
+            "nothing lies deeper than the last chamber"
+        );
+    }
+
+    #[test]
+    fn named_neighbour_walks_further_in_from_a_middle_chamber() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let s = path_structure(&session.agent.position, 4);
+        for word in FURTHER_IN_WORDS {
+            assert_eq!(
+                session.named_neighbour(&s, 1, word),
+                Some(2),
+                "{word:?} must resolve deeper, never back toward the threshold"
+            );
+        }
+        // Case and surrounding space are the player's, not the parser's.
+        assert_eq!(session.named_neighbour(&s, 1, "  Further In  "), Some(2));
+    }
+
+    #[test]
+    fn a_bare_noun_refuses_while_two_apertures_are_open() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let s = path_structure(&session.agent.position, 4);
+        // Precondition: the noun really IS in the neighbouring chamber's prose,
+        // so the refusal below is about ambiguity, not about an absent word.
+        let terrain = session.terrain_here();
+        let nouns = crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
+            &s.chambers[2],
+            &terrain,
+            session.walk_depth(),
+        ));
+        let noun = *nouns
+            .first()
+            .expect("a built chamber's prose names something");
+        assert_eq!(
+            session.named_neighbour(&s, 1, noun),
+            None,
+            "an ambiguous noun must refuse, not silently pick a direction"
+        );
+        assert_eq!(
+            session.named_neighbour(&s, 0, noun),
+            Some(1),
+            "with exactly one aperture the same noun is unambiguous, and accepted"
+        );
+    }
+
+    #[test]
+    fn an_unmatched_name_refuses_rather_than_choosing_a_destination() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let s = path_structure(&session.agent.position, 2);
+        assert_eq!(
+            session.named_neighbour(&s, 0, "a-noun-no-chamber-holds"),
+            None
+        );
+    }
+
+    #[test]
+    fn the_ways_on_inside_name_out_and_the_deeper_aperture() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let middle = path_structure(&session.agent.position, 3);
+        session.inside = Some((middle, 1));
+        let text = session.describe_chamber_here().expect("a chamber renders");
+        assert!(
+            text.ends_with("Ways on: out, further in."),
+            "a middle chamber must offer BOTH directions under distinct names: {text:?}"
+        );
+        let innermost = path_structure(&session.agent.position, 3);
+        session.inside = Some((innermost, 2));
+        let text = session.describe_chamber_here().expect("a chamber renders");
+        assert!(
+            text.ends_with("Ways on: out."),
+            "the innermost chamber must not advertise a way that is not there: {text:?}"
+        );
+    }
+
+    #[test]
+    fn a_refusal_in_a_middle_chamber_names_the_tokens_that_work() {
+        // The falsity this replaced: "There is no way to <noun> from here.",
+        // said in a room with two ways, about a noun the room's own prose had
+        // just listed. Both refusals that land there — bare, and an ambiguous
+        // noun — must name the tokens that move instead of denying the ways.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let middle = path_structure(&session.agent.position, 3);
+        session.inside = Some((middle, 1));
+        for line in ["enter", "enter doorway"] {
+            let reply = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("enter must not release"),
+            };
+            assert!(
+                reply.contains("two ways") && reply.contains("further in"),
+                "{line:?} must name the tokens that work: {reply:?}"
+            );
+            assert!(
+                !reply.contains("There is no way"),
+                "a room with two ways must not deny that they exist: {reply:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_chamber_is_reachable_from_the_threshold_by_input() {
+        // `Structure`'s doc promises "every chamber is reachable from
+        // `threshold`" — a claim about `links`. This is the player-facing
+        // version: reachable BY INPUT, which is the half that was false.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let reply = match session.handle("enter") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("enter must not release"),
+        };
+        assert!(
+            !reply.starts_with("Nothing here is built"),
+            "the flagship's own locale is built: {reply:?}"
+        );
+        let total = session
+            .inside
+            .as_ref()
+            .expect("a successful enter is inside something")
+            .0
+            .chambers
+            .len();
+        // `total` is a seed draw over `1..=MAX_CHAMBERS`. At 1 the loop below
+        // never runs and the visited-set assertion passes trivially — the exact
+        // vacuity shape this round fixed elsewhere — so pin the fixture instead
+        // of trusting today's draw.
+        assert!(
+            total > 1,
+            "fixture must draw a multi-chamber structure for this test to mean anything"
+        );
+        let mut visited = std::collections::BTreeSet::new();
+        visited.insert(session.inside.as_ref().unwrap().1);
+        for _ in 1..total {
+            session.handle("enter further in");
+            visited.insert(session.inside.as_ref().unwrap().1);
+        }
+        assert_eq!(
+            visited.len(),
+            total,
+            "every chamber must be reachable by input; visited {visited:?} of {total}"
+        );
+        let wall = match session.handle("enter further in") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("enter must not release"),
+        };
+        assert_eq!(
+            wall, "This is as far in as the place goes.",
+            "the far end names itself rather than reading as a parse failure"
+        );
+    }
+
+    #[test]
+    fn examine_indoors_states_the_limit_instead_of_denying_the_noun() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let shown = match session.handle("enter") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("enter must not release"),
+        };
+        assert!(
+            !shown.starts_with("Nothing here is built"),
+            "the flagship's own locale is built: {shown:?}"
+        );
+        // Take a noun the chamber's prose has just named to the player.
+        let terrain = session.terrain_here();
+        let interior = crate::interior::chamber_interior_of(
+            &session.inside.as_ref().unwrap().0.chambers[session.inside.as_ref().unwrap().1],
+            &terrain,
+            session.walk_depth(),
+        );
+        let nouns = crate::chamber_prose::chamber_nouns(&interior);
+        let noun = *nouns
+            .first()
+            .expect("a built chamber's prose names something");
+        assert!(
+            shown.contains(noun),
+            "the precondition is that `look` NAMED this noun: {noun:?} not in {shown:?}"
+        );
+        let reply = match session.handle(&format!("examine {noun}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "look must not name what examine denies, two turns apart: {reply:?}"
+        );
+        assert_eq!(reply, INDOOR_EXAMINE_REFUSAL);
+        // A BARE `examine` names nothing, so the band guard must not swallow it:
+        // "Examine what?" is as true indoors as out, and the refusal above is an
+        // answer to a question the player did not ask.
+        let bare = match session.handle("examine") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert_eq!(
+            bare, "Examine what?",
+            "a bare `examine` keeps its usage hint indoors"
+        );
+        // Out of doors the ordinary path is untouched.
+        session.handle("out");
+        let outdoors = match session.handle("examine a-noun-no-grain-surfaced") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            outdoors.starts_with("You see no"),
+            "the outdoor examine path is unchanged: {outdoors:?}"
+        );
+    }
+
+    #[test]
+    fn lateral_movement_indoors_is_refused_and_leaves_the_possession_inside() {
+        // §1b.6: lateral movement never changes band. Unguarded, `go n` from a
+        // chamber rendered the NEIGHBOURING LOCALE and cleared `inside` on the
+        // way, so the player left the building with no sentence saying so.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let shown = match session.handle("enter") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("enter must not release"),
+        };
+        assert!(
+            !shown.starts_with("Nothing here is built"),
+            "the flagship's own locale is built: {shown:?}"
+        );
+        let was = session
+            .inside
+            .clone()
+            .expect("a successful enter is inside");
+        // Give `back` somewhere to retrace to (walking there first would have
+        // left the built locale), so its refusal below cannot be the vacuous
+        // "You have not walked anywhere yet.": the guard must refuse it even
+        // when there IS a trail.
+        let elsewhere = session
+            .agent
+            .position
+            .neighbors()
+            .into_iter()
+            .next()
+            .expect("a locale has neighbours");
+        session.trail.push(elsewhere.clone());
+        let here = session.agent.position.clone();
+        for line in ["go n", "go north", "back"] {
+            let reply = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("{line:?} must not release"),
+            };
+            assert_eq!(
+                reply, INDOOR_LATERAL_REFUSAL,
+                "{line:?} must be refused indoors"
+            );
+            assert_eq!(
+                session.inside.as_ref(),
+                Some(&was),
+                "{line:?} must leave the possession in the chamber it was in"
+            );
+            assert_eq!(
+                session.agent.position, here,
+                "{line:?} must not move the walk-band position either"
+            );
+            assert_eq!(
+                session.trail,
+                vec![elsewhere.clone()],
+                "{line:?} must not consume the walk-band trail"
+            );
+        }
+        // Out of doors `back` works exactly as before.
+        session.handle("out");
+        let retraced = match session.handle("back") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("back must not release"),
+        };
+        assert!(
+            retraced.starts_with("[room "),
+            "the outdoor `back` path is unchanged: {retraced:?}"
+        );
+        assert_eq!(
+            session.agent.position, elsewhere,
+            "and it still retraces the trail"
         );
     }
 }

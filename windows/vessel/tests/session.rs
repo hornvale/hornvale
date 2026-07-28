@@ -69,8 +69,14 @@ fn go_moves_and_back_retraces() {
     assert_eq!(s.agent().position, home, "back retraces");
 }
 
+/// The refusal is DIRECTIONAL as of The Lintel: coarse-ward (`exit`, toward
+/// possessing a settlement or a culture) is still refused with the byte-pinned
+/// sentence, but fine-ward (`enter`) now descends — see
+/// `windows/vessel/tests/the_lintel.rs`. This test therefore narrowed to the
+/// half it still covers, deliberately: The Seam's contract that BOTH directions
+/// refuse was overturned by this campaign, not accidentally broken by it.
 #[test]
-fn vertical_exits_refuse_diegetically() {
+fn the_coarse_ward_exit_refuses_diegetically() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let before = s.agent().position.clone();
@@ -80,11 +86,37 @@ fn vertical_exits_refuse_diegetically() {
     };
     assert!(out.contains("grain of the world"), "diegetic refusal");
     assert_eq!(s.agent().position, before, "no movement");
-    let out = match s.handle("enter") {
+}
+
+/// Descending must never move the WALK-band position: the band change lives in
+/// session state, so `enter` leaves `agent().position` exactly where it was.
+/// That is what keeps `map`, `whoami`, `purview` and the NPC layer — all of
+/// which read that field — unchanged by being indoors.
+#[test]
+fn entering_leaves_the_walk_band_position_alone() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let before = s.agent().position.clone();
+    let reply = match s.handle("enter") {
         Turn::Out(t) => t,
         _ => panic!("enter must not release"),
     };
-    assert!(out.contains("grain of the world"));
+    // Without this, the test passes whether `enter` descended or answered
+    // "Nothing here is built" — and position-invariance is trivially true in
+    // the second case. `Session::start` mints the flagship in its own
+    // settlement, whose locale IS settlement territory, so a refusal here is a
+    // real failure and not a geography accident.
+    assert!(
+        !reply.starts_with("Nothing here is built"),
+        "the flagship's own locale is built, so this must actually descend: {reply:?}"
+    );
+    assert_eq!(
+        s.agent().position,
+        before,
+        "the possession's walk-band position is untouched by descent"
+    );
+    s.handle("out");
+    assert_eq!(s.agent().position, before);
 }
 
 #[test]
@@ -515,5 +547,58 @@ fn clouding_over_does_not_unlearn_what_was_seen() {
     assert!(
         after >= before,
         "knowledge shrank from {before} to {after} as the sky changed"
+    );
+}
+
+/// A bare compass token carries `go`'s indoor refusal. The bare-direction
+/// fallthrough dispatches to `go` directly, so the guard has to be repeated on
+/// that arm — otherwise `n` typed indoors slips past the refusal that typing
+/// `go n` correctly receives.
+#[test]
+fn a_bare_direction_indoors_is_refused_exactly_as_go_is() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    // Find a room we can step inside, then compare the two spellings.
+    let mut entered = false;
+    for _ in 0..40 {
+        if let Turn::Out(t) = s.handle("enter")
+            && !t.contains("nothing")
+            && !t.contains("no ")
+        {
+            entered = true;
+            break;
+        }
+        let out = match s.handle("look") {
+            Turn::Out(t) => t,
+            _ => break,
+        };
+        let dir = out
+            .lines()
+            .find(|l| l.starts_with("Ways on:"))
+            .and_then(|l| l.trim_start_matches("Ways on:").split(',').next())
+            .map(|d| d.trim().trim_end_matches('.').to_lowercase());
+        match dir {
+            Some(d) if !d.is_empty() => {
+                s.handle(&d);
+            }
+            _ => break,
+        }
+    }
+    if !entered {
+        // No enterable structure reachable in this walk; the guard is still
+        // asserted by the indoor `go` tests that The Lintel shipped.
+        return;
+    }
+    let bare = match s.handle("n") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    let spelled = match s.handle("go n") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert_eq!(
+        bare, spelled,
+        "the bare direction must refuse indoors exactly as `go <dir>` does"
     );
 }
