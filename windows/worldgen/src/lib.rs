@@ -5203,10 +5203,14 @@ fn build_to(
     // over these because toponymic wear (The Wearing) is keyed to a
     // morpheme's frequency in its own culture's name corpus, and a corpus
     // cannot be counted until every name's concepts are known. Worldgen is
-    // the only layer that sees a culture's whole scatter — `naming.rs` stays
-    // a pure function of its arguments and never learns which OTHER
-    // settlements exist, which is what keeps a name pin-isolated. The
-    // expensive half (phenomena observation) happens once, in pass 1.
+    // the only layer that sees a culture's whole scatter, and the corpus is
+    // how that view reaches naming: `naming.rs` stays a pure function of its
+    // arguments, but one of those arguments now IS a summary of the other
+    // settlements, so a glossed settlement name is no longer pin-isolated at
+    // the world level (see `naming.rs`'s module docs). What purity still
+    // buys is that the dependence is explicit, read-only and countable here,
+    // rather than ambient state threaded through the namer.
+    // The expensive half (phenomena observation) happens once, in pass 1.
     struct SettlementSite {
         id: EntityId,
         species: &'static str,
@@ -5237,8 +5241,10 @@ fn build_to(
         // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
         // committed gloss is truthful to the sky this settlement actually
         // lives under (spec §9.3), and per-settlement skies widen the
-        // descriptor space. Still a pure function of the entity's own
-        // (cell, facts): pin-isolated by construction (spec §8). The place id
+        // descriptor space. The OBSERVATION stays a pure function of the
+        // entity's own (cell, facts) — pin-isolated by construction (spec
+        // §8); it is the corpus below, not this, that ends the property for
+        // the resulting name. The place id
         // is unread by the observer — the coordinate does the culling — so
         // `world_entity` still stands in for it (the settlement entity now
         // exists, but observation never reads it) — see `observed_phenomena_from`.

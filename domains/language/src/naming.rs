@@ -29,12 +29,18 @@
 //! its own cell. **A glossed settlement name no longer is.** Its morphemes
 //! are worn against a [`NameCorpus`], a per-culture statistic the
 //! composition root counts over that species' whole settlement scatter, so
-//! **a pin that moves a species' scatter moves every name of that species**
-//! — even for settlements whose own cell did not move. Measured: holding
-//! the seed-42 scatter fixed and varying only the corpus changes 22 gnoll
-//! names. This module stays pure (the corpus is an explicit, read-only
-//! argument), but the world-level isolation property is gone by design, and
-//! a pin-isolation test must not assume it.
+//! **a pin that moves a species' scatter can move every name of that
+//! species** — even for settlements whose own cell did not move.
+//!
+//! Measured by holding a world's scatter fixed and varying only the corpus:
+//! 4 of 79 names change at seed 777, 7 of 207 at seed 99, 2 of 195 at seed
+//! 1, 1 of 76 at seed 404. At seed 42 it changes **none** — every wear that
+//! culture attempts is surrendered to the survival rule (see
+//! [`Namer::worn_compound`]), so that world's glossed names happen to be
+//! corpus-invariant. The dependence is real but sparse, and seed 42 is not
+//! the seed to cite it from. This module stays pure (the corpus is an
+//! explicit, read-only argument), but the world-level isolation property is
+//! gone by design, and a pin-isolation test must not assume it.
 //!
 //! [`Namer::glossed_name`] (The Words, Task 9) is a later epoch of the same
 //! `name` (v1 retired but never deleted — old saves still read it): rooted
@@ -45,15 +51,17 @@
 //! epoch's first leg; The Wearing (2026-07-27) supersedes it with `/v3`,
 //! which retires the drawn settlement stem and inserts toponymic wear (see
 //! [`Namer::wear`]) — both changes to what the method consumes, so both owe
-//! an epoch suffix rather than a rename. It stays exactly as pure and
-//! pin-isolated as `name` — a function of `(seed, species, kind, v3, salt,
-//! site, lexicon, corpus)`, still no re-draw, still no dependence on any
-//! other *name* — though the `lexicon`, `site` and [`NameCorpus`] a caller
-//! supplies may themselves be composed upstream from a species' full
-//! settlement scatter; that composition is entirely the composition root's
-//! business, never this module's. The corpus in particular is a per-culture
-//! *statistic*, explicitly supplied and read-only — never a shared mutable
-//! "used" set, which is what would break pin isolation.
+//! an epoch suffix rather than a rename. It is exactly as **pure** as
+//! `name` — a function of `(seed, species, kind, v3, salt, site, lexicon,
+//! corpus)`, no re-draw, no hidden state — but it is **not** as
+//! pin-isolated, and the two must not be conflated. `name` reads only its
+//! own salt; `glossed_name` also reads a `lexicon`, a `site` and a
+//! [`NameCorpus`], all of which the composition root may compose from a
+//! species' full settlement scatter. Absence of a shared mutable "used" set
+//! is what keeps this module *pure*; it is emphatically not what would keep
+//! a name pin-isolated, and the corpus breaks that property by a different
+//! route — read-only, explicit, and upstream. See the note above for what
+//! survives and what does not.
 
 use crate::etymology::{draw_wear_cascade, evolve};
 use crate::lexicon::{Headedness, LexEntry, Lexicon};
@@ -127,11 +135,18 @@ pub struct SiteConcepts<'a> {
 ///
 /// Composed upstream by the composition root, which is the only layer that
 /// can see a culture's whole settlement scatter; this crate never counts
-/// anything itself, so [`Namer::glossed_name`] stays a pure function of its
-/// arguments and settlement names stay pin-isolated by construction (a name
-/// still depends on nothing about *which other names exist* except this one
-/// explicitly supplied, per-culture statistic — never on a shared mutable
-/// "used" set).
+/// anything itself, so [`Namer::glossed_name`] stays a **pure** function of
+/// its arguments — no shared mutable "used" set, no hidden state, same
+/// arguments always the same name.
+///
+/// **This type is also what ends world-level pin isolation for settlement
+/// names, and it should be read as the place that happens.** A name built
+/// against a corpus depends on *which other settlements that species has*,
+/// because the corpus counts them. Purity is preserved by making that
+/// dependence an explicit read-only argument rather than ambient state; it
+/// is not removed. Measured by varying only the corpus: 4 of 79 names change
+/// at seed 777, 7 of 207 at seed 99, 0 of 169 at seed 42 (see the module
+/// docs for why seed 42 is the degenerate case).
 ///
 /// A concept absent from `frequencies` reads as `0.0`: unattested in the
 /// corpus, therefore unworn. [`NameCorpus::none`] is the empty corpus every
@@ -246,9 +261,10 @@ impl<'a> Namer<'a> {
     /// index — e.g. the Nth settlement's cell id), applying `morph`'s
     /// morphology. A single deterministic draw: the name is a pure function
     /// of `(seed, species, kind, salt)` with no re-draw and no dependence on
-    /// any other name (see the module docs — this is what makes settlement
-    /// names pin-isolated by construction). Uniqueness across a world's
-    /// names is de-facto, not guaranteed.
+    /// any other name — this, the **v1** draw, is pin-isolated in the strong
+    /// sense: it reads nothing but its own salt. [`Namer::glossed_name`] is
+    /// not (see the module docs). Uniqueness across a world's names is
+    /// de-facto, not guaranteed.
     /// type-audit: pending(wave-3: salt)
     pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
@@ -443,6 +459,23 @@ impl<'a> Namer<'a> {
     /// identity). Giving up in ascending frequency order keeps even the
     /// fallback frequency-keyed rather than slot-keyed.
     ///
+    /// Two deliberate coarsenesses, both erring toward keeping the name
+    /// honest rather than toward keeping the wear:
+    ///
+    /// - **Contiguity is stricter than "recognizable".** An epenthetic vowel
+    ///   inserted *inside* a worn morpheme leaves it perfectly audible but
+    ///   fails [`contains_run`], and the wear is forfeited. A looser
+    ///   subsequence test would keep more wear at the cost of a check that
+    ///   can no longer tell reduction from scattering, so the strict form
+    ///   stands.
+    /// - **The check covers unworn parts too.** A surrender is only ever
+    ///   *applied* to a genuinely worn morpheme (the give-up order is built
+    ///   from the worn ones), but it can be *triggered* by an unworn part's
+    ///   annihilation — a pre-existing possibility with nothing to do with
+    ///   wear — in which case a sibling loses perfectly good wear and the
+    ///   count over-reports. Not observed: all 30 surrenders measured on
+    ///   seed 42 accompanied a genuinely worn part.
+    ///
     /// The alternative remedy — admitting worn forms into the attested tier
     /// so repair leaves them alone — was rejected: the Lab's own
     /// romanization validator reconstructs that tier from the lexicon alone
@@ -507,17 +540,22 @@ impl<'a> Namer<'a> {
                 return (repaired, surrendered);
             }
             // Annihilated: give up the least-frequent surviving wear and
-            // retry. The final attempt wears nothing, which is exactly the
-            // pre-wear compound and repairs to itself.
+            // retry. The last iteration has every `worn[i] == None`, so it
+            // tries the fully unworn compound — which is what this code
+            // built before wear existed, and which repair leaves alone
+            // because every part is attested.
             if attempt < give_up_order.len() {
                 worn[give_up_order[attempt]] = None;
                 surrendered += 1;
             }
         }
-        // Every attempt including the unworn one failed containment — the
-        // unworn compound is not repair-stable for this culture. Nothing to
-        // do with wear; surface the unworn form, exactly as this code did
-        // before wear existed.
+        // Unreachable in practice: the loop's last iteration already tried
+        // the fully unworn compound, so falling out means even THAT failed
+        // containment — repair is not the identity for this culture's own
+        // attested words, which is a pre-existing property with nothing to
+        // do with wear. This recomputes that same unworn repair rather than
+        // caching it, because the branch is cold and the duplication is
+        // one line; it is a RECOMPUTATION, not a different result.
         (
             repair_phonotactics(Self::join_parts(lexicon, raw), self.ph, attested),
             surrendered,
@@ -2039,9 +2077,11 @@ mod tests {
     fn a_name_is_a_pure_function_of_seed_species_kind_and_salt() {
         // No re-draw, no shared "used" set: the same (seed, species, kind,
         // salt) always yields the same name, and distinct salts draw
-        // independently. This purity is what makes settlement names
-        // pin-isolated by construction (spec §8) — a name never depends on
-        // which other settlements a world places.
+        // independently. This covers `Namer::name`'s V1 names ONLY, and for
+        // those the strong property holds — a v1 name never depends on
+        // which other settlements a world places (spec §8). It says nothing
+        // about `glossed_name`, whose corpus argument does depend on a
+        // species' whole scatter; see the module docs.
         let ph = kobold_ph();
         let namer = Namer::new(&Seed(2), "kobold", &ph);
         let mut first: Vec<String> = Vec::new();

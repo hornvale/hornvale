@@ -540,15 +540,15 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/name/settlement/v2",
-            "(retired at The Wearing, superseded by name/settlement/v3) the first glossed settlement name (Task 9): the site-concept compound PLUS a per-salt 2-3 syllable drawn stem",
+            "(retired at The Wearing, superseded by name/settlement/v3) the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above, PLUS a per-salt 2-3 syllable drawn stem that v3 retires",
         ),
         (
             "language/<species>/name/deity/v2",
-            "(retired at The Wearing, superseded by name/deity/v3) the first glossed deity name (Task 9)",
+            "(retired at The Wearing, superseded by name/deity/v3) the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above",
         ),
         (
             "language/<species>/name/epithet/v2",
-            "(retired at The Wearing, superseded by name/epithet/v3) the first glossed epithet (Task 9)",
+            "(retired at The Wearing, superseded by name/epithet/v3) the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above",
         ),
         (
             "language/<species>/name/settlement/v3",
