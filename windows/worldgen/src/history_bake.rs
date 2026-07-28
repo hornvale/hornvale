@@ -449,9 +449,12 @@ pub struct TributeRelation {
     pub subordinate: EntityId,
     /// The community that collects.
     pub patron: EntityId,
-    /// The standard day this relation was established. A patronage transfer
-    /// re-establishes it, so this is when the *current* patron took it over,
-    /// not when the subordinate first began paying somebody.
+    /// The standard day this relation was established: when the *current*
+    /// patron took it over, not when the subordinate first began paying
+    /// somebody. A patronage transfer re-establishes it, and so does a
+    /// relocation that re-seats the patron — the reseated lord is a new
+    /// community, and this day is never earlier than the founding of either
+    /// entity the emitted fact names.
     pub since: f64,
 }
 
@@ -555,8 +558,14 @@ pub struct BakeCensus {
     /// occupation and relocated rather than go on paying (spec §4.3d). A
     /// **flow**, and a strict subset of `migrated` — every flight is also an
     /// orderly move, and it is deliberately NOT in `fled`, which counts being
-    /// driven off by a raider. A vassal too small to survive the road does not
-    /// take it, so this counts departures, never deaths.
+    /// driven off by a raider.
+    ///
+    /// **This counts departures, never deaths**, and the subset claim is
+    /// enforced rather than argued: [`Bake::take_flight`] increments it on the
+    /// `Settled` branches only. Two ways a flight fails to become a departure,
+    /// and neither lands here — a vassal too small to survive the road never
+    /// takes it, and one that takes it and finds nothing admissible anywhere is
+    /// `collapsed`.
     pub vassal_flights: u64,
     /// **Revolts**: a standing relation dissolved because the vassal had come
     /// to out-muscle its patron by `RAID_MARGIN` (spec §4.3d). A **flow**, and
@@ -667,9 +676,13 @@ struct Tribute {
     /// about this vassal, not a number frozen at conquest.
     assessment: f64,
     /// The standard day this relation was established — the day the *current*
-    /// patron took it, since a patronage transfer re-establishes it. Carried
-    /// only so the emitted fact can be dated by when it became true, exactly as
-    /// an occupation's end-of-life facts are.
+    /// patron took it. **Two things re-establish it**: a patronage transfer
+    /// (some rival out-muscled the incumbent) and a relocation that re-seats
+    /// the patron ([`Bake::carry_portfolio_to`]), because the reseated lord is
+    /// a new community with a new [`EntityId`] and a fact naming it may not
+    /// predate it. Carried only so the emitted fact can be dated by when it
+    /// became true, exactly as an occupation's end-of-life facts are; no rule
+    /// reads it.
     since: f64,
     /// The subordinate's population when this patron last collected — set at
     /// formation, updated at every collection. The health signal is measured
@@ -1240,7 +1253,7 @@ impl<'a> Bake<'a> {
             );
             // It reopened, so it was a move and not a death: the vassals it
             // held come with it (spec §4.3e).
-            self.carry_portfolio_to(new_idx, carried);
+            self.carry_portfolio_to(new_idx, carried, year);
             self.touch(new_idx, year);
             // The resettle is tallied HERE, where it happens, rather than at
             // the top-level call site: a cascade's terminal roller reaches
@@ -1288,7 +1301,7 @@ impl<'a> Bake<'a> {
         // that fled of its own accord. The order of these two lines no longer
         // decides anything — the guards read liveness, and every entry either
         // survives both orderings or neither — and is kept for readability.
-        self.carry_portfolio_to(new_idx, carried);
+        self.carry_portfolio_to(new_idx, carried, year);
         let victim_carried = self.lift_portfolio(victim);
         self.close(victim, year, CauseOfEnd::Fled, Ended::By(displacer_id));
         self.touch(new_idx, year);
@@ -1772,13 +1785,38 @@ impl<'a> Bake<'a> {
 
     /// Re-key a carried portfolio onto `new_idx`, the seat a relocating
     /// community has just reopened at — spec §4.3e's **wounded patron**. Each
-    /// relation is the same relation: its assessment, its `since` and its
-    /// remembered population all travel, so a patron that is driven off its
-    /// land arrives still holding its vassals' obligation, having lost only the
-    /// population the war took and the hoard its old community's closure
-    /// destroyed. What this creates is the state the model previously had no
-    /// room for — a patron that is *weakened* rather than dead — which is what
-    /// spec §4.3d's revolt needs in order ever to fire.
+    /// relation is the same relation: its assessment and its remembered
+    /// population travel, so a patron that is driven off its land arrives still
+    /// holding its vassals' obligation, having lost only the population the war
+    /// took and the hoard its old community's closure destroyed. What this
+    /// creates is the state the model previously had no room for — a patron
+    /// that is *weakened* rather than dead — which is what spec §4.3d's revolt
+    /// needs in order ever to fire.
+    ///
+    /// **`since` does NOT travel: this lord's tenure begins at `year`.** The
+    /// obligation continues, but the patron on the far side of a relocation is
+    /// a *new community with a new [`EntityId`]* — `open` minted it moments
+    /// ago — and [`TributeRelation::since`] is documented as when the CURRENT
+    /// patron took the relation over, not when the subordinate first began
+    /// paying somebody (a patronage transfer already re-stamps it for exactly
+    /// this reason). Carrying the old date forward made the emitted
+    /// `pays-tribute-to` fact assert a relationship that predated one of its
+    /// own named parties: on seed 42, 22 of 164 facts were dated up to 675
+    /// years before the patron entity they name was founded (final review,
+    /// Important 1). Role-asymmetrically so, because a fleeing vassal drops its
+    /// relation and only the patron side survives a move.
+    ///
+    /// The alternative — leaving `since` alone and clamping at the emit
+    /// boundary to `max(since, both foundings)` — was rejected: it repairs the
+    /// one consumer that exists today while leaving the impossible date in
+    /// `History::tribute`, which is public and which the next lab metric or
+    /// chronicle reader would take at face value, and it makes `since` mean one
+    /// thing in the bake and another in the ledger. Fixing it here keeps a
+    /// single meaning everywhere.
+    ///
+    /// **Nothing in the mechanism reads `since`** — it is carried for emission
+    /// alone — so this changes no rule, no draw and no census count; it changes
+    /// only the day the surviving facts are stamped with.
     ///
     /// **Only the patron role arrives here**, because only the patron role is
     /// lifted ([`Bake::lift_portfolio`]). A relocating community's own
@@ -1808,7 +1846,7 @@ impl<'a> Bake<'a> {
     /// loop's own inserts can flip for a later iteration (the portfolio's keys
     /// are distinct, and they all name `new_idx` as patron, so no install can
     /// make a later `sub` look like a patron).
-    fn carry_portfolio_to(&mut self, new_idx: usize, carried: CarriedPortfolio) {
+    fn carry_portfolio_to(&mut self, new_idx: usize, carried: CarriedPortfolio, year: f64) {
         for (sub, terms) in carried.vassals {
             if sub == new_idx || !self.communities[sub].alive {
                 continue; // gone, or still on the road: the relation does not survive it
@@ -1820,6 +1858,9 @@ impl<'a> Bake<'a> {
                 sub,
                 Tribute {
                     patron: new_idx,
+                    // This lord's tenure starts here: `new_idx` did not exist
+                    // before `year`, so no fact naming it may be older.
+                    since: year,
                     ..terms
                 },
             );
@@ -2195,7 +2236,10 @@ impl<'a> Bake<'a> {
     /// vassal's feet instead of its strength.
     ///
     /// Returns whether the community actually left, so a caller can tell a
-    /// declined road from an executed one.
+    /// declined road from an executed one. **Leaving and arriving are not the
+    /// same event**: `vassal_flights` is tallied only where the road ended in a
+    /// seat, so a vassal that walked off and found nothing is a `collapsed`
+    /// death rather than a flight (see the tally site below).
     fn take_flight(&mut self, idx: usize, era: &EraClimate, year: f64) -> bool {
         // A cascade earlier in this same pass may already have closed it.
         if !self.communities[idx].alive {
@@ -2226,15 +2270,29 @@ impl<'a> Bake<'a> {
         // escape rather than a change of address (spec §4.3e).
         let carried = self.lift_portfolio(idx);
         self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
-        self.tally.vassal_flights += 1;
         match self.relocate(
             people, arriving, lineage, id, offset, site, era, year, 0, carried,
         ) {
             // `resettled` is tallied inside `relocate`, at the branch that
             // reaches vacant ground; only the migration itself is added here.
-            Relocation::Settled { cascade: 0 } => self.tally.migrated += 1,
+            //
+            // **`vassal_flights` is tallied on the SETTLED branches only**, so
+            // that it stays the strict subset of `migrated` its own doc comment
+            // claims (final review, Important 2). Tallied before the
+            // `relocate` it would count a vassal that left and died on the
+            // road — a death, recorded as `collapsed` below — as a departure,
+            // inflating the flight count above the migration count it is
+            // supposed to sit inside. Not observed on a live world; reachable
+            // by construction wherever a fleeing vassal has nowhere admissible
+            // to go, which is what `a_flight_with_nowhere_to_go_is_a_death_not_
+            // a_departure` builds.
+            Relocation::Settled { cascade: 0 } => {
+                self.tally.migrated += 1;
+                self.tally.vassal_flights += 1;
+            }
             Relocation::Settled { cascade } => {
                 self.tally.migrated += 1;
+                self.tally.vassal_flights += 1;
                 self.tally.record_cascade(cascade);
             }
             // It left and died on the road — nothing reachable was habitable
@@ -2311,7 +2369,7 @@ impl<'a> Bake<'a> {
                         Some(lineage),
                         offset,
                     );
-                    self.carry_portfolio_to(new_idx, carried);
+                    self.carry_portfolio_to(new_idx, carried, year);
                     self.touch(new_idx, year);
                     self.tally.migrated += 1;
                 }
@@ -2674,7 +2732,7 @@ impl<'a> Bake<'a> {
             Some(raider_lineage),
             raider_offset,
         );
-        self.carry_portfolio_to(seat, raider_carried);
+        self.carry_portfolio_to(seat, raider_carried, year);
         self.touch(seat, year);
 
         // The displaced loser rolls downhill, still carrying its (reduced)
@@ -4778,6 +4836,162 @@ mod tests {
     }
 
     #[test]
+    fn a_flight_with_nowhere_to_go_is_a_death_not_a_departure() {
+        // Final review, Important 2. `vassal_flights` is documented and read as
+        // a **strict subset of `migrated`** — "this counts departures, never
+        // deaths". Deciding to leave and succeeding in leaving are two events,
+        // and the tally belongs on the second: `take_flight` closes the
+        // occupation and THEN calls `relocate`, which can return `Lost`.
+        // Counted before that call, a vassal that walked off and died on the
+        // road was counted as a flight while being tallied `collapsed`, so
+        // `vassal_flights` could exceed `migrated` and the subset claim was
+        // false.
+        //
+        // The shape that reaches it: a vassal with a real reason to leave and
+        // **nowhere admissible to go**. Only two cells in this world are
+        // habitable at all — the patron's and the vassal's — so once the
+        // vassal's own cell is closed behind it (`from` is never offered to
+        // `best_home`) the whole map is either worthless or held by a lord it
+        // cannot beat. The road ends nowhere.
+        //
+        // Mutation-verified in both directions: with the tally restored to its
+        // pre-fix position (before `relocate`) clause (b) reddens at
+        // `vassal_flights` 1 vs 0.
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let far = geo.neighbors(CellId(0))[0];
+        // The whole world is dead ground except the two cells this fixture
+        // occupies. `best_home` skips a cell whose habitability factor is zero,
+        // so nothing outside these two is ever a candidate.
+        let era = {
+            use hornvale_kernel::ReferenceElevation;
+            EraClimate {
+                day: 0.0,
+                ice: CellMap::from_fn(&geo, |_| false),
+                habitable: CellMap::from_fn(&geo, |c| c == CellId(0) || c == far),
+                sea_level: ReferenceElevation::new(0.0).unwrap(),
+                ice_fraction: 0.0,
+            }
+        };
+        /// The vassal's people — big enough that the road is survivable, so the
+        /// departure is a real choice and not the `arriving < VIABLE_MIN` guard
+        /// declining it (which would never reach the tally at all, and so would
+        /// test nothing).
+        const VASSAL_POP: f64 = 20.0;
+        /// The patron's people — over `VASSAL_POP × RAID_MARGIN`, so the vassal
+        /// can neither revolt nor take the one other habitable cell in the
+        /// world by force.
+        const PATRON_POP: f64 = 40.0;
+        /// The standing demand: above `FLIGHT_BURDEN` of what the vassal holds
+        /// when it pays, exactly as in `a_vassal_taxed_past_what_it_can_regrow_
+        /// leaves`. The two fixtures differ in the era mask and in nothing
+        /// else, so the difference in outcome is the road and not the demand.
+        const DEMAND: f64 = 6.0;
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            PATRON_POP,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            VASSAL_POP,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        let sub_lineage = bake.communities[sub].lineage;
+        bake.tribute.insert(
+            sub,
+            Tribute {
+                patron,
+                assessment: DEMAND,
+                since: 0.0,
+                last_seen_population: VASSAL_POP,
+            },
+        );
+
+        bake.begin_epoch();
+        let before_collection = bake.communities[sub].population;
+        assert!(
+            before_collection * MIGRATE_SURVIVAL >= VIABLE_MIN,
+            "precondition: the vassal must be big enough to survive the road, or it would \
+             endure rather than leave and this test would pass on the wrong branch"
+        );
+        bake.settle_revolts();
+        let fleeing = bake.collect_tribute(0.0, &era);
+        assert_eq!(
+            fleeing.len(),
+            1,
+            "precondition: the vassal must have DECIDED to leave, or the tally under test \
+             is never reached: {fleeing:?}"
+        );
+        bake.resolve_flights(fleeing, &era, 0.0);
+
+        // (a) It really did leave, and it really did die: the road, not the
+        //     guard that declines it.
+        assert!(
+            !bake.communities[sub].alive,
+            "the vassal closed its occupation and took the road"
+        );
+        assert!(
+            !bake
+                .communities
+                .iter()
+                .enumerate()
+                .any(|(i, c)| i != sub && c.alive && c.lineage == sub_lineage),
+            "…and nothing of its line is standing anywhere: the relocation must have been \
+             LOST, or this fixture is measuring a successful flight"
+        );
+
+        // (b) THE FINDING. A death is not a departure.
+        assert_eq!(
+            bake.tally.vassal_flights, 0,
+            "a flight that found no home must not be tallied as a flight: `vassal_flights` \
+             says it counts departures and is read as a subset of `migrated`"
+        );
+        assert_eq!(
+            bake.tally.migrated, 0,
+            "…and nothing migrated, because nothing arrived anywhere"
+        );
+        assert_eq!(
+            bake.tally.collapsed, 1,
+            "…it is a death, and a community may not vanish from the world uncounted"
+        );
+        // The subset claim itself, stated as the invariant rather than as two
+        // numbers that happen to agree — this is the line that would fail on
+        // any future fixture where a flight can fail.
+        assert!(
+            bake.tally.vassal_flights <= bake.tally.migrated,
+            "`vassal_flights` ({}) must never exceed `migrated` ({}): it is documented as a \
+             strict subset of it",
+            bake.tally.vassal_flights,
+            bake.tally.migrated
+        );
+
+        // (c) Nothing here was a raid or a revolt: the fixture measures the
+        //     failed road alone.
+        assert_eq!(
+            (
+                bake.tally.raided,
+                bake.tally.fled,
+                bake.tally.vassal_revolts
+            ),
+            (0, 0, 0),
+            "independence: nobody fought anybody in this world"
+        );
+    }
+
+    #[test]
     fn a_vassal_that_outgrows_its_patron_throws_off_the_relation() {
         // Spec §4.3d, REVOLT — and the campaign's first mechanism by which
         // accumulated structure can FAIL rather than merely accumulate. When
@@ -5066,7 +5280,15 @@ mod tests {
 
         // The raid. The attacker covets the patron's better land, so this is
         // the eviction branch: the patron is driven off and rolls downhill.
-        bake.maybe_raid(attacker, &era, 0.0);
+        //
+        // **Driven at year 200, not at year 0**, so that the carried relation's
+        // `since` (0.0, above) and the reseat year are DIFFERENT numbers and
+        // the date assertion below can tell them apart. 200 sits inside the
+        // same `tech_for` horizon as 0 (Neolithic runs to 400), so every
+        // strength this fixture tunes reads exactly as it did — the fixture's
+        // arithmetic is untouched, only its clock moved.
+        const RESEAT_YEAR: f64 = 200.0;
+        bake.maybe_raid(attacker, &era, RESEAT_YEAR);
         assert_eq!(
             bake.tally.raided, 1,
             "precondition: the raid must have happened"
@@ -5113,16 +5335,39 @@ mod tests {
         assert_eq!(
             (
                 standing.assessment.to_bits(),
-                standing.since.to_bits(),
                 standing.last_seen_population.to_bits()
             ),
             (
                 terms.assessment.to_bits(),
-                terms.since.to_bits(),
                 terms.last_seen_population.to_bits()
             ),
             "…on exactly the terms it stood on: a carried relation keeps its history, so \
              the patron's learned demand is not reset by being beaten"
+        );
+        // …with ONE exception, and it is the whole of what a reseat re-stamps.
+        // The obligation continues; THIS LORD'S TENURE does not — `reseated` is
+        // a community minted at `RESEAT_YEAR`, and `since` is the day the
+        // emitted `pays-tribute-to` fact is stamped with. Carried forward it
+        // would date the fact 200 years before the entity it names existed,
+        // which is what 22 of seed 42's 164 tribute facts did (final review,
+        // Important 1). Asserted against the reseat year rather than merely
+        // "not the old one", so a rule that reset it to some other convenient
+        // day fails here too.
+        assert_eq!(
+            standing.since.to_bits(),
+            RESEAT_YEAR.to_bits(),
+            "the carried relation's `since` must be re-stamped to the day the new lord was \
+             seated ({RESEAT_YEAR}), not carried from the old one ({}): no fact may be dated \
+             before either entity it names was founded",
+            terms.since
+        );
+        assert_eq!(
+            bake.records[bake.communities[reseated].record]
+                .founded
+                .to_bits(),
+            standing.since.to_bits(),
+            "…which is exactly the reseated lord's own founding day — the anchor the \
+             invariant is stated against, read off the record rather than assumed"
         );
         assert_eq!(
             (
@@ -5301,7 +5546,15 @@ mod tests {
         bake.tribute.insert(runaway, heavy);
 
         // ─── Arm A: the claim travels ────────────────────────────────────────
-        bake.maybe_raid(attacker, &era, 0.0);
+        //
+        // **The whole test runs at year 200, not year 0**, so the carried
+        // relations' `since` (0.0, above) and the reseat year are different
+        // numbers and the date assertion below can tell them apart. 200 sits
+        // inside the same `tech_for` horizon as 0 (Neolithic runs to 400), so
+        // every strength and every burden this fixture tunes reads exactly as
+        // it did.
+        const RESEAT_YEAR: f64 = 200.0;
+        bake.maybe_raid(attacker, &era, RESEAT_YEAR);
         assert_eq!(
             bake.tally.raided, 1,
             "precondition: the raid must have happened"
@@ -5334,16 +5587,25 @@ mod tests {
             assert_eq!(
                 (
                     standing.assessment.to_bits(),
-                    standing.since.to_bits(),
                     standing.last_seen_population.to_bits()
                 ),
                 (
                     terms.assessment.to_bits(),
-                    terms.since.to_bits(),
                     terms.last_seen_population.to_bits()
                 ),
                 "…on exactly the terms it stood on: the {label}'s relation was CARRIED, not \
                  re-formed by some other rule"
+            );
+            // The one term a reseat DOES re-stamp: the lord's tenure. See
+            // `a_patron_driven_off_its_land_keeps_its_vassals_and_arrives_
+            // weakened` for why
+            // (a fact may not predate either entity it names).
+            assert_eq!(
+                standing.since.to_bits(),
+                RESEAT_YEAR.to_bits(),
+                "the {label}'s `since` must be re-stamped to the day the new lord was \
+                 seated ({RESEAT_YEAR}), not carried from the old one ({})",
+                terms.since
             );
         }
         assert_eq!(
@@ -5385,13 +5647,13 @@ mod tests {
             "precondition: neither vassal may throw the lord off — this arm measures flight \
              alone"
         );
-        let fleeing = bake.collect_tribute(0.0, &era);
+        let fleeing = bake.collect_tribute(RESEAT_YEAR, &era);
         assert_eq!(
             bake.tally.tribute_collection_events, 2,
             "precondition: BOTH carried relations must have been collected on, or the carry \
              in arm A was decorative"
         );
-        bake.resolve_flights(fleeing, &era, 0.0);
+        bake.resolve_flights(fleeing, &era, RESEAT_YEAR);
         assert_eq!(
             bake.tally.vassal_flights, 1,
             "exactly one vassal was taxed past what its growth law could return"
@@ -6429,10 +6691,7 @@ mod tests {
         // decays toward zero at EVERY gain tried (it reaches 3.3e-8 at
         // ADAPT_RATE = 0.2 and 41 at a gain of 5 — the harsher gain "saves" it
         // only by annihilating the demand), so a survival assertion here would
-        // pin the metronome, not the loop. Survival at the scale the model
-        // actually claims it — a subordinate never ends an epoch below where
-        // it began — is owned by `no_subordinate_ends_an_epoch_below_where_it_
-        // began_it`, over a fixture with no exogenous blow in it at all. What
+        // pin the metronome, not the loop. What
         // this run leaves recorded is the shape of the trap the pre-amendment
         // rule had: a vassal held below the size at which its own increment
         // covered the standing demand was milked exactly flat, and a flat

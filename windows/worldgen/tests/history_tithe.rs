@@ -180,11 +180,11 @@
 //! 4555, max_stores_at_now 249.052, vassal_flights 8, vassal_revolts 5`.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{KindId, Seed};
+use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BakeCensus, History, SettlementPins, SkyChoice, WorldComponents, cascade_sizes, census,
-    history_for,
+    emit_history, history_for, register_all,
 };
 use std::collections::BTreeMap;
 
@@ -498,6 +498,92 @@ fn every_standing_relation_names_two_living_communities() {
             "a community pays tribute to itself: {t:?}"
         );
     }
+}
+
+/// **No emitted `pays-tribute-to` fact may be dated before either entity it
+/// names existed** — the chronological floor under the ledger, read off the
+/// REAL seed-42 ledger rather than off a fixture (final review, Important 1).
+///
+/// `Fact.day` means "the day this became true" (`kernel/src/ledger.rs`), so a
+/// relation fact dated before one of its two parties was founded is a claim no
+/// timeline can render. Twenty-two of seed 42's 164 tribute facts were exactly
+/// that, by up to **675 years**: `Bake::carry_portfolio_to` preserved a
+/// relation's `since` while the patron became a new community with a new
+/// `EntityId`, so the obligation continued (correctly) but the fact naming the
+/// new lord kept the old lord's start date. It was role-asymmetric — 0 of 164
+/// on the subordinate side — exactly as spec §4.3e's asymmetry predicts, since
+/// a fleeing vassal drops its relation and only the patron side survives a
+/// move.
+///
+/// This is checked on the **emitted ledger** and not on `History::tribute`,
+/// because the ledger is what a chronicle or timeline reader consumes and
+/// `emit_history` is the code that stamps the day. Emitting into a bare
+/// registered `World` costs one bake and no terrain, so the check sits in the
+/// commit gate rather than the heavy tier.
+///
+/// Anti-vacuity is asserted from both ends: the fact count is floored (a check
+/// over zero facts is the green-and-unreddenable shape this campaign has
+/// already been bitten by twice), and every fact must resolve BOTH parties to a
+/// founding day, so a lookup that silently missed would fail rather than skip.
+#[test]
+fn no_emitted_tribute_fact_predates_either_party() {
+    let h = history(42);
+    let mut world = World::new(Seed(42));
+    register_all(&mut world.registry).expect("the registry accepts every domain's concepts");
+    emit_history(&mut world, &h).expect("the seed-42 history commits");
+
+    // Every occupation's founding day, off the same ledger — never off
+    // `h.records`, because what is under test is what the LEDGER says, and a
+    // check that read one side from the bake could agree with itself while the
+    // emitted pair disagreed.
+    let founded: BTreeMap<_, _> = world
+        .ledger
+        .iter()
+        .filter(|f| f.predicate == hornvale_history::OCC_FOUNDED)
+        .map(|f| match f.object {
+            Value::Number(day) => (f.subject, day),
+            ref other => panic!("occ-founded must carry a number, got {other:?}"),
+        })
+        .collect();
+
+    let relations: Vec<(EntityId, EntityId, f64)> = world
+        .ledger
+        .iter()
+        .filter(|f| f.predicate == hornvale_history::PAYS_TRIBUTE_TO)
+        .map(|f| match f.object {
+            Value::Entity(patron) => (f.subject, patron, f.day.expect("a dated relation fact")),
+            ref other => panic!("pays-tribute-to must carry an entity, got {other:?}"),
+        })
+        .collect();
+    assert!(
+        relations.len() >= MIN_STANDING_RELATIONS,
+        "only {} tribute facts were emitted (floor {MIN_STANDING_RELATIONS}) — the date \
+         check below would pass vacuously",
+        relations.len()
+    );
+
+    let mut impossible = Vec::new();
+    for (subordinate, patron, day) in &relations {
+        let sub_founded = *founded
+            .get(subordinate)
+            .expect("every tribute subject is an emitted occupation with a founding day");
+        let patron_founded = *founded
+            .get(patron)
+            .expect("every tribute object is an emitted occupation with a founding day");
+        if *day < sub_founded || *day < patron_founded {
+            impossible.push((*subordinate, *patron, *day, sub_founded, patron_founded));
+        }
+    }
+    assert!(
+        impossible.is_empty(),
+        "{} of {} `pays-tribute-to` facts on seed 42 are dated before an entity they name \
+         existed. A relation may outlast a patron's community — the obligation continues — \
+         but the FACT names the community that holds it now, and it may not predate it. \
+         (subordinate, patron, fact day, subordinate founded, patron founded): {:?}",
+        impossible.len(),
+        relations.len(),
+        &impossible[..impossible.len().min(8)]
+    );
 }
 
 /// **THE HEADLINE (spec §5), heavy.** Pool `cascade_sizes` over `SHAPE_SAMPLE`
