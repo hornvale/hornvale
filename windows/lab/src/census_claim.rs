@@ -443,6 +443,12 @@ mod tests {
         );
     }
 
+    // Linux-only: this asserts through `pid_is_alive`, which reads `/proc`
+    // by deliberate design (decision 0063 makes the canonical box the single
+    // golden-authoring platform). On Darwin `/proc` does not exist, so the
+    // probe reports every pid dead and these assertions describe a platform
+    // they are not running on. The behaviour is Linux-only; so is its test.
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_claim_naming_a_dead_pid_is_stale() {
         // PID 1 is always alive; u32::MAX never is.
@@ -496,6 +502,12 @@ mod tests {
         }
     }
 
+    // Linux-only: this asserts through `pid_is_alive`, which reads `/proc`
+    // by deliberate design (decision 0063 makes the canonical box the single
+    // golden-authoring platform). On Darwin `/proc` does not exist, so the
+    // probe reports every pid dead and these assertions describe a platform
+    // they are not running on. The behaviour is Linux-only; so is its test.
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_live_ancestor_holding_the_lock_makes_a_claim_a_no_op() {
         // The nested census-run.sh -> regenerate-artifacts.sh -> lab run path
@@ -534,6 +546,12 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    // Linux-only: this asserts through `pid_is_alive`, which reads `/proc`
+    // by deliberate design (decision 0063 makes the canonical box the single
+    // golden-authoring platform). On Darwin `/proc` does not exist, so the
+    // probe reports every pid dead and these assertions describe a platform
+    // they are not running on. The behaviour is Linux-only; so is its test.
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_live_claim_is_reported_with_its_context() {
         let dir = scratch("live");
@@ -568,6 +586,12 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    // Linux-only: this asserts through `pid_is_alive`, which reads `/proc`
+    // by deliberate design (decision 0063 makes the canonical box the single
+    // golden-authoring platform). On Darwin `/proc` does not exist, so the
+    // probe reports every pid dead and these assertions describe a platform
+    // they are not running on. The behaviour is Linux-only; so is its test.
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_timeout_names_the_holder_and_what_to_do() {
         let dir = scratch("timeout");
