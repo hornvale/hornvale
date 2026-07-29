@@ -2,7 +2,11 @@
 
 **Campaign:** The Watershed
 **Date:** 2026-07-29
-**Status:** DRAFT — awaiting G3 review.
+**Status:** DRAFT — awaiting G3 review. **The reconciliation of §8 is DONE
+and merged** (`ccf370bc`, 2026-07-29): staples and three defect fixes landed
+on main, taking collisions 65.1% → 59.8% as a purely additive epoch. Sonority
+moved out of the reconciliation and into this campaign as Item 0, with a
+known seam to close. Predecessor peoples likewise, as Item 5.
 
 The world names its own landscape. Rivers and landmasses become individuated
 things with names, settlements are named after them, and the naming epoch
@@ -98,22 +102,30 @@ toponymy names the landscape first and settlements after it: Newcastle-upon-
 
 ### 1.3 The second cause, which is cheaper
 
-Collisions are not distributed evenly. Measured at seed 42:
+Collisions are not distributed evenly. Measured on **current main** at seed
+42, after the §8 reconciliation:
 
 ```
 gloss concepts   settlements   colliding
-    1                90          90.0%
-    2               108          59.3%
-    3               105          38.1%
-    4                22          40.9%
-    5                 4           0.0%
+    1               114          88.6%
+    2               102          74.5%
+    3                65          30.8%
+    4                33          21.2%
+    5                14          14.3%
+    6                 1           0.0%
 ```
 
-**Name arity dominates.** The 90 single-concept names collide at 90%.
-`naming.rs` draws `take = range_u32(1, 2)`, so roughly half of all names use
-one concept even where more are available.
+**Name arity dominates, and the cliff is between two and three.** Going from
+one concept to two buys little (88.6% → 74.5%); going from two to three more
+than halves it (74.5% → 30.8%). 216 of 329 settlements — two thirds — sit on
+the wrong side of that cliff.
 
-Note also that 329 settlements with 134 glosses produce **191 distinct
+This table was re-measured against main specifically because the parked
+branch's version of it put the cliff between one and two, and Item 1 was
+originally specified from that. It is the same measurement on a different
+codebase, and it changes what Item 1 should do.
+
+Note also that 329 settlements with 129 glosses produce **175 distinct
 names**: different species render the same gloss differently, so cross-
 lexicon divergence is already contributing and needs no work.
 
@@ -139,28 +151,77 @@ lexicon divergence is already contributing and needs no work.
 
 ## 3. Design
 
-Four items. Item 1 is independent and lands first; items 2–4 build on each
-other.
+Six items. Item 0 is independent and carries a known defect to close. Item 1
+is independent. Items 2–4 build on each other. Item 5 is optional and last.
 
-### Item 1 — floor the name arity at two concepts
+### Item 0 — finish sonority sequencing, seam rule included
 
-`domains/language/src/naming.rs` currently draws:
+Onset and coda templates are drawn by picking manners independently, so
+`[Nasal, Nasal]` is a legal onset (names opening `ngng-`) and reverse-sonority
+clusters no language uses are equally legal. Ordering each template by
+sonority — rising toward the nucleus in an onset, falling away in a coda,
+equal-sonority neighbours collapsed — fixes it, and **sorting rather than
+rejecting keeps the draw count identical**, so the constraint costs no
+entropy. That half is written and measured (`Nsaav` → `Smaav`, `Ngshaap` →
+`Sngaap`; `Ngngoqjqobqotdo` → `Ngaqqjokqotdo`).
 
-```rust
-let take = if candidates.len() == 1 { 1 } else { stream.range_u32(1, 2) as usize }
-    .min(candidates.len());
-```
+**The half that is NOT written, and why this is Item 0 rather than merged
+already.** Two independent obstacles, both discovered empirically:
 
-Change the draw to `range_u32(2, 3)`, still clamped by `.min(candidates.len())`
-so a site with one exposed concept still yields a one-concept name. This is
-one line and no new machinery.
+1. **The syllable seam.** SSP inside a template cannot see a coda `sh`
+   meeting an onset `sh` across a syllable boundary, which is precisely how
+   `Vngoashshngaoshshngoogootao` was built. Fixing it needs the rule in
+   BOTH `conforms` and `repair_phonotactics`, which encode well-formedness
+   independently. A first attempt taught only `conforms` and left repair
+   emitting output `conforms` rejects — two disagreeing notions of
+   well-formed, worse than one permissive one, and it was reverted.
+   **Repair's DP must carry the incoming sonority**, making `best[i]` a table
+   indexed by position AND incoming sonority.
+2. **Wear-then-repair.** Applying the finished half to main failed
+   `glossed_names_audibly_contain_their_words_under_a_saturated_corpus`:
+   `worn_compound` runs `wear_under` and then `assemble`/repair, so a name's
+   surface can be an intermediate that equals neither the citation form nor
+   the wear-only reflex the property compares against (`Faaffa`, against
+   `faaffaa` and `faffa`). The property is defending something real —
+   audibility of the morpheme a gloss names — so it must not be weakened to
+   admit the intermediate. Either repair preserves audibility by
+   construction, or the property learns the actual emitted reflex. **Decide
+   which before writing either.**
+
+**Known collateral.** `wear_is_keyed_to_frequency_not_to_the_compound_slot`
+carries a narrow seed-searched fixture that has been re-swept three times.
+Sonority breaks it again — and widens it: 0..600 held exactly one qualifying
+seed before, and five afterwards (164, 305, 325, 370, 521), because
+SSP-ordered templates are markedly more repairable. Re-sweep with the
+`#[ignore]`d `sweep_wear_fixture_seed`, added for this purpose.
+
+This item re-mints every word in every tongue. It is the reason this campaign
+is an epoch at all — items 1–4 are additive.
+
+### Item 1 — raise the name arity toward three concepts
+
+Per §1.3 the payoff is at three, not two. Raise the draw's floor so a name
+takes three site concepts wherever the site exposes three, clamped by
+`.min(candidates.len())` so a thin site still yields a short name.
 
 **Stream discipline:** the draw must consume the same number of values as
 today, or every downstream name changes for the wrong reason. `range_u32`
-consumes one value regardless of bounds, so consumption order is unchanged.
+consumes one value regardless of its bounds, so widening the bounds is
+consumption-identical. Verify this rather than assume it — the exact draw
+site is The Wearing's, not the one the parked branch modified.
 
-Expected: the 90 single-concept settlements move to two concepts where their
-site offers one, taking that cohort from 90% toward the measured 59% band.
+**Interaction to respect.** The Wearing draws a per-culture `NameShape`, so
+arity is partly a cultural property — some peoples prefer the bare simplex,
+others the specific-plus-generic compound. A blanket floor would flatten that
+distinction, which is a real loss. Prefer raising each shape's own arity
+band, so a simplex-preferring culture still reads as simplex-preferring, just
+less collision-prone. **If that cannot be done cleanly, say so and take the
+blanket floor knowingly** — do not quietly erase the culture signal.
+
+Expected: the 216 settlements at one or two concepts move up where their site
+allows, toward the measured 30.8% band. This is the single cheapest item in
+the campaign and should be measured ALONE before items 2–4 land, so its share
+is known rather than assumed.
 
 ### Item 2 — individuate landmasses
 
@@ -302,6 +363,25 @@ mechanism by which a type-based gloss system acquires proper nouns.
 Borrowing is the one genuinely new piece of language machinery in this
 campaign and is flagged at G3.
 
+### Item 5 — predecessor peoples (optional)
+
+The deepest occupation layer at a settlement's cell, where it belongs to
+another species: a goblin steading raised on a gnoll ruin is named for the
+gnolls, and `hornvale history --site` already reads out the stratigraphy
+behind the name. Measured at 0.5 percentage points over five peoples, so it
+is here for MEANING, not for the criterion — and it is the vein that scales
+with the bestiary, where "a griffin killed a goblin here" is high-cardinality
+by construction.
+
+It needs one new public API: a static kind-concept lookup in
+`domains/species`, because `settlement_site_concepts` returns
+`Vec<&'static str>` and the kind concepts (`gnoll-kind`, …) exist today only
+as literals inside a registration loop. That is a small addition and a real
+design decision, which is why it is an item rather than a line.
+
+Land it last. If items 0–4 hit the §5 prediction without it, it can be judged
+on flavour alone, which is the honest basis for it.
+
 ## 4. Determinism and epoch
 
 - **Individuation is draw-free.** Landmass ids and river ids are derived from
@@ -324,25 +404,36 @@ campaign and is flagged at G3.
 
 Preregistered, per decision 0016. The hypothesis is fixed before the code.
 
-**Primary claim.** Over the 8-seed, 1842-settlement battery already used for
-The Shibboleth's measurements, the share of settlements sharing a name with
-another falls from **56.5%** to **below 15%**.
+**Primary claim.** Over the 8-seed, 1842-settlement battery, the share of
+settlements sharing a name with another falls from the post-reconciliation
+baseline of **59.8%** to **below 15%**.
 
-Derivation of that figure, at seed 42:
+Derivation, at seed 42. The landmass and river numbers below were measured by
+simulating the discriminator over the parked branch's 134-gloss corpus; the
+baseline has since moved to 129, so treat the ratios rather than the
+absolutes as the load-bearing part:
 
 ```
-distinct glosses today                    134
-+ landmass                                187
-+ landmass + river-mouth                  266
+distinct glosses (measured on the branch)   134
++ landmass                                  187      (x1.40)
++ landmass + river-mouth                    266      (x1.99)
 ```
 
-266 of ~296 needed, before Item 1 contributes anything. Item 1 independently
-moves 90 settlements off a 90% collision rate. The prediction that the two
-compose to under 15% is the falsifiable part.
+Applied to main's 129 glosses that is ~257 of the ~296 needed, before Item 1
+contributes anything — and Item 1 has 216 settlements sitting below the
+arity cliff. **The prediction that the two compose to under 15% is the
+falsifiable part**, and the ×1.99 is the number most likely to be wrong,
+because it assumes river identity is uncorrelated with the site facts a name
+already carries. It is not perfectly uncorrelated: a river cell is a `river`
+or `ford` cell, which the gloss may already name.
+
+**Re-measure the landmass and river multipliers against main before relying
+on them.** They are the only figures in this spec not taken from the codebase
+they will run on.
 
 **Secondary claims.**
 
-1. Mean name length stays **under 14 characters** (today: 9.1; the stem era:
+1. Mean name length stays **under 14 characters** (today: 9.2; the stem era:
    up to 27). A name that distinguishes by being long has not solved the
    problem.
 2. Every river gloss is **truthful**: a `chalk-river` is in the top decile of
@@ -387,19 +478,32 @@ from.
    why: one connected ocean, no discriminating power. If you want sea basins
    named for prose reasons regardless, that is a legitimate override and I
    would put it in this campaign rather than a later one.
-6. **The Shibboleth vs The Wearing (§8).** The parked branch duplicates work
-   main already shipped, and duplicate-registers two concepts. The
-   reconciliation in §8 discards roughly half of a branch that took four
-   commits and a full gate to make green. That is the right call and it is
-   still a loss; you should see it stated rather than buried.
+6. **The Shibboleth vs The Wearing (§8) — resolved, merged as `ccf370bc`.**
+   Roughly half of a branch that took four commits and a full gate to make
+   green was discarded as superseded. That was the right call and it is still
+   a loss; it is stated here rather than buried. The half that landed took
+   collisions 65.1% → 59.8% additively.
+8. **Item 1 changed after re-measuring on main.** The parked branch put the
+   arity cliff between one and two concepts; main puts it between two and
+   three. The spec originally specified the wrong floor, from a measurement
+   taken on the wrong codebase. Every other number in §1 has now been
+   re-taken against main; the landmass and river multipliers in §5 have NOT,
+   and are flagged there.
 7. **The criterion is now a prediction, not a requirement** (§1.0). If you
    want it to be a requirement, that means superseding decision 0024, which
    is a separate and larger decision than this campaign.
 
-## 8. Reconciling The Shibboleth with The Wearing
+## 8. The reconciliation — DONE, merged as `ccf370bc`
 
 The two campaigns solved the same problem in parallel, and main won the race.
-The parked branch splits cleanly into a redundant half and an orthogonal one.
+The parked branch split cleanly into a redundant half and an orthogonal one.
+This section is now a record of what happened, not a plan.
+
+**Result: 65.1% → 59.8% collisions, 104 → 129 seed-42 glosses, and the
+lexicon golden gained 30 lines while changing ZERO words** — a purely
+additive epoch, which is strictly better than the parked branch's own
+outcome (it re-minted 56 roots across every tongue for the same gain).
+Dropping sonority is what bought that.
 
 **Discard (superseded by The Wearing's nineteen concepts):**
 
@@ -409,26 +513,22 @@ The parked branch splits cleanly into a redundant half and an orthogonal one.
   `valley`/`marsh`.
 - the stem removal itself, already on main.
 
-**Keep and rebase onto main (orthogonal, and the reason the parked branch
-scores better):**
+**Landed (orthogonal, and the reason the parked branch scored better):**
 
-- **Sonority sequencing** — a phonotactic rule, not a concept. It reorders
-  onset clusters by rising sonority (`Nsaav` → `Smaav`, `Ngshaap` →
-  `Sngaap`), touching every word in every tongue. Independent of anything The
-  Wearing did, and it composes with the nucleus template set rather than
-  competing with it.
 - **Staples** — six climate-derived concepts on a temperature × moisture
   band, exposure-gated on subsistence. Orthogonal to every site descriptor:
   what grows here does not follow from where here is.
-- **Predecessor peoples** — history-derived, reading the occupation
-  stratigraphy. Thin today at five peoples, and the vein that scales with the
-  bestiary.
-- **Four defect fixes the parked branch's gate found**, all of which apply to
-  main unchanged: scene features deduped by name; a stale `GRIEVANCE_NPC`
-  whose test passes vacuously; a gloss-truthfulness test that predated the
-  facts it names; six terrain concepts declaring `Lexicalization::Expected`
-  with no pack to realize them.
+- **Three defect fixes**, two of which were live on main: `windows/scene`
+  deduped features BY NAME (latent — it passed only while the flagship's own
+  name happened to be unique); `GRIEVANCE_NPC`, stale on its third rename,
+  whose negative assertions pass vacuously for a non-existent NPC, now guarded
+  by a fixture-existence assertion that caught this very campaign's rename on
+  the next gate run; and an exact duplicate of the variant exposure block left
+  by The Wearing's merge.
 
-The rebase is not mechanical — both branches touch `naming.rs`, the concept
-registry, and `EPOCH_COHORTS` — but the kept half is small and the conflicts
-are concentrated. **Estimate: one task, not one campaign.**
+**Deferred out of the reconciliation, into this campaign:**
+
+- **Sonority sequencing → Item 0.** Applying it to main surfaced, within two
+  test runs, exactly the seam its own parked commit named. See Item 0.
+- **Predecessor peoples → Item 5.** It needs a public static kind-concept
+  lookup in `domains/species` that does not exist. See Item 5.
