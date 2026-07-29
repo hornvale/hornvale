@@ -1,6 +1,6 @@
-# Campaign 25: The Measured Coast
+# The Measured Coast
 
-**July 2026 · outcome: complete, merged — a diagnosis given numbers, and the
+**Campaign 25 · July 2026 · outcome: complete, merged — a diagnosis given numbers, and the
 same globe seen through a sharper lens**
 
 ## What was attempted

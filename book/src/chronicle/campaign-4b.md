@@ -1,6 +1,6 @@
-# Campaign 4b: Emergent Society
+# Emergent Society
 
-**July 2026 · 8 commits · outcome: complete, merged — Campaign 4 (The
+**Campaign 4b · July 2026 · 8 commits · outcome: complete, merged — Campaign 4 (The
 People) closes with a society that grows from the land it stands on**
 
 ## What was attempted

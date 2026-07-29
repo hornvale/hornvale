@@ -1,6 +1,6 @@
-# Campaign 22: The Atlas
+# The Atlas
 
-**July 2026 · outcome: complete, merged — the book's first page a reader can
+**Campaign 22 · July 2026 · outcome: complete, merged — the book's first page a reader can
 touch**
 
 ## What was attempted

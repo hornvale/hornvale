@@ -1,6 +1,6 @@
-# Campaign 26: The Live Orrery
+# The Live Orrery
 
-**July 2026 · outcome: complete, merged — the gallery's first computed,
+**Campaign 26 · July 2026 · outcome: complete, merged — the gallery's first computed,
 animated picture**
 
 ## What was attempted

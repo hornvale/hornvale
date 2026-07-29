@@ -1,4 +1,4 @@
-# The Transport Topology — Seed 42
+# The Transport Topology of Seed 42
 
 The connection graph's legibility surface: a site's natural sea-lanes and
 overland routes, and which of the world's naturally-connected regions it

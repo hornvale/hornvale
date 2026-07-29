@@ -1,6 +1,6 @@
-# Campaign 3c: Climate & Biomes
+# Climate & Biomes
 
-**July 2026 · 16 commits · outcome: complete, merged — Campaign 3 (The
+**Campaign 3c · July 2026 · 16 commits · outcome: complete, merged — Campaign 3 (The
 Land) closes with a queryable global biome map**
 
 ## What was attempted

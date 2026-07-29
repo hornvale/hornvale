@@ -1,4 +1,4 @@
-# A Possession — seed 42, day 0
+# A Possession of Seed 42 — over time
 
 *(This transcript is frozen too — a recording, not a live session — but
 unlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a

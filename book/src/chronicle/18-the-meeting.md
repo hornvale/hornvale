@@ -1,6 +1,6 @@
-# Campaign 18: The Meeting
+# The Meeting
 
-**July 2026 · 11 commits · outcome: complete, merged — the Year-2 capstone:
+**Campaign 18 · July 2026 · 11 commits · outcome: complete, merged — the Year-2 capstone:
 the two peoples proven to diverge by their vectors and nothing else, and the
 book closed on the year**
 

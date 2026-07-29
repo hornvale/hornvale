@@ -1,6 +1,6 @@
-# Campaign 2b: The Sky's Debut
+# The Sky's Debut
 
-**July 2026 · 17 commits · outcome: complete, merged — Campaign 2's exit criterion proven**
+**Campaign 2b · July 2026 · 17 commits · outcome: complete, merged — Campaign 2's exit criterion proven**
 
 ## What was attempted
 

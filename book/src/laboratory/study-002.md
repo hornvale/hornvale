@@ -1,4 +1,4 @@
-# Study 002: The Census of Lands
+# The Census of Lands
 
 Ten thousand worlds, unpinned — seeds 0 through 9,999, each carrying not
 just a sky but a tectonic globe and, new since Campaign 3c, a full climate

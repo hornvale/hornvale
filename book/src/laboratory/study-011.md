@@ -1,4 +1,4 @@
-# Study 011: The Census of Words
+# The Census of Words
 
 Campaign 27, The Words, gave every registered concept a home in a
 per-species lexicon (a real proto-root plus a real Neogrammarian

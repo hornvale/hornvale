@@ -1,4 +1,4 @@
-# The Purview, Off a Possession — Seed 42
+# The Purview of Seed 42
 
 The situated chart `scene/surrounds/v1` describes and `hornvale scene
 surrounds --render ascii` draws, addressed outside a possession session --

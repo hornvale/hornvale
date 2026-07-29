@@ -1,4 +1,4 @@
-# Study 001: The Census of Skies
+# The Census of Skies
 
 Ten thousand tier-0 worlds, unpinned — seeds 0 through 9,999, each built in
 full and measured against every metric the registry knows. The census asks
