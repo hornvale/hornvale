@@ -14,50 +14,50 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Doododoobodobaado. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Doododoobodobaado. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [505] bugbear of Qvooshtvoagootao
-  [506] hobgoblin of Feamjeafeoqoanoagoo
-  [507] gnoll of Gzaadmzhooqdsootngsootqzhoof
+  [505] bugbear of Doododoobodobaado
+  [506] hobgoblin of Qaneenaabeeneebe
+  [507] gnoll of Dzoxgzhofdzha
   [508] a wild rust-monster
   [509] a wild otyugh
   [510] a wild xorn
   [511] a wild carrion-crawler
 > needs
-The bugbear of Qvooshtvoagootao seems content.
+The bugbear of Doododoobodobaado seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
 [room 738918402, day 5]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Doododoobodobaado. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Qvooshtvoagootao settles down to rest.
+The bugbear of Doododoobodobaado settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (17 stirred).
 > look
 [room 738918402, day 6]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Doododoobodobaado. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Qvooshtvoagootao settles down to rest.
+The bugbear of Doododoobodobaado settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (16 stirred).
 > look
 [room 738918402, day 7]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Doododoobodobaado. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Qvooshtvoagootao grows restless.
+The bugbear of Doododoobodobaado grows restless.
 > why hobgoblin
-hobgoblin of Feamjeafeoqoanoagoo:
-- canonical name of an entity: hobgoblin of Feamjeafeoqoanoagoo (asserted by the-quickening)
+hobgoblin of Qaneenaabeeneebe:
+- canonical name of an entity: hobgoblin of Qaneenaabeeneebe (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
@@ -65,10 +65,10 @@ hobgoblin of Feamjeafeoqoanoagoo:
 Time passes. You sense movement nearby (338 stirred).
 > look
 [room 738918402, day 97]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Doododoobodobaado. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Qvooshtvoagootao grows restless.
+The bugbear of Doododoobodobaado grows restless.
 > release
 You let go.
 ```

@@ -6,4 +6,4 @@ $ hornvale scene surrounds --world world.json --render ascii
  +++++++
   +++++
   ways on: SE, N, SW
-  legend: Qvooshtvoagootao, buttressed canopy, tropical seasonal forest
+  legend: Doododoobodobaado, buttressed canopy, tropical seasonal forest

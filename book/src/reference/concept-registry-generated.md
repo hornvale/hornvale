@@ -161,6 +161,7 @@
 | `bugbear-kind` | species | living | a bugbear |
 | `carrion-crawler-kind` | species | living | a carrion crawler |
 | `child` | language | kin | one's son or daughter |
+| `coast` | terrain | terrain | where the land meets the sea |
 | `cold` | climate | quality | felt, biting chill |
 | `coral-reef` | climate | terrain | a biome class |
 | `dark` | language | quality | the color term for black/dark hues |
@@ -176,6 +177,7 @@
 | `eye` | language | body | the organ of sight |
 | `fire` | language | substance | flame and heat |
 | `foot` | language | body | the walking limb-end |
+| `ford` | terrain | terrain | where a river runs shallow enough to cross |
 | `giant-constrictor-snake-kind` | species | living | a giant constrictor snake |
 | `giant-crocodile-kind` | species | living | a giant crocodile |
 | `giant-elk-kind` | species | living | a giant elk |
@@ -188,29 +190,41 @@
 | `gnoll-kind` | species | living | a gnoll |
 | `goblin-kind` | species | living | a goblin |
 | `god` | religion | social | a deity |
+| `great` | language | quality | large in size or extent |
 | `green` | language | quality | the color term for green |
 | `hadal-trench` | climate | terrain | a biome class |
 | `hand` | language | body | the manipulating limb-end |
 | `hearth` | settlement | social | the fire at the center of a home |
 | `heat` | climate | quality | felt, oppressive warmth |
+| `high` | language | quality | far above the ground |
+| `hill` | terrain | terrain | ground that rises above what surrounds it |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `home` | settlement | social | one's dwelling |
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
+| `island` | terrain | terrain | land the water surrounds |
 | `kelp-forest` | climate | terrain | a biome class |
 | `killer-whale-kind` | species | living | a killer whale |
 | `kobold-kind` | species | living | a kobold |
+| `lake` | terrain | terrain | still water held in a hollow that has no outlet to the sea |
 | `light` | language | quality | the color term for white/light hues |
+| `little` | language | quality | small in size or extent |
+| `low` | language | quality | near the ground |
 | `many` | language | quality | an indefinitely large count |
+| `marsh` | terrain | terrain | soft wet ground |
 | `mesopelagic` | climate | terrain | a biome class |
 | `moon` | astronomy | celestial | a moon |
 | `mountain` | terrain | terrain | high ground |
 | `mouth` | language | body | the organ of eating and speech |
 | `move` | language | act | to go from one place to another |
 | `name` | language | social | a word that identifies one who bears it |
+| `new` | language | quality | recently come to be |
 | `night` | astronomy | celestial | the dark half of the day-night cycle |
+| `north` | language | quality | the compass point opposite south |
+| `old` | language | quality | long in existence |
 | `one` | language | quality | the cardinal number 1 |
 | `otyugh-kind` | species | living | an otyugh |
+| `over` | language | quality | above; atop |
 | `owlbear-kind` | species | living | an owlbear |
 | `parent` | language | kin | one's father or mother |
 | `person` | language | living | a person; a member of a people (the autonym root) |
@@ -220,6 +234,7 @@
 | `reef-shark-kind` | species | living | a reef shark |
 | `rest` | language | act | to stop and recover strength |
 | `rhinoceros-kind` | species | living | a rhinoceros |
+| `river` | terrain | terrain | fresh water running across land |
 | `rust-monster-kind` | species | living | a rust monster |
 | `savanna` | climate | terrain | a biome class |
 | `sea` | terrain | terrain | a body of salt water |
@@ -230,7 +245,9 @@
 | `sibling` | language | kin | one's brother or sister |
 | `sleep` | language | act | to rest unconscious |
 | `snow` | climate | substance | frozen precipitation |
+| `south` | language | quality | the compass point opposite north |
 | `spirit` | religion | social | a lesser or unseen supernatural presence |
+| `spring` | terrain | terrain | where water rises from the ground |
 | `star` | astronomy | celestial | a fixed point of light in the night sky |
 | `starlit` | language | quality | dark faintly lit by stars |
 | `stone` | terrain | substance | rock |
@@ -247,7 +264,9 @@
 | `tundra` | climate | terrain | a biome class |
 | `twig-blight-kind` | species | living | a twig blight |
 | `two` | language | quality | the cardinal number 2 |
+| `under` | language | quality | beneath; below |
 | `upwelling` | climate | terrain | a biome class |
+| `valley` | terrain | terrain | low ground between heights |
 | `water` | language | substance | the drinkable liquid |
 | `white-dragon-kind` | species | living | a white dragon |
 | `wind` | language | substance | moving air |
