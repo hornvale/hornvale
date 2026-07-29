@@ -1,6 +1,6 @@
-# Campaign L0: The Laboratory
+# The Laboratory
 
-**July 2026 · 11 commits · outcome: complete, merged — the first moonshot, and the instrument that makes the rest measurable**
+**Campaign L0 · July 2026 · 11 commits · outcome: complete, merged — the first moonshot, and the instrument that makes the rest measurable**
 
 ## What was attempted
 

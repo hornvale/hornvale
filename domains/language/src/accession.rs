@@ -20,6 +20,50 @@
 //! existing cohort**: a concept that changed epoch would re-sort, which is
 //! exactly the churn this module exists to prevent. Retired concepts stay
 //! listed — their slot is spent either way.
+//!
+//! # A withdrawn exception, kept here because the withdrawal is the lesson
+//!
+//! For two days (2026-07-27 → 2026-07-29) this doc carried an exception: a
+//! campaign that bumps `ROOT_EPOCH` was said to be free to **re-found cohort
+//! 0**, on the reasoning that a bump reseeds every root anyway so there is no
+//! churn left to prevent. The Wearing exercised it, folding The Actants'
+//! cohort back into a 76-concept baseline and adding its own nineteen
+//! toponymic concepts there. It has been withdrawn, and the rule above is
+//! absolute again. Three things went wrong, and each is worth more than the
+//! exception was.
+//!
+//! **The fidelity argument that motivated it was false.** Ledger #9 held that
+//! placing basic words like `hill` and `river` in a later cohort would mark
+//! them as audibly borrowed, via LANG-55's coda carve. Measured
+//! (`.superpowers/sdd/loanword-claim-measurement.md`, seeds 1..=250 × 4
+//! proto-root units, 123 000 roots per epoch population): epoch-0 roots
+//! already end closed 48.18 % of the time against epoch-1+'s 60.20 %, so a
+//! closed-final word is ~4.5× likelier to be *old* than new; 99.99 % of
+//! later-epoch roots have a CV skeleton epoch-0 roots also have; and the carve
+//! is structurally inert in **74.6 %** of drawn languages, because
+//! `draw_phonotactics` gives a language one or two coda templates of length
+//! 0–1 and any single-template language is degenerate by construction. There
+//! is no marking to avoid.
+//!
+//! **The epoch label does not cause a regeneration; it documents one.**
+//! `ROOT_EPOCH` exists so that a deliberate change to the *assignment
+//! algorithm* forces fresh draws rather than silently corrupting saves. The
+//! Wearing never changed the algorithm — it changed the phonology the
+//! algorithm draws from (Task 8's nucleus template set), which reseeds every
+//! root whether or not any label moves. Reading "the epoch is bumped anyway,
+//! so cohort placement is free" backwards into "a bump licenses a
+//! re-founding" made a *documentation* suffix into a permission slip.
+//!
+//! **The exception could not be scoped.** Its own text had to spend twenty
+//! lines forbidding the reading it invited ("the bump must be independently
+//! necessitated — it is not a lever to pull for this"). A rule that needs a
+//! second rule to stop it from swallowing the first is not a scoped exception;
+//! it is the first rule repealed with extra steps. The Toponym appended its 53
+//! concepts as an ordinary cohort on the same day, at no cost, which is the
+//! demonstration that the exception bought nothing that appending does not
+//! already give.
+//!
+//! See `.superpowers/sdd/decision-ledger.md` #9 and its 2026-07-29 amendment.
 #![warn(missing_docs)]
 
 /// Concepts grouped by accession epoch: cohort `i` is epoch `i`. Cohort 0 is
@@ -216,6 +260,76 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "wind-scour",
         "wooded-grassland",
     ],
+    // Epoch 4 — The Wearing (2026-07-27, re-seated 2026-07-29): the nineteen
+    // words a place-name is built out of. Nine landforms a settled cell can BE
+    // or sit beside (`hill`, `valley`, `river`, `ford`, `spring`, `marsh`,
+    // `island`, `coast`, `lake`), gated on the real terrain query that put a
+    // settlement there; and the ten relative/evaluative modifiers every
+    // speaking people has unconditionally (`high`, `low`, `great`, `little`,
+    // `new`, `old`, `under`, `over`, `north`, `south`), which live in
+    // `packs::universal_stratum`.
+    //
+    // These were originally merged INTO cohort 0 under a re-founding — see the
+    // withdrawn exception in this module's doc. They are appended here instead,
+    // which is the ordinary and only legal growth. The cost is real and
+    // accepted: at a later epoch they sort last, so they draw after every
+    // earlier concept and take whatever the probe walk leaves them, forfeiting
+    // the short-form priority `core_rank` would otherwise give the Swadesh
+    // members among them.
+    //
+    // **The cost was MEASURED on the merged tree, not assumed**, because a
+    // stated cost nobody counted is how this campaign got into the argument it
+    // is climbing out of. Seeds 1..=250 contiguous, the real 176-concept
+    // registry, real daughters, all four proto-root assignment units; two arms
+    // over the identical universe/phonology/daughters differing only in where
+    // these nineteen sit (epoch 4 as shipped, versus epoch 0 as the withdrawn
+    // re-founding would have placed them). 4750 roots per arm per unit. Mean
+    // root length, in syllables:
+    //
+    //     unit        epoch 4    epoch 0     delta
+    //     goblinoid    1.9638     1.7918    +0.1720   (max 6 vs 5)
+    //     draconic     1.9381     1.7714    +0.1667   (max 6 vs 6)
+    //     gnoll        1.9375     1.7571    +0.1804   (max 4 vs 4)
+    //     kobold       2.0861     1.8360    +0.2501   (max 5 vs 4)
+    //
+    // For goblinoid, 871 of 4750 roots are longer at epoch 4, 85 shorter, 3794
+    // unchanged; kobold is worst at 1181 longer / 75 shorter. Of the four
+    // high-frequency generics, `ford` moves most (+0.25 to +0.33 across the
+    // units) and `river` least (+0.09 to +0.14), with `hill` +0.22 to +0.26 and
+    // `coast` +0.20 to +0.28.
+    //
+    // A root of 3+ syllables can ONLY come from the probe walk
+    // (`PROTO_ROOT_SYLLABLE_RANGE` is 1..=2, lengthened one syllable per
+    // exhausted `PROBE_BUDGET`), so that share isolates this mechanism from
+    // LANG-55's coda carve, which adds consonants and not nuclei. In the
+    // shipped configuration it runs 0.94% / 1.92% / 0.89% / 1.55% at epochs
+    // 0-3 and **8.67% at epoch 4** for goblinoid; 2.14% / 5.33% / 4.68% /
+    // 7.79% and **16.23%** for kobold. Epochs 1-3 are all subject to the carve
+    // and sit barely above epoch 0, so the carve is a small flat share and the
+    // rest is arrival order against a saturating form space.
+    //
+    // Recorded as dropped, because it is plausible and wrong: 17 of these 19
+    // are core (`packs::is_core_concept` — the 7 `TOPONYMIC_CORE` landforms
+    // plus the 10 universal-stratum modifiers; only `coast` and `lake` are
+    // periphery), and a core candidate must also clear a minimal-pair guard
+    // against every core root already placed, so the cost looked like it should
+    // concentrate on the core members. It does not: the delta is flat across
+    // the split (goblinoid core +0.1694, periphery +0.1940). The guard makes
+    // core roots longer in ABSOLUTE terms at both epochs; it is not what the
+    // epoch-4 delta is made of.
+    //
+    // LANG-27's Zipf ordering therefore stays deferred for these nineteen —
+    // the ordinary Accession trade (§3.3), paid at the size measured above and
+    // not a new one.
+    &[
+        "coast", "ford", "great", "high", "hill", "island", "lake", "little", "low", "marsh",
+        "new", "north", "old", "over", "river", "south", "spring", "under", "valley",
+    ],
+    // Epoch 5 — The Watershed: the staples. What grows here is a fact about a
+    // place that does NOT follow from where the place is, which is why these
+    // six move the descriptor space where nineteen site descriptors could not
+    // (LANG-9's recorded limit).
+    &["barley", "millet", "rice", "tuber", "vine", "wheat"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or
@@ -247,6 +361,12 @@ mod tests {
     /// also pinned `EPOCH_COHORTS.len() == 1`, which was true the day The
     /// Accession landed and wrong the moment The Actants appended a cohort —
     /// the count is expected to grow, the baseline is not.)
+    ///
+    /// This pin was moved to 110 by The Wearing's cohort-0 re-founding and
+    /// moved back here on 2026-07-29 when that re-founding was withdrawn (see
+    /// this module's doc, and ledger #9's amendment). "Forever" in the sentence
+    /// above is meant literally again: there is no bump, no campaign and no
+    /// argument that re-opens this number.
     #[test]
     fn cohort_zero_stays_the_frozen_landing_roster() {
         assert_eq!(

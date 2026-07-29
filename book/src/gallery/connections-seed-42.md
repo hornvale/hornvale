@@ -1,4 +1,4 @@
-# The Transport Topology — Seed 42
+# The Transport Topology of Seed 42
 
 The connection graph's legibility surface: a site's natural sea-lanes and
 overland routes, and which of the world's naturally-connected regions it
@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Vngoashshngaoshshngoogootao
-==============================================
+The connections of Gootoogotoodaoka
+===================================
 
-A natural route runs to Vngaoshkvoashdvoagoogootao and Kvaavngoagoogootao, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+A natural route runs to Gotoodaoka and Daoka, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Vngoashshngaoshshngoogootao sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+Gootoogotoodaoka sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -30,13 +30,13 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Mjoexaegao
-=============================
+The connections of Nenatoa
+==========================
 
-Mjoexaegao is linked by sea-lane to Qvaoshvngooshdoodoa, cell 28374, and Veebtaenoenoa -- a current-borne crossing, not a road.
-A natural route runs to Njoeqteakboanoagoogoa, Veebtaenoenoa, Qgeavoonoagoo, and Kvaovngooshshngooshdoodoa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Nenatoa is linked by sea-lane to Dodoadoogododa, cell 28374, and Geoge -- a current-borne crossing, not a road.
+A natural route runs to Gebogebo, Geoge, Geoboge, and Goodoogodotoa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Mjoexaegao's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+Nenatoa's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum

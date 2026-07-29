@@ -1,6 +1,6 @@
-# Campaign 16: The Tongues
+# The Tongues
 
-**July 2026 · 14 commits · outcome: complete, merged — planned and built
+**Campaign 16 · July 2026 · 14 commits · outcome: complete, merged — planned and built
 under the working name Y2-3, gives the world's two peoples their own
 voices**
 

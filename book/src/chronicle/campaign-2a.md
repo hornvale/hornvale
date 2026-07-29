@@ -1,6 +1,6 @@
-# Campaign 2a: System Genesis
+# System Genesis
 
-**July 2026 · 18 commits · outcome: complete, merged**
+**Campaign 2a · July 2026 · 18 commits · outcome: complete, merged**
 
 ## What was attempted
 

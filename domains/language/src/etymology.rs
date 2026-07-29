@@ -169,6 +169,14 @@ impl CascadeRegime {
     /// byte-identical.
     pub const SETTLED: CascadeRegime = CascadeRegime { min: 2, max: 4 };
 
+    /// The wear regime: the short cascade a high-frequency toponymic
+    /// morpheme is run through at name-formation time (The Wearing,
+    /// LANG-11's opacification phase — see [`crate::naming::Namer::wear`]).
+    /// One to two rules, against [`CascadeRegime::SETTLED`]'s two to four —
+    /// wear is a grinding-down of a name element that is said constantly,
+    /// not a millennium of divergence.
+    pub const WEAR: CascadeRegime = CascadeRegime { min: 1, max: 2 };
+
     /// Construct a regime from an inclusive `(min, max)` rule-count range.
     /// type-audit: bare-ok(count: min), bare-ok(count: max)
     pub const fn new(min: u32, max: u32) -> CascadeRegime {
@@ -217,6 +225,35 @@ pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegim
     Cascade { rules }
 }
 
+/// Draw `species`' **toponymic wear** cascade — the short cascade
+/// [`crate::naming::Namer::wear`] runs a high-frequency name morpheme
+/// through — from
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE).derive(streams::WEAR)`,
+/// at [`CascadeRegime::WEAR`] (1–2 rules).
+///
+/// The extra [`streams::WEAR`] leg is the whole point and is documented at
+/// that constant: drawn from [`streams::CASCADE`] directly, a wear cascade
+/// is a strict prefix of the language's *historical* cascade, whose own
+/// output the lexicon's modern forms already are — so every rule would be
+/// re-applied to its own fixpoint and the wear would be degenerate (154 of
+/// 154 applications changed nothing on seed 42; a handful of CCC-onset
+/// counterexamples exist, so it is near-inert rather than provably inert).
+/// This is one further, independent epoch of drift, applied only to the
+/// forms said often enough to suffer it.
+/// type-audit: bare-ok(identifier-text)
+pub fn draw_wear_cascade(seed: &Seed, species: &str) -> Cascade {
+    let mut stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::CASCADE)
+        .derive(streams::WEAR)
+        .stream();
+    let count = stream.range_u32(CascadeRegime::WEAR.min, CascadeRegime::WEAR.max);
+    let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
+    Cascade { rules }
+}
+
 /// The number of syllables a drawn proto-root spans.
 const PROTO_ROOT_SYLLABLE_RANGE: (u32, u32) = (1, 2);
 
@@ -253,6 +290,23 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
 /// regeneration uses an epoch suffix, never a rename — the save-format
 /// contract — so `v3` reseeds every root and old saves' `v2` forms are gone by
 /// design, regenerated with the world.
+///
+/// **What this label is for, and the `v4` that was withdrawn.** The suffix
+/// exists so that a deliberate change to the *assignment algorithm* — which
+/// concepts are drawn in which order, which candidates are rejected — forces
+/// fresh draws instead of silently reinterpreting saved worlds. It documents a
+/// regeneration; it does not cause one. The Wearing briefly moved it to `v4`
+/// (2026-07-27) to legalise re-founding the accession cohort baseline under
+/// ledger #9's since-falsified loanword premise. That campaign never touched
+/// the assignment algorithm: it changed the *phonology the algorithm draws
+/// from* (the nucleus template set in `phonology.rs`), which reseeds every root
+/// on its own, at every epoch label, and has never owed a bump. The bump was
+/// therefore doing no work the phonology change was not already doing, and
+/// `v4` was withdrawn on 2026-07-29 along with the re-founding it was minted to
+/// permit (see `accession`'s module doc and ledger #9's amendment). Nothing
+/// about worlds generated in those two days survives — a save re-derives its
+/// whole lexicon from the seed — so the withdrawal costs a regeneration and
+/// nothing else.
 const ROOT_EPOCH: &str = "v3";
 
 /// Assign a distinct proto-root to every concept in `concepts` under
@@ -349,9 +403,10 @@ pub(crate) fn assign_proto_roots_with_epoch(
         std::collections::BTreeMap::new();
     for concept in ordered {
         let core = crate::packs::is_core_concept(concept);
+        let epoch = epoch_of(concept);
         let mut probe = 0u32;
         let form = loop {
-            let candidate = draw_candidate(seed, family, concept, proto_ph, probe);
+            let candidate = draw_candidate(seed, family, concept, proto_ph, probe, epoch);
             let taken = used.contains(&candidate);
             let too_close = core
                 && core_forms
@@ -412,6 +467,7 @@ fn draw_candidate(
     concept: &str,
     ph: &Phonology,
     probe: u32,
+    epoch: u32,
 ) -> Vec<Segment> {
     let tier = probe / PROBE_BUDGET;
     let min = PROTO_ROOT_SYLLABLE_RANGE.0 + tier;
@@ -431,7 +487,34 @@ fn draw_candidate(
             .stream()
     };
     let namer = Namer::new(seed, family, ph);
-    let syllables = namer.draw_syllables(&mut stream, min, max, false);
+    // LANG-55, The Wearing: a later-epoch coinage draws from a reserved
+    // region of the SAME-LENGTH form space — its syllables are drawn with a
+    // bias toward closed (non-empty) codas, a region epoch-0 roots are free
+    // to avoid. Additivity then holds by construction of the codomain, not
+    // by the assignment order, so a core (Swadesh) concept registered in a
+    // later campaign keeps its short form instead of forfeiting it to
+    // arrival order (the cost The Accession knowingly took, §3.3). The
+    // `weighty` flag is exactly this bias and already exists for deity
+    // stems ([`Namer::draw_syllables`]).
+    //
+    // `weighty` biases EVERY syllable's coda, not only the final one
+    // (`Namer::choose_coda_template`) — a stronger carve than a single
+    // reserved final coda would need, but harmless: the disjointness
+    // argument only needs *some* reserved region, and every closed-coda
+    // form drawn this way is unreachable from the epoch-0 path regardless
+    // of which syllable carries the closure. If Task 11's inspection finds
+    // the resulting forms read as too heavy, narrow the bias to the final
+    // syllable then, with a measurement, not now on speculation.
+    //
+    // Degradation is deliberate: `draw_syllables(.., weighty = true)` falls
+    // back to the open templates when the phonology admits no closed coda
+    // at all (`choose_coda_template`'s `stream.pick(&closed)` returns
+    // `None` on an empty `closed`, and control falls through to picking
+    // from the FULL `ph.codas`), so the carve becomes the identity rather
+    // than failing. A language that cannot mark its neologisms simply does
+    // not mark them.
+    let weighty = epoch > 0;
+    let syllables = namer.draw_syllables(&mut stream, min, max, weighty);
     crate::naming::segments_of(&syllables)
 }
 
@@ -942,7 +1025,7 @@ mod tests {
                 v(Height::Mid, Backness::Front, false),   // e
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
         }
     }
@@ -978,7 +1061,7 @@ mod tests {
                 v(Height::Low, Backness::Central, false), // a
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
         }
     }
@@ -1085,13 +1168,19 @@ mod tests {
         let mut base = core_concept_batch();
         base.push("aa0");
         base.push("aa1");
-        let before = assign_proto_roots(&Seed(4), "fam", &ph, &base, &[]);
+        // Seed 256, matching the two tests below so the whole insertion-
+        // stability cluster shares one fixture with one negative control.
+        // Re-searched at the 2026-07-29 reversal: withdrawing The Wearing's
+        // `ROOT_EPOCH` v4 reseeded every draw and Seed(10) stopped displacing
+        // anything at all, which is precisely the vacuous pass the control
+        // exists to detect. Same search, same criterion, new answer.
+        let before = assign_proto_roots(&Seed(256), "fam", &ph, &base, &[]);
 
         // "zzz-late" is non-core (sorts after every core concept) and its id
         // sorts after "aa1" — so it lands strictly last.
         let mut grown = base.clone();
         grown.push("zzz-late");
-        let after = assign_proto_roots(&Seed(4), "fam", &ph, &grown, &[]);
+        let after = assign_proto_roots(&Seed(256), "fam", &ph, &grown, &[]);
 
         for concept in &base {
             assert_eq!(
@@ -1111,7 +1200,22 @@ mod tests {
         let ph = cramped_phonology();
         let base = core_concept_batch();
         let epoch0 = |_: &str| 0u32;
-        let before = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &base, &[], epoch0);
+        // Seed 256, and the negative control below MUST stay on the same seed:
+        // the control is what proves this fixture can collide at all, so a
+        // pairing split across two seeds proves nothing about this one. Task 8
+        // reseeded every phonotactic draw and left this test at Seed(4), where
+        // the epoch-0 insertion displaces NOTHING -- i.e. exactly the vacuous
+        // pass the control exists to detect, with the control looking green on
+        // a different seed. Measured over the re-searched candidates:
+        // seed 0 displaces 1, seed 10 displaces 3, seed 14 displaces 1, and
+        // seed 4 displaces 0. Seed 10 was the strongest of those.
+        //
+        // Re-searched again at the 2026-07-29 reversal, which withdrew
+        // `ROOT_EPOCH` v4 and so reseeded every draw once more: Seed(10) now
+        // displaces ZERO, the vacuous case. Swept 0..300 on the same criterion
+        // — 139 seeds displace at least one, and Seed(256) displaces FIVE, the
+        // strongest available and stronger than the old fixture ever was.
+        let before = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &base, &[], epoch0);
 
         // "moon" is core and sorts into the MIDDLE of the core block (between
         // "many" and "mouth") -- the position that was unsafe before this
@@ -1121,7 +1225,7 @@ mod tests {
         grown.push("moon");
         let epoch1_for_newcomer = |c: &str| u32::from(c == "moon");
         let after =
-            assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &grown, &[], epoch1_for_newcomer);
+            assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &grown, &[], epoch1_for_newcomer);
 
         for concept in &base {
             assert_eq!(
@@ -1142,11 +1246,19 @@ mod tests {
         let ph = cramped_phonology();
         let base = core_concept_batch();
         let epoch0 = |_: &str| 0u32;
-        let before = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &base, &[], epoch0);
+        // Seed 10, re-searched after The Wearing's nucleus fix reseeded every
+        // phonotactic draw: at the old Seed(4) this insertion displaces
+        // nothing. **This seed must equal the one the two stability tests
+        // above use** -- a control on a different fixture from the test it
+        // guards is not a control, which is the defect Task 8's first pass
+        // shipped. Re-searched at the 2026-07-29 v4 reversal (Seed(10) fell to
+        // zero displacements there): Seed(256) displaces 5 of the base
+        // assignments, the largest over 0..300.
+        let before = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &base, &[], epoch0);
 
         let mut grown = base.clone();
         grown.push("moon");
-        let after = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &grown, &[], epoch0);
+        let after = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &grown, &[], epoch0);
 
         let moved = base.iter().filter(|c| before[**c] != after[**c]).count();
         assert!(
@@ -1356,7 +1468,7 @@ mod tests {
                 vt(Height::Low, Backness::Central, false, Tone::Low), // à
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![Manner::Stop], vec![]],
         }
     }

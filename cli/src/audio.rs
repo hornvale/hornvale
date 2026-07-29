@@ -28,7 +28,7 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
     // four peoples and the three dragons (speakers since The Solitary Tongue)
     // are all covered.
     let speakers = hornvale_language::articulation_registry();
-    for (kind, _) in hornvale_species::psyche_registry().iter() {
+    for (kind, mind) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
             continue;
         }
@@ -39,7 +39,7 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
             .get(kind)
             .copied()
             .unwrap_or(hornvale_species::SocietyVector::baseline());
-        for (_, name) in crate::phonology::sample_names_for(&world, species.0, &society) {
+        for (_, name) in crate::phonology::sample_names_for(&world, species.0, mind, &society) {
             let path = out_dir.join(audio_filename(&name.espeak));
             if path.exists() {
                 kept += 1;

@@ -1,4 +1,4 @@
-# First Light (seed 42)
+# First Light of Seed 42
 
 Every campaign must end with artifacts — things you can look at that
 demonstrate what now exists. These are Campaign 1a's, and they are

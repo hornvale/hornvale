@@ -1,4 +1,4 @@
-# Study 011: The Census of Words
+# The Census of Words
 
 Campaign 27, The Words, gave every registered concept a home in a
 per-species lexicon (a real proto-root plus a real Neogrammarian
@@ -315,3 +315,53 @@ reference, never in the ledger — and they are expected to fall as the
 world grows denser in per-place facts, without the naming engine
 changing at all. H4's failure and its reframing are both part of the
 record; that is the preregistration discipline working as designed.
+
+## Coda — the fix that was undone on purpose (The Wearing, 2026-07-29)
+
+H4's two fixes above both bought their collision improvement the same way: by
+adding drawn entropy to the string. Fix 1 added a unique 1–2 syllable stem;
+fix 2 widened it to 2–3. Decision 0024, ratified hours after fix 2 landed,
+blessed the resulting 4.91% as the baseline of meaningful toponymy **and
+forbade every future repetition of that move** — "no future work 'fixes' the
+collision rate by adding entropy."
+
+The Wearing retired the stem. It had to: the same stem that bought the low
+rate was carrying 2–3 of every name's 6.04 syllables, and the campaign's
+falsifiable claim was that the name-length metric's own declared buckets
+(which stop at 10 characters, and which *every* world in the 1000-seed census
+overflowed) should finally contain the median world. So the collision rate was
+allowed to go where the mechanism sends it.
+
+It went up sharply, and the direction **contradicted this campaign's own
+preregistration**. The Wearing's spec §7 stated the expected direction in
+advance as **down**, on the reasoning that widening the site-descriptor space
+by nineteen concepts would outrun what shortening cost. Measured on a
+1000-seed census: mean in-world collision **0.172 → 0.627**, median
+**0.150 → 0.648**, and the count of zero-collision worlds **43 → 0** (the
+calibration row's own literal, pinned against an older census, read 39). Per ADR
+0016 the prediction is recorded as failed rather than retuned, and the row is
+re-pinned as the exact witness it always was.
+
+Two things make that an acceptable outcome rather than a regression.
+
+First, the companion claim held decisively, which is what the trade was for:
+`name-length-goblin`'s median fell **13.15 → 9.33** and `name-length-kobold`'s
+**12.51 → 7.40**, both inside the declared buckets for the first time, with
+mean syllable counts of 2.85 and 2.28 against a 2–3 target. A new
+`name-transparency` witness — the share of a world's names whose surface still
+contains every concept its own gloss names — moved from a constant 1.0 to a
+distribution running 0.247 to 1.000 with a median of 0.856, which is the
+campaign's other stated goal and one this study's H1 invariant is unaffected
+by (a gloss survives erosion as *etymology*, not as a *reading*).
+
+Second, 0024's own deferred remedy shipped in the same campaign: same-named
+places are now qualified where they co-occur in a rendered document, from
+their own site facts, with no counter and no ledger fact. The collision rate
+is once again what 0024 said it was — a calibration witness of how
+concentrated meaningful toponymy is, not a defect with a target.
+
+*A note on provenance.* The figures in this coda were measured on a census
+regenerated during that campaign; the census goldens committed alongside this
+page are still the pre-campaign ones, and the naming rows of the calibration
+battery are held open pending a deferred regeneration. That debt is greppable
+in the tree as `stale-census:`.

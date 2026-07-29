@@ -124,6 +124,48 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         ("stone", ConceptKind::Substance, "rock"),
         ("mountain", ConceptKind::Terrain, "high ground"),
         ("sea", ConceptKind::Terrain, "a body of salt water"),
+        (
+            "hill",
+            ConceptKind::Terrain,
+            "ground that rises above what surrounds it",
+        ),
+        (
+            "river",
+            ConceptKind::Terrain,
+            "fresh water running across land",
+        ),
+        (
+            "lake",
+            ConceptKind::Terrain,
+            // Deliberately not "fresh": this slice's water model has no
+            // standing-freshwater class (a through-flow lake reads as
+            // `River`), so the only standing body it distinguishes is the
+            // terminal endorheic sink, and that is what `lake` is exposed
+            // from. Earth agrees — the Great Salt Lake, the Dead Sea and
+            // Lake Eyre are all endorheic and all lakes — so the honest
+            // gloss is one that does not promise fresh water. Corrected in
+            // The Wearing after review found the gloss and the exposure
+            // gate contradicting each other.
+            "still water held in a hollow that has no outlet to the sea",
+        ),
+        ("valley", ConceptKind::Terrain, "low ground between heights"),
+        (
+            "coast",
+            ConceptKind::Terrain,
+            "where the land meets the sea",
+        ),
+        ("island", ConceptKind::Terrain, "land the water surrounds"),
+        (
+            "ford",
+            ConceptKind::Terrain,
+            "where a river runs shallow enough to cross",
+        ),
+        ("marsh", ConceptKind::Terrain, "soft wet ground"),
+        (
+            "spring",
+            ConceptKind::Terrain,
+            "where water rises from the ground",
+        ),
     ] {
         registry.register_manifest(Manifest {
             concept: ConceptDef {
@@ -252,7 +294,10 @@ mod tests {
         let stone = r.concept("stone").unwrap();
         assert_eq!(stone.domain, "terrain");
         assert_eq!(stone.kind, ConceptKind::Substance);
-        for name in ["mountain", "sea"] {
+        for name in [
+            "mountain", "sea", "hill", "river", "lake", "valley", "coast", "island", "ford",
+            "marsh", "spring",
+        ] {
             let c = r
                 .concept(name)
                 .unwrap_or_else(|| panic!("missing concept {name}"));

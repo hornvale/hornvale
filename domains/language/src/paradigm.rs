@@ -302,7 +302,7 @@ mod tests {
                 },
             ],
             onsets: vec![vec![]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![]],
         }
     }
@@ -387,7 +387,7 @@ mod tests {
                 }, // d, for the lenition case's Lenition output
             ],
             onsets: vec![vec![]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Stop], vec![]],
         }
     }

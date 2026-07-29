@@ -87,6 +87,7 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
 	REBASELINE=1 cargo test -q -p hornvale --test architecture
 	REBASELINE=1 cargo test -q -p hornvale-vessel --test session_snapshot
+	REBASELINE=1 cargo test -q -p hornvale-worldgen --test solitary_tongue
 
 lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=the-census)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }

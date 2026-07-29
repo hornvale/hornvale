@@ -49,7 +49,7 @@ fn scenario_phonology() -> Phonology {
     Phonology {
         inventory: vec![t(), a(), e(), i()],
         onsets: vec![vec![]],
-        nuclei: 1,
+        nuclei: vec![1],
         codas: vec![vec![Manner::Stop], vec![]],
     }
 }

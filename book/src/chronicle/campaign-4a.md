@@ -1,6 +1,6 @@
-# Campaign 4a: Placement & Drainage
+# Placement & Drainage
 
-**July 2026 · 7 commits · outcome: complete, merged — Campaign 4 (The
+**Campaign 4a · July 2026 · 7 commits · outcome: complete, merged — Campaign 4 (The
 People) opens with the world's first generated settlements**
 
 ## What was attempted

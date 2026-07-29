@@ -77,8 +77,29 @@ pub use clause::{
 };
 pub use etymology::{
     AppliedRule, Cascade, CascadeRegime, Daughter, Derivation, RuleKind, SoundRule,
-    assign_proto_roots, draw_cascade, draw_cascade_with_regime, evolve, proto_root,
+    assign_proto_roots, draw_cascade, draw_cascade_with_regime, draw_wear_cascade, evolve,
+    proto_root,
 };
+
+/// Test-only door into [`etymology::assign_proto_roots_with_epoch`], whose
+/// injected `epoch_of` lets a property test exercise the accession-epoch
+/// carve (LANG-55) over a synthetic concept universe — the real table is a
+/// `const`, and a test cannot append a cohort to it. `#[doc(hidden)]` rather
+/// than widening `assign_proto_roots_with_epoch` itself to `pub`: the real
+/// function stays `pub(crate)`, with `assign_proto_roots` (fixed to
+/// [`accession::concept_epoch`]) as its only production entry point.
+/// type-audit: bare-ok(identifier-text)
+#[doc(hidden)]
+pub fn assign_proto_roots_with_epoch_for_test(
+    seed: &hornvale_kernel::Seed,
+    family: &str,
+    proto_ph: &Phonology,
+    concepts: &[&str],
+    daughters: &[Daughter],
+    epoch_of: impl Fn(&str) -> u32,
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    etymology::assign_proto_roots_with_epoch(seed, family, proto_ph, concepts, daughters, epoch_of)
+}
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
     tongue_grammar,
@@ -91,7 +112,9 @@ pub use morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
     morph_depths, morph_forms,
 };
-pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
+pub use naming::{
+    GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,
+};
 pub use packs::{
     PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,
     is_core_concept, kin_pack, register_concepts, universal_stratum,
@@ -517,15 +540,27 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/name/settlement/v2",
-            "the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above",
+            "(retired at The Wearing, superseded by name/settlement/v3) the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above, PLUS a per-salt 2-3 syllable drawn stem that v3 retires",
         ),
         (
             "language/<species>/name/deity/v2",
-            "the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above",
+            "(retired at The Wearing, superseded by name/deity/v3) the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above",
         ),
         (
             "language/<species>/name/epithet/v2",
-            "the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above",
+            "(retired at The Wearing, superseded by name/epithet/v3) the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above",
+        ),
+        (
+            "language/<species>/name/settlement/v3",
+            "the glossed settlement name (The Wearing): composed from the lexicon's roots/compounds under the species' drawn headedness, each morpheme first worn to its frequency in this culture's own name corpus. The epoch bump is owed to two changes in what this stream consumes — the wear, and the RETIREMENT of v2's per-salt drawn stem (decision 0024: uniqueness is reference-time, and no future work fixes collisions by adding entropy)",
+        ),
+        (
+            "language/<species>/name/deity/v3",
+            "the glossed deity name (The Wearing): as v2, reseeded by the epoch bump the settlement stream owes. Deity names carry no name corpus (their space is one-per-belief, not a scatter), so nothing wears here",
+        ),
+        (
+            "language/<species>/name/epithet/v3",
+            "the glossed epithet (The Wearing): as v2, reseeded by the epoch bump. No name corpus, so nothing wears here",
         ),
         (
             "language/<family>/lexicon/root/v3/<concept>",
@@ -542,6 +577,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/lexicon/cascade",
             "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root",
+        ),
+        (
+            "language/<species>/lexicon/cascade/wear",
+            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing)",
         ),
         (
             "language/<species>/lexicon/headedness",

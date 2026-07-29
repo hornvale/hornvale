@@ -1,6 +1,6 @@
-# Campaign 19: The Star Chart
+# The Star Chart
 
-**July 2026 · outcome: complete, merged — a confirmed physics defect fixed
+**Campaign 19 · July 2026 · outcome: complete, merged — a confirmed physics defect fixed
 before a single star was drawn, and the almanac's oldest unpaid promise
 finally paid**
 

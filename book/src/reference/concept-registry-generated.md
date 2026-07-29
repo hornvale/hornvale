@@ -155,6 +155,7 @@
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
 | `alpine` | climate | terrain | a biome class |
 | `bait-ball` | climate | substance | A dense turning mass of fish. |
+| `barley` | climate | substance | a staple crop |
 | `bathypelagic` | climate | terrain | a biome class |
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
@@ -167,6 +168,7 @@
 | `carrion-crawler-kind` | species | living | a carrion crawler |
 | `child` | language | kin | one's son or daughter |
 | `closed-canopy` | climate | substance | Tall closed-canopy tropical forest. |
+| `coast` | terrain | terrain | where the land meets the sea |
 | `cold` | climate | quality | felt, biting chill |
 | `cold-upwelling` | climate | substance | Cold nutrient-rich water rising from below. |
 | `coral-head` | climate | substance | A massive coral colony standing proud of the reef. |
@@ -190,6 +192,7 @@
 | `fire-scrub` | climate | substance | Scrub regrowing after fire. |
 | `fish-shoal` | climate | substance | A shoal moving as one body. |
 | `foot` | language | body | the walking limb-end |
+| `ford` | terrain | terrain | where a river runs shallow enough to cross |
 | `forest-gap` | climate | substance | A break in the canopy where light reaches the ground. |
 | `frost-heave` | climate | substance | Ground churned and patterned by freezing. |
 | `gallery-forest` | climate | substance | Forest following a watercourse. |
@@ -206,29 +209,38 @@
 | `goblin-kind` | species | living | a goblin |
 | `god` | religion | social | a deity |
 | `grass-sward` | climate | substance | Open grassland, unbroken by trees. |
+| `great` | language | quality | large in size or extent |
 | `green` | language | quality | the color term for green |
 | `hadal-trench` | climate | terrain | a biome class |
 | `hamada` | climate | substance | A stony desert pavement of bare rock. |
 | `hand` | language | body | the manipulating limb-end |
 | `hearth` | settlement | social | the fire at the center of a home |
 | `heat` | climate | quality | felt, oppressive warmth |
+| `high` | language | quality | far above the ground |
+| `hill` | terrain | terrain | ground that rises above what surrounds it |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `holdfast-tangle` | climate | substance | The anchored base of a kelp forest. |
 | `home` | settlement | social | one's dwelling |
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
 | `ice-lead` | climate | substance | A channel of open water through sea ice. |
+| `island` | terrain | terrain | land the water surrounds |
 | `kelp-canopy` | climate | substance | The floating canopy of a kelp forest. |
 | `kelp-forest` | climate | terrain | a biome class |
 | `killer-whale-kind` | species | living | a killer whale |
 | `kobold-kind` | species | living | a kobold |
+| `lake` | terrain | terrain | still water held in a hollow that has no outlet to the sea |
 | `liana-forest` | climate | substance | Tropical forest tangled with climbing vines. |
 | `light` | language | quality | the color term for white/light hues |
 | `lightless-water` | climate | substance | Water below all light. |
+| `little` | language | quality | small in size or extent |
+| `low` | language | quality | near the ground |
 | `many` | language | quality | an indefinitely large count |
 | `marine-snow` | climate | substance | Organic debris drifting endlessly down. |
+| `marsh` | terrain | terrain | soft wet ground |
 | `melt-pond` | climate | substance | A pool of meltwater on sea ice. |
 | `mesopelagic` | climate | terrain | a biome class |
+| `millet` | climate | substance | a staple crop |
 | `moon` | astronomy | celestial | a moon |
 | `mossy-deadfall` | climate | substance | Fallen timber going back to moss and lichen. |
 | `mountain` | terrain | terrain | high ground |
@@ -236,12 +248,16 @@
 | `move` | language | act | to go from one place to another |
 | `muskeg` | climate | substance | Waterlogged peat ground in the boreal forest. |
 | `name` | language | social | a word that identifies one who bears it |
+| `new` | language | quality | recently come to be |
 | `night` | astronomy | celestial | the dark half of the day-night cycle |
 | `nodule-field` | climate | substance | Seafloor strewn with mineral nodules. |
+| `north` | language | quality | the compass point opposite south |
+| `old` | language | quality | long in existence |
 | `old-growth` | climate | substance | Mature forest, closed above and open beneath. |
 | `one` | language | quality | the cardinal number 1 |
 | `open-blue` | climate | substance | Open sunlit water, far from any shore. |
 | `otyugh-kind` | species | living | an otyugh |
+| `over` | language | quality | above; atop |
 | `owlbear-kind` | species | living | an owlbear |
 | `parent` | language | kin | one's father or mother |
 | `person` | language | living | a person; a member of a people (the autonym root) |
@@ -257,6 +273,8 @@
 | `reg` | climate | substance | A desert floor of wind-swept gravel. |
 | `rest` | language | act | to stop and recover strength |
 | `rhinoceros-kind` | species | living | a rhinoceros |
+| `rice` | climate | substance | a staple crop |
+| `river` | terrain | terrain | fresh water running across land |
 | `rust-monster-kind` | species | living | a rust monster |
 | `sargassum-drift` | climate | substance | A drifting raft of floating weed. |
 | `savanna` | climate | terrain | a biome class |
@@ -273,7 +291,9 @@
 | `smoker-field` | climate | substance | A field of hydrothermal chimneys. |
 | `snow` | climate | substance | frozen precipitation |
 | `snowfield` | climate | substance | An unbroken field of snow. |
+| `south` | language | quality | the compass point opposite north |
 | `spirit` | religion | social | a lesser or unseen supernatural presence |
+| `spring` | terrain | terrain | where water rises from the ground |
 | `spur-and-groove` | climate | substance | The ribbed seaward face of a reef. |
 | `staghorn-stand` | climate | substance | A thicket of branching coral. |
 | `star` | astronomy | celestial | a fixed point of light in the night sky |
@@ -292,15 +312,20 @@
 | `trench-wall` | climate | substance | The steep side of an ocean trench. |
 | `tropical-rainforest` | climate | terrain | a biome class |
 | `tropical-seasonal-forest` | climate | terrain | a biome class |
+| `tuber` | climate | substance | a staple crop |
 | `tubeworm-thicket` | climate | substance | Vent fauna crowded around hot water. |
 | `tundra` | climate | terrain | a biome class |
 | `twig-blight-kind` | species | living | a twig blight |
 | `twilight-water` | climate | substance | Water at the edge of the light. |
 | `two` | language | quality | the cardinal number 2 |
+| `under` | language | quality | beneath; below |
 | `upwelling` | climate | terrain | a biome class |
 | `urchin-barren` | climate | substance | Seabed grazed bare of kelp. |
+| `valley` | terrain | terrain | low ground between heights |
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
+| `vine` | climate | substance | a staple crop |
 | `water` | language | substance | the drinkable liquid |
+| `wheat` | climate | substance | a staple crop |
 | `white-dragon-kind` | species | living | a white dragon |
 | `wind` | language | substance | moving air |
 | `wind-scour` | climate | substance | Ground swept bare by wind. |

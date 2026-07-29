@@ -42,8 +42,21 @@ pub const NUMERACY_RUNG: StreamLabel<'static> = StreamLabel::from_static("numera
 pub const NAME: StreamLabel<'static> = StreamLabel::from_static("name");
 /// The generic epoch-2 suffix leg, appended one level deeper than a v1
 /// name draw (settlement/deity/epithet all reuse this exact leg).
+/// **Retired** by [`V3`] (The Wearing, 2026-07-27) but never deleted — an
+/// epoch is a save-format contract, so a superseded leg stays declared.
 /// type-audit: bare-ok(identifier-text: return)
 pub const V2: StreamLabel<'static> = StreamLabel::from_static("v2");
+/// The generic epoch-3 suffix leg, in the same position [`V2`] occupied
+/// (settlement/deity/epithet all reuse this exact leg).
+///
+/// The Wearing (2026-07-27) retires the 2–3 syllable drawn settlement stem
+/// and inserts toponymic wear between compounding and repair, both of which
+/// change what `Namer::glossed_name` consumes from its stream. Deliberate
+/// regeneration uses an epoch suffix, never a rename (the save-format
+/// contract), so `v3` reseeds every glossed name and `v2`'s forms are gone
+/// by design, regenerated with the world.
+/// type-audit: bare-ok(identifier-text: return)
+pub const V3: StreamLabel<'static> = StreamLabel::from_static("v3");
 /// The lexicon sub-tree.
 /// type-audit: bare-ok(identifier-text: return)
 pub const LEXICON: StreamLabel<'static> = StreamLabel::from_static("lexicon");
@@ -53,6 +66,26 @@ pub const HEADEDNESS: StreamLabel<'static> = StreamLabel::from_static("headednes
 /// Sound-change cascade draw, under lexicon.
 /// type-audit: bare-ok(identifier-text: return)
 pub const CASCADE: StreamLabel<'static> = StreamLabel::from_static("cascade");
+/// The toponymic-wear cascade draw, one leg below [`CASCADE`].
+///
+/// A leg of its own, and that is load-bearing rather than tidy. Drawing the
+/// wear cascade from [`CASCADE`] itself yields a strict *prefix* of the
+/// language's historical cascade, because the rule draws follow the count
+/// draw and consume identically — and a lexicon's modern forms are exactly
+/// that historical cascade's own output. Re-running its opening rules on
+/// its own output finds no environment left to fire in: `ClusterSimplify`
+/// has already removed the word-initial cluster it looks for, `FinalLoss`
+/// the word-final consonant, and the codomain constraint blocks a second
+/// `Lenition`/`Fortition`/`VowelShift` whose target is no longer in the
+/// inventory. The result is not *provably* inert — a CCC onset lets
+/// `ClusterSimplify` fire a second time, and a 200-seed × 5-species sweep
+/// found 44 such counterexamples in 3600 forms — but it is degenerate to
+/// the point of uselessness: on seed 42 it changed **154 of 154** wear
+/// applications not at all, and the whole world came out byte-identical to
+/// one with wear switched off. Off this leg the same sweep changes 906 of
+/// 3600. The wear must draw rules the words have *not* already undergone.
+/// type-audit: bare-ok(identifier-text: return)
+pub const WEAR: StreamLabel<'static> = StreamLabel::from_static("wear");
 /// The proto-root draw leg, under lexicon (named `PROTO_ROOT`, not
 /// `ROOT`, to avoid colliding with this file's own crate-root constant —
 /// the literal value is `"root"`, distinct from `ROOT`'s `"language"`).

@@ -77,3 +77,58 @@ fn the_parity_check_is_over_a_non_empty_roster() {
         "registry and accession register must agree exactly"
     );
 }
+
+/// The Wearing: every toponymic concept the campaign added is registered
+/// and accessioned. All nineteen — the nine terrain concepts plus the ten
+/// relative/evaluative modifiers.
+#[test]
+fn the_toponymic_concepts_are_registered_and_accessioned() {
+    const TOPONYMIC: &[&str] = &[
+        "hill", "river", "lake", "valley", "coast", "island", "ford", "marsh", "spring", "high",
+        "low", "great", "little", "new", "old", "under", "over", "north", "south",
+    ];
+    let registered = registered();
+    let accessioned = accessioned();
+    for concept in TOPONYMIC {
+        assert!(registered.contains(*concept), "{concept} is not registered");
+        assert!(
+            accessioned.contains(*concept),
+            "{concept} has no accession epoch"
+        );
+    }
+}
+
+/// The Wearing (Task 4 review, Important 5): every toponymic concept that
+/// can ever win a `Root` in `windows/worldgen::exposure_of` must be core —
+/// a periphery concept sorts after core inside its shared accession epoch
+/// and takes a longer form, which for `hill` and `river` (the
+/// highest-frequency morphemes in the name corpus) is exactly backwards.
+/// Not all nineteen: `coast` and `lake` are `KnowsOf`-only by construction
+/// (a culture can know a shore or a salt basin without living on either),
+/// so neither ever reaches the `Steeped` pass that assigns roots — every
+/// occurrence is a `Compound` or a `Gap`, never a `Root` — and short-form
+/// priority for a concept that can never hold a root only tightens the
+/// minimal-pair/merger constraints on every OTHER core root for no benefit.
+/// They are periphery instead, alongside `sea`/`mountain` (the same
+/// `KnowsOf`-only shape). The ten modifiers are `Steeped` unconditionally
+/// (the universal stratum), so all ten are core.
+#[test]
+fn the_rootable_toponymic_concepts_are_core() {
+    const CORE_TOPONYMIC: &[&str] = &[
+        "hill", "river", "valley", "island", "ford", "marsh", "spring", "high", "low", "great",
+        "little", "new", "old", "under", "over", "north", "south",
+    ];
+    const PERIPHERY_TOPONYMIC: &[&str] = &["coast", "lake"];
+    for concept in CORE_TOPONYMIC {
+        assert!(
+            hornvale_language::packs::is_core_concept(concept),
+            "{concept} is periphery; it must be core to win a short form"
+        );
+    }
+    for concept in PERIPHERY_TOPONYMIC {
+        assert!(
+            !hornvale_language::packs::is_core_concept(concept),
+            "{concept} is KnowsOf-only (never wins a root) and should stay periphery"
+        );
+    }
+}

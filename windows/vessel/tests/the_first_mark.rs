@@ -19,7 +19,22 @@ fn world() -> hornvale_kernel::World {
 /// The seed-42 settled NPC guaranteed co-located with the possessed agent at
 /// `PossessOpts::default()`'s starting room (day 0.5, before any `go`) — see
 /// `possession_moves.rs`'s `GRIEVANCE_NPC` (Task 2).
-const GRIEVANCE_NPC: &str = "bugbear of Vngoashshngaoshshngoogootao";
+///
+/// Re-pinned at The Wearing's merge: the flagship settlement's rendered name
+/// re-derived `Qvooshtvoagootao` -> `Doododoobodobaado` (the campaign's
+/// shorter, wearable names). Re-pinned AGAIN at the rebase onto The Toponym's
+/// cohort ordering, which reseeds every proto-root:
+/// `Goodoogogootoodadoo` -> `Gootoogotoodaoka`. Measured off the session's
+/// own `npcs` listing, which returns the same seven NPCs at the same entity
+/// ids (1865-1871) before and after. The NPC, its room and its co-location
+/// are all unchanged — only the label this test addresses it by moved.
+///
+/// A stale label here fails LOUDLY BUT MISLEADINGLY: `provoke` finds no such
+/// NPC, so nothing fires and every downstream count reads 0, which looks like
+/// a behavioural regression rather than a renamed target. It has now done so
+/// twice. If these tests fail with `marks 0 vs 3` or `hostility 0 vs 1`,
+/// check this constant against `npcs` BEFORE suspecting the grievance fold.
+const GRIEVANCE_NPC: &str = "bugbear of Gootoogotoodaoka";
 
 fn out_text(t: Turn) -> String {
     match t {
@@ -31,6 +46,21 @@ fn out_text(t: Turn) -> String {
 #[test]
 fn provoked_npc_turns_hostile_on_the_next_wait_but_an_unprovoked_one_does_not() {
     let w = world();
+
+    // GUARD THE FIXTURE FIRST — see the identical guard in
+    // `possession_moves.rs`. A stale `GRIEVANCE_NPC` satisfies every negative
+    // assertion in this file, because hostility is `false` for a label the
+    // session has never seen. This constant has already gone stale twice on
+    // settlement renames.
+    assert!(
+        Session::start(&w, &PossessOpts::default())
+            .unwrap()
+            .0
+            .npc_labels()
+            .contains(&GRIEVANCE_NPC),
+        "GRIEVANCE_NPC ({GRIEVANCE_NPC}) is not co-located at day 0.5 — the settlement was \
+         probably renamed; re-read it from book/src/gallery/possession-seed-42.md"
+    );
 
     // control: only waits, never provokes -> no hostility.
     let (mut control, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();

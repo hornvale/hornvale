@@ -1,6 +1,6 @@
-# Campaign 27: The Words
+# The Words
 
-**July 2026 · landed in 25 commits · outcome: complete, merged — gives
+**Campaign 27 · July 2026 · landed in 25 commits · outcome: complete, merged — gives
 the world a concept layer, a per-language lexicon with real history, and
 a truthful gloss on every name it mints; the preregistered collision-rate
 claim, measured three times, still fails, honestly**

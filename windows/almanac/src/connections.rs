@@ -16,8 +16,17 @@
 //! (`BTreeMap`/`BTreeSet` throughout `hornvale-topology`, no `HashMap`); this
 //! module only reads them and formats what it finds. Same
 //! `world`/`site`/`graph`, same string, byte for byte.
+//!
+//! This is the one document in this window that names an unbounded set of
+//! settlements it did not choose — every endpoint the graph happens to link
+//! — so it is where colliding names actually collide on the page ("a natural
+//! route runs to Xoxa, Xoxa, Xo, …" at seed 42). Labels therefore come from
+//! [`crate::qualify::SiteLabels`], built once over exactly the roster this
+//! document will name: decision 0024's render-time disambiguation, spent
+//! only where the ambiguity is.
 
-use hornvale_kernel::{CellId, Value, World};
+use crate::qualify::SiteLabels;
+use hornvale_kernel::{CellId, World};
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 
 /// Below this conductance, an edge carries no real natural route -- it is
@@ -58,9 +67,25 @@ const MIN_NOTABLE_REGION_SIZE: usize = 2;
 /// `hornvale_worldgen::connection_graph_of`, which this window cannot call
 /// itself -- see the module doc); this function only reads it. Deterministic:
 /// same `world`/`site`/`graph`, same string.
+///
+/// Same-named endpoints are disambiguated from their own site facts, and
+/// only against the other sites *this* document names (see
+/// [`crate::qualify`]).
 /// type-audit: bare-ok(artifact: return)
 pub fn render_connections(world: &World, site: CellId, graph: &ConnectionGraph) -> String {
-    let label = site_label(world, site);
+    let water = destinations(graph, site, EdgeKind::WaterRoute);
+    let land = destinations(graph, site, EdgeKind::LandRoute);
+
+    // The document's roster: every site this render will name -- the subject
+    // and both route lists. Duplicates (an endpoint reached by sea *and* by
+    // land) collapse in `for_document`; one place named twice is not an
+    // ambiguity. The isolation paragraph names no site but this one.
+    let mut roster = vec![site];
+    roster.extend(water.iter().copied());
+    roster.extend(land.iter().copied());
+    let labels = SiteLabels::for_document(world, &roster);
+
+    let label = labels.label(site);
     let mut out = String::new();
     let header = format!("The connections of {label}");
     out.push_str(&header);
@@ -68,7 +93,7 @@ pub fn render_connections(world: &World, site: CellId, graph: &ConnectionGraph) 
     out.push_str(&"=".repeat(header.chars().count()));
     out.push_str("\n\n");
 
-    out.push_str(&routes_paragraph(world, site, graph, &label));
+    out.push_str(&routes_paragraph(&labels, &water, &land, &label));
     out.push('\n');
     out.push_str(&isolation_paragraph(site, graph, &label));
     out
@@ -91,11 +116,11 @@ fn destinations(graph: &ConnectionGraph, site: CellId, kind: EdgeKind) -> Vec<Ce
 }
 
 /// The water/land route paragraph: named destinations by kind, or an honest
-/// "no route" line when a site has neither.
-fn routes_paragraph(world: &World, site: CellId, graph: &ConnectionGraph, label: &str) -> String {
-    let water = destinations(graph, site, EdgeKind::WaterRoute);
-    let land = destinations(graph, site, EdgeKind::LandRoute);
-
+/// "no route" line when a site has neither. Takes the already-resolved
+/// `labels` and the already-collected destination lists rather than
+/// re-deriving them, so the roster the qualification was computed over and
+/// the roster this paragraph prints cannot drift apart.
+fn routes_paragraph(labels: &SiteLabels, water: &[CellId], land: &[CellId], label: &str) -> String {
     if water.is_empty() && land.is_empty() {
         return format!(
             "{label} opens onto no sea-lane and no natural overland route of its own: \
@@ -105,14 +130,14 @@ fn routes_paragraph(world: &World, site: CellId, graph: &ConnectionGraph, label:
 
     let mut out = String::new();
     if !water.is_empty() {
-        let names: Vec<String> = water.iter().map(|&c| site_label(world, c)).collect();
+        let names: Vec<String> = water.iter().map(|&c| labels.label(c)).collect();
         out.push_str(&format!(
             "{label} is linked by sea-lane to {} -- a current-borne crossing, not a road.\n",
             crate::history::join_prose(&names)
         ));
     }
     if !land.is_empty() {
-        let names: Vec<String> = land.iter().map(|&c| site_label(world, c)).collect();
+        let names: Vec<String> = land.iter().map(|&c| labels.label(c)).collect();
         out.push_str(&format!(
             "A natural route runs to {}, by land, over the easiest ground the terrain \
              allows -- a pass, never a paved road.\n",
@@ -238,20 +263,4 @@ fn join_sizes(sizes: &[usize]) -> String {
     } else {
         format!("{joined} cells")
     }
-}
-
-/// A cell's canonical prose label: a known settlement's name, or "cell N"
-/// when the cell holds no settlement (mirrors `history::render_site`'s bare-
-/// cell-id convention for the same case).
-fn site_label(world: &World, cell: CellId) -> String {
-    for settlement in hornvale_settlement::all_settlements(world) {
-        if let Some(Value::Number(n)) = world
-            .ledger
-            .value_of(settlement.id, hornvale_settlement::CELL_ID)
-            && *n as u32 == cell.0
-        {
-            return settlement.name;
-        }
-    }
-    format!("cell {}", cell.0)
 }

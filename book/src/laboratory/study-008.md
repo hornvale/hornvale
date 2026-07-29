@@ -1,4 +1,4 @@
-# Study 008: The Census of Tongues
+# The Census of Tongues
 
 Ten thousand worlds, unpinned — the same seeds 0 through 9,999 every prior
 census has walked. Campaign Y2-3 gave every settlement and every deity a

@@ -1,6 +1,6 @@
-# Campaign 1a: The Kernel
+# The Kernel
 
-**July 2026 · 17 commits · outcome: complete, merged**
+**Campaign 1a · July 2026 · 17 commits · outcome: complete, merged**
 
 ## What was attempted
 

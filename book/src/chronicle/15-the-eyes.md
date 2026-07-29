@@ -1,6 +1,6 @@
-# Campaign 15: The Eyes
+# The Eyes
 
-**July 2026 · 12 commits · outcome: complete, merged — the plain sequence
+**Campaign 15 · July 2026 · 12 commits · outcome: complete, merged — the plain sequence
 number decision 0017 promised at the next campaign boundary, planned and
 built under the working name Y2-2; gives the world's two peoples their own
 eyes**

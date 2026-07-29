@@ -197,17 +197,28 @@ fn no_deity_bearing_schema_ever_fires_agentless() {
 fn moons_explained_only_where_kept() {
     // Seed 2: kobold keeps the moons (moon-count Kept), goblin loses them
     // (BeyondCapability). Measured: kobold's moon-count fires Agentive,
-    // bound to the SLOWEST cyclic belief ("Nggo", period 1174.61, the
+    // bound to the SLOWEST cyclic belief ("Nggoo", period 1174.61, the
     // pantheon's longest — manner Slow); goblin's stays plain Lost, never
     // Explained.
     //
     // Re-pinned again under The Living Community epoch (history is the sole
     // settlement placer, this merge): seed 2's kobold re-derived its
     // settlement demography once more, so its language re-mapped and the Slow
-    // manner verb shifted "stalks" -> "strides". The agent ("Nggo"), schema
-    // (Agentive), underlying (Kept), and manner (Slow) are all unchanged —
+    // manner verb shifted "stalks" -> "strides". The agent, schema
+    // (Agentive), underlying (Kept), and manner (Slow) were all unchanged —
     // only the drawn lexeme moved, the expected signature of a language
     // re-derivation. (Prior drifts: strides -> drives -> stalks -> strides.)
+    //
+    // Re-pinned again at The Wearing's merge: the agent's rendered name
+    // re-derived "Nggo" -> "Tsaasngkoo". Task 3 registers 19 toponymic and
+    // quality concepts, and registration feeds the lexicon's proto-root
+    // walk, so every lexicon-derived name re-draws. Schema, underlying,
+    // lexeme and manner all hold; only the name moved.
+    //
+    // Re-pinned once more at the rebase onto The Toponym's cohort ordering,
+    // which reseeds every proto-root: "Tsaasngkoo" -> "Nggoo". Same story —
+    // `underlying` (Kept), `schema` (Agentive), `lexeme` ("strides") and
+    // `manner` (Slow) compare byte-identical; only `agent` moved.
     let w = generated(2);
     let voices = accounts_of(&w);
     let kobold = voices
@@ -230,7 +241,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Nggo".to_string()),
+            agent: Some("Nggoo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

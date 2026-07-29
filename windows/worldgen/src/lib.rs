@@ -3737,6 +3737,200 @@ fn within_hops(
     false
 }
 
+/// The size (in cells) of the contiguous non-ocean landmass reachable from
+/// `start` by land, capped at `cap + 1` — a plain breadth-first walk that
+/// stops early once it has visited more than `cap` cells, so a full
+/// continent costs the same bounded work as a small island (`exposure_of`'s
+/// `island` gate). `start` is assumed land (a settled cell); the result
+/// saturates at `cap + 1` rather than continuing to the mainland's true
+/// size, which the caller only needs to compare against `cap`.
+fn landmass_size_capped(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    start: hornvale_kernel::CellId,
+    cap: usize,
+) -> usize {
+    use std::collections::BTreeSet;
+    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    visited.insert(start);
+    let mut frontier = vec![start];
+    // The cap check lives entirely in the inner early return — once
+    // `visited.len()` clears `cap` this returns immediately, so an outer
+    // loop condition re-testing the same bound would never be reached
+    // false; the frontier emptying (a landmass smaller than `cap`) is the
+    // only other exit.
+    while !frontier.is_empty() {
+        let mut next = Vec::new();
+        for cell in &frontier {
+            for &n in geo.neighbors(*cell) {
+                if !terrain.is_ocean(n) && visited.insert(n) {
+                    if visited.len() > cap {
+                        return visited.len();
+                    }
+                    next.push(n);
+                }
+            }
+        }
+        frontier = next;
+    }
+    visited.len()
+}
+
+/// The wetness floor (`drainage_at`) `marsh` sits above (see
+/// [`is_marsh_cell`]) — a module constant so `exposure_of_impl` and
+/// [`settlement_site_concepts`] read the identical threshold rather than
+/// two literals that could drift apart.
+const MARSH_MIN_DRAINAGE: f64 = 5.0;
+
+/// The small-landmass ceiling `island` sits under (see [`is_island_cell`])
+/// — a module constant for the same single-source reason as
+/// [`MARSH_MIN_DRAINAGE`].
+const ISLAND_CELL_CAP: usize = 200;
+
+/// Whether `cell` is a real river channel: `water_kind_at` is exactly
+/// `River`. The Confluence's carrying-capacity term spikes NEAR a river
+/// (within `RIVER_REACH` hops, `river_proximity`'s decay radius —
+/// "adjacent to rivers, not necessarily on it", `water.rs:96-99`) rather
+/// than only on the channel cell itself, so this gate is narrower than that
+/// siting pressure, not identical to it. Shared by `exposure_of_impl`
+/// (looping over a species' whole settled history) and
+/// [`settlement_site_concepts`] (checking one settlement's own cell) — the
+/// single definition of "is this cell a river."
+fn is_river_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
+}
+
+/// Whether `cell` is `river` narrowed to the drainage band below the
+/// waterfall threshold (`carve::WATERFALL_MIN_DRAINAGE`) — "where a river
+/// runs shallow enough to cross" read literally: a river cell whose flow
+/// hasn't reached waterfall-scale drainage is, by definition, the class
+/// this slice models as fordable.
+fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    is_river_cell(terrain, cell)
+        && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+}
+
+/// Whether `cell` is a STRICT local elevation maximum over its FULL
+/// neighbor ring, with any ocean neighbor's elevation clamped up to sea
+/// level rather than excluded or read at its true depth.
+///
+/// History (Task 4 review, two rounds): the first version compared against
+/// ALL neighbors with real elevation, so every ocean neighbor (by
+/// definition lower than any land cell, `is_ocean` is `elevation_at <
+/// sea_level`) trivially satisfied `hill` — every coastal promontory passed
+/// regardless of relief. EXCLUDING ocean neighbors (round 1's fix) cured
+/// that but broke `valley` worse: it removed the very thing that had been
+/// disqualifying a shoreline cell (a lower ocean neighbor breaks "all
+/// neighbors higher"), so `valley` started firing for any coastal cell with
+/// few, higher, land neighbors — measured at seed 42, a land-degree-3 cell
+/// was 79x more likely to pass than a land-degree-6 one, and every settled
+/// `valley` hit was a partial-ring coastal cell, none a full interior
+/// basin. CLAMPING (this version) keeps the full ring — an ocean neighbor
+/// still counts, but at sea level rather than its true depth, so it still
+/// correctly disqualifies a coastal cell from `valley` (a shoreline cell's
+/// clamped-lower ocean neighbor breaks "all higher" exactly as it should)
+/// while still letting a genuinely elevated coastal cell — a real headland,
+/// higher than the sea AND every land neighbor it has — count as `hill`.
+/// Re-measured over all 11,066 seed-42 land cells: `valley` now fires ONLY
+/// at land-degree 6 (zero ocean adjacency — a true interior basin), 48
+/// cells, 0.43% — eliminating the coastal skew entirely (0% at every degree
+/// 0-5, where the land-only version peaked at 41% and 292 of 344 total hits
+/// sat). `hill` stays close to its round-1 rate (173 vs 167 cells, ~1.4-1.6%
+/// flat from land-degree 3 up) with a real, accepted allowance for small
+/// islets/headlands at very low land-degree. Full table in the Task 4
+/// report. Shared by `exposure_of_impl` and [`settlement_site_concepts`] —
+/// the single definition of "is this cell a hill."
+fn is_hill_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    let sea_level = terrain.sea_level().get();
+    let here = terrain.elevation_at(cell).get();
+    let neighbors = geo.neighbors(cell);
+    !neighbors.is_empty()
+        && neighbors
+            .iter()
+            .all(|&n| terrain.elevation_at(n).get().max(sea_level) < here)
+}
+
+/// The symmetric counterpart of [`is_hill_cell`]: a STRICT local elevation
+/// minimum over the full, sea-level-clamped neighbor ring. See that
+/// function's doc comment for the two-round history behind the clamp. The
+/// single definition of "is this cell a valley," shared the same way.
+fn is_valley_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    let sea_level = terrain.sea_level().get();
+    let here = terrain.elevation_at(cell).get();
+    let neighbors = geo.neighbors(cell);
+    !neighbors.is_empty()
+        && neighbors
+            .iter()
+            .all(|&n| terrain.elevation_at(n).get().max(sea_level) > here)
+}
+
+/// Whether `cell` is land meaningfully wetter than typical dry ground but
+/// hasn't channelized into a river: `water_kind_at` is `DryLand` and
+/// `drainage_at` clears [`MARSH_MIN_DRAINAGE`] — `water.rs`'s own
+/// calibration comment puts the median LAND cell at drainage ~2 and the
+/// 90th percentile at ~11 against `RIVER_MIN_DRAINAGE`'s 15, so a cell
+/// accumulating runoff above the median but below the river threshold is
+/// genuinely damper than ordinary dry land without yet being a channel.
+/// The single definition of "is this cell a marsh," shared the same way.
+fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
+        && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
+}
+
+/// Whether `cell` is a karst conduit with enough drainage to surface as
+/// flow rather than sit as a dry cave or sinkhole: `hydro_at` is `Karst`
+/// and `drainage_at` clears `RIVER_MIN_DRAINAGE` — "where an aquifer meets
+/// the surface with flow" read through the reachable half of the
+/// lithology model (`Hydro::Spring` is structurally unreachable on every
+/// seed; see `.superpowers/sdd/followups.md` F5). Disclosure: `classify`
+/// (`water.rs`) routes any non-sink land cell at this drainage to `River`
+/// regardless of lithology, so a Karst cell that clears the floor is almost
+/// always ALSO a `River` cell (measured at seed 42: 137 Karst cells clear
+/// it, 132 of those are `WaterKind::River`) — `spring` is `river`
+/// partitioned by rock type, not an independent signal. The single
+/// definition of "is this cell a spring," shared the same way.
+fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
+        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+}
+
+/// Whether `cell` sits on a real small landmass: a bounded flood-fill of
+/// non-ocean cells from `cell` stays under [`ISLAND_CELL_CAP`]. Tests
+/// landmass size underfoot, not proximity to open water (that's
+/// [`is_coast_cell`]) — a mainland coastal settlement is `coast` but not
+/// `island`. 200 sits in a real gap: seed 42's full landmass census (30
+/// components) runs 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 4, 4, 7, 13, 22, 32,
+/// 40, 66, 104, then jumps to 356 and up. The single definition of "is this
+/// cell an island," shared the same way.
+fn is_island_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP
+}
+
+/// Whether `cell` lies within two hops of an ocean cell — the shore as a
+/// PLACE, not the water (`sea` covers the water; toponymy wants the
+/// former, cosmology the latter). The single definition of "is this cell
+/// coastal," shared the same way.
+fn is_coast_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    within_hops(geo, cell, 2, |c| terrain.is_ocean(c))
+}
+
+/// Whether `cell` lies within two hops of a `SaltBasin` cell — this water
+/// model's only standing-water class distinct from a through-flow river
+/// (documented verbatim as "the evaporative salt lake / playa"; a
+/// freshwater through-flow lake reads as `River`, so [`is_river_cell`]
+/// already covers that case). The single definition of "is this cell near
+/// a lake," shared the same way.
+fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    within_hops(geo, cell, 2, |c| {
+        terrain.water_kind_at(c) == hornvale_terrain::WaterKind::SaltBasin
+    })
+}
+
 /// Classify every concept in the world's registry for `species`'s culture
 /// (spec §7): `Steeped` concepts get their own root word, `KnowsOf`
 /// concepts are named as compounds, and `Unknown` concepts get a
@@ -3752,18 +3946,38 @@ fn within_hops(
 ///   the species has settled anywhere, the living kind of every species
 ///   placed in this world (coexistence in one shared world is exposure —
 ///   spec §3's free endonym/exonym) plus its own domestic and religious
-///   social concepts (`home`, `hearth`, `god`, `spirit`).
+///   social concepts (`home`, `hearth`, `god`, `spirit`). The universal
+///   stratum already carries the ten relative/evaluative modifiers
+///   (`high`, `low`, `great`, `little`, `new`, `old`, `under`, `over`,
+///   `north`, `south`) unconditionally — every people that speaks has
+///   them — so no separate rule is needed for those. Seven of the nine
+///   toponymic terrain concepts (Task 4) are Steeped instead, each gated
+///   on the real terrain query that put a settlement there rather than on
+///   roster membership: `river` (`water_kind_at` is `River`), `ford`
+///   (`river` narrowed to drainage below the waterfall threshold —
+///   shallow enough to cross), `hill`/`valley` (the settled cell is a
+///   strict local elevation max/min among its immediate neighbors),
+///   `island` (a capped landmass flood-fill from the settled cell stays
+///   under the small-landmass cap), `marsh` (dry land whose drainage
+///   clears a wetness floor without reaching the river threshold), and
+///   `spring` (`hydro_at` is `Spring`, a real but rare porosity-gated
+///   landform).
 /// - **KnowsOf**: the biome of every cell adjacent to a settled cell (that
-///   isn't already `Steeped` from the species' own settlements); and
-///   `sea`, if any settled cell lies within two cells of a below-sea-level
-///   (ocean) cell.
+///   isn't already `Steeped` from the species' own settlements); `sea`, if
+///   any settled cell lies within two cells of a below-sea-level (ocean)
+///   cell; `coast`, on the same two-cell gate (the shore as a place, not
+///   the water); and `lake`, on the same two-cell gate against a
+///   `SaltBasin` cell (this slice's only standing-water class — a
+///   through-flow freshwater lake reads as `River`, so it is already
+///   covered there).
 /// - **Unknown**: every other registered concept — most visibly a
 ///   color-pack entry excluded by ladder depth (`GapReason::Perceptual`)
-///   and a biome/`sea` concept the species neither settled nor neighbors
-///   (`GapReason::Experiential`, "no settlement in or beside `<biome>`");
-///   every remaining leftover concept (an unplaced species' living-kind,
-///   or a social/geographic concept the species hasn't settled to reach)
-///   gets a generic but still recountable `GapReason::Experiential`.
+///   and a biome/`sea`/`coast`/`lake` concept the species neither settled
+///   nor neighbors (`GapReason::Experiential`, "no settlement in or beside
+///   `<biome>`"); every remaining leftover concept (an unplaced species'
+///   living-kind, or a social/geographic concept the species hasn't
+///   settled to reach) gets a generic but still recountable
+///   `GapReason::Experiential`.
 ///
 /// type-audit: bare-ok(identifier-text)
 pub fn exposure_of(
@@ -3851,7 +4065,17 @@ fn exposure_of_impl(
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
         std::collections::BTreeMap::new();
 
-    // Steeped: the universal stratum, unconditionally.
+    // Steeped: the universal stratum, unconditionally. The Wearing's ten
+    // relative/evaluative modifiers (`high`, `low`, `great`, `little`,
+    // `new`, `old`, `under`, `over`, `north`, `south`) are already members
+    // of `universal_stratum` (Task 3), so this one loop is their whole
+    // exposure rule too — no separate terrain-independent block needed:
+    // every people that speaks has them, by the same unconditional gate
+    // water and fire already use. (The nine toponymic TERRAIN concepts —
+    // `hill`, `river`, `lake`, `valley`, `coast`, `island`, `ford`,
+    // `marsh`, `spring` — were also, mistakenly, members of this stratum
+    // until Task 4's fix to `hornvale_language::packs::universal_stratum`;
+    // see that function's doc comment. They are gated below instead.)
     for entry in universal_stratum() {
         classes.insert(entry.concept.to_string(), ExposureClass::Steeped);
     }
@@ -3884,6 +4108,16 @@ fn exposure_of_impl(
     // reasoning that gives them a word for the savanna it is a kind of — and
     // it is the same cell-scale draw their settlements are named from, so the
     // word and the name agree.
+    //
+    // Merge note (2026-07-29): this composes with The Wearing's nine terrain
+    // gates further down rather than competing with them, and the two are
+    // additive by construction — they steep a people in disjoint concept sets
+    // (53 formation sub-types here, nine landforms there) drawn from disjoint
+    // sources (a cell-scale variant draw here, terrain queries there), and
+    // every write is an `insert` on a concept name no other rule claims. Both
+    // rules read the SAME `settled` slice, which is the substantive agreement:
+    // a people is steeped in the terrain AND the variant of the cells it
+    // actually settled, by one notion of "lived here".
     for &cell in settled {
         let expr = climate.biome_expr_at(cell);
         if let Some(v) = hornvale_climate::variant_at_cell(
@@ -3894,6 +4128,43 @@ fn exposure_of_impl(
             hornvale_climate::GroundKind::Ordinary,
         ) {
             classes.insert(v.concept_name().to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped/Unknown: the STAPLE of every settled cell (The Watershed). A
+    // people that raises a crop has a word for it; one that fishes, herds, or
+    // forages has met the plant but never named it as a staple, which is an
+    // EXPERIENTIAL gap, not a perceptual one — their eyes are fine, their
+    // living is elsewhere. Subsistence is read per cell, so a people farming
+    // one valley and fishing another is steeped in the valley's grain.
+    //
+    // The gate lives HERE and not at the naming site on purpose: `holds_word`
+    // filters a namer's candidates against the lexicon, so a consumer-side
+    // gate can only subtract from a set exposure already decided. Gating at
+    // the naming site was measured and moved exactly zero bytes.
+    for &cell in settled {
+        let expr = climate.biome_expr_at(cell);
+        let Some(crop) = hornvale_climate::crop_at(
+            expr.formation,
+            climate.mean_temperature_at(cell),
+            climate.moisture_at(cell),
+        ) else {
+            continue;
+        };
+        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let subsistence =
+            hornvale_culture::subsistence(biome_class(climate.biome_at(cell)), coastal);
+        let concept = crop.concept_name().to_string();
+        if subsistence == hornvale_culture::Subsistence::Farming {
+            classes.insert(concept, ExposureClass::Steeped);
+        } else {
+            // Never downgrade: another cell may have steeped this crop.
+            classes.entry(concept).or_insert(ExposureClass::Unknown {
+                reason: GapReason::Experiential(format!(
+                    "{species} lives by {} here and raises no staple",
+                    subsistence.name()
+                )),
+            });
         }
     }
 
@@ -3944,6 +4215,88 @@ fn exposure_of_impl(
             classes
                 .entry("sea".to_string())
                 .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: coast, on the same two-hop gate `sea` uses. A people can
+    // know the shore without living on it; `coast` is the shore as a
+    // PLACE, where `sea` is the water — two concepts, deliberately, because
+    // toponymy wants the former ("Seaside") and cosmology wants the latter.
+    // Gate logic: [`is_coast_cell`].
+    if world.registry.concept("coast").is_some() {
+        let near_coast = settled.iter().any(|&cell| is_coast_cell(terrain, cell));
+        if near_coast {
+            classes
+                .entry("coast".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: lake, on the same two-hop gate against a `SaltBasin` cell.
+    // Gate logic: [`is_lake_cell`].
+    if world.registry.concept("lake").is_some() {
+        let near_lake = settled.iter().any(|&cell| is_lake_cell(terrain, cell));
+        if near_lake {
+            classes
+                .entry("lake".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // Steeped: river, the terrain a people actually lives on. Gate logic
+    // (and the `RIVER_REACH` disclosure): [`is_river_cell`].
+    for &cell in settled {
+        if is_river_cell(terrain, cell) {
+            classes.insert("river".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: ford, `river` narrowed to the sub-waterfall drainage band.
+    // Gate logic: [`is_ford_cell`].
+    for &cell in settled {
+        if is_ford_cell(terrain, cell) {
+            classes.insert("ford".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: hill/valley, a settled cell that is a STRICT local
+    // elevation extremum over its FULL, sea-level-clamped neighbor ring.
+    // Gate logic and the two-round clamp history: [`is_hill_cell`] /
+    // [`is_valley_cell`].
+    for &cell in settled {
+        if is_hill_cell(terrain, cell) {
+            classes.insert("hill".to_string(), ExposureClass::Steeped);
+        }
+        if is_valley_cell(terrain, cell) {
+            classes.insert("valley".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: marsh, land wetter than typical dry ground but not yet
+    // channelized. Gate logic: [`is_marsh_cell`].
+    for &cell in settled {
+        if is_marsh_cell(terrain, cell) {
+            classes.insert("marsh".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: spring, a karst conduit with enough drainage to surface as
+    // flow. NOT `Hydro::Spring` (Task 4 review, Critical 1: structurally
+    // unreachable — see `.superpowers/sdd/followups.md` F5). Gate logic
+    // and the `spring ⊆ river` disclosure: [`is_spring_cell`].
+    for &cell in settled {
+        if is_spring_cell(terrain, cell) {
+            classes.insert("spring".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: island, a real landmass-size test — proximity to open water
+    // ([`is_coast_cell`]) and the size of the ground underfoot
+    // ([`is_island_cell`]) are deliberately different concepts.
+    for &cell in settled {
+        if is_island_cell(terrain, cell) {
+            classes.insert("island".to_string(), ExposureClass::Steeped);
+            break;
         }
     }
 
@@ -4225,13 +4578,104 @@ pub fn voice_params(
     }
 }
 
-/// Derive a species' naming morphology from its psychology vector (spec
+/// The weight of the [`hornvale_language::NameShape::Qualified`] shape in
+/// every culture's raw profile: the same small constant everywhere, because
+/// the qualified toponym (`Newcastle-upon-Tyne`, `Great Yarmouth`) is rare
+/// in every system that has it at all. What differs per culture is how far
+/// [`shape_beta`] pushes it down (or, below 1, lets it up).
+///
+/// It sits on the same scale as the two workhorse weights rather than being
+/// an order of magnitude below them, and that is deliberate: β sharpening
+/// is a power, so a weight already tiny before sharpening is annihilated by
+/// any β > 1 and the tail stops existing at all. A calibration dial, not a
+/// derived quantity.
+/// type-audit: bare-ok(ratio)
+const QUALIFIED_WEIGHT: f64 = 0.25;
+
+/// A species' raw [`hornvale_language::NameShape`] preferences, before β
+/// sharpening — read off `in_group_radius` (insular 0 ↔ expansive 1).
+///
+/// **The story.** An insular people names places for insiders. Everyone
+/// already knows *which* ford, so the bare specific does the whole job and
+/// the simplex name (`York`, `Bath`) is enough. As "us" widens, a name has
+/// to survive being said to someone who was not there: the generic gets
+/// carried explicitly (`Ox-ford`), and the rare case needs a qualifier on
+/// top of that. So simplex weight falls and specific+generic weight rises
+/// with `in_group_radius`, crossing over at **0.6** — above the goblin
+/// baseline of 0.5, so only a people whose "us" reaches well past the
+/// baseline carries the generic explicitly as a matter of course.
+///
+/// The two slopes and the crossover are calibration dials (the Lab's
+/// name-length metrics are what move them), not derived quantities, and
+/// the crossover in particular has no empirical prior to fix it — real
+/// toponymy does not say at what social radius the flip happens. It was
+/// **measured into place**: with the crossover at 0.45 the shipped seed-42
+/// world came out at 11.56 mean name characters against a pre-shape 11.12,
+/// because the one people a wider profile pushes toward compounds (gnoll)
+/// also holds this world's longest roots. At 0.6 the same world reads
+/// 10.53. A length measurement over the real pipeline is what moved the
+/// dial, exactly as `WEAR_FLOOR`'s doc comment says such dials move.
+///
+/// The endpoints: at radius 0 the raw profile is `[1.6, 0.4, 0.25]`, at
+/// radius 1 it is `[0.6, 1.4, 0.25]`. Both workhorse weights stay strictly
+/// positive across the whole `[0, 1]` domain, so no shape is ever silently
+/// zeroed out of the draw.
+/// type-audit: bare-ok(ratio: return)
+pub fn shape_weights(society: &hornvale_species::SocietyVector) -> [f64; 3] {
+    let radius = society.in_group_radius;
+    [1.6 - radius, 0.4 + radius, QUALIFIED_WEIGHT]
+}
+
+/// How stereotyped a species' toponymy is — the β exponent
+/// [`hornvale_language::MorphOptions::shape_beta`] sharpens its weights by,
+/// read off `time_horizon` (immediate 0 ↔ generational 1).
+///
+/// **The story.** A people that plans in generations entrenches its
+/// conventions: a naming practice outlives the people who started it, gets
+/// copied, and hardens into *the* way places are named here. A
+/// short-horizon, opportunistic people never converges — each name is made
+/// for the moment, so its toponymy stays heterogeneous. So β rises with
+/// `time_horizon`: `0.5 + 2·h`, spanning `[0.5, 2.5]`, with the goblin
+/// baseline (`h = 0.5`) at 1.5. Below 1 the profile is *flattened* toward
+/// uniform, which is a real reading and not a degenerate one — it is what
+/// "this people has no single way of naming things" looks like.
+///
+/// Deliberately a different vector dimension from [`shape_weights`]', and
+/// that separation is the whole reason both dials exist. If β were read off
+/// `in_group_radius` too, one trait would have to encode both *which* shape
+/// a people prefers and *how hard* it prefers it, and β would collapse into
+/// a redeployment of the weights.
+///
+/// **Scope, wider than "toponymy".** The profile these two functions build
+/// is carried on [`hornvale_language::MorphOptions`], which every glossed
+/// name reads — deity and epithet names as well as settlement ones. Place
+/// names are where it is *visible*, because only a settlement site offers
+/// enough concepts for the shape to vary: [`deity_site_concepts`] returns
+/// at most two, so a belief's name realizes `Simplex` or
+/// `SpecificGeneric` and `Qualified` always clamps. The story above is
+/// told about toponymy because that is where it does work, not because
+/// the field is scoped to it.
+/// type-audit: bare-ok(ratio: return)
+pub fn shape_beta(mind: &hornvale_species::MindVector) -> f64 {
+    0.5 + 2.0 * mind.time_horizon
+}
+
+/// Derive a species' naming morphology from its psychology vectors (spec
 /// §7): honorifics are drawn only for a rank-based status basis — the
 /// goblin baseline — matching `voice_params`' epithet-density reading of
-/// the same field.
-pub fn morph_options(society: &hornvale_species::SocietyVector) -> hornvale_language::MorphOptions {
+/// the same field; the glossed-name shape distribution comes from
+/// [`shape_weights`] and [`shape_beta`].
+///
+/// Takes both vectors, as `voice_params` does, because the shape profile
+/// reads one dimension from each.
+pub fn morph_options(
+    mind: &hornvale_species::MindVector,
+    society: &hornvale_species::SocietyVector,
+) -> hornvale_language::MorphOptions {
     hornvale_language::MorphOptions {
         honorifics: society.status_basis == hornvale_species::StatusBasis::Rank,
+        shape_weights: shape_weights(society),
+        shape_beta: shape_beta(mind),
     }
 }
 
@@ -4254,6 +4698,160 @@ pub fn deity_site_concepts(
         concepts.push(concept);
     }
     concepts.push(sentiment_concept(sentiment));
+    concepts
+}
+
+/// The concepts a settlement's own site offers its namer, most specific
+/// first — the order is a CONTRACT: `glossed_name` picks 1-3 concepts by
+/// index from this vector (however many its drawn
+/// [`hornvale_language::NameShape`] asks for), so reordering it silently
+/// renames every settlement in every world.
+/// Mirrors [`deity_site_concepts`]'s shape for the settlement side of
+/// naming. Public because the Lab's `name-gloss-true` metric re-derives a
+/// settlement's site concepts to check that its committed gloss is
+/// truthful, and must call this SAME composition rather than maintaining a
+/// parallel definition of "what does this site offer."
+///
+/// **What "by index" does and does not mean.** `Namer::choose_concepts` draws
+/// a uniform index into the surviving pool and *removes* the pick, repeating
+/// for however many morphemes the shape asks — it does not take a prefix. So
+/// position carries no priority: an entry at the front is exactly as likely to
+/// be chosen as one at the back. What position determines is which draw lands
+/// on which concept, i.e. the *identity* of every settlement name in every
+/// world. The ordering below is therefore a readable convention backed by a
+/// byte-identity contract, and the two must not be confused: reordering it
+/// renames the world without making any concept more or less likely to appear.
+/// (The Wearing's own doc asserted "most specific first" in a voice that
+/// invited the priority reading; this paragraph is the correction, checked
+/// against `naming.rs`'s `choose_concepts` rather than against the older
+/// comment.)
+///
+/// Was biome + presiding phenomenon only (~12 biomes against a handful of
+/// phenomena) — narrow enough that the same generic gloss appeared
+/// verbatim across unrelated settlements. Widened here to the nine
+/// terrain concepts Task 4 gave real exposure rules (LANG-9: "the naming
+/// engine already consumes whatever site facts the composition root
+/// offers").
+///
+/// Order, and why: the nine terrain gates split into two kinds. A
+/// `Steeped` gate (`exposure_of_impl`) is a direct claim about THIS cell
+/// (it IS a hill); a `KnowsOf` gate is a claim about its neighborhood (it
+/// is NEAR the sea). A direct claim is the more specific fact, so every
+/// direct gate precedes both proximity gates. Within the direct gates,
+/// narrower physical criteria come first, ordered by the shipped gates'
+/// own measurements over seed 42's ~11,066 land cells (see
+/// [`is_hill_cell`]'s doc comment for the round-3 clamp fix these numbers
+/// come from): `valley` (48 cells, 0.43% of land — the rarest of the nine,
+/// a full-ring strict elevation minimum) and `hill` (173 cells, ~1.56% —
+/// the symmetric maximum); `spring` (a karst/drainage
+/// intersection) and `ford` (`river` narrowed to a sub-waterfall drainage
+/// band — both proper narrowings of a broader condition); `island` (a
+/// capped small-landmass flood-fill); `marsh` (a wetness band on dry
+/// land); then `river` itself, the broadest direct gate (~6.7% of land,
+/// `water.rs`'s own tuning comment). `coast` and `lake` close the terrain
+/// concepts: a two-hop proximity test is a weaker claim than any direct
+/// one, and both saturate to near-100% at population scale (Task 4's
+/// report).
+///
+/// **The variant, and why it sits where it does** (merge reconciliation with
+/// The Toponym, 2026-07-29). The Toponym gave a cell a *variant* — one of 53
+/// named sub-types of the formation it sits in (`old-growth`,
+/// `mossy-deadfall`, `forest-gap`), drawn at cell scale on its own stream
+/// label. That campaign built its site vector as `[biome, presiding,
+/// variant]`; this one built `[…nine terrain gates…, biome, presiding]`. Both
+/// belong, and the joint order resolves on this rule: a variant is a **strict
+/// refinement of the biome**, so it sits immediately before the biome it
+/// refines and the pair reads as one fact at two grains ("the mossy deadfall
+/// of the temperate forest"). It sits *after* every terrain gate because the
+/// gates are the rarer, sharper claims — `valley` fires on 0.43% of seed 42's
+/// land and `hill` on 1.56%, where a variant is available on essentially every
+/// cell that has a formation at all — and the convention this vector documents
+/// is sharpest-first. Both campaigns' internal orders survive intact; only the
+/// splice point was decided here.
+///
+/// The variant is the one entry that is **drawn** rather than read: every other
+/// entry is a terrain/climate fact already true of the settled cell, while
+/// `hornvale_climate::variant_at_cell` makes a cell-scale draw off the world
+/// seed. That is why this function takes the seed. It derives the variant
+/// *itself* rather than accepting it as a parameter, deliberately reversing The
+/// Toponym's shape: that campaign's own account records that its real
+/// difficulty was five independent re-derivations of a gloss's truthfulness
+/// each having to learn about variants separately. There is one derivation
+/// now — this one — and every re-deriving consumer gets it by calling this
+/// function.
+///
+/// Biome and the presiding sky phenomenon close the whole vector: every
+/// settlement has one of each, so they are the least discriminating facts a
+/// cell carries.
+/// type-audit: bare-ok(identifier-text: presiding), bare-ok(identifier-text: return)
+pub fn settlement_site_concepts(
+    seed: &Seed,
+    cell: hornvale_kernel::CellId,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    presiding: Option<&'static str>,
+) -> Vec<&'static str> {
+    // Up to 12: the nine terrain concepts, the variant, the biome, presiding.
+    let mut concepts: Vec<&'static str> = Vec::with_capacity(12);
+    if is_valley_cell(terrain, cell) {
+        concepts.push("valley");
+    }
+    if is_hill_cell(terrain, cell) {
+        concepts.push("hill");
+    }
+    if is_spring_cell(terrain, cell) {
+        concepts.push("spring");
+    }
+    if is_ford_cell(terrain, cell) {
+        concepts.push("ford");
+    }
+    if is_island_cell(terrain, cell) {
+        concepts.push("island");
+    }
+    if is_marsh_cell(terrain, cell) {
+        concepts.push("marsh");
+    }
+    if is_river_cell(terrain, cell) {
+        concepts.push("river");
+    }
+    if is_coast_cell(terrain, cell) {
+        concepts.push("coast");
+    }
+    if is_lake_cell(terrain, cell) {
+        concepts.push("lake");
+    }
+    // The Toponym's variant, immediately before the biome it refines. Drawn,
+    // not read — see this function's doc comment for both halves of that.
+    // `GroundKind::Ordinary` matches the draw the settlement pass made before
+    // this function existed, so the variant a place is named for is the same
+    // one its cell has.
+    let expr = climate.biome_expr_at(cell);
+    if let Some(variant) = hornvale_climate::variant_at_cell(
+        *seed,
+        cell,
+        expr.formation,
+        expr.stratum,
+        hornvale_climate::GroundKind::Ordinary,
+    ) {
+        concepts.push(variant.concept_name());
+    }
+    // The staple (The Watershed), between the variant and the biome it grows
+    // on. Offered UNCONDITIONALLY: the lexicon decides, because `holds_word`
+    // admits it only for a people whose exposure steeped it. A fishing people
+    // simply has no word to name its home with, and agriculture gets no
+    // special case in the namer — it is gated exactly where colour and
+    // kinship are.
+    let expr = climate.biome_expr_at(cell);
+    concepts.extend(
+        hornvale_climate::crop_at(
+            expr.formation,
+            climate.mean_temperature_at(cell),
+            climate.moisture_at(cell),
+        )
+        .map(|c| c.concept_name()),
+    );
+    concepts.push(climate.biome_at(cell).concept_name());
+    concepts.extend(presiding);
     concepts
 }
 
@@ -4338,12 +4936,16 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
             concepts: &concepts,
         };
         let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
+        // No name corpus: a deity's name space is one-per-belief, not a
+        // scatter of settlements, so there is no per-culture frequency
+        // for a morpheme to wear against (The Wearing is toponymic).
         let (g, gloss) = self.namer.glossed_name(
             hornvale_language::NameKind::Deity,
             name_seed,
             &self.morph,
             &site,
             self.lexicon,
+            &hornvale_language::NameCorpus::none(),
         );
         if !gloss.is_empty() {
             self.glosses.insert(salt, gloss);
@@ -4374,6 +4976,7 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
             &self.morph,
             &site,
             self.lexicon,
+            &hornvale_language::NameCorpus::none(),
         );
         (g.roman, g.ipa)
     }
@@ -4844,9 +5447,18 @@ fn build_to(
     // name below — settlement, then deity/epithet — is a single
     // deterministic draw salted by the entity's own id (the settlement cell,
     // the belief). No shared "used" set threads through them: names are pure
-    // functions of seed+species+kind+salt, so settlement names are
-    // pin-isolated by construction (spec §8) and cross-world uniqueness is
-    // de-facto (measured as a calibration, spec §9), not enforced.
+    // functions of seed+species+kind+salt+(site, lexicon, corpus). Since The
+    // Wearing that last argument means a settlement name is NO LONGER
+    // pin-isolated at the world level: its morphemes are worn against a
+    // per-culture name corpus counted over the species' whole scatter, so a
+    // pin that moves that scatter CAN move any name of that species. How
+    // many actually move is small and seed-dependent — measured by swapping
+    // the corpus for an empty one with the scatter held fixed: 4 of 79 names
+    // at seed 777, 7 of 207 at seed 99, and 0 of 169 at seed 42, where every
+    // eligible morpheme surrenders to the survival rule. Deity
+    // and epithet names, which pass no corpus, are unaffected. Uniqueness
+    // is de-facto (measured as a calibration, spec §9), not enforced — and
+    // since the drawn stem retired it is common, by design (decision 0024).
     let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
         .map(|&name| (name, language_of_wc(&world, wc, name)))
@@ -4935,8 +5547,10 @@ fn build_to(
     // `cell-id`, and the occupation facts); the naming pass adds the
     // descriptors onto the SAME entities so history stays the sole placer (the
     // retired `settlement::genesis` used to mint these together with
-    // placement). Names are pure functions of seed+species+kind+cell-salt
-    // (pin-isolated), so a shifted settlement set perturbs no other draw.
+    // placement). Names are pure functions of their arguments, so a shifted
+    // settlement set perturbs no other DRAW — but it does change the name
+    // corpus below, and therefore the names of that species' other
+    // settlements (The Wearing; see `naming.rs`'s module docs).
     // Build the phenomena sources ONCE for the whole pass, reusing this
     // stage's climate (no per-settlement climate rebuild — the Stage-2 perf
     // guard). Observations are gathered under one immutable ledger borrow,
@@ -4951,7 +5565,51 @@ fn build_to(
         longitude: f64,
         gloss: String,
     }
-    let mut descriptors: Vec<SettlementDescriptor> = Vec::with_capacity(placements.len());
+    // A settlement's site inputs, resolved once. Naming runs in TWO passes
+    // over these because toponymic wear (The Wearing) is keyed to a
+    // morpheme's frequency in its own culture's name corpus, and a corpus
+    // cannot be counted until every name's concepts are known. Worldgen is
+    // the only layer that sees a culture's whole scatter, and the corpus is
+    // how that view reaches naming: `naming.rs` stays a pure function of its
+    // arguments, but one of those arguments now IS a summary of the other
+    // settlements, so a glossed settlement name is no longer pin-isolated at
+    // the world level (see `naming.rs`'s module docs). What purity still
+    // buys is that the dependence is explicit, read-only and countable here,
+    // rather than ambient state threaded through the namer.
+    // The expensive half (phenomena observation) happens once, in pass 1.
+    struct SettlementSite {
+        id: EntityId,
+        species: &'static str,
+        salt: u64,
+        cell: hornvale_kernel::CellId,
+        latitude: f64,
+        longitude: f64,
+        concepts: Vec<&'static str>,
+    }
+    let mut sites: Vec<SettlementSite> = Vec::with_capacity(placements.len());
+    // species -> (concept -> how many of that species' names use it), and
+    // species -> how many names it has. `BTreeMap` throughout: no hashing
+    // anywhere in a determinism-critical path.
+    use std::collections::BTreeMap;
+    let mut used: BTreeMap<&'static str, BTreeMap<String, usize>> = BTreeMap::new();
+    let mut named: BTreeMap<&'static str, usize> = BTreeMap::new();
+    // Resolved once, here, so BOTH passes below read the IDENTICAL naming
+    // morphology. Pass 1 counts the corpus from the concepts
+    // `glossed_concepts` reports; those concepts depend on the drawn
+    // `NameShape`, which depends on these options — so two passes with
+    // different options would count a corpus against names that were never
+    // drawn, and the `name-gloss` facts would stop matching the counts they
+    // were worn against.
+    let morph_for = |species: &'static str| -> hornvale_language::MorphOptions {
+        morph_options(
+            wc.psyche
+                .get(&KindId(species))
+                .expect("a placed people carries a mind vector"),
+            wc.society
+                .get(&KindId(species))
+                .expect("peopled pass over a fauna kind"),
+        )
+    };
     for s in &placements {
         let name = species_set[s.tag];
         let coord = geo.coord(s.cell);
@@ -4959,57 +5617,103 @@ fn build_to(
         let namer = namers
             .get(name)
             .expect("a Namer was built for every placed species");
-        let morph = morph_options(
-            wc.society
-                .get(&KindId(name))
-                .expect("peopled pass over a fauna kind"),
-        );
         let lexicon = lexicons
             .get(name)
             .expect("a lexicon was built for every placed species");
-        let biome_concept = climate.biome_at(s.cell).concept_name();
         // The presiding phenomenon is observed from THIS settlement's own
         // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
         // committed gloss is truthful to the sky this settlement actually
         // lives under (spec §9.3), and per-settlement skies widen the
-        // descriptor space. Still a pure function of the entity's own
-        // (cell, facts): pin-isolated by construction (spec §8). The place id
+        // descriptor space. The OBSERVATION stays a pure function of the
+        // entity's own (cell, facts) — pin-isolated by construction (spec
+        // §8); it is the corpus below, not this, that ends the property for
+        // the resulting name. The place id
         // is unread by the observer — the coordinate does the culling — so
         // `world_entity` still stands in for it (the settlement entity now
         // exists, but observation never reads it) — see `observed_phenomena_from`.
-        let seen =
-            observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
+        let seen = observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
-        // The Toponym: a settlement is named for the KIND of place it sits in,
-        // not merely its biome. The variant is drawn at cell scale, because a
-        // settlement occupies a cell and a room is one of thousands within it.
-        let expr = climate.biome_expr_at(s.cell);
-        let variant = hornvale_climate::variant_at_cell(
-            world.seed,
-            s.cell,
-            expr.formation,
-            expr.stratum,
-            hornvale_climate::GroundKind::Ordinary,
+        let concepts = settlement_site_concepts(&world.seed, s.cell, &terrain, &climate, presiding);
+        // Which concepts this name will actually be built from — exactly
+        // what its gloss will name, reported without rendering anything.
+        // `glossed_name` replays the same picks off the same stream (wear
+        // consumes nothing from it), so pass 2 names from precisely the
+        // concepts counted here — including the drawn `NameShape`, which is
+        // why the same `morph_for` result must reach both passes.
+        let chosen = namer.glossed_concepts(
+            hornvale_language::NameKind::Settlement,
+            salt,
+            &morph_for(name),
+            &hornvale_language::SiteConcepts {
+                concepts: &concepts,
+            },
+            lexicon,
         );
-        let mut site_concepts: Vec<&str> = vec![biome_concept];
-        site_concepts.extend(presiding);
-        site_concepts.extend(variant.map(|v| v.concept_name()));
+        *named.entry(name).or_insert(0) += 1;
+        let counts = used.entry(name).or_default();
+        for concept in chosen {
+            *counts.entry(concept.to_string()).or_insert(0) += 1;
+        }
+        sites.push(SettlementSite {
+            id: s.id,
+            species: name,
+            salt,
+            cell: s.cell,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            concepts,
+        });
+    }
+    // The corpus proper: each concept's count over that culture's own name
+    // total. A settlement whose site holds no word still counts in the
+    // denominator — it is one of the culture's names, merely an opaque one.
+    let corpora: BTreeMap<&'static str, BTreeMap<String, f64>> = named
+        .iter()
+        .map(|(species, total)| {
+            let frequencies = used
+                .get(species)
+                .map(|counts| {
+                    counts
+                        .iter()
+                        .map(|(concept, n)| (concept.clone(), *n as f64 / *total as f64))
+                        .collect()
+                })
+                .unwrap_or_default();
+            (*species, frequencies)
+        })
+        .collect();
+
+    let mut descriptors: Vec<SettlementDescriptor> = Vec::with_capacity(sites.len());
+    for s in &sites {
+        let namer = namers
+            .get(s.species)
+            .expect("a Namer was built for every placed species");
+        let morph = morph_for(s.species);
+        let lexicon = lexicons
+            .get(s.species)
+            .expect("a lexicon was built for every placed species");
         let site = hornvale_language::SiteConcepts {
-            concepts: &site_concepts,
+            concepts: &s.concepts,
+        };
+        let corpus = hornvale_language::NameCorpus {
+            frequencies: corpora
+                .get(s.species)
+                .expect("a corpus was counted for every species that named a settlement"),
         };
         let (generated, gloss) = namer.glossed_name(
             hornvale_language::NameKind::Settlement,
-            salt,
+            s.salt,
             &morph,
             &site,
             lexicon,
+            &corpus,
         );
         descriptors.push(SettlementDescriptor {
             id: s.id,
             name: generated.roman,
             biome: climate.biome_at(s.cell).name().to_string(),
-            latitude: coord.latitude,
-            longitude: coord.longitude,
+            latitude: s.latitude,
+            longitude: s.longitude,
             gloss,
         });
     }
@@ -5187,7 +5891,7 @@ fn build_to(
             let namer = namers
                 .get(name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(society_v);
+            let morph = morph_options(psych_v, society_v);
             let lexicon = lexicons
                 .get(name)
                 .expect("a lexicon was built for every placed species");
@@ -5299,8 +6003,11 @@ fn build_to(
         // so this branch is not exercised by any current seed.
         // Collective names must be unique WITHIN a world. The account layer
         // keys collectives by subject NAME, so two peoples that render the
-        // same autonym (bugbear and hobgoblin both draw "Babako" at seed 1,
-        // sharing a proto-language) collapse into one — which breaks the
+        // same autonym (bugbear and hobgoblin both drew "Babako" at seed 1
+        // before The Wearing, sharing a proto-language; that campaign
+        // re-derived every lexicon-drawn name, so the illustration is
+        // historical — the hazard and this guard are unchanged)
+        // collapse into one — which breaks the
         // null-filter byte-identity law, ground-truth recoverability, and the
         // disclosure tripwire. Only the composition root sees the whole
         // peoples roster (the language domain names one people at a time), so
@@ -5338,7 +6045,19 @@ fn build_to(
                     let namer = namers
                         .get(kind.0)
                         .expect("a Namer was built for every placed species");
-                    let morph = hornvale_language::MorphOptions { honorifics: false };
+                    // The species' own options. `Namer::name` is the v1
+                    // bare-stem draw and never consults the shape profile,
+                    // but there is no honest way to write a shape profile
+                    // that "is not read" — so this asks the composition
+                    // root for the real one rather than inventing a value.
+                    let morph = morph_options(
+                        wc.psyche
+                            .get(&KindId(kind.0))
+                            .expect("a placed people carries a mind vector"),
+                        wc.society
+                            .get(&KindId(kind.0))
+                            .expect("a placed people carries a society vector"),
+                    );
                     let mut salt = 0u64;
                     loop {
                         let candidate = namer
@@ -6384,6 +7103,56 @@ pub fn rendered_beliefs(
     Ok(out)
 }
 
+/// The Land list's label for every place, in `hornvale_terrain::places`
+/// order — decision 0024's render-time qualification applied to the one
+/// almanac section that names every settlement in the world at once.
+///
+/// The almanac window cannot build these itself: `PlaceInfo` carries an
+/// `EntityId` but no `CellId`, `AlmanacContext` holds no `&World`, and a
+/// window may not reach back to this root. So the root resolves each place
+/// to its cell and hands the finished labels over.
+///
+/// The list prints `- **{name}** — {biome}`, so the biome is part of every
+/// line and [`hornvale_almanac::qualify::SiteLabels::for_lines`] groups by
+/// the pair: two entries are ambiguous only when name *and* biome coincide.
+/// At seed 42 that qualifies **120** of 169 entries where grouping by name
+/// alone would have qualified 129, and it is also why no line can come out
+/// as `- **Roa (taiga)** — taiga` (the biome rung cannot separate a group
+/// whose members already share a biome, so it is never chosen). All 120 are
+/// coordinates; the seed-42 Land list contains no biome or people rung at
+/// all.
+///
+/// A place with no committed `cell-id` — no generated world has one, since
+/// every place is a placed settlement — cannot be qualified and keeps its
+/// bare name.
+/// type-audit: bare-ok(prose: return)
+fn land_list_labels(world: &World) -> Vec<String> {
+    let places = hornvale_terrain::places(world);
+    let cells: Vec<Option<hornvale_kernel::CellId>> = places
+        .iter()
+        .map(
+            |p| match world.ledger.value_of(p.id, hornvale_settlement::CELL_ID) {
+                Some(hornvale_kernel::Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                _ => None,
+            },
+        )
+        .collect();
+    let lines: Vec<(hornvale_kernel::CellId, String)> = places
+        .iter()
+        .zip(&cells)
+        .filter_map(|(p, cell)| Some(((*cell)?, p.biome.clone())))
+        .collect();
+    let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
+    places
+        .iter()
+        .zip(&cells)
+        .map(|(p, cell)| match cell {
+            Some(cell) => labels.label(*cell),
+            None => p.name.clone(),
+        })
+        .collect()
+}
+
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
@@ -6447,6 +7216,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         // night-stars must not stay salient under a rain deck.
         phenomena: observed_phenomena_occluded(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
+        place_labels: land_list_labels(world),
         land_lines: land_lines_from(&terrain),
         biome_lines: biome_lines_from(&climate),
         ground_lines: ground_lines_from(&terrain, &climate),
@@ -6529,6 +7299,77 @@ mod tests {
             &SettlementPins::default(),
         )
         .expect("seed 42 builds")
+    }
+
+    /// Decision 0024's remedy on the almanac's Land list — the section that
+    /// names every settlement in the world at once, and the one whose
+    /// committed gallery page would otherwise publish twenty-one
+    /// indistinguishable `- **Xoxa** — temperate-forest` lines.
+    ///
+    /// Three claims, each of which can fail on its own:
+    /// 1. `place_labels` is exactly as long as `places` — the parallel-vector
+    ///    invariant `AlmanacContext::place_labels` documents, and the reason
+    ///    the render can fall back silently without hiding a bug here.
+    /// 2. No two rendered lines repeat.
+    /// 3. The qualification is spent lazily: exactly the entries whose *line*
+    ///    (name and biome together) would have repeated are qualified, and no
+    ///    others — so the 9 seed-42 settlements whose name collides but whose
+    ///    biome already separates them stay bare.
+    ///
+    /// Claim 2 alone would pass on a world with no colliding names at all, so
+    /// the bare-line duplicate count is asserted non-zero first.
+    #[test]
+    fn land_list_lines_are_all_distinct_at_seed_42() {
+        let world = vigil_world();
+        let ctx = almanac_context(&world).expect("seed 42 renders");
+        assert_eq!(
+            ctx.place_labels.len(),
+            ctx.places.len(),
+            "one label per place"
+        );
+
+        let bare: Vec<(String, String)> = ctx
+            .places
+            .iter()
+            .map(|p| (p.name.clone(), p.biome.clone()))
+            .collect();
+        let distinct_bare: std::collections::BTreeSet<_> = bare.iter().collect();
+        assert!(
+            distinct_bare.len() < bare.len(),
+            "precondition: the bare Land list must actually repeat, or this \
+             test proves nothing ({} distinct of {})",
+            distinct_bare.len(),
+            bare.len()
+        );
+
+        let rendered: Vec<String> = ctx
+            .places
+            .iter()
+            .zip(&ctx.place_labels)
+            .map(|(p, label)| format!("- **{label}** — {}", p.biome))
+            .collect();
+        let distinct: std::collections::BTreeSet<&String> = rendered.iter().collect();
+        assert_eq!(
+            distinct.len(),
+            rendered.len(),
+            "every Land line is distinct; {} would have repeated bare",
+            bare.len() - distinct_bare.len()
+        );
+
+        let qualified = ctx
+            .places
+            .iter()
+            .zip(&ctx.place_labels)
+            .filter(|(p, label)| **label != p.name)
+            .count();
+        let in_a_repeating_group = bare
+            .iter()
+            .filter(|row| bare.iter().filter(|other| other == row).count() > 1)
+            .count();
+        assert_eq!(
+            qualified, in_a_repeating_group,
+            "qualified exactly the entries whose line would have repeated, no more"
+        );
     }
 
     #[test]
@@ -9365,12 +10206,31 @@ mod tests {
     #[test]
     fn a_settlement_name_gloss_is_truthful_to_its_own_site_facts() {
         // Every settlement carrying a `name-gloss` fact must gloss to
-        // concepts drawn only from its own site: its own biome, or one of
-        // the phenomenon concepts a presiding belief can map to.
+        // concepts drawn only from its own site vector (Task 5: the nine
+        // toponymic terrain concepts, biome, or the presiding phenomenon),
+        // and if that gloss names its biome concept, that concept must
+        // match the settlement's own committed `BIOME` fact.
+        //
+        // Re-deriving the site vector via the SAME `settlement_site_concepts`
+        // the naming pass itself calls does NOT pin the composition against
+        // a future change to that function: `terrain_of`/`climate_from`
+        // reconstruct the identical terrain and climate the build used, and
+        // `CELL_ID` is the same cell, so the recomputed vector is
+        // bit-identical to what the naming pass saw BY CONSTRUCTION — a bug
+        // inside `settlement_site_concepts` itself would be silently
+        // absorbed by both sides of this check (review round 1, Important
+        // 2). What this test actually pins: that `glossed_name` draws ONLY
+        // from the vector it is handed (no concept the gloss names is
+        // absent from the recomputed site vector), that the gloss was
+        // committed against the settlement whose own `CELL_ID` it carries,
+        // and — the anchor the widening had silently dropped, restored
+        // below — that a biome token in the gloss agrees with the
+        // settlement's own committed `BIOME` fact rather than some other
+        // cell's.
         let world = generated(42);
-        let terrain = terrain_of(&world).expect("seed 42 has terrain");
-        let climate = climate_from(&world, &terrain).expect("seed 42 has climate");
-        let plausible_phenomenon_concepts = ["sun", "moon", "star", "day", "wind"];
+        let terrain = terrain_of(&world).expect("seed 42 builds terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
+        let wc = WorldComponents::assemble().expect("component assembly");
         let mut checked_any = false;
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
             let id = f.subject;
@@ -9378,40 +10238,210 @@ mod tests {
                 continue;
             };
             checked_any = true;
-            let biome = world
-                .ledger
-                .text_of(id, hornvale_settlement::BIOME)
-                .expect("every settlement has a biome");
+            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                _ => panic!("a settlement carries a numeric cell-id"),
+            };
+            let species = hornvale_species::species_of(&world, id)
+                .expect("a settlement carries a species fact");
+            let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+                .expect("observation succeeds for a placed species");
+            let presiding = seen.first().and_then(phenomenon_concept);
+            let site = settlement_site_concepts(&world.seed, cell, &terrain, &climate, presiding);
             let mut remainder = gloss.to_string();
-            remainder = remainder.replace(biome, "");
-            for concept in plausible_phenomenon_concepts {
-                remainder = remainder.replace(concept, "");
+            for concept in &site {
+                remainder = remainder.replacen(concept, "", 1);
             }
-            // The Toponym: a gloss may also name the VARIANT of the
-            // settlement's own cell. Stripped by the same rule as the biome —
-            // the assertion is that nothing OUTSIDE its own site facts appears.
-            if let Some(hornvale_kernel::Value::Number(n)) =
-                world.ledger.value_of(id, hornvale_settlement::CELL_ID)
-            {
-                let cell = hornvale_kernel::CellId(*n as u32);
-                let expr = climate.biome_expr_at(cell);
-                if let Some(var) = hornvale_climate::variant_at_cell(
-                    world.seed,
-                    cell,
-                    expr.formation,
-                    expr.stratum,
-                    hornvale_climate::GroundKind::Ordinary,
-                ) {
-                    remainder = remainder.replace(var.concept_name(), "");
-                }
-            }
+            // The Toponym stripped the cell's VARIANT here with its own
+            // re-derivation, because on that branch the site vector did not
+            // carry it. It does now (`settlement_site_concepts` derives it),
+            // so the loop above already removed it and a second strip would be
+            // the sixth copy of a derivation this merge exists to reduce to
+            // one. Deleting it strengthens the test rather than weakening it:
+            // a variant in the gloss must now come from the SAME composition
+            // the namer used, not merely be re-derivable at the same cell.
             assert!(
                 remainder.chars().all(|c| c == '-'),
-                "gloss {gloss:?} for settlement biome {biome:?} names a concept outside its \
-                 own site facts"
+                "gloss {gloss:?} for settlement {id:?} names a concept outside its own site \
+                 vector {site:?}"
             );
+            // The restored BIOME anchor: if the gloss names the settlement's
+            // biome concept at all, that concept must match the settlement's
+            // own committed `BIOME` fact — catching a gloss committed
+            // against the wrong cell, which the remainder check above
+            // cannot (it only checks the gloss against a FRESHLY
+            // re-derived vector at the SAME `cell`, so a `CELL_ID`/`BIOME`
+            // mismatch introduced upstream would sail through it silently).
+            let biome_concept = climate.biome_at(cell).concept_name();
+            if gloss.contains(biome_concept) {
+                let committed_biome = world
+                    .ledger
+                    .text_of(id, hornvale_settlement::BIOME)
+                    .expect("every settlement carries a biome fact");
+                assert_eq!(
+                    biome_concept, committed_biome,
+                    "settlement {id:?} glosses to its biome concept {biome_concept:?}, but its \
+                     committed BIOME fact is {committed_biome:?} — the gloss and the \
+                     settlement's own biome fact disagree"
+                );
+            }
         }
         assert!(checked_any, "seed 42 should gloss at least one settlement");
+    }
+
+    #[test]
+    fn the_site_vector_is_wider_than_biome_and_sky() {
+        // The Wearing: a settlement's site offers more than its biome and
+        // its sky. The concrete claim: at seed 42, at least one
+        // settlement's vector contains a terrain-derived concept, and every
+        // vector is a subset of the registry.
+        let world = generated(42);
+        let terrain = terrain_of(&world).expect("seed 42 builds terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
+        let wc = WorldComponents::assemble().expect("component assembly");
+        let mut vectors: Vec<Vec<&'static str>> = Vec::new();
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let id = f.subject;
+            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                _ => panic!("a settlement carries a numeric cell-id"),
+            };
+            let species = hornvale_species::species_of(&world, id)
+                .expect("a settlement carries a species fact");
+            let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+                .expect("observation succeeds for a placed species");
+            let presiding = seen.first().and_then(phenomenon_concept);
+            vectors.push(settlement_site_concepts(
+                &world.seed,
+                cell,
+                &terrain,
+                &climate,
+                presiding,
+            ));
+        }
+        assert!(!vectors.is_empty(), "seed 42 places no settlements");
+        assert!(
+            vectors.iter().any(|v| v.len() > 2),
+            "every site vector is still <= 2 concepts wide — the widening did not land"
+        );
+        for v in &vectors {
+            for concept in v {
+                assert!(
+                    world.registry.concept(concept).is_some(),
+                    "site vector names an unregistered concept: {concept}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn settlement_site_concepts_orders_a_real_multi_concept_vector_most_specific_first() {
+        // The ordering is a documented CONTRACT (`settlement_site_concepts`'s
+        // doc comment) but nothing else in the tree asserts it, and the
+        // seed-42 fixture that would normally catch an accidental reorder
+        // (`hornvale::lens_purity::seed_42_world_json_matches_the_committed_fixture`)
+        // is in this campaign's standing failure set for its whole
+        // duration (Task 1), so a reorder landing in a later task would go
+        // completely unobserved without a direct pin.
+        //
+        // An earlier version of this test pinned one hardcoded cell's exact
+        // vector (`30793`, a kobold hill Task 4's review had measured). The
+        // absorb of main at `166d4ad9` un-settled that cell and the test
+        // died on its own fixture — so the pin is written against the
+        // CONTRACT instead of against one world's accident: the biome and
+        // the presiding phenomenon trail, in that order, and everything
+        // before them is a sharper site fact. That is the whole substance of
+        // "most specific first", it is what `glossed_name`'s index draw
+        // actually consumes, and it does not drift when settlements move.
+        //
+        // It stays order-sensitive: swapping the trailing biome/presiding
+        // pushes, or moving either ahead of a terrain gate, fails it. It
+        // also stays non-vacuous — the search below requires a settlement
+        // whose vector genuinely spans more than the trailing pair, which is
+        // exactly what Task 5 widened the vector to produce, and it fails
+        // loudly rather than skipping if no such settlement exists.
+        let world = generated(42);
+        let terrain = terrain_of(&world).expect("seed 42 builds terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
+        let wc = WorldComponents::assemble().expect("component assembly");
+
+        let mut checked = 0usize;
+        for id in world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+        {
+            let Some(Value::Number(n)) = world.ledger.value_of(id, hornvale_settlement::CELL_ID)
+            else {
+                continue;
+            };
+            let cell = hornvale_kernel::CellId(*n as u32);
+            let Some(species) = hornvale_species::species_of(&world, id) else {
+                continue;
+            };
+            let Ok(seen) = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+            else {
+                continue;
+            };
+            let presiding = seen.first().and_then(phenomenon_concept);
+            let site = settlement_site_concepts(&world.seed, cell, &terrain, &climate, presiding);
+            let biome = climate.biome_at(cell).concept_name();
+
+            // The trailing pair, in order: presiding last when it exists,
+            // biome immediately before it (or last when it does not).
+            match presiding {
+                Some(p) => {
+                    assert_eq!(
+                        site.last().copied(),
+                        Some(p),
+                        "settlement {id:?} (cell {}): the presiding phenomenon must be LAST — \
+                         it is the least discriminating fact a cell carries. Vector: {site:?}",
+                        cell.0
+                    );
+                    assert_eq!(
+                        site.get(site.len() - 2).copied(),
+                        Some(biome),
+                        "settlement {id:?} (cell {}): the biome must sit immediately before \
+                         the presiding phenomenon. Vector: {site:?}",
+                        cell.0
+                    );
+                }
+                None => assert_eq!(
+                    site.last().copied(),
+                    Some(biome),
+                    "settlement {id:?} (cell {}): with no presiding phenomenon the biome must \
+                     be LAST. Vector: {site:?}",
+                    cell.0
+                ),
+            }
+            // Nothing ahead of the trailing pair may be the biome or the
+            // presiding concept — that would mean a duplicate push or a
+            // reordering that put a coarse fact ahead of a sharp one.
+            let trailing = if presiding.is_some() { 2 } else { 1 };
+            for (i, concept) in site.iter().enumerate().take(site.len() - trailing) {
+                assert_ne!(
+                    *concept, biome,
+                    "settlement {id:?} (cell {}): biome appears at index {i}, ahead of the \
+                     trailing pair. Vector: {site:?}",
+                    cell.0
+                );
+                assert!(
+                    presiding != Some(*concept),
+                    "settlement {id:?} (cell {}): the presiding concept appears at index {i}, \
+                     ahead of the trailing pair. Vector: {site:?}",
+                    cell.0
+                );
+            }
+            if site.len() > trailing {
+                checked += 1;
+            }
+        }
+        assert!(
+            checked > 0,
+            "no settlement at seed 42 has a site vector wider than its trailing biome/presiding \
+             pair — the order contract is then untested, and Task 5's widening has regressed to \
+             the two-concept vector it replaced"
+        );
     }
 
     #[test]
@@ -10240,6 +11270,352 @@ mod tests {
                 || dominates_a_cell("red-dragon")
                 || dominates_a_cell("black-dragon"),
             "at least one chromatic dragon (mighty apex) should hold a stronghold: {breakdown:?}"
+        );
+    }
+
+    /// How many morphemes each of `species`' settlement names was built
+    /// from, read back **out of the committed world** rather than by
+    /// re-running the namer: a `name-gloss` fact is its name's chosen site
+    /// concepts joined with `"-"`, so parsing it against the world's own
+    /// concept registry counts the morphemes the shipped pipeline actually
+    /// produced.
+    ///
+    /// Reading the ledger rather than calling `glossed_concepts` is the
+    /// point. Re-deriving the shape from the same function the naming pass
+    /// calls would confirm that the function agrees with itself; this
+    /// measures what the world came out holding, through the corpus pass,
+    /// the wear, the survival rule, and the candidate clamp.
+    ///
+    /// A settlement whose site offered no word at all commits no
+    /// `name-gloss` and is skipped: it has no shape, it fell back to a
+    /// bare stem.
+    fn settlement_shapes(world: &World) -> std::collections::BTreeMap<String, Vec<usize>> {
+        let mut out: std::collections::BTreeMap<String, Vec<usize>> = Default::default();
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let id = f.subject;
+            let Some(gloss) = world.ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
+                continue;
+            };
+            let Some(species) = hornvale_species::species_of(world, id) else {
+                continue;
+            };
+            out.entry(species)
+                .or_default()
+                .push(gloss_morphemes(world, gloss));
+        }
+        out
+    }
+
+    /// The number of concept ids `gloss` is the `"-"`-join of. Concept ids
+    /// contain hyphens themselves (`temperate-forest`), so this is a
+    /// greedy longest-match walk over hyphen-separated tokens against the
+    /// world's registry, and it **panics rather than guessing** if any
+    /// position admits no registered concept — a silently mis-parsed gloss
+    /// would corrupt every distribution measured from it.
+    fn gloss_morphemes(world: &World, gloss: &str) -> usize {
+        let tokens: Vec<&str> = gloss.split('-').collect();
+        let (mut i, mut morphemes) = (0usize, 0usize);
+        while i < tokens.len() {
+            let mut matched = None;
+            for j in (i + 1..=tokens.len()).rev() {
+                let candidate = tokens[i..j].join("-");
+                if world.registry.concept(&candidate).is_some() {
+                    matched = Some(j);
+                    break;
+                }
+            }
+            let Some(j) = matched else {
+                panic!("gloss {gloss:?} holds no registered concept at token {i}");
+            };
+            morphemes += 1;
+            i = j;
+        }
+        morphemes
+    }
+
+    /// The share of `shapes` taken by its most common value.
+    fn modal_share(shapes: &[usize]) -> f64 {
+        let mut counts: std::collections::BTreeMap<usize, usize> = Default::default();
+        for s in shapes {
+            *counts.entry(*s).or_insert(0) += 1;
+        }
+        let top = counts.values().copied().max().unwrap_or(0);
+        top as f64 / shapes.len() as f64
+    }
+
+    /// The share of `species`' names its own shipped shape profile predicts
+    /// for `NameShape::Simplex` — the closed form `w₀^β / Σ wⱼ^β` over
+    /// exactly the weights `morph_options` hands the namer, so this reads
+    /// the composition root's real mapping and never a copy of it.
+    fn predicted_simplex_share(wc: &WorldComponents, species: &str) -> f64 {
+        let kind = KindId(
+            wc.psyche
+                .iter()
+                .map(|(k, _)| k.0)
+                .find(|k| *k == species)
+                .expect("a placed people is in the psyche registry"),
+        );
+        let morph = morph_options(
+            wc.psyche.get(&kind).expect("mind vector"),
+            wc.society.get(&kind).expect("society vector"),
+        );
+        let sharpened: Vec<f64> = morph
+            .shape_weights
+            .iter()
+            .map(|w| hornvale_kernel::math::powf(*w, morph.shape_beta))
+            .collect();
+        sharpened[0] / sharpened.iter().sum::<f64>()
+    }
+
+    /// Peoples with enough settlement names at this seed to speak of a
+    /// distribution at all.
+    const SHAPE_SAMPLE_FLOOR: usize = 20;
+
+    #[test]
+    fn the_shape_profile_reads_the_vector_dimensions_its_doc_comments_claim() {
+        // `shape_weights`' and `shape_beta`'s doc comments tell a causal
+        // story — an insular people names for insiders so the bare specific
+        // suffices; a people that plans in generations entrenches its
+        // conventions. Without this test that story is unfalsifiable: the
+        // world-level tests below rank peoples by whatever `morph_options`
+        // returns, so a `shape_weights` that ignored `in_group_radius` and
+        // returned a fixed SKEWED profile would leave every one of them
+        // green (β alone still separates the cultures). This is the test
+        // that fails when the mapping stops being a mapping.
+        //
+        // Pure functions over authored vectors, so it costs nothing and
+        // builds no world.
+        let society_at = |radius: f64| hornvale_species::SocietyVector {
+            in_group_radius: radius,
+            ..hornvale_species::SocietyVector::baseline()
+        };
+        let mind_at = |horizon: f64| hornvale_species::MindVector {
+            time_horizon: horizon,
+            ..*hornvale_species::psyche_registry()
+                .get(&KindId("goblin"))
+                .expect("the goblin baseline mind")
+        };
+
+        // Sampled across the whole authored domain, not at a convenient
+        // point or two.
+        let samples: Vec<f64> = (0..=100).map(|i| f64::from(i) / 100.0).collect();
+        for pair in samples.windows(2) {
+            let (lo, hi) = (
+                shape_weights(&society_at(pair[0])),
+                shape_weights(&society_at(pair[1])),
+            );
+            assert!(
+                hi[0] < lo[0],
+                "simplex weight must fall strictly as in_group_radius rises \
+                 (radius {} -> {}: {:.4} -> {:.4})",
+                pair[0],
+                pair[1],
+                lo[0],
+                hi[0]
+            );
+            assert!(
+                hi[1] > lo[1],
+                "specific+generic weight must rise strictly as in_group_radius rises \
+                 (radius {} -> {}: {:.4} -> {:.4})",
+                pair[0],
+                pair[1],
+                lo[1],
+                hi[1]
+            );
+            assert!(
+                shape_beta(&mind_at(pair[1])) > shape_beta(&mind_at(pair[0])),
+                "beta must rise strictly with time_horizon ({} -> {})",
+                pair[0],
+                pair[1]
+            );
+        }
+
+        // Both workhorse weights strictly positive everywhere, and the
+        // qualified weight strictly the smallest — the two properties the
+        // draw depends on (nothing silently zeroed out of the draw; the
+        // qualified shape is the rarest in EVERY profile, which is what the
+        // brief asks for).
+        for radius in &samples {
+            let w = shape_weights(&society_at(*radius));
+            assert!(
+                w[0] > 0.0 && w[1] > 0.0,
+                "radius {radius}: a workhorse weight fell to {w:?}, which drops a shape out \
+                 of the draw entirely"
+            );
+            assert!(
+                w[2] < w[0] && w[2] < w[1],
+                "radius {radius}: qualified must be the smallest weight, got {w:?}"
+            );
+        }
+
+        // The crossover the doc comment names, checked as a crossover and
+        // not merely as a value: which shape a people prefers must actually
+        // flip there.
+        let below = shape_weights(&society_at(0.59));
+        let at = shape_weights(&society_at(0.6));
+        let above = shape_weights(&society_at(0.61));
+        assert!(
+            below[0] > below[1],
+            "below the 0.6 crossover an insular people must prefer the simplex: {below:?}"
+        );
+        assert!(
+            (at[0] - at[1]).abs() < 1e-9,
+            "the crossover must sit at in_group_radius 0.6: {at:?}"
+        );
+        assert!(
+            above[1] > above[0],
+            "above the 0.6 crossover an expansive people must prefer the compound: {above:?}"
+        );
+    }
+
+    #[test]
+    fn a_culture_has_a_dominant_shape_and_a_tail() {
+        // The Wearing (Task 7): a people's toponymy is recognizable as
+        // THEIRS — one shape dominates — but it has a tail. Pure
+        // per-settlement variety reads as noise; pure per-culture
+        // uniformity loses the variation real systems have (English is
+        // overwhelmingly specific+generic and still keeps `York` beside
+        // `Newcastle-upon-Tyne`).
+        let world = generated(42);
+        let shapes = settlement_shapes(&world);
+
+        // NON-VACUITY, and the assertion the pre-shape code could not have
+        // passed on any seed: three-morpheme names exist. The superseded
+        // `/v2` draw was `range_u32(1, 2)`, so `Qualified` was unreachable
+        // by construction — and the bounds below are NOT enough on their
+        // own, because a uniform 1-or-2 draw lands a modal share near 0.5
+        // and sails through them. This line is what makes the test able to
+        // fail.
+        let qualified: usize = shapes
+            .values()
+            .flat_map(|v| v.iter())
+            .filter(|n| **n >= hornvale_language::NameShape::Qualified.morphemes())
+            .count();
+        assert!(
+            qualified > 0,
+            "no settlement in the world carries a qualified (3-morpheme) name — the shape \
+             draw is not reaching production, or every culture's Qualified weight is dead"
+        );
+
+        let mut examined = 0usize;
+        for (species, counts) in &shapes {
+            if counts.len() < SHAPE_SAMPLE_FLOOR {
+                continue; // too few to speak of a distribution
+            }
+            examined += 1;
+            let dominant = modal_share(counts);
+            assert!(
+                dominant > 0.4,
+                "{species}: no dominant shape ({dominant:.2}) — this people's toponymy reads \
+                 as noise rather than as a practice of its own"
+            );
+            assert!(
+                dominant < 0.95,
+                "{species}: shape is effectively constant ({dominant:.2}) — the tail real \
+                 systems have is gone"
+            );
+        }
+        assert!(
+            examined >= 2,
+            "fewer than two peoples at seed 42 have {SHAPE_SAMPLE_FLOOR}+ named settlements, \
+             so nothing above was actually checked"
+        );
+    }
+
+    #[test]
+    fn toponymic_shape_is_per_culture_not_one_world_wide_distribution() {
+        // Ledger #6: the shape distribution is PER CULTURE, drawn per
+        // settlement. That is the claim the bounds in the test above cannot
+        // reach — a single world-wide distribution would satisfy every one
+        // of them, since each people would then just be a sample from it.
+        //
+        // So: rank the peoples by the simplex share their OWN shipped
+        // weights predict, and require the world to reproduce that ranking.
+        // The predicted shares come from `morph_options` itself, so this
+        // cannot drift from the mapping; the observed ones come from the
+        // committed `name-gloss` facts, so it is not the draw checking
+        // itself.
+        let world = generated(42);
+        let wc = WorldComponents::assemble().expect("component assembly");
+        let shapes = settlement_shapes(&world);
+
+        let mut peoples: Vec<(String, f64, f64)> = Vec::new();
+        for (species, counts) in &shapes {
+            if counts.len() < SHAPE_SAMPLE_FLOOR {
+                continue;
+            }
+            let observed = counts
+                .iter()
+                .filter(|n| **n == hornvale_language::NameShape::Simplex.morphemes())
+                .count() as f64
+                / counts.len() as f64;
+            peoples.push((
+                species.clone(),
+                predicted_simplex_share(&wc, species),
+                observed,
+            ));
+        }
+        assert!(
+            peoples.len() >= 2,
+            "need two peoples with {SHAPE_SAMPLE_FLOOR}+ names to compare distributions at all"
+        );
+
+        // Only pairs the mapping SEPARATES are checked: a 0.15 predicted
+        // gap is several sampling standard errors at these sample sizes,
+        // so an inverted observation means the weights are not in force,
+        // not that the dice were unkind. Pairs the mapping does not
+        // separate say nothing either way and are skipped.
+        const SEPARATION: f64 = 0.15;
+        let mut compared = 0usize;
+        for (i, a) in peoples.iter().enumerate() {
+            for b in peoples.iter().skip(i + 1) {
+                if (a.1 - b.1).abs() < SEPARATION {
+                    continue;
+                }
+                compared += 1;
+                let (heavier, lighter) = if a.1 > b.1 { (a, b) } else { (b, a) };
+                assert!(
+                    heavier.2 > lighter.2,
+                    "{} is predicted to name more simply than {} ({:.3} vs {:.3}) but the \
+                     world says otherwise ({:.3} vs {:.3}) — the per-culture weights are not \
+                     reaching the draw",
+                    heavier.0,
+                    lighter.0,
+                    heavier.1,
+                    lighter.1,
+                    heavier.2,
+                    lighter.2
+                );
+            }
+        }
+        assert!(
+            compared > 0,
+            "no two peoples' predicted simplex shares differ by {SEPARATION} — the shape \
+             mapping carries no per-culture signal to test, which is itself the failure"
+        );
+
+        // And the separation has to be VISIBLE, not merely correctly
+        // ordered: the extremes must be far apart in the world, or a
+        // world-wide distribution with a lucky ordering would pass.
+        let most = peoples
+            .iter()
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .expect("non-empty");
+        let least = peoples
+            .iter()
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .expect("non-empty");
+        assert!(
+            most.2 - least.2 > 0.2,
+            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}) yet their \
+             observed simplex shares are {:.3} and {:.3} — too close together for these to be \
+             different naming practices",
+            most.0,
+            least.0,
+            most.1,
+            least.1,
+            most.2,
+            least.2
         );
     }
 }

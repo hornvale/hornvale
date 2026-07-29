@@ -210,7 +210,7 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
     doc.push_str(
         "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale concepts --manifest`. -->\n\n",
     );
-    doc.push_str("# Concept Manifest — the correspondence ledger\n\n");
+    doc.push_str("# The Concept Manifest\n\n");
     doc.push_str(
         "Every registered concept is carried across three correspondence ledgers — \
          **lexicon** (a word), **perception** (a phenomenon kind), and **cognition** (a \
@@ -388,7 +388,7 @@ mod tests {
         let doc = render_manifest(&registry);
         for expected in [
             "<!-- GENERATED FILE",
-            "# Concept Manifest — the correspondence ledger",
+            "# The Concept Manifest",
             "## Backlog (the negative space)",
             "Unnamed (lexeme gap):",
             "Unperceived (percept gap):",

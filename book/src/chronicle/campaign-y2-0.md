@@ -1,6 +1,6 @@
-# Campaign Y2-0: Firm Ground
+# Firm Ground
 
-**July 2026 · 11 commits · outcome: complete, merged — Year 2 opens by
+**Campaign Y2-0 · July 2026 · 11 commits · outcome: complete, merged — Year 2 opens by
 fixing the one known placement degeneracy and re-baselining Year 1's
 numbers exactly once**
 

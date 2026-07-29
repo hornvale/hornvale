@@ -1,6 +1,6 @@
-# Campaign 17: Audible Phonology
+# Audible Phonology
 
-**July 2026 · 10 commits · outcome: complete, merged — explored under an
+**Campaign 17 · July 2026 · 10 commits · outcome: complete, merged — explored under an
 explicit abandon gate, and the gate said go: the world's names can now be
 heard**
 

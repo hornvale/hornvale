@@ -1,4 +1,4 @@
-# Study 010: The Census of Coasts
+# The Census of Coasts
 
 Ten thousand tier-0 worlds, unpinned — the same seeds 0 through 9,999 every
 prior census walks — measured against six new metrics that quantify

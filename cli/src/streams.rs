@@ -289,6 +289,18 @@ mod tests {
         // colliding with its successor is a review decision rather than a
         // silent change to what every world written afterwards claims. It also
         // walks the whole roster through `split_version`'s ambiguity assert.
+        //
+        // The three naming stems read v3 as of The Wearing, and this line is
+        // that review decision being taken rather than deferred. The bump is
+        // real, deliberate and already declared with the epoch-suffix
+        // discipline the Constitution requires (never a rename): see
+        // `domains/language/src/lib.rs`, where `name/settlement/v2` is marked
+        // retired and `name/settlement/v3` states what changed — the wear pass
+        // over each morpheme, plus the RETIREMENT of v2's per-salt drawn stem
+        // under decision 0024. This golden was authored on main while the
+        // campaign's bump was in flight on its branch, so the two met for the
+        // first time at the close merge; the roster is updated to record the
+        // bump, and the assertion is left exactly as strong as it was.
         let rows: Vec<String> = versioned_labels()
             .into_iter()
             .map(|(k, v)| format!("{k} {v}"))
@@ -302,9 +314,9 @@ mod tests {
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
                 "language/<family>/lexicon/root/<concept> v3",
-                "language/<species>/name/deity v2",
-                "language/<species>/name/epithet v2",
-                "language/<species>/name/settlement v2",
+                "language/<species>/name/deity v3",
+                "language/<species>/name/epithet v3",
+                "language/<species>/name/settlement v3",
                 "religion/deity v2",
                 "room/chambers v1",
                 "room/furnishing v1",

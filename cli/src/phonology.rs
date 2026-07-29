@@ -43,13 +43,13 @@ pub fn render_phonology() -> String {
     // `iter()` is `KindId`-ascending, byte-identical to the old
     // registry-then-filter order.
     let speakers = hornvale_language::articulation_registry();
-    for (kind, _) in hornvale_species::psyche_registry().iter() {
+    for (kind, mind) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
             continue;
         }
         let species = kind.0;
         let phonology = world_builder::language_of(&world, species);
-        // The Cloister: `sample_names_for` needs only the society vector.
+        // The Cloister: `sample_names_for` needs the mind and society vectors.
         // Since this loop covers every minded speaker (dragons included since
         // The Solitary Tongue), a Solitary carries no society row — resolve
         // the goblin baseline for it, mirroring genesis's mixed-consumer rule.
@@ -79,8 +79,8 @@ pub fn render_phonology() -> String {
             template_list(&phonology.onsets)
         ));
         doc.push_str(&format!(
-            "- **Nuclei:** {} slot(s) per syllable\n",
-            phonology.nuclei
+            "- **Nuclei:** {}\n",
+            nucleus_list(&phonology.nuclei)
         ));
         doc.push_str(&format!(
             "- **Codas:** {}\n\n",
@@ -89,7 +89,7 @@ pub fn render_phonology() -> String {
 
         doc.push_str("### Sample names\n\n");
         doc.push_str("| Kind | Romanization | IPA | Espeak | Audio |\n|---|---|---|---|---|\n");
-        for (name_kind, name) in sample_names_for(&world, species, &society) {
+        for (name_kind, name) in sample_names_for(&world, species, mind, &society) {
             doc.push_str(&format!(
                 "| {} | {} | /{}/ | `{}` | <audio controls preload=\"none\" src=\"../audio/{}\"></audio> |\n",
                 name_kind,
@@ -111,11 +111,12 @@ pub fn render_phonology() -> String {
 pub(crate) fn sample_names_for(
     world: &World,
     species: &str,
+    mind: &hornvale_species::MindVector,
     society: &hornvale_species::SocietyVector,
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);
-    let morph = world_builder::morph_options(society);
+    let morph = world_builder::morph_options(mind, society);
     let mut samples = Vec::new();
     for salt in 0..SETTLEMENT_SAMPLES {
         samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
@@ -181,6 +182,23 @@ fn feature_description(seg: &Segment) -> String {
 /// `Debug` as its canonical name, e.g. `Labial`, `Stop`).
 fn lower<T: std::fmt::Debug>(value: &T) -> String {
     format!("{value:?}").to_lowercase()
+}
+
+/// Render the nucleus template set for the phonotactics section: each
+/// admissible size as that many `v` slots joined by `+` (`v`, `v+v`),
+/// comma-separated. Mirrors `template_list`'s shape, because since The
+/// Wearing the nucleus IS a template set rather than a single obligatory
+/// count. An empty set (never produced by `draw_phonology`, which always
+/// admits the simple vowel) reads as `*(none)*`.
+fn nucleus_list(sizes: &[usize]) -> String {
+    if sizes.is_empty() {
+        return "*(none)*".to_string();
+    }
+    sizes
+        .iter()
+        .map(|size| vec!["v"; *size].join("+"))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Render a list of manner-slot templates for the phonotactics section:
@@ -253,7 +271,7 @@ mod tests {
         // A SPEAKING people: since The Eremite the psyche registry is a superset
         // (the dragons carry a mind but no speech, and sort ahead of the peoples
         // by KindId), so pick the first psyche-carrier that also speaks.
-        let (kind, _) = psyche
+        let (kind, mind) = psyche
             .iter()
             .find(|&(k, _)| articulation.contains(k))
             .expect("at least one speaking people");
@@ -264,7 +282,7 @@ mod tests {
             .unwrap_or(hornvale_species::SocietyVector::baseline());
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(&society);
+        let morph = world_builder::morph_options(mind, &society);
         let name = namer.name(NameKind::Settlement, 0, &morph);
         assert!(!name.roman.is_empty(), "romanization must not be empty");
         assert!(!name.ipa.is_empty(), "IPA transcription must not be empty");
@@ -288,7 +306,7 @@ mod tests {
         // A SPEAKING people: since The Eremite the psyche registry is a superset
         // (the dragons carry a mind but no speech, and sort ahead of the peoples
         // by KindId), so pick the first psyche-carrier that also speaks.
-        let (kind, _) = psyche
+        let (kind, mind) = psyche
             .iter()
             .find(|&(k, _)| articulation.contains(k))
             .expect("at least one speaking people");
@@ -296,7 +314,7 @@ mod tests {
             .get(kind)
             .copied()
             .unwrap_or(hornvale_species::SocietyVector::baseline());
-        let samples = sample_names_for(&world, kind.0, &society);
+        let samples = sample_names_for(&world, kind.0, mind, &society);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {
             assert!(

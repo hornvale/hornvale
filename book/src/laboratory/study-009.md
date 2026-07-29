@@ -1,4 +1,4 @@
-# Study 009: The Census of the Meeting
+# The Census of the Meeting
 
 The capstone census of Year 2. The four campaigns before it built two
 peoples layer by layer — psychology, perception, articulation — and each

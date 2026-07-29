@@ -1,9 +1,17 @@
 //! The almanac window: render a world as a one-page document. Windows may
 //! depend on domains (they present them); domains never depend on windows.
+//!
+//! Settlement names may collide — decision 0024 holds that uniqueness is a
+//! property of a *reference*, not of a name — so any document here that can
+//! name two settlements at once resolves its labels through [`qualify`],
+//! which spends a qualifier only where an ambiguity actually appears in that
+//! document. It is a view over committed site facts: nothing in this window
+//! writes a fact or touches a save-format contract.
 #![warn(missing_docs)]
 
 pub mod connections;
 pub mod history;
+pub mod qualify;
 
 /// Re-exported so that test code assembling the `OccupationRecord` fixtures
 /// [`history::render_site`] reads can reach the history domain's types
@@ -113,7 +121,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines), bare-ok(prose: deep_lines), bare-ok(prose: lode_lines), bare-ok(prose: vestige_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines), bare-ok(prose: deep_lines), bare-ok(prose: lode_lines), bare-ok(prose: vestige_lines), bare-ok(prose: place_labels)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -125,6 +133,22 @@ pub struct AlmanacContext {
     pub phenomena: Vec<Phenomenon>,
     /// Known places.
     pub places: Vec<PlaceInfo>,
+    /// The Land list's rendered label for each entry of [`Self::places`],
+    /// same order and same length — a settlement's name, qualified from its
+    /// own site facts where this document would otherwise print two
+    /// indistinguishable lines (decision 0024; see [`qualify`]). The
+    /// composition root fills this: qualification needs the `&World` and the
+    /// cell ids that [`PlaceInfo`] does not carry, and a window may not
+    /// reach back to the root.
+    ///
+    /// Shorter than `places` (an empty vector, in particular) is legal and
+    /// means "unlabelled": each entry past the end renders its bare
+    /// `PlaceInfo::name`, which is what the hand-built contexts in this
+    /// module's own tests want and what a caller predating this field gets.
+    /// `almanac_context` always fills it exactly, and
+    /// `windows/worldgen`'s `land_list_lines_are_all_distinct_at_seed_42`
+    /// holds it to that.
+    pub place_labels: Vec<String>,
     /// The tectonic globe's headline lines, from the composition root.
     pub land_lines: Vec<String>,
     /// The globe's biome/habitability headline lines, from the composition root.
@@ -353,8 +377,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if ctx.places.is_empty() {
         doc.push_str("No places are known.\n\n");
     } else {
-        for place in &ctx.places {
-            doc.push_str(&format!("- **{}** — {}\n", place.name, place.biome));
+        for (index, place) in ctx.places.iter().enumerate() {
+            // The qualified label where the composition root supplied one,
+            // the bare name otherwise (see `AlmanacContext::place_labels`).
+            let label = ctx
+                .place_labels
+                .get(index)
+                .map_or(place.name.as_str(), String::as_str);
+            doc.push_str(&format!("- **{label}** — {}\n", place.biome));
         }
         doc.push_str(&format!(
             "\n{} ({:.0}°C)\n\n",
@@ -547,6 +577,11 @@ mod tests {
                 name: "the Vale".to_string(),
                 biome: "temperate forest".to_string(),
             }],
+            // Deliberately empty: this fixture exercises the unlabelled
+            // fallback (`place_labels` shorter than `places`), so the Land
+            // list here must render the bare `PlaceInfo::name`. The wired
+            // path is covered in `windows/worldgen` against a real world.
+            place_labels: vec![],
             land_lines: vec![
                 "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
             ],

@@ -1,7 +1,7 @@
 //! The REPL window: interrogate a world line by line. Generic over
 //! input/output so tests drive it with buffers.
 
-use hornvale_kernel::{EntityId, Value, World, WorldTime};
+use hornvale_kernel::{CellId, EntityId, Value, World, WorldTime};
 use hornvale_worldgen as world_builder;
 use std::io::{BufRead, Write};
 
@@ -157,18 +157,50 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 }
             }
             "settlements" => {
-                for place in hornvale_terrain::places(world) {
-                    let population = match world
-                        .ledger
-                        .value_of(place.id, hornvale_settlement::POPULATION)
-                    {
-                        Some(Value::Number(n)) => *n as u32,
-                        _ => 0,
+                // Unlike `places`/`settlement`, this listing prints no entity
+                // id, so two settlements sharing a name, a population and a
+                // biome would render as byte-identical lines (six such groups
+                // at seed 42). Decision 0024's remedy: qualify from the
+                // entities' own site facts, and only where the whole line
+                // coincides -- population and biome already separate most
+                // colliding names here, and `for_lines` is told so.
+                let rows: Vec<(hornvale_terrain::PlaceInfo, u32, Option<CellId>)> =
+                    hornvale_terrain::places(world)
+                        .into_iter()
+                        .map(|place| {
+                            let population = match world
+                                .ledger
+                                .value_of(place.id, hornvale_settlement::POPULATION)
+                            {
+                                Some(Value::Number(n)) => *n as u32,
+                                _ => 0,
+                            };
+                            let cell = match world
+                                .ledger
+                                .value_of(place.id, hornvale_settlement::CELL_ID)
+                            {
+                                Some(Value::Number(n)) => Some(CellId(*n as u32)),
+                                _ => None,
+                            };
+                            (place, population, cell)
+                        })
+                        .collect();
+                let lines: Vec<(CellId, String)> = rows
+                    .iter()
+                    .filter_map(|(place, population, cell)| {
+                        Some(((*cell)?, format!("{population} — {}", place.biome)))
+                    })
+                    .collect();
+                let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
+                for (place, population, cell) in &rows {
+                    let label = match cell {
+                        Some(cell) => labels.label(*cell),
+                        None => place.name.clone(),
                     };
                     writeln!(
                         output,
-                        "{} — population {} — {}",
-                        place.name, population, place.biome
+                        "{label} — population {population} — {}",
+                        place.biome
                     )?;
                 }
             }
@@ -450,6 +482,89 @@ mod tests {
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
+    }
+
+    /// Decision 0024's remedy on the one listing that prints no entity id:
+    /// no two `settlements` lines may be byte-identical, and the
+    /// qualification must be spent only where the *whole line* coincides —
+    /// name, population and biome together.
+    ///
+    /// Both halves are load-bearing. Without the first this test would pass
+    /// on any world whose names happen not to collide, so it asserts against
+    /// an independently computed count of what the *bare* listing would
+    /// duplicate (13 lines in 6 groups at seed 42). Without the second it
+    /// would pass on a name-scoped qualifier that spends a coordinate on all
+    /// 129 name-colliding settlements.
+    #[test]
+    fn the_settlements_listing_qualifies_exactly_the_lines_that_would_repeat() {
+        let world = constant_world();
+        let rendered: Vec<String> = {
+            let mut out = Vec::new();
+            run(&world, b"settlements\nquit\n" as &[u8], &mut out).unwrap();
+            String::from_utf8(out)
+                .unwrap()
+                .lines()
+                .filter(|l| l.contains(" — population "))
+                .map(str::to_string)
+                .collect()
+        };
+
+        // What the bare listing WOULD print, read straight off the ledger --
+        // an independent route, sharing no code with `SiteLabels`.
+        let bare: Vec<(String, u32, String)> = hornvale_terrain::places(&world)
+            .into_iter()
+            .map(|place| {
+                let population = match world
+                    .ledger
+                    .value_of(place.id, hornvale_settlement::POPULATION)
+                {
+                    Some(Value::Number(n)) => *n as u32,
+                    _ => 0,
+                };
+                (place.name, population, place.biome)
+            })
+            .collect();
+        assert_eq!(rendered.len(), bare.len(), "one line per place");
+
+        let distinct_bare: std::collections::BTreeSet<_> = bare.iter().collect();
+        let would_repeat = bare.len() - distinct_bare.len();
+        assert!(
+            would_repeat > 0,
+            "precondition: the bare listing must actually repeat, or this \
+             test proves nothing (got {} distinct of {})",
+            distinct_bare.len(),
+            bare.len()
+        );
+
+        let distinct_rendered: std::collections::BTreeSet<&String> = rendered.iter().collect();
+        assert_eq!(
+            distinct_rendered.len(),
+            rendered.len(),
+            "every rendered line is distinct; {would_repeat} would have repeated bare"
+        );
+
+        // Lazily: only the lines that would have repeated are qualified.
+        // Every other name -- including the settlements whose NAME collides
+        // but whose population or biome already separates them -- is printed
+        // bare. Detected by comparing each rendered line to the bare line it
+        // replaced, not by looking for a bracket: the people rung
+        // ("Roa of the kobolds") carries no bracket at all.
+        let bare_line = |(name, population, biome): &(String, u32, String)| {
+            format!("{name} — population {population} — {biome}")
+        };
+        let qualified = rendered
+            .iter()
+            .zip(&bare)
+            .filter(|(line, row)| **line != bare_line(row))
+            .count();
+        let in_a_repeating_group = bare
+            .iter()
+            .filter(|row| bare.iter().filter(|other| other == row).count() > 1)
+            .count();
+        assert_eq!(
+            qualified, in_a_repeating_group,
+            "qualified exactly the lines that would have repeated, no more"
+        );
     }
 
     #[test]
