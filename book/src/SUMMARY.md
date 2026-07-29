@@ -278,6 +278,7 @@
 - [The Column](./chronicle/the-column.md)
 - [The Sextant](./chronicle/the-sextant.md)
 - [The Effacement](./chronicle/the-effacement.md)
+- [The Cistern](./chronicle/the-cistern.md)
 
 # Appendix: The Frontier
 

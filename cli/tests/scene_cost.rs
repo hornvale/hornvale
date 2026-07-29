@@ -1,13 +1,23 @@
 //! The scene APIs' **cost gate** (The Sextant §3.2): the client-facing
 //! surface the Orrery renders through.
 //!
-//! Every **terrain-facing** `windows/scene` entry point re-derives terrain
-//! and climate from the `World` (`terrain_of` + `climate_from` at the top of
-//! `tiles_scene` and `tiles_region_scene`; `climate_of`, which is those same
-//! two calls in sequence, at the top of `temperature_grid`). That is ~638 ms
-//! of fixed overhead per call, and the Orrery pays it once per LOD tile on
-//! every camera move. This battery does not fix that — it pins it, so it
-//! cannot get worse unnoticed while the fix is pending.
+//! Every **terrain-facing** `windows/scene` entry point used to re-derive
+//! terrain and climate from the `World` — ~638 ms of fixed overhead per call,
+//! paid by the Orrery once per LOD tile on every camera move. The Sextant
+//! pinned that cost; **The Cistern removed it** (2026-07-29). The derivation
+//! now happens once per world, in `SceneContext::build`, and the `_in` entry
+//! points take the context as an argument.
+//!
+//! So this battery measures **the path the client takes**: one
+//! `SceneContext::build`, then `tiles_scene_in` and `tiles_region_scene_in`.
+//! The `&World`-only wrappers still exist and still cost context-build plus
+//! per-call work, but by construction — each one delegates to its `_in` form
+//! — so pinning them separately would measure the same two numbers summed.
+//!
+//! `CONTEXT_BUDGET_MS` is where the old 638 ms went. It was added with the
+//! ratchet below rather than left implicit: taking the derivation out of the
+//! per-call ceilings would otherwise have left the single most expensive
+//! operation on this surface with no ceiling over it at all.
 //!
 //! The purely astronomical documents — `system_scene`, `moons_scene`,
 //! `neighbors_scene`, `eclipses_scene` — derive no terrain, which is exactly
@@ -23,15 +33,48 @@
 //! **Ceilings ratchet DOWN freely. Raising one is an explicit, reviewed act**
 //! and must be recorded in that constant's doc comment with the reason
 //! (The Sextant §3.3). `graph_cost.rs`'s own history — 2.6 s → 90 s as the
-//! world grew — is why this rule is written down rather than assumed.
+//! world grew — is why this rule is written down rather than assumed. The
+//! Cistern is the first campaign to exercise the ratchet in its designed
+//! direction; every constant below whose value changed names the Sextant
+//! figure it descends from.
 //!
 //! `#[ignore]`d: a live-worldgen build takes minutes, so this is deferred
 //! from the commit gate (`make gate`) to `make gate-full`.
 //!
-//! ## Measured
+//! ## Measured — The Cistern (2026-07-29), the current ceiling basis
 //!
 //! **Dev profile (this box, `lefford`, `cargo test -p hornvale --test
-//! scene_cost -- --ignored --nocapture`, 2026-07-28) — the ceiling basis,
+//! scene_cost -- --ignored --nocapture`, 2026-07-29), the context path.**
+//! Three runs; the slowest per metric was taken as the ceiling basis:
+//!
+//! ```text
+//! run 1: genesis 6262.5, context 1290.0, tiles(512)+json 4319.9, small 2.7, region/tile 198.1
+//! run 2: genesis 6178.5, context 1291.3, tiles(512)+json 4149.6, small 2.5, region/tile 206.1
+//! run 3: genesis 6318.6, context 1308.0, tiles(512)+json 4181.7, small 2.6, region/tile 196.7
+//! slowest: genesis 6318.6, context 1308.0, tiles+json 4319.9, small 2.7, region/tile 206.1
+//! ```
+//!
+//! Taken under ~80-way load on the 40-core box, which is what makes them
+//! comparable to The Sextant's basis below rather than to its unloaded
+//! outliers: the two metrics this campaign did **not** touch reproduced it
+//! within noise (genesis 6318.6 against 6442.8; small docs 2.7 against 2.6).
+//! That agreement is the control — it is the evidence that the region and
+//! tiles figures fell because the code changed, not because the box was idle.
+//!
+//! Release profile, same day, same box and load, measured within one run by
+//! the two-pass profiler (`cargo run --release -p hornvale-scene --example
+//! profile_scene -- 8`): region **897.7 ms/tile through the `&World` path
+//! against 83.4 ms/tile through the context path — 10.8x**, against spec §5's
+//! hypothesised ~11x. A within-run ratio is the load-robust statistic here;
+//! the absolute milliseconds are not.
+//!
+//! ## Measured — The Sextant (2026-07-28), the superseded basis
+//!
+//! Kept because every ceiling below names the value it ratcheted down from,
+//! and the provenance chain has to stay readable.
+//!
+//! **Dev profile (this box, `lefford`, `cargo test -p hornvale --test
+//! scene_cost -- --ignored --nocapture`, 2026-07-28) — the then ceiling basis,
 //! since `make gate-full` runs the heavy tier without `--release`
 //! (`scripts/gate-full-heavy.sh:47`, no `--release`)**. Three runs; the
 //! slowest per metric (not necessarily the same run) was taken as the
@@ -54,7 +97,7 @@
 //! so this constant carries the same ~2x headroom, against the same
 //! conditions, as its three siblings.
 //!
-//! **Release profile (Task 1's reference measurement, seed 42, 8 region
+//! **Release profile (The Sextant's reference measurement, seed 42, 8 region
 //! tiles, `cargo run -p hornvale-scene --example profile_scene -- 8`,
 //! `/tmp/sextant-baseline.txt`) — the campaign's reference measurement
 //! (spec §1), NOT the ceiling basis (a release-based ceiling is roughly 2x
@@ -87,45 +130,76 @@ use std::time::Instant;
 const SAMPLES: u32 = 64;
 /// The Orrery's `REGION_MIN_LEVEL` (orrery `src/views/globe.ts:346`).
 const REGION_LEVEL: u32 = 3;
-/// Region patches measured. Small: each one currently costs ~700 ms.
+/// Region patches measured, sharing one context.
 const REGION_TILES: usize = 4;
 
-/// Wall-time budget for ONE `tiles_region_scene` call on a seed-42 world, at
-/// the Orrery's own tile geometry.
+/// Wall-time budget for ONE `tiles_region_scene_in` call on a seed-42 world,
+/// at the Orrery's own tile geometry, against a context already built.
 ///
-/// Measured 1545.8 ms/tile on 2026-07-28 (slowest of three runs), host
-/// `lefford` (40 cores), dev profile, as `gate-full` runs it, via `cargo
-/// test -p hornvale --test scene_cost -- --ignored --nocapture`.
+/// **Ratcheted DOWN by The Cistern: 3100.0 → 420.0 ms.** Measured 206.1
+/// ms/tile on 2026-07-29 (slowest of three runs), host `lefford` (40 cores),
+/// dev profile, as `gate-full` runs it, via `cargo test -p hornvale --test
+/// scene_cost -- --ignored --nocapture`. The Sextant's value was 3100.0,
+/// from 1545.8 ms/tile measured on 2026-07-28 through the re-deriving path.
+/// Budgeted at ~2x, unchanged in method.
 ///
-/// **This ceiling is deliberately above a known-bad number.** ~91% of that
-/// measurement is redundant re-derivation of terrain and climate (The
-/// Sextant §1). The ceiling locks in "no worse than today" while the fix is
-/// pending; the fix campaign ratchets it down. Budgeted at ~2x the
-/// measurement: it catches a regression that **more than** doubles the
-/// per-call work — an exact doubling still passes — while leaving enough
-/// headroom that ordinary load on a shared box does not flake it.
-const REGION_PER_TILE_BUDGET_MS: f64 = 3100.0;
+/// This is the campaign's headline number. The old measurement was ~91%
+/// redundant re-derivation (The Sextant §1); what remains is the sampling
+/// and serialization the client actually asked for.
+const REGION_PER_TILE_BUDGET_MS: f64 = 420.0;
 
 /// Wall-time budget for one `hw_new`-equivalent `build_world` at
 /// `BuildDepth::Full`, which is what the catalog's `hw_new` performs.
 ///
 /// Measured 6442.8 ms on 2026-07-28 (slowest of three runs), host
 /// `lefford`, dev profile, as `gate-full` runs it. Budgeted at ~2x.
+///
+/// **Unchanged by The Cistern, deliberately.** Re-measured 6318.6 ms on
+/// 2026-07-29 under the same conditions — world building is not on this
+/// campaign's path, and the agreement is the control that makes the two
+/// ratchets below attributable to the code rather than to the box. Moving
+/// 13000.0 to 12700.0 would be chasing noise.
 const GENESIS_BUDGET_MS: f64 = 13000.0;
+
+/// Wall-time budget for one `SceneContext::build` — the terrain and climate
+/// derivation, the two nearest-cell indices, and the biome map, built once per
+/// world and reused by every terrain-facing entry point.
+///
+/// **New in The Cistern; no Sextant counterpart.** Measured 1308.0 ms on
+/// 2026-07-29 (slowest of three runs), host `lefford`, dev profile, as
+/// `gate-full` runs it. Budgeted at ~2x.
+///
+/// The other ceilings in this file fell because this cost moved here. Adding
+/// it is what keeps the ratchet honest: without it, the derivation would have
+/// left the per-call ceilings and landed nowhere, and a regression inside
+/// `terrain_of` or `climate_from` would trip nothing on this surface. It is
+/// paid once per world rather than once per call, which is the whole change.
+const CONTEXT_BUDGET_MS: f64 = 2700.0;
 
 /// Wall-time budget for `tiles_scene(512)` — the globe base export — and its
 /// JSON serialization, measured together.
 ///
-/// Measured 5444.0 ms build+json on 2026-07-28 (slowest of three runs), host
-/// `lefford`, dev profile, as `gate-full` runs it. Budgeted at ~2x the sum.
-/// Build and JSON are summed rather than budgeted separately because they
-/// regress together: both scale with `width`, the one knob that changes
+/// **Ratcheted DOWN by The Cistern: 11000.0 → 8700.0 ms.** Measured 4319.9 ms
+/// build+json on 2026-07-29 (slowest of three runs), host `lefford`, dev
+/// profile, as `gate-full` runs it, now through `tiles_scene_in` against a
+/// context already built. The Sextant's value was 11000.0, from 5444.0 ms
+/// measured on 2026-07-28 through the re-deriving path. Budgeted at ~2x the
+/// sum. Build and JSON are summed rather than budgeted separately because
+/// they regress together: both scale with `width`, the one knob that changes
 /// this document's size.
-const TILES_BUDGET_MS: f64 = 11000.0;
+///
+/// It falls by ~1.1 s rather than by the full derivation, and that is the
+/// expected shape: serialization is untouched and is now the larger half of
+/// this number (spec §2 — the JSON size problem survives this campaign).
+const TILES_BUDGET_MS: f64 = 8700.0;
 
 /// Wall-time budget for the four small scene documents — `system_scene`,
 /// `moons_scene`, `neighbors_scene`, `eclipses_scene` — and their JSON
 /// serialization, measured together as one aggregate (spec §3.2).
+///
+/// **Untouched by The Cistern**, which is the point: these four documents are
+/// outside its scope and their cost did not move (2.7 ms re-measured on
+/// 2026-07-29 against 2.6 ms, same box, same load band).
 ///
 /// Measured 2.6 ms on 2026-07-28, host `lefford`, dev profile, as `gate-full`
 /// runs it — the loaded run, matching the conditions under which the three
@@ -157,9 +231,19 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let genesis_ms = start.elapsed().as_secs_f64() * 1000.0;
 
+    // The derivation, now paid ONCE per world rather than once per call.
+    // This is where the ~638 ms that used to sit inside every terrain-facing
+    // ceiling below went; it is measured here so that removing it from the
+    // per-call ceilings does not leave it unguarded.
     #[allow(clippy::disallowed_types)] // benchmark harness
     let start = Instant::now();
-    let scene = hornvale_scene::tiles_scene(&world, 512).expect("tiles scene");
+    let ctx = hornvale_scene::SceneContext::build(&world).expect("scene context");
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let context_ms = start.elapsed().as_secs_f64() * 1000.0;
+
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let start = Instant::now();
+    let scene = hornvale_scene::tiles_scene_in(&world, &ctx, 512).expect("tiles scene");
     let json = hornvale_scene::scene_json(&scene);
     #[allow(clippy::disallowed_types)] // benchmark harness
     let tiles_ms = start.elapsed().as_secs_f64() * 1000.0;
@@ -193,8 +277,9 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     let start = Instant::now();
     for i in 0..REGION_TILES {
         let ix = (i as u32) % (1 << REGION_LEVEL);
-        let scene = hornvale_scene::tiles_region_scene(&world, 0, REGION_LEVEL, ix, 0, SAMPLES)
-            .expect("region scene");
+        let scene =
+            hornvale_scene::tiles_region_scene_in(&world, &ctx, 0, REGION_LEVEL, ix, 0, SAMPLES)
+                .expect("region scene");
         assert!(
             !hornvale_scene::region_json(&scene).is_empty(),
             "the region document is non-empty"
@@ -205,6 +290,7 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     let per_tile_ms = region_ms / REGION_TILES as f64;
 
     println!("genesis            {genesis_ms:9.1} ms (budget {GENESIS_BUDGET_MS})");
+    println!("SceneContext::build {context_ms:9.1} ms (budget {CONTEXT_BUDGET_MS})");
     println!("tiles(512)+json    {tiles_ms:9.1} ms (budget {TILES_BUDGET_MS})");
     println!(
         "small docs+json    {small_ms:9.1} ms (budget {SMALL_DOCS_BUDGET_MS}) [{small_bytes} B]"
@@ -214,6 +300,10 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     assert!(
         genesis_ms < GENESIS_BUDGET_MS,
         "genesis took {genesis_ms:.1} ms, over the {GENESIS_BUDGET_MS} ms ceiling"
+    );
+    assert!(
+        context_ms < CONTEXT_BUDGET_MS,
+        "SceneContext::build took {context_ms:.1} ms, over the {CONTEXT_BUDGET_MS} ms ceiling"
     );
     assert!(
         tiles_ms < TILES_BUDGET_MS,

@@ -19,6 +19,15 @@ The first row is backfilled by hand from the fast-gate-tiers investigation
 ~8 parallel sessions — the 43.5-min worst case that motivated the tiering.
 Its low `cpu_ratio` (3.6 on a 10-core box) is the contention signature.
 
+One label changed what it measures, and the rows must not be read as a trend.
+`scene-profile` ran one traversal of the scene workload at The Sextant
+(2026-07-28, 8.3 s). At The Cistern (2026-07-29) the profiler became a
+**two-pass** instrument — the `&World` path and the `SceneContext` path in a
+single run, so the before and after share a box, a build and a world — which
+roughly doubles its wall time (16.0 s) while the thing it measures got about
+eleven times cheaper. The campaign's number is the ratio the run *prints*, not
+the wall time of the run.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -44,3 +53,5 @@ Its low `cpu_ratio` (3.6 on a 10-core box) is the contention signature.
 | 2026-07-28T13:09:03Z | census | 1098.866 | 12870.156 | 272.621 | 11.96 | 0 | 7e23dd49 |  | lefford | 40 |
 | 2026-07-28T19:12:34Z | rebaseline | 294.969 | 304.818 | 10.094 | 1.07 | 0 | 346fd2ee | main | MacBookPro | 10 |
 | 2026-07-28T19:55:30Z | scene-profile | 8.322 | 8.098 | 0.224 | 1.00 | 0 | ef762ca6 | the-sextant | lefford | 40 |
+| 2026-07-29T05:08:44Z | scene-profile | 16.028 | 15.646 | 0.351 | 1.00 | 0 | 3944ff02 | the-cistern | lefford | 40 |
+| 2026-07-29T05:20:44Z | rebaseline | 698.257 | 834.569 | 16.261 | 1.22 | 0 | 3944ff02 | the-cistern | lefford | 40 |
