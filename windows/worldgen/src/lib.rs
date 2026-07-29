@@ -4131,21 +4131,40 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped: the VARIANT of every settled cell (The Toponym). A people that
-    // has lived in a grass sward has a word for a grass sward, by exactly the
-    // reasoning that gives them a word for the savanna it is a kind of — and
-    // it is the same cell-scale draw their settlements are named from, so the
-    // word and the name agree.
+    // Steeped/Unknown: the STAPLE of every settled cell (The Watershed). A
+    // people that raises a crop has a word for it; one that fishes, herds, or
+    // forages has met the plant but never named it as a staple, which is an
+    // EXPERIENTIAL gap, not a perceptual one — their eyes are fine, their
+    // living is elsewhere. Subsistence is read per cell, so a people farming
+    // one valley and fishing another is steeped in the valley's grain.
+    //
+    // The gate lives HERE and not at the naming site on purpose: `holds_word`
+    // filters a namer's candidates against the lexicon, so a consumer-side
+    // gate can only subtract from a set exposure already decided. Gating at
+    // the naming site was measured and moved exactly zero bytes.
     for &cell in settled {
         let expr = climate.biome_expr_at(cell);
-        if let Some(v) = hornvale_climate::variant_at_cell(
-            world.seed,
-            cell,
+        let Some(crop) = hornvale_climate::crop_at(
             expr.formation,
-            expr.stratum,
-            hornvale_climate::GroundKind::Ordinary,
-        ) {
-            classes.insert(v.concept_name().to_string(), ExposureClass::Steeped);
+            climate.mean_temperature_at(cell),
+            climate.moisture_at(cell),
+        ) else {
+            continue;
+        };
+        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let subsistence =
+            hornvale_culture::subsistence(biome_class(climate.biome_at(cell)), coastal);
+        let concept = crop.concept_name().to_string();
+        if subsistence == hornvale_culture::Subsistence::Farming {
+            classes.insert(concept, ExposureClass::Steeped);
+        } else {
+            // Never downgrade: another cell may have steeped this crop.
+            classes.entry(concept).or_insert(ExposureClass::Unknown {
+                reason: GapReason::Experiential(format!(
+                    "{species} lives by {} here and raises no staple",
+                    subsistence.name()
+                )),
+            });
         }
     }
 
@@ -4816,6 +4835,21 @@ pub fn settlement_site_concepts(
     ) {
         concepts.push(variant.concept_name());
     }
+    // The staple (The Watershed), between the variant and the biome it grows
+    // on. Offered UNCONDITIONALLY: the lexicon decides, because `holds_word`
+    // admits it only for a people whose exposure steeped it. A fishing people
+    // simply has no word to name its home with, and agriculture gets no
+    // special case in the namer — it is gated exactly where colour and
+    // kinship are.
+    let expr = climate.biome_expr_at(cell);
+    concepts.extend(
+        hornvale_climate::crop_at(
+            expr.formation,
+            climate.mean_temperature_at(cell),
+            climate.moisture_at(cell),
+        )
+        .map(|c| c.concept_name()),
+    );
     concepts.push(climate.biome_at(cell).concept_name());
     concepts.extend(presiding);
     concepts

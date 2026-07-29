@@ -521,14 +521,30 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// Re-pinned at The Wearing's merge: the flagship's rendered name re-derived
 /// `Qvooshtvoagootao` -> `Doododoobodobaado`. Re-pinned AGAIN at the rebase
 /// onto The Toponym's cohort ordering, which reseeds every proto-root:
-/// `Doododoobodobaado` -> `Goodoogogootoodadoo`. Measured off the session's
+/// `Goodoogogootoodadoo` -> `Gootoogotoodaoka`. Measured off the session's
 /// own `npcs` listing, which returns the same seven NPCs at the same entity
 /// ids (1865-1871) before and after — the NPC and its co-location are
 /// unchanged; only the label moved.
-const GRIEVANCE_NPC: &str = "bugbear of Goodoogogootoodadoo";
+const GRIEVANCE_NPC: &str = "bugbear of Gootoogotoodaoka";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
+    // GUARD THE FIXTURE FIRST. `would_turn_hostile` answers `false` for a
+    // label it has never seen, so the NEGATIVE assertions below are satisfied
+    // by a stale or misspelt `GRIEVANCE_NPC` just as well as by a real one —
+    // only a positive assertion can fail. This constant has already gone
+    // stale twice on settlement renames. Assert the NPC exists, so the next
+    // rename fails HERE, saying so.
+    assert!(
+        Session::start(&world(), &PossessOpts::default())
+            .unwrap()
+            .0
+            .npc_labels()
+            .contains(&GRIEVANCE_NPC),
+        "GRIEVANCE_NPC ({GRIEVANCE_NPC}) is not co-located at day 0.5 — the settlement was \
+         probably renamed; re-read it from book/src/gallery/possession-seed-42.md"
+    );
+
     // THE GRIEVANCE FOLD (Task 2, direct social consequence, not an ambient
     // drive tip): an un-provoked NPC carries zero grievance and is never
     // hostile.
