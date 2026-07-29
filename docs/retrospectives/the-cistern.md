@@ -20,7 +20,9 @@ the sign is unknowable after the fact, which is worse than the magnitude.
 Making the profiler run both arms in one process fixed it structurally. Same
 build, same world, same box, same second: the only surviving difference
 between the two columns is the code. The ratio came out at 11.1× and 10.8× on
-two consecutive runs while the absolute numbers moved 29% between them.
+two consecutive runs — holding to within 3% — while the unfixed arm those
+ratios are taken from sat 28.5% above what The Sextant had measured for the
+very same code. The absolute drifted between campaigns; the ratio did not.
 
 The same trick paid twice. The cost battery's five metrics include two this
 campaign did not touch — world genesis and the four terrain-free documents —
