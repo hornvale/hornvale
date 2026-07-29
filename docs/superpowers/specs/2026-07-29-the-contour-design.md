@@ -19,7 +19,7 @@ Verified in source, not inferred:
 windows/worldgen/src/history_bake.rs:1648
   strength = (population + stores * STORE_WEIGHT) * tech_weight(tech)
 
-windows/worldgen/src/history_bake.rs:2519  (inside maybe_raid's candidate walk)
+windows/worldgen/src/history_bake.rs:2544  (inside maybe_raid's candidate walk)
   if raider_str <= t_str * RAID_MARGIN { continue; }   // RAID_MARGIN = 1.5
 ```
 
@@ -230,10 +230,12 @@ was.
   not. The plan carries a task that regenerates and diffs before any label is
   touched. The expectation is that `history/bake` does move; the expectation
   is not the evidence.
-- **Census goldens will move.** A refresh on the canonical host is required at
-  the close (decision 0081, `scripts/census-run.sh`, host `lefford` per 0079).
-  **This is an autopilot carve-out and needs Nathan's explicit authorization at
-  the point of running, not at spec approval.**
+- **Census goldens are expected to move, and that expectation is not
+  evidence.** The same discipline 0084 applies to the epoch applies here: the
+  plan regenerates and reads the diff rather than asserting it. If a refresh is
+  needed it runs on the canonical host (decision 0081, `scripts/census-run.sh`,
+  host `lefford` per 0079). **This is an autopilot carve-out and needs Nathan's
+  explicit authorization at the point of running, not at spec approval.**
 
 ## 6. Testing
 
