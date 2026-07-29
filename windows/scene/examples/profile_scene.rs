@@ -39,8 +39,17 @@ fn ms(t: Instant) -> f64 {
     t.elapsed().as_secs_f64() * 1000.0
 }
 
-/// A deterministic fan of `n` level-`REGION_LEVEL` tile addresses, walked
-/// face-major so a small `n` still spans more than one cube face.
+/// A deterministic fan of the first `n` level-`REGION_LEVEL` tile addresses in
+/// face-major order: face 0's `(1 << REGION_LEVEL)²` = 64 tiles in row-major
+/// order, then face 1, and so on. So the default fan of 8 — and even a fan of
+/// 24 — is a contiguous run of addresses **on face 0 alone**.
+///
+/// That is deliberate and sufficient for what this profiler measures. The
+/// finding is per-tile cost that does not fall as the fan grows, and per-tile
+/// cost was measured flat across fan sizes 1 / 8 / 24 (687.3 / 700.5 / 701.8
+/// ms — spec §1), which is the redundancy signature. Nothing here claims
+/// per-tile cost is independent of *address*: that was never measured, and
+/// every number this campaign reports comes from cube face 0.
 fn tile_fan(n: usize) -> Vec<(u32, u32, u32)> {
     let per_edge = 1u32 << REGION_LEVEL;
     let mut out = Vec::with_capacity(n);

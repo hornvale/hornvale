@@ -1,12 +1,20 @@
 //! The scene APIs' **cost gate** (The Sextant §3.2): the client-facing
 //! surface the Orrery renders through.
 //!
-//! Every `windows/scene` entry point re-derives terrain and climate from the
-//! `World` (`terrain_of` + `climate_from` at the top of `tiles_scene`,
-//! `temperature_grid`, and `tiles_region_scene`). That is ~638 ms of fixed
-//! overhead per call, and the Orrery pays it once per LOD tile on every
-//! camera move. This battery does not fix that — it pins it, so it cannot
-//! get worse unnoticed while the fix is pending.
+//! Every **terrain-facing** `windows/scene` entry point re-derives terrain
+//! and climate from the `World` (`terrain_of` + `climate_from` at the top of
+//! `tiles_scene` and `tiles_region_scene`; `climate_of`, which is those same
+//! two calls in sequence, at the top of `temperature_grid`). That is ~638 ms
+//! of fixed overhead per call, and the Orrery pays it once per LOD tile on
+//! every camera move. This battery does not fix that — it pins it, so it
+//! cannot get worse unnoticed while the fix is pending.
+//!
+//! The purely astronomical documents — `system_scene`, `moons_scene`,
+//! `neighbors_scene`, `eclipses_scene` — derive no terrain, which is exactly
+//! why the four of them together cost under a millisecond. That is what
+//! `SMALL_DOCS_BUDGET_MS` guards: if one of them ever acquired a `terrain_of`
+//! call, its cost would go from a fraction of a millisecond to ~638 ms, and
+//! the other three ceilings here would not notice.
 //!
 //! Budgets here are **falsification ceilings, not targets**, in the sense
 //! `graph_cost.rs` established: set above the measured value so only a real
@@ -35,6 +43,16 @@
 //! run 3: genesis 6442.8 ms, tiles(512)+json 5444.0 ms, region per tile 1498.6 ms
 //! slowest per metric: genesis 6442.8 ms, tiles(512)+json 5444.0 ms, region per tile 1545.8 ms
 //! ```
+//!
+//! The small-documents aggregate was added later the same day, same box and
+//! profile. Three unloaded runs gave 1.7 / 1.8 / 1.8 ms — but an unloaded run
+//! is NOT comparable to the basis above, which the same three runs showed to
+//! have been taken under load (they returned genesis 3819–3899 ms against the
+//! recorded 6442.8). Re-run under 40-way CPU load the box reproduced the
+//! basis (genesis 6876.8 ms, tiles+json 5620.0 ms, region per tile 1508.2 ms)
+//! and the aggregate cost **2.6 ms**. That loaded figure is the ceiling basis,
+//! so this constant carries the same ~2x headroom, against the same
+//! conditions, as its three siblings.
 //!
 //! **Release profile (Task 1's reference measurement, seed 42, 8 region
 //! tiles, `cargo run -p hornvale-scene --example profile_scene -- 8`,
@@ -83,7 +101,9 @@ const REGION_TILES: usize = 4;
 /// measurement is redundant re-derivation of terrain and climate (The
 /// Sextant §1). The ceiling locks in "no worse than today" while the fix is
 /// pending; the fix campaign ratchets it down. Budgeted at ~2x the
-/// measurement — tight enough that doubling the per-call work trips it.
+/// measurement: it catches a regression that **more than** doubles the
+/// per-call work — an exact doubling still passes — while leaving enough
+/// headroom that ordinary load on a shared box does not flake it.
 const REGION_PER_TILE_BUDGET_MS: f64 = 3100.0;
 
 /// Wall-time budget for one `hw_new`-equivalent `build_world` at
@@ -102,6 +122,22 @@ const GENESIS_BUDGET_MS: f64 = 13000.0;
 /// regress together: both scale with `width`, the one knob that changes
 /// this document's size.
 const TILES_BUDGET_MS: f64 = 11000.0;
+
+/// Wall-time budget for the four small scene documents — `system_scene`,
+/// `moons_scene`, `neighbors_scene`, `eclipses_scene` — and their JSON
+/// serialization, measured together as one aggregate (spec §3.2).
+///
+/// Measured 2.6 ms on 2026-07-28, host `lefford`, dev profile, as `gate-full`
+/// runs it — the loaded run, matching the conditions under which the three
+/// ceilings above were measured (unloaded the same aggregate costs 1.7–1.8 ms;
+/// see the module doc). Budgeted at ~2x.
+///
+/// **The highest-signal ceiling in this file.** These four are cheap
+/// *because* they derive no terrain — they read the sky only. Acquiring a
+/// `terrain_of` call is this campaign's exact defect class, and it would take
+/// this aggregate from a fraction of a millisecond to ~638 ms per document
+/// while every other ceiling here stayed green.
+const SMALL_DOCS_BUDGET_MS: f64 = 5.2;
 
 /// The cost gate. Prints every measured number (`--nocapture`) so a future
 /// re-baselining does not need to re-derive the harness.
@@ -129,6 +165,30 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     let tiles_ms = start.elapsed().as_secs_f64() * 1000.0;
     assert!(!json.is_empty(), "the tiles document is non-empty");
 
+    // The four terrain-free documents, timed as one aggregate: individually
+    // they are far below timer resolution, and their shared property (no
+    // `terrain_of`) is what the ceiling is guarding.
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let start = Instant::now();
+    let mut small_bytes = 0usize;
+    small_bytes +=
+        hornvale_scene::system_json(&hornvale_scene::system_scene(&world).expect("system scene"))
+            .len();
+    small_bytes +=
+        hornvale_scene::moons_json(&hornvale_scene::moons_scene(&world).expect("moons scene"))
+            .len();
+    small_bytes += hornvale_scene::neighbors_json(
+        &hornvale_scene::neighbors_scene(&world).expect("neighbors scene"),
+    )
+    .len();
+    small_bytes += hornvale_scene::eclipses_json(
+        &hornvale_scene::eclipses_scene(&world, 0.0, 365.0).expect("eclipses scene"),
+    )
+    .len();
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let small_ms = start.elapsed().as_secs_f64() * 1000.0;
+    assert!(small_bytes > 0, "the small documents are non-empty");
+
     #[allow(clippy::disallowed_types)] // benchmark harness
     let start = Instant::now();
     for i in 0..REGION_TILES {
@@ -146,6 +206,9 @@ fn scene_api_cost_is_bounded_on_seed_42() {
 
     println!("genesis            {genesis_ms:9.1} ms (budget {GENESIS_BUDGET_MS})");
     println!("tiles(512)+json    {tiles_ms:9.1} ms (budget {TILES_BUDGET_MS})");
+    println!(
+        "small docs+json    {small_ms:9.1} ms (budget {SMALL_DOCS_BUDGET_MS}) [{small_bytes} B]"
+    );
     println!("region per tile    {per_tile_ms:9.1} ms (budget {REGION_PER_TILE_BUDGET_MS})");
 
     assert!(
@@ -155,6 +218,12 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     assert!(
         tiles_ms < TILES_BUDGET_MS,
         "tiles_scene(512)+json took {tiles_ms:.1} ms, over the {TILES_BUDGET_MS} ms ceiling"
+    );
+    assert!(
+        small_ms < SMALL_DOCS_BUDGET_MS,
+        "the four small scene documents took {small_ms:.1} ms, over the \
+         {SMALL_DOCS_BUDGET_MS} ms ceiling — the likeliest cause is one of them \
+         acquiring a terrain or climate derivation"
     );
     assert!(
         per_tile_ms < REGION_PER_TILE_BUDGET_MS,
