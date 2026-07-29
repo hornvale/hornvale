@@ -186,13 +186,35 @@ fn divergence_real_holds_on_every_swept_seed() {
 /// minimal pair, which pushes kobold's forms further from the goblinoid
 /// family's: re-measured under v2, the coincidence rate falls to zero —
 /// 1000/1000 clean, no exceptions. Pinned as empty, re-derived not forced.
+///
+/// The Wearing re-pin (2026-07-28; lefford regen `f32d6ce2`, 0063): the tail
+/// surfaced again, on **one** seed — 171 — so the pin moves from "empty" to
+/// "exactly {171}", 999/1000 clean. This is the re-pin the failure message
+/// below has always prescribed, and it is the third time the tail has been
+/// observed (seeds 278 and 816 under The Words, then none under `root/v2`,
+/// now 171). It is re-pinned as an EXCEPTION LIST rather than relaxed to a
+/// rate or a bound, so that a fourth coincidence still fails loudly and names
+/// its seed.
+///
+/// Why this is a coincidence and not a family-boundary break: The Wearing
+/// changed how names are BUILT from lexemes (shape, nucleus templates,
+/// reduction, the retired stem) and did not touch proto-root assignment,
+/// which is what this metric reads. The one-seed movement is the expected
+/// behaviour of a statistical near-certainty under any reseeding, and the
+/// sibling structural guards are all still green on this same census:
+/// `monophyly_goblinoid_holds_on_every_swept_seed`,
+/// `divergence_real_holds_on_every_swept_seed` and
+/// `inventory_closure_holds_on_every_swept_seed_for_every_daughter` pass with
+/// no exceptions. If those had moved too, this would be a boundary break and
+/// not a re-pin.
 #[test]
 fn clean_outgroup_kobold_holds_on_every_swept_seed() {
     let rows = flags(col("clean-outgroup-kobold"));
     assert_eq!(rows.len(), 1000);
     let failures: Vec<u64> = rows.iter().filter(|(_, v)| !v).map(|(s, _)| *s).collect();
-    assert!(
-        failures.is_empty(),
+    assert_eq!(
+        failures,
+        vec![171],
         "clean-outgroup-kobold coincided with the goblinoid family on seeds \
          {failures:?} — re-derive and re-pin, don't force back to empty"
     );
@@ -238,7 +260,18 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // The Tumult (predation epoch; lefford regen, 0063): 3.059 -> 3.058 —
     // predation reseats settlements, moving a discrete count on ~1 seed;
     // hobgoblin and bugbear are unmoved, and the aggregate ordering holds.
-    assert!((mg - 3.058).abs() < 1e-9, "goblin mean drifted: {mg}");
+    //
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063): all
+    // three daughters fall together and by similar fractions — goblin
+    // 3.058 -> 3.036 (-0.7%), hobgoblin 2.487 -> 2.470 (-0.7%), bugbear
+    // 4.483 -> 4.473 (-0.2%). The campaign reworked how names are built from
+    // lexemes, which reseeds the draws deciding which proto segments land
+    // off a given daughter's inventory; the effect is small because
+    // divergence magnitude is a property of INVENTORIES, which the campaign
+    // did not change. **The preregistered loudness ordering holds
+    // decisively** (bugbear 4.473 >= goblin 3.036 >= hobgoblin 2.470, bugbear
+    // still ~1.8x hobgoblin), so these re-pin the witnesses, not the claim.
+    assert!((mg - 3.036).abs() < 1e-9, "goblin mean drifted: {mg}");
     // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
     // re-measured (was 2.485) — accumulated lexeme-space drift (the person
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
@@ -256,12 +289,16 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // refresh surfaced the accumulated move. The aggregate ordering holds
     // decisively (4.483 >= 3.058 >= 2.487), so this re-pins the witness,
     // not the preregistered claim.
-    assert!((mh - 2.487).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063):
+    // 2.487 -> 2.470; cause and ordering verdict in the goblin note above.
+    assert!((mh - 2.470).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
     // 4.481 -> 4.483 (same cause as hobgoblin above).
-    assert!((mb - 4.483).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063):
+    // 4.483 -> 4.473; cause and ordering verdict in the goblin note above.
+    assert!((mb - 4.473).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -279,12 +316,18 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
         .count();
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): per-seed rates re-measured below.
-    assert_eq!(bg, 859, "bugbear>=goblin rate drifted: {bg}/{n}");
-    assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    // Census regen (2026-07-27, inherited language drift, lefford 0063):
-    // bugbear>=hobgoblin 908 -> 909; the other three rates are unmoved.
-    assert_eq!(bh, 909, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
-    assert_eq!(chain, 586, "full-chain per-seed rate drifted: {chain}/{n}");
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063): all four
+    // per-seed rates move by a handful of seeds each — bugbear>=goblin
+    // 859 -> 864, goblin>=hobgoblin 718 -> 717, bugbear>=hobgoblin
+    // 909 -> 908, full chain 586 -> 591. The picture they record is unchanged
+    // in every respect that matters: the full strict chain still holds on
+    // well under two thirds of seeds (59.1%), so this is still NOT a
+    // universal invariant, and the three pairwise majorities are still
+    // directionally consistent with the aggregate ordering.
+    assert_eq!(bg, 864, "bugbear>=goblin rate drifted: {bg}/{n}");
+    assert_eq!(gh, 717, "goblin>=hobgoblin rate drifted: {gh}/{n}");
+    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    assert_eq!(chain, 591, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
 /// Observation, not a pass/fail invariant (spec §3's merger-induced
@@ -383,13 +426,23 @@ fn homophony_count_is_measured_and_pinned() {
     // hobgoblin 1.637 -> 1.747, bugbear 6.797 -> 7.159, kobold 1.959 -> 2.042.
     // Bugbear stays highest among the goblinoid daughters by better than 3x,
     // which is the claim this test guards.
-    assert!((mg - 1.997).abs() < 1e-9, "goblin mean drifted: {mg}");
-    // hobgoblin 1.572 -> 1.637, bugbear 6.584 -> 6.797, kobold 1.9 -> 1.959
-    // (same cause); bugbear stays highest among the goblinoid daughters, the
-    // claim this test actually guards.
-    assert!((mh - 1.747).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 7.159).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.042).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063): every
+    // daughter's periphery homophony FALLS, and bugbear falls hardest —
+    // goblin 1.997 -> 1.914 (-4%), hobgoblin 1.747 -> 1.555 (-11%), bugbear
+    // 7.159 -> 5.952 (-17%), kobold 2.042 -> 1.860 (-9%). The campaign's
+    // naming rework does not touch nativization, but it does reseed the draws
+    // that decide which periphery forms a daughter mints, and a name built
+    // from a drawn shape over a template nucleus set explores more of the
+    // form space than one built from a fixed compound did. Bugbear stays
+    // highest among the goblinoid daughters by better than 3x — the claim
+    // this test actually guards — so these re-pin the witnesses, not the
+    // observation. Note the DIRECTION is opposite to the last two regens,
+    // which both rose; a fall is the first movement here attributable to a
+    // named cause rather than to accumulated unattributed drift.
+    assert!((mg - 1.914).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.555).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 5.952).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 1.860).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -29,42 +29,93 @@
 //! cyclic pantheon (that panic never fired), name-gloss is still 100%
 //! row-by-row, and every generated name is still phonotactically valid.
 //!
-//! ## Pending regen — The Wearing (2026-07-28)
+//! ## Census regen — The Wearing (2026-07-28, lefford, decision 0063)
 //!
-//! **Every test in this file is red until The Wearing's census regenerates,
-//! and the cause is one line: three new metrics.** `the-census` is defined as
-//! "all registered metrics", so registering `name-syllables-goblin`,
-//! `name-syllables-kobold` and `name-transparency` expands its schema, and
-//! `load_census` refuses a `rows.csv` whose header no longer matches the
-//! study ("rows.csv header does not match study 'the-census' schema"). Every
-//! calibration here reads through that one loader, so all 31 fail identically
-//! and none of them is a calibration failure. They clear at the regen without
-//! any edit.
+//! Regen commit `f32d6ce2`; both 1000-row studies completed with 0 refusals.
+//! The campaign shortened names: the drawn settlement stem retired (Task 6),
+//! name shape became a per-culture drawn distribution (Task 7), the
+//! obligatory-diphthong nucleus count became a template set (Task 8), and
+//! reduction became position-conditioned (Task 9). Every naming row below is
+//! re-pinned to that census; each carries its own dated note.
 //!
-//! What that regen must then re-pin, and why — each is a drift witness, never
-//! a bound, and each is annotated in place at its own test:
+//! Only naming/language columns moved. Diffing this census against its
+//! predecessor column by column, 21 of ~340 columns changed and every one of
+//! them is a naming or lexicon reading — settlement placement, pantheon
+//! structure, terrain and climate are byte-identical. That is why
+//! `goblin_flagship_coastal_split_is_pinned`, the belief-kind rows, the
+//! blind-attribution rows and the two structural null-control pins
+//! (cult-form TVD, pantheon-size SMD) did NOT move and are not re-pinned.
 //!
-//! - `name_length_distributions_are_measured_and_pinned` — the campaign's
-//!   primary claim. Names got much shorter (the drawn settlement stem retired).
-//! - `name_collision_rate_is_measured_and_pinned` — expected UP, against the
-//!   preregistered direction. Reported, not chased (decision 0024, spec §4).
-//! - `null_control_name_length_smd_is_pinned` and the name-length arm of
-//!   `null_control_distributions_are_within_the_sampling_bound` — the same
-//!   naming re-baseline reaches the solo census too.
+//! The headline, medians over 1000 worlds, re-derived from the committed
+//! `rows.csv` rather than quoted:
 //!
-//! Nothing else in this file has a naming input, so nothing else needs a
-//! stated cause — but every recorded value in it is measured over settlements
-//! and pantheons, and those re-derive per regen as they always do.
+//! | metric | before | after |
+//! |---|---:|---:|
+//! | `name-length-goblin` median | 13.15 | **9.33** |
+//! | `name-length-kobold` median | 12.51 | **7.40** |
+//! | `name-syllables-goblin` median | — | **2.80** |
+//! | `name-syllables-kobold` median | — | **2.22** |
+//! | `name-transparency` median | 1.00 | **0.86** |
+//! | `name-collision-rate` median | 0.15 | **0.65** |
 //!
-//! Two rows that must NOT move, and are worth checking by name at the regen:
-//! `name_gloss_true_is_100_percent_row_by_row` and
-//! `phonotactic_validity_is_true_for_every_generated_name` are invariants, and
-//! both were re-measured on the live shipped code at seeds 42/1/99/777 during
-//! this sweep rather than assumed from the stale fixture. Gloss truth needed a
-//! metric fix to stay honest (the pair-arity ceiling in `name_gloss_true`;
-//! see its own comment in `windows/lab/src/metrics.rs`) — it read FALSE at all
-//! four seeds on glosses that were themselves perfectly truthful, and the
-//! stale fixture was hiding it.
+//! The name-length medians are the campaign's PRIMARY preregistered claim
+//! (spec §7): a median inside the metric's own declared buckets, which stop
+//! at 10 characters. Both land inside. Preregistered direction DOWN: **held**.
+//!
+//! ## Two invariants this regen broke, and why they are NOT re-pinned
+//!
+//! `epithet_honorific_is_true_for_goblin_and_false_for_kobold` and
+//! `lexicon_is_regular_and_exposure_sound_for_both_species` are left FAILING
+//! deliberately. They are invariants, not witnesses, and an invariant is
+//! never "re-pinned" — it is either honoured or reported. Both were masked
+//! until now by the 31 header-mismatch failures Task 11a recorded, so this
+//! regen is the first run that could see them. In **both** cases the
+//! diagnosis is a stale METRIC, not a broken world — the campaign's own
+//! finding shape #1 (a comment asserting a property the code lacks),
+//! committed by this campaign and surfacing here:
+//!
+//! - **`exposure-sound-{goblin,kobold}`, 1000 true -> 748 false (both
+//!   species, the same seeds).** The unsound roots are `ford`, `river`,
+//!   `marsh`, `spring`, `hill`, `island` — the TOPONYMIC concepts. Task 4
+//!   (`0e1d0dda`, `4d7a98ae`) gave `hornvale_worldgen::exposure_of` new
+//!   `Steeped` rules for them, gated on real terrain predicates
+//!   (`is_river_cell`, `is_ford_cell`, `is_hill_cell`, …). The lab metric's
+//!   deliberately INDEPENDENT duplicate of those rules,
+//!   `independently_steeped_concepts` in `windows/lab/src/metrics.rs`, never
+//!   learned them, so it classifies a concept `Unknown` that worldgen
+//!   classifies `Steeped` and the soundness check reads false. The lexicon
+//!   is doing exactly what `exposure_of` says; the second opinion is the
+//!   stale one. Fixing it means duplicating those terrain gates into the
+//!   metric — a design task, not a re-pin, and it would move census values,
+//!   so it needs a regen and the owner.
+//!
+//! - **`epithet-honorific-goblin`, 766 true -> 452 false.** The goblin
+//!   honorific pipeline is intact: re-deriving each committed epithet with
+//!   `honorifics: true` reproduces it exactly, character for character, at
+//!   every seed probed (0, 1, 42). What broke is the metric's DETECTION
+//!   TRICK. `epithet_honorific` re-derives the name with honorifics switched
+//!   OFF and asserts the committed epithet ends with that plain word, on the
+//!   stated ground that the affix "is one template syllable drawn AFTER the
+//!   site-concept picks and PREPENDED". Task 9's position-conditioned
+//!   reduction voided that: prepending the affix shifts every following
+//!   syllable's position, so the stem reduces differently inside the
+//!   honorific-bearing name than it does alone. Seed 0, belief 1: committed
+//!   `Teeloflof`, honorific-off re-derivation `loeflof` — the same stem with
+//!   `lo-e-flof` where the committed form reduced to `lo-flof`, so the suffix
+//!   test fails on a name that carries its honorific perfectly well.
+//!
+//! Neither is fixable inside a re-pin commit: both fixes change what the
+//! metric emits, so both owe a census regen. Recorded here rather than left
+//! for the next reader to rediscover.
+//!
+//! Two rows that must NOT move, and DID not: `name_gloss_true_is_100_percent_
+//! row_by_row` (770 true / 230 absent, unchanged) and
+//! `phonotactic_validity_is_true_for_every_generated_name` (766/762 true,
+//! unchanged) are both green on this census. Gloss truth needed a metric fix
+//! during Task 11a to stay honest (the pair-arity ceiling in
+//! `name_gloss_true`; see its own comment in `windows/lab/src/metrics.rs`) —
+//! it read FALSE at all four probe seeds on glosses that were themselves
+//! perfectly truthful, and the stale fixture was hiding it.
 use hornvale_culture::{BiomeClass, subsistence};
 use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
@@ -1060,37 +1111,42 @@ fn name_collision_rate_is_measured_and_pinned() {
     // duplicate name now do (48 -> 43 zero-collision, 722 -> 727 nonzero);
     // the absent set (worlds with no measurable rate at all) is unmoved.
     //
-    // The Wearing (2026-07-28): NOT re-pinned here — the values below cannot
-    // be re-derived without the census, and the regen is Task 11 step 4 (the
-    // owner's call). The cause and the DIRECTION are recorded now, before the
-    // measurement, so the regen confirms a prediction instead of writing one:
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063). The
+    // direction was recorded HERE, in this file, before the census ran, so
+    // this note confirms a prediction rather than writing one. Predicted:
+    // "the rate UP, sharply, and the zero-collision count to collapse."
+    // Measured: 39 -> 0 zero-collision worlds (the count did not merely fall,
+    // it went to ZERO — not one world in a thousand now draws a wholly
+    // duplicate-free name set), 731 -> 770 nonzero, mean 0.1858 -> 0.6274.
+    // The prediction HELD, including its sharpness.
     //
-    //   Expect the rate UP, sharply, and expect the zero-collision count to
-    //   collapse. `Namer::glossed_name`'s `/v3` epoch RETIRED the drawn
-    //   settlement stem — a per-salt 2-3 syllable unique element compounded
-    //   onto every settlement name, which was the single largest length
-    //   contributor and the only part of a name that named nothing. It
-    //   existed as collision fix 2 (see the 2026-07-11 note above). Removing
-    //   it hands the collision rate straight back: a settlement name is now
-    //   its site words and nothing else, so two settlements with the same
-    //   site facts get the same name.
+    // Cause: `Namer::glossed_name`'s `/v3` epoch RETIRED the drawn settlement
+    // stem — a per-salt 2-3 syllable unique element compounded onto every
+    // settlement name, which was the single largest length contributor and
+    // the only part of a name that named nothing. It existed as collision
+    // fix 2 (see the 2026-07-11 note above). Removing it hands the collision
+    // rate straight back: a settlement name is now its site words and nothing
+    // else, so two settlements with the same site facts get the same name.
+    //
+    // The absent count is UNMOVED at 230 — the same 230 worlds report no
+    // measurable rate as before. Naming does not decide which worlds seat a
+    // flagship, and this regen moved no placement column, so the population
+    // this rate is measured over is exactly the previous one. The whole
+    // movement is in the names.
     //
     // **This contradicts the preregistered direction and is reported, not
     // chased** (ADR 0016). Spec §7 predicted DOWN, reasoning that S2's wider
-    // descriptor space would outrun what S3 shortened. It did not: measured
-    // live on the shipped code at the four campaign seeds, settlement-only
-    // collisions run 76.3% / 78.0% / 76.3% / 65.8% (seed 42 was 0.0% before
-    // the campaign, 55.0% at Task 6, 62.1% at Task 7 — Tasks 8-9 carried it
-    // the rest of the way), and this metric's own reading, which includes
-    // deity names, is 0.7465 / 0.7531 / 0.7353 / 0.6111.
+    // descriptor space would outrun what S3 shortened. It did not, and the
+    // census margin is far wider than the four-seed probe suggested.
     //
     // Decision 0024 governs and is dispositive: uniqueness is a property of a
     // reference, not of a name; the relief is render-time qualification (which
     // Task 10 shipped), never more drawn entropy. This row is a drift witness
     // and must never be "fixed" by lengthening names again — which is exactly
-    // what the retired stem did.
-    assert_eq!(zero, 39, "zero-collision world count drifted");
-    assert_eq!(nonzero, 731, "nonzero-collision world count drifted");
+    // what the retired stem did. A future reader looking at a 0.63 collision
+    // rate and reaching for the stem is undoing decision 0024 by hand.
+    assert_eq!(zero, 0, "zero-collision world count drifted");
+    assert_eq!(nonzero, 770, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1131,7 +1187,14 @@ fn name_collision_rate_is_measured_and_pinned() {
         // prunes the settlement roster (losers are seized, not merely
         // displaced), so fewer names are drawn per world and the mean rate
         // FALLS 0.183_235_100_516_883 -> 0.185804141557143.
-        (mean - 0.185804141557143).abs() < 1e-6,
+        //
+        // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063):
+        // 0.185_804_141_557_143 -> 0.627_418_410_740_260_4 — a 3.4x rise, by
+        // far the largest single movement this pin has ever recorded, and the
+        // sanctioned cost of retiring the drawn stem. The median is 0.6478;
+        // the distribution now runs 0.10 to 0.81, so no world is anywhere
+        // near collision-free. See the cause and decision 0024 above.
+        (mean - 0.6274184107402604).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1207,40 +1270,43 @@ fn name_length_distributions_are_measured_and_pinned() {
     // ledger #14/#19 investigation named in
     // `blind_attribution_beats_chance_decisively`.
     //
-    // The Wearing (2026-07-28): NOT re-pinned here — census-backed, and the
-    // regen is Task 11 step 4. Cause and direction recorded in advance:
+    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063). The
+    // direction was recorded here before the census ran: "both means DOWN, by
+    // a lot", this campaign's PRIMARY preregistered claim (spec §7) — median
+    // mean-name-length inside the metric's own declared bucket range, which
+    // stops at 10 characters. Four levers, in descending size: the drawn
+    // settlement stem retired (`/v3`), name shape became a per-culture drawn
+    // distribution rather than always stem + concepts, the nucleus became a
+    // template set instead of an obligatory count, and morphemes now wear.
     //
-    //   Expect both means DOWN, by a lot. This is the campaign's PRIMARY
-    //   preregistered claim (spec §7): median mean-name-length inside the
-    //   metric's declared bucket range, ≤ 10 characters. Four levers, in
-    //   descending size: the drawn settlement stem retired (`/v3`), name
-    //   shape became a per-culture drawn distribution rather than always
-    //   stem + concepts, the nucleus became a template set instead of an
-    //   obligatory count, and morphemes now wear.
+    // **Direction HELD, and the claim is met.** Measured over the 1000-world
+    // census, re-derived from the committed `rows.csv`:
     //
-    //   Measured live on the shipped code at seeds 42/1/99/777, over the 650
-    //   settlement names of all five peoples: mean 21.99 -> 10.43 characters
-    //   (seed 42: 20.08 -> 8.41), median 18 -> well inside target. Per
-    //   species, on the same population this row reads (settlement + deity +
-    //   epithet): goblin 13.50/14.44/15.84/25.61 -> 8.47/8.34/8.00/12.61,
-    //   kobold 15.31/24.33/19.05/27.57 -> 5.49/10.33/10.25/8.00. The
-    //   pre-campaign figures are from the Task 5 tip (`608bcf68`) re-measured
-    //   in a detached worktree during this sweep, not quoted from a report.
+    //   goblin  mean 13.397 -> 9.563   median 13.15 -> 9.33   (range 5.06-21.2)
+    //   kobold  mean 13.212 -> 7.639   median 12.51 -> 7.40   (range 2.68-20.35)
     //
-    //   Present-row counts should move only incidentally (naming does not
-    //   decide WHICH worlds seat a flagship), but they are pins, so re-read
-    //   them rather than assuming.
+    // The claim is about the MEDIAN, and both medians land inside the buckets
+    // with room to spare. Both means also fall below 10, which the claim did
+    // not require. Kobold moves further than goblin (-42% vs -29%), the same
+    // asymmetry the four-seed probe saw.
     //
-    // The companion `name-syllables-{goblin,kobold}` columns land at this
-    // same regen and have no row here yet: they cannot be pinned before a
-    // census exists to pin them against. Add their drift-witness row after
-    // the regen — the claim they carry is spec §8 criterion 2, mean syllable
-    // count in the 2-3 range, and the live four-seed readings are goblin
-    // 3.03/3.07/3.16/3.13 and kobold 2.24/2.31/2.84/2.29 against a pre-
-    // campaign 6.04 (seed 42, all peoples' settlements). Same for
-    // `name-transparency`, whose target is explicitly NOT 1.0 (spec §8):
-    // 0.7633/0.6462/0.6039/0.8481 live, against exactly 1.0 at all four seeds
-    // pre-campaign.
+    // Present-row counts are UNMOVED — goblin 766, kobold 762, exactly as
+    // before. That is the expected result and worth stating plainly: naming
+    // does not decide WHICH worlds seat a flagship, and this regen moved no
+    // placement column at all (see the file header). So these two means are
+    // measured over precisely the previous population; the entire movement is
+    // in the names themselves, with no compositional change to confound it.
+    //
+    // Do NOT pool this row's movement with the wear figures. Cascade wear
+    // (LANG-11 opacification) touches 13 -> 14 of 650 names; position-
+    // conditioned reduction visibly shortens 191 of 650. They are different
+    // phenomena and the campaign has already had to correct that conflation
+    // once.
+    //
+    // The companion `name-syllables-{goblin,kobold}` and `name-transparency`
+    // columns land at this same regen and now have their own drift-witness
+    // rows below (`name_syllable_distributions_are_measured_and_pinned`,
+    // `name_transparency_is_measured_and_pinned`).
     for (species, expected_present, expected_mean) in [
         // goblin mean re-pinned on the 2026-07-17 Reckoning-epoch regen
         // (The Presiding): ages/origins facts perturb the deity-name draws;
@@ -1269,7 +1335,12 @@ fn name_length_distributions_are_measured_and_pinned() {
         // worlds seat a goblin one — but the surviving flagships are richer
         // sites with longer names: mean 13.382_874_198_569_583 ->
         // 13.411_552_371_911_55.
-        ("goblin", 766u32, 13.397077864229757),
+        //
+        // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063):
+        // presence unmoved at 766 — naming moved no placement column — and
+        // the mean falls 13.397_077_864_229_757 -> 9.563_241_092_950_387
+        // (-28.6%). Median 9.33, inside the metric's declared buckets.
+        ("goblin", 766u32, 9.563241092950387),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1295,7 +1366,14 @@ fn name_length_distributions_are_measured_and_pinned() {
         // reseats kobold flagships onto materially different sites, the same
         // movement that inverts the coastal-rate ordering (see
         // kobold_flagships_are_less_coastal_than_goblin_flagships).
-        ("kobold", 762u32, 13.211758902624661),
+        //
+        // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063):
+        // presence unmoved at 762; mean 13.211_758_902_624_661 ->
+        // 7.638_659_840_944_880_5 (-42.2%). Kobold shortens half again as
+        // hard as goblin — its per-culture shape distribution (Task 7) draws
+        // fewer concepts per name — and its median, 7.40, is the shortest
+        // reading either species has ever recorded here.
+        ("kobold", 762u32, 7.6386598409448805),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1328,6 +1406,161 @@ fn name_length_distributions_are_measured_and_pinned() {
             "{species} mean name length drifted: {mean:.15}"
         );
     }
+}
+
+#[test]
+fn name_syllable_distributions_are_measured_and_pinned() {
+    // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
+    // companion to `name_length_distributions_are_measured_and_pinned`, over
+    // the same per-species name population (that species' settlement names
+    // plus its flagship's deity names and epithets), counting maximal runs of
+    // vowel graphemes instead of characters. A drift witness pinned to exact
+    // measured values, never a bound.
+    //
+    // The claim it carries is spec §8 criterion 2: mean syllable count in the
+    // 2-3 range. Pre-campaign, seed 42's 650 settlement names ran 6.04
+    // syllables — names were long because the retired drawn stem contributed
+    // 2-3 syllables of its own to every one of them, on top of the site
+    // words.
+    //
+    // **Criterion 2 is met at census scale, and this corrects the four-seed
+    // reading.** Task 11a probed seeds 42/1/99/777 and found goblin at
+    // 3.03/3.07/3.16/3.13 — just ABOVE the range — and flagged as its first
+    // concern that whether criterion 2 held was a judgement call. Over 1000
+    // worlds goblin's mean is 2.854 and its median 2.80, comfortably inside.
+    // The four-seed sample was high, not the population. That is the whole
+    // reason this row is pinned against a census rather than a probe.
+    //
+    //   goblin  766 present / 234 absent   mean 2.854  median 2.80  (1.83-7.22)
+    //   kobold  762 present / 238 absent   mean 2.278  median 2.22  (1.13-5.37)
+    //
+    // Present/absent counts are IDENTICAL to the name-length row's, which is
+    // the expected structural relation and worth asserting rather than
+    // assuming: both metrics range over the same population, so a world
+    // reports a syllable count exactly when it reports a name length. If
+    // these ever diverge, one of the two metrics has changed its population
+    // and the comparison between them has quietly stopped meaning anything.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for (species, expected_present, expected_mean) in [
+        ("goblin", 766u32, 2.8535480079634477),
+        ("kobold", 762u32, 2.2784107906824143),
+    ] {
+        let syl_i = idx(&format!("name-syllables-{species}"));
+        let len_i = idx(&format!("name-length-{species}"));
+        let (mut present, mut absent) = (0u32, 0u32);
+        let mut sum = 0.0_f64;
+        for row in &result.rows {
+            // The population tie described above, checked row by row rather
+            // than only in aggregate — equal totals could hide two worlds
+            // swapping.
+            assert_eq!(
+                matches!(row.values[syl_i], MetricValue::Absent),
+                matches!(row.values[len_i], MetricValue::Absent),
+                "seed {}: name-syllables-{species} and name-length-{species} \
+                 disagree about whether this world has names",
+                row.seed
+            );
+            match row.values[syl_i] {
+                MetricValue::Number(n) => {
+                    present += 1;
+                    sum += n;
+                }
+                MetricValue::Absent => absent += 1,
+                ref other => panic!(
+                    "seed {}: name-syllables-{species} not a number: {other:?}",
+                    row.seed
+                ),
+            }
+        }
+        assert_eq!(
+            present, expected_present,
+            "{species} name-syllables present-row count drifted"
+        );
+        assert_eq!(
+            present + absent,
+            1000,
+            "{species} name-syllables row count drifted"
+        );
+        let mean = sum / f64::from(present);
+        assert!(
+            (mean - expected_mean).abs() < 1e-9,
+            "{species} mean name syllables drifted: {mean:.15}"
+        );
+    }
+}
+
+#[test]
+fn name_transparency_is_measured_and_pinned() {
+    // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
+    // share of a world's settlement names whose surface still contains the
+    // citation form of a lexeme its gloss names — i.e. how much of the naming
+    // is still readable as language rather than worn into opacity.
+    //
+    // **The target is explicitly NOT 1.0** (spec §8), and this is the one
+    // row in this file where a HIGHER reading is the defect. Before the
+    // campaign transparency was exactly 1.00 — 650 of 650 names, at every
+    // seed measured — because nothing ever wore: every name was a clean
+    // concatenation of intact citation forms. A language in which no name has
+    // ever eroded is not a language with perfect etymology, it is a language
+    // with no history. The uniformity was the defect, not the number.
+    //
+    // Measured over the 1000-world census: mean 0.827, median 0.856, spanning
+    // 0.247 to 1.000 across 770 present worlds. It is a distribution now.
+    // Some worlds still read fully transparent (the top of the range is a
+    // genuine 1.0); some have worn most of their names past recognition.
+    //
+    // A future reader must not read the fall from 1.00 as damage and "fix"
+    // it, and must not read a drift back UP toward 1.00 as an improvement —
+    // that would mean wear had stopped happening. Pinned exactly, both ways.
+    //
+    // Do NOT pool this with the reduction figures. Two distinct mechanisms
+    // shorten names and only one of them opacifies: cascade wear (LANG-11)
+    // moves 13 -> 14 of 650 names, while position-conditioned reduction
+    // visibly shortens 191 of 650. Transparency is the wear reading; the
+    // name-length rows above are dominated by reduction and by the retired
+    // stem. The campaign has already had to correct this conflation once.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let t_i = idx("name-transparency");
+    let (mut present, mut absent) = (0u32, 0u32);
+    let mut sum = 0.0_f64;
+    let (mut min, mut max) = (f64::INFINITY, f64::NEG_INFINITY);
+    for row in &result.rows {
+        match row.values[t_i] {
+            MetricValue::Number(n) => {
+                assert!(
+                    (0.0..=1.0).contains(&n),
+                    "seed {}: name-transparency {n} is not a share",
+                    row.seed
+                );
+                present += 1;
+                sum += n;
+                min = min.min(n);
+                max = max.max(n);
+            }
+            MetricValue::Absent => absent += 1,
+            ref other => panic!("seed {}: name-transparency not a flag: {other:?}", row.seed),
+        }
+    }
+    assert_eq!(present, 770, "name-transparency present-row count drifted");
+    assert_eq!(absent, 230, "name-transparency absent-row count drifted");
+    let mean = sum / f64::from(present);
+    assert!(
+        (mean - 0.8267291343896103).abs() < 1e-9,
+        "mean name-transparency drifted: {mean:.15}"
+    );
+    // The SPREAD is the point of the row, not just the mean: a mean of 0.827
+    // could be produced by every world reading 0.827, which would be the same
+    // uniformity defect in a new costume. Pinned exactly.
+    assert!(
+        (min - 0.24705882).abs() < 1e-8,
+        "name-transparency minimum drifted: {min:.15}"
+    );
+    assert!(
+        (max - 1.0).abs() < 1e-8,
+        "name-transparency maximum drifted: {max:.15}"
+    );
 }
 
 #[test]
@@ -1451,11 +1684,14 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         size.abs() < 0.2,
         "pantheon-size SMD {size:.4} exceeds the bound"
     );
-    // The Wearing (2026-07-28): nothing to re-pin on this line — it is a
-    // BOUND, not a witness, and the campaign's naming re-baseline reaches
-    // both solo builds through the same code, so the bound is expected to
-    // keep holding unchanged. The exact residual it envelopes is the pinned
-    // value in `null_control_name_length_smd_is_pinned`, which the regen does
+    // The Wearing (2026-07-28; lefford regen f32d6ce2, 0063): nothing was
+    // re-pinned on this line and nothing needed to be — it is a BOUND, not a
+    // witness. The prediction recorded here before the regen was that the
+    // campaign's naming re-baseline reaches both solo builds through the same
+    // code, so the bound would keep holding unchanged. It HELD: the residual
+    // it envelopes moved from -0.0650 to +0.0266, changing sign but staying
+    // an order of magnitude inside ±0.2. The exact residual is the pinned
+    // value in `null_control_name_length_smd_is_pinned`, which the regen did
     // re-pin; see its own note.
     assert!(
         namelen.abs() < 0.2,
@@ -1600,18 +1836,26 @@ fn null_control_name_length_smd_is_pinned() {
         // name-length gap barely moves — -0.065_161_843_432_313_43 ->
         // -0.064_965_927_887_856_32; still well inside the ±0.2 bound.
         //
-        // The Wearing (2026-07-28): NOT re-pinned — census-backed (the solo
-        // `census-of-the-meeting` fixture), regen is Task 11 step 4. Direction
-        // recorded in advance: the MAGNITUDE of this residual should stay
-        // small, because the naming re-baseline reaches both solo builds
-        // identically (`goblin-solo` and `goblin-twin-solo` differ only by
-        // name salt, and every lever the campaign pulled — stem retirement,
-        // drawn shape, nucleus templates, wear — is applied by the same code
-        // to both). What re-pins is the exact residual, as at every prior
-        // naming re-baseline in the list above. It should stay well inside
-        // the ±0.2 sampling bound; if it does not, that is a real finding
-        // about the twin, not a re-pin, and belongs in the retrospective.
-        (namelen - -0.064_965_927_887_856_32).abs() < 1e-9,
+        // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063). The
+        // direction was recorded here before the census ran: the MAGNITUDE of
+        // this residual should stay small, because the naming re-baseline
+        // reaches both solo builds identically (`goblin-solo` and
+        // `goblin-twin-solo` differ only by name salt, and every lever the
+        // campaign pulled — stem retirement, drawn shape, nucleus templates,
+        // wear — is applied by the same code to both).
+        //
+        // **The magnitude prediction HELD**: -0.064_965_927_887_856_32 ->
+        // 0.026_557_760_190_573_92, an order of magnitude inside the ±0.2
+        // sampling bound and in fact SMALLER in absolute value than before.
+        // The residual changed SIGN, which the prediction did not speak to
+        // and which is not a finding: an SMD of 0.027 over 387 rows a side is
+        // well within the noise this two-sample envelope was drawn to cover,
+        // so its sign carries no information. Recorded because it is visible,
+        // not because it means anything.
+        //
+        // The solo present-row counts are unmoved at 387/387 — the meeting
+        // census, like the drift census, moved only naming columns.
+        (namelen - 0.02655776019057392).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

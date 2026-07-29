@@ -51,6 +51,26 @@
 -- preregisters the re-selection rate itself against `threat_response` in
 -- windows/lab/tests/disposition_calibration.rs, which is a live-worldgen
 -- battery with no census column and so has no second path here either.)
+-- (Resync 2026-07-28, The Wearing regen on lefford (0063), regen commit
+-- f32d6ce2: the campaign shortened names — the drawn settlement stem retired,
+-- name shape became a per-culture drawn distribution, the nucleus became a
+-- template set, and reduction became position-conditioned. ONLY naming and
+-- lexicon columns moved (21 of ~340; settlement placement, pantheon structure,
+-- terrain and climate are byte-identical), so only the naming literals below
+-- drifted and every placement/pantheon literal is untouched. Three new pins
+-- are ADDED for the campaign's three new metrics — name-syllables-goblin,
+-- name-syllables-kobold and name-transparency — which had no second path
+-- here before because they had no census to be measured against.
+-- Two notable movements: the mean name-collision-rate RISES 3.4x
+-- (0.186 -> 0.627) and the zero-collision world count goes to ZERO (39 -> 0),
+-- which is SANCTIONED, not a defect — decision 0024 holds that uniqueness is
+-- a reference-time property and forbids fixing it with drawn entropy, and the
+-- retired stem was exactly such a fix; the relief Task 10 shipped is
+-- render-time qualification. And both mean name lengths fall by a quarter to
+-- two fifths (goblin 13.397 -> 9.563, kobold 13.212 -> 7.639), which is the
+-- campaign's PRIMARY preregistered claim landing: the medians, 9.33 and 7.40,
+-- are inside the mean-name-length metric's own declared buckets, which stop
+-- at 10. Re-synced FROM calibration.rs, which stays primary.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -157,6 +177,19 @@ WITH agg AS (
     avg("name-length-goblin") AS goblin_len_mean,
     count(*) FILTER (WHERE "name-length-kobold" IS NOT NULL) AS kobold_len_present,
     avg("name-length-kobold") AS kobold_len_mean,
+    -- name_syllable_distributions_are_measured_and_pinned (The Wearing, new)
+    count(*) FILTER (WHERE "name-syllables-goblin" IS NOT NULL) AS goblin_syl_present,
+    avg("name-syllables-goblin") AS goblin_syl_mean,
+    count(*) FILTER (WHERE "name-syllables-kobold" IS NOT NULL) AS kobold_syl_present,
+    avg("name-syllables-kobold") AS kobold_syl_mean,
+    -- name_transparency_is_measured_and_pinned (The Wearing, new). The min and
+    -- max are pinned alongside the mean because the SPREAD is the finding: a
+    -- mean of 0.827 with every world reading 0.827 would be the same
+    -- uniformity defect the campaign removed, wearing a different number.
+    count(*) FILTER (WHERE "name-transparency" IS NOT NULL) AS transparency_present,
+    avg("name-transparency") AS transparency_mean,
+    min("name-transparency") AS transparency_min,
+    max("name-transparency") AS transparency_max,
     -- goblin_hue_depth_exceeds_kobold_hue_depth (a structural constant, so
     -- its mean over present rows equals the per-row pinned value exactly)
     avg("hue-depth-goblin") FILTER (
@@ -313,13 +346,17 @@ checks AS (
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 50 -> 48.
   -- The Tumult (predation) re-pin, 0063: 48 -> 43.
+  -- The Wearing re-pin, 0063: 39 -> 0. Not one world in a thousand now draws
+  -- a wholly duplicate-free name set. Sanctioned; see the header note.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 39.0, collision_zero = 39 FROM agg
+         CAST(collision_zero AS DOUBLE), 0.0, collision_zero = 0 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
+  -- The Wearing re-pin, 0063: 731 -> 770 (every previously zero-collision
+  -- world moved into this bucket; the absent count below is unmoved).
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 731.0, collision_nonzero = 731 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 770.0, collision_nonzero = 770 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
@@ -330,10 +367,14 @@ checks AS (
   -- The Tumult (predation) re-pin, 0063: 0.183_235_100_516_883 ->
   -- 0.185_804_141_557_143 (predation prunes the roster, so fewer names
   -- are drawn per world and the rate FALLS).
+  -- The Wearing re-pin, 0063: 0.185_804_141_557_143 -> 0.627_418_410_740_260_4,
+  -- a 3.4x rise and by far the largest single movement this pin has recorded.
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.185_804_141_557_143, abs(collision_mean - 0.185_804_141_557_143) < 1e-6 FROM agg
+         collision_mean, 0.627_418_410_740_260_4, abs(collision_mean - 0.627_418_410_740_260_4) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
+  -- The Wearing, 0063: UNMOVED at 766 — naming decides no placement, so both
+  -- name-length means below are measured over exactly the prior population.
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
          CAST(goblin_len_present AS DOUBLE), 766.0, goblin_len_present = 766 FROM agg
   UNION ALL
@@ -341,10 +382,13 @@ checks AS (
   -- 13.382_874_198_569_583.
   -- The Tumult (predation) re-pin, 0063: 13.382_874_198_569_583 ->
   -- 13.397_077_864_229_757.
+  -- The Wearing re-pin, 0063: 13.397_077_864_229_757 -> 9.563_241_092_950_387
+  -- (-28.6%); median 9.33, inside the metric's own declared buckets.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 13.397_077_864_229_757, abs(goblin_len_mean - 13.397_077_864_229_757) < 1e-6 FROM agg
+         goblin_len_mean, 9.563_241_092_950_387, abs(goblin_len_mean - 9.563_241_092_950_387) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
+  -- The Wearing, 0063: UNMOVED at 762.
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
          CAST(kobold_len_present AS DOUBLE), 762.0, kobold_len_present = 762 FROM agg
   UNION ALL
@@ -353,8 +397,41 @@ checks AS (
   -- The Tumult (predation) re-pin, 0063: 12.690_321_674_122_243 ->
   -- 13.211_758_902_624_661 (kobold moves far more than goblin — the same
   -- reseating that inverts the coastal-rate ordering).
+  -- The Wearing re-pin, 0063: 13.211_758_902_624_661 -> 7.638_659_840_944_880_5
+  -- (-42.2%); median 7.40. Kobold shortens half again as hard as goblin.
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 13.211_758_902_624_661, abs(kobold_len_mean - 13.211_758_902_624_661) < 1e-6 FROM agg
+         kobold_len_mean, 7.638_659_840_944_880_5, abs(kobold_len_mean - 7.638_659_840_944_880_5) < 1e-6 FROM agg
+  UNION ALL
+  -- The Wearing (2026-07-28), NEW pins: the three metrics the campaign added.
+  -- Mean syllable count is spec §8 criterion 2 (target 2-3). Both daughters
+  -- land inside at census scale — which CORRECTS the four-seed probe that
+  -- read goblin at 3.03-3.16, above the range.
+  SELECT 'goblin name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         CAST(goblin_syl_present AS DOUBLE), 766.0, goblin_syl_present = 766 FROM agg
+  UNION ALL
+  SELECT 'mean goblin name syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         goblin_syl_mean, 2.853_548_007_963_447_7, abs(goblin_syl_mean - 2.853_548_007_963_447_7) < 1e-6 FROM agg
+  UNION ALL
+  SELECT 'kobold name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         CAST(kobold_syl_present AS DOUBLE), 762.0, kobold_syl_present = 762 FROM agg
+  UNION ALL
+  SELECT 'mean kobold name syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         kobold_syl_mean, 2.278_410_790_682_414_3, abs(kobold_syl_mean - 2.278_410_790_682_414_3) < 1e-6 FROM agg
+  UNION ALL
+  -- Transparency's target is explicitly NOT 1.0 (spec §8). It read exactly
+  -- 1.00 before this campaign — 650 of 650 names — because nothing ever wore.
+  -- A drift back UP toward 1.0 is a REGRESSION here, not an improvement.
+  SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
+         CAST(transparency_present AS DOUBLE), 770.0, transparency_present = 770 FROM agg
+  UNION ALL
+  SELECT 'mean name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
+         transparency_mean, 0.826_729_134_389_610_3, abs(transparency_mean - 0.826_729_134_389_610_3) < 1e-6 FROM agg
+  UNION ALL
+  SELECT 'minimum name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
+         transparency_min, 0.24705882, abs(transparency_min - 0.24705882) < 1e-6 FROM agg
+  UNION ALL
+  SELECT 'maximum name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
+         transparency_max, 1.0, abs(transparency_max - 1.0) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -399,9 +476,13 @@ checks AS (
   -- -0.065_161_843_432_313_42.
   -- The Tumult (predation) re-pin, 0063: -0.065_161_843_432_313_42 ->
   -- -0.064_965_927_887_856_34.
+  -- The Wearing re-pin, 0063: -0.064_965_927_887_856_34 ->
+  -- 0.026_557_760_190_573_92. The magnitude stays an order of magnitude
+  -- inside the ±0.2 sampling bound and is in fact SMALLER than before; the
+  -- sign change carries no information at this scale (387 rows a side).
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.064_965_927_887_856_34,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.064_965_927_887_856_34) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), 0.026_557_760_190_573_92,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - 0.026_557_760_190_573_92) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;
