@@ -581,9 +581,15 @@ fn draw_nuclei(stream: &mut Stream) -> Vec<usize> {
 /// of every world main has ever generated therefore survive this change
 /// unchanged; the codas, which follow the nucleus draw, do not.
 ///
-/// Where that flips: once `name/v3` is frozen on main, there is no unreleased
-/// epoch left to ride and the next consumption change here owes one of its
-/// own.
+/// **That has now flipped, and this paragraph records it rather than leaving
+/// the condition in the future tense.** The Wearing merged at `0b65be20`, so a
+/// world saved off main carries `language/<species>/name/settlement: v3` in its
+/// `derived_under` stamp; `name/v3` is frozen. There is no unreleased epoch
+/// left to ride here, and **the next change to what this function consumes owes
+/// `phonotactics/v2`** — the reasoning above is the record of why *this*
+/// change did not, not a standing licence for the next one. The freeze rule
+/// itself is decision 0086 (`docs/decisions/`), which is where a reader should
+/// go before riding any epoch.
 fn draw_phonotactics(
     stream: &mut Stream,
     inventory: &[Segment],
