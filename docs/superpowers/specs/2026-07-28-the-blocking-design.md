@@ -169,6 +169,8 @@ the same fact, which §4.3 forbids.
 so the largest extent any chamber count can produce must fit one, asserted over
 every count rather than chosen by hand and hoped for.
 
+Ratified at close as **decision 0085** (*derived geometry reads the durable signal, not the living one*) — the argument generalizes past floor plans to anything derived from a brief, so it earned a record rather than a comment.
+
 Deferred with a home: a **durable** extent — what the shell remembers rather than
 what the tenants are — needs the ruin signature the brief deliberately omits, and
 arrives with it. Its most interesting form is *tech as a material span cap*: a
