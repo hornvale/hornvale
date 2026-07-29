@@ -296,6 +296,85 @@ pub extern "C" fn hw_scene_tiles(width: u32) -> i32 {
     }
 }
 
+/// Emit the current world's `scene/tiles/v1` JSON at `width` tiles across,
+/// carrying only the per-tile layers named by a JSON array of `len` bytes in
+/// the input buffer — e.g. `["elevation_m","ocean"]`. Document metadata
+/// (`schema`, `width`, the legends, `features`, …) is always present, and a
+/// layer that IS emitted is byte-identical to `hw_scene_tiles`' bytes for it.
+/// `hw_scene_tiles(width)` is unchanged and still emits everything.
+///
+/// 0 ok; 2 scene error (width odd / out of range, or the context refused);
+/// -1 `len` exceeds the input buffer; -2 the field list is not UTF-8; -3 no
+/// world is live; -4 the list named a layer that does not exist; -5 the list
+/// is not a JSON array of strings.
+///
+/// **-4 and -5 are deliberately distinct.** A client that typoed a field name
+/// has a different bug from one that sent a JSON object where an array
+/// belongs, and the two are worth telling apart without parsing the envelope
+/// prose. Both are separate from -3 ("no world live"), which means what it
+/// means on every other scene export.
+///
+/// `INBUF` is 4096 bytes and all nineteen names as a JSON array are 248, so a
+/// legitimate field list can never overflow it: -1 says the caller wrote
+/// something that is not a field list, not that it asked for too many layers.
+///
+/// Unlike `hw_new_pinned`, this export sets an error envelope on *every*
+/// non-zero return, including -1 and -2. It has to: on a refusal `OUT` still
+/// holds whatever the last successful call left there, and for this export
+/// that is a multi-megabyte tiles document — a caller that read `OUT` after a
+/// silent refusal would get a stale success payload rather than nothing.
+#[unsafe(no_mangle)]
+pub extern "C" fn hw_scene_tiles_selected(width: u32, len: usize) -> i32 {
+    let world_ptr = &raw const WORLD;
+    let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
+        set_error("no world; call hw_new first");
+        return -3;
+    };
+    let inbuf_ptr = &raw const INBUF;
+    let buf = unsafe { &*inbuf_ptr };
+    if len > buf.len() {
+        set_error(&format!(
+            "field list is {len} bytes; the input buffer holds {}",
+            buf.len()
+        ));
+        return -1;
+    }
+    let Ok(text) = core::str::from_utf8(&buf[..len]) else {
+        set_error("field list is not UTF-8");
+        return -2;
+    };
+    let fields = match hornvale_scene::TileFields::parse_json(text) {
+        Ok(f) => f,
+        Err(e) => {
+            let code = match &e {
+                hornvale_scene::SceneError::UnknownTileField(_) => -4,
+                // `parse_json` yields only those two variants; any other is
+                // unreachable and folds in with the malformed case.
+                _ => -5,
+            };
+            set_error(&format!("{e}"));
+            return code;
+        }
+    };
+    let ctx = match scene_ctx(world) {
+        Ok(c) => c,
+        Err(e) => {
+            set_error(&format!("{e}"));
+            return 2;
+        }
+    };
+    match hornvale_scene::tiles_scene_in(world, ctx, width) {
+        Ok(s) => {
+            set_out(hornvale_scene::scene_json_selected(&s, &fields));
+            0
+        }
+        Err(e) => {
+            set_error(&format!("{e}"));
+            2
+        }
+    }
+}
+
 /// Emit the current world's `scene/tiles-region/v1` JSON for one tile address.
 /// 0 ok; 2 scene error (bad address; envelope set); -3 when no world is live.
 #[unsafe(no_mangle)]
