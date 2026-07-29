@@ -398,14 +398,16 @@ checks AS (
   -- The Sundering (moving-sea epoch, 0063): 50 -> 48.
   -- The Tumult (predation) re-pin, 0063: 48 -> 43.
   -- The Tithe (tribute) re-pin, 0063: 39 -> 33.
+  -- The Toponym (name-gloss epoch), 0063: 33 -> 43.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 33.0, collision_zero = 33 FROM agg
+         CAST(collision_zero AS DOUBLE), 43.0, collision_zero = 43 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
   -- The Tithe (tribute) re-pin, 0063: 731 -> 737.
+  -- The Toponym (name-gloss epoch), 0063: 737 -> 727.
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 737.0, collision_nonzero = 737 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 727.0, collision_nonzero = 727 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
@@ -417,10 +419,10 @@ checks AS (
   -- 0.185_804_141_557_143 (predation prunes the roster, so fewer names
   -- are drawn per world and the rate FALLS).
   -- The Tithe (tribute) re-pin, 0063: 0.185_804_141_557_143 ->
-  -- 0.138_343_210_536_363_64 — the roster nearly doubles yet the rate FALLS,
+  -- 0.126_857_511_090_779 — the roster nearly doubles yet the rate FALLS,
   -- recorded as measured, not explained (see the header note).
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.138_343_210_536_363_64, abs(collision_mean - 0.138_343_210_536_363_64) < 1e-6 FROM agg
+         collision_mean, 0.126_857_511_090_779, abs(collision_mean - 0.126_857_511_090_779) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -432,9 +434,9 @@ checks AS (
   -- The Tumult (predation) re-pin, 0063: 13.382_874_198_569_583 ->
   -- 13.397_077_864_229_757.
   -- The Tithe (tribute) re-pin, 0063: 13.397_077_864_229_757 ->
-  -- 13.686_009_046_023_463.
+  -- 13.665_297_457_235_99.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 13.686_009_046_023_463, abs(goblin_len_mean - 13.686_009_046_023_463) < 1e-6 FROM agg
+         goblin_len_mean, 13.665_297_457_235_99, abs(goblin_len_mean - 13.665_297_457_235_99) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -447,9 +449,9 @@ checks AS (
   -- 13.211_758_902_624_661 (kobold moves far more than goblin — the same
   -- reseating that inverts the coastal-rate ordering).
   -- The Tithe (tribute) re-pin, 0063: 13.211_758_902_624_661 ->
-  -- 14.573_312_491_578_953 (kobold again moves far more than goblin).
+  -- 15.548_879_020_789_471 (kobold again moves far more than goblin).
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 14.573_312_491_578_953, abs(kobold_len_mean - 14.573_312_491_578_953) < 1e-6 FROM agg
+         kobold_len_mean, 15.548_879_020_789_471, abs(kobold_len_mean - 15.548_879_020_789_471) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -556,14 +558,15 @@ checks AS (
   -- The Sundering (moving-sea epoch, 0063): -0.057_530_513_798_514_59 ->
   -- -0.065_161_843_432_313_42.
   -- The Tumult (predation) re-pin, 0063: -0.065_161_843_432_313_42 ->
-  -- -0.064_965_927_887_856_34.
-  -- The Wearing re-pin, 0063: -0.064_965_927_887_856_34 ->
-  -- 0.026_557_760_190_573_92. The magnitude stays an order of magnitude
-  -- inside the ±0.2 sampling bound and is in fact SMALLER than before; the
-  -- sign change carries no information at this scale (387 rows a side).
+  -- -0.065_714_087_428_851_79.
+  -- Merge reconciliation (The Wearing x The Toponym, 2026-07-29): The
+  -- Toponym's value is kept, because the census it was measured against is
+  -- the rows.csv committed here; this branch's own (0.026_557_760_190_573_92)
+  -- was measured against a census the merge replaced. Both predate the
+  -- merged physics — F11's single regen re-measures.
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), 0.026_557_760_190_573_92,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - 0.026_557_760_190_573_92) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.065_714_087_428_851_79,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.065_714_087_428_851_79) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

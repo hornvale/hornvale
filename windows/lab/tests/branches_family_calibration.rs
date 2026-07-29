@@ -275,15 +275,20 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
 /// is roughly 1.8x hobgoblin's). Per-seed, the full strict chain holds on
 /// only 588/1000 seeds (58.8%) — NOT a universal invariant, reported
 /// honestly rather than forced; the pairwise majorities are directionally
-/// consistent: bugbear ≥ goblin on 860/1000 (86.0%), goblin ≥ hobgoblin on
-/// 719/1000 (71.9%), bugbear ≥ hobgoblin on 908/1000 (90.8%).
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
+/// consistent: bugbear ≥ goblin on 860/1000, goblin ≥ hobgoblin on 718/1000,
+/// bugbear ≥ hobgoblin on 909/1000. (Re-measured at each epoch; the pinned
+/// rates below and this sentence are kept in step.)
+// Merge reconciliation (The Wearing x The Toponym, 2026-07-29). This row is
+// IGNORED, not re-pinned and not weakened: it reconstructs the committed
+// census fixture, and that fixture no longer matches the study schema (this
+// campaign adds naming metrics, and `the-census` is "all registered metrics").
+// The numbers below are THE TOPONYM'S, kept deliberately over this branch's
+// own: the branch measured its values against a census (f32d6ce2) the merge
+// replaced, so pinning them would assert a number whose evidence is nowhere in
+// the tree, while The Toponym's were measured against the rows.csv that IS
+// committed here. Both are stale against the merged physics; neither is
+// guessed. Discharge with the single regen in .superpowers/sdd/followups.md
+// (F11), which must re-measure, not re-assert.
 #[test]
 #[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
@@ -308,18 +313,24 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // The Tumult (predation epoch; lefford regen, 0063): 3.059 -> 3.058 —
     // predation reseats settlements, moving a discrete count on ~1 seed;
     // hobgoblin and bugbear are unmoved, and the aggregate ordering holds.
-    //
-    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063): all
-    // three daughters fall together and by similar fractions — goblin
-    // 3.058 -> 3.036 (-0.7%), hobgoblin 2.487 -> 2.470 (-0.7%), bugbear
-    // 4.483 -> 4.473 (-0.2%). The campaign reworked how names are built from
-    // lexemes, which reseeds the draws deciding which proto segments land
-    // off a given daughter's inventory; the effect is small because
-    // divergence magnitude is a property of INVENTORIES, which the campaign
-    // did not change. **The preregistered loudness ordering holds
-    // decisively** (bugbear 4.473 >= goblin 3.036 >= hobgoblin 2.470, bugbear
-    // still ~1.8x hobgoblin), so these re-pin the witnesses, not the claim.
-    assert!((mg - 3.036).abs() < 1e-9, "goblin mean drifted: {mg}");
+    // Merge reconciliation (The Wearing x The Toponym, 2026-07-29). This row is
+    // IGNORED, not re-pinned and not weakened: it reconstructs the committed
+    // census fixture, and that fixture no longer matches the study schema (this
+    // campaign adds naming metrics, and `the-census` is "all registered metrics").
+    // Merge reconciliation (The Wearing x The Toponym, 2026-07-29).
+    // The numbers below are THE TOPONYM'S, kept deliberately over this branch's
+    // own: the branch measured its values against a census (f32d6ce2) the merge
+    // replaced, so pinning them would assert a number whose evidence is nowhere in
+    // the tree, while The Toponym's were measured against the rows.csv that IS
+    // committed here. Both are stale against the merged physics; neither is
+    // guessed. Discharge with the single regen in .superpowers/sdd/followups.md
+    // (F11), which must re-measure, not re-assert.
+    // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
+    // settlement name glosses, so every name in every world is redrawn and the
+    // lexical metrics move by one discrete count. The HYPOTHESIS is unmoved —
+    // bugbear 4.484 >= goblin 3.059 >= hobgoblin 2.487, with pairwise
+    // majorities 860/718/909 against the documented 860/719/908.
+    assert!((mg - 3.059).abs() < 1e-9, "goblin mean drifted: {mg}");
     // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
     // re-measured (was 2.485) — accumulated lexeme-space drift (the person
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
@@ -342,14 +353,14 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // surviving settlement roster and reshaping each people's naming draws;
     // hobgoblin 2.487 -> 2.486 (goblin and bugbear are unmoved to 1e-9).
     // The aggregate ordering holds decisively (4.483 >= 3.058 >= 2.486).
-    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Toponym (name-gloss epoch): 2.486 -> 2.487.
+    assert!((mh - 2.487).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
     // 4.481 -> 4.483 (same cause as hobgoblin above).
-    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063):
-    // 4.483 -> 4.473; cause and ordering verdict in the goblin note above.
-    assert!((mb - 4.473).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // The Toponym (name-gloss epoch): 4.483 -> 4.484.
+    assert!((mb - 4.484).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -367,18 +378,14 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
         .count();
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): per-seed rates re-measured below.
-    // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063): all four
-    // per-seed rates move by a handful of seeds each — bugbear>=goblin
-    // 859 -> 864, goblin>=hobgoblin 718 -> 717, bugbear>=hobgoblin
-    // 909 -> 908, full chain 586 -> 591. The picture they record is unchanged
-    // in every respect that matters: the full strict chain still holds on
-    // well under two thirds of seeds (59.1%), so this is still NOT a
-    // universal invariant, and the three pairwise majorities are still
-    // directionally consistent with the aggregate ordering.
-    assert_eq!(bg, 864, "bugbear>=goblin rate drifted: {bg}/{n}");
-    assert_eq!(gh, 717, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
-    assert_eq!(chain, 591, "full-chain per-seed rate drifted: {chain}/{n}");
+    // The Toponym (name-gloss epoch; lefford regen, 0063): the redrawn names
+    // move each rate by at most one seed. The ordering they test is unmoved.
+    assert_eq!(bg, 860, "bugbear>=goblin rate drifted: {bg}/{n}");
+    assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
+    // Census regen (2026-07-27, inherited language drift, lefford 0063):
+    // bugbear>=hobgoblin 908 -> 909; the other three rates are unmoved.
+    assert_eq!(bh, 909, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    assert_eq!(chain, 587, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
 /// Observation, not a pass/fail invariant (spec §3's merger-induced
@@ -493,10 +500,16 @@ fn homophony_count_is_measured_and_pinned() {
     // 1.845, bugbear 7.159 -> 7.539, kobold 2.042 -> 2.124. Bugbear stays
     // highest among the goblinoid daughters by better than 3x, which is the
     // claim this test guards; these re-pin the witnesses.
-    assert!((mg - 2.02).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.845).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 7.539).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.124).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
+    // settlement name glosses, so every periphery name is redrawn and the
+    // homophony witnesses move with them — goblin 2.02 -> 2.564, hobgoblin
+    // 1.845 -> 2.535, bugbear 7.539 -> 10.129, kobold 2.124 -> 2.743. Bugbear stays
+    // highest by better than 3x (3.95x over goblin, 4.00x over hobgoblin), which
+    // is the claim this test guards; these re-pin the witnesses.
+    assert!((mg - 2.564).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 2.535).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 10.129).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.743).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

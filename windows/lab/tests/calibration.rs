@@ -1274,8 +1274,10 @@ fn name_collision_rate_is_measured_and_pinned() {
     // 203 -> 329 live), so more worlds draw at least one duplicate name
     // (39 -> 33 zero-collision, 731 -> 737 nonzero); the absent set is
     // unmoved at 230.
-    assert_eq!(zero, 33, "zero-collision world count drifted");
-    assert_eq!(nonzero, 737, "nonzero-collision world count drifted");
+    // The Toponym (name-gloss epoch): redrawn names change which worlds
+    // collide; the absent set is unmoved at 230.
+    assert_eq!(zero, 43, "zero-collision world count drifted");
+    assert_eq!(nonzero, 727, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1326,7 +1328,9 @@ fn name_collision_rate_is_measured_and_pinned() {
         // measured, not explained: no claim in this file rests on the
         // direction, and the zero/nonzero split above moves the other way
         // (six more worlds now show SOME collision).
-        (mean - 0.138_343_210_536_363_64).abs() < 1e-6,
+        // The Toponym (name-gloss epoch): 0.138_343_210_536_363_64 ->
+        // 0.126_857_511_090_779.
+        (mean - 0.126_857_511_090_779).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1481,7 +1485,9 @@ fn name_length_distributions_are_measured_and_pinned() {
         // nearly doubles and the flagship is drawn from a much larger pool:
         // 766 -> 767 present, mean 13.397_077_864_229_757 ->
         // 13.686_009_046_023_463.
-        ("goblin", 767u32, 13.686009046023463),
+        // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
+        // settlement name glosses, so every name in every world is redrawn.
+        ("goblin", 767u32, 13.66529745723599),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1513,7 +1519,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 14.573_312_491_578_953 — kobold moves far more than goblin again,
         // and in the same direction: the bigger surviving roster seats
         // flagships on materially different sites.
-        ("kobold", 760u32, 14.573312491578953),
+        ("kobold", 760u32, 15.548879020789471),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1991,27 +1997,22 @@ fn null_control_name_length_smd_is_pinned() {
         // reseats settlements in both solo builds alike, so the residual
         // name-length gap barely moves — -0.065_161_843_432_313_43 ->
         // -0.064_965_927_887_856_32; still well inside the ±0.2 bound.
-        //
-        // The Wearing re-pin (2026-07-28; lefford regen f32d6ce2, 0063). The
-        // direction was recorded here before the census ran: the MAGNITUDE of
-        // this residual should stay small, because the naming re-baseline
-        // reaches both solo builds identically (`goblin-solo` and
-        // `goblin-twin-solo` differ only by name salt, and every lever the
-        // campaign pulled — stem retirement, drawn shape, nucleus templates,
-        // wear — is applied by the same code to both).
-        //
-        // **The magnitude prediction HELD**: -0.064_965_927_887_856_32 ->
-        // 0.026_557_760_190_573_92, an order of magnitude inside the ±0.2
-        // sampling bound and in fact SMALLER in absolute value than before.
-        // The residual changed SIGN, which the prediction did not speak to
-        // and which is not a finding: an SMD of 0.027 over 387 rows a side is
-        // well within the noise this two-sample envelope was drawn to cover,
-        // so its sign carries no information. Recorded because it is visible,
-        // not because it means anything.
-        //
-        // The solo present-row counts are unmoved at 387/387 — the meeting
-        // census, like the drift census, moved only naming columns.
-        (namelen - 0.02655776019057392).abs() < 1e-9,
+        // Merge reconciliation (The Wearing x The Toponym, 2026-07-29). This row is
+        // IGNORED, not re-pinned and not weakened: it reconstructs the committed
+        // census fixture, and that fixture no longer matches the study schema (this
+        // campaign adds naming metrics, and `the-census` is "all registered metrics").
+        // The numbers below are THE TOPONYM'S, kept deliberately over this branch's
+        // own: the branch measured its values against a census (f32d6ce2) the merge
+        // replaced, so pinning them would assert a number whose evidence is nowhere in
+        // the tree, while The Toponym's were measured against the rows.csv that IS
+        // committed here. Both are stale against the merged physics; neither is
+        // guessed. Discharge with the single regen in .superpowers/sdd/followups.md
+        // (F11), which must re-measure, not re-assert.
+        // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
+        // settlement name glosses, so both solo builds are renamed alike and
+        // the residual gap moves — -0.064_965_927_887_856_32 ->
+        // -0.065_714_087_428_851_79; still well inside the ±0.2 bound.
+        (namelen - -0.065_714_087_428_851_79).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

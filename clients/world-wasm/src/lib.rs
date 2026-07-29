@@ -3,17 +3,22 @@
 //!
 //! Mirrors the Casement's vessel wasm (decision 0052): no wasm-bindgen,
 //! strings cross as (ptr, len) pairs over linear memory, the module
-//! imports nothing. wasm32-unknown-unknown is single-threaded; the three
+//! imports nothing. wasm32-unknown-unknown is single-threaded; the four
 //! statics are the whole state model.
 #![warn(missing_docs)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
+use hornvale_scene::SceneContext;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 /// The current world, if any.
 static mut WORLD: Option<World> = None;
+/// The scene context for the live world, built on first scene call and
+/// reused. Cleared with `WORLD` — a context outliving its world would serve
+/// the previous planet's terrain under the new seed.
+static mut SCENE_CTX: Option<SceneContext> = None;
 /// The output text (scene JSON or an error envelope) JS reads back.
 static mut OUT: String = String::new();
 /// The input buffer JS writes UTF-8 pins JSON into.
@@ -110,10 +115,13 @@ fn parse_pins(bytes: &[u8]) -> Result<Pins, String> {
 }
 
 /// Genesis: build the world for `seed` under `pins`, replacing any prior
-/// world. 0 on success; 1 with an error envelope when genesis refuses.
+/// world and dropping its scene context. 0 on success; 1 with an error
+/// envelope when genesis refuses.
 fn genesis(seed: u64, pins: &Pins) -> i32 {
     let world_ptr = &raw mut WORLD;
+    let ctx_ptr = &raw mut SCENE_CTX;
     unsafe { *world_ptr = None };
+    unsafe { *ctx_ptr = None };
     match build_world(
         Seed(seed),
         &pins.sky,
@@ -149,14 +157,19 @@ pub extern "C" fn hw_new(seed: u64) -> i32 {
 /// the input buffer. Returns like `hw_new`, plus -1 (len exceeds the
 /// buffer), -2 (not UTF-8), -3 (bad pins JSON / unknown pin, envelope set).
 ///
-/// Clears the prior world *before* parsing, even on the -1/-2/-3 early
-/// returns: any `hw_new*` call invalidates the prior world, full stop —
-/// a caller must never be able to observe a stale world surviving a
-/// refused pinned call.
+/// Clears the prior world *and its scene context* **before** parsing, even
+/// on the -1/-2/-3 early returns: any `hw_new*` call invalidates the prior
+/// world, full stop — a caller must never be able to observe a stale world
+/// surviving a refused pinned call. The context is the sharper half of that
+/// rule: a `SceneContext` outliving its world holds the previous planet's
+/// terrain, so a scene call after a refused pinned call would serve those
+/// tiles stamped with the new seed.
 #[unsafe(no_mangle)]
 pub extern "C" fn hw_new_pinned(seed: u64, len: usize) -> i32 {
     let world_ptr = &raw mut WORLD;
+    let ctx_ptr = &raw mut SCENE_CTX;
     unsafe { *world_ptr = None };
+    unsafe { *ctx_ptr = None };
     let inbuf_ptr = &raw const INBUF;
     let buf = unsafe { &*inbuf_ptr };
     if len > buf.len() {
@@ -237,6 +250,23 @@ pub extern "C" fn hw_scene_neighbors() -> i32 {
     }
 }
 
+/// The live world's scene context, derived on first use and reused for every
+/// later scene call. `SCENE_CTX` is only ever `Some` alongside the `WORLD` it
+/// was built from — both `hw_new*` paths clear the two together before any
+/// early return — so the context this hands back always describes `world`.
+///
+/// Reusing it is the whole point of the catalog holding one: the derivation
+/// costs ~638 ms, 91.6% of a region patch (The Cistern, spec §1), against far
+/// less per-call work.
+fn scene_ctx(world: &World) -> Result<&'static SceneContext, hornvale_scene::SceneError> {
+    let ctx_ptr = &raw mut SCENE_CTX;
+    if unsafe { (*ctx_ptr).as_ref() }.is_none() {
+        let built = SceneContext::build(world)?;
+        unsafe { *ctx_ptr = Some(built) };
+    }
+    Ok(unsafe { (*ctx_ptr).as_ref() }.expect("just built above"))
+}
+
 /// Emit the current world's `scene/tiles/v1` JSON at `width` tiles across.
 /// 0 ok; 2 scene error (width odd / out of range; envelope set); -3 when
 /// no world is live.
@@ -247,7 +277,14 @@ pub extern "C" fn hw_scene_tiles(width: u32) -> i32 {
         set_error("no world; call hw_new first");
         return -3;
     };
-    match hornvale_scene::tiles_scene(world, width) {
+    let ctx = match scene_ctx(world) {
+        Ok(c) => c,
+        Err(e) => {
+            set_error(&format!("{e}"));
+            return 2;
+        }
+    };
+    match hornvale_scene::tiles_scene_in(world, ctx, width) {
         Ok(s) => {
             set_out(hornvale_scene::scene_json(&s));
             0
@@ -274,7 +311,14 @@ pub extern "C" fn hw_scene_tiles_region(
         set_error("no world; call hw_new first");
         return -3;
     };
-    match hornvale_scene::tiles_region_scene(world, face, level, ix, iy, samples) {
+    let ctx = match scene_ctx(world) {
+        Ok(c) => c,
+        Err(e) => {
+            set_error(&format!("{e}"));
+            return 2;
+        }
+    };
+    match hornvale_scene::tiles_region_scene_in(world, ctx, face, level, ix, iy, samples) {
         Ok(s) => {
             set_out(hornvale_scene::region_json(&s));
             0

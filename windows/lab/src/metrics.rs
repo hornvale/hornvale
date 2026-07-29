@@ -4285,7 +4285,8 @@ fn settlement_site_concepts(
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
     let presiding = phenomena.first().and_then(phenomenon_concept);
-    let concepts = worldgen_settlement_site_concepts(cell, v.terrain(), climate, presiding);
+    let concepts =
+        worldgen_settlement_site_concepts(&v.world().seed, cell, v.terrain(), climate, presiding);
     Some(concepts.into_iter().map(str::to_string).collect())
 }
 
@@ -4561,10 +4562,15 @@ fn name_transparency(v: &FullView) -> MetricValue {
         let Some(lexicon) = lexicon.as_ref() else {
             continue;
         };
-        let mut vocab: std::collections::BTreeSet<&str> =
-            worldgen_settlement_site_concepts(CellId(*cell as u32), v.terrain(), v.climate(), None)
-                .into_iter()
-                .collect();
+        let mut vocab: std::collections::BTreeSet<&str> = worldgen_settlement_site_concepts(
+            &v.world().seed,
+            CellId(*cell as u32),
+            v.terrain(),
+            v.climate(),
+            None,
+        )
+        .into_iter()
+        .collect();
         vocab.extend(PRESIDING_CONCEPTS.iter().copied());
         let parses = gloss_parses(gloss, &vocab);
         if parses.len() != 1 {
@@ -4824,6 +4830,19 @@ fn independently_steeped_concepts(
         .collect();
     for &cell in &settled {
         steeped.insert(v.climate().biome_at(cell).concept_name().to_string());
+        // The Toponym: a people is steeped in the VARIANT of every cell it
+        // settled, as it is in the biome. Re-derived here independently of
+        // `exposure_of`, which is the point of this function.
+        let expr = v.climate().biome_expr_at(cell);
+        if let Some(var) = hornvale_climate::variant_at_cell(
+            v.world().seed,
+            cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        ) {
+            steeped.insert(var.concept_name().to_string());
+        }
     }
 
     let own_kind = format!("{species}-kind");

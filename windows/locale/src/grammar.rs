@@ -43,11 +43,7 @@ pub(crate) fn render(
     addr: &RoomAddr,
 ) -> String {
     let room = addr.seed(seed);
-    let variety = draw(
-        room,
-        LOCALE_VARIETY,
-        variety_pool(expr.formation, expr.stratum, negations.substrate),
-    );
+    let variety = draw_variety(room, expr.formation, expr.stratum, negations.substrate);
     let substrate_detail = draw(
         room,
         LOCALE_SUBSTRATE_DETAIL,
@@ -223,111 +219,41 @@ pub(crate) fn exotic_clause(n: Negations) -> String {
 
 /// Base-variety pool per biome (+ substrate for deserts). Real content drawn
 /// from cycle-02 Appendix A; extend as authoring amplifies (decision 0009).
-fn variety_pool(formation: Formation, stratum: Stratum, substrate: Substrate) -> Pool {
-    match (formation, substrate) {
-        (Formation::Desert, Substrate::Sand) => &[(3.0, "erg dunes"), (2.0, "a nabkha field")],
-        (Formation::Desert, Substrate::Evaporite) => {
-            &[(3.0, "a cracked playa"), (2.0, "a salt pan")]
-        }
-        (Formation::Desert, Substrate::Basaltic) => &[(3.0, "a hamada of bare rock")],
-        (Formation::Desert, _) => &[
-            (3.0, "a reg of wind-swept gravel"),
-            (2.0, "a yardang field"),
-        ],
-        (Formation::TemperateForest | Formation::TemperateRainforest, _) => &[
-            (3.0, "old-growth timber"),
-            (3.0, "dense understory"),
-            (2.0, "a mossy hollow"),
-            (2.0, "a windthrow gap"),
-            (2.0, "a fern-choked draw"),
-            (2.0, "a lichen-hung grove"),
-            (1.0, "a deadfall tangle"),
-            (1.0, "a shaft of clear light"),
-        ],
-        (Formation::Taiga, _) => &[
-            (3.0, "a boreal stand"),
-            (2.0, "a peat hollow"),
-            (1.0, "a burnt snag"),
-        ],
-        (Formation::Tundra | Formation::Alpine, _) => &[
-            (3.0, "frost-heaved ground"),
-            (2.0, "a boulder field"),
-            (2.0, "wind scour"),
-        ],
-        (Formation::Savanna | Formation::TemperateGrassland, _) => {
-            &[(3.0, "open sward"), (2.0, "a scattered copse")]
-        }
-        (Formation::TropicalRainforest | Formation::TropicalSeasonalForest, _) => &[
-            (3.0, "buttressed canopy"),
-            (2.0, "a liana tangle"),
-            (2.0, "a stream gully"),
-        ],
-        (Formation::Ice, _) => &[
-            (3.0, "a snowfield"),
-            (2.0, "a crevasse field"),
-            (2.0, "wind-carved sastrugi"),
-            (1.0, "blue ice, swept bare"),
-        ],
-        (Formation::Shrubland, _) => &[
-            (3.0, "thorn scrub"),
-            (2.0, "a chaparral slope"),
-            (2.0, "matorral, low and grey"),
-            (1.0, "a burnt-over thicket"),
-        ],
-        (Formation::SeaIce, _) => &[
-            (3.0, "a pressure ridge"),
-            (2.0, "a lead of open water"),
-            (2.0, "rafted floe"),
-            (1.0, "a melt pond"),
-        ],
-        (Formation::Reef, _) => &[
-            (3.0, "a coral head"),
-            (2.0, "a spur-and-groove channel"),
-            (2.0, "a rubble apron"),
-            (2.0, "a stand of staghorn"),
-            (1.0, "a bommie standing alone"),
-        ],
-        (Formation::KelpForest, _) => &[
-            (3.0, "a kelp canopy"),
-            (2.0, "a holdfast tangle"),
-            (2.0, "a stipe forest"),
-            (1.0, "an urchin barren, grazed bare"),
-        ],
-        (Formation::Vent, _) => &[
-            (3.0, "a black smoker"),
-            (2.0, "a chimney field"),
-            (2.0, "a tubeworm thicket"),
-            (1.0, "a shimmering haze of hot water"),
-        ],
-        (Formation::Upwelling, _) => &[
-            (3.0, "a plankton bloom"),
-            (2.0, "cold water rising"),
-            (1.0, "a bait ball, turning"),
-        ],
-        // The arm the facets exist for: one formation, read by its depth.
-        // The flat enum could not say this, because depth had already spent
-        // the single slot the community needed.
-        (Formation::OpenWater, _) => match stratum {
-            Stratum::Epipelagic | Stratum::Surface => &[
-                (3.0, "open blue water"),
-                (2.0, "a drifting sargassum mat"),
-                (1.0, "a shoal turning as one"),
-            ],
-            Stratum::Mesopelagic => &[
-                (3.0, "the twilight water"),
-                (2.0, "a scattering layer, rising"),
-            ],
-            Stratum::Bathypelagic => &[
-                (3.0, "the lightless water"),
-                (2.0, "marine snow, drifting down"),
-            ],
-            Stratum::Abyssal => &[
-                (3.0, "the abyssal plain"),
-                (2.0, "a field of manganese nodules"),
-            ],
-            Stratum::Hadal => &[(3.0, "the trench wall"), (2.0, "the trench floor")],
-        },
+/// Bridge `locale`'s substrate classes to the domain's ground kinds.
+fn ground_of(substrate: Substrate) -> hornvale_climate::GroundKind {
+    use hornvale_climate::GroundKind;
+    match substrate {
+        Substrate::Ordinary => GroundKind::Ordinary,
+        Substrate::Sand => GroundKind::Sand,
+        Substrate::Evaporite => GroundKind::Evaporite,
+        Substrate::Basaltic => GroundKind::Basaltic,
+        Substrate::Ashen => GroundKind::Ashen,
     }
+}
+
+/// Draw the variety entry for a room off `LOCALE_VARIETY`.
+///
+/// The table moved to `domains/climate` in The Toponym, but its order and
+/// weights are the ones this draw has always seen, so the descriptor a room
+/// renders is unchanged. The entry carries its variant, which is what a
+/// settlement is named for — drawn separately, at cell scale.
+fn draw_variety(
+    room: Seed,
+    formation: Formation,
+    stratum: Stratum,
+    substrate: Substrate,
+) -> String {
+    let pool = hornvale_climate::variant_pool(formation, stratum, ground_of(substrate));
+    if pool.is_empty() {
+        return String::new();
+    }
+    let weights: Vec<f64> = pool.iter().map(|e| e.weight).collect();
+    let i = room
+        .derive(LOCALE_VARIETY)
+        .stream()
+        .weighted_index(&weights)
+        .unwrap_or(0);
+    pool[i].prose.to_string()
 }
 
 /// Substrate-detail clause pool.
@@ -512,11 +438,12 @@ mod tests {
         // The 79%: every formation must have prose of its own.
         for f in ALL_FORMATIONS {
             for stratum in [Stratum::Surface, Stratum::Epipelagic, Stratum::Hadal] {
-                let pool = variety_pool(*f, stratum, Substrate::Ordinary);
+                let pool =
+                    hornvale_climate::variant_pool(*f, stratum, ground_of(Substrate::Ordinary));
                 assert!(!pool.is_empty(), "{f:?} has no pool");
-                for (_, word) in pool {
+                for e in pool {
                     assert!(
-                        *word != "broken terrain" && *word != "unremarkable ground",
+                        e.prose != "broken terrain" && e.prose != "unremarkable ground",
                         "{f:?} still falls through to the catch-all"
                     );
                 }

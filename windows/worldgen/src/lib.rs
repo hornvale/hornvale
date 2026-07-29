@@ -4103,6 +4103,52 @@ fn exposure_of_impl(
         classes.insert(name, ExposureClass::Steeped);
     }
 
+    // Steeped: the VARIANT of every settled cell (The Toponym). A people that
+    // has lived in a grass sward has a word for a grass sward, by exactly the
+    // reasoning that gives them a word for the savanna it is a kind of — and
+    // it is the same cell-scale draw their settlements are named from, so the
+    // word and the name agree.
+    //
+    // Merge note (2026-07-29): this composes with The Wearing's nine terrain
+    // gates further down rather than competing with them, and the two are
+    // additive by construction — they steep a people in disjoint concept sets
+    // (53 formation sub-types here, nine landforms there) drawn from disjoint
+    // sources (a cell-scale variant draw here, terrain queries there), and
+    // every write is an `insert` on a concept name no other rule claims. Both
+    // rules read the SAME `settled` slice, which is the substantive agreement:
+    // a people is steeped in the terrain AND the variant of the cells it
+    // actually settled, by one notion of "lived here".
+    for &cell in settled {
+        let expr = climate.biome_expr_at(cell);
+        if let Some(v) = hornvale_climate::variant_at_cell(
+            world.seed,
+            cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        ) {
+            classes.insert(v.concept_name().to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: the VARIANT of every settled cell (The Toponym). A people that
+    // has lived in a grass sward has a word for a grass sward, by exactly the
+    // reasoning that gives them a word for the savanna it is a kind of — and
+    // it is the same cell-scale draw their settlements are named from, so the
+    // word and the name agree.
+    for &cell in settled {
+        let expr = climate.biome_expr_at(cell);
+        if let Some(v) = hornvale_climate::variant_at_cell(
+            world.seed,
+            cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        ) {
+            classes.insert(v.concept_name().to_string(), ExposureClass::Steeped);
+        }
+    }
+
     // Steeped: the species' own living kind (a people always knows itself),
     // and — once this species has settled anywhere — the living kind of
     // every species placed in this world, plus its own domestic/religious
@@ -4640,13 +4686,26 @@ pub fn deity_site_concepts(
 /// first — the order is a CONTRACT: `glossed_name` picks 1-3 concepts by
 /// index from this vector (however many its drawn
 /// [`hornvale_language::NameShape`] asks for), so reordering it silently
-/// renames every settlement in every world. Every entry is read off a terrain/climate
-/// fact that already exists on the settled cell; nothing here is drawn.
+/// renames every settlement in every world.
 /// Mirrors [`deity_site_concepts`]'s shape for the settlement side of
 /// naming. Public because the Lab's `name-gloss-true` metric re-derives a
 /// settlement's site concepts to check that its committed gloss is
 /// truthful, and must call this SAME composition rather than maintaining a
 /// parallel definition of "what does this site offer."
+///
+/// **What "by index" does and does not mean.** `Namer::choose_concepts` draws
+/// a uniform index into the surviving pool and *removes* the pick, repeating
+/// for however many morphemes the shape asks — it does not take a prefix. So
+/// position carries no priority: an entry at the front is exactly as likely to
+/// be chosen as one at the back. What position determines is which draw lands
+/// on which concept, i.e. the *identity* of every settlement name in every
+/// world. The ordering below is therefore a readable convention backed by a
+/// byte-identity contract, and the two must not be confused: reordering it
+/// renames the world without making any concept more or less likely to appear.
+/// (The Wearing's own doc asserted "most specific first" in a voice that
+/// invited the priority reading; this paragraph is the correction, checked
+/// against `naming.rs`'s `choose_concepts` rather than against the older
+/// comment.)
 ///
 /// Was biome + presiding phenomenon only (~12 biomes against a handful of
 /// phenomena) — narrow enough that the same generic gloss appeared
@@ -4673,19 +4732,48 @@ pub fn deity_site_concepts(
 /// `water.rs`'s own tuning comment). `coast` and `lake` close the terrain
 /// concepts: a two-hop proximity test is a weaker claim than any direct
 /// one, and both saturate to near-100% at population scale (Task 4's
-/// report). Biome and the presiding sky phenomenon close the whole
-/// vector — every settlement has one of each, so they are the least
-/// discriminating facts a cell carries, and `glossed_name` should reach
-/// them only when nothing sharper fired.
+/// report).
+///
+/// **The variant, and why it sits where it does** (merge reconciliation with
+/// The Toponym, 2026-07-29). The Toponym gave a cell a *variant* — one of 53
+/// named sub-types of the formation it sits in (`old-growth`,
+/// `mossy-deadfall`, `forest-gap`), drawn at cell scale on its own stream
+/// label. That campaign built its site vector as `[biome, presiding,
+/// variant]`; this one built `[…nine terrain gates…, biome, presiding]`. Both
+/// belong, and the joint order resolves on this rule: a variant is a **strict
+/// refinement of the biome**, so it sits immediately before the biome it
+/// refines and the pair reads as one fact at two grains ("the mossy deadfall
+/// of the temperate forest"). It sits *after* every terrain gate because the
+/// gates are the rarer, sharper claims — `valley` fires on 0.43% of seed 42's
+/// land and `hill` on 1.56%, where a variant is available on essentially every
+/// cell that has a formation at all — and the convention this vector documents
+/// is sharpest-first. Both campaigns' internal orders survive intact; only the
+/// splice point was decided here.
+///
+/// The variant is the one entry that is **drawn** rather than read: every other
+/// entry is a terrain/climate fact already true of the settled cell, while
+/// `hornvale_climate::variant_at_cell` makes a cell-scale draw off the world
+/// seed. That is why this function takes the seed. It derives the variant
+/// *itself* rather than accepting it as a parameter, deliberately reversing The
+/// Toponym's shape: that campaign's own account records that its real
+/// difficulty was five independent re-derivations of a gloss's truthfulness
+/// each having to learn about variants separately. There is one derivation
+/// now — this one — and every re-deriving consumer gets it by calling this
+/// function.
+///
+/// Biome and the presiding sky phenomenon close the whole vector: every
+/// settlement has one of each, so they are the least discriminating facts a
+/// cell carries.
 /// type-audit: bare-ok(identifier-text: presiding), bare-ok(identifier-text: return)
 pub fn settlement_site_concepts(
+    seed: &Seed,
     cell: hornvale_kernel::CellId,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     presiding: Option<&'static str>,
 ) -> Vec<&'static str> {
-    // Up to 11: the nine terrain concepts plus biome plus presiding.
-    let mut concepts: Vec<&'static str> = Vec::with_capacity(11);
+    // Up to 12: the nine terrain concepts, the variant, the biome, presiding.
+    let mut concepts: Vec<&'static str> = Vec::with_capacity(12);
     if is_valley_cell(terrain, cell) {
         concepts.push("valley");
     }
@@ -4712,6 +4800,21 @@ pub fn settlement_site_concepts(
     }
     if is_lake_cell(terrain, cell) {
         concepts.push("lake");
+    }
+    // The Toponym's variant, immediately before the biome it refines. Drawn,
+    // not read — see this function's doc comment for both halves of that.
+    // `GroundKind::Ordinary` matches the draw the settlement pass made before
+    // this function existed, so the variant a place is named for is the same
+    // one its cell has.
+    let expr = climate.biome_expr_at(cell);
+    if let Some(variant) = hornvale_climate::variant_at_cell(
+        *seed,
+        cell,
+        expr.formation,
+        expr.stratum,
+        hornvale_climate::GroundKind::Ordinary,
+    ) {
+        concepts.push(variant.concept_name());
     }
     concepts.push(climate.biome_at(cell).concept_name());
     concepts.extend(presiding);
@@ -5496,7 +5599,7 @@ fn build_to(
         // exists, but observation never reads it) — see `observed_phenomena_from`.
         let seen = observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
-        let concepts = settlement_site_concepts(s.cell, &terrain, &climate, presiding);
+        let concepts = settlement_site_concepts(&world.seed, s.cell, &terrain, &climate, presiding);
         // Which concepts this name will actually be built from — exactly
         // what its gloss will name, reported without rendering anything.
         // `glossed_name` replays the same picks off the same stream (wear
@@ -10110,11 +10213,19 @@ mod tests {
             let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
                 .expect("observation succeeds for a placed species");
             let presiding = seen.first().and_then(phenomenon_concept);
-            let site = settlement_site_concepts(cell, &terrain, &climate, presiding);
+            let site = settlement_site_concepts(&world.seed, cell, &terrain, &climate, presiding);
             let mut remainder = gloss.to_string();
             for concept in &site {
                 remainder = remainder.replacen(concept, "", 1);
             }
+            // The Toponym stripped the cell's VARIANT here with its own
+            // re-derivation, because on that branch the site vector did not
+            // carry it. It does now (`settlement_site_concepts` derives it),
+            // so the loop above already removed it and a second strip would be
+            // the sixth copy of a derivation this merge exists to reduce to
+            // one. Deleting it strengthens the test rather than weakening it:
+            // a variant in the gloss must now come from the SAME composition
+            // the namer used, not merely be re-derivable at the same cell.
             assert!(
                 remainder.chars().all(|c| c == '-'),
                 "gloss {gloss:?} for settlement {id:?} names a concept outside its own site \
@@ -10167,7 +10278,11 @@ mod tests {
                 .expect("observation succeeds for a placed species");
             let presiding = seen.first().and_then(phenomenon_concept);
             vectors.push(settlement_site_concepts(
-                cell, &terrain, &climate, presiding,
+                &world.seed,
+                cell,
+                &terrain,
+                &climate,
+                presiding,
             ));
         }
         assert!(!vectors.is_empty(), "seed 42 places no settlements");
@@ -10235,7 +10350,7 @@ mod tests {
                 continue;
             };
             let presiding = seen.first().and_then(phenomenon_concept);
-            let site = settlement_site_concepts(cell, &terrain, &climate, presiding);
+            let site = settlement_site_concepts(&world.seed, cell, &terrain, &climate, presiding);
             let biome = climate.biome_at(cell).concept_name();
 
             // The trailing pair, in order: presiding last when it exists,

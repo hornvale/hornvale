@@ -35,126 +35,126 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
-| `abyssal` | a biome class | *Gaokoe | /gaokoe/ |
-| `alpine` | a biome class | *Ne | /ne/ |
-| `bathypelagic` | a biome class | *Neogeo | /neogeo/ |
-| `black-dragon-kind` | a black dragon | *Negoo | /negoo/ |
-| `blood` | the circulating fluid of a body | *Tae | /tae/ |
-| `blue` | the color term for blue | *Kano | /kano/ |
-| `bone` | the rigid frame of a body | *Padea | /padea/ |
-| `brown` | the color term for brown | *Pano | /pano/ |
-| `bugbear-kind` | a bugbear | *Deetee | /deetee/ |
-| `carrion-crawler-kind` | a carrion crawler | *Tapo | /tapo/ |
-| `child` | one's son or daughter | *Doena | /doena/ |
-| `coast` | where the land meets the sea | *Neoda | /neoda/ |
-| `cold` | felt, biting chill | *Gao | /gao/ |
-| `coral-reef` | a biome class | *Nae | /nae/ |
-| `dark` | the color term for black/dark hues | *Naonaa | /naonaa/ |
-| `day` | the light half of the day-night cycle | *Kaa | /kaa/ |
-| `desert` | a biome class | *Kaode | /kaode/ |
-| `die` | to cease living | *No | /no/ |
-| `dire-wolf-kind` | a dire wolf | *Qaa | /qaa/ |
-| `drink` | to swallow liquid | *Ta | /ta/ |
-| `earth` | the ground underfoot | *Pode | /pode/ |
-| `eat` | to consume food | *Noanoe | /noanoe/ |
-| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Nenaa | /nenaa/ |
-| `epipelagic` | a biome class | *Goka | /goka/ |
-| `eye` | the organ of sight | *Tetae | /tetae/ |
-| `fire` | flame and heat | *Qee | /qee/ |
-| `foot` | the walking limb-end | *Ke | /ke/ |
-| `ford` | where a river runs shallow enough to cross | *Naadee | /naadee/ |
-| `giant-constrictor-snake-kind` | a giant constrictor snake | *Noko | /noko/ |
-| `giant-crocodile-kind` | a giant crocodile | *Deeneo | /deeneo/ |
-| `giant-elk-kind` | a giant elk | *Nepa | /nepa/ |
-| `giant-goat-kind` | a giant goat | *Nao | /nao/ |
-| `giant-hyena-kind` | a giant hyena | *Neopoo | /neopoo/ |
-| `giant-octopus-kind` | a giant octopus | *Gaa | /gaa/ |
-| `giant-scorpion-kind` | a giant scorpion | *Tea | /tea/ |
-| `giant-squid-kind` | a giant squid | *Toenea | /toenea/ |
-| `gloom` | the deepest, starless dark | *Neoka | /neoka/ |
-| `gnoll-kind` | a gnoll | *Geeqae | /geeqae/ |
-| `goblin-kind` | a goblin | *Paenee | /paenee/ |
-| `god` | a deity | *Ge | /ge/ |
-| `great` | large in size or extent | *Nadee | /nadee/ |
-| `green` | the color term for green | *Neo | /neo/ |
-| `hadal-trench` | a biome class | *Naone | /naone/ |
-| `hand` | the manipulating limb-end | *Goona | /goona/ |
-| `hearth` | the fire at the center of a home | *Kono | /kono/ |
-| `heat` | felt, oppressive warmth | *Taa | /taa/ |
-| `high` | far above the ground | *Neapoa | /neapoa/ |
-| `hill` | ground that rises above what surrounds it | *Naono | /naono/ |
-| `hobgoblin-kind` | a hobgoblin | *Dae | /dae/ |
-| `home` | one's dwelling | *Qoqe | /qoqe/ |
-| `hydrothermal-vent` | a biome class | *Poo | /poo/ |
-| `ice` | frozen water | *Po | /po/ |
-| `island` | land the water surrounds | *Gope | /gope/ |
-| `kelp-forest` | a biome class | *Naa | /naa/ |
-| `killer-whale-kind` | a killer whale | *Gaqo | /gaqo/ |
-| `kobold-kind` | a kobold | *Naeno | /naeno/ |
-| `lake` | still water held in a hollow that has no outlet to the sea | *Qao | /qao/ |
-| `light` | the color term for white/light hues | *Noaqaa | /noaqaa/ |
-| `little` | small in size or extent | *Noe | /noe/ |
-| `low` | near the ground | *Noeneo | /noeneo/ |
-| `many` | an indefinitely large count | *Qonakee | /qonakee/ |
-| `marsh` | soft wet ground | *Kotoa | /kotoa/ |
-| `mesopelagic` | a biome class | *Qona | /qona/ |
-| `moon` | a moon | *Koo | /koo/ |
-| `mountain` | high ground | *Dotoo | /dotoo/ |
-| `mouth` | the organ of eating and speech | *Noanaa | /noanaa/ |
-| `move` | to go from one place to another | *Goatee | /goatee/ |
-| `name` | a word that identifies one who bears it | *Poone | /poone/ |
-| `new` | recently come to be | *Nena | /nena/ |
-| `night` | the dark half of the day-night cycle | *Deqaa | /deqaa/ |
-| `north` | the compass point opposite south | *Neanao | /neanao/ |
-| `old` | long in existence | *Gea | /gea/ |
-| `one` | the cardinal number 1 | *Daaga | /daaga/ |
-| `otyugh-kind` | an otyugh | *Naoko | /naoko/ |
-| `over` | above; atop | *Naenae | /naenae/ |
-| `owlbear-kind` | an owlbear | *Too | /too/ |
-| `parent` | one's father or mother | *Deno | /deno/ |
-| `person` | a person; a member of a people (the autonym root) | *Neepo | /neepo/ |
-| `rain` | liquid precipitation | *Nope | /nope/ |
-| `red` | the color term for red | *Qage | /qage/ |
-| `red-dragon-kind` | a red dragon | *Keadaa | /keadaa/ |
-| `reef-shark-kind` | a reef shark | *Go | /go/ |
-| `rest` | to stop and recover strength | *Neane | /neane/ |
-| `rhinoceros-kind` | a rhinoceros | *Pea | /pea/ |
-| `river` | fresh water running across land | *Neede | /neede/ |
-| `rust-monster-kind` | a rust monster | *Teko | /teko/ |
-| `savanna` | a biome class | *Ga | /ga/ |
-| `sea` | a body of salt water | *Qae | /qae/ |
-| `sea-ice` | a biome class | *Qoono | /qoono/ |
-| `shadow` | cast dark, distinct from open gloom | *Nano | /nano/ |
-| `shrieker-kind` | a shrieker | *Goo | /goo/ |
-| `shrubland` | a biome class | *De | /de/ |
-| `sibling` | one's brother or sister | *Qedeo | /qedeo/ |
-| `sleep` | to rest unconscious | *Tanae | /tanae/ |
-| `snow` | frozen precipitation | *Qanae | /qanae/ |
-| `south` | the compass point opposite north | *Neoto | /neoto/ |
-| `spirit` | a lesser or unseen supernatural presence | *Naoqae | /naoqae/ |
-| `spring` | where water rises from the ground | *Qepae | /qepae/ |
-| `star` | a fixed point of light in the night sky | *Peanoo | /peanoo/ |
-| `starlit` | dark faintly lit by stars | *Tane | /tane/ |
-| `stone` | rock | *Peotea | /peotea/ |
-| `sun` | the sun | *Pago | /pago/ |
-| `taiga` | a biome class | *Qe | /qe/ |
-| `temperate-forest` | a biome class | *Noa | /noa/ |
-| `temperate-grassland` | a biome class | *Noo | /noo/ |
-| `temperate-rainforest` | a biome class | *Daenao | /daenao/ |
-| `tide` | the rise and fall of the waters under the moons | *Nea | /nea/ |
-| `treant-kind` | a treant | *Nana | /nana/ |
-| `tree` | a woody plant | *Topo | /topo/ |
-| `tropical-rainforest` | a biome class | *Qanee | /qanee/ |
-| `tropical-seasonal-forest` | a biome class | *Nee | /nee/ |
-| `tundra` | a biome class | *Poa | /poa/ |
-| `twig-blight-kind` | a twig blight | *Qeenoe | /qeenoe/ |
-| `two` | the cardinal number 2 | *Qaanoa | /qaanoa/ |
-| `under` | beneath; below | *Qapea | /qapea/ |
-| `upwelling` | a biome class | *Toepa | /toepa/ |
-| `valley` | low ground between heights | *Ganee | /ganee/ |
-| `water` | the drinkable liquid | *Paane | /paane/ |
-| `white-dragon-kind` | a white dragon | *Qopea | /qopea/ |
-| `wind` | moving air | *Nekoo | /nekoo/ |
-| `woolly-mammoth-kind` | a woolly mammoth | *Denee | /denee/ |
-| `xorn-kind` | a xorn | *Kaqo | /kaqo/ |
-| `yellow` | the color term for yellow | *Daodo | /daodo/ |
+| `abyssal` | a biome class | *Nane | /nane/ |
+| `alpine` | a biome class | *Peo | /peo/ |
+| `bathypelagic` | a biome class | *Nea | /nea/ |
+| `black-dragon-kind` | a black dragon | *Pope | /pope/ |
+| `blood` | the circulating fluid of a body | *No | /no/ |
+| `blue` | the color term for blue | *Toqoo | /toqoo/ |
+| `bone` | the rigid frame of a body | *Ke | /ke/ |
+| `brown` | the color term for brown | *Pa | /pa/ |
+| `bugbear-kind` | a bugbear | *Ka | /ka/ |
+| `carrion-crawler-kind` | a carrion crawler | *Gaka | /gaka/ |
+| `child` | one's son or daughter | *Deeqe | /deeqe/ |
+| `coast` | where the land meets the sea | *Naoqoa | /naoqoa/ |
+| `cold` | felt, biting chill | *Gonae | /gonae/ |
+| `coral-reef` | a biome class | *Daote | /daote/ |
+| `dark` | the color term for black/dark hues | *Tano | /tano/ |
+| `day` | the light half of the day-night cycle | *Gaage | /gaage/ |
+| `desert` | a biome class | *Nadoa | /nadoa/ |
+| `die` | to cease living | *Toono | /toono/ |
+| `dire-wolf-kind` | a dire wolf | *Penae | /penae/ |
+| `drink` | to swallow liquid | *Ganae | /ganae/ |
+| `earth` | the ground underfoot | *Geo | /geo/ |
+| `eat` | to consume food | *Koo | /koo/ |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Ne | /ne/ |
+| `epipelagic` | a biome class | *Naenoo | /naenoo/ |
+| `eye` | the organ of sight | *Ta | /ta/ |
+| `fire` | flame and heat | *Nao | /nao/ |
+| `foot` | the walking limb-end | *Nono | /nono/ |
+| `ford` | where a river runs shallow enough to cross | *Geogee | /geogee/ |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | *Noagae | /noagae/ |
+| `giant-crocodile-kind` | a giant crocodile | *Poo | /poo/ |
+| `giant-elk-kind` | a giant elk | *Noakee | /noakee/ |
+| `giant-goat-kind` | a giant goat | *Neekao | /neekao/ |
+| `giant-hyena-kind` | a giant hyena | *Pana | /pana/ |
+| `giant-octopus-kind` | a giant octopus | *Pota | /pota/ |
+| `giant-scorpion-kind` | a giant scorpion | *Neo | /neo/ |
+| `giant-squid-kind` | a giant squid | *Denoo | /denoo/ |
+| `gloom` | the deepest, starless dark | *Nae | /nae/ |
+| `gnoll-kind` | a gnoll | *Kene | /kene/ |
+| `goblin-kind` | a goblin | *Nanae | /nanae/ |
+| `god` | a deity | *Neta | /neta/ |
+| `great` | large in size or extent | *Goedono | /goedono/ |
+| `green` | the color term for green | *Koetoe | /koetoe/ |
+| `hadal-trench` | a biome class | *Pea | /pea/ |
+| `hand` | the manipulating limb-end | *Qaagaa | /qaagaa/ |
+| `hearth` | the fire at the center of a home | *Nope | /nope/ |
+| `heat` | felt, oppressive warmth | *Keqoo | /keqoo/ |
+| `high` | far above the ground | *Geanea | /geanea/ |
+| `hill` | ground that rises above what surrounds it | *Nootea | /nootea/ |
+| `hobgoblin-kind` | a hobgoblin | *Qage | /qage/ |
+| `home` | one's dwelling | *Doe | /doe/ |
+| `hydrothermal-vent` | a biome class | *Teo | /teo/ |
+| `ice` | frozen water | *Na | /na/ |
+| `island` | land the water surrounds | *Goqao | /goqao/ |
+| `kelp-forest` | a biome class | *Noo | /noo/ |
+| `killer-whale-kind` | a killer whale | *Neeqe | /neeqe/ |
+| `kobold-kind` | a kobold | *Daa | /daa/ |
+| `lake` | still water held in a hollow that has no outlet to the sea | *Gone | /gone/ |
+| `light` | the color term for white/light hues | *Teakoa | /teakoa/ |
+| `little` | small in size or extent | *Nonea | /nonea/ |
+| `low` | near the ground | *Gaenea | /gaenea/ |
+| `many` | an indefinitely large count | *Nooneo | /nooneo/ |
+| `marsh` | soft wet ground | *Qaneo | /qaneo/ |
+| `mesopelagic` | a biome class | *Nana | /nana/ |
+| `moon` | a moon | *Tapea | /tapea/ |
+| `mountain` | high ground | *Toe | /toe/ |
+| `mouth` | the organ of eating and speech | *Deneo | /deneo/ |
+| `move` | to go from one place to another | *Noane | /noane/ |
+| `name` | a word that identifies one who bears it | *Noenae | /noenae/ |
+| `new` | recently come to be | *Nopee | /nopee/ |
+| `night` | the dark half of the day-night cycle | *Neqa | /neqa/ |
+| `north` | the compass point opposite south | *Nanoe | /nanoe/ |
+| `old` | long in existence | *Tape | /tape/ |
+| `one` | the cardinal number 1 | *Kaa | /kaa/ |
+| `otyugh-kind` | an otyugh | *Neonoo | /neonoo/ |
+| `over` | above; atop | *Datee | /datee/ |
+| `owlbear-kind` | an owlbear | *Poko | /poko/ |
+| `parent` | one's father or mother | *Gatea | /gatea/ |
+| `person` | a person; a member of a people (the autonym root) | *Neoda | /neoda/ |
+| `rain` | liquid precipitation | *De | /de/ |
+| `red` | the color term for red | *Nee | /nee/ |
+| `red-dragon-kind` | a red dragon | *Noenea | /noenea/ |
+| `reef-shark-kind` | a reef shark | *Deopoe | /deopoe/ |
+| `rest` | to stop and recover strength | *Kaeno | /kaeno/ |
+| `rhinoceros-kind` | a rhinoceros | *Qateo | /qateo/ |
+| `river` | fresh water running across land | *Gootoe | /gootoe/ |
+| `rust-monster-kind` | a rust monster | *Koa | /koa/ |
+| `savanna` | a biome class | *Naanoa | /naanoa/ |
+| `sea` | a body of salt water | *Gaanaa | /gaanaa/ |
+| `sea-ice` | a biome class | *Qeka | /qeka/ |
+| `shadow` | cast dark, distinct from open gloom | *Neetoe | /neetoe/ |
+| `shrieker-kind` | a shrieker | *Da | /da/ |
+| `shrubland` | a biome class | *Naka | /naka/ |
+| `sibling` | one's brother or sister | *Poatea | /poatea/ |
+| `sleep` | to rest unconscious | *Noegoa | /noegoa/ |
+| `snow` | frozen precipitation | *Noanee | /noanee/ |
+| `south` | the compass point opposite north | *Qaeneo | /qaeneo/ |
+| `spirit` | a lesser or unseen supernatural presence | *Paa | /paa/ |
+| `spring` | where water rises from the ground | *Negao | /negao/ |
+| `star` | a fixed point of light in the night sky | *Noe | /noe/ |
+| `starlit` | dark faintly lit by stars | *Kee | /kee/ |
+| `stone` | rock | *Tee | /tee/ |
+| `sun` | the sun | *Toa | /toa/ |
+| `taiga` | a biome class | *Naa | /naa/ |
+| `temperate-forest` | a biome class | *Nena | /nena/ |
+| `temperate-grassland` | a biome class | *Dano | /dano/ |
+| `temperate-rainforest` | a biome class | *Doqa | /doqa/ |
+| `tide` | the rise and fall of the waters under the moons | *Nonoa | /nonoa/ |
+| `treant-kind` | a treant | *To | /to/ |
+| `tree` | a woody plant | *Kone | /kone/ |
+| `tropical-rainforest` | a biome class | *Noa | /noa/ |
+| `tropical-seasonal-forest` | a biome class | *Getoe | /getoe/ |
+| `tundra` | a biome class | *Keka | /keka/ |
+| `twig-blight-kind` | a twig blight | *Qaaqee | /qaaqee/ |
+| `two` | the cardinal number 2 | *Naanee | /naanee/ |
+| `under` | beneath; below | *Nootae | /nootae/ |
+| `upwelling` | a biome class | *Qoa | /qoa/ |
+| `valley` | low ground between heights | *Nenaa | /nenaa/ |
+| `water` | the drinkable liquid | *Doege | /doege/ |
+| `white-dragon-kind` | a white dragon | *Qo | /qo/ |
+| `wind` | moving air | *Neqoo | /neqoo/ |
+| `woolly-mammoth-kind` | a woolly mammoth | *Qae | /qae/ |
+| `xorn-kind` | a xorn | *Notee | /notee/ |
+| `yellow` | the color term for yellow | *Qaene | /qaene/ |

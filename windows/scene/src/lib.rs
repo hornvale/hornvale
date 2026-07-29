@@ -9,7 +9,9 @@
 
 #![warn(missing_docs)]
 
-use hornvale_kernel::{NearestCellIndex, World};
+use hornvale_climate::{Biome, GeneratedClimate};
+use hornvale_kernel::{CellMap, NearestCellIndex, Seed, World};
+use hornvale_terrain::GeneratedTerrain;
 use serde::Serialize;
 
 mod region;
@@ -269,30 +271,109 @@ fn tangent_north(position: [f64; 3], east: [f64; 3]) -> [f64; 3] {
     }
 }
 
-/// Build the `scene/tiles/v1` scene for `world` at `width` tiles across
-/// (height is `width / 2`). Deterministic: same world + same width →
-/// the same scene, byte-for-byte once serialized.
-/// type-audit: bare-ok(count: width)
-pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> {
+/// The reusable coarse-world build for scene documents. Constructed once and
+/// reused across every scene call, so a document stays a cheap derived view.
+///
+/// Every terrain-facing entry point used to rebuild all of this per call —
+/// 638 ms of terrain and climate derivation, 91.6% of a region patch (The
+/// Sextant). The `x_scene` / `x_scene_in` pair here is the same one
+/// [`surrounds_scene_in`] already uses with a `LocaleContext`.
+pub struct SceneContext {
+    /// The world this context was built from; guards against reuse across worlds.
+    seed: Seed,
+    /// The sculpted terrain, derived once.
+    terrain: GeneratedTerrain,
+    /// The derived climate, derived once.
+    climate: GeneratedClimate,
+    /// Nearest-cell index over the terrain geosphere. Two indices, not one:
+    /// terrain and climate each carry their own geosphere, and today both
+    /// happen to share the same cell level, so one index could in principle
+    /// serve both. Keeping them separate is deliberate defensiveness against
+    /// that ever diverging — behavior is identical while the two geospheres
+    /// agree.
+    terrain_index: NearestCellIndex,
+    /// Nearest-cell index over the climate geosphere (see `terrain_index` for
+    /// why the two are kept separate).
+    climate_index: NearestCellIndex,
+    /// The per-cell biome map (`biome_map()` returns by value, so it is built once).
+    biomes: CellMap<Biome>,
+}
+
+impl SceneContext {
+    /// Derive terrain, climate, both nearest-cell indices and the biome map once.
+    pub fn build(world: &World) -> Result<SceneContext, SceneError> {
+        let terrain =
+            hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+        let climate = hornvale_worldgen::climate_from(world, &terrain)
+            .map_err(|e| SceneError::Build(e.to_string()))?;
+        let terrain_index = NearestCellIndex::new(terrain.geosphere());
+        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let biomes = climate.biome_map();
+        Ok(SceneContext {
+            seed: world.seed,
+            terrain,
+            climate,
+            terrain_index,
+            climate_index,
+            biomes,
+        })
+    }
+
+    /// The seed this context was built from.
+    pub fn seed(&self) -> Seed {
+        self.seed
+    }
+}
+
+/// The `width` contract shared by [`tiles_scene`] and [`temperature_grid`]:
+/// even, and inside `MIN_WIDTH..=MAX_WIDTH`. Factored out so the `&World`
+/// wrappers can reject a bad width *before* paying for
+/// [`SceneContext::build`] while the `_in` forms still validate for every
+/// caller. Duplicating the check on the wrapper path is the right trade
+/// against making a bad-input call pay ~638 ms of derivation first.
+fn validate_width(width: u32) -> Result<(), SceneError> {
     if !(MIN_WIDTH..=MAX_WIDTH).contains(&width) {
         return Err(SceneError::WidthOutOfRange(width));
     }
     if !width.is_multiple_of(2) {
         return Err(SceneError::WidthOdd(width));
     }
+    Ok(())
+}
+
+/// Build the `scene/tiles/v1` scene for `world` at `width` tiles across
+/// (height is `width / 2`), deriving a fresh [`SceneContext`]. Deterministic:
+/// same world + same width → the same scene, byte-for-byte once serialized.
+///
+/// Prefer [`tiles_scene_in`] whenever a context is already in hand: the
+/// derivation this performs costs ~638 ms against far less per-call work.
+/// type-audit: bare-ok(count: width)
+pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> {
+    validate_width(width)?;
+    tiles_scene_in(world, &SceneContext::build(world)?, width)
+}
+
+/// Build the `scene/tiles/v1` scene for `world` at `width` tiles across,
+/// reusing a [`SceneContext`] the caller already built — the same
+/// `x_scene` / `x_scene_in` pairing [`surrounds_scene_in`] uses.
+/// type-audit: bare-ok(count: width)
+pub fn tiles_scene_in(
+    world: &World,
+    ctx: &SceneContext,
+    width: u32,
+) -> Result<TilesScene, SceneError> {
+    debug_assert_eq!(
+        ctx.seed(),
+        world.seed,
+        "SceneContext was built for a different world than this call's"
+    );
+    validate_width(width)?;
     let height = width / 2;
-    let terrain =
-        hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let climate = hornvale_worldgen::climate_from(world, &terrain)
-        .map_err(|e| SceneError::Build(e.to_string()))?;
-    // Two indices, not one: terrain and climate each carry their own
-    // geosphere, and today both happen to share the same cell level, so one
-    // index could in principle serve both. Keeping them separate is
-    // deliberate defensiveness against that ever diverging — behavior is
-    // identical while the two geospheres agree.
-    let terrain_index = NearestCellIndex::new(terrain.geosphere());
-    let climate_index = NearestCellIndex::new(climate.geosphere());
-    let biomes = climate.biome_map();
+    let terrain = &ctx.terrain;
+    let climate = &ctx.climate;
+    let terrain_index = &ctx.terrain_index;
+    let climate_index = &ctx.climate_index;
+    let biomes = &ctx.biomes;
     let catalog = hornvale_climate::Biome::catalog();
     let tiles = (width * height) as usize;
     let mut elevation_m = Vec::with_capacity(tiles);
@@ -431,16 +512,33 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
 /// boundary.
 /// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
 pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>, SceneError> {
-    if !(MIN_WIDTH..=MAX_WIDTH).contains(&width) {
-        return Err(SceneError::WidthOutOfRange(width));
-    }
-    if !width.is_multiple_of(2) {
-        return Err(SceneError::WidthOdd(width));
-    }
+    validate_width(width)?;
+    temperature_grid_in(world, &SceneContext::build(world)?, width, day)
+}
+
+/// Per-tile actual temperature at `day`, °C, reusing a [`SceneContext`] the
+/// caller already built — the `_in` half of [`temperature_grid`]. The context
+/// derives terrain then climate, which is exactly what `climate_of` does
+/// (`windows/worldgen/src/lib.rs`), so only `ctx.climate` and
+/// `ctx.climate_index` are read here — `world` is otherwise read only by the
+/// context/world match assertion below, which is the same shape every `_in`
+/// entry point takes.
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+pub fn temperature_grid_in(
+    world: &World,
+    ctx: &SceneContext,
+    width: u32,
+    day: f64,
+) -> Result<Vec<f64>, SceneError> {
+    debug_assert_eq!(
+        ctx.seed(),
+        world.seed,
+        "SceneContext was built for a different world than this call's"
+    );
+    validate_width(width)?;
     let height = width / 2;
-    let climate =
-        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let climate_index = NearestCellIndex::new(climate.geosphere());
+    let climate = &ctx.climate;
+    let climate_index = &ctx.climate_index;
     let tiles = (width * height) as usize;
     let mut temperature = Vec::with_capacity(tiles);
     for py in 0..height {
@@ -1948,5 +2046,54 @@ mod tests {
         let _ = eclipses_scene(&w, 0.0, 2000.0).unwrap();
         let after = serde_json::to_string(&w).unwrap();
         assert_eq!(before, after, "eclipses_scene must not alter the world");
+    }
+
+    /// The Cistern's core guarantee: routing a scene through a prebuilt
+    /// [`SceneContext`] moves zero bytes. `mooned_world()` is seed 42 with a
+    /// generated sky — the same world `region.rs`'s `gen42()` builds, so this
+    /// test covers the canonical fixture without a second helper.
+    #[test]
+    fn the_context_path_is_byte_identical_to_the_world_path() {
+        let world = mooned_world();
+        let ctx = SceneContext::build(&world).expect("context builds");
+
+        // Tiles: the big document.
+        let via_world = scene_json(&tiles_scene(&world, 64).expect("tiles"));
+        let via_ctx = scene_json(&tiles_scene_in(&world, &ctx, 64).expect("tiles_in"));
+        assert_eq!(
+            via_world, via_ctx,
+            "tiles_scene diverged from tiles_scene_in"
+        );
+
+        // Region: the hot path, across several addresses on one face.
+        for ix in 0..3u32 {
+            let via_world =
+                region_json(&tiles_region_scene(&world, 0, 3, ix, 0, 8).expect("region"));
+            let via_ctx = region_json(
+                &tiles_region_scene_in(&world, &ctx, 0, 3, ix, 0, 8).expect("region_in"),
+            );
+            assert_eq!(via_world, via_ctx, "tiles_region_scene diverged at ix={ix}");
+        }
+
+        // Temperature: the third terrain-facing entry point.
+        let via_world = temperature_grid(&world, 64, 100.0).expect("temps");
+        let via_ctx = temperature_grid_in(&world, &ctx, 64, 100.0).expect("temps_in");
+        assert_eq!(
+            via_world, via_ctx,
+            "temperature_grid diverged from temperature_grid_in"
+        );
+
+        // Regional temperature: the fourth, and the one a day loop sweeps —
+        // so it is checked across several days on one address, not just one.
+        for day in [0.0, 100.0, 233.5] {
+            let via_world =
+                temperature_grid_region(&world, 0, 3, 0, 0, 8, day).expect("region temps");
+            let via_ctx = temperature_grid_region_in(&world, &ctx, 0, 3, 0, 0, 8, day)
+                .expect("region temps_in");
+            assert_eq!(
+                via_world, via_ctx,
+                "temperature_grid_region diverged at day={day}"
+            );
+        }
     }
 }

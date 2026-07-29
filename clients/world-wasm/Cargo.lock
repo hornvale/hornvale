@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "hornvale-alchemy"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-almanac"
 version = "0.1.0"
 dependencies = [
@@ -154,6 +161,7 @@ dependencies = [
 name = "hornvale-worldgen"
 version = "0.1.0"
 dependencies = [
+ "hornvale-alchemy",
  "hornvale-almanac",
  "hornvale-astronomy",
  "hornvale-climate",

@@ -8,6 +8,21 @@
 //! is only visible when region calls REPEAT, because each one re-derives the
 //! whole planet.
 //!
+//! Since The Cistern the profiler runs the **same workload twice** and prints
+//! both halves side by side:
+//!
+//! - the `&World` path — every terrain-facing call builds its own
+//!   [`hornvale_scene::SceneContext`] internally, which is the pre-Cistern
+//!   behaviour preserved by delegation;
+//! - the `SceneContext` path — one context built for the world, then passed
+//!   to the `_in` variants, which is what a real client (the Orrery's
+//!   catalog) does.
+//!
+//! Two paths in one run is the honest instrument: the before and the after
+//! are measured on the same box, the same build, and the same world, so the
+//! ratio between them is not confounded by anything the machine was doing
+//! between two separate runs.
+//!
 //! Run: `cargo run -p hornvale-scene --example profile_scene -- [TILES]`
 //! (TILES defaults to 8 region patches.)
 
@@ -82,6 +97,185 @@ fn genesis() -> (World, f64) {
     (world, elapsed)
 }
 
+/// One measured pass over the scene workload: the timings a single traversal
+/// of the six documents plus the region fan produced.
+struct Pass {
+    /// Cost of building the shared [`hornvale_scene::SceneContext`], or `None`
+    /// on the `&World` path where each call builds its own internally.
+    ctx_build_ms: Option<f64>,
+    /// `tiles_scene` build time.
+    tiles_build_ms: f64,
+    /// Size of the serialized tiles document.
+    tiles_bytes: usize,
+    /// `scene_json` serialization time for the tiles document.
+    tiles_json_ms: f64,
+    /// The four astronomical documents, built and serialized as one aggregate.
+    small_ms: f64,
+    /// Their combined serialized size.
+    small_bytes: usize,
+    /// The whole region fan, built and serialized.
+    region_ms: f64,
+    /// The fan's combined serialized size.
+    region_bytes: usize,
+}
+
+impl Pass {
+    /// Everything this pass spent, excluding genesis.
+    fn subtotal_ms(&self) -> f64 {
+        self.ctx_build_ms.unwrap_or(0.0)
+            + self.tiles_build_ms
+            + self.tiles_json_ms
+            + self.small_ms
+            + self.region_ms
+    }
+
+    /// The headline: mean cost of one region patch, build plus serialization.
+    fn per_tile_ms(&self, tiles: usize) -> f64 {
+        self.region_ms / tiles as f64
+    }
+}
+
+/// The four terrain-free documents. They read `sky_of` only, take no context,
+/// and are measured identically in both passes so the two totals compare.
+#[allow(clippy::disallowed_types)] // benchmark harness
+fn small_docs(world: &World) -> (f64, usize) {
+    let t = Instant::now();
+    let mut bytes = 0usize;
+    bytes +=
+        hornvale_scene::system_json(&hornvale_scene::system_scene(world).expect("system scene"))
+            .len();
+    bytes +=
+        hornvale_scene::moons_json(&hornvale_scene::moons_scene(world).expect("moons scene")).len();
+    bytes += hornvale_scene::neighbors_json(
+        &hornvale_scene::neighbors_scene(world).expect("neighbors scene"),
+    )
+    .len();
+    bytes += hornvale_scene::eclipses_json(
+        &hornvale_scene::eclipses_scene(world, 0.0, 365.0).expect("eclipses scene"),
+    )
+    .len();
+    (ms(t), bytes)
+}
+
+/// The pre-Cistern shape: every terrain-facing call derives its own planet.
+#[allow(clippy::disallowed_types)] // benchmark harness
+fn world_pass(world: &World, fan: &[(u32, u32, u32)]) -> Pass {
+    let t = Instant::now();
+    let tiles_scene = hornvale_scene::tiles_scene(world, TILES_WIDTH).expect("tiles scene");
+    let tiles_build_ms = ms(t);
+
+    let t = Instant::now();
+    let tiles_bytes = hornvale_scene::scene_json(&tiles_scene).len();
+    let tiles_json_ms = ms(t);
+
+    let (small_ms, small_bytes) = small_docs(world);
+
+    let t = Instant::now();
+    let mut region_bytes = 0usize;
+    for (face, ix, iy) in fan {
+        let scene =
+            hornvale_scene::tiles_region_scene(world, *face, REGION_LEVEL, *ix, *iy, SAMPLES)
+                .expect("region scene");
+        region_bytes += hornvale_scene::region_json(&scene).len();
+    }
+    let region_ms = ms(t);
+
+    Pass {
+        ctx_build_ms: None,
+        tiles_build_ms,
+        tiles_bytes,
+        tiles_json_ms,
+        small_ms,
+        small_bytes,
+        region_ms,
+        region_bytes,
+    }
+}
+
+/// The client shape: one context per world, then the `_in` variants.
+#[allow(clippy::disallowed_types)] // benchmark harness
+fn context_pass(world: &World, fan: &[(u32, u32, u32)]) -> Pass {
+    let t = Instant::now();
+    let ctx = hornvale_scene::SceneContext::build(world).expect("scene context");
+    let ctx_build_ms = ms(t);
+
+    let t = Instant::now();
+    let tiles_scene =
+        hornvale_scene::tiles_scene_in(world, &ctx, TILES_WIDTH).expect("tiles scene");
+    let tiles_build_ms = ms(t);
+
+    let t = Instant::now();
+    let tiles_bytes = hornvale_scene::scene_json(&tiles_scene).len();
+    let tiles_json_ms = ms(t);
+
+    let (small_ms, small_bytes) = small_docs(world);
+
+    let t = Instant::now();
+    let mut region_bytes = 0usize;
+    for (face, ix, iy) in fan {
+        let scene = hornvale_scene::tiles_region_scene_in(
+            world,
+            &ctx,
+            *face,
+            REGION_LEVEL,
+            *ix,
+            *iy,
+            SAMPLES,
+        )
+        .expect("region scene");
+        region_bytes += hornvale_scene::region_json(&scene).len();
+    }
+    let region_ms = ms(t);
+
+    Pass {
+        ctx_build_ms: Some(ctx_build_ms),
+        tiles_build_ms,
+        tiles_bytes,
+        tiles_json_ms,
+        small_ms,
+        small_bytes,
+        region_ms,
+        region_bytes,
+    }
+}
+
+/// Print one pass in the profiler's established column layout.
+fn report(pass: &Pass, tiles: usize, genesis_ms: f64) {
+    if let Some(ctx_ms) = pass.ctx_build_ms {
+        println!("  {:<26} {ctx_ms:9.1} ms", "SceneContext::build");
+    }
+    println!(
+        "  {:<26} {:9.1} ms  ({} KB)",
+        format!("hw_scene_tiles({TILES_WIDTH}) build"),
+        pass.tiles_build_ms,
+        pass.tiles_bytes / 1024
+    );
+    println!(
+        "  {:<26} {:9.1} ms",
+        "hw_scene_tiles json", pass.tiles_json_ms
+    );
+    println!(
+        "  {:<26} {:9.1} ms  ({} B)",
+        "system+moons+neigh+ecl", pass.small_ms, pass.small_bytes
+    );
+    println!(
+        "  {:<26} {:9.1} ms  ({} KB)",
+        format!("hw_scene_tiles_region x{tiles}"),
+        pass.region_ms,
+        pass.region_bytes / 1024
+    );
+    println!(
+        "  {:<26} {:9.1} ms  <-- the per-tile figure",
+        "  ... per tile",
+        pass.per_tile_ms(tiles)
+    );
+    println!(
+        "  {:<26} {:9.1} ms",
+        "TOTAL",
+        genesis_ms + pass.subtotal_ms()
+    );
+}
+
 fn main() {
     let tiles: usize = std::env::args()
         .nth(1)
@@ -89,70 +283,35 @@ fn main() {
         .unwrap_or(8);
 
     let (world, genesis_ms) = genesis();
-
-    #[allow(clippy::disallowed_types)] // benchmark harness
-    let t = Instant::now();
-    let tiles_scene = hornvale_scene::tiles_scene(&world, TILES_WIDTH).expect("tiles scene");
-    let tiles_build_ms = ms(t);
-
-    #[allow(clippy::disallowed_types)] // benchmark harness
-    let t = Instant::now();
-    let tiles_bytes = hornvale_scene::scene_json(&tiles_scene).len();
-    let tiles_json_ms = ms(t);
-
-    #[allow(clippy::disallowed_types)] // benchmark harness
-    let t = Instant::now();
-    let mut small_bytes = 0usize;
-    small_bytes +=
-        hornvale_scene::system_json(&hornvale_scene::system_scene(&world).expect("system scene"))
-            .len();
-    small_bytes +=
-        hornvale_scene::moons_json(&hornvale_scene::moons_scene(&world).expect("moons scene"))
-            .len();
-    small_bytes += hornvale_scene::neighbors_json(
-        &hornvale_scene::neighbors_scene(&world).expect("neighbors scene"),
-    )
-    .len();
-    small_bytes += hornvale_scene::eclipses_json(
-        &hornvale_scene::eclipses_scene(&world, 0.0, 365.0).expect("eclipses scene"),
-    )
-    .len();
-    let small_ms = ms(t);
-
     let fan = tile_fan(tiles);
-    #[allow(clippy::disallowed_types)] // benchmark harness
-    let t = Instant::now();
-    let mut region_bytes = 0usize;
-    for (face, ix, iy) in &fan {
-        let scene =
-            hornvale_scene::tiles_region_scene(&world, *face, REGION_LEVEL, *ix, *iy, SAMPLES)
-                .expect("region scene");
-        region_bytes += hornvale_scene::region_json(&scene).len();
-    }
-    let region_ms = ms(t);
-    let per_tile_ms = region_ms / fan.len() as f64;
+    let n = fan.len();
 
-    let total = genesis_ms + tiles_build_ms + tiles_json_ms + small_ms + region_ms;
-    println!("scene profile (seed {SEED}, {} region tiles):", fan.len());
+    // The `&World` pass runs first so it cannot benefit from anything the
+    // context pass warmed; if either order biased the result it would be this
+    // one, and it biases AGAINST the campaign's claim.
+    let before = world_pass(&world, &fan);
+    let after = context_pass(&world, &fan);
+
+    println!("scene profile (seed {SEED}, {n} region tiles):");
     println!("  {:<26} {genesis_ms:9.1} ms", "hw_new");
+    println!();
+    println!("  -- &World path: one planet derived per call --");
+    report(&before, n, genesis_ms);
+    println!();
+    println!("  -- SceneContext path: one planet derived per world --");
+    report(&after, n, genesis_ms);
+    println!();
+
+    let before_tile = before.per_tile_ms(n);
+    let after_tile = after.per_tile_ms(n);
     println!(
-        "  {:<26} {tiles_build_ms:9.1} ms  ({} KB)",
-        format!("hw_scene_tiles({TILES_WIDTH}) build"),
-        tiles_bytes / 1024
+        "  per tile   {before_tile:.1} ms -> {after_tile:.1} ms   ({:.1}x)",
+        before_tile / after_tile
     );
-    println!("  {:<26} {tiles_json_ms:9.1} ms", "hw_scene_tiles json");
+    let before_total = genesis_ms + before.subtotal_ms();
+    let after_total = genesis_ms + after.subtotal_ms();
     println!(
-        "  {:<26} {small_ms:9.1} ms  ({small_bytes} B)",
-        "system+moons+neigh+ecl"
+        "  TOTAL      {before_total:.1} ms -> {after_total:.1} ms   ({:.1}x)",
+        before_total / after_total
     );
-    println!(
-        "  {:<26} {region_ms:9.1} ms  ({} KB)",
-        format!("hw_scene_tiles_region x{}", fan.len()),
-        region_bytes / 1024
-    );
-    println!(
-        "  {:<26} {per_tile_ms:9.1} ms  <-- the per-tile figure",
-        "  ... per tile"
-    );
-    println!("  {:<26} {total:9.1} ms", "TOTAL");
 }

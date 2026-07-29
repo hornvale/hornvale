@@ -1,5 +1,14 @@
 # The Sextant
 
+> **Historical.** Every measurement below was taken against the code as it
+> stood on 2026-07-28, and describes a defect that [The
+> Cistern](./the-cistern.md) closed the next day: the scene window now derives
+> the planet once per world, and a region patch costs about eighty
+> milliseconds rather than seven hundred. Nothing here has been rewritten —
+> the numbers are what they were, the diagnosis was right, and the fix
+> campaign's whole claim is checkable only because these figures exist. Read
+> it as the position fix that preceded the course change.
+
 The Orrery feels slow, and it is. This campaign does not make it faster. It
 builds the instrument that says, in numbers, *where* the time goes — and
 leaves a ceiling behind that a future regression trips over. A sextant does
@@ -154,3 +163,13 @@ them currently rebuilds. The guard becomes writable at the same moment,
 against the same seam. What the measurement half could not do was pin a
 pattern the client-visible paths do not yet follow — which makes the fix
 campaign's route shorter than it looked, not longer.
+
+**That is what happened.** [The Cistern](./the-cistern.md) shipped exactly this
+shape a day later — a `SceneContext` holding the terrain, the climate, both
+nearest-cell indices and the biome map; an `_in` variant on each of the four
+terrain-facing entry points, the fourth of them found only during
+implementation; and the deferred structural guard, written in the two layers
+described above. The profiler recorded here became a two-pass instrument that
+prints both paths in one run, and reported **11.1×** on the per-tile figure
+against the ~11× this campaign's arithmetic predicted. The ceilings ratcheted
+down for the first time: the per-tile budget from 3100 ms to 420 ms.

@@ -5,7 +5,8 @@
 //! contract change.
 
 use hornvale_scene::{
-    render_surrounds_ascii, scene_json, surrounds_json, surrounds_scene, tiles_scene,
+    region_json, render_surrounds_ascii, scene_json, surrounds_json, surrounds_scene,
+    tiles_region_scene, tiles_scene,
 };
 
 // Integration tests can't see #[cfg(test)] helpers, and the public API
@@ -36,6 +37,30 @@ fn v1_bytes_are_pinned() {
         &seed_1_json(),
         "scene/tiles/v1 bytes moved — this is the epoch decision point (scene-protocol \
          spec §2); accept deliberately and review the diff as a contract change",
+    );
+}
+
+// scene/tiles-region/v1's own pin, the third sibling. Until this existed the
+// region path's only in-repo byte evidence was the *mutual* equivalence test
+// in the lib (`the_context_path_is_byte_identical_to_the_world_path`), which
+// would pass if both paths moved together — an absolute pin is what makes a
+// context refactor's byte-identity claim checkable at all. A seed-1 level-3
+// patch at 8 samples is 81 nodes: small enough for the commit gate.
+fn region_seed_1_json() -> String {
+    region_json(&tiles_region_scene(&world(), 0, 3, 0, 0, 8).unwrap())
+}
+
+#[test]
+fn region_v1_bytes_are_pinned() {
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/region-seed-1-f0-l3.json"
+        )),
+        &region_seed_1_json(),
+        "scene/tiles-region/v1 bytes moved — this is the region path's absolute byte pin \
+         (the projection is shared byte-for-byte with the orrery's cubeSphere.ts); accept \
+         deliberately, re-run with REBASELINE=1, and review the diff as a contract change",
     );
 }
 

@@ -391,13 +391,17 @@ scene document can be faithful, grounded, drawn, legible, and correctly
 assembled with its neighbours — and still be **ruinously expensive to ask
 for**, because a versioned schema is a contract about a document's *contents*
 and says nothing about the cost of producing one. Every terrain-facing entry
-point in the scene window re-derives terrain and climate from the world and
-keeps neither, so each such document carries about 638 ms of fixed setup;
+point in the scene window re-derived terrain and climate from the world and
+kept neither, so each such document carried about 638 ms of fixed setup;
 measured against the
 Orrery's real call pattern, which requests one regional document per
-level-of-detail tile, **91.6% of a scene call is the planet being rebuilt** and
-a single camera move spends roughly fifteen seconds generating the same world
-two dozen times. The bet is untouched — nothing crosses the seam incorrectly,
+level-of-detail tile, **91.6% of a scene call was the planet being rebuilt**
+and a single camera move spent roughly fifteen seconds generating the same
+world two dozen times. ([The Cistern](./chronicle/the-cistern.md) closed that
+the following day — the derivation now happens once per world, and a region
+patch measured 11.1× cheaper. The entry stays on the ledger because the
+*failure mode* is what it records, not the defect's lifetime.) The bet is
+untouched — nothing crosses the seam incorrectly,
 and the interface required no change to be measured. What sharpens is the
 same scope lesson The Selvage drew about geometry, transposed to cost: a
 document describes itself and not its relationship to the *other* documents a
