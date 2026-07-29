@@ -11,7 +11,7 @@ set -uo pipefail
 
 status="$(cargo run --quiet --release -p hornvale -- lab claim-status 2>/dev/null || true)"
 case "$status" in
-    "census running"*)
+    "census running"*|"heavy running"*)
         echo "note: $status" >&2
         echo "note: your timings will be contended — see docs/timings.md's cpu_ratio column." >&2
         ;;

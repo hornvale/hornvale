@@ -996,8 +996,10 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some("claim-status") => {
-            // Answers "is a census running right now?" without ps | grep
-            // (decision 0081). `scripts/census-run.sh status` wraps this.
+            // Answers "is a heavy run holding the box right now?" without
+            // ps | grep (decision 0081). `scripts/census-run.sh status` and
+            // `scripts/heavy-run.sh status` both wrap this; the line names
+            // which KIND of job holds it (The Siding).
             println!("{}", hornvale_lab::census_claim::status_line());
             Ok(())
         }
