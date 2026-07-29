@@ -86,10 +86,14 @@
 //!
 //! Release profile, same day, same box and load, measured within one run by
 //! the two-pass profiler (`cargo run --release -p hornvale-scene --example
-//! profile_scene -- 8`): region **897.7 ms/tile through the `&World` path
-//! against 83.4 ms/tile through the context path — 10.8x**, against spec §5's
-//! hypothesised ~11x. A within-run ratio is the load-robust statistic here;
-//! the absolute milliseconds are not.
+//! profile_scene -- 8`): region **902.3 ms/tile through the `&World` path
+//! against 81.4 ms/tile through the context path — 11.1x**, against spec §5's
+//! hypothesised ~11x. This is the run the chronicle
+//! (`book/src/chronicle/the-cistern.md`) headlines and reproduces in full; an
+//! immediately preceding run of the same binary gave 897.7 against 83.4 —
+//! **10.8x** — which is the second observation, not a competing headline. A
+//! within-run ratio is the load-robust statistic here; the absolute
+//! milliseconds are not.
 //!
 //! ## Measured — The Sextant (2026-07-28), the superseded basis
 //!

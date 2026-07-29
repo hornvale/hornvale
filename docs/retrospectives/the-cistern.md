@@ -10,9 +10,12 @@ Sextant's recorded reference. That comparison would have been worthless. The
 box was carrying roughly eighty runnable threads of a parallel session's
 `gate-full` when the measurement was taken, and the unfixed code re-measured
 at 902.3 ms/tile against the 702 ms The Sextant had recorded for *the same
-lines of source*. Twenty-eight percent of the "improvement" would have been
-the machine, in whichever direction the load happened to sit — and the sign
-is unknowable after the fact, which is worse than the magnitude.
+work*. (Not literally the same lines: by then the `&World` forms were
+one-line wrappers delegating to their `_in` halves, so the arm being
+re-measured was semantically equivalent to what The Sextant timed, not
+textually identical to it.) Twenty-eight percent of the "improvement" would
+have been the machine, in whichever direction the load happened to sit — and
+the sign is unknowable after the fact, which is worse than the magnitude.
 
 Making the profiler run both arms in one process fixed it structurally. Same
 build, same world, same box, same second: the only surviving difference
@@ -104,3 +107,29 @@ constant.
 timing comparisons need a fixed machine. A campaign that runs in a worktree —
 which is every campaign here — cannot compare its binary against one built in
 the primary checkout.
+
+## Follow-ups
+
+Two coverage gaps found by the whole-branch review and deliberately **not**
+closed here: both are widenings of the region path's byte net, which is a
+larger job than a fix wave, and neither is a defect in what shipped.
+
+- **The region golden is partly degenerate.**
+  `windows/scene/tests/fixtures/region-seed-1-f0-l3.json` is an all-ocean
+  tile — `water` all `0`, `drainage` all `0.0`, `waterfalls` empty. So three
+  of the region document's branches have *no* byte coverage at all: the
+  water-kind classification, drainage, and `tile_contains`'s waterfall
+  filter. A refactor could move any of them and no committed golden would
+  notice. The fix is a second golden on a coastal or river-bearing tile,
+  chosen so all three branches are non-trivial; that is a fixture-selection
+  problem (finding an address with water *and* relief) more than a code one.
+
+- **`temperature_grid_region` has no in-repo byte pin.** Its only net inside
+  this repository is `temperature_grid_region_commutes_with_the_evaluator`
+  (`windows/scene/src/region.rs`), which checks the grid against an
+  independent rebuild of the same three additive terms at 1e-9 *relative*
+  tolerance. That is a relation, not an absolute: a change moving both sides
+  together passes. The absolute golden this repo *generates*
+  (`examples/region_temperature_golden.rs`) is committed in the **orrery**
+  repo, so a cross-repo change is required to see it move. An in-repo
+  absolute golden would put the pin next to the code it pins.

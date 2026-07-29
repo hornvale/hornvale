@@ -1,5 +1,23 @@
 # The Cistern Implementation Plan
 
+> **EXECUTED AND MERGED 2026-07-29. This file is now history.**
+>
+> All three tasks shipped. The central prediction — ~11× on region tiles with
+> not one scene document byte moved — **was measured and held** (11.1×, and
+> 10.8× on the preceding run). No decisions were minted; no epoch was declared.
+>
+> Kept unedited below as the record of what was planned, including the parts
+> that were wrong. Four of this plan's own assumptions failed at execution and
+> each is named in the retrospective: the byte-equivalence test it opens with
+> went **tautological** the moment the `&World` forms became delegations; the
+> "compare against The Sextant's recorded reference" measurement method would
+> have measured the box rather than the code; "ratchet the ceilings down to
+> ~2×" would have left the relocated 638 ms under no ceiling at all; and the
+> binary-size delta it asked for is not measurable from a worktree. A plan
+> rewritten after the fact to look prescient teaches nothing.
+>
+> ---
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Derive the planet once per world instead of once per scene call, without moving a single byte of any scene document.

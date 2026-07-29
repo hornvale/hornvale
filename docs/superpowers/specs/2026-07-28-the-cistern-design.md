@@ -2,7 +2,13 @@
 
 **Campaign:** The Cistern
 **Date:** 2026-07-28
-**Status:** spec, awaiting G3 review
+**Status:** **COMPLETE — shipped and merged 2026-07-29.** All three tasks
+shipped. The preregistered hypothesis of §5 (~11× on region tiles) **held**:
+902.3 → 81.4 ms/tile within one process, **11.1×**, with byte-identity intact
+across all nine scene documents. Chronicle: `book/src/chronicle/the-cistern.md`.
+Retrospective: `docs/retrospectives/the-cistern.md`. **No decisions were
+minted** and no epoch was declared — nothing in the derivation moved (0084's
+test). Spec approved at G3.
 
 A vessel that holds what was drawn. The scene window derives the planet once
 per world instead of once per call, and the guard that makes the old

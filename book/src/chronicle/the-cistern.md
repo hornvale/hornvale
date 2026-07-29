@@ -59,10 +59,13 @@ statistic; the milliseconds are context.
 The residual is worth naming honestly. The specification predicted about
 sixty-four milliseconds of real sampling per patch, a figure it had obtained
 by subtraction (702 − 638) and flagged as such. What the direct measurement
-shows is eighty-one, on a loaded box, and roughly nine percent of the
-unfixed call against a predicted eight and a half. The subtraction was
-sound; the campaign did not beat it, and the ~11× is where the agreement
-actually lies.
+shows is eighty-one, on a loaded box. The comparison that means anything is
+the *fraction* of the unfixed call the residual represents, since the two
+figures were taken under different loads: 81.4 of 902.3 is 9.0%, against the
+prediction's 64 of 702, which is 9.1% — the same basis on both sides. The
+subtraction was sound, and the measurement came in a hair under it rather
+than over. The ~11× is where the agreement is loudest, but the residual
+agrees too.
 
 ## The ratchet, moved down for the first time
 
@@ -165,9 +168,9 @@ constant, and the corrected figure above does.
 The specification named one thing it would not fix, and it was right to. The
 globe's tile document is seventeen megabytes, and serializing it costs about a
 second — the one line in the profiler that is *identical* in both columns
-(1053.6 against 1062.9 milliseconds). Building that document got two and a
-half times cheaper; emitting it did not move at all, and is now the larger
-half of its cost. The redundancy problem is closed and the volume problem is
+(1053.6 against 1062.9 milliseconds). Building that document got 2.4× cheaper
+(1448.1 down to 600.3 milliseconds); emitting it did not move at all, and is
+now the larger half of its cost. The redundancy problem is closed and the volume problem is
 next.
 
 The structural guard The Sextant specified and could not write is now written,
