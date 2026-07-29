@@ -459,7 +459,7 @@ mod tests {
         let mut output = Vec::new();
         run(&world, input, &mut output).unwrap();
         let text = String::from_utf8(output).unwrap();
-        assert!(text.contains("You stand in"), "possession opened");
+        assert!(text.contains("in the lands of"), "possession opened");
         assert!(text.contains("You let go."), "release ended the possession");
         let released_at = text.find("You let go.").unwrap();
         let village_out = &text[released_at..];

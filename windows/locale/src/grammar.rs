@@ -55,12 +55,20 @@ pub(crate) fn render(
     );
     let habitat = micro_habitat(micro, expr);
     let exotic = exotic_clause(negations);
-    // Assemble, dropping empty clauses.
-    [variety, substrate_detail, habitat, exotic]
+    // Assemble, dropping empty clauses. The variety and its substrate detail
+    // are one noun phrase ("erg dunes of shifting sand"); the habitat and
+    // exotic clauses are qualifiers, and read as a list rather than a run-on
+    // now that the descriptor opens the sentence instead of trailing a verb.
+    let noun = [variety, substrate_detail]
         .into_iter()
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
-        .join(" ")
+        .join(" ");
+    [noun, habitat, exotic]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Draw one entry from a pool off a per-slot stream; "" if the pool is empty.
@@ -80,9 +88,47 @@ fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) -> String {
 /// The micro-habitat clause reads the MicroField deterministically (no draw).
 fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
     match expr.realm.medium {
+        // Permanent ice is land, and its clauses were the ordinary land ones —
+        // so an ice sheet read "sun-warmed, dry", which is the same category
+        // smell the sea had one medium over. Ice is not damp or dry; it is
+        // wind-scoured or drifted, and its aspect is glare rather than warmth.
+        Medium::AirOverRock if matches!(expr.formation, Formation::Ice) => ice_micro_habitat(micro),
         Medium::AirOverRock => land_micro_habitat(micro),
+        Medium::Water if matches!(expr.formation, Formation::SeaIce) => ice_micro_habitat(micro),
         Medium::Water => water_micro_habitat(micro, expr.stratum),
     }
+}
+
+/// The habitat clause on ice: the same micro-field read as ice reads it.
+/// Relief is the surface's own shape, aspect is glare rather than warmth, and
+/// wetness is how much snow the wind has left rather than how wet the ground is.
+fn ice_micro_habitat(micro: MicroField) -> String {
+    let relief = if micro.relief > 0.33 {
+        "on a swell of ice"
+    } else if micro.relief < -0.33 {
+        "in a hollow"
+    } else {
+        ""
+    };
+    let glare = if micro.aspect > 0.33 {
+        "glaring"
+    } else if micro.aspect < -0.33 {
+        "in blue shadow"
+    } else {
+        ""
+    };
+    let cover = if micro.wetness > 0.33 {
+        "drifted deep"
+    } else if micro.wetness < -0.33 {
+        "scoured bare"
+    } else {
+        ""
+    };
+    [glare, cover, relief]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// The overworld's habitat clause — the original body, unchanged.
@@ -112,7 +158,7 @@ fn land_micro_habitat(micro: MicroField) -> String {
         .into_iter()
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
-        .join(" ")
+        .join(", ")
 }
 
 /// The water column's habitat clause: the same micro-field, read as water
@@ -152,7 +198,7 @@ fn water_micro_habitat(micro: MicroField, stratum: Stratum) -> String {
         .into_iter()
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
-        .join(" ")
+        .join(", ")
 }
 
 /// Exotic clause for placed regimes (empty for the derived tier).

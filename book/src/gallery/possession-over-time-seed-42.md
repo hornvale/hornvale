@@ -14,11 +14,11 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
@@ -35,7 +35,7 @@ The bugbear of Qvooshtvoagootao seems content.
 Time passes; the world keeps its shape.
 > look
 [room 738918402, day 5]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
@@ -43,7 +43,7 @@ The bugbear of Qvooshtvoagootao settles down to rest.
 Time passes. You sense movement nearby (17 stirred).
 > look
 [room 738918402, day 6]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
@@ -51,7 +51,7 @@ The bugbear of Qvooshtvoagootao settles down to rest.
 Time passes. You sense movement nearby (16 stirred).
 > look
 [room 738918402, day 7]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The sky is a low grey rain-deck.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The sky is a low grey rain-deck.
 Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao grows restless.
@@ -65,7 +65,7 @@ hobgoblin of Feamjeafeoqoanoagoo:
 Time passes. You sense movement nearby (338 stirred).
 > look
 [room 738918402, day 97]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao grows restless.

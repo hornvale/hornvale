@@ -29,7 +29,7 @@ fn opts() -> PossessOpts {
 fn possession_opens_with_a_focalized_description() {
     let world = seam_world();
     let (_s, opening) = Session::start(&world, &opts()).unwrap();
-    assert!(opening.contains("You stand in"));
+    assert!(opening.contains("in the lands of"));
     assert!(
         opening.contains("[room "),
         "the opening carries the room id"
@@ -422,7 +422,7 @@ fn run_drives_a_script_deterministically() {
     assert_eq!(out_a, out_b, "byte-identical replays");
     let text = String::from_utf8(out_a).unwrap();
     assert!(text.contains("> look"), "echo mode echoes commands");
-    assert!(text.contains("You stand in"));
+    assert!(text.contains("in the lands of"));
 }
 
 /// The room prints "Ways on: SE, N, SW." — every one of those tokens must be
@@ -618,7 +618,7 @@ fn the_water_column_is_a_place_you_can_be() {
             s.handle(d);
         }
         if let Turn::Out(t) = s.handle("look")
-            && t.contains("You float on")
+            && t.contains("Open water")
         {
             afloat = t;
             break;
@@ -630,14 +630,17 @@ fn the_water_column_is_a_place_you_can_be() {
     );
 
     // On the surface: afloat on open water, not standing in the floor's biome.
-    assert!(afloat.contains("You float on open water"), "{afloat}");
+    assert!(afloat.contains("Open water —"), "{afloat}");
 
     // Down: a different place at the same coordinate.
     let under = match s.handle("dive") {
         Turn::Out(t) => t,
         _ => panic!("dive must not release"),
     };
-    assert!(under.contains("You hang in"), "{under}");
+    assert!(
+        !under.contains("Open water —"),
+        "diving must leave the surface: {under}"
+    );
     assert_ne!(
         afloat, under,
         "the surface and the water below it rendered identically"
@@ -657,7 +660,7 @@ fn the_water_column_is_a_place_you_can_be() {
         _ => panic!("surface must not release"),
     };
     assert!(up.contains("You break the surface"), "{up}");
-    assert!(up.contains("You float on"), "{up}");
+    assert!(up.contains("Open water —"), "{up}");
 }
 
 /// On land there is no column, and the refusal says why rather than reading

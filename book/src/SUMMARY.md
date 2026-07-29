@@ -275,6 +275,7 @@
 - [The Shoal](./chronicle/the-shoal.md)
 - [The Tare](./chronicle/the-tare.md)
 - [The Column](./chronicle/the-column.md)
+- [The Effacement](./chronicle/the-effacement.md)
 
 # Appendix: The Frontier
 
