@@ -47,7 +47,7 @@ same as a radius-8 one." `windows/locale`'s `LocaleContext::build`
 (`windows/locale/src/lib.rs:183`) does the derive-once itself.
 
 So this is not a new seam. It is the `x_scene` / `x_scene_in` pair extended
-to the three entry points that lack it.
+to the four entry points that lack it.
 
 ## 2. Non-goals
 
@@ -95,13 +95,23 @@ those rebuilt per call and forfeit part of the win for no reason.
 `Biome::catalog()` stays a per-call value: it is a `&'static` catalog lookup,
 not derived state.
 
-### Item 2 — `_in` variants on the three terrain-facing entry points
+### Item 2 — `_in` variants on the terrain-facing entry points
 
 | existing | new |
 |---|---|
 | `tiles_scene(world, width)` | `tiles_scene_in(world, ctx, width)` |
 | `tiles_region_scene(world, face, level, ix, iy, samples)` | `tiles_region_scene_in(world, ctx, …)` |
 | `temperature_grid(world, width, day)` | `temperature_grid_in(world, ctx, width, day)` |
+| `temperature_grid_region(world, face, level, ix, iy, samples, day)` | `temperature_grid_region_in(world, ctx, …)` |
+
+**Amended after the Task 1 review (2026-07-28):** `temperature_grid_region`
+(`windows/scene/src/region.rs:456`) is a **fourth** terrain-facing entry
+point and was missed when this table was drafted — it opens with
+`climate_of` + `NearestCellIndex::new` per call, the full 638 ms, and
+`windows/scene/examples/region_temperature_golden.rs:35` calls it in a day
+loop. It is in scope: §1's claim is "every terrain-facing entry point", and
+leaving one out would make Item 4's guard narrower than the rule it
+enforces.
 
 The `&World`-only forms **stay and keep their signatures**, each delegating:
 
@@ -119,7 +129,7 @@ construction.
 `temperature_grid` is included even though the Orrery evaluates the seasonal
 curve client-side (`orrery src/sim/climate.ts`, golden-pinned) and no wasm
 export reaches it. It carries the identical defect on the lab and book paths,
-and leaving one of three unfixed would make the structural guard in Item 5
+and leaving any of them unfixed would make the structural guard in Item 4
 narrower than the rule it is meant to enforce.
 
 The four astronomical documents (`system_scene`, `moons_scene`,
@@ -155,6 +165,16 @@ context surviving a refused `hw_new_pinned` would serve the previous world's
 terrain under the new world's seed: silent, plausible, and wrong. `SceneContext`
 carries `seed` so a debug assertion can catch it, but placement is the real
 guard.
+
+**Enforcement shape, settled at the Task 1 review:**
+`debug_assert_eq!(ctx.seed(), world.seed, …)` as the first line of each
+`_in` variant — **not** a new `SceneError` variant. A `Result` variant would
+widen the error enum with a case the `&World` wrapper path can never take,
+forcing every caller to handle an impossible branch. A `debug_assert` costs
+nothing in the `opt-level="z"` catalog build (decision 0052), fires in every
+test run, and is precisely the layer that catches a misplaced `SCENE_CTX`
+invalidation. This is also why `temperature_grid_in` keeps its otherwise-
+unused `world` parameter.
 
 ### Item 4 — the structural guard The Sextant deferred
 
