@@ -275,12 +275,52 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // accepted: at a later epoch they sort last, so they draw after every
     // earlier concept and take whatever the probe walk leaves them, forfeiting
     // the short-form priority `core_rank` would otherwise give the Swadesh
-    // members among them. Measured on the merged tree rather than assumed —
-    // `.superpowers/sdd/rebase-report.md` §4 reports the per-species mean and
-    // max root length of exactly these nineteen at this epoch against what the
-    // re-founding gave them, including `hill`/`river`/`ford`/`coast`
-    // individually. LANG-27's Zipf ordering stays deferred for them, which is
-    // the ordinary Accession trade (§3.3) and not a new one.
+    // members among them.
+    //
+    // **The cost was MEASURED on the merged tree, not assumed**, because a
+    // stated cost nobody counted is how this campaign got into the argument it
+    // is climbing out of. Seeds 1..=250 contiguous, the real 176-concept
+    // registry, real daughters, all four proto-root assignment units; two arms
+    // over the identical universe/phonology/daughters differing only in where
+    // these nineteen sit (epoch 4 as shipped, versus epoch 0 as the withdrawn
+    // re-founding would have placed them). 4750 roots per arm per unit. Mean
+    // root length, in syllables:
+    //
+    //     unit        epoch 4    epoch 0     delta
+    //     goblinoid    1.9638     1.7918    +0.1720   (max 6 vs 5)
+    //     draconic     1.9381     1.7714    +0.1667   (max 6 vs 6)
+    //     gnoll        1.9375     1.7571    +0.1804   (max 4 vs 4)
+    //     kobold       2.0861     1.8360    +0.2501   (max 5 vs 4)
+    //
+    // For goblinoid, 871 of 4750 roots are longer at epoch 4, 85 shorter, 3794
+    // unchanged; kobold is worst at 1181 longer / 75 shorter. Of the four
+    // high-frequency generics, `ford` moves most (+0.25 to +0.33 across the
+    // units) and `river` least (+0.09 to +0.14), with `hill` +0.22 to +0.26 and
+    // `coast` +0.20 to +0.28.
+    //
+    // A root of 3+ syllables can ONLY come from the probe walk
+    // (`PROTO_ROOT_SYLLABLE_RANGE` is 1..=2, lengthened one syllable per
+    // exhausted `PROBE_BUDGET`), so that share isolates this mechanism from
+    // LANG-55's coda carve, which adds consonants and not nuclei. In the
+    // shipped configuration it runs 0.94% / 1.92% / 0.89% / 1.55% at epochs
+    // 0-3 and **8.67% at epoch 4** for goblinoid; 2.14% / 5.33% / 4.68% /
+    // 7.79% and **16.23%** for kobold. Epochs 1-3 are all subject to the carve
+    // and sit barely above epoch 0, so the carve is a small flat share and the
+    // rest is arrival order against a saturating form space.
+    //
+    // Recorded as dropped, because it is plausible and wrong: 17 of these 19
+    // are core (`packs::is_core_concept` — the 7 `TOPONYMIC_CORE` landforms
+    // plus the 10 universal-stratum modifiers; only `coast` and `lake` are
+    // periphery), and a core candidate must also clear a minimal-pair guard
+    // against every core root already placed, so the cost looked like it should
+    // concentrate on the core members. It does not: the delta is flat across
+    // the split (goblinoid core +0.1694, periphery +0.1940). The guard makes
+    // core roots longer in ABSOLUTE terms at both epochs; it is not what the
+    // epoch-4 delta is made of.
+    //
+    // LANG-27's Zipf ordering therefore stays deferred for these nineteen —
+    // the ordinary Accession trade (§3.3), paid at the size measured above and
+    // not a new one.
     &[
         "coast", "ford", "great", "high", "hill", "island", "lake", "little", "low", "marsh",
         "new", "north", "old", "over", "river", "south", "spring", "under", "valley",
