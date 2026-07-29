@@ -193,6 +193,21 @@ freezing the walk band's vocabulary is what deferred both. The design chose that
 freeze knowingly, to buy byte-identity, and it should have said out loud that
 this was the price. It says so now.
 
+> **Fixed by [The Blocking](./the-blocking.md) (2026-07-28) — and the "that
+> epoch" above never arrived.** Chambers now take *roles*, and a role admits a
+> subset of the patterns, so the two chambers of the seed-42 dwelling read *a
+> doorway and a screen* and *a doorway and an alcove*. The forecast in this
+> section was half wrong in an instructive way: differentiation did need
+> vocabulary the frozen inventory lacked, but it turned out to be
+> **redistribution rather than accumulation** — neither chamber gained anything,
+> and the composer's existing patterns were *divided* between them. New patterns
+> were appended behind role gates that no walk-band composition opens, and the
+> selector filters in inventory order, so every existing composition stayed
+> byte-identical. No metric golden moved and no epoch was declared. The
+> discontinuity is **deferred, not absent**: five gated patterns wait on the
+> first mark committed inside a chamber, which is when they become an epoch
+> retroactively.
+
 ## What is safe to say afterwards
 
 A structure can be walked into one chamber at a time and is left in a single
