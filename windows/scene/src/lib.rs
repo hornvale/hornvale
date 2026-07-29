@@ -283,6 +283,14 @@ impl TileFields {
     /// The nineteen per-tile array names, in [`TilesScene`]'s declaration
     /// order. Document metadata (`schema`, the legends, `features`, …) is
     /// never selectable: it is always emitted.
+    ///
+    /// The tag below is currently unenforced: `tools/type-audit` walks
+    /// module-level `Item::Const` only (`extract.rs:64`) and never descends
+    /// into an `impl` block's associated consts, so the audit cannot see
+    /// this surface. The tag is written anyway so the annotation is honest
+    /// if the tool ever grows that case — a tool gap worth a followup, not
+    /// a reason to leave a pub-boundary primitive unannotated.
+    /// type-audit: bare-ok(identifier-text: ALL_NAMES)
     pub const ALL_NAMES: &'static [&'static str] = &[
         "elevation_m",
         "ocean",
@@ -2343,6 +2351,41 @@ mod tests {
         &doc[start..i]
     }
 
+    /// Assert two scene documents are byte-identical, reporting the FIRST
+    /// divergence with context rather than dumping both strings.
+    ///
+    /// A bare `assert_eq!` on these is unusable: at width 64 it prints 20,014
+    /// truncated characters and the reader still cannot see which field
+    /// broke; at the Orrery's width 512 it would be 35 MB. Since a failure
+    /// here always means one field moved, the byte index plus a window either
+    /// side names that field immediately — the preceding `"key":` is visible
+    /// in the left context.
+    fn assert_same_document(expected: &str, actual: &str, what: &str) {
+        if expected == actual {
+            return;
+        }
+        let (e, a) = (expected.as_bytes(), actual.as_bytes());
+        let at = (0..e.len().min(a.len()))
+            .find(|&i| e[i] != a[i])
+            .unwrap_or(e.len().min(a.len()));
+        // Byte windows rendered lossily: a divergence can land mid-codepoint
+        // (biome and settlement names are UTF-8), and a panicking slice would
+        // replace the diagnostic with a worse one.
+        let window = |s: &[u8]| {
+            let lo = at.saturating_sub(80);
+            let hi = (at + 80).min(s.len());
+            String::from_utf8_lossy(&s[lo..hi]).into_owned()
+        };
+        panic!(
+            "{what}: documents diverge at byte {at} \
+             (expected {} bytes, actual {} bytes)\n  expected: ...{}...\n  actual:   ...{}...",
+            e.len(),
+            a.len(),
+            window(e),
+            window(a),
+        );
+    }
+
     /// The drift guard: the projected serializer at `all()` must reproduce the
     /// derive byte for byte. If someone adds a field to `TilesScene` and forgets
     /// the manual impl, this reds immediately.
@@ -2350,9 +2393,10 @@ mod tests {
     fn the_full_projection_equals_the_derive() {
         let world = mooned_world();
         let scene = tiles_scene(&world, 64).expect("tiles");
-        assert_eq!(
-            scene_json(&scene),
-            scene_json_selected(&scene, &TileFields::all())
+        assert_same_document(
+            &scene_json(&scene),
+            &scene_json_selected(&scene, &TileFields::all()),
+            "the all() projection diverged from the derive",
         );
     }
 
