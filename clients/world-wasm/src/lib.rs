@@ -314,6 +314,13 @@ pub extern "C" fn hw_scene_tiles(width: u32) -> i32 {
 /// prose. Both are separate from -3 ("no world live"), which means what it
 /// means on every other scene export.
 ///
+/// **An empty list `[]` returns 0**, emitting a metadata-only document with no
+/// per-tile arrays at all. That is the projection applied consistently — the
+/// caller asked for no layers and got none — but it is the one input where a
+/// client bug yields a *successful* useless document rather than a refusal, so
+/// a client that builds its field list dynamically should check the list is
+/// non-empty before calling.
+///
 /// `INBUF` is 4096 bytes and all nineteen names as a JSON array are 248, so a
 /// legitimate field list can never overflow it: -1 says the caller wrote
 /// something that is not a field list, not that it asked for too many layers.

@@ -280,6 +280,7 @@
 - [The Effacement](./chronicle/the-effacement.md)
 - [The Cistern](./chronicle/the-cistern.md)
 - [The Toponym](./chronicle/the-toponym.md)
+- [The Winnowing](./chronicle/the-winnowing.md)
 
 # Appendix: The Frontier
 

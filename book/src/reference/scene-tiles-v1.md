@@ -278,3 +278,48 @@ This prints one `scene/tiles/v1` document to standard output. `--world`
 defaults to `world.json`; `--width` defaults to 256. Width must be even —
 height is always `width / 2` — and must fall between 16 and 1024 inclusive;
 anything else is refused with a description of which bound it violates.
+
+## Projection: asking for a subset of the layers
+
+Since [The Winnowing](../chronicle/the-winnowing.md), a caller may name the
+per-tile layers it wants. At width 512 the nineteen parallel arrays are 99.8%
+of the document's 17,729,304 bytes, and a client typically reads a handful of
+them.
+
+```rust,ignore
+let fields = TileFields::only(&["elevation_m", "ocean", "biome"])?;
+let json = scene_json_selected(&scene, &fields);
+```
+
+The wasm catalog exposes the same choice as
+`hw_scene_tiles_selected(width, len)`, reading a JSON array of names from the
+input buffer. `hw_scene_tiles(width)` is unchanged and still emits everything,
+so a caller that says nothing gets exactly what it always got.
+
+Three properties make this safe to rely on, and they are what the schema
+promises about projection:
+
+- **Only per-tile arrays are selectable.** Document metadata — `schema`,
+  `seed`, `width`, `height`, `sea_level_m`, `season_period_days`, `locked`,
+  `circulation_bands`, the two legends, `features`, `waterfalls` — is always
+  emitted. It is under 33 KB combined and parts of it are needed to interpret
+  any layer at all.
+- **A projection omits; it never re-encodes.** A layer that is present is
+  byte-for-byte what the full document carries for it, in the same position in
+  the same key order. Nothing is quantized differently and nothing is
+  reordered.
+- **Layers are independent.** A layer's bytes do not depend on which other
+  layers were requested, so any subset is a coherent document and the sizes
+  compose by addition. This is checked directly at width 512: the nineteen
+  measured per-layer contributions plus the metadata sum to the full
+  document's byte count with a residual of zero.
+- **An unknown name is a hard error**, never a silently dropped layer. A client
+  asking for `elevation` when the field is `elevation_m` is told so.
+
+An empty selection is legal and yields a metadata-only document — the
+projection applied consistently, but also the one input where a client bug
+produces a successful and useless result.
+
+Projection is not a schema change: a projected document *is* a
+`scene/tiles/v1` document, and a consumer that reads fields by name and
+tolerates their absence is unaffected either way.

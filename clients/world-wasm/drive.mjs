@@ -96,11 +96,23 @@ expect(
   0,
   "hw_scene_tiles_selected (all nineteen)",
 );
-if (out() !== fullDoc) fail("full selection", "differs from the unprojected document");
+// This list is a hand-maintained copy of `TileFields::ALL_NAMES`, so a
+// mismatch here is ambiguous by construction: it may mean the projecting
+// serializer diverged from the derive, or it may simply mean THIS list drifted
+// from `windows/scene/src/lib.rs`'s `ALL_NAMES` (a layer added there and not
+// here). Check the list before the serializer — the duplication is
+// self-detecting, which is why it is tolerated, but it detects itself here.
+if (out() !== fullDoc) {
+  fail(
+    "full selection",
+    "differs from the unprojected document — either the projecting serializer " +
+      "diverged from scene_json, or drive.mjs's `allNames` has drifted from " +
+      "TileFields::ALL_NAMES (windows/scene/src/lib.rs). Compare the lists first.",
+  );
+}
 
 // A subset: three layers requested, sixteen withheld.
 const wanted = ["elevation_m", "ocean", "biome"];
-const withheld = "precip_mm_yr";
 expect(
   e.hw_scene_tiles_selected(width, writeIn(JSON.stringify(wanted))),
   0,
@@ -114,12 +126,16 @@ try {
 } catch (err) {
   fail("projected document", `does not parse: ${err.message}`);
 }
-// (b) an unrequested layer is genuinely absent — no key, not a null or an
-// empty array. Checked on the raw text too, so a key nested anywhere cannot
-// hide from the parsed-object test.
-if (withheld in doc) fail("projected document", `"${withheld}" is present but was not requested`);
-if (projected.includes(`"${withheld}":`)) {
-  fail("projected document", `raw text still carries a "${withheld}" key`);
+// (b) EVERY unrequested layer is genuinely absent — no key, not a null or an
+// empty array. All sixteen, not a representative one: an over-emitting
+// projection that happened to spare the one sampled name would otherwise pass.
+// Checked on the raw text too, so a key nested anywhere cannot hide from the
+// parsed-object test.
+for (const withheld of allNames.filter((n) => !wanted.includes(n))) {
+  if (withheld in doc) fail("projected document", `"${withheld}" is present but was not requested`);
+  if (projected.includes(`"${withheld}":`)) {
+    fail("projected document", `raw text still carries a "${withheld}" key`);
+  }
 }
 // Metadata is never selectable and must survive the projection.
 for (const meta of ["schema", "seed", "width", "height", "biome_legend", "features"]) {
