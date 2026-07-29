@@ -55,6 +55,30 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
     ns
 }
 
+/// The aggregate ease of reaching `cell`: the summed `conductance` of every
+/// traversable edge into it (`conductance > 0.0` — ocean-touching adjacency
+/// edges are stored at exactly 0.0 and are not routes). Higher means more,
+/// and easier, ways in.
+///
+/// A pure function of the graph, with no time, seed, or bake state in it,
+/// which is what makes [`defensibility`] recomputable and testable. The
+/// graph is per-era, so this is too: a glacial low-stand that exposes a land
+/// bridge raises the ease of every cell it reaches.
+///
+/// Reserved integration seam: this campaign's Task 3 wires this into
+/// `defensibility`, not yet present. Present in all builds (not
+/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
+/// module's tests until it lands.
+#[allow(dead_code)]
+fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    graph
+        .edges(cell)
+        .iter()
+        .filter(|e| e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .sum()
+}
+
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;
@@ -3078,6 +3102,45 @@ mod tests {
             },
         );
         assert_eq!(traversable_neighbors(&g, CellId(0)), vec![CellId(1)]);
+    }
+
+    #[test]
+    fn approach_ease_sums_traversable_conductance_only() {
+        use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
+        let mut g = ConnectionGraph::new(4);
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.25,
+            },
+        );
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(2),
+                kind: EdgeKind::LandRoute,
+                conductance: 0.75,
+            },
+        );
+        // Ocean-touching adjacency is stored at exactly 0.0 and must not count.
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(3),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.0,
+            },
+        );
+        assert_eq!(approach_ease(&g, CellId(0)), 1.0);
+    }
+
+    #[test]
+    fn approach_ease_is_zero_for_an_isolated_cell() {
+        use hornvale_topology::ConnectionGraph;
+        let g = ConnectionGraph::new(2);
+        assert_eq!(approach_ease(&g, CellId(0)), 0.0);
     }
 
     /// A pure-land connection graph over `geo` (unit-conductance adjacency,
