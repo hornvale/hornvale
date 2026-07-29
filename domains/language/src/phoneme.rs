@@ -747,6 +747,21 @@ pub fn espeak_word(segments: &[Segment]) -> String {
     format!("[[{body}]]")
 }
 
+/// The sonority rank of a MANNER, 0 (least sonorous) to 4. The consonant half
+/// of [`sonority`], exposed on its own because the phonotactic templates are
+/// drawn as manner slots — the "phonotactics" this scale's doc has always said
+/// it was for, and never used until The Shibboleth.
+/// type-audit: bare-ok(count)
+pub fn sonority_of_manner(manner: Manner) -> u8 {
+    match manner {
+        Manner::Stop | Manner::Ejective | Manner::Click => 0,
+        Manner::Fricative | Manner::Sibilant => 1,
+        Manner::Nasal => 2,
+        Manner::Trill => 3,
+        Manner::Approximant => 4,
+    }
+}
+
 /// The sonority rank of a segment, 0 (least sonorous) to 5 (most): the
 /// scale a later task's loudness bias and phonotactics depend on. Ranked by
 /// manner alone — place and voicing do not affect sonority.

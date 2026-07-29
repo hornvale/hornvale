@@ -7,7 +7,9 @@
 //! `romanize`/`ipa` are exhaustive only over that curated set, so an
 //! off-menu feature combination would surface as `"?"` in every later name.
 
-use crate::phoneme::{Manner, Place, Segment, Tone, canonical_segments, sonority};
+use crate::phoneme::{
+    Manner, Place, Segment, Tone, canonical_segments, sonority, sonority_of_manner,
+};
 use crate::streams;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
@@ -481,14 +483,39 @@ fn draw_manner_slots(
     manners: &[Manner],
     min_len: usize,
     max_len: usize,
+    rising: bool,
 ) -> Vec<Manner> {
     if manners.is_empty() {
         return Vec::new();
     }
     let len = stream.range_u32(min_len as u32, max_len as u32) as usize;
-    (0..len)
+    let drawn: Vec<Manner> = (0..len)
         .filter_map(|_| stream.pick(manners).copied())
-        .collect()
+        .collect();
+    order_by_sonority(drawn, rising)
+}
+
+/// Impose the **Sonority Sequencing Principle** on a drawn manner sequence:
+/// sonority rises toward the nucleus in an onset and falls away from it in a
+/// coda, and no two adjacent slots sit at the same height.
+///
+/// Without this the templates were drawn independently, so `[Nasal, Nasal]`
+/// was a legal onset and produced names opening `ngng-`; `[Nasal, Stop]` gave
+/// the reverse-sonority clusters no language uses. Sorting rather than
+/// rejecting keeps the draw count identical, so the constraint costs no extra
+/// entropy — it only decides what the same draws mean.
+fn order_by_sonority(mut drawn: Vec<Manner>, rising: bool) -> Vec<Manner> {
+    drawn.sort_by_key(|m| {
+        if rising {
+            sonority_of_manner(*m)
+        } else {
+            4 - sonority_of_manner(*m)
+        }
+    });
+    // Equal-sonority neighbours are the geminate-like clusters (ngng, shsh);
+    // the plateau is what makes them unsayable, so collapse it.
+    drawn.dedup_by_key(|m| sonority_of_manner(*m));
+    drawn
 }
 
 /// Draw the onset/nucleus/coda phonotactic templates from `inventory`'s
@@ -501,14 +528,14 @@ fn draw_phonotactics(
 
     let onset_count = stream.range_u32(2, 3) as usize;
     let onsets = (0..onset_count)
-        .map(|_| draw_manner_slots(stream, &manners, 1, 2))
+        .map(|_| draw_manner_slots(stream, &manners, 1, 2, true))
         .collect();
 
     let nuclei = stream.range_u32(1, 2) as usize;
 
     let coda_count = stream.range_u32(1, 2) as usize;
     let codas = (0..coda_count)
-        .map(|_| draw_manner_slots(stream, &manners, 0, 1))
+        .map(|_| draw_manner_slots(stream, &manners, 0, 1, false))
         .collect();
 
     (onsets, nuclei, codas)
