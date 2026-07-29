@@ -2431,12 +2431,16 @@ pub fn registry() -> Vec<Metric> {
             name: "name-gloss-true",
             doc: "Whether every committed settlement name-gloss fact in this world is a \
                    truthful composition of that SAME settlement's own re-derived site \
-                   concepts (biome, presiding phenomenon, and any of the nine toponymic \
-                   terrain concepts its own cell offers — hydrography, elevation extrema, \
-                   landmass size, wetness; Task 5 widened this vector past the original \
-                   biome + presiding pair), re-derived here by calling worldgen's own \
-                   settlement_site_concepts rather than a hand-maintained parallel \
-                   definition; Absent if no settlement in this world carries a gloss",
+                   concepts — up to twelve: the nine toponymic terrain concepts its own \
+                   cell offers (hydrography, elevation extrema, landmass size, wetness), \
+                   The Toponym's characteristic climate variant, the biome, and the \
+                   presiding sky phenomenon. The Wearing's Task 5 widened this vector \
+                   past the original biome + presiding pair, and the close merge with The \
+                   Toponym added the variant. Rather than restate the vector, this metric \
+                   re-derives it by calling worldgen's own settlement_site_concepts, so \
+                   there is no hand-maintained parallel definition to go stale — only \
+                   this sentence, which has now gone stale twice; Absent if no settlement \
+                   in this world carries a gloss",
             summary: SummaryKind::Flag,
             extract: Extractor::Full(name_gloss_true),
         },
