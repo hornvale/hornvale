@@ -1069,8 +1069,10 @@ fn name_collision_rate_is_measured_and_pinned() {
     // 203 -> 329 live), so more worlds draw at least one duplicate name
     // (39 -> 33 zero-collision, 731 -> 737 nonzero); the absent set is
     // unmoved at 230.
-    assert_eq!(zero, 33, "zero-collision world count drifted");
-    assert_eq!(nonzero, 737, "nonzero-collision world count drifted");
+    // The Toponym (name-gloss epoch): redrawn names change which worlds
+    // collide; the absent set is unmoved at 230.
+    assert_eq!(zero, 43, "zero-collision world count drifted");
+    assert_eq!(nonzero, 727, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1121,7 +1123,9 @@ fn name_collision_rate_is_measured_and_pinned() {
         // measured, not explained: no claim in this file rests on the
         // direction, and the zero/nonzero split above moves the other way
         // (six more worlds now show SOME collision).
-        (mean - 0.138_343_210_536_363_64).abs() < 1e-6,
+        // The Toponym (name-gloss epoch): 0.138_343_210_536_363_64 ->
+        // 0.126_857_511_090_779.
+        (mean - 0.126_857_511_090_779).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1230,7 +1234,9 @@ fn name_length_distributions_are_measured_and_pinned() {
         // nearly doubles and the flagship is drawn from a much larger pool:
         // 766 -> 767 present, mean 13.397_077_864_229_757 ->
         // 13.686_009_046_023_463.
-        ("goblin", 767u32, 13.686009046023463),
+        // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
+        // settlement name glosses, so every name in every world is redrawn.
+        ("goblin", 767u32, 13.66529745723599),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1262,7 +1268,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 14.573_312_491_578_953 — kobold moves far more than goblin again,
         // and in the same direction: the bigger surviving roster seats
         // flagships on materially different sites.
-        ("kobold", 760u32, 14.573312491578953),
+        ("kobold", 760u32, 15.548879020789471),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1560,7 +1566,11 @@ fn null_control_name_length_smd_is_pinned() {
         // reseats settlements in both solo builds alike, so the residual
         // name-length gap barely moves — -0.065_161_843_432_313_43 ->
         // -0.064_965_927_887_856_32; still well inside the ±0.2 bound.
-        (namelen - -0.064_965_927_887_856_32).abs() < 1e-9,
+        // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
+        // settlement name glosses, so both solo builds are renamed alike and
+        // the residual gap moves — -0.064_965_927_887_856_32 ->
+        // -0.065_714_087_428_851_79; still well inside the ±0.2 bound.
+        (namelen - -0.065_714_087_428_851_79).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

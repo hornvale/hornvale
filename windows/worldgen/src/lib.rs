@@ -3879,6 +3879,24 @@ fn exposure_of_impl(
         classes.insert(name, ExposureClass::Steeped);
     }
 
+    // Steeped: the VARIANT of every settled cell (The Toponym). A people that
+    // has lived in a grass sward has a word for a grass sward, by exactly the
+    // reasoning that gives them a word for the savanna it is a kind of — and
+    // it is the same cell-scale draw their settlements are named from, so the
+    // word and the name agree.
+    for &cell in settled {
+        let expr = climate.biome_expr_at(cell);
+        if let Some(v) = hornvale_climate::variant_at_cell(
+            world.seed,
+            cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        ) {
+            classes.insert(v.concept_name().to_string(), ExposureClass::Steeped);
+        }
+    }
+
     // Steeped: the species' own living kind (a people always knows itself),
     // and — once this species has settled anywhere — the living kind of
     // every species placed in this world, plus its own domestic/religious
@@ -4962,8 +4980,20 @@ fn build_to(
         let seen =
             observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
+        // The Toponym: a settlement is named for the KIND of place it sits in,
+        // not merely its biome. The variant is drawn at cell scale, because a
+        // settlement occupies a cell and a room is one of thousands within it.
+        let expr = climate.biome_expr_at(s.cell);
+        let variant = hornvale_climate::variant_at_cell(
+            world.seed,
+            s.cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        );
         let mut site_concepts: Vec<&str> = vec![biome_concept];
         site_concepts.extend(presiding);
+        site_concepts.extend(variant.map(|v| v.concept_name()));
         let site = hornvale_language::SiteConcepts {
             concepts: &site_concepts,
         };
@@ -9338,6 +9368,8 @@ mod tests {
         // concepts drawn only from its own site: its own biome, or one of
         // the phenomenon concepts a presiding belief can map to.
         let world = generated(42);
+        let terrain = terrain_of(&world).expect("seed 42 has terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 has climate");
         let plausible_phenomenon_concepts = ["sun", "moon", "star", "day", "wind"];
         let mut checked_any = false;
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
@@ -9354,6 +9386,24 @@ mod tests {
             remainder = remainder.replace(biome, "");
             for concept in plausible_phenomenon_concepts {
                 remainder = remainder.replace(concept, "");
+            }
+            // The Toponym: a gloss may also name the VARIANT of the
+            // settlement's own cell. Stripped by the same rule as the biome —
+            // the assertion is that nothing OUTSIDE its own site facts appears.
+            if let Some(hornvale_kernel::Value::Number(n)) =
+                world.ledger.value_of(id, hornvale_settlement::CELL_ID)
+            {
+                let cell = hornvale_kernel::CellId(*n as u32);
+                let expr = climate.biome_expr_at(cell);
+                if let Some(var) = hornvale_climate::variant_at_cell(
+                    world.seed,
+                    cell,
+                    expr.formation,
+                    expr.stratum,
+                    hornvale_climate::GroundKind::Ordinary,
+                ) {
+                    remainder = remainder.replace(var.concept_name(), "");
+                }
             }
             assert!(
                 remainder.chars().all(|c| c == '-'),

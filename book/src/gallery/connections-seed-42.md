@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Qvooshtvoagootao
-===================================
+The connections of Vngoashshngaoshshngoogootao
+==============================================
 
-A natural route runs to Vngooshtvoavngoashgootao and Shngooshvngooshqvaagootao, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+A natural route runs to Vngaoshkvoashdvoagoogootao and Kvaavngoagoogootao, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Qvooshtvoagootao sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+Vngoashshngaoshshngoogootao sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -30,13 +30,13 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Mjoexaenoenoa
-================================
+The connections of Mjoexaegao
+=============================
 
-Mjoexaenoenoa is linked by sea-lane to Kvoashngoodoodoa, cell 28374, and Veebtaenoagoo -- a current-borne crossing, not a road.
-A natural route runs to Njoeqteakboanoenoanoagoo, Veebtaenoagoo, Qgeavoonoagoo, and Vngoashngaodoodoa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Mjoexaegao is linked by sea-lane to Qvaoshvngooshdoodoa, cell 28374, and Veebtaenoenoa -- a current-borne crossing, not a road.
+A natural route runs to Njoeqteakboanoagoogoa, Veebtaenoenoa, Qgeavoonoagoo, and Kvaovngooshshngooshdoodoa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Mjoexaenoenoa's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+Mjoexaegao's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum

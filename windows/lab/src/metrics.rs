@@ -3906,6 +3906,21 @@ fn settlement_site_concepts(
     if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
         concepts.push(concept.to_string());
     }
+    // The Toponym: the variant of the settlement's own cell, re-derived here
+    // rather than read back from worldgen's composition.
+    if let Some(Value::Number(n)) = v.world().ledger.value_of(id, hornvale_settlement::CELL_ID) {
+        let cell = CellId(*n as u32);
+        let expr = climate.biome_expr_at(cell);
+        if let Some(var) = hornvale_climate::variant_at_cell(
+            v.world().seed,
+            cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        ) {
+            concepts.push(var.concept_name().to_string());
+        }
+    }
     Some(concepts)
 }
 
@@ -4054,6 +4069,19 @@ fn independently_steeped_concepts(
         .collect();
     for &cell in &settled {
         steeped.insert(v.climate().biome_at(cell).concept_name().to_string());
+        // The Toponym: a people is steeped in the VARIANT of every cell it
+        // settled, as it is in the biome. Re-derived here independently of
+        // `exposure_of`, which is the point of this function.
+        let expr = v.climate().biome_expr_at(cell);
+        if let Some(var) = hornvale_climate::variant_at_cell(
+            v.world().seed,
+            cell,
+            expr.formation,
+            expr.stratum,
+            hornvale_climate::GroundKind::Ordinary,
+        ) {
+            steeped.insert(var.concept_name().to_string());
+        }
     }
 
     let own_kind = format!("{species}-kind");

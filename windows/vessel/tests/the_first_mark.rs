@@ -19,7 +19,7 @@ fn world() -> hornvale_kernel::World {
 /// The seed-42 settled NPC guaranteed co-located with the possessed agent at
 /// `PossessOpts::default()`'s starting room (day 0.5, before any `go`) — see
 /// `possession_moves.rs`'s `GRIEVANCE_NPC` (Task 2).
-const GRIEVANCE_NPC: &str = "bugbear of Qvooshtvoagootao";
+const GRIEVANCE_NPC: &str = "bugbear of Vngoashshngaoshshngoogootao";
 
 fn out_text(t: Turn) -> String {
     match t {

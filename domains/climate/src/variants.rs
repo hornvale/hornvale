@@ -16,6 +16,9 @@
 //! is confined to settlement names.
 
 use crate::facets::{Formation, Stratum};
+use crate::streams::VARIANT_CELL;
+use hornvale_kernel::seed::StreamLabel;
+use hornvale_kernel::{CellId, Seed};
 
 /// A named sub-type of a formation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -246,6 +249,68 @@ impl Variant {
             Variant::TrenchWall,
             Variant::TrenchFloor,
         ]
+    }
+}
+
+impl Variant {
+    /// A one-line description — the concept registry's doc for this variant.
+    /// type-audit: bare-ok(prose: return)
+    pub fn doc(self) -> &'static str {
+        match self {
+            Variant::Erg => "A sand sea of dunes.",
+            Variant::Playa => "A dry lake bed of salt and cracked clay.",
+            Variant::Hamada => "A stony desert pavement of bare rock.",
+            Variant::Reg => "A desert floor of wind-swept gravel.",
+            Variant::OldGrowth => "Mature forest, closed above and open beneath.",
+            Variant::DampHollow => "A shaded, wet fold in the forest floor.",
+            Variant::ForestGap => "A break in the canopy where light reaches the ground.",
+            Variant::MossyDeadfall => "Fallen timber going back to moss and lichen.",
+            Variant::BorealStand => "A stand of northern conifers.",
+            Variant::Muskeg => "Waterlogged peat ground in the boreal forest.",
+            Variant::Burn => "Ground recovering from fire.",
+            Variant::FrostHeave => "Ground churned and patterned by freezing.",
+            Variant::Felsenmeer => "A field of frost-shattered boulders.",
+            Variant::WindScour => "Ground swept bare by wind.",
+            Variant::GrassSward => "Open grassland, unbroken by trees.",
+            Variant::WoodedGrassland => "Grassland with scattered trees.",
+            Variant::ClosedCanopy => "Tall closed-canopy tropical forest.",
+            Variant::LianaForest => "Tropical forest tangled with climbing vines.",
+            Variant::GalleryForest => "Forest following a watercourse.",
+            Variant::Snowfield => "An unbroken field of snow.",
+            Variant::CrevasseField => "Ice split by crevasses.",
+            Variant::ScouredIce => "Ice swept bare and carved by wind.",
+            Variant::ThornScrub => "Dry scrub of thorned shrubs.",
+            Variant::SclerophyllScrub => "Hard-leaved drought-adapted scrub.",
+            Variant::FireScrub => "Scrub regrowing after fire.",
+            Variant::PressureRidge => "Sea ice buckled into a ridge.",
+            Variant::IceLead => "A channel of open water through sea ice.",
+            Variant::RaftedFloe => "Ice floes driven over one another.",
+            Variant::MeltPond => "A pool of meltwater on sea ice.",
+            Variant::CoralHead => "A massive coral colony standing proud of the reef.",
+            Variant::SpurAndGroove => "The ribbed seaward face of a reef.",
+            Variant::ReefRubble => "Broken coral debris behind a reef.",
+            Variant::StaghornStand => "A thicket of branching coral.",
+            Variant::KelpCanopy => "The floating canopy of a kelp forest.",
+            Variant::HoldfastTangle => "The anchored base of a kelp forest.",
+            Variant::UrchinBarren => "Seabed grazed bare of kelp.",
+            Variant::SmokerField => "A field of hydrothermal chimneys.",
+            Variant::TubewormThicket => "Vent fauna crowded around hot water.",
+            Variant::VentPlume => "Shimmering hot water rising from a vent.",
+            Variant::PlanktonBloom => "Water thick with plankton.",
+            Variant::ColdUpwelling => "Cold nutrient-rich water rising from below.",
+            Variant::BaitBall => "A dense turning mass of fish.",
+            Variant::OpenBlue => "Open sunlit water, far from any shore.",
+            Variant::SargassumDrift => "A drifting raft of floating weed.",
+            Variant::FishShoal => "A shoal moving as one body.",
+            Variant::TwilightWater => "Water at the edge of the light.",
+            Variant::ScatteringLayer => "The daily-rising layer of small sea life.",
+            Variant::LightlessWater => "Water below all light.",
+            Variant::MarineSnow => "Organic debris drifting endlessly down.",
+            Variant::AbyssalPlain => "The flat floor of the deep ocean.",
+            Variant::NoduleField => "Seafloor strewn with mineral nodules.",
+            Variant::TrenchWall => "The steep side of an ocean trench.",
+            Variant::TrenchFloor => "The deepest floor of an ocean trench.",
+        }
     }
 }
 
@@ -655,4 +720,31 @@ pub fn variant_pool(
             ],
         },
     }
+}
+
+/// The characteristic variant of a whole CELL — what a settlement there is
+/// named for.
+///
+/// Distinct from the per-room draw the prose uses: a settlement occupies a
+/// cell, and a room is one of some four thousand within it, so "the variant at
+/// a settlement" is otherwise undefined. Its own stream label, so it perturbs
+/// nothing that existed before it.
+pub fn variant_at_cell(
+    seed: Seed,
+    cell: CellId,
+    formation: Formation,
+    stratum: Stratum,
+    ground: GroundKind,
+) -> Option<Variant> {
+    let pool = variant_pool(formation, stratum, ground);
+    if pool.is_empty() {
+        return None;
+    }
+    let weights: Vec<f64> = pool.iter().map(|e| e.weight).collect();
+    let i = seed
+        .derive(VARIANT_CELL)
+        .derive(StreamLabel::dynamic(&cell.0.to_string()))
+        .stream()
+        .weighted_index(&weights)?;
+    Some(pool[i].variant)
 }

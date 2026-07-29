@@ -30,7 +30,7 @@ pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
 };
 pub use temperature::locked_temperature_at_position;
-pub use variants::{GroundKind, Variant, VariantEntry, variant_pool};
+pub use variants::{GroundKind, Variant, VariantEntry, variant_at_cell, variant_pool};
 pub use weather::{
     CloudType, WeatherState, cloud_type, storm_propensity, weather_phase, weather_seed,
     weather_state,
@@ -144,6 +144,32 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             },
             lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
             percept,
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    // The named sub-types of a formation (The Toponym). These are what a
+    // settlement can be named for, so each needs a concept for a language to
+    // grow a word on. Appended as one accession cohort, which makes them
+    // additive by construction — no existing proto-root moves.
+    for v in variants::Variant::catalog() {
+        let name = v.concept_name();
+        if registry.concept(name).is_some() {
+            continue;
+        }
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "climate".to_string(),
+                kind: ConceptKind::Substance,
+                doc: v.doc().to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
+            // A variant is a KIND OF PLACE, not something the sky or the air
+            // emits; nothing observes it as a phenomenon.
+            percept: Correspondent::Absent(Void::Gap("a place, not an emitted phenomenon")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),
