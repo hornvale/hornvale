@@ -304,9 +304,12 @@ fn the_stitch_law_end_to_end() {
     };
     assert!(
         // The Book Polish (2026-07-20): re-pinned with its subject. The Living
-        // Community epoch (this merge): seed 1's rendered planet name
-        // re-derived Vebe -> Xobo under the epoch's re-placement.
-        after.contains("Xobo has two moons, as the initiated count."),
+        // Community epoch: seed 1's rendered planet name re-derived
+        // Vebe -> Xobo under the epoch's re-placement. The Wearing (this
+        // merge): Xobo -> Booko — the 19 toponymic/quality concepts Task 3
+        // registered shift the proto-root walk, so every lexicon-derived
+        // name re-draws. Moon count, subject and sentence frame unchanged.
+        after.contains("Booko has two moons, as the initiated count."),
         "the ledger's own moon-count, now unlocked: {after}"
     );
     assert!(
@@ -335,7 +338,7 @@ fn the_stitch_law_end_to_end() {
         _ => panic!("consult must not release"),
     };
     assert!(
-        consulted.contains("Xobo has two moons, as the initiated count."),
+        consulted.contains("Booko has two moons, as the initiated count."),
         "heard 'nine' still renders the ledger's 'two' — heard is not true, printed: {consulted}"
     );
     assert!(

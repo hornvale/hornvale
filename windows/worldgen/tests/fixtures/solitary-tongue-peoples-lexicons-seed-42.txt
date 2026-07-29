@@ -5,28 +5,30 @@ abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): goblin has no exposure to 'black-dragon-kind'
-blood: root Neo /neo/
-blue: root Taotao /taotao/
-bone: root Kae /kae/
+blood: root Tae /tae/
+blue: root Kano /kano/
+bone: root Badea /badea/
 brown: gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5
-bugbear-kind: root Kea /kea/
+bugbear-kind: root Deetee /deetee/
 carrion-crawler-kind: gap (experiential): goblin has no exposure to 'carrion-crawler-kind'
-child: root Daekoa /daekoa/
+child: root Doena /doena/
+coast: compound earth+water -> Bodebaane /bodebaane/
 cold: gap (experiential): goblin has no exposure to 'cold'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
-dark: root Taanoo /taanoo/
-day: root Boanae /boanae/
+dark: root Naonaa /naonaa/
+day: root Kaa /kaa/
 desert: gap (experiential): no settlement in or beside desert
-die: root Taobaa /taobaa/
+die: root No /no/
 dire-wolf-kind: gap (experiential): goblin has no exposure to 'dire-wolf-kind'
-drink: root Neobea /neobea/
-earth: root Bee /bee/
-eat: root Koo /koo/
+drink: root Ta /ta/
+earth: root Bode /bode/
+eat: root Noanoe /noanoe/
 eclipse: gap (experiential): goblin has no exposure to 'eclipse'
 epipelagic: gap (experiential): no settlement in or beside epipelagic
-eye: root Tao /tao/
-fire: root Tea /tea/
-foot: root Doa /doa/
+eye: root Tetae /tetae/
+fire: root Tee /tee/
+foot: root Ke /ke/
+ford: root Naadee /naadee/
 giant-constrictor-snake-kind: gap (experiential): goblin has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): goblin has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): goblin has no exposure to 'giant-elk-kind'
@@ -35,76 +37,93 @@ giant-hyena-kind: gap (experiential): goblin has no exposure to 'giant-hyena-kin
 giant-octopus-kind: gap (experiential): goblin has no exposure to 'giant-octopus-kind'
 giant-scorpion-kind: gap (experiential): goblin has no exposure to 'giant-scorpion-kind'
 giant-squid-kind: gap (experiential): goblin has no exposure to 'giant-squid-kind'
-gloom: root Noa /noa/
-gnoll-kind: root Kaenoe /kaenoe/
-goblin-kind: root Nea /nea/
-god: root Neetaa /neetaa/
-green: root Keotae /keotae/
+gloom: root Neoka /neoka/
+gnoll-kind: root Beetae /beetae/
+goblin-kind: root Baenee /baenee/
+god: root Be /be/
+great: root Nadee /nadee/
+green: root Neo /neo/
 hadal-trench: gap (experiential): no settlement in or beside hadal-trench
-hand: root Naa /naa/
-hearth: root Noobee /noobee/
+hand: root Boona /boona/
+hearth: root Kono /kono/
 heat: gap (experiential): goblin has no exposure to 'heat'
-hobgoblin-kind: root Taaboe /taaboe/
-home: root Nee /nee/
+high: root Neaboa /neaboa/
+hill: gap (experiential): goblin has no exposure to 'hill'
+hobgoblin-kind: root Dae /dae/
+home: root Tote /tote/
 hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
 ice: gap (experiential): no settlement in or beside ice
+island: gap (experiential): goblin has no exposure to 'island'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 killer-whale-kind: gap (experiential): goblin has no exposure to 'killer-whale-kind'
-kobold-kind: root Dea /dea/
-light: root Toetea /toetea/
-many: root Neodoa /neodoa/
+kobold-kind: root Naeno /naeno/
+lake: gap (experiential): goblin has no exposure to 'lake'
+light: root Noataa /noataa/
+little: root Noe /noe/
+low: root Noeneo /noeneo/
+many: root Tonakee /tonakee/
+marsh: root Kotoa /kotoa/
 mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
-moon: root Teabae /teabae/
+moon: root Koo /koo/
 mountain: gap (experiential): goblin has no exposure to 'mountain'
-mouth: root Doenoe /doenoe/
-move: root Toonae /toonae/
-name: root Deokao /deokao/
-night: root Naetaa /naetaa/
-one: root Kaokao /kaokao/
+mouth: root Noanaa /noanaa/
+move: root Boatee /boatee/
+name: root Boone /boone/
+new: root Nena /nena/
+night: root Detaa /detaa/
+north: root Neanao /neanao/
+old: root Bea /bea/
+one: root Daaba /daaba/
 otyugh-kind: gap (experiential): goblin has no exposure to 'otyugh-kind'
+over: root Naenae /naenae/
 owlbear-kind: gap (experiential): goblin has no exposure to 'owlbear-kind'
-parent: root Boatee /boatee/
-person: root Neekoa /neekoa/
+parent: root Deno /deno/
+person: root Neebo /neebo/
 rain: gap (experiential): goblin has no exposure to 'rain'
-red: root Neanao /neanao/
+red: root Tabe /tabe/
 red-dragon-kind: gap (experiential): goblin has no exposure to 'red-dragon-kind'
 reef-shark-kind: gap (experiential): goblin has no exposure to 'reef-shark-kind'
-rest: root Kaanee /kaanee/
+rest: root Neane /neane/
 rhinoceros-kind: gap (experiential): goblin has no exposure to 'rhinoceros-kind'
+river: root Neede /neede/
 rust-monster-kind: gap (experiential): goblin has no exposure to 'rust-monster-kind'
 savanna: gap (experiential): no settlement in or beside savanna
-sea: compound many+water -> Neodoadaokaa /neodoadaokaa/
+sea: compound many+water -> Tonakeebaane /tonakeebaane/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5
 shrieker-kind: gap (experiential): goblin has no exposure to 'shrieker-kind'
 shrubland: gap (experiential): no settlement in or beside shrubland
-sibling: root Beonae /beonae/
-sleep: root Neebeo /neebeo/
+sibling: root Tedeo /tedeo/
+sleep: root Tanae /tanae/
 snow: gap (experiential): goblin has no exposure to 'snow'
-spirit: root Naodao /naodao/
-star: root Naetoa /naetoa/
+south: root Neoto /neoto/
+spirit: root Naotae /naotae/
+spring: gap (experiential): goblin has no exposure to 'spring'
+star: root Beanoo /beanoo/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5
-stone: root Naonea /naonea/
-sun: root Noaboo /noaboo/
+stone: root Beotea /beotea/
+sun: root Babo /babo/
 taiga: gap (experiential): no settlement in or beside taiga
-temperate-forest: root Noenoa /noenoa/
+temperate-forest: root Noa /noa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
 tide: gap (experiential): goblin has no exposure to 'tide'
 treant-kind: gap (experiential): goblin has no exposure to 'treant-kind'
-tree: root Koonee /koonee/
-tropical-rainforest: root Toa /toa/
-tropical-seasonal-forest: root Beetao /beetao/
+tree: root Tobo /tobo/
+tropical-rainforest: root Tanee /tanee/
+tropical-seasonal-forest: root Nee /nee/
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): goblin has no exposure to 'twig-blight-kind'
-two: root Naanaa /naanaa/
+two: root Taanoa /taanoa/
+under: root Tabea /tabea/
 upwelling: gap (experiential): no compound recipe for 'upwelling'
-water: root Daokaa /daokaa/
+valley: gap (experiential): goblin has no exposure to 'valley'
+water: root Baane /baane/
 white-dragon-kind: gap (experiential): goblin has no exposure to 'white-dragon-kind'
-wind: root Noetoo /noetoo/
+wind: root Nekoo /nekoo/
 woolly-mammoth-kind: gap (experiential): goblin has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): goblin has no exposure to 'xorn-kind'
-yellow: root Taadeo /taadeo/
+yellow: root Daodo /daodo/
 
 species: hobgoblin
 headedness: HeadLast
@@ -113,28 +132,30 @@ abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): hobgoblin has no exposure to 'black-dragon-kind'
-blood: root Neo /neo/
+blood: root Tae /tae/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
-bone: root Gae /gae/
+bone: root Babea /babea/
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
-bugbear-kind: root Gea /gea/
+bugbear-kind: root Beetee /beetee/
 carrion-crawler-kind: gap (experiential): hobgoblin has no exposure to 'carrion-crawler-kind'
-child: root Baegoa /baegoa/
+child: root Boena /boena/
+coast: compound earth+water -> Bobebaane /bobebaane/
 cold: gap (experiential): hobgoblin has no exposure to 'cold'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
-dark: root Taanoo /taanoo/
-day: root Goanae /goanae/
+dark: root Naonaa /naonaa/
+day: root Gaa /gaa/
 desert: gap (experiential): no settlement in or beside desert
-die: root Taobaa /taobaa/
+die: root No /no/
 dire-wolf-kind: gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind'
-drink: root Neogea /neogea/
-earth: root Bee /bee/
-eat: root Goo /goo/
+drink: root Ta /ta/
+earth: root Bobe /bobe/
+eat: root Noanoe /noanoe/
 eclipse: gap (experiential): hobgoblin has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
-eye: root Qao /qao/
-fire: root Qea /qea/
-foot: root Boa /boa/
+eye: root Tetae /tetae/
+fire: root Qee /qee/
+foot: root Ge /ge/
+ford: root Naabee /naabee/
 giant-constrictor-snake-kind: gap (experiential): hobgoblin has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): hobgoblin has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): hobgoblin has no exposure to 'giant-elk-kind'
@@ -143,76 +164,93 @@ giant-hyena-kind: gap (experiential): hobgoblin has no exposure to 'giant-hyena-
 giant-octopus-kind: gap (experiential): hobgoblin has no exposure to 'giant-octopus-kind'
 giant-scorpion-kind: gap (experiential): hobgoblin has no exposure to 'giant-scorpion-kind'
 giant-squid-kind: gap (experiential): hobgoblin has no exposure to 'giant-squid-kind'
-gloom: root Noa /noa/
-gnoll-kind: root Gaenoe /gaenoe/
-goblin-kind: root Nea /nea/
-god: root Neetaa /neetaa/
-green: root Geoqae /geoqae/
+gloom: root Neoga /neoga/
+gnoll-kind: root Geeqae /geeqae/
+goblin-kind: root Baenee /baenee/
+god: root Ge /ge/
+great: root Nabee /nabee/
+green: root Neo /neo/
 hadal-trench: gap (experiential): no settlement in or beside hadal-trench
-hand: root Naa /naa/
-hearth: root Noobee /noobee/
+hand: root Goona /goona/
+hearth: root Gono /gono/
 heat: gap (experiential): hobgoblin has no exposure to 'heat'
-hobgoblin-kind: root Qaagoe /qaagoe/
-home: root Nee /nee/
+high: root Neaboa /neaboa/
+hill: gap (experiential): hobgoblin has no exposure to 'hill'
+hobgoblin-kind: root Bae /bae/
+home: root Qoqe /qoqe/
 hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
 ice: gap (experiential): no settlement in or beside ice
+island: gap (experiential): hobgoblin has no exposure to 'island'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 killer-whale-kind: gap (experiential): hobgoblin has no exposure to 'killer-whale-kind'
-kobold-kind: root Bea /bea/
-light: root Toeqea /toeqea/
-many: root Neoboa /neoboa/
+kobold-kind: root Naeno /naeno/
+lake: compound little+water -> Noebaane /noebaane/
+light: root Noaqaa /noaqaa/
+little: root Noe /noe/
+low: root Noeneo /noeneo/
+many: root Qonagee /qonagee/
+marsh: root Gotoa /gotoa/
 mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
-moon: root Teabae /teabae/
+moon: root Goo /goo/
 mountain: gap (experiential): hobgoblin has no exposure to 'mountain'
-mouth: root Boenoe /boenoe/
-move: root Toonae /toonae/
-name: root Beogao /beogao/
-night: root Naeqaa /naeqaa/
-one: root Gaogao /gaogao/
+mouth: root Noanaa /noanaa/
+move: root Goatee /goatee/
+name: root Boone /boone/
+new: root Nena /nena/
+night: root Beqaa /beqaa/
+north: root Neanao /neanao/
+old: root Gea /gea/
+one: root Baaga /baaga/
 otyugh-kind: gap (experiential): hobgoblin has no exposure to 'otyugh-kind'
+over: root Naenae /naenae/
 owlbear-kind: gap (experiential): hobgoblin has no exposure to 'owlbear-kind'
-parent: root Goatee /goatee/
-person: root Neegoa /neegoa/
+parent: root Beno /beno/
+person: root Neebo /neebo/
 rain: gap (experiential): hobgoblin has no exposure to 'rain'
-red: root Neanao /neanao/
+red: root Qage /qage/
 red-dragon-kind: gap (experiential): hobgoblin has no exposure to 'red-dragon-kind'
 reef-shark-kind: gap (experiential): hobgoblin has no exposure to 'reef-shark-kind'
-rest: root Gaanee /gaanee/
+rest: root Neane /neane/
 rhinoceros-kind: gap (experiential): hobgoblin has no exposure to 'rhinoceros-kind'
+river: root Neebe /neebe/
 rust-monster-kind: gap (experiential): hobgoblin has no exposure to 'rust-monster-kind'
 savanna: gap (experiential): no compound recipe for 'savanna'
-sea: compound many+water -> Neoboabaogaa /neoboabaogaa/
+sea: compound many+water -> Qonageebaane /qonageebaane/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6
 shrieker-kind: gap (experiential): hobgoblin has no exposure to 'shrieker-kind'
 shrubland: gap (experiential): no settlement in or beside shrubland
-sibling: root Beonae /beonae/
-sleep: root Neebeo /neebeo/
+sibling: root Qebeo /qebeo/
+sleep: root Tanae /tanae/
 snow: gap (experiential): hobgoblin has no exposure to 'snow'
-spirit: root Naobao /naobao/
-star: root Naetoa /naetoa/
+south: root Neoto /neoto/
+spirit: root Naoqae /naoqae/
+spring: root Qebae /qebae/
+star: root Beanoo /beanoo/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6
-stone: root Naonea /naonea/
-sun: root Noagoo /noagoo/
+stone: root Beotea /beotea/
+sun: root Bago /bago/
 taiga: gap (experiential): no settlement in or beside taiga
-temperate-forest: root Noenoa /noenoa/
+temperate-forest: root Noa /noa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: root Toaneo /toaneo/
+temperate-rainforest: root Baenao /baenao/
 tide: gap (experiential): hobgoblin has no exposure to 'tide'
 treant-kind: gap (experiential): hobgoblin has no exposure to 'treant-kind'
-tree: root Goonee /goonee/
-tropical-rainforest: root Qoa /qoa/
-tropical-seasonal-forest: root Geetao /geetao/
+tree: root Tobo /tobo/
+tropical-rainforest: root Qanee /qanee/
+tropical-seasonal-forest: root Nee /nee/
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): hobgoblin has no exposure to 'twig-blight-kind'
-two: root Naanaa /naanaa/
+two: root Qaanoa /qaanoa/
+under: root Qabea /qabea/
 upwelling: gap (experiential): no settlement in or beside upwelling
-water: root Baogaa /baogaa/
+valley: gap (experiential): hobgoblin has no exposure to 'valley'
+water: root Baane /baane/
 white-dragon-kind: gap (experiential): hobgoblin has no exposure to 'white-dragon-kind'
-wind: root Noeqoo /noeqoo/
+wind: root Negoo /negoo/
 woolly-mammoth-kind: gap (experiential): hobgoblin has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): hobgoblin has no exposure to 'xorn-kind'
-yellow: root Qaabeo /qaabeo/
+yellow: root Baobo /baobo/
 
 species: bugbear
 headedness: HeadLast
@@ -221,28 +259,30 @@ abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): bugbear has no exposure to 'black-dragon-kind'
-blood: root Doo /doo/
+blood: root Tao /tao/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
-bone: root Kao /kao/
+bone: root Badoa /badoa/
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
-bugbear-kind: root Koa /koa/
+bugbear-kind: root Dootoo /dootoo/
 carrion-crawler-kind: gap (experiential): bugbear has no exposure to 'carrion-crawler-kind'
-child: root Daokoa /daokoa/
+child: root Dooda /dooda/
+coast: compound earth+water -> Bodobaado /bodobaado/
 cold: gap (experiential): bugbear has no exposure to 'cold'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
-dark: root Taadoo /taadoo/
-day: root Goadao /goadao/
+dark: root Daodaa /daodaa/
+day: root Kaa /kaa/
 desert: gap (experiential): no settlement in or beside desert
-die: root Taobaa /taobaa/
+die: root Do /do/
 dire-wolf-kind: gap (experiential): bugbear has no exposure to 'dire-wolf-kind'
-drink: root Doogoa /doogoa/
-earth: root Boo /boo/
-eat: root Koo /koo/
+drink: root Ta /ta/
+earth: root Bodo /bodo/
+eat: root Doadoo /doadoo/
 eclipse: gap (experiential): bugbear has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
-eye: root Qao /qao/
-fire: root Qoa /qoa/
-foot: root Doa /doa/
+eye: root Totao /totao/
+fire: root Qoo /qoo/
+foot: root Ko /ko/
+ford: root Daadoo /daadoo/
 giant-constrictor-snake-kind: gap (experiential): bugbear has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): bugbear has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): bugbear has no exposure to 'giant-elk-kind'
@@ -251,76 +291,93 @@ giant-hyena-kind: gap (experiential): bugbear has no exposure to 'giant-hyena-ki
 giant-octopus-kind: gap (experiential): bugbear has no exposure to 'giant-octopus-kind'
 giant-scorpion-kind: gap (experiential): bugbear has no exposure to 'giant-scorpion-kind'
 giant-squid-kind: gap (experiential): bugbear has no exposure to 'giant-squid-kind'
-gloom: root Doa /doa/
-gnoll-kind: root Kaodoo /kaodoo/
-goblin-kind: root Doa /doa/
-god: root Dootaa /dootaa/
-green: root Kooqao /kooqao/
+gloom: root Dooka /dooka/
+gnoll-kind: root Gooqao /gooqao/
+goblin-kind: root Baodoo /baodoo/
+god: root Go /go/
+great: root Dadoo /dadoo/
+green: root Doo /doo/
 hadal-trench: gap (experiential): no settlement in or beside hadal-trench
-hand: root Daa /daa/
-hearth: root Dooboo /dooboo/
+hand: root Gooda /gooda/
+hearth: root Kodo /kodo/
 heat: gap (experiential): bugbear has no exposure to 'heat'
-hobgoblin-kind: root Qaagoo /qaagoo/
-home: root Doo /doo/
+high: root Doaboa /doaboa/
+hill: root Daodo /daodo/
+hobgoblin-kind: root Dao /dao/
+home: root Qoqo /qoqo/
 hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
 ice: gap (experiential): no settlement in or beside ice
+island: gap (experiential): bugbear has no exposure to 'island'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 killer-whale-kind: gap (experiential): bugbear has no exposure to 'killer-whale-kind'
-kobold-kind: root Doa /doa/
-light: root Tooqoa /tooqoa/
-many: root Doodoa /doodoa/
+kobold-kind: root Daodo /daodo/
+lake: compound little+water -> Doobaado /doobaado/
+light: root Doaqaa /doaqaa/
+little: root Doo /doo/
+low: root Doodoo /doodoo/
+many: root Qodakoo /qodakoo/
+marsh: root Kotoa /kotoa/
 mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
-moon: root Toabao /toabao/
+moon: root Koo /koo/
 mountain: gap (experiential): bugbear has no exposure to 'mountain'
-mouth: root Doodoo /doodoo/
-move: root Toodao /toodao/
-name: root Dookao /dookao/
-night: root Daoqaa /daoqaa/
-one: root Kaokao /kaokao/
+mouth: root Doadaa /doadaa/
+move: root Goatoo /goatoo/
+name: root Boodo /boodo/
+new: root Doda /doda/
+night: root Doqaa /doqaa/
+north: root Doadao /doadao/
+old: root Goa /goa/
+one: root Daaga /daaga/
 otyugh-kind: gap (experiential): bugbear has no exposure to 'otyugh-kind'
+over: root Daodao /daodao/
 owlbear-kind: gap (experiential): bugbear has no exposure to 'owlbear-kind'
-parent: root Goatoo /goatoo/
-person: root Dookoa /dookoa/
+parent: root Dodo /dodo/
+person: root Doobo /doobo/
 rain: gap (experiential): bugbear has no exposure to 'rain'
-red: root Doadao /doadao/
+red: root Qago /qago/
 red-dragon-kind: gap (experiential): bugbear has no exposure to 'red-dragon-kind'
 reef-shark-kind: gap (experiential): bugbear has no exposure to 'reef-shark-kind'
-rest: root Kaadoo /kaadoo/
+rest: root Doado /doado/
 rhinoceros-kind: gap (experiential): bugbear has no exposure to 'rhinoceros-kind'
+river: root Doodo /doodo/
 rust-monster-kind: gap (experiential): bugbear has no exposure to 'rust-monster-kind'
 savanna: gap (experiential): no settlement in or beside savanna
-sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
+sea: compound many+water -> Qodakoobaado /qodakoobaado/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
-shadow: root Daoqao /daoqao/
+shadow: root Dado /dado/
 shrieker-kind: gap (experiential): bugbear has no exposure to 'shrieker-kind'
 shrubland: gap (experiential): no settlement in or beside shrubland
-sibling: root Boodao /boodao/
-sleep: root Dooboo /dooboo/
+sibling: root Qodoo /qodoo/
+sleep: root Tadao /tadao/
 snow: gap (experiential): bugbear has no exposure to 'snow'
-spirit: root Daodao /daodao/
-star: root Daotoa /daotoa/
-starlit: root Kaodoa /kaodoa/
-stone: root Daodoa /daodoa/
-sun: root Doagoo /doagoo/
+south: root Dooto /dooto/
+spirit: root Daoqao /daoqao/
+spring: root Qobao /qobao/
+star: root Boadoo /boadoo/
+starlit: root Tado /tado/
+stone: root Bootoa /bootoa/
+sun: root Bago /bago/
 taiga: gap (experiential): no compound recipe for 'taiga'
-temperate-forest: root Doodoa /doodoa/
+temperate-forest: root Doa /doa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: root Toadoo /toadoo/
+temperate-rainforest: root Daodao /daodao/
 tide: gap (experiential): bugbear has no exposure to 'tide'
 treant-kind: gap (experiential): bugbear has no exposure to 'treant-kind'
-tree: root Koodoo /koodoo/
-tropical-rainforest: root Qoa /qoa/
-tropical-seasonal-forest: root Gootao /gootao/
+tree: root Tobo /tobo/
+tropical-rainforest: root Qadoo /qadoo/
+tropical-seasonal-forest: root Doo /doo/
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): bugbear has no exposure to 'twig-blight-kind'
-two: root Daadaa /daadaa/
+two: root Qaadoa /qaadoa/
+under: root Qaboa /qaboa/
 upwelling: gap (experiential): no compound recipe for 'upwelling'
-water: root Daokaa /daokaa/
+valley: gap (experiential): bugbear has no exposure to 'valley'
+water: root Baado /baado/
 white-dragon-kind: gap (experiential): bugbear has no exposure to 'white-dragon-kind'
-wind: root Dooqoo /dooqoo/
+wind: root Dokoo /dokoo/
 woolly-mammoth-kind: gap (experiential): bugbear has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): bugbear has no exposure to 'xorn-kind'
-yellow: root Qaadoo /qaadoo/
+yellow: root Daodo /daodo/
 
 species: kobold
 headedness: HeadFirst
@@ -329,28 +386,30 @@ abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
 bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 black-dragon-kind: gap (experiential): kobold has no exposure to 'black-dragon-kind'
-blood: root Ra /ra/
+blood: root Roo /roo/
 blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
-bone: root Xo /xo/
+bone: root Xaaraa /xaaraa/
 brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
-bugbear-kind: root Roqxa /roqxa/
+bugbear-kind: root Raoraa /raoraa/
 carrion-crawler-kind: gap (experiential): kobold has no exposure to 'carrion-crawler-kind'
-child: root Rakxa /rakxa/
+child: root Ra /ra/
+coast: compound earth+water -> Xaarrooroara /xaarrooroara/
 cold: gap (experiential): kobold has no exposure to 'cold'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
-dark: root Xa /xa/
-day: root Ro /ro/
+dark: root Rao /rao/
+day: root Xaxaa /xaxaa/
 desert: gap (experiential): no settlement in or beside desert
-die: root Rogro /rogro/
+die: root Xaaxa /xaaxa/
 dire-wolf-kind: gap (experiential): kobold has no exposure to 'dire-wolf-kind'
-drink: root Rotra /rotra/
-earth: root Rorra /rorra/
-eat: root Rokxo /rokxo/
+drink: root Xaoxo /xaoxo/
+earth: root Roara /roara/
+eat: root Rao /rao/
 eclipse: gap (experiential): kobold has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
-eye: root Rarro /rarro/
-fire: root Roro /roro/
-foot: root Rogrro /rogrro/
+eye: root Roarraa /roarraa/
+fire: root Rarraa /rarraa/
+foot: root Xoxo /xoxo/
+ford: root Xarra /xarra/
 giant-constrictor-snake-kind: gap (experiential): kobold has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): kobold has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): kobold has no exposure to 'giant-elk-kind'
@@ -359,73 +418,90 @@ giant-hyena-kind: gap (experiential): kobold has no exposure to 'giant-hyena-kin
 giant-octopus-kind: gap (experiential): kobold has no exposure to 'giant-octopus-kind'
 giant-scorpion-kind: gap (experiential): kobold has no exposure to 'giant-scorpion-kind'
 giant-squid-kind: gap (experiential): kobold has no exposure to 'giant-squid-kind'
-gloom: root Rara /rara/
-gnoll-kind: root Xagrro /xagrro/
-goblin-kind: root Xoro /xoro/
-god: root Roqro /roqro/
+gloom: root Xorroa /xorroa/
+gnoll-kind: root Raxaa /raxaa/
+goblin-kind: root Roraa /roraa/
+god: root Xoo /xoo/
+great: root Roaxo /roaxo/
 green: gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9
 hadal-trench: gap (experiential): no settlement in or beside hadal-trench
-hand: root Rorro /rorro/
-hearth: root Xara /xara/
+hand: root Xaa /xaa/
+hearth: root Roarro /roarro/
 heat: gap (experiential): kobold has no exposure to 'heat'
-hobgoblin-kind: root Ro /ro/
-home: root Ragxo /ragxo/
+high: root Roaxoa /roaxoa/
+hill: gap (experiential): kobold has no exposure to 'hill'
+hobgoblin-kind: root Raoxaa /raoxaa/
+home: root Roa /roa/
 hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
 ice: gap (experiential): no settlement in or beside ice
+island: gap (experiential): kobold has no exposure to 'island'
 kelp-forest: gap (experiential): no compound recipe for 'kelp-forest'
 killer-whale-kind: gap (experiential): kobold has no exposure to 'killer-whale-kind'
-kobold-kind: root Roro /roro/
-light: root Xaxo /xaxo/
-many: root Rogrra /rogrra/
+kobold-kind: root Roorraa /roorraa/
+lake: compound little+water -> Xaarrooraoroo /xaarrooraoroo/
+light: root Raa /raa/
+little: root Raoroo /raoroo/
+low: root Raaxao /raaxao/
+many: root Rorro /rorro/
+marsh: root Xo /xo/
 mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
-moon: root Roqrra /roqrra/
+moon: root Roa /roa/
 mountain: gap (experiential): kobold has no exposure to 'mountain'
-mouth: root Rakxo /rakxo/
-move: root Ratro /ratro/
-name: root Ragxo /ragxo/
-night: root Xaxa /xaxa/
-one: root Xoxo /xoxo/
+mouth: root Roxa /roxa/
+move: root Rorraa /rorraa/
+name: root Roorroa /roorroa/
+new: root Roroa /roroa/
+night: root Xaorraa /xaorraa/
+north: root Xaxa /xaxa/
+old: root Xaroroo /xaroroo/
+one: root Rarrooroo /rarrooroo/
 otyugh-kind: gap (experiential): kobold has no exposure to 'otyugh-kind'
+over: root Roorro /roorro/
 owlbear-kind: gap (experiential): kobold has no exposure to 'owlbear-kind'
-parent: root Xaxo /xaxo/
-person: root Raxo /raxo/
+parent: root Raoxo /raoxo/
+person: root Xorao /xorao/
 rain: gap (experiential): kobold has no exposure to 'rain'
-red: root Rara /rara/
+red: root Xaroa /xaroa/
 red-dragon-kind: gap (experiential): kobold has no exposure to 'red-dragon-kind'
 reef-shark-kind: gap (experiential): kobold has no exposure to 'reef-shark-kind'
-rest: root Xakxo /xakxo/
+rest: root Roro /roro/
 rhinoceros-kind: gap (experiential): kobold has no exposure to 'rhinoceros-kind'
+river: root Raarraa /raarraa/
 rust-monster-kind: gap (experiential): kobold has no exposure to 'rust-monster-kind'
 savanna: gap (experiential): no settlement in or beside savanna
-sea: compound many+water -> Rarakrarogrra /rarakrarogrra/
+sea: compound many+water -> Xaarroororro /xaarroororro/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
-shadow: root Xogrra /xogrra/
+shadow: root Raarraa /raarraa/
 shrieker-kind: gap (experiential): kobold has no exposure to 'shrieker-kind'
 shrubland: gap (experiential): no settlement in or beside shrubland
-sibling: root Rotrra /rotrra/
-sleep: root Roqxa /roqxa/
+sibling: root Rooxa /rooxa/
+sleep: root Xoarro /xoarro/
 snow: gap (experiential): kobold has no exposure to 'snow'
-spirit: root Ro /ro/
-star: root Rogra /rogra/
-starlit: root Ra /ra/
-stone: root Xa /xa/
-sun: root Rogxa /rogxa/
-taiga: root Ro /ro/
-temperate-forest: root Xatxo /xatxo/
+south: root Raarra /raarra/
+spirit: root Raorraa /raorraa/
+spring: root Rarao /rarao/
+star: root Xorraxaa /xorraxaa/
+starlit: root Xaxoo /xaxoo/
+stone: root Xoarraroo /xoarraroo/
+sun: root Rarro /rarro/
+taiga: root Roorao /roorao/
+temperate-forest: root Xoxa /xoxa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: root Xotro /xotro/
+temperate-rainforest: root Raoxa /raoxa/
 tide: gap (experiential): kobold has no exposure to 'tide'
 treant-kind: gap (experiential): kobold has no exposure to 'treant-kind'
-tree: root Rakrra /rakrra/
-tropical-rainforest: root Rorro /rorro/
-tropical-seasonal-forest: root Ro /ro/
+tree: root Rarroarra /rarroarra/
+tropical-rainforest: root Xaxoa /xaxoa/
+tropical-seasonal-forest: root Raoxao /raoxao/
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): kobold has no exposure to 'twig-blight-kind'
-two: root Roxa /roxa/
+two: root Raorao /raorao/
+under: root Rorroo /rorroo/
 upwelling: gap (experiential): no compound recipe for 'upwelling'
-water: root Rarakra /rarakra/
+valley: gap (experiential): kobold has no exposure to 'valley'
+water: root Xaarroo /xaarroo/
 white-dragon-kind: gap (experiential): kobold has no exposure to 'white-dragon-kind'
-wind: root Raxakrra /raxakrra/
+wind: root Xorraaro /xorraaro/
 woolly-mammoth-kind: gap (experiential): kobold has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): kobold has no exposure to 'xorn-kind'
 yellow: gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9
@@ -437,28 +513,30 @@ abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): gnoll has no exposure to 'black-dragon-kind'
-blood: root Mzoaq /mzoaq/
+blood: root Gshaansoa /gʃaansoa/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75
-bone: root Ngshoog /ŋʃoog/
+bone: root Ngzhogzho /ŋʒogʒo/
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75
-bugbear-kind: root Dsoap /dsoap/
+bugbear-kind: root Nzoonshov /nzoonʃov/
 carrion-crawler-kind: gap (experiential): gnoll has no exposure to 'carrion-crawler-kind'
-child: root Gzhoof /gʒoof/
+child: root Pzhafgshoo /pʒafgʃoo/
+coast: compound earth+water -> Qsooxpshaopzhaamshoa /qsooxpʃaopʒaamʃoa/
 cold: gap (experiential): gnoll has no exposure to 'cold'
 coral-reef: gap (experiential): no compound recipe for 'coral-reef'
-dark: root Gsaoq /gsaoq/
-day: root Ngshaap /ŋʃaap/
+dark: root Dsa /dsa/
+day: root Qshoadzav /qʃoadzav/
 desert: gap (experiential): no settlement in or beside desert
-die: root Dzhaaq /dʒaaq/
+die: root Nshoxngzhaaf /nʃoxŋʒaaf/
 dire-wolf-kind: gap (experiential): gnoll has no exposure to 'dire-wolf-kind'
-drink: root Qshaognzoov /qʃaognzoov/
-earth: root Nsaav /nsaav/
-eat: root Pshoavngshood /pʃoavŋʃood/
+drink: root Ngza /ŋza/
+earth: root Pzhaamshoa /pʒaamʃoa/
+eat: root Mzhaomsoa /mʒaomsoa/
 eclipse: gap (experiential): gnoll has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
-eye: root Dsaog /dsaog/
-fire: root Qsaopnshoov /qsaopnʃoov/
-foot: root Mzoodqsaag /mzoodqsaag/
+eye: root Qzao /qzao/
+fire: root Gzhov /gʒov/
+foot: root Dsaof /dsaof/
+ford: root Dzoxgzhof /dzoxgʒof/
 giant-constrictor-snake-kind: gap (experiential): gnoll has no exposure to 'giant-constrictor-snake-kind'
 giant-crocodile-kind: gap (experiential): gnoll has no exposure to 'giant-crocodile-kind'
 giant-elk-kind: gap (experiential): gnoll has no exposure to 'giant-elk-kind'
@@ -467,74 +545,91 @@ giant-hyena-kind: gap (experiential): gnoll has no exposure to 'giant-hyena-kind
 giant-octopus-kind: gap (experiential): gnoll has no exposure to 'giant-octopus-kind'
 giant-scorpion-kind: gap (experiential): gnoll has no exposure to 'giant-scorpion-kind'
 giant-squid-kind: gap (experiential): gnoll has no exposure to 'giant-squid-kind'
-gloom: root Gzhoov /gʒoov/
-gnoll-kind: root Nshaad /nʃaad/
-goblin-kind: root Msooddzhoad /msooddʒoad/
-god: root Dzhaogpzhaog /dʒaogpʒaog/
-green: root Gzhaod /gʒaod/
+gloom: root Dsonsoo /dsonsoo/
+gnoll-kind: root Pzhovgsoax /pʒovgsoax/
+goblin-kind: root Qso /qso/
+god: root Ngsoxgshaa /ŋsoxgʃaa/
+great: root Dzhaagsoa /dʒaagsoa/
+green: root Ngsavdzhav /ŋsavdʒav/
 hadal-trench: gap (experiential): no settlement in or beside hadal-trench
-hand: root Nshaov /nʃaov/
-hearth: root Ngshoopqzaog /ŋʃoopqzaog/
+hand: root Nsha /nʃa/
+hearth: root Gsoqzaof /gsoqzaof/
 heat: gap (experiential): gnoll has no exposure to 'heat'
-hobgoblin-kind: root Ngsaaqdzhaov /ŋsaaqdʒaov/
-home: root Mshoap /mʃoap/
+high: root Nshaadshoo /nʃaadʃoo/
+hill: gap (experiential): gnoll has no exposure to 'hill'
+hobgoblin-kind: root Nsodsax /nsodsax/
+home: root Qzhaogzhax /qʒaogʒax/
 hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
 ice: gap (experiential): no settlement in or beside ice
+island: gap (experiential): gnoll has no exposure to 'island'
 kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 killer-whale-kind: gap (experiential): gnoll has no exposure to 'killer-whale-kind'
-kobold-kind: root Gshaov /gʃaov/
-light: root Psaopgzaoq /psaopgzaoq/
-many: root Nzhoog /nʒoog/
+kobold-kind: root Mzoox /mzoox/
+lake: gap (experiential): gnoll has no exposure to 'lake'
+light: root Dshongzhoax /dʃoŋʒoax/
+little: root Mshoox /mʃoox/
+low: root Dzhongsao /dʒoŋsao/
+many: root Msongshaaf /msoŋʃaaf/
+marsh: root Msoo /msoo/
 mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
-moon: root Ngsoad /ŋsoad/
+moon: root Dzaaf /dzaaf/
 mountain: gap (experiential): gnoll has no exposure to 'mountain'
-mouth: root Gsaad /gsaad/
-move: root Pzaad /pzaad/
-name: root Mzhaov /mʒaov/
-night: root Mzhoovnzaaf /mʒoovnzaaf/
-one: root Psooqnzoox /psooqnzoox/
+mouth: root Nzho /nʒo/
+move: root Dsho /dʃo/
+name: root Ngshaov /ŋʃaov/
+new: root Nshodshaof /nʃodʃaof/
+night: root Dzafgsa /dzafgsa/
+north: root Ngsoav /ŋsoav/
+old: root Ngsaoxdshav /ŋsaoxdʃav/
+one: root Dzhoapzhaaf /dʒoapʒaaf/
 otyugh-kind: gap (experiential): gnoll has no exposure to 'otyugh-kind'
+over: root Ngzhoaxpzhoa /ŋʒoaxpʒoa/
 owlbear-kind: gap (experiential): gnoll has no exposure to 'owlbear-kind'
-parent: root Ngzhaoq /ŋʒaoq/
-person: root Msoax /msoax/
+parent: root Gzhoox /gʒoox/
+person: root Msaafpsox /msaafpsox/
 rain: gap (experiential): gnoll has no exposure to 'rain'
-red: root Nshaavngsaag /nʃaavŋsaag/
+red: root Msaofqzho /msaofqʒo/
 red-dragon-kind: gap (experiential): gnoll has no exposure to 'red-dragon-kind'
 reef-shark-kind: gap (experiential): gnoll has no exposure to 'reef-shark-kind'
-rest: root Ngzhoodngsoaq /ŋʒoodŋsoaq/
+rest: root Nzhoangzaav /nʒoaŋzaav/
 rhinoceros-kind: gap (experiential): gnoll has no exposure to 'rhinoceros-kind'
+river: root Dzha /dʒa/
 rust-monster-kind: gap (experiential): gnoll has no exposure to 'rust-monster-kind'
-savanna: root Dzaav /dzaav/
-sea: compound many+water -> Nshoagnzhoog /nʃoagnʒoog/
+savanna: root Psoo /psoo/
+sea: compound many+water -> Qsooxpshaomsongshaaf /qsooxpʃaomsoŋʃaaf/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
-shadow: root Mzaaqdzhood /mzaaqdʒood/
+shadow: root Qzaagsao /qzaagsao/
 shrieker-kind: gap (experiential): gnoll has no exposure to 'shrieker-kind'
-shrubland: root Gzoav /gzoav/
-sibling: root Nshaaqmsaop /nʃaaqmsaop/
-sleep: root Dzhoav /dʒoav/
+shrubland: root Qzhaax /qʒaax/
+sibling: root Msaov /msaov/
+sleep: root Nshax /nʃax/
 snow: gap (experiential): gnoll has no exposure to 'snow'
-spirit: root Ngsooddzaav /ŋsooddzaav/
-star: root Gzaof /gzaof/
-starlit: root Qshaafmsoof /qʃaafmsoof/
-stone: root Ngzhoop /ŋʒoop/
-sun: root Ngshooqnzhoad /ŋʃooqnʒoad/
-taiga: root Dshaox /dʃaox/
-temperate-forest: root Gshaognshaap /gʃaognʃaap/
+south: root Ngsov /ŋsov/
+spirit: root Nsho /nʃo/
+spring: root Gsa /gsa/
+star: root Pzoov /pzoov/
+starlit: root Mshao /mʃao/
+stone: root Pshoodzho /pʃoodʒo/
+sun: root Nzov /nzov/
+taiga: root Psoafmsoov /psoafmsoov/
+temperate-forest: root Qsagzoo /qsagzoo/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: root Nsoav /nsoav/
+temperate-rainforest: root Mshox /mʃox/
 tide: gap (experiential): gnoll has no exposure to 'tide'
 treant-kind: gap (experiential): gnoll has no exposure to 'treant-kind'
-tree: root Dshooq /dʃooq/
-tropical-rainforest: root Gzaadmzhooq /gzaadmʒooq/
-tropical-seasonal-forest: root Nzhaof /nʒaof/
+tree: root Pshov /pʃov/
+tropical-rainforest: root Gzav /gzav/
+tropical-seasonal-forest: root Ngsa /ŋsa/
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): gnoll has no exposure to 'twig-blight-kind'
-two: root Qzhaoddzaof /qʒaoddzaof/
+two: root Gsox /gsox/
+under: root Dzoo /dzoo/
 upwelling: gap (experiential): no compound recipe for 'upwelling'
-water: root Nshoag /nʃoag/
+valley: gap (experiential): gnoll has no exposure to 'valley'
+water: root Qsooxpshao /qsooxpʃao/
 white-dragon-kind: gap (experiential): gnoll has no exposure to 'white-dragon-kind'
-wind: root Gzhaoqnshood /gʒaoqnʃood/
+wind: root Ngsoaxnzhox /ŋsoaxnʒox/
 woolly-mammoth-kind: gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): gnoll has no exposure to 'xorn-kind'
-yellow: root Msood /msood/
+yellow: root Nzhanzhao /nʒanʒao/
 

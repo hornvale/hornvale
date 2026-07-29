@@ -11,8 +11,9 @@ use hornvale_vessel::{PossessOpts, Session, Turn};
 /// neighbours), so it can only stand in for "the NPC under test stayed put"
 /// while EVERY derived NPC happens to sit on fresh water. The Tumult's
 /// predation epoch ended that coincidence: at seed 42 the flagship
-/// (`Qvooshtvoagootao`) is still on water and still drinks in place, but the
-/// neighbour `Vootkeonoagootoaneo` was reseated off the river and its NPC now
+/// (`Doododoobodobaado`, rendered `Qvooshtvoagootao` before The Wearing) is
+/// still on water and still drinks in place, but the neighbour then rendered
+/// `Vootkeonoagootoaneo` was reseated off the river and its NPC now
 /// wanders 18 steps looking for water. The proxy went nonzero while every
 /// claim these tests actually make stayed true — so the proxy is narrowed to
 /// the claim rather than re-pinned to 18, which would have frozen an
@@ -312,8 +313,9 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
 
     // Day 0.5 (PossessOpts::default, before any wait): re-derived at the
     // the-living-community merge. The history-driven re-placement seats a
-    // different co-located home-settlement NPC (the bugbear of
-    // Qvooshtvoagootao) whose merged diurnal/fatigue physics put it on a REST
+    // different co-located home-settlement NPC (the bugbear of the flagship,
+    // rendered Doododoobodobaado since The Wearing) whose merged
+    // diurnal/fatigue physics put it on a REST
     // phase at day 0.5 — it reads "settles down to rest", not the old
     // "seems content". (A PLACEMENT/PHYSICS behavior change, not a moved value:
     // the drive-cycle-differs intent is preserved by re-pinning against a day
@@ -515,7 +517,11 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// task-2 report for how this was discovered. It never walks (the
 /// on-water flagship settlement's peoples drink in place), so it stays
 /// co-located across every `wait` in these tests too.
-const GRIEVANCE_NPC: &str = "bugbear of Qvooshtvoagootao";
+///
+/// Re-pinned at The Wearing's merge: the flagship's rendered name re-derived
+/// `Qvooshtvoagootao` -> `Doododoobodobaado`. The NPC and its co-location are
+/// unchanged; only the label moved.
+const GRIEVANCE_NPC: &str = "bugbear of Doododoobodobaado";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

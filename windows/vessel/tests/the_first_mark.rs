@@ -19,7 +19,15 @@ fn world() -> hornvale_kernel::World {
 /// The seed-42 settled NPC guaranteed co-located with the possessed agent at
 /// `PossessOpts::default()`'s starting room (day 0.5, before any `go`) — see
 /// `possession_moves.rs`'s `GRIEVANCE_NPC` (Task 2).
-const GRIEVANCE_NPC: &str = "bugbear of Qvooshtvoagootao";
+///
+/// Re-pinned at The Wearing's merge: the flagship settlement's rendered name
+/// re-derived `Qvooshtvoagootao` -> `Doododoobodobaado` (the campaign's
+/// shorter, wearable names). The NPC, its room and its co-location are all
+/// unchanged — only the label this test addresses it by moved. A stale label
+/// here fails LOUDLY BUT MISLEADINGLY: `provoke` finds no such NPC, so
+/// nothing fires and every downstream count reads 0, which looks like a
+/// behavioural regression rather than a renamed target.
+const GRIEVANCE_NPC: &str = "bugbear of Doododoobodobaado";
 
 fn out_text(t: Turn) -> String {
     match t {

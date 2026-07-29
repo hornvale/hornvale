@@ -5866,8 +5866,11 @@ fn build_to(
         // so this branch is not exercised by any current seed.
         // Collective names must be unique WITHIN a world. The account layer
         // keys collectives by subject NAME, so two peoples that render the
-        // same autonym (bugbear and hobgoblin both draw "Babako" at seed 1,
-        // sharing a proto-language) collapse into one — which breaks the
+        // same autonym (bugbear and hobgoblin both drew "Babako" at seed 1
+        // before The Wearing, sharing a proto-language; that campaign
+        // re-derived every lexicon-drawn name, so the illustration is
+        // historical — the hazard and this guard are unchanged)
+        // collapse into one — which breaks the
         // null-filter byte-identity law, ground-truth recoverability, and the
         // disclosure tripwire. Only the composition root sees the whole
         // peoples roster (the language domain names one people at a time), so
