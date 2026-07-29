@@ -41,6 +41,29 @@
 //! `#[ignore]`d: a live-worldgen build takes minutes, so this is deferred
 //! from the commit gate (`make gate`) to `make gate-full`.
 //!
+//! ## The observed failure mode is contention, and it is legible
+//!
+//! Every ceiling here is a wall time, so a pathological co-run trips them
+//! together. Seen once during The Cistern, when a second `gate-full`'s
+//! processes survived their parent and overlapped this one:
+//!
+//! ```text
+//! genesis              24220.9 ms (budget 13000)   <- untouched Sextant ceiling
+//! SceneContext::build   4068.2 ms (budget 2700)
+//! tiles(512)+json      11114.8 ms (budget 8700)
+//! small docs+json          6.8 ms (budget 5.2)     <- untouched Sextant ceiling
+//! region per tile        565.9 ms (budget 420)
+//! ```
+//!
+//! Read the whole print-out before suspecting the code. **All five inflated by
+//! roughly 3x, and the two the code has not changed since 2026-07-28 blew
+//! their ceilings by the widest margins** — `genesis` by 86%, against 35% for
+//! the tightest new one. A real regression is local: one or two metrics move
+//! and the rest hold. A uniform 3x across metrics with unrelated causes is the
+//! machine. Re-run on an idle box before touching a constant, and never raise
+//! one from a contended reading — that is precisely the ratchet-upward the
+//! rule above exists to make deliberate.
+//!
 //! ## Measured — The Cistern (2026-07-29), the current ceiling basis
 //!
 //! **Dev profile (this box, `lefford`, `cargo test -p hornvale --test
