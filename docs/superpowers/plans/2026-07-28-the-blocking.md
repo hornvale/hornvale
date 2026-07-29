@@ -1,5 +1,19 @@
 # The Blocking Implementation Plan
 
+> **EXECUTED AND MERGED 2026-07-28. This file is now history.**
+>
+> All nine tasks shipped (1, 2, 3, 4, **4b**, 5, 6, 7, 8). Task 4b was added
+> mid-campaign at Nathan's direction: a wall became a *cell* rather than a
+> boundary between cells. The campaign's central prediction — that byte-identity
+> would break and the health battery would become the gate — **was measured and
+> did not hold** (decision 0084); `room/furnishing` stays at v1.
+>
+> Kept unedited below as the record of what was planned, including the parts that
+> were wrong. Nine of this plan's own claims failed at execution and each is named
+> in the retrospective; a plan rewritten to look prescient teaches nothing.
+>
+> ---
+>
 > **COMPLETE — Tasks 1–8 written 2026-07-28. Ready for execution.**
 >
 > The two questions the earlier draft left open are **settled** in

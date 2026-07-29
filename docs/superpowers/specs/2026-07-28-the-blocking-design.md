@@ -2,7 +2,10 @@
 
 **Campaign:** The Blocking — campaign 1 of the Rose Window's **render arc**, the
 three-campaign carve agreed 2026-07-28 (this, then The Sighting, then The Panes).
-**Date:** 2026-07-28 · **Status:** spec approved at G3; amended 2026-07-28 by
+**Date:** 2026-07-28 · **Status:** **COMPLETE — shipped and merged 2026-07-28.**
+Chronicle: `book/src/chronicle/the-blocking.md`. Retrospective:
+`docs/retrospectives/the-blocking.md`. Decisions minted: 0083, 0084, 0085.
+**No epoch was declared** — see 0084. Spec approved at G3; amended 2026-07-28 by
 ledger #7–#12 (the extent derivation §3.4, per-method layout labels §3.2/§5.1, the
 measured epoch §5.2, what the stamp records §5.3, the two role-table constraints
 §4.1), by ledger #23–#27 during execution (**a wall is a cell**, §3.3/§3.4/§7,
