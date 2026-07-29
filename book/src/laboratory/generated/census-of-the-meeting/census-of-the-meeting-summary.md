@@ -1006,8 +1006,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 104 | 20.8% |
-| false | 283 | 56.6% |
+| true | 282 | 56.4% |
+| false | 105 | 21.0% |
 | absent | 113 | 22.6% |
 
 ### epithet-honorific-kobold — goblin-solo
@@ -1202,8 +1202,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 117 | 23.4% |
-| false | 383 | 76.6% |
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
 
 ### exposure-sound-kobold — goblin-solo
 

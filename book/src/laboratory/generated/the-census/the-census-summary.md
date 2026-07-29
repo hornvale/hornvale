@@ -1026,8 +1026,8 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 314 | 31.4% |
-| false | 452 | 45.2% |
+| true | 764 | 76.4% |
+| false | 2 | 0.2% |
 | absent | 234 | 23.4% |
 
 ### epithet-honorific-kobold — default
@@ -1221,15 +1221,15 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 252 | 25.2% |
-| false | 748 | 74.8% |
+| true | 1000 | 100.0% |
+| false | 0 | 0.0% |
 
 ### exposure-sound-kobold — default
 
 | value | count | share |
 |---|---|---|
-| true | 252 | 25.2% |
-| false | 748 | 74.8% |
+| true | 1000 | 100.0% |
+| false | 0 | 0.0% |
 
 ### hue-depth-goblin — default
 
