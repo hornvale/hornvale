@@ -25,9 +25,12 @@ of the request is the arithmetic signature of a computation that is not being
 shared: each call pays in full for something the call before it had already
 finished.
 
-What it pays for is the world. Every entry point in the scene window opens
-with the same two lines — derive terrain from the world, then derive climate
-from the world and that terrain — and neither result is kept. Isolated, those
+What it pays for is the world. Every *terrain-facing* entry point in the scene
+window opens with the same two lines — derive terrain from the world, then
+derive climate from the world and that terrain — and neither result is kept.
+The four small documents are the control group: they read the sky and no
+terrain, and they are the ones that cost three tenths of a millisecond
+between them. Isolated, those
 two derivations cost 543.8 and 94.0 milliseconds: **638 milliseconds of fixed
 overhead on every scene call, whatever the call was for.** A flamegraph over
 a fan of twelve patches measures shares of the whole process: 61.36% in the
@@ -38,7 +41,8 @@ patch is the planet being rebuilt** — a figure the wall clock reaches
 independently, since 638 of 702 milliseconds is 90.9%. Roughly sixty-four
 milliseconds is the sampling the client actually asked for; 24.9% of the
 self-time is one function, the fractal-noise sample that the terrain
-derivation calls several million times per world and then discards.
+derivation calls and then discards. (The call *count* was not measured — only
+its share of self time.)
 
 The consumer's shape turns that from a nuisance into the dominant cost. The
 Orrery requests one region patch **per level-of-detail tile**, and a camera
@@ -125,13 +129,28 @@ derives terrain at most once per world.* It is deterministic, cannot flake,
 and belongs to the same family as the drift check, the type audit, and the
 architecture test.
 
-It cannot be written yet. Every scene entry point takes a world and derives
-internally, so "derived once" has no seam to observe against — only a
-counter existing solely for a test, or the artifact-taking API that the fix
-itself introduces. The guard is therefore specified and deferred to the fix,
-which is the first point it can be written honestly. That the fix has a
-shape is not in doubt: one directory over, the locale window already holds
-it. `LocaleContext` performs exactly the same two derivations exactly once
-and every room description reuses it, and its doc comment states the reason
-in a sentence — *so a locale stays a cheap derived view.* The scene window
-has no equivalent, and that absence is the whole finding.
+It cannot be written yet. Every entry point the client actually calls — the
+globe's tile document, the temperature grid, the region patch — takes a world
+and derives internally, so "derived once" has no seam to observe against on
+those paths: only a counter existing solely for a test, or the artifact-taking
+API the fix itself introduces. The guard is therefore specified and deferred
+to the fix, which is the first point it can be written honestly.
+
+That deferral is a statement about coverage, not about difficulty, and the
+distinction matters because the shape the fix needs is **already shipped in
+this crate**. The surrounds chart is written as a pair: `surrounds_scene`
+builds a `LocaleContext` and hands it to `surrounds_scene_in`, which takes the
+context as an argument and reuses it. Its doc comment makes this campaign's
+argument in advance and carries its own measurement — building the context
+costs about 1.19 seconds against roughly 2 milliseconds of the function's own
+per-cell work, so a caller making more than one query should hold the context
+itself. The locale window supplies the artifact; the scene window already
+knows how to accept one.
+
+So the fix is not a new architecture but the extension of an existing one:
+give the terrain-facing entry points the same `x_scene` / `x_scene_in` pair,
+with a scene-side context holding the terrain and climate that every one of
+them currently rebuilds. The guard becomes writable at the same moment,
+against the same seam. What the measurement half could not do was pin a
+pattern the client-visible paths do not yet follow — which makes the fix
+campaign's route shorter than it looked, not longer.

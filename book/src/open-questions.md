@@ -390,9 +390,10 @@ and it is the first one an instrument found rather than a human looking. A
 scene document can be faithful, grounded, drawn, legible, and correctly
 assembled with its neighbours — and still be **ruinously expensive to ask
 for**, because a versioned schema is a contract about a document's *contents*
-and says nothing about the cost of producing one. Every entry point in the
-scene window re-derives terrain and climate from the world and keeps neither,
-so each document carries about 638 ms of fixed setup; measured against the
+and says nothing about the cost of producing one. Every terrain-facing entry
+point in the scene window re-derives terrain and climate from the world and
+keeps neither, so each such document carries about 638 ms of fixed setup;
+measured against the
 Orrery's real call pattern, which requests one regional document per
 level-of-detail tile, **91.6% of a scene call is the planet being rebuilt** and
 a single camera move spends roughly fifteen seconds generating the same world

@@ -104,6 +104,13 @@ fn ms(t: Instant) -> f64 {
     t.elapsed().as_secs_f64() * 1000.0
 }
 
+// NOTE (final branch review): the doc comment below is false — with
+// `per_edge = 8` one face holds 64 tiles and `face` is the OUTER loop, so
+// face-major order keeps a small `n` on face 0, it does not spread it. The
+// iteration order is correct and unchanged (changing it would invalidate the
+// committed baselines); the shipped comment in
+// `windows/scene/examples/profile_scene.rs` was rewritten to describe what
+// the fan does. Left here as authored, for the record.
 /// A deterministic fan of `n` level-`REGION_LEVEL` tile addresses, walked
 /// face-major so a small `n` still spans more than one cube face.
 fn tile_fan(n: usize) -> Vec<(u32, u32, u32)> {
@@ -584,7 +591,13 @@ git commit -m "docs(the-sextant): close — chronicle, retro, timing ledger"
 
 ## Self-review
 
-**Spec coverage.** §3.1 profiler → Task 1. §3.2 ceilings → Task 2. §3.3
+**Spec coverage.** §3.1 profiler → Task 1. §3.2 ceilings → Task 2 —
+**incompletely, and caught at the final branch review**: §3.2 lists four
+ceilings and this plan's Task 2 transcribes three. The small-documents
+aggregate was dropped between spec and plan with no note, and nothing
+downstream re-read the spec's list against the plan's, so it stayed missing
+through implementation. It was added to `cli/tests/scene_cost.rs` at the
+review fix wave (`SMALL_DOCS_BUDGET_MS`). §3.3
 ratchet discipline → Task 2 Step 1 (module doc + per-constant docs). §3.4
 timing ledger and the no-committed-timings rule → Task 3 Step 1, and by
 construction (nothing in Tasks 1–2 writes a file). §3.5 deferred structural
@@ -607,7 +620,15 @@ arguments match `windows/worldgen/src/lib.rs:5569`. `SkyPins` and
 **Known risk.** Task 1's `tile_fan` returns `(face, ix, iy)` while Task 2
 inlines its own simpler address walk. That is deliberate — the test does not
 depend on the example — but it means the two measure slightly different tile
-sets. Both stay at `REGION_LEVEL` with the same `SAMPLES`, and per-tile cost
-is flat in address (spec §1: 687.3 / 700.5 / 701.8 ms across three different
-fan sizes), so the ceiling transfers. If a future change makes per-tile cost
-address-dependent, this assumption breaks and the two must be unified.
+sets. Both stay at `REGION_LEVEL` with the same `SAMPLES`, and both draw their
+addresses from **cube face 0**: `tile_fan` is face-major over a 64-tile face,
+so a fan of 8 or 24 never leaves face 0, and Task 2's walk pins `face = 0`
+outright. That shared face is what makes the ceiling transfer, not any
+property of cost across faces.
+
+What the campaign actually measured is per-tile cost that is flat in **fan
+size** — 687.3 / 700.5 / 701.8 ms at n = 1 / 8 / 24 (spec §1) — which is the
+redundancy signature. Per-tile cost across *addresses* was never measured;
+every number reported by this campaign was taken on face 0. If a future change
+makes per-tile cost address-dependent, or either fixture starts crossing
+faces, the two must be re-checked against each other.

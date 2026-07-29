@@ -272,10 +272,10 @@
 - [The Tithe](./chronicle/the-tithe.md)
 - [The Occlusion](./chronicle/the-occlusion.md)
 - [The Formations](./chronicle/the-formations.md)
-- [The Sextant](./chronicle/the-sextant.md)
 - [The Shoal](./chronicle/the-shoal.md)
 - [The Tare](./chronicle/the-tare.md)
 - [The Column](./chronicle/the-column.md)
+- [The Sextant](./chronicle/the-sextant.md)
 
 # Appendix: The Frontier
 

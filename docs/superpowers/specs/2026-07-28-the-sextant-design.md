@@ -24,13 +24,21 @@ hw_scene_system/moons/neighbors/eclipses   < 0.3 ms each
 ```
 
 Per-tile cost is flat in tile count: nothing is cached anywhere. Every
-`windows/scene` entry point opens with the same two lines
-(`region.rs:316`, `lib.rs:284`, `lib.rs:441`):
+terrain-facing `windows/scene` entry point opens with the same two lines
+(`region.rs:316`, `lib.rs:284`):
 
 ```rust
 let terrain = hornvale_worldgen::terrain_of(world)?;   // → hornvale_terrain::generate, no memoization
 let climate = hornvale_worldgen::climate_from(world, &terrain)?;
 ```
+
+`temperature_grid` (`lib.rs:441`) opens with the single call
+`hornvale_worldgen::climate_of(world)?`, which is those same two lines inlined
+one level down (`windows/worldgen/src/lib.rs:1459-1462` is literally
+`terrain_of` then `climate_from`) — the same cost, one call site. The four
+purely astronomical documents (`system_scene`, `moons_scene`,
+`neighbors_scene`, `eclipses_scene`) read only the sky and pay none of it,
+which is why they measure < 0.3 ms between them above.
 
 Isolated: `terrain_of` 543.8 ms, `climate_from` 94.0 ms — **638 ms of fixed
 overhead on every scene call.** A frame-pointer flamegraph over
@@ -147,10 +155,18 @@ target)". Same mechanics:
   does, so the ceiling's provenance travels with it.
 
 Ceilings, one per client-visible operation: `hw_new`, `tiles_scene(512)`
-build and JSON separately (they are 1069 / 567 ms and regress for different
-reasons), the small scene documents as one aggregate, and **per-tile**
+build and JSON, the small scene documents as one aggregate, and **per-tile**
 region cost — per-tile, not per-fan, so the ceiling is independent of how
 many tiles the fixture happens to request.
+
+*Amended at implementation.* This section originally asked for the
+`tiles_scene(512)` build and its JSON to be budgeted **separately**, on the
+grounds that at 1069 / 567 ms they regress for different reasons. The
+implementation budgets their sum, and that is the version that stands: both
+scale with `width`, the single knob that changes the document's size, so they
+in fact regress together, and two constants tracking one knob is two things to
+re-baseline for every change instead of one. The spec is corrected rather than
+the test (`cli/tests/scene_cost.rs:104-115`).
 
 ### Item 3 — ceilings ratchet down, never quietly up
 
@@ -189,13 +205,36 @@ symptom — the same character as the drift check, the type audit, and the
 architecture test, and unlike a wall-clock ceiling (which is the only
 member of that family that is neither structural nor statistical).
 
-**It cannot be written against today's signature.** Every scene entry point
-takes `&World` and derives internally; there is no seam at which a test can
+**It cannot be written against today's signature.** Every *client-visible*
+entry point — `tiles_scene`, `temperature_grid`, `tiles_region_scene` — takes
+`&World` and derives internally, and `clients/world-wasm` exports no query
+that does otherwise. On those paths there is no seam at which a test can
 observe "derived once" without either the artifact-taking API the fix
 introduces, or invasive counter instrumentation in `worldgen` that would
 exist solely for the test. So the structural guard is specified here and
 **deferred to the fix campaign**, which is the first point it can be written
 honestly. Recorded in the followup register; flagged in §5.
+
+**The API shape the fix needs already exists in this crate**, which is the
+useful half of that observation. `windows/scene/src/surrounds.rs:174` ships
+the pair:
+
+```rust
+pub fn surrounds_scene_in(
+    world: &World,
+    ctx: &LocaleContext,   // the artifact, passed in
+    room: &RoomAddr, radius: u32, at: WorldTime,
+) -> Result<SurroundsScene, SceneError>
+```
+
+with `surrounds_scene` as the context-building wrapper over it. Its doc
+comment (`:163-173`) makes this campaign's argument and carries its own
+measurement: `LocaleContext::build` ~1.19 s against ~2 ms of per-cell work,
+"so building a fresh context per call would make a radius-0 chart cost the
+same as a radius-8 one." The fix is therefore the extension of an existing
+in-crate convention — an `x_scene` / `x_scene_in` pair over a scene-side
+terrain+climate context — not a new one, and the structural guard becomes
+writable against that seam.
 
 ## 4. Verification
 

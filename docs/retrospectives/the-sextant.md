@@ -53,11 +53,22 @@ contain it at all.
 The campaign was scoped fixture-first by owner decision, on the assumption
 that the fixture half could deliver the full guard set independently. It
 could not, and that surfaced only while writing the design: the guard worth
-having is structural (*derives terrain at most once per world*), and it has
-no seam to observe against while every scene entry point takes a `&World` and
+having is structural (*derives terrain at most once per world*), and it has no
+seam to observe against while every **client-visible** scene entry point —
+`tiles_scene`, `temperature_grid`, `tiles_region_scene` — takes a `&World` and
 derives internally. Writing it today requires either counter instrumentation
 existing solely for a test, or the artifact-taking API that the fix
 introduces.
+
+The first draft of this section said the scene window had no context-taking
+entry point at all. That was wrong, and the correction is the more useful
+fact: `surrounds_scene` / `surrounds_scene_in` in the same crate already are
+that pair, and the `_in` variant's doc comment argues this campaign's case
+with its own measurement (a `LocaleContext::build` at ~1.19 s against ~2 ms of
+per-cell work). The deferral is about *coverage* — the paths the client calls
+do not follow that pattern yet — not about the pattern being absent or
+unproven. The fix's route is correspondingly shorter than the deferral made it
+sound.
 
 This materially changed what "fixture first" buys — wall-clock ceilings above
 a known-bad number rather than a guard against reintroduction — so it was
@@ -103,10 +114,12 @@ the constant will read it.
 
 - **The structural "derives once" guard** is deferred to the fix campaign,
   with the reasoning in the spec (§3.5) and the followup register. The fix's
-  shape already exists in-repo: `windows/locale`'s `LocaleContext` performs
-  the same `terrain_of` + `climate_from` pair once and reuses it across every
-  `describe`, and says so in its doc comment. `windows/scene` has no
-  equivalent.
+  shape already exists *in `windows/scene` itself*:
+  `surrounds_scene_in(world, ctx, …)` takes the artifact as an argument and
+  `surrounds_scene` is the context-building wrapper over it. Extending that
+  `x_scene` / `x_scene_in` pair to the terrain-facing entry points, over a
+  scene-side terrain+climate context, is both the fix and the seam the guard
+  needs.
 - **Ceiling headroom is ~2.0×**, the plan-mandated floor.
   `cli/tests/graph_cost.rs:313-333` records a 6.6× swing (1.51 s – 10.00 s)
   for identical work under three-way parallel load on this box, which is why
