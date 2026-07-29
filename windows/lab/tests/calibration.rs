@@ -108,6 +108,37 @@
 //! metric emits, so both owe a census regen. Recorded here rather than left
 //! for the next reader to rediscover.
 //!
+//! ## Second census regen — The Wearing (2026-07-28, lefford, decision 0063)
+//!
+//! Regen commit `46a148a2`, taken after Task 11c repaired both stale
+//! metrics (`3e9d2ad5`). Diffing it against the first regen (`f32d6ce2`)
+//! column by column, **exactly three of ~340 columns moved**, and all three
+//! are fed by the two repaired metrics:
+//!
+//! | column | first regen | second regen |
+//! |---|---|---|
+//! | `exposure-sound-goblin` | 252 true / 748 false | **1000 true** |
+//! | `exposure-sound-kobold` | 252 true / 748 false | **1000 true** |
+//! | `epithet-honorific-goblin` | 314 true / 452 false / 234 absent | **764 true / 2 false / 234 absent** |
+//!
+//! `epithet-honorific-kobold` did NOT move (762 false / 238 absent in
+//! both), which is exactly right: the repair changed how a PRESENT affix is
+//! detected, and kobold has none to detect.
+//!
+//! **The headline naming rows did not move, and that was verified rather
+//! than assumed.** Re-derived from both committed `rows.csv` files: the
+//! `name-length-{goblin,kobold}`, `name-syllables-{goblin,kobold}`,
+//! `name-transparency` and `name-collision-rate` columns are identical row
+//! for row across the two regens, medians included. They were pinned
+//! against the first regen and stand unchanged — the repairs changed
+//! metrics, not worlds.
+//!
+//! Of the two invariants left deliberately failing above,
+//! `lexicon_is_regular_and_exposure_sound_for_both_species` is now green
+//! with no edit at all, and `epithet_honorific_is_true_for_goblin_and_
+//! false_for_kobold` is re-pinned at its own site with the two remaining
+//! goblin falses (seeds 386 and 976) chased to a named cause first.
+//!
 //! Two rows that must NOT move, and DID not: `name_gloss_true_is_100_percent_
 //! row_by_row` (770 true / 230 absent, unchanged) and
 //! `phonotactic_validity_is_true_for_every_generated_name` (766/762 true,
@@ -840,6 +871,15 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
     }
 }
 
+/// The two goblin worlds the detector cannot see (The Wearing, Task 11d).
+///
+/// NOT a tolerance and NOT a threshold: an explicit, exhaustive list of the
+/// seeds whose `false` has been chased to a named cause. Any other seed
+/// reading false still fails, and so does either of these two turning true
+/// — the list is pinned by equality, not by count, so it cannot silently
+/// absorb a third world.
+const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 2] = [386, 976];
+
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
@@ -850,34 +890,88 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // honorific-free GLOSSED epithet (the /v2 epoch), re-composing the
     // belief's site concepts exactly as worldgen did — see
     // `epithet_honorific` in windows/lab/src/metrics.rs.
+    //
+    // ## Re-pinned 2026-07-28, Task 11d, against the second regen (46a148a2)
+    //
+    // Task 11c repaired the detector Task 9 had voided, and the regen moved
+    // this column from 314 true / 452 false / 234 absent to **764 true / 2
+    // false / 234 absent**. The two remaining falses are seeds 386 and 976,
+    // and they were chased before anything here was re-pinned — a number
+    // nobody can explain is not a measurement.
+    //
+    // Both are a limit of the DETECTOR, not a world that broke the
+    // status-basis rule. Each is its world's only belief whose gloss is a
+    // two-morpheme compound ("gloom-day"), and on it the honorific-free
+    // reference surfaced the `gloom` morpheme where the committed form did
+    // not — the same wear/repair-ladder divergence Task 11c documented at
+    // seed 26 bugbear, landing at the FRONT of the word this time, which is
+    // the one place the narrowed claim still asserted something. Remove
+    // that morpheme from the reference and the affix is plainly there
+    // (`zfaaw` and `va` respectively); the goblins of both worlds carry
+    // their honorifics. The full derivation, with the independent
+    // identification of the dropped morpheme from other beliefs of the same
+    // worlds, is in `prepended_material`'s doc, and both witnesses are
+    // pinned in both directions by
+    // `the_two_census_falses_are_a_front_divergence_and_not_a_missing_affix`.
+    //
+    // The claim is therefore narrowed a second time, and the counts below
+    // are pinned so the narrowing cannot quietly widen: the detector
+    // under-detects and never over-detects, so a genuinely broken honorific
+    // pipeline would turn hundreds of worlds false, not two — which is what
+    // keeps this an invariant worth running rather than a fitted bound.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (g_i, k_i) = (
         idx("epithet-honorific-goblin"),
         idx("epithet-honorific-kobold"),
     );
+    let (mut g_true, mut g_absent, mut g_false_seeds) = (0u32, 0u32, Vec::new());
+    let (mut k_false, mut k_absent) = (0u32, 0u32);
     for row in &result.rows {
         match &row.values[g_i] {
-            MetricValue::Flag(v) => {
-                assert!(*v, "seed {}: goblin epithet-honorific false", row.seed)
-            }
-            MetricValue::Absent => {}
+            MetricValue::Flag(true) => g_true += 1,
+            MetricValue::Flag(false) => g_false_seeds.push(row.seed),
+            MetricValue::Absent => g_absent += 1,
             other => panic!(
                 "seed {}: epithet-honorific-goblin not a flag: {other:?}",
                 row.seed
             ),
         }
         match &row.values[k_i] {
+            // kobold is the roster's only Knowledge-status people, so
+            // `morph_options` leaves honorifics off and every committed
+            // epithet IS its own honorific-free re-derivation. `false` here
+            // is the correct reading, not a blind detector: the identical
+            // code path reads true on 764 goblin worlds. Confirmed
+            // positively too — across seeds 386, 976, 42, 7 and 13 all 42
+            // kobold beliefs commit exactly their plain glossed word.
             MetricValue::Flag(v) => {
-                assert!(!*v, "seed {}: kobold epithet-honorific true", row.seed)
+                assert!(!*v, "seed {}: kobold epithet-honorific true", row.seed);
+                k_false += 1;
             }
-            MetricValue::Absent => {}
+            MetricValue::Absent => k_absent += 1,
             other => panic!(
                 "seed {}: epithet-honorific-kobold not a flag: {other:?}",
                 row.seed
             ),
         }
     }
+    assert_eq!(
+        g_false_seeds, HONORIFIC_DETECTOR_BLIND_SEEDS,
+        "the goblin epithet-honorific falses are no longer exactly the two diagnosed \
+         detector-blind worlds — a new false is an UNDIAGNOSED world and must be chased, \
+         not added to the list"
+    );
+    assert_eq!(
+        (g_true, g_absent),
+        (764, 234),
+        "goblin epithet-honorific true/absent split drifted"
+    );
+    assert_eq!(
+        (k_false, k_absent),
+        (762, 238),
+        "kobold epithet-honorific false/absent split drifted"
+    );
 }
 
 #[test]
@@ -924,6 +1018,17 @@ fn lexicon_is_regular_and_exposure_sound_for_both_species() {
     // INDEPENDENT re-derivation classifies Unknown, every Gap reasoned).
     // Row-by-row, both species; Absent is a legitimate skip (no Root / no
     // lexicon entries this world).
+    //
+    // Green again as of the second regen (46a148a2, Task 11d) with NO
+    // change to this test. The 748-false reading the first regen produced
+    // was the stale second opinion Task 11a diagnosed and Task 11c
+    // repaired: `independently_steeped_concepts` had never learned Task 4's
+    // seven toponymic `Steeped` rules. Both `exposure-sound-goblin` and
+    // `exposure-sound-kobold` now read 1000 true / 0 false / 0 absent, and
+    // `lexicon-regular-{goblin,kobold,family}` were 1000 true across both
+    // regens — untouched by the repair, as they should be. This is the
+    // shape a correct repair leaves behind: the invariant is honoured, not
+    // re-pinned, because there was never anything wrong with the worlds.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for species in ["goblin", "kobold"] {

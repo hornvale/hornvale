@@ -3825,6 +3825,61 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// make is therefore about the FRONT of the word, which is the only place
 /// an honorific can be, and it makes no claim about the tail.
 ///
+/// # The narrowing Task 11c did not go far enough on (The Wearing, 11d)
+///
+/// Task 11c's sweep of seeds 0-199 saw no goblin world read false, and
+/// concluded the front was safe. The 1000-world census disagreed: two
+/// worlds, seeds **386** and **976**, read `false` for
+/// `epithet-honorific-goblin`. Both were chased, and both are THIS
+/// function's blind spot rather than a missing affix — the very same
+/// repair-ladder divergence described above, landing at the FRONT of the
+/// word instead of the tail, which is the one place the narrowed claim
+/// still asserted something.
+///
+/// The two witnesses, re-derived rather than quoted (both are the world's
+/// only belief whose gloss is a two-morpheme compound, `"gloom-day"`):
+///
+/// | seed | committed | honorific-free reference |
+/// |---|---|---|
+/// | 386 | `Zfaawmoffof` | `Foafmoffof` |
+/// | 976 | `Vabozhbzas`  | `Boozhbozhbzas` |
+///
+/// In both, the honorific-free form surfaced the `gloom` morpheme and the
+/// honorific-bearing form did not. That identification is not a guess: at
+/// seed 386 the honorific-free surface of `gloom` standing alone is `Foaf`
+/// (beliefs 4 and 6 of that same world), and at seed 976 it is `Boozh`
+/// (beliefs 12-15). Strip it and the alignment is there —
+/// `prepended_material("Zfaawmoffof", "moffof", …)` yields `zfaaw` and
+/// `prepended_material("Vabozhbzas", "bozhbzas", …)` yields `va` — and
+/// `va` is itself an affix this function detects on belief 10 of seed 976.
+/// The reference word contains material the committed word genuinely does
+/// not, so no offset aligns and `None` is the only answer available.
+///
+/// So the honest statement is stronger than "no claim about the tail": the
+/// honorific-free re-derivation is an unreliable reference at EITHER end
+/// whenever a belief's gloss is a multi-morpheme compound, because the
+/// wear/repair ladder that runs downstream of reduction is not
+/// reduction-invariant and may surface a different number of morphemes in
+/// the two forms.
+///
+/// **The error is one-directional, which is what keeps the metric usable.**
+/// A missing morpheme in the reference can only make an alignment fail, so
+/// this function under-detects and never over-detects. `Some(_)` therefore
+/// remains a strong positive — an affix was structurally located — and it
+/// is `None` that became ambiguous between "no affix was prepended" and
+/// "the reference diverged at the front". Task 11c's mutation evidence
+/// bears exactly on the direction that still matters: with the prepend
+/// deleted from BOTH of `glossed_name`'s paths, all fifteen probed beliefs
+/// read `None`, zero false positives. A genuinely broken honorific
+/// pipeline would turn hundreds of census worlds false, not two.
+///
+/// The follow-up that would close the blind spot is unchanged from 11c's:
+/// let a caller re-derive the plain word under `Prominence::None` so both
+/// forms take the same rung of the ladder. That widens
+/// `hornvale_language`'s public surface for a lab metric's benefit, so it
+/// stays an owner's design call rather than a repair — and it would move
+/// two census values, so it owes a regen.
+///
 /// Returns the prepended surface material for the earliest reading that
 /// places at least one consonant before the frame, or `None` if the frame
 /// only ever sits at the very start (which is exactly the honorific-free
@@ -3899,7 +3954,30 @@ fn prepended_material(
 /// ([`prepended_material`], which carries the argument for why the frame
 /// and not the word itself, and the measurement behind it). `Flag(true)`
 /// iff EVERY committed epithet carries it (goblin, Rank), `Flag(false)` iff
-/// none does (kobold, Knowledge).
+/// any does not — which for a non-`Rank` people means every one of them
+/// (kobold, Knowledge).
+///
+/// # `false` is the CORRECT reading for a non-`Rank` people
+///
+/// Worth stating flatly, because a `Flag` whose right answer is `false` on
+/// half the roster is a trap for the next reader (The Wearing, Task 11d).
+/// [`hornvale_worldgen::morph_options`] switches honorifics on exactly for
+/// `StatusBasis::Rank`. Kobold is the roster's only `Knowledge` people, so
+/// its `MorphOptions` already carry `honorifics: false`, its epithets are
+/// committed as plain glossed words, and the honorific-free re-derivation
+/// this metric measures against is byte-identical to the committed form —
+/// the skeletons are equal, the only alignment sits at offset zero, and
+/// `prepended_material` returns `None` **by construction**. Over the
+/// 1000-world census `epithet-honorific-kobold` reads 762 false and 238
+/// absent, with not one `true`: the flag is reporting kobold morphology
+/// faithfully, not failing to see something.
+///
+/// That this is a property of kobold and not a dead detector is settled by
+/// the goblin column, which runs the identical code path and reads `true`
+/// on 764 of the same 1000 worlds — the detector demonstrably can and does
+/// report `true`. It was confirmed positively as well: across seeds 386,
+/// 976, 42, 7 and 13, all 42 kobold beliefs commit an epithet equal to
+/// their own honorific-free re-derivation, character for character.
 ///
 /// **This is still a detection, not a reading.** Nothing here asks the
 /// generator whether it prefixed an affix, and nothing compares the
@@ -6429,6 +6507,62 @@ mod tests {
             prepended_material("Ddoapzhdap", "Ddoapzhdap", &bugbear),
             None,
             "the same word standing alone carries no affix"
+        );
+    }
+
+    /// The two census worlds [`prepended_material`] cannot see, pinned as
+    /// witnesses so the blind spot is defended by a test and not only by
+    /// prose (The Wearing, Task 11d).
+    ///
+    /// Seeds 386 and 976 are the entire `false` population of
+    /// `epithet-honorific-goblin` over the 1000-world census, and both are
+    /// this function's front-divergence limit rather than a missing affix:
+    /// the honorific-free reference surfaced the `gloom` morpheme where the
+    /// committed form did not, so the reference holds material the
+    /// committed word does not and no offset aligns.
+    ///
+    /// Each seed is asserted in BOTH directions — `None` against the
+    /// reference the metric actually uses, and the affix recovered against
+    /// the reference with that extra morpheme removed. The second half is
+    /// what makes this a diagnosis rather than a restatement of the
+    /// symptom: it shows the affix is right there, and names the exact
+    /// material whose presence in the reference hides it. If a future
+    /// change puts both forms on the same rung of the wear/repair ladder,
+    /// the first assertion of each pair fails and sends the reader here.
+    #[test]
+    fn the_two_census_falses_are_a_front_divergence_and_not_a_missing_affix() {
+        // Seed 386, goblin, belief 5 (gloss "gloom-day"). The world's own
+        // honorific-free surface for `gloom` alone is `Foaf` — beliefs 4
+        // and 6 of this same world — and that is precisely the material
+        // standing in front of the shared tail `moffof` in the reference.
+        let v386 = AstronomyView::build(Seed(386), &SkyPins::default()).unwrap();
+        let g386 = vowel_graphemes(&hornvale_worldgen::language_of(&v386.world, "goblin"));
+        assert_eq!(
+            prepended_material("Zfaawmoffof", "Foafmoffof", &g386),
+            None,
+            "seed 386's reference carries a morpheme the committed form dropped, so nothing aligns"
+        );
+        assert_eq!(
+            prepended_material("Zfaawmoffof", "moffof", &g386).as_deref(),
+            Some("zfaaw"),
+            "with that morpheme gone from the reference, the affix is exactly where it should be"
+        );
+
+        // Seed 976, goblin, belief 16 (gloss "gloom-day"). Same shape: the
+        // world's honorific-free surface for `gloom` alone is `Boozh`
+        // (beliefs 12-15), and the recovered affix `va` is one this
+        // function already detects unaided on belief 10 of the same world.
+        let v976 = AstronomyView::build(Seed(976), &SkyPins::default()).unwrap();
+        let g976 = vowel_graphemes(&hornvale_worldgen::language_of(&v976.world, "goblin"));
+        assert_eq!(
+            prepended_material("Vabozhbzas", "Boozhbozhbzas", &g976),
+            None,
+            "seed 976's reference carries a morpheme the committed form dropped, so nothing aligns"
+        );
+        assert_eq!(
+            prepended_material("Vabozhbzas", "bozhbzas", &g976).as_deref(),
+            Some("va"),
+            "with that morpheme gone from the reference, the affix is exactly where it should be"
         );
     }
 

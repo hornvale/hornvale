@@ -71,6 +71,26 @@
 -- campaign's PRIMARY preregistered claim landing: the medians, 9.33 and 7.40,
 -- are inside the mean-name-length metric's own declared buckets, which stop
 -- at 10. Re-synced FROM calibration.rs, which stays primary.)
+-- (Resync 2026-07-28, The Wearing Task 11d, SECOND local regen on lefford
+-- (0063), regen commit 46a148a2, taken after Task 11c repaired the two stale
+-- metrics (3e9d2ad5). Diffed column by column against the first regen
+-- (f32d6ce2): exactly THREE of ~340 columns moved, all three fed by the two
+-- repaired metrics — exposure-sound-goblin and exposure-sound-kobold both
+-- 252 true/748 false -> 1000 true, and epithet-honorific-goblin
+-- 314 true/452 false -> 764 true/2 false (absent 234 throughout).
+-- epithet-honorific-kobold did NOT move, correctly: the repair changed how a
+-- PRESENT affix is detected and kobold has none. No naming or placement
+-- literal above is touched — the headline naming columns are identical row
+-- for row across the two regens, verified rather than assumed, so the
+-- name-length / name-syllables / name-transparency / name-collision pins
+-- from the first regen all stand. The two remaining goblin falses are seeds
+-- 386 and 976, chased to a named cause (the honorific-free reference word
+-- surfaces a morpheme the committed form dropped, so the consonant frame
+-- cannot align — a detector blind spot, not a world missing its honorific;
+-- the derivation is in prepended_material's doc in
+-- windows/lab/src/metrics.rs). Twelve new pins are ADDED below for the two
+-- invariants this file had wrongly declared undrifting; see the
+-- NOT-translated note further down.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -96,13 +116,23 @@
 --     (kobold_flagships_are_less_coastal_than_goblin_flagships stood here
 --     too until it was retired on 2026-07-26 — see the header note above.)
 --   * phonotactic_validity_is_true_for_every_generated_name,
---     epithet_honorific_is_true_for_goblin_and_false_for_kobold,
---     name_gloss_true_is_100_percent_row_by_row,
---     lexicon_is_regular_and_exposure_sound_for_both_species
---     — boolean invariants that hold 100%/0% by construction (grammar,
---     morph_options, name-gloss truthfulness, exposure soundness); no
---     drifting literal, and re-deriving "is this name valid" needs the
---     phonotactic/lexicon machinery itself, not just the fixture.
+--     name_gloss_true_is_100_percent_row_by_row
+--     — boolean invariants that hold 100% by construction (grammar,
+--     name-gloss truthfulness); no drifting literal, and re-deriving "is
+--     this name valid" needs the phonotactic machinery itself, not just the
+--     fixture.
+--     (epithet_honorific_is_true_for_goblin_and_false_for_kobold and
+--     lexicon_is_regular_and_exposure_sound_for_both_species stood in this
+--     list until 2026-07-28 on the stated ground that they "hold 100%/0% by
+--     construction". That ground was FALSE, and this file's silence is how
+--     it stayed false: the epithet column read 452 false and both
+--     exposure-sound columns read 748 false on the first Wearing regen, and
+--     nothing here could notice, because a pin nobody wrote is a pin nobody
+--     can break. Both are now translated below as ordinary counted
+--     literals, false counts included, and the epithet one additionally
+--     pins the exact seeds of its two known exceptions. This is the
+--     campaign's signature defect — a comment asserting a property the code
+--     lacks — found in this very file.)
 --   * census_fixture_matches_live_run — the `#[ignore]`d heavy live-rerun
 --     guard, not a calibration constant.
 --   * null_control_blind_attribution_is_at_chance's `picks_twin` — no longer
@@ -198,6 +228,30 @@ WITH agg AS (
     avg("hue-depth-kobold") FILTER (
       WHERE "hue-depth-goblin" IS NOT NULL AND "hue-depth-kobold" IS NOT NULL
     ) AS kobold_hue_mean,
+    -- epithet_honorific_is_true_for_goblin_and_false_for_kobold (The
+    -- Wearing Task 11d, newly translated — see the header note: these
+    -- columns are no longer the 100%/0%-by-construction booleans this file
+    -- previously declined to duplicate).
+    count(*) FILTER (WHERE "epithet-honorific-goblin" = true) AS epithet_goblin_true,
+    count(*) FILTER (WHERE "epithet-honorific-goblin" = false) AS epithet_goblin_false,
+    count(*) FILTER (WHERE "epithet-honorific-goblin" IS NULL) AS epithet_goblin_absent,
+    -- The two detector-blind seeds, pinned by their min and max: with the
+    -- false COUNT pinned at 2, min and max together identify the set
+    -- exactly, so a different pair of worlds cannot pass by arithmetic.
+    min(seed) FILTER (WHERE "epithet-honorific-goblin" = false) AS epithet_goblin_false_lo,
+    max(seed) FILTER (WHERE "epithet-honorific-goblin" = false) AS epithet_goblin_false_hi,
+    count(*) FILTER (WHERE "epithet-honorific-kobold" = false) AS epithet_kobold_false,
+    count(*) FILTER (WHERE "epithet-honorific-kobold" = true) AS epithet_kobold_true,
+    count(*) FILTER (WHERE "epithet-honorific-kobold" IS NULL) AS epithet_kobold_absent,
+    -- lexicon_is_regular_and_exposure_sound_for_both_species (The Wearing
+    -- Task 11d, newly translated for the same reason). The FALSE counts are
+    -- pinned at 0 alongside the true counts deliberately: the first regen
+    -- read 748 false on both species for eleven days with nothing in this
+    -- file able to notice.
+    count(*) FILTER (WHERE "exposure-sound-goblin" = true) AS exposure_goblin_true,
+    count(*) FILTER (WHERE "exposure-sound-goblin" = false) AS exposure_goblin_false,
+    count(*) FILTER (WHERE "exposure-sound-kobold" = true) AS exposure_kobold_true,
+    count(*) FILTER (WHERE "exposure-sound-kobold" = false) AS exposure_kobold_false,
     -- fixture size sanity (implicit in several "present + absent == 1000"
     -- row-count assertions across this file)
     count(*) AS row_count
@@ -441,6 +495,48 @@ checks AS (
   UNION ALL
   SELECT '"the-census" fixture row count (calibration.rs — implicit in several present+absent==1000 row-count assertions)',
          CAST(row_count AS DOUBLE), 1000.0, row_count = 1000 FROM agg
+  UNION ALL
+  -- The Wearing Task 11d re-pin, 0063 (second regen 46a148a2, after the two
+  -- metric repairs in 3e9d2ad5): 314 -> 764 true, 452 -> 2 false.
+  SELECT 'goblin epithet-honorific true count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_goblin_true AS DOUBLE), 764.0, epithet_goblin_true = 764 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific false count — the two diagnosed detector-blind worlds (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_goblin_false AS DOUBLE), 2.0, epithet_goblin_false = 2 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_goblin_absent AS DOUBLE), 234.0, epithet_goblin_absent = 234 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific lowest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
+         CAST(epithet_goblin_false_lo AS DOUBLE), 386.0, epithet_goblin_false_lo = 386 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific highest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
+         CAST(epithet_goblin_false_hi AS DOUBLE), 976.0, epithet_goblin_false_hi = 976 FROM agg
+  UNION ALL
+  -- Unmoved by the repair, as it must be: the repair changed how a PRESENT
+  -- affix is detected, and kobold (Knowledge status basis) has none.
+  SELECT 'kobold epithet-honorific false count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_kobold_false AS DOUBLE), 762.0, epithet_kobold_false = 762 FROM agg
+  UNION ALL
+  SELECT 'kobold epithet-honorific TRUE count — structurally impossible for a non-Rank people (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_kobold_true AS DOUBLE), 0.0, epithet_kobold_true = 0 FROM agg
+  UNION ALL
+  SELECT 'kobold epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_kobold_absent AS DOUBLE), 238.0, epithet_kobold_absent = 238 FROM agg
+  UNION ALL
+  -- The Wearing Task 11d re-pin, 0063: 252 -> 1000 true, 748 -> 0 false on
+  -- both species, the stale second opinion repaired.
+  SELECT 'goblin exposure-sound true count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
+         CAST(exposure_goblin_true AS DOUBLE), 1000.0, exposure_goblin_true = 1000 FROM agg
+  UNION ALL
+  SELECT 'goblin exposure-sound false count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
+         CAST(exposure_goblin_false AS DOUBLE), 0.0, exposure_goblin_false = 0 FROM agg
+  UNION ALL
+  SELECT 'kobold exposure-sound true count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
+         CAST(exposure_kobold_true AS DOUBLE), 1000.0, exposure_kobold_true = 1000 FROM agg
+  UNION ALL
+  SELECT 'kobold exposure-sound false count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
+         CAST(exposure_kobold_false AS DOUBLE), 0.0, exposure_kobold_false = 0 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 325 -> 324.
   -- The Tumult (predation) re-pin, 0063: 324 -> 323.
