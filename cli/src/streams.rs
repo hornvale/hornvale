@@ -296,6 +296,10 @@ mod tests {
         assert_eq!(
             rows,
             vec![
+                // The Toponym: a cell's characteristic variant, what a
+                // settlement there is named for. Additive — a new label
+                // perturbs no existing stream.
+                "climate/variant/cell v1",
                 "climate/weather/phase v1",
                 "language/<family>/lexicon/root/<concept> v3",
                 "language/<species>/name/deity v2",

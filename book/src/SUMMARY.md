@@ -279,6 +279,7 @@
 - [The Sextant](./chronicle/the-sextant.md)
 - [The Effacement](./chronicle/the-effacement.md)
 - [The Cistern](./chronicle/the-cistern.md)
+- [The Toponym](./chronicle/the-toponym.md)
 
 # Appendix: The Frontier
 
