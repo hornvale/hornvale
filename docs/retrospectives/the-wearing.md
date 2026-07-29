@@ -137,15 +137,31 @@ Carried from `.superpowers/sdd/followups.md` (F1–F11), unresolved at close:
 
 | | |
 |---|---|
-| **F1** | Four idea-registry rows cite `WeightedCategorical::reduce(β)` as shipped machinery; no such type exists. Right about the mechanism, wrong about the name — the dangerous combination. |
-| **F2** | Discharged in-campaign (the `name-gloss-true` doc and scope edit). |
-| **F3** | Bucket overflow in a census metric should be visible in the summary, not only in a histogram's tail. This campaign is the argument. |
-| **F4** | Onset-cluster density, if the nucleus fix proves insufficient. |
+| **F1** | ~~Four idea-registry rows cite~~ **CLOSED 2026-07-29.** One row (`MAP-31b`), not four, cited `WeightedCategorical::reduce(β)` as shipped machinery; no such type exists. Corrected to name `Stream::weighted_index` under `schemas::select_schema`, and to say outright that the combinator is *proposed, not shipped*. The three-row overcount was itself an unverified claim — `git log -S` shows LANG-37's citation was already removed by the row-compaction pass, and UNI-28 and LANG-38 never carried one. |
+| **F2** | ~~Discharged in-campaign~~ **CLOSED 2026-07-29, but not by the in-campaign edit.** Task 5's fix was correct and then went stale a *second* time: the close merge brought The Toponym's characteristic climate variant into `settlement_site_concepts`, making the vector twelve sources, not eleven. Doc corrected again; the assertion was never at risk (it calls the composition root). |
+| **F3** | **STILL OPEN, restated.** Blocked on F11 — the committed census is `main`'s and contains no name this campaign generated. Two claims corrected on the committed `rows.csv`: overflow is 88.5% / 86.6% of present rows, not "every one of the 1000"; and the overflow row *is* already visible in the summary (`>= 10 · 679 · 67.9%`). The real gap is that nothing reads it. Readout after the regen is named in the register. |
+| **F4** | **CLOSED 2026-07-29 — its condition did not fire.** The nucleus fix sufficed, and the evidence is now structural rather than a four-seed sample: `no_language_requires_a_diphthong_in_every_syllable` (400 drawn phonologies) and `a_diphthong_admitting_language_still_speaks_simple_syllables` (share bounded 0.3–0.7) both pass on the merged tree, making the ≥95%-two-vowel condition unreachable by construction. The onset draw is untouched, and touching it now costs `phonotactics/v2` under 0086. |
 | **F5** | `Hydro::Spring` and `Hydro::Aquifer` are unreachable in `hydrogeology` on every seed — a terrain-domain branch-order bug found from the language side. |
 | **F6** | Adding a fifth people *reduced* seed 42's settlement count by 34. Entirely `main`'s behaviour; handed to the placement campaign as a measurement. |
 | **F7** | A leading `Tonogenesis` is provably the identity, appears in 8 of 20 production wear cascades, leads in 7, and **is the entire cascade in 3** — the lever on the name cycle's opacification phase. |
-| **F8** | The epoch rule's *expiry* condition (when a leg stops being rideable) lives only in a task report; decision 0006 does not carry it. |
+| **F8** | **CLOSED 2026-07-29 by decision [0086](../decisions/0086-an-epoch-freezes-when-it-can-be-stamped-on-a-saved-world.md)** — a new record refining 0006, not an amendment (the log's own rule forbids editing an Accepted record's substance, and 0041/0044/0083/0084 are the house form for a refinement). The rule is sharpened in the record: Task 7's "with fixtures regenerated" clause is wrong, because F11 landed the `/v3` code *without* the regen. The freeze test is mechanical — a world saved off `main` carries `language/<species>/name/settlement: v3` in `derived_under`, so `/v3` is frozen and the next consumption change owes `/v4`. Both misleading doc comments (`glossed_name`, `draw_phonotactics`) corrected in place. |
 | **F9** | Two compounding layers stack (lexicon recipe × name shape); shortening syllables cannot reach the multiplier. |
 | **F10** | A *relative* position rung (`the northern Roa`) would separate wherever the coordinate does, read as toponymy, and cost less — and Task 3 already registered the vocabulary. |
 | **F11** | The deferred census: 35 `#[ignore]`d rows (20 + 7 + 3 fixture-blocked, 5 live seed pins) and two commented `golden-pins.sql` blocks, greppable as `stale-census:`. **Do not discharge by absorbing `main` first and regenerating after** — that is the loop that killed both campaign regens. |
-| **F12** | *(New, at close.)* The 31 standing golden/artifact failures are the campaign's own Task-1 fixture drift, not inherited debt, and F11's recipe for them is wrong. `regenerate-artifacts.sh` clears one; `make rebaseline-goldens` reaches five more; `hornvale-book` (14), the `the_first_mark` battery (5), `doctrine`/`explanations`/`solitary_tongue` (4) and `audio_artifacts` (which needs the offline `hornvale voice` pass) each need their own. Accepting them is a deliberate world-identity re-baseline and wants the owner's eye, not a drive-by at the close. |
+| **F12** | *(New, at close.)* **CLOSED 2026-07-29 — discharged by the keystone refreeze, not deferred.** The 31 standing golden/artifact failures are the campaign's own Task-1 fixture drift, not inherited debt, and F11's recipe for them is wrong. `regenerate-artifacts.sh` clears one; `make rebaseline-goldens` reaches five more; `hornvale-book` (14), the `the_first_mark` battery (5), `doctrine`/`explanations`/`solitary_tongue` (4) and `audio_artifacts` (which needs the offline `hornvale voice` pass) each need their own. Accepting them is a deliberate world-identity re-baseline and wants the owner's eye, not a drive-by at the close. — *The multi-route breakdown was right and was used: commits `a29a1f29` and `dc3d4b64` took the set 30 → 0 (6 via `make rebaseline-goldens`, 1 via `regenerate-artifacts.sh`, 23 hand-re-pinned), plus an ordering constraint F12 had not found (goldens → artifacts → goldens, because `session_snapshot` holds both a `REBASELINE` golden and an artifact-reading test that aborts the recipe). No census was regenerated. F11's closing "Also red — the artifact/golden set" paragraph is therefore **stale**; what remains of F11 is the 35 `stale-census:` rows and the two `golden-pins.sql` blocks, nothing more.* |
+
+### Post-close follow-up pass — 2026-07-29
+
+The documentation half of this register was worked immediately after the merge,
+on `followups-post-the-wearing`: **F1, F2, F4, F8 and F12 closed; F3 left open
+and restated** (it is blocked on F11's regen, which is authorized and run
+separately). F5, F6, F7, F9, F10 and F11 are untouched and stand as written.
+
+Two of the five closures found the followup's own text to be wrong in the
+campaign's signature way — F1 overcounted four rows where one carried the
+citation, and F2 was recorded as discharged when a sibling campaign's merge had
+already re-staled it. Both corrections are measured and recorded in
+`.superpowers/sdd/followups-docs-report.md` and in the register entries. The
+lesson is small and specific: **a followup entry is a claim, and it decays like
+any other** — the ones written at a close describe a tree that the close merge
+itself was in the process of changing.
