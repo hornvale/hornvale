@@ -10,6 +10,59 @@ The Shibboleth opened closes with a name that tells two places apart.
 
 ## 1. The problem
 
+### 1.0 Prior art, which this spec must not relitigate
+
+**Decision 0024 (ratified, 2026-07-09) says uniqueness is a reference-time
+property.** Committed names may collide; any surface that would be ambiguous
+disambiguates at render time from the entities' own site facts, "exactly as
+Earth accepts its forty-one Springfields." It states plainly that **no future
+work fixes the collision rate by adding entropy.**
+
+This campaign is consistent with that decision and does not reopen it, on two
+grounds the decision itself supplies:
+
+- 0024 forecloses *drawn* entropy — stuffing more dice into the string. The
+  Watershed adds none; every discriminator here is a derived fact about the
+  world.
+- 0024 explicitly **anticipates and endorses this route**: "collision
+  pressure is expected to fall as a natural by-product of world density:
+  every future substrate that adds per-place facts … widens the descriptor
+  space without touching the naming engine (LANG-9)." Naming the landscape is
+  that substrate.
+
+What this spec *does* retire is the framing that a low-collision number is
+itself the goal. It is not, per 0024. The goal is a world whose places are
+named after things that exist; falling collisions are the by-product 0024
+predicted. §5's criterion is therefore a **prediction**, not a requirement.
+
+**LANG-9 already recorded the limit I re-derived at cost.** Its row reads:
+"colliding names agree on their descriptors BY CONSTRUCTION — the gloss IS
+the site-descriptor set — so no fact fed INTO naming separates a collision;
+only facts outside it can." Four attempts to add descriptor types (§1 below)
+each plateaued, exactly as that sentence predicts. Landmasses and rivers are
+*particulars*, not descriptors, which is why they fall outside the limit.
+
+**The Wearing shipped a large part of this while The Shibboleth was parked.**
+It retired the drawn stem and registered nineteen exposure-gated toponymic
+concepts (`hill river valley island ford marsh spring coast lake high low
+great little new old north south over under`), plus per-culture name shapes
+and a nucleus template set. Measured on main today, 8 seeds / 1842
+settlements:
+
+```
+                        colliding   mean chars   seed-42 glosses
+main (The Wearing)         65.1%        9.5           104
+the-shibboleth (parked)    56.5%        9.1           134
+```
+
+The parked branch is the better number despite carrying fewer concepts,
+because crops and predecessor peoples are *orthogonal* axes while The
+Wearing's nineteen are all site descriptors subject to LANG-9's limit. But
+the two campaigns overlap heavily and **`river` and `coast` are duplicate
+registrations**. §8 states the reconciliation.
+
+### 1.1 The Shibboleth's own measurements
+
 The Shibboleth removed the random stem from settlement names, trading
 uniqueness for meaning. `Vngoashshngaoshshngoogootao` became `Gootao`, and a
 name became a translatable description of its site — biome, variant,
@@ -30,19 +83,20 @@ site facts (river/creek/coast/basin/upland/lowland)   64.0%
 + staples (barley/wheat/rice/millet/tuber/vine)       56.5%
 ```
 
-### 1.1 Why adding concepts plateaus
+### 1.2 Why adding concepts plateaus
 
 Every concept in the naming vocabulary is a **type** — `coast`, `rice`,
 `upland`. A taxonomy has tens of members, and types are exactly what
 neighbouring places share. 329 settlements at seed 42 draw on ~60 types and
 realize only **134 distinct glosses**; the criterion needs ~296.
 
-The missing ingredient is **particulars** — proper nouns, whose cardinality
+This is LANG-9's recorded limit, rediscovered. The missing ingredient is
+**particulars** — proper nouns, whose cardinality
 equals the number of things rather than the size of a vocabulary. Real
 toponymy names the landscape first and settlements after it: Newcastle-upon-
 **Tyne**, where *Tyne* is older than the language using it.
 
-### 1.2 The second cause, which is cheaper
+### 1.3 The second cause, which is cheaper
 
 Collisions are not distributed evenly. Measured at seed 42:
 
@@ -333,3 +387,48 @@ from.
    why: one connected ocean, no discriminating power. If you want sea basins
    named for prose reasons regardless, that is a legitimate override and I
    would put it in this campaign rather than a later one.
+6. **The Shibboleth vs The Wearing (§8).** The parked branch duplicates work
+   main already shipped, and duplicate-registers two concepts. The
+   reconciliation in §8 discards roughly half of a branch that took four
+   commits and a full gate to make green. That is the right call and it is
+   still a loss; you should see it stated rather than buried.
+7. **The criterion is now a prediction, not a requirement** (§1.0). If you
+   want it to be a requirement, that means superseding decision 0024, which
+   is a separate and larger decision than this campaign.
+
+## 8. Reconciling The Shibboleth with The Wearing
+
+The two campaigns solved the same problem in parallel, and main won the race.
+The parked branch splits cleanly into a redundant half and an orthogonal one.
+
+**Discard (superseded by The Wearing's nineteen concepts):**
+
+- the six `sitefact` concepts — `river`, `creek`, `coast`, `basin`, `upland`,
+  `lowland`. `river` and `coast` are duplicate registrations outright;
+  `upland`/`lowland` are The Wearing's `high`/`low`; `basin` is covered by
+  `valley`/`marsh`.
+- the stem removal itself, already on main.
+
+**Keep and rebase onto main (orthogonal, and the reason the parked branch
+scores better):**
+
+- **Sonority sequencing** — a phonotactic rule, not a concept. It reorders
+  onset clusters by rising sonority (`Nsaav` → `Smaav`, `Ngshaap` →
+  `Sngaap`), touching every word in every tongue. Independent of anything The
+  Wearing did, and it composes with the nucleus template set rather than
+  competing with it.
+- **Staples** — six climate-derived concepts on a temperature × moisture
+  band, exposure-gated on subsistence. Orthogonal to every site descriptor:
+  what grows here does not follow from where here is.
+- **Predecessor peoples** — history-derived, reading the occupation
+  stratigraphy. Thin today at five peoples, and the vein that scales with the
+  bestiary.
+- **Four defect fixes the parked branch's gate found**, all of which apply to
+  main unchanged: scene features deduped by name; a stale `GRIEVANCE_NPC`
+  whose test passes vacuously; a gloss-truthfulness test that predated the
+  facts it names; six terrain concepts declaring `Lexicalization::Expected`
+  with no pack to realize them.
+
+The rebase is not mechanical — both branches touch `naming.rs`, the concept
+registry, and `EPOCH_COHORTS` — but the kept half is small and the conflicts
+are concentrated. **Estimate: one task, not one campaign.**
