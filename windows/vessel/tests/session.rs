@@ -308,8 +308,10 @@ fn the_stitch_law_end_to_end() {
         // Vebe -> Xobo under the epoch's re-placement. The Wearing (this
         // merge): Xobo -> Booko — the 19 toponymic/quality concepts Task 3
         // registered shift the proto-root walk, so every lexicon-derived
-        // name re-draws. Moon count, subject and sentence frame unchanged.
-        after.contains("Booko has two moons, as the initiated count."),
+        // name re-draws. The rebase onto The Toponym's cohort ordering
+        // re-draws them once more: Booko -> Xoaboa. Moon count ("two"),
+        // subject and sentence frame unchanged at every step.
+        after.contains("Xoaboa has two moons, as the initiated count."),
         "the ledger's own moon-count, now unlocked: {after}"
     );
     assert!(
@@ -338,7 +340,7 @@ fn the_stitch_law_end_to_end() {
         _ => panic!("consult must not release"),
     };
     assert!(
-        consulted.contains("Booko has two moons, as the initiated count."),
+        consulted.contains("Xoaboa has two moons, as the initiated count."),
         "heard 'nine' still renders the ledger's 'two' — heard is not true, printed: {consulted}"
     );
     assert!(

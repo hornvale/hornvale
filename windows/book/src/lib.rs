@@ -2574,6 +2574,50 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
 
 #[cfg(test)]
 mod tests {
+    //! ## The rebase onto The Toponym's cohort ordering — the rename map
+    //!
+    //! The nineteen toponymic concepts sort at epoch 4 rather than in
+    //! cohort 0, which reseeds every proto-root, so every lexicon-derived
+    //! name in every world re-draws. Fourteen tests in this module pin such
+    //! names as literals; all fourteen were re-pinned by applying exactly
+    //! this map and nothing else:
+    //!
+    //! | seed | bugbear | gnoll | goblin | hobgoblin | kobold | planet |
+    //! |---|---|---|---|---|---|---|
+    //! | 1 | Xoobo→Booxo | Jakdaod→Kabjab | Veewe→Woove | Veebe→Boove | Ngongngo→Zhzho | Booko→Xoaboa |
+    //! | 2 | Booqboo→Bobboo | Klalsha→Klojsho | Meepmoe→Mepmee | Weeqwoe→Webwee | Ngka→Ngkooqngto | — |
+    //! | 3 | Tashoo→Doozka | Jpajjpa→Jpojjpo | Ztasoe→Sdoozka | Ztashoeg→Shtoozka | Sqaojxo→Jjojjjo | — |
+    //!
+    //! Deities: `Wtoevvelqa` and `Dbemdden` re-drew to the same forms and
+    //! are unchanged (measured, not assumed). `Kaavoa` SPLITS: it was one
+    //! form standing for two distinct beliefs, and the reseed separates
+    //! them into goblin `Voovoo` and hobgoblin `Vooboo`. Eleven ordinary
+    //! tongue word forms moved as well — see `the_additivity_law`, the one
+    //! register whose drift is not confined to proper nouns.
+    //!
+    //! **Where the inversion proof is blind.** It verifies a BIJECTION. A
+    //! many-to-one entry — one old form standing for two things, as
+    //! `Kaavoa` did — collapses under the map and re-expands under its
+    //! inverse, so the proof passes while the pin is wrong. That is exactly
+    //! what happened here, and `the_additivity_law` caught what the proof
+    //! could not. Treat the inversion as necessary, not sufficient.
+    //!
+    //! **Evidence this is name drift and nothing else.** Applying the
+    //! INVERSE of the map above to this file reproduces the pre-rebase file
+    //! byte for byte (verified by hash). The rename is therefore a bijection
+    //! over proper nouns and drawn word forms; no frame, count, ordering or
+    //! assertion changed. Independently, every pinned NUMBER held across the
+    //! rebase: the seed-1 darkening counts 6472/4010, seed-2's 81/49,
+    //! seed-3's 53/32, the taught/true days 36531/36528/36522/36337/36125,
+    //! the two-moon count, the star class `yellow-white dwarf (F)` and the
+    //! 1.5-standard-day day length.
+    //!
+    //! **A stale name in a LOOKUP KEY fails as a phantom regression, not as
+    //! a diff.** `the_esoteric_law_mutation_verified` keys its reader by
+    //! `(planet_name, MOON_COUNT)`; when the planet renamed, the key matched
+    //! nothing and the assertion saw an empty vec — which reads as "the
+    //! esoteric law stopped working" rather than "the planet was renamed".
+    //! Fix the key, never the behaviour.
     use super::*;
 
     fn constant(seed: u64) -> World {
@@ -2663,7 +2707,7 @@ mod tests {
             .expect("the planet's sentence is present");
         assert_eq!(
             line,
-            "Booko is a planet with two moons, orbiting a yellow-white dwarf (F); \
+            "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); \
              its day lasts about 1.5 standard days."
         );
     }
@@ -2705,12 +2749,12 @@ mod tests {
         let world = generated(1);
         let vol = render_volume(&world);
         assert!(
-            vol.lines.iter().any(|l| l == "The Veewe are goblins."),
+            vol.lines.iter().any(|l| l == "The Woove are goblins."),
             "goblin collective renders as the autonym: {:?}",
             vol.lines
         );
         assert!(
-            vol.lines.iter().any(|l| l == "The Veebe are hobgoblins."),
+            vol.lines.iter().any(|l| l == "The Boove are hobgoblins."),
             "hobgoblin collective renders as the autonym: {:?}",
             vol.lines
         );
@@ -3009,20 +3053,31 @@ mod tests {
     /// `(None, None, _)`-depth species states itself in one unqualified
     /// clause — is untouched: the clause shape is identical and only the
     /// drawn proper nouns moved.
+    ///
+    /// Re-pinned once more at the rebase onto The Toponym's cohort
+    /// ordering, which reseeds every proto-root: seed 2's goblin
+    /// `Meepmoe Tmamee` -> `Mepmee Gmaamea` and kobold `Ngka Tsao` ->
+    /// `Ngkooqngto Ngkaa`. Both the autonym and the drawn word form moved;
+    /// the English gloss in parentheses, the one-clause shape and the
+    /// `(None, None, _)` depth that selects these two peoples are all
+    /// unchanged. The pre-C7 bytes remain unreachable by construction —
+    /// that is a consequence of the naming work, not a weakening of this
+    /// test, which still asserts the clause SHAPE exactly.
     #[test]
     fn shallow_species_lines_are_byte_identical_to_c3() {
         let world = generated(2);
         let vol = render_volume(&world);
         assert!(
             vol.tongue_lines.contains(
-                &"Meepmoe Tmamee. (in the goblin tongue: \"The Meepmoe are goblins.\")".to_string()
+                &"Mepmee Gmaamea. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
             ),
             "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
         );
         assert!(
             vol.tongue_lines.contains(
-                &"Ngka Tsao. (in the kobold tongue: \"The Ngka are kobolds.\")".to_string()
+                &"Ngkooqngto Ngkaa. (in the kobold tongue: \"The Ngkooqngto are kobolds.\")"
+                    .to_string()
             ),
             "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
@@ -3227,7 +3282,7 @@ mod tests {
         let probes = tongue_probes(&world);
         assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
         assert_eq!(probes[0].concept, "planet");
-        assert_eq!(probes[0].subject, "Booko");
+        assert_eq!(probes[0].subject, "Xoaboa");
     }
 
     /// C4 T1: the probe's SUCCESS path lands the realized line instead of
@@ -3296,7 +3351,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Veewe", &account, &world);
+        let section = voice_section("goblin", "Woove", &account, &world);
         assert_eq!(
             section.emic, vol.lines,
             "identity filters == the god's-eye volume"
@@ -3317,16 +3372,16 @@ mod tests {
             .iter()
             .find(|s| s.kind == "goblin")
             .expect("goblin voice");
-        assert_eq!(goblin.heading, "As the Veewe tell it");
+        assert_eq!(goblin.heading, "As the Woove tell it");
         assert!(
-            goblin.emic.contains(&"Booko is the earth.".to_string()),
+            goblin.emic.contains(&"Xoaboa is the earth.".to_string()),
             "planet substituted to the carving: {:?}",
             goblin.emic
         );
         assert!(
             goblin
                 .emic
-                .contains(&"The Veebe are hobgoblins — neighbors.".to_string()),
+                .contains(&"The Boove are hobgoblins — neighbors.".to_string()),
             "goblin stance: {:?}",
             goblin.emic
         );
@@ -3334,7 +3389,7 @@ mod tests {
             goblin
                 .margin
                 .iter()
-                .any(|m| m.starts_with("In truth, Booko is a planet")
+                .any(|m| m.starts_with("In truth, Xoaboa is a planet")
                     && m.contains("two moons")
                     && m.contains("yellow-white dwarf")),
             "the margin carries what the stack lost: {:?}",
@@ -3355,7 +3410,7 @@ mod tests {
         assert!(
             hobgoblin
                 .emic
-                .contains(&"The Veewe are goblins — rivals.".to_string()),
+                .contains(&"The Woove are goblins — rivals.".to_string()),
             "hobgoblin reads goblins as rivals: {:?}",
             hobgoblin.emic
         );
@@ -3670,7 +3725,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Veewe", &account, &world);
+        let section = voice_section("goblin", "Woove", &account, &world);
         for line in section.emic.iter().chain(section.margin.iter()) {
             assert!(
                 !line.contains("because"),
@@ -3689,13 +3744,13 @@ mod tests {
         let vol = render_volume(&world);
         assert!(
             vol.lines.iter().any(|l| l
-                == "Booko is a planet with two moons, orbiting a yellow-white dwarf (F); \
+                == "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); \
                     its day lasts about 1.5 standard days."),
             "the god's-eye planet line stays exactly as C4 shipped it: {:?}",
             vol.lines
         );
         assert!(
-            vol.lines.iter().any(|l| l == "The Veewe are goblins."),
+            vol.lines.iter().any(|l| l == "The Woove are goblins."),
             "the god's-eye collective line stays exactly as C4 shipped it: {:?}",
             vol.lines
         );
@@ -3776,7 +3831,7 @@ mod tests {
             .doctrine
             .as_ref()
             .expect("goblin's organized flagship gates in a doctrine section at seed 1");
-        assert_eq!(doctrine.heading, "As the priesthood of the Veewe teach it");
+        assert_eq!(doctrine.heading, "As the priesthood of the Woove teach it");
         assert!(
             doctrine
                 .emic
@@ -3787,8 +3842,8 @@ mod tests {
         assert!(
             doctrine
                 .emic
-                .contains(&"The day returns because Kaavoa strides the sky, briskly.".to_string()),
-            "the measured doctrine day explanation, agent Kaavoa: {:?}",
+                .contains(&"The day returns because Voovoo strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Voovoo: {:?}",
             doctrine.emic
         );
     }
@@ -4113,6 +4168,14 @@ mod tests {
     /// Ngngoashzhoo -> Ngongngo, planet Xobo -> Booko. FIVE peoples still,
     /// same species, same stances, same sentence frames: the C6 null-effect
     /// property is untouched and only the proper nouns moved.
+    ///
+    /// Re-pinned once more at the rebase onto The Toponym's cohort
+    /// ordering — Xoobo -> Booxo, Jakdaod -> Kabjab, Veewe -> Woove,
+    /// Veebe -> Boove, Ngongngo -> Zhzho, Booko -> Xoaboa (the module
+    /// header carries the full map). Still five peoples, same species, same
+    /// stances (`neighbors`/`ourselves`), same sentence frames, and the
+    /// closing "The day returns because the sky must be crossed." is
+    /// byte-identical.
     #[test]
     fn folk_sections_are_byte_unchanged() {
         let vol = render_volume(&generated(1));
@@ -4124,19 +4187,19 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
-                "The Xoobo are bugbears — neighbors.".to_string(),
-                "The Jakdaod are gnolls — neighbors.".to_string(),
-                "The Veewe are goblins — ourselves.".to_string(),
-                "The Veebe are hobgoblins — neighbors.".to_string(),
-                "The Ngongngo are kobolds — neighbors.".to_string(),
-                "Booko is the earth.".to_string(),
+                "The Booxo are bugbears — neighbors.".to_string(),
+                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Woove are goblins — ourselves.".to_string(),
+                "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Zhzho are kobolds — neighbors.".to_string(),
+                "Xoaboa is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4150,19 +4213,19 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
-                "The Xoobo are bugbears — rivals.".to_string(),
-                "The Jakdaod are gnolls — rivals.".to_string(),
-                "The Veewe are goblins — rivals.".to_string(),
-                "The Veebe are hobgoblins — ourselves.".to_string(),
-                "The Ngongngo are kobolds — rivals.".to_string(),
-                "Booko is the earth.".to_string(),
+                "The Booxo are bugbears — rivals.".to_string(),
+                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Woove are goblins — rivals.".to_string(),
+                "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Zhzho are kobolds — rivals.".to_string(),
+                "Xoaboa is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4406,14 +4469,14 @@ mod tests {
 
         // The initiated reader: exactly one line, for exactly this key.
         let mut reader: BTreeSet<(String, String)> = BTreeSet::new();
-        reader.insert(("Booko".to_string(), MOON_COUNT.to_string()));
+        reader.insert(("Xoaboa".to_string(), MOON_COUNT.to_string()));
         let lines = esoteric_lines(&world, &reader);
         assert_eq!(
             lines,
             // The Book Polish (2026-07-20): re-pinned with its subject
             // (was the bare "— two, as the initiated count."). Merge:
             // planet renamed Vebe -> Booko.
-            vec!["Booko has two moons, as the initiated count.".to_string()],
+            vec!["Xoaboa has two moons, as the initiated count.".to_string()],
             "exactly one initiated line for the one key in the reader"
         );
 
@@ -4424,26 +4487,26 @@ mod tests {
         // would NOT match what `esoteric_lines` actually produced (the
         // "verify the mechanism by asserting a WRONG expected value
         // fails" arm this test's own doc calls out).
-        let xobo = entity_named(&world, "Booko").expect("Booko resolves to an entity");
+        let xobo = entity_named(&world, "Xoaboa").expect("Xoaboa resolves to an entity");
         let ledger_value = match world.ledger.value_of(xobo, MOON_COUNT) {
             Some(Value::Number(n)) => *n as u64,
-            other => panic!("Booko's ledger moon-count must be a Value::Number: {other:?}"),
+            other => panic!("Xoaboa's ledger moon-count must be a Value::Number: {other:?}"),
         };
         assert_eq!(
             ledger_value, 2,
-            "Booko's committed moon-count is two at seed 1"
+            "Xoaboa's committed moon-count is two at seed 1"
         );
         let moon_word = if ledger_value == 1 { "moon" } else { "moons" };
         assert_eq!(
             lines[0],
             format!(
-                "Booko has {} {moon_word}, as the initiated count.",
+                "Xoaboa has {} {moon_word}, as the initiated count.",
                 cardinal(ledger_value)
             ),
             "the line's cardinal must equal the ledger's own value"
         );
         let wrong = format!(
-            "Booko has {} {moon_word}, as the initiated count.",
+            "Xoaboa has {} {moon_word}, as the initiated count.",
             cardinal(ledger_value + 1)
         );
         assert_ne!(
@@ -4496,7 +4559,7 @@ mod tests {
         let initiated_extra = esoteric_lines(&world, &reader);
         assert!(
             // The Book Polish (2026-07-20): re-pinned with its subject.
-            initiated_extra.contains(&"Booko has two moons, as the initiated count.".to_string()),
+            initiated_extra.contains(&"Xoaboa has two moons, as the initiated count.".to_string()),
             "the moon-count RevealedClaim's initiated line should surface under the \
              omniscient reader: {:?}",
             initiated_extra
@@ -4563,34 +4626,34 @@ mod tests {
         assert_eq!(
             seed1.reckoning[1].lines,
             vec![
-                "Among the Xoobo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Xoobo numbers the darkenings: 6472.".to_string(),
+                "Among the Booxo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Booxo numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Xoobo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Booxo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Jakdaod, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jakdaod numbers the darkenings: 6472.".to_string(),
+                "Among the Kabjab, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kabjab numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Jakdaod's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Kabjab's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Veewe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Veewe numbers the darkenings: 4010.".to_string(),
+                "Among the Woove, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Woove numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Veewe's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Woove's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Veebe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Veebe numbers the darkenings: 4010.".to_string(),
+                "Among the Boove, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Boove numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Veebe's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Boove's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Ngongngo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngongngo numbers the darkenings: 6472.".to_string(),
+                "Among the Zhzho, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zhzho numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Ngongngo's own priesthood taught wrongly, and could be shown wrong by \
+                "The Zhzho's own priesthood taught wrongly, and could be shown wrong by \
                  any who kept their own count."
                     .to_string(),
             ],
@@ -4600,19 +4663,19 @@ mod tests {
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
-                "In truth, the Xoobo's priesthood taught the darkening would come on day \
+                "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Jakdaod's priesthood taught the darkening would come on day \
+                "In truth, the Kabjab's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Veewe's priesthood taught the darkening would come on day \
+                "In truth, the Woove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Veebe's priesthood taught the darkening would come on day \
+                "In truth, the Boove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Ngongngo's priesthood taught the darkening would come on day \
+                "In truth, the Zhzho's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
@@ -4629,34 +4692,34 @@ mod tests {
         assert_eq!(
             seed2.reckoning[1].lines,
             vec![
-                "Among the Booqboo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Booqboo numbers the darkenings: 81.".to_string(),
+                "Among the Bobboo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Bobboo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Booqboo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Klalsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Klalsha numbers the darkenings: 81.".to_string(),
+                "Among the Klojsho, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Klojsho numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Klalsha's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Klojsho's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Meepmoe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Meepmoe numbers the darkenings: 49.".to_string(),
+                "Among the Mepmee, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Mepmee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Meepmoe's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Mepmee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Weeqwoe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Weeqwoe numbers the darkenings: 49.".to_string(),
+                "Among the Webwee, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Webwee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Weeqwoe's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Ngka, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngka numbers the darkenings: 81.".to_string(),
+                "Among the Ngkooqngto, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngkooqngto numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Ngka's own priesthood taught wrongly, and could be shown wrong by \
+                "The Ngkooqngto's own priesthood taught wrongly, and could be shown wrong by \
                  any who kept their own count."
                     .to_string(),
             ]
@@ -4664,19 +4727,19 @@ mod tests {
         assert_eq!(
             seed2.reckoning[1].margin,
             vec![
-                "In truth, the Booqboo's priesthood taught the darkening would come on day \
+                "In truth, the Bobboo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Klalsha's priesthood taught the darkening would come on day \
+                "In truth, the Klojsho's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Meepmoe's priesthood taught the darkening would come on day \
+                "In truth, the Mepmee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Weeqwoe's priesthood taught the darkening would come on day \
+                "In truth, the Webwee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Ngka's priesthood taught the darkening would come on day \
+                "In truth, the Ngkooqngto's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
@@ -4691,34 +4754,34 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                "Among the Tashoo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Tashoo numbers the darkenings: 53.".to_string(),
+                "Among the Doozka, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Doozka numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Tashoo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Doozka's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Jpajjpa, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jpajjpa numbers the darkenings: 53.".to_string(),
+                "Among the Jpojjpo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Jpojjpo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jpajjpa's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Jpojjpo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Ztasoe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ztasoe numbers the darkenings: 32.".to_string(),
+                "Among the Sdoozka, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Sdoozka numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Ztasoe's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Sdoozka's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Ztashoeg, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ztashoeg numbers the darkenings: 32.".to_string(),
+                "Among the Shtoozka, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Shtoozka numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Ztashoeg's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Shtoozka's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Sqaojxo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Sqaojxo numbers the darkenings: 53.".to_string(),
+                "Among the Jjojjjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Jjojjjo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Sqaojxo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Jjojjjo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
             ],
@@ -4728,19 +4791,19 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
-                "In truth, the Tashoo's priesthood taught the darkening would come on day \
+                "In truth, the Doozka's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Jpajjpa's priesthood taught the darkening would come on day \
+                "In truth, the Jpojjpo's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Ztasoe's priesthood taught the darkening would come on day \
+                "In truth, the Sdoozka's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Ztashoeg's priesthood taught the darkening would come on day \
+                "In truth, the Shtoozka's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Sqaojxo's priesthood taught the darkening would come on day \
+                "In truth, the Jjojjjo's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
@@ -4800,19 +4863,19 @@ mod tests {
                 // lines pinned in `the_reckoning_renders_the_epoch_pair`.
                 // Merge re-placement, then The Vacancy T9: five organized
                 // priesthoods now, each with its own live crisis.
-                "In truth, the Xoobo's priesthood taught the darkening would come on day \
+                "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Jakdaod's priesthood taught the darkening would come on day \
+                "In truth, the Kabjab's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Veewe's priesthood taught the darkening would come on day \
+                "In truth, the Woove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Veebe's priesthood taught the darkening would come on day \
+                "In truth, the Boove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Ngongngo's priesthood taught the darkening would come on day \
+                "In truth, the Zhzho's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the darkenings by day 36525 number 6472.".to_string(),
@@ -4846,14 +4909,14 @@ mod tests {
         assert_eq!(
             vol.lines,
             vec![
-                "Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
+                "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
                  lasts about 1.5 standard days."
                     .to_string(),
-                "The Xoobo are bugbears.".to_string(),
-                "The Jakdaod are gnolls.".to_string(),
-                "The Veewe are goblins.".to_string(),
-                "The Veebe are hobgoblins.".to_string(),
-                "The Ngongngo are kobolds.".to_string(),
+                "The Booxo are bugbears.".to_string(),
+                "The Kabjab are gnolls.".to_string(),
+                "The Woove are goblins.".to_string(),
+                "The Boove are hobgoblins.".to_string(),
+                "The Zhzho are kobolds.".to_string(),
             ]
         );
         assert_eq!(
@@ -4864,29 +4927,35 @@ mod tests {
                 // campaign re-derives the lexicons themselves, so each
                 // tongue's ordinary word forms moved too (bugbear
                 // `Nxaabo`/`Boxa` -> `Nxatboa`/`Boobao`, goblin `Saa
-                // Wowe` -> `Sa Wookaowo`, and so on). What did NOT move is
+                // Wowe` -> `Sa Wookaowo`, and so on). Re-pinned AGAIN at
+                // the rebase onto The Toponym's cohort ordering, which
+                // moved the word forms a second time (`Boobao` -> `Bobao`,
+                // `Wookaowo` -> `Woowoo`, hobgoblin `Koe` -> `Beebo`,
+                // kobold `Shso` -> `Ngngongnga`, and so on — eleven in
+                // all). What did NOT move is
                 // the meaning: every English gloss in parentheses is
                 // byte-identical, every clause keeps its token count and
                 // word order, and the ten lines keep their order and
                 // tongue-pairing. The additivity law this test exists for —
                 // C8 adds only `reckoning`, perturbing no pre-C8 register's
                 // SHAPE — is therefore intact.
-                "Nxatboa Xoobo Boobao. (in the bugbear tongue: \"The Xoobo are bugbears.\")"
+                "Nxatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
                     .to_string(),
-                "Nxatboa Booko Booko. (in the bugbear tongue: \"Booko is the earth.\")".to_string(),
-                "Jakdaod Paab Joadjaadjood. (in the gnoll tongue: \"The Jakdaod are gnolls.\")"
+                "Nxatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
-                "Booko Paab Jaabjaodkaad. (in the gnoll tongue: \"Booko is the earth.\")"
+                "Kabjab Paab Jaadjaakjood. (in the gnoll tongue: \"The Kabjab are gnolls.\")"
                     .to_string(),
-                "Sa Wookaowo Veewe. (in the goblin tongue: \"The Veewe are goblins.\")".to_string(),
-                "Sa Wewoeke Booko. (in the goblin tongue: \"Booko is the earth.\")".to_string(),
-                "Veebe Koe Boa Boo. (in the hobgoblin tongue: \"The Veebe are hobgoblins.\")"
+                "Xoaboa Paab Paobkaad. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Sa Woowoo Woove. (in the goblin tongue: \"The Woove are goblins.\")".to_string(),
+                "Sa Weveawea Xoaboa. (in the goblin tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")"
                     .to_string(),
-                "Booko Boeke Boa Be. (in the hobgoblin tongue: \"Booko is the earth.\")"
+                "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
-                "Ngongngo Ngngoq Ngokngo. (in the kobold tongue: \"The Ngongngo are kobolds.\")"
+                "Zhzho Ngngoq Ngngo. (in the kobold tongue: \"The Zhzho are kobolds.\")"
                     .to_string(),
-                "Booko Ngngoq Shso. (in the kobold tongue: \"Booko is the earth.\")".to_string(),
+                "Xoaboa Ngngoq Ngngongnga. (in the kobold tongue: \"Xoaboa is the earth.\")"
+                    .to_string(),
             ]
         );
         assert_eq!(
@@ -4908,19 +4977,19 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
-                "The Xoobo are bugbears — neighbors.".to_string(),
-                "The Jakdaod are gnolls — neighbors.".to_string(),
-                "The Veewe are goblins — ourselves.".to_string(),
-                "The Veebe are hobgoblins — neighbors.".to_string(),
-                "The Ngongngo are kobolds — neighbors.".to_string(),
-                "Booko is the earth.".to_string(),
+                "The Booxo are bugbears — neighbors.".to_string(),
+                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Woove are goblins — ourselves.".to_string(),
+                "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Zhzho are kobolds — neighbors.".to_string(),
+                "Xoaboa is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4928,33 +4997,33 @@ mod tests {
         let goblin_doctrine = goblin.doctrine.as_ref().expect("goblin is organized");
         assert_eq!(
             goblin_doctrine.heading,
-            "As the priesthood of the Veewe teach it"
+            "As the priesthood of the Woove teach it"
         );
         assert_eq!(
             goblin_doctrine.tongue_taught_line,
             // The same goblin lexicon re-draw as the `tongue_lines` block
             // above: `Saa Wovewe` -> `Sa Wewoeke`, gloss byte-identical.
-            "Sa Wewoeke Booko. (\"Booko is the earth — as it is taught.\")"
+            "Sa Weveawea Xoaboa. (\"Xoaboa is the earth — as it is taught.\")"
         );
         assert_eq!(
             goblin_doctrine.emic,
             vec![
-                "The Xoobo are bugbears — neighbors.".to_string(),
-                "The Jakdaod are gnolls — neighbors.".to_string(),
-                "The Veewe are goblins — ourselves.".to_string(),
-                "The Veebe are hobgoblins — neighbors.".to_string(),
-                "The Ngongngo are kobolds — neighbors.".to_string(),
-                "Booko is the earth.".to_string(),
+                "The Booxo are bugbears — neighbors.".to_string(),
+                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Woove are goblins — ourselves.".to_string(),
+                "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Zhzho are kobolds — neighbors.".to_string(),
+                "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 "The moons cross because Wtoevvelqa strides the sky, slowly.".to_string(),
-                "The day returns because Kaavoa strides the sky, briskly.".to_string(),
+                "The day returns because Voovoo strides the sky, briskly.".to_string(),
             ]
         );
         assert!(goblin_doctrine.annotations.is_empty());
         assert_eq!(
             goblin_doctrine.margin,
             vec![
-                "In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts \
+                "In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts \
                  about 1.5 standard days."
                     .to_string()
             ]
@@ -4968,19 +5037,19 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
-                "The Xoobo are bugbears — rivals.".to_string(),
-                "The Jakdaod are gnolls — rivals.".to_string(),
-                "The Veewe are goblins — rivals.".to_string(),
-                "The Veebe are hobgoblins — ourselves.".to_string(),
-                "The Ngongngo are kobolds — rivals.".to_string(),
-                "Booko is the earth.".to_string(),
+                "The Booxo are bugbears — rivals.".to_string(),
+                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Woove are goblins — rivals.".to_string(),
+                "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Zhzho are kobolds — rivals.".to_string(),
+                "Xoaboa is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4993,20 +5062,28 @@ mod tests {
         let hobgoblin_doctrine = hobgoblin.doctrine.as_ref().expect("hobgoblin is organized");
         assert_eq!(
             hobgoblin_doctrine.heading,
-            "As the priesthood of the Veebe teach it"
+            "As the priesthood of the Boove teach it"
         );
         assert_eq!(
             hobgoblin_doctrine.emic,
             vec![
-                "The Xoobo are bugbears — rivals.".to_string(),
-                "The Jakdaod are gnolls — rivals.".to_string(),
-                "The Veewe are goblins — rivals.".to_string(),
-                "The Veebe are hobgoblins — ourselves.".to_string(),
-                "The Ngongngo are kobolds — rivals.".to_string(),
-                "Booko is the earth.".to_string(),
+                "The Booxo are bugbears — rivals.".to_string(),
+                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Woove are goblins — rivals.".to_string(),
+                "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Zhzho are kobolds — rivals.".to_string(),
+                "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 "The moons cross because Dbemdden strides the sky, slowly.".to_string(),
-                "The day returns because Kaavoa strides the sky, briskly.".to_string(),
+                // NOT the goblin's `Voovoo` above. Before this rebase BOTH
+                // peoples' day-deities rendered `Kaavoa` — two distinct
+                // beliefs that happened to draw the same form — and the
+                // reseed separates them: goblin -> `Voovoo`, hobgoblin ->
+                // `Vooboo`. A rename map built by token therefore CANNOT be
+                // inverted to prove this pair name-only; the collapse is
+                // invisible to the inversion and only this assertion caught
+                // it. Measured per-people off the rendered doctrine.
+                "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );
         assert!(hobgoblin_doctrine.annotations.is_empty());
@@ -5086,7 +5163,7 @@ mod tests {
         // seeds carries a live prediction crisis (see
         // `the_reckoning_renders_the_epoch_pair`) -- so it is exercised
         // synthetically here too, through the same public round-trip pair.
-        let synthetic_doctrine = "None among the Veewe have shown the priesthood's teaching false.";
+        let synthetic_doctrine = "None among the Woove have shown the priesthood's teaching false.";
         let chorus_line = parse_chorus_line(synthetic_doctrine, &ctx)
             .unwrap_or_else(|e| panic!("the doctrine crisis_live=false line must invert: {e:?}"));
         let ChorusLine::Reckoning(reckoning) = &chorus_line else {
@@ -5095,7 +5172,7 @@ mod tests {
         assert_eq!(
             *reckoning,
             ReckoningLine::Doctrine {
-                autonym: "Veewe".to_string(),
+                autonym: "Woove".to_string(),
                 crisis_live: false,
             }
         );
@@ -5113,19 +5190,19 @@ mod tests {
     #[test]
     fn the_prediction_line_omits_honestly_beyond_the_teaching_horizon() {
         let lines =
-            reckoning_culture_lines("Veewe", hornvale_worldgen::LadderRung::Predictive, 8, None);
+            reckoning_culture_lines("Woove", hornvale_worldgen::LadderRung::Predictive, 8, None);
         assert_eq!(
             lines,
             vec![
                 // The Book Polish (2026-07-20): re-pinned attributed.
-                "Among the Veewe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Veewe numbers the darkenings: eight.".to_string(),
+                "Among the Woove, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Woove numbers the darkenings: eight.".to_string(),
             ],
             "Predictive + None: the count still renders, but no prediction line"
         );
 
         let lines_with_prediction = reckoning_culture_lines(
-            "Veewe",
+            "Woove",
             hornvale_worldgen::LadderRung::Predictive,
             8,
             Some(9080.42957840976),
@@ -5133,8 +5210,8 @@ mod tests {
         assert_eq!(
             lines_with_prediction,
             vec![
-                "Among the Veewe, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Veewe numbers the darkenings: eight.".to_string(),
+                "Among the Woove, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Woove numbers the darkenings: eight.".to_string(),
                 "The next darkening, it teaches, comes on day 9080.".to_string(),
             ],
             "Predictive + Some: the prediction line renders, integer-truncated"
@@ -5152,8 +5229,8 @@ mod tests {
             last_actual: 40_850.9,
         };
         assert_eq!(
-            reckoning_crisis_margin_line("Veewe", crisis),
-            "In truth, the Veewe's priesthood taught the darkening would come on day 41200; \
+            reckoning_crisis_margin_line("Woove", crisis),
+            "In truth, the Woove's priesthood taught the darkening would come on day 41200; \
              it came on day 40850 instead."
         );
     }
@@ -5163,9 +5240,9 @@ mod tests {
     /// other doctrine-gated render path's `None` convention.
     #[test]
     fn the_doctrine_line_is_none_for_a_folk_only_culture() {
-        assert_eq!(reckoning_doctrine_line("Veewe", false, false), None);
+        assert_eq!(reckoning_doctrine_line("Woove", false, false), None);
         assert_eq!(
-            reckoning_doctrine_line("Veewe", false, true),
+            reckoning_doctrine_line("Woove", false, true),
             None,
             "a folk-only culture never has a doctrine to have taught anything wrongly"
         );
@@ -5178,13 +5255,13 @@ mod tests {
     #[test]
     fn the_doctrine_line_names_the_crisis_when_one_is_live() {
         assert_eq!(
-            reckoning_doctrine_line("Veewe", true, false),
-            Some("None among the Veewe have shown the priesthood's teaching false.".to_string())
+            reckoning_doctrine_line("Woove", true, false),
+            Some("None among the Woove have shown the priesthood's teaching false.".to_string())
         );
         assert_eq!(
-            reckoning_doctrine_line("Veewe", true, true),
+            reckoning_doctrine_line("Woove", true, true),
             Some(
-                "The Veewe's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Woove's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string()
             )

@@ -519,9 +519,13 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// co-located across every `wait` in these tests too.
 ///
 /// Re-pinned at The Wearing's merge: the flagship's rendered name re-derived
-/// `Qvooshtvoagootao` -> `Doododoobodobaado`. The NPC and its co-location are
+/// `Qvooshtvoagootao` -> `Doododoobodobaado`. Re-pinned AGAIN at the rebase
+/// onto The Toponym's cohort ordering, which reseeds every proto-root:
+/// `Doododoobodobaado` -> `Goodoogogootoodadoo`. Measured off the session's
+/// own `npcs` listing, which returns the same seven NPCs at the same entity
+/// ids (1865-1871) before and after — the NPC and its co-location are
 /// unchanged; only the label moved.
-const GRIEVANCE_NPC: &str = "bugbear of Doododoobodobaado";
+const GRIEVANCE_NPC: &str = "bugbear of Goodoogogootoodadoo";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

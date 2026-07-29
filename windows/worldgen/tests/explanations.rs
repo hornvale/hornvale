@@ -197,7 +197,7 @@ fn no_deity_bearing_schema_ever_fires_agentless() {
 fn moons_explained_only_where_kept() {
     // Seed 2: kobold keeps the moons (moon-count Kept), goblin loses them
     // (BeyondCapability). Measured: kobold's moon-count fires Agentive,
-    // bound to the SLOWEST cyclic belief ("Tsaasngkoo", period 1174.61, the
+    // bound to the SLOWEST cyclic belief ("Nggoo", period 1174.61, the
     // pantheon's longest — manner Slow); goblin's stays plain Lost, never
     // Explained.
     //
@@ -214,6 +214,11 @@ fn moons_explained_only_where_kept() {
     // quality concepts, and registration feeds the lexicon's proto-root
     // walk, so every lexicon-derived name re-draws. Schema, underlying,
     // lexeme and manner all hold; only the name moved.
+    //
+    // Re-pinned once more at the rebase onto The Toponym's cohort ordering,
+    // which reseeds every proto-root: "Tsaasngkoo" -> "Nggoo". Same story —
+    // `underlying` (Kept), `schema` (Agentive), `lexeme` ("strides") and
+    // `manner` (Slow) compare byte-identical; only `agent` moved.
     let w = generated(2);
     let voices = accounts_of(&w);
     let kobold = voices
@@ -236,7 +241,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Tsaasngkoo".to_string()),
+            agent: Some("Nggoo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }
