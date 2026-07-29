@@ -339,6 +339,11 @@ pub fn tiles_region_scene_in(
     iy: u32,
     samples: u32,
 ) -> Result<RegionScene, SceneError> {
+    debug_assert_eq!(
+        ctx.seed(),
+        world.seed,
+        "SceneContext was built for a different world than this call's"
+    );
     let addr = RegionAddr {
         face,
         level,
@@ -452,7 +457,13 @@ pub fn region_json(scene: &RegionScene) -> String {
 /// per cell — interpolation commutes with the evaluator (The Region §3.4).
 /// Full precision (not quantized); the cross-repo contract test pins the
 /// client's reconstruction against these values.
+///
+/// Derives a fresh [`SceneContext`]. Prefer [`temperature_grid_region_in`]
+/// whenever a context is already in hand — especially here, where the usual
+/// caller sweeps a day loop over one fixed address and would otherwise pay
+/// ~638 ms of derivation per day.
 /// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+#[allow(clippy::too_many_arguments)] // the address is five contract fields, spelled out
 pub fn temperature_grid_region(
     world: &World,
     face: u32,
@@ -462,6 +473,42 @@ pub fn temperature_grid_region(
     samples: u32,
     day: f64,
 ) -> Result<Vec<f64>, SceneError> {
+    // Validate before the expensive derivation, exactly as `tiles_region_scene`
+    // does — a bad address must not pay ~638 ms first.
+    RegionAddr {
+        face,
+        level,
+        ix,
+        iy,
+        samples,
+    }
+    .validate()?;
+    let ctx = SceneContext::build(world)?;
+    temperature_grid_region_in(world, &ctx, face, level, ix, iy, samples, day)
+}
+
+/// Per-node actual temperature at `day`, °C, reusing a [`SceneContext`] the
+/// caller already built — the `_in` half of [`temperature_grid_region`]. The
+/// context derives terrain then climate, which is exactly what `climate_of`
+/// does (`windows/worldgen/src/lib.rs`), so only `ctx.climate` and
+/// `ctx.climate_index` are read here.
+/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+#[allow(clippy::too_many_arguments)] // the address is five contract fields, spelled out
+pub fn temperature_grid_region_in(
+    world: &World,
+    ctx: &SceneContext,
+    face: u32,
+    level: u32,
+    ix: u32,
+    iy: u32,
+    samples: u32,
+    day: f64,
+) -> Result<Vec<f64>, SceneError> {
+    debug_assert_eq!(
+        ctx.seed(),
+        world.seed,
+        "SceneContext was built for a different world than this call's"
+    );
     let addr = RegionAddr {
         face,
         level,
@@ -470,14 +517,13 @@ pub fn temperature_grid_region(
         samples,
     };
     addr.validate()?;
-    let climate =
-        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let c_index = NearestCellIndex::new(climate.geosphere());
+    let climate = &ctx.climate;
+    let c_index = &ctx.climate_index;
     let cg = climate.geosphere();
     Ok(addr
         .node_units()
         .iter()
-        .map(|s| interp(cg, &c_index, *s, |c| climate.temperature_at(c, day).get()))
+        .map(|s| interp(cg, c_index, *s, |c| climate.temperature_at(c, day).get()))
         .collect())
 }
 

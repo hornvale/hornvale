@@ -362,6 +362,11 @@ pub fn tiles_scene_in(
     ctx: &SceneContext,
     width: u32,
 ) -> Result<TilesScene, SceneError> {
+    debug_assert_eq!(
+        ctx.seed(),
+        world.seed,
+        "SceneContext was built for a different world than this call's"
+    );
     validate_width(width)?;
     let height = width / 2;
     let terrain = &ctx.terrain;
@@ -515,16 +520,21 @@ pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>,
 /// caller already built — the `_in` half of [`temperature_grid`]. The context
 /// derives terrain then climate, which is exactly what `climate_of` does
 /// (`windows/worldgen/src/lib.rs`), so only `ctx.climate` and
-/// `ctx.climate_index` are read here. The `world` parameter is unused for
-/// that reason but kept for signature parity with the other two `_in`
-/// entry points, which every caller drives through the same shape.
+/// `ctx.climate_index` are read here — `world` is otherwise read only by the
+/// context/world match assertion below, which is the same shape every `_in`
+/// entry point takes.
 /// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
 pub fn temperature_grid_in(
-    _world: &World,
+    world: &World,
     ctx: &SceneContext,
     width: u32,
     day: f64,
 ) -> Result<Vec<f64>, SceneError> {
+    debug_assert_eq!(
+        ctx.seed(),
+        world.seed,
+        "SceneContext was built for a different world than this call's"
+    );
     validate_width(width)?;
     let height = width / 2;
     let climate = &ctx.climate;
@@ -2072,5 +2082,18 @@ mod tests {
             via_world, via_ctx,
             "temperature_grid diverged from temperature_grid_in"
         );
+
+        // Regional temperature: the fourth, and the one a day loop sweeps —
+        // so it is checked across several days on one address, not just one.
+        for day in [0.0, 100.0, 233.5] {
+            let via_world =
+                temperature_grid_region(&world, 0, 3, 0, 0, 8, day).expect("region temps");
+            let via_ctx = temperature_grid_region_in(&world, &ctx, 0, 3, 0, 0, 8, day)
+                .expect("region temps_in");
+            assert_eq!(
+                via_world, via_ctx,
+                "temperature_grid_region diverged at day={day}"
+            );
+        }
     }
 }
