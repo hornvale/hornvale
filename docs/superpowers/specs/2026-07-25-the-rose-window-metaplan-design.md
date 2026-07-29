@@ -407,6 +407,16 @@ boundary flipping bands every step), and the mismatched lateral step together.
 `AnchorKind::Threshold` already ships as "an anchor that is ALSO a room-graph
 edge (the two-level seam)".
 
+> **Clarified by The Blocking (2026-07-28). The law above is UNCHANGED.** The
+> Lintel read "lateral movement never changes band" as also meaning a compass
+> bearing is meaningless inside a chamber, and refused `go north` indoors on that
+> basis. The Blocking gave a chamber an interior lattice, so `go north` indoors is
+> now one cell north — and the law still holds, because a cell step stays inside
+> the chamber band; it changes no band at all. What the campaign reversed is the
+> *inference* The Lintel drew from this law, not the law. (`back` stays refused
+> indoors: it retraces a walk-band trail, which is a walk-band operation whatever
+> the interior looks like.)
+
 "The world coarsens behind you" survives as a *consequence*, not a rule: fine
 bands exist only inside structures, so there is no fine band to be in once you
 step out the gate. A move's cost still scales with its band's extent (a 1.7 km

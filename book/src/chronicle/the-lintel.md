@@ -104,7 +104,19 @@ crash.
 Chambers have no bearing relative to one another. Their addresses are identity,
 not shape, so *north* inside a house is a question the model cannot answer and
 should not pretend to. Movement between chambers is therefore through named
-apertures, and `go north` is refused indoors.
+apertures, and `go north` *was* refused indoors.
+
+> **Reversed by The Blocking (2026-07-28), and not a flip-flop.** The refusal was
+> correct for a chamber with no interior; The Blocking gave chambers an interior —
+> a cell lattice with walls, floor and doorways — so `go north` now means one
+> cell north, and the plan marks where you stand. What changed is the *inference*
+> drawn here, that a chamber address carries no bearing to walk along; the band
+> law itself (metaplan §1b.6, *lateral movement never changes band*) is
+> **unchanged**, because a cell step stays inside the chamber band. The paragraph
+> above is still exactly right about what it is about: movement **between**
+> chambers is by named aperture, because *chamber addresses* carry no bearing to
+> each other. `back` stays refused indoors, since it retraces a walk-band trail
+> whatever the interior looks like.
 
 Naming the apertures turned out to be where the campaign's one real functional
 defect lived. The first implementation named each aperture after something the
@@ -180,6 +192,21 @@ naturally the same one that gives chambers a vocabulary of their own, since
 freezing the walk band's vocabulary is what deferred both. The design chose that
 freeze knowingly, to buy byte-identity, and it should have said out loud that
 this was the price. It says so now.
+
+> **Fixed by [The Blocking](./the-blocking.md) (2026-07-28) — and the "that
+> epoch" above never arrived.** Chambers now take *roles*, and a role admits a
+> subset of the patterns, so the two chambers of the seed-42 dwelling read *a
+> doorway and a screen* and *a doorway and an alcove*. The forecast in this
+> section was half wrong in an instructive way: differentiation did need
+> vocabulary the frozen inventory lacked, but it turned out to be
+> **redistribution rather than accumulation** — neither chamber gained anything,
+> and the composer's existing patterns were *divided* between them. New patterns
+> were appended behind role gates that no walk-band composition opens, and the
+> selector filters in inventory order, so every existing composition stayed
+> byte-identical. No metric golden moved and no epoch was declared. The
+> discontinuity is **deferred, not absent**: five gated patterns wait on the
+> first mark committed inside a chamber, which is when they become an epoch
+> retroactively.
 
 ## What is safe to say afterwards
 

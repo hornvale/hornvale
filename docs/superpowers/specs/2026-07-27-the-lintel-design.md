@@ -199,6 +199,17 @@ have no bearing relative to one another — that would be shape, and an address 
 identity — so `enter the hall` is the idiom and `go north` is refused inside a
 structure. This is §7's "APERTURES, NOT STAIRS" taken literally.
 
+> **Amended by The Blocking (2026-07-28).** Movement *between chambers* is still by
+> named aperture, for exactly the reason given: chamber addresses are identity, so
+> they carry no bearing to each other. What is reversed is the second half — `go
+> north` is no longer refused, because The Blocking gave a chamber an interior (a
+> cell lattice) and a bearing inside one room is a real question with a real
+> answer: one cell north. **This is not a flip-flop and it amends no law.** The
+> refusal was correct for a chamber with no interior; the campaign built the
+> interior. Metaplan §1b.6 (*lateral movement never changes band*) is unchanged,
+> because a cell step stays inside the chamber band. `back` stays refused indoors,
+> because it retraces a walk-band trail whatever the interior looks like.
+
 ## 7. Determinism and labels
 
 - **`room/furnishing/v1` already exists** — declared by The Hearth
