@@ -65,6 +65,15 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
 /// graph is per-era, so this is too: a glacial low-stand that exposes a land
 /// bridge raises the ease of every cell it reaches.
 ///
+/// The `conductance > 0.0` filter is intent-documenting, not behaviourally
+/// load-bearing for this sum: `conductance` is never negative by domain
+/// convention (every producer in `graph_derive.rs` emits either `0.0` or a
+/// positive reciprocal), so a filtered-out `0.0` term would contribute
+/// nothing to the total even if the filter were removed. It stays because it
+/// says explicitly, at the call site, "only traversable edges count" —
+/// matching `traversable_neighbors`' idiom directly above — not because a
+/// test can observe it changing this function's output.
+///
 /// Reserved integration seam: this campaign's Task 3 wires this into
 /// `defensibility`, not yet present. Present in all builds (not
 /// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
@@ -3124,7 +3133,11 @@ mod tests {
                 conductance: 0.75,
             },
         );
-        // Ocean-touching adjacency is stored at exactly 0.0 and must not count.
+        // Ocean-touching adjacency is stored at exactly 0.0. Note this is not
+        // a test of the `conductance > 0.0` filter: a zero-valued term
+        // contributes nothing to the sum whether or not it is filtered out
+        // first, so this edge's presence is here only to document the
+        // ocean-touching case, not to exercise exclusion behaviour.
         g.add_edge(
             CellId(0),
             Edge {
