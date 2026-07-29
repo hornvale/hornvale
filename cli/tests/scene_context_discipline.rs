@@ -77,8 +77,75 @@ fn the_catalog_reuses_one_scene_context_per_world() {
     assert!(
         clears >= 2,
         "{CATALOG} clears `SCENE_CTX` in {clears} place(s); both `genesis` and \
-         `hw_new_pinned` must clear it, and `hw_new_pinned` must do so BEFORE \
-         its -1/-2/-3 early returns — a context surviving a refused pinned \
-         call describes the previous planet.{WHY}"
+         `hw_new_pinned` must clear it.{WHY}"
+    );
+
+    // ...and PLACEMENT, which the count above cannot see. Spec §3.3: the
+    // clear happens in the same statement region as `WORLD`'s, never in a
+    // later branch and never only on the success path. Both mutations that
+    // break the invariant — sinking the clear into `hw_new_pinned`'s
+    // `Ok(pins)` arm, or below its `-1`/`-2` returns — leave the count at 2,
+    // so only an index comparison enforces what the message claims.
+    //
+    // `genesis`: the clear must precede the world it would otherwise outlive.
+    assert_before(
+        &fn_body(&text, "fn genesis(seed: u64, pins: &Pins) -> i32 {"),
+        "genesis",
+        "*ctx_ptr = None",
+        "build_world(",
+        "a context built for the OLD world must be dropped before the new one \
+         is built, or the first scene call after genesis serves the previous \
+         planet",
+    );
+    // `hw_new_pinned`: the clear must precede the FIRST early return, which
+    // puts it ahead of all three (-1 length, -2 UTF-8, -3 bad pins).
+    assert_before(
+        &fn_body(
+            &text,
+            "pub extern \"C\" fn hw_new_pinned(seed: u64, len: usize) -> i32 {",
+        ),
+        "hw_new_pinned",
+        "*ctx_ptr = None",
+        "return -1",
+        "any hw_new* call invalidates the prior world FULL STOP; a clear that \
+         sits after an early return (or only in the `Ok(pins)` arm) leaves a \
+         refused pinned call holding a context for the previous planet",
+    );
+}
+
+/// The body text of the function whose signature line is `signature`: from
+/// that signature to the next top-level `}` (a line that is exactly `}`,
+/// which rustfmt guarantees for an item's closing brace). Panics loudly if
+/// the signature moved — a placement assertion that silently stops finding
+/// its subject is worse than no assertion.
+fn fn_body(text: &str, signature: &str) -> String {
+    let start = text.find(signature).unwrap_or_else(|| {
+        panic!(
+            "{CATALOG} no longer contains the signature `{signature}`; this test \
+             slices that function's body to check WHERE `SCENE_CTX` is cleared, \
+             so it cannot verify the invariant until the signature here is \
+             updated to match.{WHY}"
+        )
+    });
+    let rest = &text[start..];
+    let end = rest.find("\n}\n").map_or(rest.len(), |i| i + 2);
+    rest[..end].to_string()
+}
+
+/// Assert `first` appears before `second` in `body`, with both required to
+/// be present. `what` explains the consequence of the wrong order.
+fn assert_before(body: &str, func: &str, first: &str, second: &str, what: &str) {
+    let at_first = body
+        .find(first)
+        .unwrap_or_else(|| panic!("{CATALOG}'s `{func}` does not contain `{first}`.{WHY}"));
+    let at_second = body.find(second).unwrap_or_else(|| {
+        panic!(
+            "{CATALOG}'s `{func}` does not contain `{second}`, so this test can no \
+             longer tell whether `{first}` precedes it.{WHY}"
+        )
+    });
+    assert!(
+        at_first < at_second,
+        "{CATALOG}'s `{func}` has `{first}` AFTER `{second}` — {what}.{WHY}"
     );
 }

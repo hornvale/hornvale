@@ -463,7 +463,6 @@ pub fn region_json(scene: &RegionScene) -> String {
 /// caller sweeps a day loop over one fixed address and would otherwise pay
 /// ~638 ms of derivation per day.
 /// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
-#[allow(clippy::too_many_arguments)] // the address is five contract fields, spelled out
 pub fn temperature_grid_region(
     world: &World,
     face: u32,
