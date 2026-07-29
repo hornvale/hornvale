@@ -31,6 +31,22 @@
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# --- evidence, by construction ------------------------------------------------
+# This run costs tens of minutes. If the only record of what it did is whatever
+# the caller happened to pipe it through, then ANY surprise — a failure, a
+# kill, a dropped ssh — costs the whole run again to re-observe. It happened
+# once (The Siding, 2026-07-29: launched under `| tail -40`, which buffers, so
+# a run that died 60s in looked alive for an hour and left no trace at all).
+#
+# So the script emits its own evidence rather than relying on the call site:
+# the full log goes to a predictable path, and an outcome line is appended on
+# EVERY exit path including signals. `make heavy-log` reads them back.
+HV_HEAVY_LOG_DIR="${HV_HEAVY_LOG_DIR:-/tmp/hornvale-heavy}"
+mkdir -p "$HV_HEAVY_LOG_DIR"
+run_log="$HV_HEAVY_LOG_DIR/heavy-$(date -u +%Y%m%dT%H%M%SZ)-$$.log"
+outcome_log="$HV_HEAVY_LOG_DIR/runs.tsv"
+run_began=$SECONDS
+
 # `status` is handled before the host guard AND before the lock: asking is not
 # authoring, so it is legal from any machine and must never block (0081).
 if [ "${1:-}" = "status" ]; then
@@ -41,6 +57,36 @@ fi
 # shellcheck source=scripts/census-canonical-host.sh
 . "$(dirname "$0")/census-canonical-host.sh"
 require_canonical_census_host heavy || exit 1
+
+# Record the outcome before anything can go wrong, so even a SIGKILL-adjacent
+# death leaves a row saying a run started and never reported. `why` is set by
+# the signal traps; the EXIT trap fires last and carries the real exit code.
+why="exit"
+record_outcome() {
+    local code=$1
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        "$why" \
+        "$code" \
+        "$((SECONDS - run_began))" \
+        "$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || echo '-')" \
+        "$run_log" \
+        >> "$outcome_log"
+}
+trap 'why=SIGINT'  INT
+trap 'why=SIGTERM' TERM
+trap 'why=SIGHUP'  HUP
+# Installed NOW, before the fetch/worktree/lock steps, so a death anywhere in
+# them is still recorded. Replaced further down by the combined
+# claim-release + record trap once there is a claim to release.
+trap 'record_outcome $?' EXIT
+
+# Everything from here is captured. Announce the path on the ORIGINAL stderr
+# first, so a caller who never reads the log still knows where it is.
+echo "heavy-run: logging to $run_log" >&2
+echo "heavy-run: outcomes appended to $outcome_log" >&2
+exec >>"$run_log" 2>&1
+echo "heavy-run: started $(date -Is) on $(hostname -s) as pid $$"
 
 run_root="$repo_root"
 if [ -n "${HV_HEAVY_REF:-}" ]; then
@@ -108,8 +154,9 @@ export HV_CENSUS_LOCK_HELD=$$
     echo "cmdline=heavy-run.sh $*"
 } > "$claim_path"
 # Release the claim on EVERY exit path, including the error ones, so a failed
-# run never wedges the box.
-trap 'rm -f "$claim_path"; echo "heavy-run: finished at $(date -Is)" >&2' EXIT
+# run never wedges the box — and record the outcome in the same trap, so a run
+# that dies cannot leave the ledger silent about it.
+trap 'code=$?; rm -f "$claim_path"; echo "heavy-run: finished at $(date -Is) rc=$code"; record_outcome "$code"' EXIT
 
 bash scripts/timed.sh heavy -- bash scripts/gate-full-heavy.sh
 
