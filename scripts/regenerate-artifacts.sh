@@ -131,6 +131,7 @@ possess_ot_tmp="$(mktemp)"
 run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
 {
     head -n 1 "$possess_ot_tmp"
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and\nsatisfy it — narrated by `wait`, felt directly through `needs`, and\nrecounted with its own reason by `why`. This settlement condenses\ndirectly onto fresh water (settlements-near-rivers): the NPC drinks in\nplace rather than walking to it, so `why` recounts a drink, not a\njourney — not every settlement'"'"'s fate (condensation lands most, not\nall, towns on the river network), but this world'"'"'s own flagship\nsettlement'"'"'s real, measured outcome. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
 } > book/src/gallery/possession-over-time-seed-42.md
@@ -138,26 +139,41 @@ rm -f "$possess_ot_tmp"
 
 # The legibility surface (living-community, T7): a real seed-42 site read back
 # off the ledger as prose — its stratigraphy of occupation layers plus the
-# derived flesh in the present-day grass. Cell 36918 is a genuine abandoned
-# clearing on this world: a bugbear lineage that clung to the same ground
-# across five generations, dwindling as the ice crept down, until the last few
-# walked away and left a child's doll behind. The framing line below is
-# hand-authored (the render replaces the file body, so re-emit it here); the
-# fenced block is the `history` verb's exact, drift-checked output.
+# derived flesh in the present-day grass. The framing paragraph below is
+# hand-authored; the fenced block is the `history` verb's exact, drift-checked
+# output. THE TWO MUST AGREE. `HISTORY_SITE` is the single source of the cell
+# id for both, and `cli/tests/docs_consistency.rs` asserts that the id named in
+# the prose is the one the block reports and that the block is not empty —
+# because they silently disagreed once. The moving-sea epoch (The Sundering)
+# emptied the previously-pinned cell 36918 while its hand-authored paragraph
+# went on describing a lineage that no longer existed there; the drift check
+# passed throughout, since the *generated* half was current.
+history_site=28414
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
     printf '# An Abandoned Clearing — Seed 42\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
     printf 'of every people that ever settled one cell, oldest layer deepest, and the\n'
     printf 'derived flesh — the structures they raised, the residue in the grass\n'
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
-    printf '(structures, residue) derived on demand and never committed. This is a\n'
-    printf 'real clearing on the world of seed 42 — cell 36918 — where a bugbear\n'
-    printf 'lineage returned five times over two centuries, smaller each time, as the\n'
-    printf 'glaciers advanced, until the ice won and a doll was left in the grass.\n\n'
+    printf '(structures, residue) derived on demand and never committed.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
+    printf 'peoples have failed on it. Every one of them arrived the same way: fleeing\n'
+    printf 'the ice of the clearing at cell 7169, looking for kinder ground. They kept\n'
+    printf 'finding the same ground. Bugbears held it seven times, then hobgoblins\n'
+    printf 'twice, then bugbears three times more, from the year 1175 to the year 1725 —\n'
+    printf 'and what the layers show is not progress but repetition: every steading\n'
+    printf 'arrives classical and ends classical, and every one of the twelve held the\n'
+    printf 'ground for exactly twenty-five years. Nor does the count improve: seven\n'
+    printf 'souls in the deepest layer, then six, five, seven, six, five, six, eight,\n'
+    printf 'six, four, three, and three in the last. Not one of the twelve was taken by\n'
+    printf 'force — every single one was ended by the cold, or by ground that stopped\n'
+    printf 'feeding them. What is left in the grass is potsherds, the low turf-lines of\n'
+    printf 'the dwellings, and a scatter of worked flint.\n\n'
     printf '```text\n'
-    run -p hornvale -- history --world "$wsky" --site 36918
+    run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
 } > book/src/gallery/history-seed-42.md
 
@@ -176,8 +192,10 @@ echo "regenerate-artifacts: the legibility surface (the transport topology)" >&2
     printf '# The Transport Topology — Seed 42\n\n'
     printf 'The connection graph'\''s legibility surface: a site'\''s natural sea-lanes and\n'
     printf 'overland routes, and which of the world'\''s naturally-connected regions it\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'belongs to, read off the `connections` verb. Nothing here is authored\n'
     printf 'infrastructure -- a "route" is always a natural corridor the terrain and\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'currents make easy, never a built road (see `EdgeKind`). The graph itself\n'
     printf 'is purely derived (no epoch, no seed draw): the same world always yields\n'
     printf 'the same topology.\n\n'
@@ -258,6 +276,38 @@ run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surr
 # scene-surrounds-seed-42.json, since they render the identical
 # `biome`/`water`/`relief` classifications; the hand-authored .md that
 # includes them carries no such exposure and is checked normally.
+# The variety surface (the-shoal, T4): a global sample of rooms, so the book
+# shows what the world's places actually read like. Roughly two thirds of any
+# sample is sea — which is exactly why this page exists. Before The Shoal every
+# one of those rows said "broken terrain", and no committed artifact sampled a
+# marine room, so the gap was invisible in the book for as long as it existed.
+echo "regenerate-artifacts: the variety surface (a global room sample)" >&2
+{
+    printf '# The Look of the World — Seed 42\n\n'
+    printf 'A Fibonacci-lattice sample of rooms spread evenly over the globe, each\n'
+    printf 'rendered by the locale window: its biome, its strangeness, and the\n'
+    printf 'descriptor drawn for it. Most of any honest sample of a world is ocean,\n'
+    printf 'so most of this page is ocean — the sea read at its own depths, with the\n'
+    printf 'sunlit water described by its light and the lightless water not.\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'Generated by `hornvale locale --world world.json --sample 48`.\n\n'
+    printf '```text\n'
+    run -p hornvale -- locale --world "$wsky" --sample 48
+    printf '```\n'
+} > book/src/gallery/room-sample-seed-42.md
+
+# The findability surface (the-occlusion, T7): the placed exotic sites. The
+# strangeness budget keeps them a rare minority of land by design, so a random
+# `locale --sample` essentially never lands on one — the tier was generated but
+# unreachable. This listing is where it becomes visible.
+echo "regenerate-artifacts: the findability surface (placed exotic sites)" >&2
+{
+    printf '# Strange Sites — Seed 42\n\n'
+    # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
+    printf 'The world'"'"'s placed exotic regimes: where each is, and what makes it\nstrange. Generated by `hornvale locale --world world.json --strange`.\n\n'
+    run -p hornvale -- locale --world "$wsky" --strange
+} > book/src/gallery/strange-sites-seed-42.md
+
 echo "regenerate-artifacts: the legibility surface (the purview, off a possession)" >&2
 mkdir -p book/src/gallery/generated/surrounds-seed-42
 {

@@ -5,11 +5,11 @@ the same world in your browser — same crates, same bytes.)*
 
 ```text
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > map
 [lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
@@ -24,7 +24,7 @@ Ways on: SE, N, SW.
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
-Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > whoami
 A bugbear of Qvooshtvoagootao (agent 7225590595188407000), day 0, room 738918402.
 > enter
@@ -69,11 +69,11 @@ A recess cut back from the main space, deep enough to sit in.
 Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > go n
 [room 739115010, day 0]
-You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > map out 2
 [lens: terrain · depth 10 · radius 4 · lattice-aligned, not north-up]
@@ -83,28 +83,28 @@ Ways on: NE, NW, S.
  +++++++
   + + +
   ways on: NE, NW, S
-  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy sun-warmed in a hollow, tropical seasonal forest
+  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy, sun-warmed, in a hollow, tropical seasonal forest
 
 > enter
 Nothing here is built; there is nothing to enter.
 > look
 [room 739115010, day 0]
-You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > out
 You are already out of doors.
 > go ne
 [room 739115106, day 0]
-You stand in tropical seasonal forest — a liana tangle damp on a rise — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — a liana tangle, damp, on a rise — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: N, SW, SE.
 > back
 [room 739115010, day 0]
-You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy, in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
 Time passes. You sense movement nearby (344 stirred).
 > examine sky
-Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows
 5 things seen:
   room/738918402 = {"schema":"locale/room/v2","id":738918402,"face":2,"path"…

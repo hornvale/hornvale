@@ -6,4 +6,4 @@ $ hornvale scene surrounds --world world.json --room 897392747 --render ascii
  ~~~~___
   ~ ~ ~
   ways on: SW, SE, N
-  legend: a windthrow gap sun-warmed damp on a rise, epipelagic, temperate forest
+  legend: a windthrow gap, sun-warmed, damp, on a rise, epipelagic, temperate forest

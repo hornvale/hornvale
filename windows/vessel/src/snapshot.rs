@@ -269,7 +269,7 @@ mod tests {
                 hostile: false,
             }],
             narration: Narration {
-                prose: "You stand in tropical seasonal forest.".to_string(),
+                prose: "Tropical seasonal forest.".to_string(),
                 nouns: vec![NounEntry {
                     noun: "sky".to_string(),
                     datum: "Night.".to_string(),

@@ -9,6 +9,7 @@ use crate::circulation::{
     RotationRegime, band_count_for, band_index, is_rising_band, prevailing_wind,
 };
 use crate::currents::ocean_current_field;
+use crate::facets::BiomeExpr;
 use crate::habitability;
 use crate::moisture::{moisture_field, upwind_neighbor};
 use crate::precipitation::{
@@ -76,6 +77,7 @@ pub struct GeneratedClimate {
     weather_seed: Seed,
     current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
+    biome_expr: CellMap<BiomeExpr>,
     habitability: CellMap<bool>,
     band_count: Option<u32>,
     obliquity_deg: f64,
@@ -188,10 +190,13 @@ impl GeneratedClimate {
         });
         let weather_seed = crate::weather::weather_seed(inputs.seed);
         let current = ocean_current_field(geo, &is_ocean, band_count);
-        let biome = CellMap::from_fn(geo, |cell| {
+        // The faceted expression is the truth; the legacy `Biome` map is
+        // derived from it in the same pass, so the two views cannot diverge and
+        // neither costs an extra classification.
+        let biome_expr = CellMap::from_fn(geo, |cell| {
             let temp = *mean_temp.get(cell);
             let upwell = is_upwelling(geo, inputs.elevation, inputs.sea_level, cell, band_count);
-            biome::classify(
+            biome::classify_expr(
                 temp,
                 *moisture.get(cell),
                 temp, // SST proxy = surface annual-mean temperature
@@ -202,6 +207,7 @@ impl GeneratedClimate {
                 upwell,
             )
         });
+        let biome = CellMap::from_fn(geo, |cell| biome_expr.get(cell).biome());
         let habitability = habitability::habitability_map(
             geo,
             inputs.elevation,
@@ -225,6 +231,7 @@ impl GeneratedClimate {
             weather_seed,
             current,
             biome,
+            biome_expr,
             habitability,
             band_count,
             obliquity_deg: inputs.obliquity_deg,
@@ -416,6 +423,12 @@ impl GeneratedClimate {
     /// The full biome field (a clone of the derived map).
     pub fn biome_map(&self) -> CellMap<Biome> {
         self.biome.clone()
+    }
+    /// The faceted biome at a cell — realm, formation, and stratum (The
+    /// Stratum §3). [`GeneratedClimate::biome_at`] is this projected through
+    /// [`BiomeExpr::biome`], so the two always agree.
+    pub fn biome_expr_at(&self, cell: CellId) -> BiomeExpr {
+        *self.biome_expr.get(cell)
     }
     /// The per-cell habitability mask.
     /// type-audit: bare-ok(flag)
@@ -1019,6 +1032,52 @@ mod tests {
                 WeatherState::Storm => assert_eq!(c, CloudType::Cumulonimbus),
                 WeatherState::Clear => assert!(matches!(c, CloudType::None | CloudType::Cirrus)),
                 _ => {}
+            }
+        }
+    }
+
+    /// A small mixed land/ocean world, matching the shape the other provider
+    /// tests build.
+    fn sample_climate() -> GeneratedClimate {
+        let geo = Geosphere::new(4);
+        let elev = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[2] > 0.0 {
+                300.0
+            } else {
+                -1000.0
+            };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime))
+    }
+
+    #[test]
+    fn the_expression_and_the_legacy_biome_agree_at_every_cell() {
+        let c = sample_climate();
+        for cell in c.geosphere().cells() {
+            assert_eq!(
+                c.biome_expr_at(cell).biome(),
+                c.biome_at(cell),
+                "cell {cell:?} disagrees between the faceted and legacy views"
+            );
+        }
+    }
+
+    #[test]
+    fn marine_cells_are_in_the_waterworld_and_land_cells_are_not() {
+        use crate::facets::{Realm, Stratum};
+        let c = sample_climate();
+        for cell in c.geosphere().cells() {
+            let e = c.biome_expr_at(cell);
+            assert_eq!(
+                e.realm == Realm::WATERWORLD,
+                c.biome_at(cell).is_marine(),
+                "realm disagrees with is_marine() at {cell:?}"
+            );
+            if e.realm == Realm::OVERWORLD {
+                assert_eq!(e.stratum, Stratum::Surface);
             }
         }
     }

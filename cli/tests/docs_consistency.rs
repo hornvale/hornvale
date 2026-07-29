@@ -870,3 +870,92 @@ fn cite_errors_in_catches_line_wrapped_cites() {
     );
     assert!(errors[0].contains("no-such-decision-here"), "{errors:?}");
 }
+
+/// The history gallery page names a cell in hand-authored prose *and* renders
+/// that cell's `history` output in a fenced block. The two must agree, and the
+/// block must not be empty.
+///
+/// They silently disagreed once. The Sundering's moving-sea epoch emptied the
+/// then-pinned cell 36918 — correctly, since the epoch moved the sea and that
+/// cell stopped being a settleable clearing — while the paragraph above it went
+/// on describing a bugbear lineage that returned five times over two centuries.
+/// The artifact drift check passed the whole time, because the *generated* half
+/// was current; nothing gated the hand-authored half. That is the mirror of the
+/// usual freshness bug, and this is the cheap guard for it.
+#[test]
+fn the_history_page_prose_names_the_cell_it_renders() {
+    let page = read(&repo_root().join("book/src/gallery/history-seed-42.md"));
+
+    // The prose cites "cell N"; the rendered block heads with "The clearing at cell N".
+    let rendered = page
+        .lines()
+        .find_map(|l| l.strip_prefix("The clearing at cell "))
+        .map(|c| c.trim().to_string())
+        .expect("the rendered block heads with 'The clearing at cell N'");
+
+    let cited = page
+        .lines()
+        .filter(|l| !l.starts_with("The clearing at cell "))
+        .find_map(|l| {
+            l.split("cell ").nth(1).and_then(|rest| {
+                let n: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                (!n.is_empty()).then_some(n)
+            })
+        })
+        .expect("the framing prose cites a cell id");
+
+    assert_eq!(
+        cited, rendered,
+        "history-seed-42.md prose cites cell {cited} but renders cell {rendered} — \
+         the hand-authored half has gone stale against the generated half"
+    );
+
+    assert!(
+        !page.contains("Nothing ever settled here"),
+        "the history showcase page renders an EMPTY column — it is the showcase \
+         for stratigraphy and is telling readers the feature did nothing. \
+         Repoint `history_site` in scripts/regenerate-artifacts.sh at a cell with \
+         a real column and rewrite the framing paragraph to match it."
+    );
+
+    // Matching cell ids is necessary but nowhere near sufficient, and this
+    // test learned that the hard way one commit after it was written. The
+    // Tithe's accumulation term re-baselined the deep-history bake while this
+    // page's paragraph was being authored against the pre-Tithe bake; cell
+    // 28414 kept its id and its twelve layers, so both checks above passed,
+    // while the prose went on naming hobgoblins and kobolds at a cell now
+    // held by bugbears, over centuries it no longer spans.
+    //
+    // So also check the two classes of claim that are mechanically
+    // checkable: every people the prose names, and every year it cites, must
+    // actually appear in the rendered block. Narrative claims (how many
+    // souls, what ended them) still are not covered — but those are the ones
+    // an author re-reads, and these are the ones that rot silently.
+    let (prose, block) = page
+        .split_once("```text")
+        .expect("the page has a fenced render block");
+
+    for people in ["bugbear", "hobgoblin", "kobold", "goblin", "gnoll"] {
+        if prose.to_lowercase().contains(people) {
+            assert!(
+                block.to_lowercase().contains(people),
+                "history-seed-42.md prose names {people}s, but no {people} appears \
+                 in the rendered column — the hand-authored half has gone stale \
+                 against the generated half"
+            );
+        }
+    }
+
+    for year in prose.split("the year ").skip(1).map(|rest| {
+        rest.chars()
+            .take_while(char::is_ascii_digit)
+            .collect::<String>()
+    }) {
+        assert!(
+            !year.is_empty() && block.contains(&format!("year {year}")),
+            "history-seed-42.md prose cites the year {year}, which the rendered \
+             column never reports — the hand-authored half has gone stale against \
+             the generated half"
+        );
+    }
+}

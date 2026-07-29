@@ -20,7 +20,7 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
     ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, World, WorldContext, WorldTime, observe,
+    RegistryError, Seed, Temperature, Value, Visibility, World, WorldContext, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{
@@ -102,7 +102,8 @@ pub use graph_derive::{
     land_route_attempt_count,
 };
 pub use history_bake::{
-    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, bake, cascade_sizes, census,
+    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, TributeRelation, bake, cascade_sizes,
+    census,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
@@ -224,9 +225,16 @@ pub enum Sky {
 impl Sky {
     /// The sky at a moment, rendered, from whichever provider this is.
     pub fn sky_at(&self, time: WorldTime) -> SkyReport {
+        self.sky_at_visibility(time, Visibility::CLEAR)
+    }
+
+    /// The sky at a moment through a view of the given [`Visibility`], from
+    /// whichever provider this is. Each provider decides for itself what
+    /// survives a dimmed sky; neither learns what dimmed it.
+    pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
         match self {
-            Sky::Constant(sun) => sun.sky_at(time),
-            Sky::Generated(sky) => sky.sky_at(time),
+            Sky::Constant(sun) => sun.sky_at_visibility(time, vis),
+            Sky::Generated(sky) => sky.sky_at_visibility(time, vis),
         }
     }
 
@@ -481,29 +489,44 @@ fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> Seafloo
 /// biome are barren (defensively — settlements never sit on open ocean, but
 /// the map must still be total).
 pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeClass {
-    use hornvale_climate::Biome;
+    biome_class_of_formation(hornvale_climate::BiomeExpr::for_legacy(biome).formation)
+}
+
+/// The fertility class of a [`hornvale_climate::Formation`] — the same mapping
+/// as [`biome_class`], keyed off the taxonomy tier that actually means
+/// "community type" rather than off the pre-facet enum that mixed communities
+/// with depth strata (The Stratum §2).
+///
+/// This stays at the composition root, and must: `domains/culture` may not
+/// depend on `domains/climate`, so worldgen is what bridges them.
+///
+/// Value-preserving against the legacy `Biome` mapping across the whole
+/// catalog, asserted by
+/// `the_formation_keyed_class_matches_the_biome_keyed_one_for_every_biome` —
+/// this re-keys the source, never the result, because the class feeds
+/// `culture::fertility` and therefore subsistence and the calibration battery.
+pub fn biome_class_of_formation(
+    formation: hornvale_climate::Formation,
+) -> hornvale_culture::BiomeClass {
+    use hornvale_climate::Formation;
     use hornvale_culture::BiomeClass;
-    match biome {
-        Biome::TropicalRainforest
-        | Biome::TropicalSeasonalForest
-        | Biome::TemperateRainforest
-        | Biome::TemperateForest
-        | Biome::Taiga => BiomeClass::Forest,
-        Biome::Savanna | Biome::TemperateGrassland => BiomeClass::Grassland,
-        Biome::Desert | Biome::Shrubland => BiomeClass::Arid,
-        Biome::Tundra => BiomeClass::Cold,
-        Biome::Alpine
-        | Biome::Ice
-        | Biome::SeaIce
-        | Biome::CoralReef
-        | Biome::KelpForest
-        | Biome::HydrothermalVent
-        | Biome::HadalTrench
-        | Biome::Upwelling
-        | Biome::Epipelagic
-        | Biome::Mesopelagic
-        | Biome::Bathypelagic
-        | Biome::Abyssal => BiomeClass::Barren,
+    match formation {
+        Formation::TropicalRainforest
+        | Formation::TropicalSeasonalForest
+        | Formation::TemperateRainforest
+        | Formation::TemperateForest
+        | Formation::Taiga => BiomeClass::Forest,
+        Formation::Savanna | Formation::TemperateGrassland => BiomeClass::Grassland,
+        Formation::Desert | Formation::Shrubland => BiomeClass::Arid,
+        Formation::Tundra => BiomeClass::Cold,
+        Formation::Alpine
+        | Formation::Ice
+        | Formation::SeaIce
+        | Formation::Reef
+        | Formation::KelpForest
+        | Formation::Vent
+        | Formation::Upwelling
+        | Formation::OpenWater => BiomeClass::Barren,
     }
 }
 
@@ -3013,8 +3036,9 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     // world (even one with a corrupt sky pin) returns Ok(empty) without ever
     // deriving climate/sky — the "no place, no phenomena" contract. So this
     // standalone accessor keeps its own body rather than eagerly building a
-    // climate to delegate through `observed_phenomena_from_climate` (which the
-    // almanac render, where a climate already exists, uses instead).
+    // climate to delegate through a pre-built-climate reader (which the almanac
+    // render, where a climate already exists, uses instead — see
+    // `observed_phenomena_occluded`).
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
@@ -3032,12 +3056,19 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     ))
 }
 
-/// [`observed_phenomena`] from a PRE-BUILT climate — builds the phenomena
-/// sources off the shared climate via [`phenomena_sources_from`] instead of
-/// re-deriving one, so the almanac render shares a single climate (The Single
-/// Sculpt). Byte-identical to `observed_phenomena` for the same world's
-/// climate.
-fn observed_phenomena_from_climate(
+/// [`observed_phenomena`] from a PRE-BUILT climate (The Single Sculpt), as an
+/// observer under that day's actual WEATHER sees it — the occluded read.
+///
+/// This is a **presentation** accessor, deliberately separate from the
+/// unoccluded primitive above. The primitive is what genesis and belief
+/// glossing re-derive from (`derived-from-phenomenon` is a committed
+/// predicate, and a goblin's identity-lensed observation is pinned bytewise to
+/// it), so occluding it would rewrite the world: under seed 42's day-0
+/// overcast it cost the pantheon 23 of its 48 deities. A culture's gods form
+/// over generations and must not turn on whether one morning was cloudy.
+///
+/// Occlusion is a property of a MOMENT'S viewing, so it lives here.
+fn observed_phenomena_occluded(
     world: &World,
     day: f64,
     climate: &GeneratedClimate,
@@ -3053,10 +3084,84 @@ fn observed_phenomena_from_climate(
         &ObserverContext {
             place,
             time: WorldTime { day },
-            lens: PerceptionLens::identity(),
+            lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
     ))
+}
+
+// `observed_phenomena_from_climate` — the unoccluded PRE-BUILT-climate reader —
+// was removed when its only caller, the almanac render, moved to
+// `observed_phenomena_occluded` below. That function keeps The Single Sculpt
+// property (it takes the caller's already-built climate rather than deriving
+// one); it simply also applies the day's occlusion, which is what a presented
+// sky wants. The unoccluded reader survives as `observed_phenomena`, which
+// genesis and belief glossing still use.
+
+/// Turn a sky's weather into the occlusion it imposes: a perception lens (how
+/// much attention each venue still earns) and a [`Visibility`] (how much of
+/// the sky reaches the eye). The composition root is the ONLY place weather
+/// becomes occlusion — no domain learns that clouds exist.
+///
+/// Identity and [`Visibility::CLEAR`] under a clear, cloudless sky **by
+/// construction**, the same discipline [`perception_lens`] keeps at the goblin
+/// baseline: `observe` then performs no arithmetic at all, so an unclouded
+/// world is byte-identical to its pre-occlusion self.
+///
+/// Ambient rises above 1.0 deliberately as the sky dims — the occluder
+/// promotes itself. Under a deck you notice the closeness of the air, and the
+/// salience sort does the rest.
+pub fn occlusion(
+    state: hornvale_climate::WeatherState,
+    cloud: hornvale_climate::CloudType,
+) -> (PerceptionLens, Visibility) {
+    use hornvale_climate::{CloudType, WeatherState};
+    // The fraction of the sky that still reaches the eye.
+    let v = match (state, cloud) {
+        // High cirrus over an otherwise clear sky veils without hiding.
+        (WeatherState::Clear, CloudType::Cirrus) => 0.85,
+        (WeatherState::Clear, _) => 1.0,
+        (WeatherState::Fair, _) => 0.7,
+        (WeatherState::Overcast, _) => 0.3,
+        (WeatherState::Rain, _) => 0.1,
+        (WeatherState::Storm, _) => 0.0,
+    };
+    if v == 1.0 {
+        return (PerceptionLens::identity(), Visibility::CLEAR);
+    }
+    let lens = PerceptionLens {
+        day_sky: v,
+        night_sky: v,
+        // Bounded at 1.5, matching `perception_lens`'s ambient range.
+        ambient: 1.0 + (1.0 - v) * 0.5,
+    };
+    // `v` is a literal in [0, 1] on every arm, so `new` cannot fail; the
+    // fallback keeps the function total rather than panicking.
+    (lens, Visibility::new(v).unwrap_or(Visibility::CLEAR))
+}
+
+/// The occlusion lens over a placed observer at `day` — the single place a
+/// cell's weather becomes a lens, so the phenomena paths cannot drift apart.
+/// The identity lens for a position-blind observation: nowhere in particular
+/// has no weather.
+fn occlusion_lens_at(
+    world: &World,
+    climate: &GeneratedClimate,
+    position: Option<hornvale_kernel::GeoCoord>,
+    day: f64,
+) -> PerceptionLens {
+    let Some(coord) = position else {
+        return PerceptionLens::identity();
+    };
+    let Ok(terrain) = terrain_of(world) else {
+        return PerceptionLens::identity();
+    };
+    let cell = terrain.nearest_cell(coord.latitude, coord.longitude);
+    let (lens, _) = occlusion(
+        climate.weather_at(cell, day),
+        climate.cloud_type_at(cell, day),
+    );
+    lens
 }
 
 /// Derive a species' perception lens from its authored vector (spec §4).
@@ -3306,6 +3411,17 @@ fn observe_with_sources(
         &ObserverContext {
             place,
             time: WorldTime { day },
+            // NO occlusion here, deliberately. This is the observation GENESIS
+            // derives from — settlement name glosses and the deities a people
+            // believe in (`derived-from-phenomenon` is a committed predicate).
+            // A culture's pantheon forms over generations; it must not depend
+            // on whether day 0 happened to be overcast. Occluding here cost
+            // seed 42 twenty-three of its forty-eight deities and moved the
+            // world's bytes — see the campaign's determinism note.
+            //
+            // Occlusion is a property of a MOMENT'S observation, so it lives
+            // on the reading paths (`observed_phenomena*`, `sky_report_from`),
+            // not on the path that authors the world.
             lens: perception_lens(perception),
             position,
         },
@@ -4365,6 +4481,23 @@ fn bake_history_from(
     cfg.disposition = peoples
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
+        .collect();
+    // The Tithe §4.2's concealment term, resolved on the same channel and with
+    // the same fallback: `in_group_radius` rides `SocietyVector`, which only
+    // `Settled` kinds carry (decision 0068) — a people without one is absent
+    // from the map and conceals nothing.
+    cfg.in_group_radius = peoples
+        .iter()
+        .filter_map(|&k| wc.society.get(&k).map(|s| (k, s.in_group_radius)))
+        .collect();
+    // The Tithe §4.3a's extraction strategy, resolved on the same channel:
+    // `time_horizon` rides `MindVector` beside the disposition above, so a
+    // people whose psyche is missing is simply absent from the map and is read
+    // at the neutral middle of the axis (never at zero, which would make an
+    // unauthored patron the cruellest one there is).
+    cfg.time_horizon = peoples
+        .iter()
+        .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
         .collect();
     let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
@@ -5664,19 +5797,15 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
-    sky_report_from(world, time, &terrain, &climate)
+    let at = flagship_cell(world, &terrain);
+    sky_report_from(world, time, &terrain, &climate, at)
 }
 
-/// The sky report given already-derived terrain and climate — the reuse seam
-/// so callers holding the providers don't re-derive them (The Retainer).
-pub fn sky_report_from(
-    world: &World,
-    time: WorldTime,
-    terrain: &GeneratedTerrain,
-    climate: &GeneratedClimate,
-) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
-    let cell = hornvale_terrain::places(world)
+/// The canonical-grid cell of the world's flagship settlement, if it has one.
+/// `None` for a settlement-less world — seed 123 generates one, and its sky is
+/// honestly placeless rather than cell 0's by accident.
+fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_kernel::CellId> {
+    hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
             world
@@ -5686,9 +5815,31 @@ pub fn sky_report_from(
         })
         .and_then(|p| place_coord(world, p.id))
         .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
-        .unwrap_or(hornvale_kernel::CellId(0));
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+///
+/// `at` is the OBSERVER's cell: whose weather this sky describes, and whose
+/// occlusion dims it. It used to be resolved here from the flagship
+/// settlement, so a walker a thousand miles away still got the capital's
+/// weather — and a settlement-less world silently borrowed cell 0's. `None`
+/// means nowhere in particular, which has no weather at all: the sky comes
+/// back unobstructed and unannotated.
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    _terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    at: Option<hornvale_kernel::CellId>,
+) -> Result<SkyReport, BuildError> {
+    let Some(cell) = at else {
+        return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
+    };
     let state = climate.weather_at(cell, time.day);
     let cloud = climate.cloud_type_at(cell, time.day);
+    let (_, vis) = occlusion(state, cloud);
+    let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
         "{} The sky is {}.",
         report.description,
@@ -6254,9 +6405,17 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
+        sky: sky_report_from(
+            world,
+            WorldTime { day: 0.0 },
+            &terrain,
+            &climate,
+            flagship_cell(world, &terrain),
+        )?,
         climate: climate_report(world),
-        phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
+        // The almanac PRESENTS the sky, so it reads the occluded observation:
+        // night-stars must not stay salient under a rain deck.
+        phenomena: observed_phenomena_occluded(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
         land_lines: land_lines_from(&terrain),
         biome_lines: biome_lines_from(&climate),
@@ -6340,6 +6499,161 @@ mod tests {
             &SettlementPins::default(),
         )
         .expect("seed 42 builds")
+    }
+
+    #[test]
+    fn a_clear_sky_occludes_nothing_by_construction() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let (lens, vis) = occlusion(WeatherState::Clear, CloudType::None);
+        assert!(
+            lens.is_identity(),
+            "a clear sky must yield the identity lens, or `observe` stops \
+             being a byte-level no-op on the legacy path"
+        );
+        assert_eq!(vis, Visibility::CLEAR);
+    }
+
+    #[test]
+    fn thicker_cloud_occludes_monotonically() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let states = [
+            (WeatherState::Clear, CloudType::None),
+            (WeatherState::Fair, CloudType::Cumulus),
+            (WeatherState::Overcast, CloudType::Stratus),
+            (WeatherState::Rain, CloudType::Nimbostratus),
+            (WeatherState::Storm, CloudType::Cumulonimbus),
+        ];
+        let mut last = f64::INFINITY;
+        for (s, c) in states {
+            let (lens, vis) = occlusion(s, c);
+            assert!(
+                vis.get() <= last,
+                "visibility must not rise as cloud thickens: {s:?}"
+            );
+            last = vis.get();
+            assert!(lens.night_sky <= 1.0, "the sky never brightens: {s:?}");
+            assert!(
+                lens.ambient >= 1.0,
+                "the occluder promotes itself: {s:?} gave ambient {}",
+                lens.ambient
+            );
+        }
+    }
+
+    #[test]
+    fn a_storm_hides_the_sky_entirely() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let (_, vis) = occlusion(WeatherState::Storm, CloudType::Cumulonimbus);
+        assert_eq!(vis.get(), 0.0);
+    }
+
+    #[test]
+    fn high_cirrus_over_a_clear_sky_dims_only_slightly() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let (_, vis) = occlusion(WeatherState::Clear, CloudType::Cirrus);
+        assert!(vis.get() > 0.75, "cirrus must not cull the stars");
+        assert!(vis.get() < 1.0, "but it is not nothing");
+    }
+
+    #[test]
+    fn occlusion_composes_with_species_perception() {
+        // `perception_lens` is already non-identity for non-goblin species, so
+        // occlusion must MULTIPLY with it, not replace it.
+        let nocturnal = hornvale_species::PerceptionVector {
+            activity: hornvale_species::ActivityCycle::Nocturnal,
+            sky_attention: 0.5,
+            night_vision: 0.5,
+        };
+        let species = perception_lens(&nocturnal);
+        assert!(!species.is_identity(), "fixture must be non-identity");
+        let (occ, _) = occlusion(
+            hornvale_climate::WeatherState::Overcast,
+            hornvale_climate::CloudType::Stratus,
+        );
+        let composed = occ.compose(&species);
+        assert_eq!(composed.night_sky, occ.night_sky * species.night_sky);
+        assert_eq!(composed.ambient, occ.ambient * species.ambient);
+        assert_eq!(composed.day_sky, occ.day_sky * species.day_sky);
+    }
+
+    /// Genesis must observe an UNOCCLUDED sky.
+    ///
+    /// Phenomena are not purely a read: `derived-from-phenomenon` is a
+    /// committed predicate, so the sky a people observes at genesis decides
+    /// which deities they believe in and how their settlements are named.
+    /// Wiring occlusion into that path (rather than into the reading paths)
+    /// culled the faint night-stars under seed 42's day-0 overcast and cost
+    /// the world 23 of its 48 deities — a save-format change wearing the
+    /// costume of a presentation fix.
+    ///
+    /// The three 48s are the guard, and they are the pre-Occlusion values: a
+    /// culture's pantheon forms over generations and must not depend on
+    /// whether day 0 happened to be cloudy.
+    ///
+    /// `name-gloss` is a corroborating count, not part of that claim — it
+    /// counts every glossed name in the world, so any campaign that adds
+    /// named things moves it while leaving the occlusion question untouched.
+    /// The Tithe did exactly that: subordination gave the deep-history bake
+    /// an accumulation term, seed 42's world went 7350 → 26309 facts under a
+    /// declared genesis epoch, and the gloss count went 207 → 367 with all
+    /// three 48s unchanged. Re-pinned here rather than dropped, because an
+    /// exact count is the stronger check; if it moves again, ask whether the
+    /// moving campaign added names or culled phenomena, and read the 48s.
+    #[test]
+    fn genesis_observes_an_unoccluded_sky() {
+        let world = vigil_world();
+        let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
+        assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 48);
+        assert_eq!(count("deity-name"), 48);
+        assert_eq!(count("name-gloss"), 367);
+    }
+
+    #[test]
+    fn two_places_can_have_different_skies_on_the_same_day() {
+        // The assertion that could not hold while weather was resolved from
+        // the flagship settlement: every cell reported the capital's sky.
+        let world = vigil_world();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
+        let day = WorldTime { day: 0.0 };
+        let mut seen = std::collections::BTreeSet::new();
+        for cell in terrain.geosphere().cells().take(400) {
+            let r = sky_report_from(&world, day, &terrain, &climate, Some(cell)).unwrap();
+            seen.insert(r.description);
+        }
+        assert!(
+            seen.len() > 1,
+            "every cell reported an identical sky — weather is still pinned to one place"
+        );
+    }
+
+    #[test]
+    fn nowhere_in_particular_has_no_weather() {
+        let world = vigil_world();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
+        let r = sky_report_from(&world, WorldTime { day: 0.0 }, &terrain, &climate, None).unwrap();
+        assert!(
+            !r.description.contains("The sky is"),
+            "a placeless observation must not borrow a cell's weather: {}",
+            r.description
+        );
+    }
+
+    #[test]
+    fn the_formation_keyed_class_matches_the_biome_keyed_one_for_every_biome() {
+        // Value-preserving by construction is not enough: fertility feeds
+        // subsistence and the calibration battery, so prove it across the
+        // whole catalog.
+        for b in hornvale_climate::Biome::catalog() {
+            let formation = hornvale_climate::BiomeExpr::for_legacy(*b).formation;
+            assert_eq!(
+                biome_class_of_formation(formation),
+                biome_class(*b),
+                "{b:?} changes fertility class under the formation mapping"
+            );
+        }
     }
 
     /// The predicate sequence committed for one species entity, in ledger order.

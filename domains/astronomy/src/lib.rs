@@ -65,8 +65,8 @@ pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
-    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, RegistryError, Venue, Void,
-    WorldTime,
+    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, RegistryError, Venue, Visibility,
+    Void, WorldTime,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -461,6 +461,12 @@ impl ConstantSun {
                 .to_string(),
             bodies: vec!["the sun".to_string()],
         }
+    }
+
+    /// The sky at `_time` through a view of `_vis` — which, at tier 0, is the
+    /// same sky. The tier-0 sun is a stipulation, not a body: nothing dims it.
+    pub fn sky_at_visibility(&self, time: WorldTime, _vis: Visibility) -> SkyReport {
+        self.sky_at(time)
     }
 }
 

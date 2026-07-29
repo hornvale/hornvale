@@ -75,10 +75,18 @@ pub const OCC_NOTABILITY: &str = "occ-notability";
 /// present-frame residue).
 /// type-audit: bare-ok(identifier-text)
 pub const IS_RUIN: &str = "is-ruin";
+/// Predicate: the community this community pays standing tribute to (The
+/// Tithe, functional, Entity). Carried on the SUBORDINATE's subject — a
+/// community has at most one patron, so the relation is functional in this
+/// direction and in this direction only; a patron holding many subordinates is
+/// read back off the object index.
+/// type-audit: bare-ok(identifier-text)
+pub const PAYS_TRIBUTE_TO: &str = "pays-tribute-to";
 
 /// Register history's contribution to the concept registry: the world-level
-/// `history-now` scalar, one predicate per `OccupationRecord` field, plus the
-/// `is-occupation`/`is-ruin` marker predicates.
+/// `history-now` scalar, one predicate per `OccupationRecord` field, the
+/// `is-occupation`/`is-ruin` marker predicates, and the standing
+/// `pays-tribute-to` relation between two communities.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(
         HISTORY_NOW,
@@ -114,6 +122,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     )?;
     registry.register_predicate(OCC_NOTABILITY, true, "how notable the occupation was")?;
     registry.register_predicate(IS_RUIN, true, "subject is a ruin (a dead occupation)")?;
+    registry.register_predicate(
+        PAYS_TRIBUTE_TO,
+        true,
+        "the community this community pays standing tribute to",
+    )?;
     Ok(())
 }
 

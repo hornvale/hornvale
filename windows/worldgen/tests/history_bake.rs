@@ -422,9 +422,19 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     eprintln!("ESCARPMENT census: {c:?}");
     // (a) The mask never evicts anyone here: every displacement in this world
     //     is conflict, not climate.
+    //
+    //     `migrated` counts BOTH orderly moves — the climate eviction this
+    //     clause is about, and spec §4.3d's vassal flight, which shares the
+    //     tally deliberately (a flight is a self-directed move, never a
+    //     `fled`). `vassal_flights` is the flight subset, so the climate
+    //     eviction count is the difference, and it is the difference this
+    //     clause has always meant. Comparing `migrated` against zero read as
+    //     the same claim only while no flight happened to fire on this
+    //     fixture, which stopped being true the moment a fleeing vassal kept
+    //     its relation (spec §4.3e) and so had reason to leave more than once.
     assert_eq!(
-        c.migrated, 0,
-        "the mask must never evict anyone here: {c:?}"
+        c.migrated, c.vassal_flights,
+        "the mask must never evict anyone here — every orderly move must be a flight: {c:?}"
     );
     // (b) Conflict fires…
     assert!(c.raided > 0, "no raid fired on the escarpment: {c:?}");
@@ -538,6 +548,319 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     assert_eq!(
         h.records, h2.records,
         "the bake must be deterministic (same seed → identical records)"
+    );
+}
+
+/// A **value-flat** world: every cell carries the same capacity and every cell
+/// is habitable in the single era. Two properties make it the exact negative
+/// control the subordination trigger needs (spec §4.1):
+///
+/// - **No cell is ever worth more than its neighbour**, so the shipped covet
+///   test (`eff_capacity(target) > eff_capacity(raider)`) is false *everywhere,
+///   always*. Eviction is impossible by construction, not by luck of the seed.
+/// - **Nobody is ever crowded and nobody is ever evicted**: capacity 120 sits
+///   far above the genesis (10) and daughter (8) populations, and the logistic
+///   growth term asymptotes at pressure 1, well below `COLLAPSE_PRESSURE`. So
+///   every community stays productive — `has_spoils` holds — and no climate
+///   mask ever moves anybody.
+///
+/// What is left is a pure strength gradient: communities founded at different
+/// years sit at wildly different populations (and reach their tech horizons at
+/// different years), so a mature genesis community towers over a fresh daughter
+/// next door. Under the shipped rule that neighbour is invisible — poorer land
+/// is not coveted, so a strong community simply ignores it. Under tribute the
+/// people are the prize, and it is milked where it stands.
+fn value_flat_fixture() -> (
+    Geosphere,
+    CellMap<f64>,
+    CellMap<f64>,
+    Vec<EraClimate>,
+    CellMap<bool>,
+) {
+    let geo = Geosphere::new(1); // 42 cells
+    let capacity = CellMap::from_fn(&geo, |_| 120.0);
+    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    let refugia = CellMap::from_fn(&geo, |_| false);
+    let era = EraClimate {
+        day: 0.0,
+        ice: CellMap::from_fn(&geo, |_| false),
+        habitable: CellMap::from_fn(&geo, |_| true),
+        sea_level: e(0.0),
+        ice_fraction: 0.0,
+    };
+    (geo, capacity, river_prox, vec![era], refugia)
+}
+
+#[test]
+fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
+    // The Tithe's founding claim: asset mobility decides how a raid ends
+    // (spec §4.1). The prize the shipped rule knows is IMMOBILE — the cell —
+    // so a raid can only evict, and a neighbour whose land is no better is
+    // ignored outright (`t_val <= raider_val { continue }`). The prize this
+    // task adds is MOBILE — the people and their product — takeable
+    // repeatedly without displacing anyone.
+    //
+    // The fixture makes the shipped path IMPOSSIBLE: capacity is uniform, so
+    // the covet test is false on every pair in every era. Any raid this world
+    // resolves is therefore the new branch, and `raided == 0` is asserted
+    // alongside so the test cannot pass by the old mechanism firing.
+    let h = value_flat_history();
+    let c = census(&h);
+    // (a) The world really is value-flat and quiet: no eviction, no climate
+    //     displacement, nobody starved. Nothing here can explain a raid.
+    assert_eq!(
+        c.raided, 0,
+        "equal-value land: eviction must not fire: {c:?}"
+    );
+    assert_eq!(c.fled, 0, "no eviction, so nobody may be driven off: {c:?}");
+    assert_eq!(
+        c.migrated, 0,
+        "the mask must never evict anyone here: {c:?}"
+    );
+    // (b) …and the new branch fired anyway.
+    assert!(
+        c.subordinations_formed > 0,
+        "a productive, beatable, no-richer neighbour must be subordinated: {c:?}"
+    );
+    // (c) The relation is REAL, not just a counter: relations still STAND at
+    //     `now`, and at least one patron holds a subordinate. Both are read off
+    //     the live relation table, so they fail if the tally is bumped without
+    //     a relation being recorded (mutation-verified).
+    assert!(
+        c.tribute_relations_at_now > 0,
+        "the tally moved but no relation stands at now: {c:?}"
+    );
+    assert!(
+        c.max_subordinates > 0,
+        "the tally moved but no relation is held at now: {c:?}"
+    );
+    // Depth (spec §9's deferred chaining lever, which §5 preregisters the
+    // headline on the absence of) is bound on this and every other REAL bake by
+    // the `debug_assert!` at the point of formation in `history_bake.rs` — the
+    // table is private, and an end-of-bake reading would in any case miss a
+    // chain that formed and dissolved mid-span. Tests run in debug.
+    // (d) Tribute redistributes rather than consuming: subordination moves
+    //     nobody, so every community that was ever opened and not starved is
+    //     still standing.
+    assert_eq!(
+        c.alive_at_now, c.records_total,
+        "subordination must displace and kill nobody: {c:?}"
+    );
+}
+
+/// [`value_flat_fixture`]'s world, baked over twenty 25-year epochs — long
+/// enough that the relations it forms have epochs left to actually collect
+/// over. "A relation stands" and "tribute flowed" are genuinely different
+/// claims: a remittance is paid out of the epoch's growth first and only then
+/// out of the stock standing above `FARM_FLOOR` (spec §4.2b), so a relation
+/// formed on the last epoch of a bake collects once and learns nothing.
+/// Shared by every value-flat test, so they bake one world between them
+/// rather than two identical ones.
+fn value_flat_history() -> hornvale_worldgen::history_bake::History {
+    value_flat_history_with(std::collections::BTreeMap::new())
+}
+
+/// [`value_flat_history`] with an authored `in_group_radius` map — the one
+/// input the concealment arms differ in. An empty map is the fail-open the
+/// composition root hands a bake whose peoples carry no `SocietyVector`, so
+/// `value_flat_history()` is exactly the world every other value-flat test
+/// reads.
+fn value_flat_history_with(
+    in_group_radius: std::collections::BTreeMap<KindId, f64>,
+) -> hornvale_worldgen::history_bake::History {
+    let (geo, cap, river, eras, refugia) = value_flat_fixture();
+    let people = peoples();
+    let cfg = BakeConfig {
+        start_year: 0.0,
+        end_year: 500.0,
+        epoch_years: 25.0,
+        in_group_radius,
+        ..BakeConfig::default_millennia()
+    };
+    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
+    bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    )
+}
+
+#[test]
+fn tribute_flows_along_a_standing_relation() {
+    // Spec §4.2/§4.2a over a REAL bake: Task 2 built the standing relation but
+    // nothing moved along it. What must be true now is that the relation is a
+    // conduit — wealth leaves the subordinate and lands in the patron's store.
+    //
+    // The other half of the claim — that being farmed is SURVIVABLE, which
+    // since amendment 3 means "never bled through `FARM_FLOOR`" (spec §4.2b,
+    // §8.3) — is deliberately NOT asserted here, because in this fixture no
+    // census reading can carry it. A headcount identity (`alive_at_now ==
+    // records_total`) is unreddenable by any tribute defect: starvation needs
+    // population at `COLLAPSE_PRESSURE` times capacity, the logistic growth
+    // term is bounded BY capacity, and tribute only ever LOWERS population —
+    // so nobody here can die however hard they are farmed, and a subordinate
+    // drained to nothing stays alive at zero. The survival claim is bound
+    // instead where the state it is about is visible:
+    // `no_subordinate_is_farmed_below_the_farm_floor_by_tribute` (in
+    // `history_bake.rs`) drives the real epoch loop and reads the
+    // per-subordinate population between epochs, which a finished `History`
+    // does not carry.
+    let h = value_flat_history();
+    let c = census(&h);
+    assert!(
+        c.subordinations_formed > 0,
+        "precondition: a relation must form before anything can flow: {c:?}"
+    );
+    assert!(
+        c.tribute_collected > 0.0,
+        "tribute must actually flow along a standing relation: {c:?}"
+    );
+    assert!(
+        c.max_stores_at_now > 0.0,
+        "the flow must LAND: some patron must hold a store at now: {c:?}"
+    );
+}
+
+#[test]
+fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_down() {
+    // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair —
+    // and **restated at task 5b, because amendment 3 inverted what it
+    // measures.** The history is worth keeping, because the inversion is a
+    // finding about the amended mechanism and not a defect in it:
+    //
+    //   * T4 built this as `an_insular_world_yields_less_tribute_than_an_
+    //     expansive_one`, which its own review cut back to a DIRECT-term claim
+    //     (`concealment_lowers_the_direct_term_over_a_structurally_invariant_
+    //     fixture`) after the whole-world proposition proved FALSE on seed 42:
+    //     `tribute_collected` ROSE +9.1% (6002.56 -> 6549.04) with concealment
+    //     switched on, because a concealing vassal lives longer and pays for
+    //     more epochs than it discounts per epoch.
+    //   * Amendment 3 (spec §4.2b) then brought that inversion onto THIS
+    //     fixture too, and the reason is structural rather than incidental.
+    //     Concealment scales the AVAILABILITY (`(surplus + bleed) × (1 −
+    //     concealment)`), and the bleed makes availability the whole stock
+    //     above `FARM_FLOOR` — normally far above the standing demand. So the
+    //     `min` selects the assessment branch on most collections and the
+    //     concealment factor never binds there at all. What concealment then
+    //     did was shield the vassal: it was bled more slowly, stayed larger,
+    //     kept clearing its patron's demand, and therefore paid MORE over the
+    //     span, not less. Measured then: insular 419.87 vs expansive 412.60
+    //     (+1.8%) over 20 epochs and 244 collections in each arm.
+    //   * **Amendment 4 (spec §4.3a) flipped it back, and the flip is the
+    //     amendment working.** The reach now stops at the patron's setpoint
+    //     rather than at `FARM_FLOOR`, so availability is what stands above
+    //     that setpoint — a much smaller number, of the order of the epoch's
+    //     increment — and it is no longer far above the standing demand. The
+    //     `min` therefore selects the availability branch often, where the
+    //     concealment factor DOES bind, and a hidden share is once again
+    //     simply a share not handed over. The shielding effect that reversed
+    //     the sign at T5b is gone with the thing it shielded against: a vassal
+    //     is not bled toward a floor it cannot recover from any more, so
+    //     concealment has far less to save it from. Measured here: insular
+    //     306.43 vs expansive 324.89 (−5.7%), over the same structurally
+    //     invariant fixture.
+    //
+    // **The direct term itself is unmoved and is still bound**, in
+    // `an_insular_subordinate_remits_less_than_an_expansive_one` (in
+    // `history_bake.rs`), which compares the two radii against the SAME state
+    // in a single epoch — the only frame in which "insular remits less" is a
+    // statement about concealment rather than about two different histories.
+    //
+    // What this test binds is the pair of claims that survive the amendment,
+    // and both are sharp:
+    //
+    //   (a) the fixture is genuinely structurally invariant — same formations,
+    //       same transfers, same standing relations, same collections, same
+    //       records, same survivors — so the arms differ in what MOVED and in
+    //       nothing else; and
+    //   (b) concealment is NOT INERT: the totals differ. Delete the term (a
+    //       concealment of zero for everybody) and the two arms become
+    //       bit-identical, which reddens (b) — mutation-verified.
+    //
+    // The two arms are the same world, the same seed, the same span and the
+    // same peoples; they differ in EXACTLY ONE input — the authored
+    // `in_group_radius` of the peoples that live in it — so only concealment
+    // can explain the gap between what the patrons collected. Task 6's
+    // attribution must therefore read `tribute_collected` alongside
+    // `tribute_collection_events` and `tribute_relations_at_now`: the sign of
+    // this term has moved twice under two amendments without the term itself
+    // changing a line, because what it multiplies — the availability branch —
+    // changed shape underneath it. A volume reading alone cannot tell "moved
+    // the rate" from "moved the payer", and here it has been each in turn.
+    let expansive: std::collections::BTreeMap<KindId, f64> =
+        peoples().into_iter().map(|k| (k, 1.0)).collect();
+    let insular: std::collections::BTreeMap<KindId, f64> =
+        peoples().into_iter().map(|k| (k, 0.0)).collect();
+
+    let ce = census(&value_flat_history_with(expansive));
+    let ci = census(&value_flat_history_with(insular));
+
+    assert!(
+        ce.subordinations_formed > 0 && ci.subordinations_formed > 0,
+        "precondition: relations must form in both arms: expansive {ce:?}, insular {ci:?}"
+    );
+    assert!(
+        ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
+        "precondition: tribute must flow in BOTH arms — a difference over two zeros \
+         proves nothing: expansive {}, insular {}",
+        ce.tribute_collected,
+        ci.tribute_collected
+    );
+    // (a) Structural invariance — what makes the comparison clean.
+    for (name, e, i) in [
+        (
+            "subordinations_formed",
+            ce.subordinations_formed,
+            ci.subordinations_formed,
+        ),
+        (
+            "patronage_transfers",
+            ce.patronage_transfers,
+            ci.patronage_transfers,
+        ),
+        (
+            "tribute_relations_at_now",
+            ce.tribute_relations_at_now,
+            ci.tribute_relations_at_now,
+        ),
+        (
+            "tribute_collection_events",
+            ce.tribute_collection_events,
+            ci.tribute_collection_events,
+        ),
+        ("records_total", ce.records_total, ci.records_total),
+        ("alive_at_now", ce.alive_at_now, ci.alive_at_now),
+        ("raided", ce.raided, ci.raided),
+        ("migrated", ce.migrated, ci.migrated),
+        ("collapsed", ce.collapsed, ci.collapsed),
+    ] {
+        assert_eq!(
+            e, i,
+            "the arms must differ in what MOVED and in nothing else: {name} is {e} expansive \
+             vs {i} insular, so this fixture is no longer structurally invariant and the \
+             comparison below would be reading two different histories"
+        );
+    }
+    // (b) …and concealment is not inert. Asserted with its measured SIGN,
+    //     which under the setpoint runs the direct way again: what a vassal
+    //     hides is a share it does not hand over, and the availability branch
+    //     — the only place the factor binds — is now the branch that is
+    //     usually selected.
+    assert!(
+        ci.tribute_collected < ce.tribute_collected,
+        "concealment must move what the patrons collected — and under the setpoint (amendment \
+         4) it moves it DOWN again, because the reach stops at the patron's target rather than \
+         at the floor, so availability is of the order of the epoch's increment and the \
+         concealment factor actually binds: insular {} vs expansive {}. Equal totals mean the \
+         term is inert.",
+        ci.tribute_collected,
+        ce.tribute_collected
     );
 }
 

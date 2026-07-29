@@ -29,18 +29,29 @@
 //!
 //! ## Measured (seed 42, `BuildDepth::Settlements`, default `GraphConfig`)
 //!
-//! Recorded once, on this machine (`cargo test --test graph_cost -- --ignored
-//! --nocapture`), before the budgets below were chosen:
+//! Recorded on this machine (`cargo test --test graph_cost -- --ignored
+//! --nocapture`), before the budgets below were chosen. The first line is the
+//! original Connection Graph measurement; the second is The Tithe's
+//! re-measurement, on a world its tribute mechanism made materially larger:
 //!
 //! ```text
 //! 129 settlements, 1684 land-route attempts (of 8256 possible pairs), 2.6251s wall-time
+//! 344 settlements, 10663 land-route attempts (of 58996 possible pairs), 30.5-31.4s wall-time
 //! ```
 //!
 //! The radius bound (`GraphConfig::default().land_route_radius = 12`) is
-//! doing real filtering work -- 1684 of 8256 possible settlement pairs
-//! (≈20%) -- not merely a no-op, and the whole derivation (adjacency + water
-//! routes + all 1684 land-route searches) finishes in ~2.6s. See the
-//! constants below for the budgets chosen against these numbers.
+//! doing real filtering work at both sizes -- 1684 of 8256 possible pairs
+//! (≈20%) then, 10 663 of 58 996 (≈18%) now -- not merely a no-op. **The
+//! settlement count nearly trebled between the two readings and the budgets
+//! were re-baselined for it** (see [`WALL_TIME_BUDGET_SECS`] and
+//! [`ATTEMPT_BUDGET`], which carry the counterfactual measurement showing this
+//! is a bigger living world rather than a slower derivation).
+//!
+//! `tithe_tribute_bake_stays_within_budget` is a third battery (The Tithe,
+//! living-community C3 slice 2, Task 7 -- spec §8.5): it bounds the
+//! **tribute bake's wall-time** and the **relation table's size**, the
+//! latter of which nothing in the tree bounded before. See that test's
+//! constants for its own measured numbers and for what each ceiling catches.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -59,18 +70,42 @@ use hornvale_worldgen::{
 use std::time::Instant;
 
 /// Wall-time budget for one `connection_graph_of` call on a seed-42 world at
-/// `BuildDepth::Settlements`. Measured: **2.6251s** (module doc). Budgeted
-/// at roughly 5.7x that -- a falsification ceiling for a real regression
-/// (e.g. an accidentally-unbounded search or a much slower machine), not a
-/// target to approach.
-const WALL_TIME_BUDGET_SECS: f64 = 15.0;
+/// `BuildDepth::Settlements`.
+///
+/// **Re-baselined by The Tithe (Task 7), and the reason is the campaign's own
+/// headline.** The original budget was 15.0s against a measured 2.6251s on a
+/// world of 129 settlements (module doc). Tribute keeps communities alive that
+/// predation alone destroyed, so seed 42 now stands at **344** settlements at
+/// `now` where The Tumult's build stood at 203 — and the land-route derivation
+/// is superlinear in that count. Re-measured on this machine, three solo runs:
+/// **31.397, 30.775, 30.539s**. The counterfactual was taken rather than
+/// assumed: with subordination disabled (≈ the pre-Tithe world) the same call
+/// on the same code measures **7.972s over 203 settlements** and passes the old
+/// budget, so this is a bigger living world and not a slower derivation.
+///
+/// Budgeted at **90.0s**, ≈2.9× the re-measured value. Kept nearer the
+/// measurement than the old 5.7× because 5.7× of 31s would be a three-minute
+/// ceiling no plausible regression could reach.
+const WALL_TIME_BUDGET_SECS: f64 = 90.0;
 
 /// Land-route `least_cost` attempt-count budget (settlement pairs within
-/// `GraphConfig::default().land_route_radius`). Measured: **1684 attempts**
-/// against 129 settlements (module doc; `C(129,2) = 8256` possible pairs
-/// total, so the radius bound cut the search space by ≈80%). Budgeted at
-/// roughly 3x that measured value.
-const ATTEMPT_BUDGET: usize = 5000;
+/// `GraphConfig::default().land_route_radius`).
+///
+/// **Re-baselined by The Tithe (Task 7)**, same cause as
+/// [`WALL_TIME_BUDGET_SECS`] above: 129 → 344 settlements. Originally 5000
+/// against a measured 1684 attempts; the pre-Tithe world had already drifted to
+/// **4209** (measured with subordination disabled) — 84% of that budget — and
+/// The Tithe's larger world takes it to **10 663 attempts of `C(344,2)` =
+/// 58 996 possible pairs**.
+///
+/// Budgeted at **30 000**, and chosen against the radius bound's own job rather
+/// than as a multiple of the measurement: 30 000 is ≈51% of the possible pairs
+/// on today's world, so this ceiling fires exactly when
+/// `GraphConfig::land_route_radius` has stopped filtering most of the search
+/// space (it filters ≈82% today) — which is the regression the bound exists to
+/// catch, and it is stated in pairs rather than in a ratio so it does not
+/// silently loosen as the world grows again.
+const ATTEMPT_BUDGET: usize = 30_000;
 
 /// The cost gate: build seed-42 to `BuildDepth::Settlements`, derive the
 /// connection graph, and assert both the measured wall-time and the
@@ -266,5 +301,159 @@ fn tumult_predation_bake_stays_within_budget() {
          of size up to {max_size_upper_bound}, budget {CASCADE_SIZE_BUDGET} -- avalanches are \
          supposed to dissipate against VIABLE_MIN well short of the depth cap, not be silently \
          truncated by it"
+    );
+}
+
+/// Wall-time budget for one [`history_for`] call on seed 42 — spec §8.5's
+/// **bake wall-time**. That call builds to `BuildDepth::Terrain`, reconstructs
+/// terrain/climate, derives the per-era graphs and runs the whole deep-history
+/// bake, of which The Tithe's tribute path (subordination, collection, flight,
+/// revolt, dissolution) is the part this campaign added.
+///
+/// **Measured** (this machine, debug profile — the profile `make gate-full`
+/// runs the heavy tier in — five consecutive solo runs before this budget was
+/// chosen): **2.103, 2.388, 3.778, 2.798, 2.106 s**, median **2.39 s**. Under
+/// three-way parallel load in the same binary the same call measured **10.002,
+/// 1.591, 1.506 s**.
+///
+/// **State what this catches, because the spread already says what it cannot.**
+/// The loaded spread on this box is **6.6×** (1.51 s to 10.00 s) for a bake
+/// whose *work* did not change by one instruction, so no ceiling read off a
+/// wall-clock here can catch a 2× regression without firing spuriously on an
+/// unlucky run. Budgeted at **30 s** — 12.6× the solo median and **3.0× the
+/// worst loaded run observed** — which catches an order-of-magnitude cost
+/// regression and nothing finer. The concrete shape it is here for: the raid
+/// classification in `maybe_raid` runs `self.tribute.values().any(..)` and
+/// `.filter(..).count()` **per candidate, per raider, per epoch**, so bake cost
+/// carries a `communities × neighbours × relation-table` term. A change that
+/// let the relation table grow with the world instead of staying near it turns
+/// that term quadratic, and quadratic is what 30 s finds. The same 30 s as
+/// [`PREDATION_BAKE_BUDGET_SECS`], deliberately: the two bound overlapping
+/// builds and a reader should not have to reconcile two different ceilings.
+const TRIBUTE_BAKE_BUDGET_SECS: u64 = 30;
+
+/// Ceiling on the **relation table's size** — spec §8.5's second half, and the
+/// quantity nothing in this tree bounded before this test.
+///
+/// **Measured**: seed 42 stands at **164** tribute relations at `now`, against
+/// **344** communities alive to key them (`tribute` is a `BTreeMap` keyed by
+/// the *subordinate*, so one patron per community is structural and 344 is the
+/// coherent maximum). Budgeted at **400**, ≈2.4× the measured value.
+///
+/// **A tighter multiple than the wall-time budgets in this file, and
+/// deliberately so.** This is a count on a pinned seed: it is deterministic and
+/// carries no hardware or load variance at all, so the headroom it needs is
+/// against *physics* drift, not noise. 2.4× absorbs a slice that grows the
+/// living world by half again — The Tithe itself moved seed 42 from 203 alive
+/// to 344 — while still binding.
+///
+/// **What it was verified to catch** (mutation-verified, T6's ladder): removing
+/// the two dissolution lines from `Bake::close`, so relations outlive their
+/// parties, takes seed 42 to **482** entries — more entries than the **286**
+/// communities then alive to key them — and this ceiling fires on it, with the
+/// message naming both numbers.
+///
+/// **That verification was taken in the release profile, and the reason
+/// matters.** In the debug profile — the one `make gate-full` runs the heavy
+/// tier in — the same mutation is caught one step earlier, by the bake's own
+/// `debug_assert!` that every standing relation names two alive communities.
+/// So on that arm this ceiling is the *second* line of defence, not the first.
+/// Its own line of defence is the growth shape neither that `debug_assert!` nor
+/// `every_standing_relation_names_two_living_communities` can see: a table
+/// whose entries are all **live and coherent** and simply too many — chained
+/// tribute, or a subordinate acquiring a second patron. Nothing else in the
+/// tree would redden on that.
+///
+/// **What it was verified NOT to be tripped by**, which is why it is a size
+/// gate and not a re-statement of a coherence gate: deleting spec §4.3b's
+/// `min_vassal` guard, so a patron accepts *any* target however small, moves
+/// the table only 164 → **169**. The one-level-star topology (§4.4) pins the
+/// table near the live-community count on its own, so this ceiling fires on
+/// unbounded growth — a future slice's chained tribute (§9's depth lever), or a
+/// keying change admitting more than one patron per subordinate — rather than
+/// on ordinary calibration. `every_standing_relation_names_two_living_
+/// communities` in `windows/worldgen/tests/history_tithe.rs` owns the coherence
+/// reading; this one owns the size.
+const RELATION_TABLE_BUDGET: usize = 400;
+
+/// The Tithe's cost gate (spec §8.5): run the seed-42 tribute bake through
+/// [`history_for`] — documented byte-identical to the settlement stage's own
+/// bake — and assert both its wall-time and the size of the relation table it
+/// leaves standing stay under their budgets. Prints those two alongside the
+/// collection-event count, the live-community count and the widest star
+/// (`--nocapture`) so a future re-measurement doesn't need to re-derive the
+/// harness.
+///
+/// **`tribute_collection_events` and `max_subordinates` are reported and NOT
+/// bounded**, each for its own reason. `max_subordinates` is cardinality, which
+/// §4.4 leaves deliberately unbounded — a runaway hub is a finding, not a
+/// failure. `tribute_collection_events` looks like the cost *integral* (the
+/// collection pass is linear in the table, so summing it over epochs is the
+/// work the table caused) but it is not one: the pass `continue`s on a dead
+/// party **before** incrementing the counter, so under the no-dissolution
+/// mutation above the count *falls* (4555 → 3882) while the real iteration
+/// count rises. A ceiling on it would have been a number no mutation tried
+/// could move, which is decoration. It is printed because it is the right
+/// diagnostic for a human re-measuring, not because it is a gate.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn tithe_tribute_bake_stays_within_budget() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+
+    #[allow(clippy::disallowed_types)] // benchmark harness: measuring the bake, not sim logic
+    let start = Instant::now();
+    let h = history_for(
+        Seed(42),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &wc,
+    )
+    .expect("seed 42 bakes for the tribute cost gate");
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let elapsed = start.elapsed();
+
+    let c = census(&h);
+    let relations = h.tribute.len();
+
+    eprintln!(
+        "tithe_tribute_bake_stays_within_budget: {elapsed:?} to bake seed-42's deep history \
+         (budget {TRIBUTE_BAKE_BUDGET_SECS}s); {relations} standing tribute relations (budget \
+         {RELATION_TABLE_BUDGET}) over {} communities alive at now; reported and unbounded: \
+         {} collection events, widest star {} subordinates",
+        c.alive_at_now, c.tribute_collection_events, c.max_subordinates
+    );
+
+    // Non-vacuity FIRST, the same discipline `tumult_predation_bake_stays_
+    // within_budget` above carries. A build where subordination never fired
+    // leaves an EMPTY relation table, and "0 < 400" passes without having
+    // measured anything — the green-and-unreddenable shape this campaign has
+    // been bitten by. `subordinations_formed` counts first-time relations over
+    // the whole span, so a positive count means the table below is a reading of
+    // this world's tribute structure rather than the absence of one.
+    assert!(
+        c.subordinations_formed > 0,
+        "subordination never fired on seed 42, so the relation table is trivially empty and \
+         this size budget would pass vacuously"
+    );
+
+    assert!(
+        elapsed.as_secs() < TRIBUTE_BAKE_BUDGET_SECS,
+        "the tribute bake regressed: {elapsed:?} to bake seed-42's deep history (budget \
+         {TRIBUTE_BAKE_BUDGET_SECS}s) over {relations} standing relations — see this budget's \
+         doc comment for what a ceiling on a wall-clock can and cannot establish"
+    );
+    assert!(
+        relations < RELATION_TABLE_BUDGET,
+        "the relation table grew past its size budget (spec §8.5): {relations} standing \
+         relations at now (budget {RELATION_TABLE_BUDGET}) over {} communities alive to key \
+         them, {} collection events, widest star {} — the table is keyed by the SUBORDINATE and \
+         the star topology is one level deep, so it should sit near the live-community count; \
+         well above it means relations are outliving their parties or a subordinate has \
+         acquired a second patron",
+        c.alive_at_now,
+        c.tribute_collection_events,
+        c.max_subordinates
     );
 }

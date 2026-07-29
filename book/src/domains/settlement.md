@@ -230,6 +230,56 @@ nothing is stored between relaxations whose release could make a large event —
 which is precisely what the deferred dominance-hierarchy slice would add. See
 [The Tumult](../chronicle/the-tumult.md).
 
+**A raid may also end in subordination rather than eviction (The Tithe).** The
+accumulation term above was then built, and what decides between the two
+outcomes is the **mobility of the prize**. A cell is a perfectly rival immobile
+good, takeable only by occupying it, so contact over it stays conquest. But a
+community's people and their product are mobile, and a mobile prize can be
+taken again next year without displacing anyone — so a raider that beats a
+neighbour whose *land* is no better, but which still has growth headroom,
+**subordinates** it instead: the loser keeps its ground and begins paying
+tribute. That is motive the covetousness gate previously refused outright, and
+it is the accumulation the falsification asked for, because the dominant now
+grows **without moving**.
+
+The rate is a guess on both sides, and the asymmetry that makes it one is
+already structural: **the patron taxes what it can see, the vassal holds what it
+has.** The demand is set from the vassal cell's visible capacity; the remittance
+is paid out of the epoch's growth increment and out of stock above a floor, less
+a **concealment** derived from the vassal's authored in-group radius, so an
+insular people withholds more than an expansive one. What is remitted lands not
+in the patron's population — which would drive its pressure to the collapse
+threshold and starve a successful extractor — but in a per-community **store**
+of wealth, which feeds strength, never enters the pressure term, decays slowly,
+and is lost when its holder dies. How hard a patron extracts is set by its
+authored **time horizon**, read as a discount rate: because a community grows
+logistically, maximum sustainable yield sits at half of capacity, so a patron
+maximising the discounted stream holds its vassal there while one maximising
+this epoch strips it. The Danegeld, the protection racket, tax farming and the
+bust-out are therefore the *same rule at different horizons* — a family
+generated rather than enumerated — and extinction arrives as the classical
+resource-economics result that extermination is optimal when the discount rate
+exceeds intrinsic growth: rare, and concentrated among the shortest-sighted
+patrons. Vassals are not passive: one whose burden grows too heavy **flees**,
+and one that comes to out-muscle its patron by the dominance margin **revolts**.
+A community that relocates keeps the relations it holds as patron — a lord's
+claim travels — but drops the one it owes as vassal, so a vassal that moves,
+for any reason, arrives free.
+
+The headline was re-measured on the same instrument, and it is a **second
+falsification**. Accumulation moved the branching ratio: σ rises from ≈ 0.051 to
+**≈ 0.11** across thirty seeds and 7183 conquests, and by the same factor across
+a hundred seeds and 22 255. But σ ≈ 0.1 is not σ ≈ 1, and the *shape* is
+unchanged — the support still spans 0.48 decades, the per-octave decay is still
+17.6-fold where a heavy tail falls two- to fourfold, and **not one cascade
+exceeds three displacements in roughly twenty-two thousand conquests**.
+Geometric with a hard cutoff, still deeply sub-critical. The diagnosis this
+leaves is structural rather than a missing term: a revolt frees exactly one
+vassal, and the relation graph is a set of **one-level stars** (a vassal may not
+itself take a vassal), so a patron's failure has no medium along which to
+propagate. An avalanche needs a medium. See [The
+Tithe](../chronicle/the-tithe.md).
+
 **The model card.**
 
 - **Drawn (from the seed, or pinned):** a settlement's name, drawn by
@@ -261,20 +311,30 @@ which is precisely what the deferred dominance-hierarchy slice would add. See
   state rather than integrating it, so no new draw and no chaotic forward
   integration enters the bake. It commits no new fact shape: a conquest is a
   chain of the occupation record's existing endings and foundings.
+- **Milked, not only taken (The Tithe):** a settlement may instead be
+  subordinated and left standing. Assessment, remittance, concealment,
+  the patron's setpoint, flight and revolt are all total functions of frozen
+  epoch state and authored species data — no new draw, no agent decision, no
+  chaotic forward integration. It commits **one** new registered predicate
+  (`pays-tribute-to`) over the ledger's existing entity-to-entity fact
+  envelope, and no new fact shape, cause of ending, or stream label.
 
-Seed 42 under a spinning sky now grows **203 settlements** as the present
+Seed 42 under a spinning sky now grows **329 settlements** as the present
 frame of its derived history (the field-condensation model above supplies the
 substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
-competitive niche-K stack, the four peoples (goblin, hobgoblin, bugbear, and
-kobold, since [The Branches](../chronicle/the-branches.md) gave the
-goblinoids two new members) share the landscape, but history now separates
-them into distinct territories and each holds its own chief settlement: the
-bugbear **Qvooshtvoagootao** (118 souls, tropical-seasonal-forest) is the
-world flagship, with the hobgoblin **Mjeaqkeomjaenoagoo** (112,
-tropical-rainforest), the kobold **Roroqrraxoxo** (107,
-tropical-seasonal-forest), and the goblin **Zhvekngokngaknoenoanoaboo** (90,
-temperate-forest) each holding their own — real, phonology-drawn names
+competitive niche-K stack, five peoples share the landscape — the four
+goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The
+Branches](../chronicle/the-branches.md) gave them two new members) and the
+gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added —
+but history now separates them into distinct territories and each holds its own
+chief settlement: the hobgoblin **Feamjeafeoqoanoagoo** (127 souls,
+tropical-rainforest) is the world flagship, with the gnoll
+**Gzaadmzhooqdsootngsootqzhoof** (119, tropical-rainforest), the bugbear
+**Qvooshtvoagootao** (118, tropical-seasonal-forest), the goblin
+**Fneksvotngetnoaboo** (118, tropical-rainforest), and the kobold
+**Roqrrarogxok** (110, temperate-forest) each holding their own — real,
+phonology-drawn names
 (Campaign Y2-3, The Tongues; Campaign 27, The Words). One selection rule is
 worth stating because it is easy to misread: a *people's* chief settlement is
 not its largest but its **oldest surviving occupation** — the first settlement
@@ -288,7 +348,7 @@ the equilibrium snapshot's, because a settlement's headcount is now something
 that *grew* there over the history rather than a single field readout. The
 gallery holds the exit-demo pair: [The
 Peoples of Seed 42](../gallery/settlement-seed-42.md) against [its
-tidally-locked twin](../gallery/settlement-seed-42-locked.md) (136
+tidally-locked twin](../gallery/settlement-seed-42-locked.md) (250
 settlements), where habitability's collapse toward the terminator ring
 (Campaign 3c's biome map already predicted it) reshapes the same globe. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md) and [Campaign Y2-0, Firm
@@ -312,8 +372,20 @@ present world as the last frame of a derived deep history rather than placing
 it fully formed at genesis. *The transport topology and the conflict have since
 landed too* — the connection graph over a sea that moves with the ice ([The
 Sundering](../chronicle/the-sundering.md)) and value-driven conquest over it
-([The Tumult](../chronicle/the-tumult.md)). What still stands open from this
-list is the **standing relationship** between communities — tribute, alliance,
-vassalage, trade — which, unlike a one-shot conquest, cannot be written as a
-chain of endings and foundings in the occupation record and needs a persistent
-inter-community relation the ledger has no shape for.
+([The Tumult](../chronicle/the-tumult.md)). *The first **standing
+relationship** between communities has since landed too* — tribute, in [The
+Tithe](../chronicle/the-tithe.md) — and the reason it had been deferred turned
+out to be wrong. The claim on record was that a persistent inter-community
+relation "needs a save-format change and a real new subsystem", because the
+occupation record cannot express one as a chain of endings and foundings. It
+does not need to: the ledger's fact envelope is **already** a typed, directed,
+dated entity-to-entity edge, and the bake already emitted two of them. Tribute
+took **one registered predicate** and nothing else. What still stands open is
+therefore not the shape but the rest of the space it opens — alliance, trade,
+employment, and the down-flow of **protection**, a patron shielding its vassals
+from third-party raids, which is the strongest deferred lever because it changes
+the shipped raid rule itself; along with **chained** tribute, where a vassal's
+vassal remits upward, and **collapse-release**, where a fallen patron frees its
+whole network at once. The last two are what the criticality measurement now
+argues for, since they are what would give a patron's failure a medium to
+propagate along.

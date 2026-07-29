@@ -68,6 +68,17 @@ impl PerceptionLens {
         self.day_sky == 1.0 && self.night_sky == 1.0 && self.ambient == 1.0
     }
 
+    /// This lens seen through `other` — the component-wise product. Occlusion
+    /// composes with a species' own perception rather than replacing it: a
+    /// nocturnal observer under an overcast is subject to both.
+    pub fn compose(&self, other: &PerceptionLens) -> PerceptionLens {
+        PerceptionLens {
+            day_sky: self.day_sky * other.day_sky,
+            night_sky: self.night_sky * other.night_sky,
+            ambient: self.ambient * other.ambient,
+        }
+    }
+
     fn weight(&self, venue: Venue) -> f64 {
         match venue {
             Venue::DaySky => self.day_sky,
@@ -76,6 +87,44 @@ impl PerceptionLens {
         }
     }
 }
+
+/// How much of the sky reaches the observer, in `[0, 1]`: `1.0` is an
+/// unobstructed view, `0.0` a sky completely hidden. Deliberately abstract —
+/// a producer decides what the ratio *means* for its own content, and never
+/// learns what obstructed the view.
+/// type-audit: bare-ok(ratio)
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub struct Visibility(f64);
+
+impl Visibility {
+    /// A wholly unobstructed sky. The legacy path: every producer must render
+    /// exactly its pre-occlusion content at this value.
+    pub const CLEAR: Visibility = Visibility(1.0);
+
+    /// A visibility ratio, or `None` if `v` is not a finite value in `[0, 1]`.
+    /// type-audit: bare-ok(constructor-edge: v)
+    pub fn new(v: f64) -> Option<Visibility> {
+        (v.is_finite() && (0.0..=1.0).contains(&v)).then_some(Visibility(v))
+    }
+
+    /// The ratio itself.
+    /// type-audit: bare-ok(ratio)
+    pub fn get(&self) -> f64 {
+        self.0
+    }
+}
+
+/// Weighted salience at or above which a phenomenon still reaches the
+/// observer. Below it the phenomenon is culled rather than merely demoted: a
+/// star dimmed to a fiftieth is not a faint star, it is a star you cannot
+/// see. Applied only when the lens is non-identity, so the legacy path is
+/// untouched.
+///
+/// Measured against seed 42 at day 0 (a flat overcast, occlusion `v = 0.3`):
+/// the two moons fall 0.64 → 0.19 and 0.47 → 0.14 and survive; the five
+/// neighbour stars fall 0.10–0.11 → 0.03 and do not.
+/// type-audit: bare-ok(ratio)
+pub const VISIBILITY_FLOOR: f64 = 0.05;
 
 /// Where and when the observation happens. Culture joins in a later
 /// campaign; adding a field here must not break existing sources.
@@ -137,6 +186,7 @@ pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<P
             let w = ctx.lens.weight(p.venue);
             p.salience = ((p.salience * w).clamp(0.0, 1.0) * 100.0).round() / 100.0;
         }
+        all.retain(|p| p.salience >= VISIBILITY_FLOOR);
     }
     all.sort_by(|a, b| {
         b.salience
@@ -305,5 +355,71 @@ mod tests {
             },
         );
         assert_eq!(blind, placed);
+    }
+
+    #[test]
+    fn the_identity_lens_still_drops_nothing() {
+        // The identity path performs no arithmetic, and the floor must not
+        // retroactively cull a faint-but-real phenomenon on it.
+        let faint = ph_venue("ember", 0.01, Venue::NightSky);
+        let a = FixedSource(vec![faint.clone()]);
+        assert_eq!(observe(&[&a], &ctx()), vec![faint]);
+    }
+
+    #[test]
+    fn a_weighted_lens_culls_below_the_floor() {
+        let a = FixedSource(vec![
+            ph_venue("bright", 1.0, Venue::NightSky),
+            ph_venue("faint", 0.1, Venue::NightSky),
+        ]);
+        let lens = PerceptionLens {
+            day_sky: 1.0,
+            night_sky: 0.2,
+            ambient: 1.0,
+        };
+        let out = observe(&[&a], &ObserverContext { lens, ..ctx() });
+        // bright: 1.0 × 0.2 = 0.20, survives. faint: 0.1 × 0.2 = 0.02, culled:
+        // a star dimmed to a fiftieth is not a faint star, it is one you
+        // cannot see.
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].kind, "bright");
+        assert_eq!(out[0].salience, 0.2);
+    }
+
+    #[test]
+    fn lenses_compose_component_wise() {
+        let a = PerceptionLens {
+            day_sky: 0.5,
+            night_sky: 0.4,
+            ambient: 2.0,
+        };
+        let b = PerceptionLens {
+            day_sky: 0.5,
+            night_sky: 0.5,
+            ambient: 0.5,
+        };
+        let c = a.compose(&b);
+        assert_eq!(c.day_sky, 0.25);
+        assert_eq!(c.night_sky, 0.2);
+        assert_eq!(c.ambient, 1.0);
+    }
+
+    #[test]
+    fn composing_with_identity_is_a_no_op() {
+        let a = PerceptionLens {
+            day_sky: 0.5,
+            night_sky: 0.4,
+            ambient: 2.0,
+        };
+        assert_eq!(a.compose(&PerceptionLens::identity()), a);
+    }
+
+    #[test]
+    fn visibility_rejects_values_outside_the_unit_interval() {
+        assert!(Visibility::new(-0.1).is_none());
+        assert!(Visibility::new(1.1).is_none());
+        assert!(Visibility::new(f64::NAN).is_none());
+        assert_eq!(Visibility::new(0.5).map(|v| v.get()), Some(0.5));
+        assert_eq!(Visibility::CLEAR.get(), 1.0);
     }
 }

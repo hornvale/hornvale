@@ -20,6 +20,17 @@ pub trait Focalizer {
     fn render(&self, vantage: &Vantage) -> Focalized;
 }
 
+/// Capitalize the first character, leaving the rest alone — the biome noun now
+/// opens the sentence.
+/// type-audit: bare-ok(prose: s), bare-ok(prose: return)
+fn capitalize_first(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+        None => String::new(),
+    }
+}
+
 /// Tier 0: one templated passage. Repetitive across rooms by design — The
 /// Uncommon Ground buys variety and absorbs into this surface.
 pub struct TemplateFocalizer;
@@ -30,9 +41,32 @@ impl Focalizer for TemplateFocalizer {
         let descriptor = v.locale.regime.descriptor.clone();
         let village = v.village.name.clone();
         let sky_noun = "sky".to_string();
+        // A walker does not STAND in the sea. The verb follows the medium, and
+        // the water column distinguishes floating on the surface from hanging
+        // in the water below it — the same category error The Shoal fixed for
+        // the descriptors, one clause up.
+        // The narrator does not say what the occupant's body is doing.
+        //
+        // "You stand in coral reef" asserted a posture nothing had computed:
+        // the renderer knows the medium and the band, and knows nothing about
+        // legs, fins, wings, boats, or sleep. Adding "swim" and "walk the
+        // floor" would only have made the unsourced claim more specific. So
+        // the description describes the PLACE — the convention tabletop
+        // read-aloud text arrived at for the same reason, that the body
+        // belongs to whoever owns it.
+        //
+        // A sourced stance is still possible later; it wants the liveness
+        // layer to supply a real activity, and this seam is where it would go.
+        // On the surface, the depth zone beneath is not where the observer
+        // is: the sea's own name for that place is simply the open water.
+        let named = if v.locale.biome_kind.is_marine() && !v.submerged {
+            "open water".to_string()
+        } else {
+            biome.clone()
+        };
+        let place = capitalize_first(&named);
         let prose = format!(
-            "You stand in {biome} — {descriptor} — in the lands of {village}. \
-             The {sky_noun} above: {}",
+            "{place} — {descriptor} — in the lands of {village}. The {sky_noun} above: {}",
             v.sky
         );
         let nouns = vec![

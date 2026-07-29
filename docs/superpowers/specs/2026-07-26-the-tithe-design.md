@@ -1,0 +1,586 @@
+# The Tithe — Living-Community C3, Slice 2: Tribute
+
+**Status:** **Shipped 2026-07-28** (campaign *The Tithe*). Amended five times, four of them
+following a disappointing measurement — §4.2b (the bleed), §4.3 (the corrected oscillator), §4.3a–d
+(extraction as a discount-rate family) and §4.3e (the wounded patron, whose predictions were
+preregistered *before* its code existed). §8.0's variety criterion is **met**; §5's headline is a
+**second documented falsification** — accumulation roughly doubled the branching ratio to σ
+0.109–0.115 and left the distribution geometric with a hard cutoff. The secondary secular-cycle axis
+is a **null**: §4.3a's setpoint turned §4.3's two-signed feedback into a converging regulator. Two
+provisional calls survive as shipped and refinable, and one spec surface arrived by omission (a
+raider that is itself a vassal escapes its lord by conquering a cell). Chronicle:
+[The Tithe](https://github.com/hornvale/hornvale/blob/main/book/src/chronicle/the-tithe.md).
+Retrospective: [the-tithe](https://github.com/hornvale/hornvale/blob/main/docs/retrospectives/the-tithe.md).
+
+*Original status —* G3 CLEARED (Nathan, 2026-07-26). Two calls are **provisional and refinable** rather
+than deeply justified, and are flagged here so a later reader does not mistake them for settled:
+(a) the productivity test for the subordinate branch is `pressure < 1` — a reasonable reading of
+"has surplus to take", not a derived threshold; (b) a second bid on an already-subordinated
+community **transfers** patronage with no contest, which means patrons can be quietly poached.
+Both are cheap to revise once the mechanism is measured.
+**Program:** The Living Community engine (campaign 4), conflict-as-criticality
+**Slice:** tribute — a raid may end in *subordination* rather than eviction, and the rate is a
+guess on both sides. A genesis epoch.
+**Base:** `main` @`d6caa514` (contains The Tumult).
+
+---
+
+## 1. The payoff
+
+The Tumult built predation and measured it honestly: **the power law was falsified**, branching
+ratio **σ ≈ 0.051**, geometric with a hard cutoff, deeply sub-critical. Its diagnosis was precise
+and is this slice's mandate — the campaign's two failed builds bracket the answer:
+
+| build | drive | dissipation | accumulation | result |
+|---|---|---|---|---|
+| crowding sandpile | yes | **none** | none | runaway to the depth cap |
+| predation (The Tumult) | yes | yes | **none** | σ ≈ 0.051, nothing chains |
+| **tribute (this slice)** | yes | yes | **yes** | measured |
+
+Self-organized criticality needs drive *and* dissipation *and* something to accumulate — a
+structure that stores what the drive produces until it can no longer hold, and then releases.
+Predation has no such store: every raid discharges immediately, because taking a cell is a
+one-shot transfer. **A standing relation is the store.** A dominant that milks rather than evicts
+grows *without moving*, and what it accumulates is a topple-able structure.
+
+The historical case is the one the spec has cited since The Tumult's pivot: the Danegeld, the
+protection racket, tax farming. You do not burn the productive village. You come back next year.
+
+## 2. Context — what is already true
+
+- **The ledger already has the shape, and the contrary diagnosis was wrong.** The Tumult's spec
+  §9 and its close-time investigation both asserted that a standing inter-community relation
+  "needs a persistent relation the ledger has no shape for — a save-format change and a real new
+  subsystem." Re-observed at this campaign's opening: `kernel/src/ledger.rs` defines
+  `Fact { subject: EntityId, predicate: String, object: Value::Entity(other), day: Option<f64> }`
+  — a typed, directed, dated entity→entity edge, **already in use** by the bake's own
+  `occ-ended-by` and by religion's `held-by`. A tribute relation needs a *registered predicate*,
+  not a new data shape. (This is the "an inherited diagnosis is a hypothesis" lesson: re-observe
+  before designing.)
+- **Asset mobility was designed and then lost.** The Tumult's decision ledger #8 specified
+  "outcome by asset-mobility (mobile ⇒ rustle/extract, target survives; immobile ⇒
+  conquer/displace)". It never reached that spec. It is recovered here, and it is also exactly
+  what `SOC-contact`'s rivalry kernel predicts.
+- **The psych substrate is already wired into the bake.** The Tumult threaded a per-species
+  lookup for `MindVector.threat_response` (the disposition gate) through `BakeConfig`. This slice
+  reuses that channel for `SocietyVector`, which is carried **solely by `Settled` kinds** — exactly
+  the peoples that form tribute relations.
+
+## 3. Architecture (constitutional layering)
+
+A rewiring, not a new subsystem.
+
+- **`windows/worldgen` — `history_bake.rs`.** `maybe_raid` gains a second outcome; the `Bake`
+  gains a live relation table and a per-epoch collection step. Everything reads state already
+  present (`population`, `eff_capacity`, the era graph, the psych lookup).
+- **`windows/worldgen` — `history_emit.rs`.** The relation is emitted as dated facts, exactly as
+  occupation records are.
+- **`domains/history`** — one new registered predicate.
+- **`windows/lab` / `windows/worldgen/tests`** — the falsification metric and the gates.
+- **No new domain, no new crate, no new `Fact` shape, no new `CauseOfEnd` variant.**
+
+## 4. The mechanism
+
+### 4.1 The subordination trigger — asset mobility decides
+
+`maybe_raid` today evicts when the target's cell is worth more than the raider's. It now resolves
+two outcomes, both still gated by dominance (`strength(raider) > strength(target) × RAID_MARGIN`)
+and by the shipped inhibitions (no-spoils, disposition):
+
+1. **The prize is immobile — the cell.** `eff_capacity(target) > eff_capacity(raider)`. Land, a
+   mine, forage: takeable only by *occupying* it. ⇒ **evict and seize** (the shipped path,
+   unchanged).
+2. **The prize is mobile — the people and their product.** The target's cell is *no better*, but
+   the target is **productive** — it has growth headroom (`pressure < 1`), so there is a surplus
+   to take. ⇒ **subordinate**: the target keeps its cell and begins paying tribute.
+
+Neither ⇒ no raid this epoch.
+
+**Branch 2 is genuine new motive, not a relabelling.** The shipped covet gate does
+`if t_val <= raider_val { continue }` — a strong community ignores a poorer neighbour outright.
+Under tribute, a neighbour whose *land* is no prize but whose *people* are productive becomes
+worth milking. That is the accumulation term: the dominant grows **without moving**.
+
+Note the productivity test is the *inverse* of the shipped no-spoils veto and composes with it
+cleanly: a starving target has nothing to seize *and* nothing to farm.
+
+### 4.2 The negotiation — three terms, no new draw
+
+The rate is not a constant. Nobody in this world runs double-entry accounting; both sides are
+guessing, and the subjugated withhold. Lifted, this is the **principal-agent problem under
+asymmetric information**, whose historical result hands us a deterministic mechanism — because the
+asymmetry is already structural in the bake:
+
+| term | reads | meaning |
+|---|---|---|
+| **assessment** | the target cell's `eff_capacity` × `ASSESS_RATE` | what the dominant *demands*, set from what it can **see** |
+| **remittance** | `min(assessment, (surplus + bleed) × (1 − concealment))`, where **surplus is that epoch's growth increment** and **bleed is what can be taken from the standing stock above `FARM_FLOOR`** | what the subordinate *hands over*, paid from what it **has** |
+| **concealment** | `(1 − in_group_radius) × CONCEAL_MAX` | the gap the subordinate controls — an insular people hides more from outsiders |
+| **shortfall** | `assessment − remittance` | the only signal the dominant reads |
+
+`eff_capacity` and `population` are already two different numbers, so **the information asymmetry
+costs nothing and is fully deterministic**. Land tax has always been assessed on area, never on
+the granary, for exactly this reason.
+
+### 4.2b A greedy patron can bleed its vassal — the third amendment, and it reverses one of this spec's own rules
+
+**Amendment 3 (owner's call, 2026-07-27), made with its costs stated.** Earlier text capped
+remittance at the epoch's growth increment so that tribute would *milk rather than kill*. Task 5's
+implementation measured the consequence: that cap guarantees
+`population_after ≥ population_at_epoch_start`, so **the tribute loop's own health signal can never
+go negative.** The demand eases only when war, famine, climate or crowding hurts the vassal — never
+because the patron over-extracted. §4.3's "over-extract → collapse → relax" therefore **did not
+close inside the mechanism**, and a second bound sat on top of it: once the assessment exceeds a
+vassal's increment the vassal is milked exactly flat, and a flat vassal emits signal `0.0`, so the
+demand stops easing and the pair parks.
+
+Milk-don't-kill and the secular cycle want opposite things. The owner chose the cycle.
+
+**The expression this section originally published is superseded twice over, and the shipped rule
+is below it.** As written the amendment said:
+
+```
+bleed      =  max(0, population − FARM_FLOOR)          // SUPERSEDED — see below
+remittance =  min(assessment, (surplus + bleed) × (1 − concealment))
+```
+
+That is not what ships, for two separate reasons, both of them measurements rather than choices.
+
+*First, it breached its own floor.* At collection time `population` **already carries this epoch's
+increment**, so `population − FARM_FLOOR` double-counts the increment and reaches *through* the
+floor by up to that amount — measured at task 5b: a vassal that began an epoch at 3.157 was farmed
+to 1.746 under a floor of 2.0. `bleed` is therefore measured against the stock the epoch **found**,
+`stock = population − surplus`, which is what §4.2b's own "a floor, not an exemption" requires.
+
+*Second, amendment 4 (§4.3a) replaced the line the reach stops at.* It is no longer the bare
+`FARM_FLOOR` but the patron's own **setpoint**, discounted by its horizon and by how many other
+vassals it holds — the same rule, with the patron's character supplying the target. A vassal
+standing *below* that setpoint is left to recover rather than merely taxed less: only the growth
+that carries it past the line is harvested, without which a below-target vassal hands over its whole
+increment every epoch and is held flat forever (the floor-pinned attractor the investigation
+measured at 79.2% of relations).
+
+**What ships:**
+
+```
+stock      =  population − surplus                      // what the epoch FOUND, increment excluded
+target     =  target_stock(patron_people, other_vassals_held, eff_capacity(vassal_cell))
+              =  max(FARM_FLOOR, FARM_FLOOR + horizon × (eff/2 − FARM_FLOOR))    // §4.3a, §4.3c
+bleed      =  max(0, stock − target)                    // taken from the STOCK, down to the setpoint
+harvest    =  max(0, surplus − max(0, target − stock))  // the increment, above the setpoint only
+remittance =  min(assessment, (harvest + bleed) × (1 − concealment))
+```
+
+`FARM_FLOOR` survives as the floor under `target`, never as the target itself; the two coincide
+only for a maximally short-horizon patron, which is exactly the Clark's-case patron §4.3a intends.
+
+A patron demanding more than the surplus still genuinely **shrinks** its vassal, the health signal
+goes negative from tribute alone, the demand eases, the vassal recovers — and the loop closes
+inside the mechanism, which is what §1 sells and what neither prior formulation could deliver.
+
+**`FARM_FLOOR` is a floor, not an exemption.** A vassal may be bled down toward it but not through
+it, so tribute alone still cannot drive a community to extinction — §8.3 stands, with its claim
+restated: *no community is farmed below `FARM_FLOOR` by tribute alone.* Set `FARM_FLOOR` at or above
+`VIABLE_MIN` so a bled vassal remains a viable community rather than a husk.
+
+**What this supersedes.** The per-subordinate between-epoch population floor (the guard three tasks
+were built against, and itself the fix for this campaign's third non-binding assertion) is **no
+longer the invariant** — it is replaced by the `FARM_FLOOR` floor, which is the weaker but now-true
+claim. Every seed-42 measurement from Tasks 1–5 becomes a superseded baseline; §5's adjudication
+runs on the post-amendment mechanism, and the pre-amendment numbers are retained in the campaign
+record as the measurement that *motivated* the amendment, not as results.
+
+### 4.2a Where tribute lands — the store (this is the accumulator)
+
+**Remittance must NOT be added to the dominant's `population`.** A dominant's cell capacity is
+unchanged by conquest, so population gained from tribute drives
+`pressure = population × NEED / eff` upward until `COLLAPSE_PRESSURE` kills it of Famine: **a
+successful extractor would eat itself**, and the readout would report "accumulation does not chain"
+when the truth is that mass was added to a fixed container. Tribute therefore lands in a new
+per-community scalar:
+
+```
+Community { …, stores: f64 }          // wealth, not bodies
+
+remittance  →  dominant.stores
+strength     =  (population + stores × STORE_WEIGHT) × tech_weight(tech)
+pressure     =  population × NEED / eff          // UNCHANGED — stores never eat
+```
+
+Historically exact: tribute becomes granaries, walls and retainers — strength the *local land does
+not have to feed*. It also gives §1's criticality argument a literal accumulator rather than a
+metaphorical one. `stores` decays slowly (`STORE_DECAY`) so a hoard is not immortal, and it is
+lost with the community when it closes — a dominant's fall releases what it held.
+
+**This generalises beyond the slice.** Tree-finding on "one community's product ending up with
+another" gives seizure (one-shot), tribute (recurring, coerced), **trade** (recurring, voluntary)
+and gift; trade needs this identical `stores` concept, so the accumulator is the shared
+prerequisite for the wider contact program, not a slice-2 local.
+
+`in_group_radius` (insular 0 ↔ expansive 1) lives on `SocietyVector`; wiring concealment and
+secrecy to it is the reading `SOC-information-economy` already argues for.
+
+**Both errors destabilise, in opposite directions.** Under-assess and the subordinate accumulates
+until it can throw off its patron; over-assess and it is crushed. Fixed points do exist — a
+concealment that exactly offsets an over-assessment sits still — so the honest claim is that this
+system has **no *attracting* equilibrium**, unlike a fixed rate. That is the point, and the direct
+answer to why the crowding build was smooth and raid-free.
+
+### 4.3 Adaptive demand — the oscillator
+
+**Corrected before implementation; the first formulation could not oscillate.** It read
+`assessment += shortfall × ADAPT_RATE` with `shortfall = assessment − remittance`. But
+`remittance = min(assessment, …) ≤ assessment` by construction, so **shortfall is non-negative
+always** and the rule is a monotone **ratchet** to the ceiling, not a feedback loop. "Over-extract
+→ collapse → tribute falls → demand relaxes" had no mechanism by which demand could ever relax.
+A one-signed error term cannot produce a cycle.
+
+**The patron feeds back on its subordinate's *health*, not on the shortfall.** Each epoch after
+collection it compares the subordinate against what it saw last time:
+
+```
+signal      =  (population_now − population_at_last_visit) / population_at_last_visit
+assessment +=  signal × assessment × ADAPT_RATE          // clamped to [0, eff_capacity × ASSESS_MAX]
+```
+
+A vassal that **grew** can bear more, so the demand rises; one that **shrank** is being
+over-milked, so the demand eases. The error term is genuinely **two-signed**, so the loop can
+overshoot in both directions — which is what makes it an oscillator rather than a ratchet. It also
+matches the historical story the spec has cited since the pivot: a tax farmer who kills the village
+collects nothing next year, and learns. Feedback with delay (the delay is the epoch step, free)
+then reproduces the **Ibn Khaldun / Turchin secular cycle** as a *consequence* rather than an
+authored feature — and oscillators parked near a threshold are how SOC systems actually sit at
+criticality, which is precisely what neither prior build achieved.
+
+**The demand must be able to bind, and the original constants made that impossible.** With
+`NEED = 1.0` and `GROWTH_RATE = 0.2`, the logistic increment is
+`0.2 × N × (1 − N/eff)`, maximised at `N = eff/2` and therefore **never exceeding `0.05 × eff`**.
+An `ASSESS_RATE` of `0.1` puts the assessment at `0.1 × eff` — at least twice the largest surplus
+the subordinate's land can ever produce — so `min(assessment, surplus)` selects the surplus branch
+on every world, the assessment is decorative, and adapting it changes no remittance anywhere.
+**`ASSESS_RATE` must therefore sit below the logistic ceiling `GROWTH_RATE / 4`**, and the two
+constants are coupled: any future change to `GROWTH_RATE` re-opens this. A test pins the
+relationship rather than the value, so the coupling cannot rot silently.
+
+### 4.3a Extraction strategy — the patron's horizon is a discount rate (amendment 4)
+
+**The measurement that forced this.** An investigation across seeds 1–24 found
+`assessment_at_formation / eff_capacity` takes **exactly one value, 0.025, across all 2258
+relations**. There is no patron-side term anywhere in the tribute rule — the only per-people input
+is the *vassal's* concealment. A Sopranos bust-out and a Roman census are not merely the same code
+path; nothing in the model could distinguish them even in principle. Every patron takes the whole
+growth increment forever, and 79.2% of relations crash to the floor in a median two epochs.
+
+**The lift.** Substituting the *source* of the demand — from "the cell's capacity" to "the
+discounted future stream" — turns extraction into **renewable-resource economics**, and the
+vassal's logistic growth makes the mapping exact: **maximum sustainable yield sits at `N = eff/2`**,
+the peak of the increment the bake already computes. A patron maximising the discounted stream holds
+its vassal *at* that peak; one maximising this epoch strips the stock. Same rule, one parameter.
+
+**`MindVector.time_horizon` (immediate 0 ↔ generational 1) is that parameter** — authored, spread
+(bugbear 0.3 / hobgoblin 0.5 / kobold 0.8), and currently unread by the bake. It reaches the bake
+through the same `BakeConfig` channel as `disposition` and `in_group_radius`.
+
+```
+target_n  =  FARM_FLOOR + horizon × (eff_capacity/2 − FARM_FLOOR)
+```
+
+A generational patron targets MSY and its relation persists indefinitely; an immediate one targets
+the floor and strips. Between them lie the protection racket and the Danegeld — the family is
+**generated, not enumerated.**
+
+**The horizon sets the setpoint; §4.3's health feedback is the controller that reaches it.** They
+are not rivals: the patron targets from what it can *see* (`eff_capacity`), the vassal's true
+population is partly hidden (§4.2), and the health signal corrects the resulting mis-estimate. The
+feedback becomes two-signed around a *meaningful* target rather than around whatever happened.
+
+**Extinction becomes Clark's case, and that is exactly the intent.** In resource economics,
+extermination is optimal when the discount rate exceeds the resource's intrinsic growth rate. So a
+subjugated people *can* be destroyed — but only by the shortest-sighted patrons, as a consequence of
+the same optimisation rather than a special case. That also shrinks the terminal-conflict defect
+(§4.2b's bleed leaves a vassal unable to survive being raided, killing the cascade at depth 0):
+deep bleeding becomes **rare** instead of universal.
+
+### 4.3b Horizon-aware subordination
+
+Measured: **45.7% of relations open on a fresh daughter at `DAUGHTER_POP = 8`**, always below the
+low root (`N/eff = 0.1464`) — doomed at conception, which is why the crash basin is the default
+outcome regardless of extraction rate. A patron with foresight does not subordinate a community too
+small to farm. The minimum vassal a patron will take therefore scales with its horizon: a
+generational patron wants a going concern, an immediate one takes anything it can beat.
+
+### 4.3c The portfolio effect
+
+A patron holding many vassals treats each as more expendable, so it extracts harder from the
+marginal ones — historically why empires are crueler to distant provinces than to the core. The
+patron's **effective** horizon shortens as its subordinate count rises. The input already exists
+(`max_subordinates` is tracked). This produces cruelty structurally rather than authoring it as a
+trait, and gives strategy a second source of variation on top of the per-people one.
+
+### 4.3d Vassal agency — flight and revolt, both structural
+
+The subjugated are not limited to passive concealment. Both responses are **total functions of
+frozen state — no agent decision, no new draw**:
+
+- **Flight.** When the burden exceeds a threshold, the vassal relocates rather than continue in that
+  condition, using the existing `relocate` path. It is leaving, not being driven off.
+- **Revolt.** When `strength(vassal) > strength(patron) × RAID_MARGIN`, the relation dissolves. The
+  patron then loses that tribute, so its stores fall, so it becomes beatable by *others* — a chain
+  that is **emergent rather than engineered**, and distinct from §9's deferred collapse-release,
+  which frees a whole network in one relaxation by construction.
+
+Revolt is the avalanche trigger the headline metric has never had: the cascade distribution has
+never seen a large event, and a patron's failure propagating through its holdings is the first
+mechanism in this campaign that could produce one.
+
+### 4.3e The wounded patron — relation continuity across relocation (amendment 5)
+
+**The measurement.** §4.3d's revolt **never fires**: zero revolts across thirty worlds. The cause is
+structural, not a mis-set threshold. The largest `strength(vassal) / strength(patron)` any relation
+reaches is **1.029** against the 1.5 the rule requires. Forming a relation needs 1.5×, so reversing
+it needs a 2.25× swing; the patron's stores then widen the gap monotonically; and **every path that
+damages a patron kills it outright** — a patron that loses a raid `close`s its record, and closure
+dissolves its whole portfolio. **A patron is never wounded, only healthy or dead**, so the state
+revolt requires does not exist.
+
+**The change.** A community that relocates — closing here and reopening there — **keeps its tribute
+relations**, which transfer to its new community. Only a patron that genuinely *dies* loses them.
+
+**The continuity is role-asymmetric, and the asymmetry is the point.** A relocating community keeps
+its relations **as patron** — a lord's claim travels with him — but **drops them as subordinate**: a
+vassal that flees is gone. Shipped role-blind first, and measured: obligation that follows the runaway
+turns flight into a change of address rather than an escape, and produces repeat leavers (pooled
+flights 78 → 647, mostly the same communities fleeing again each epoch because fleeing discharged
+nothing). §4.3d's flight is "relocates *rather than continue in that condition*", which only means
+anything if leaving ends the condition.
+A defeated lord who flees to another holding still holds his vassals' obligation; what he has lost
+is the strength to enforce it. That is precisely the wounded state, and it is defensible on realism
+independently of what it does to the metric: a defeated empire shrinking is more plausible than one
+evaporating.
+
+**Preregistered prediction, written before the implementation exists.** This is the fifth amendment
+in this campaign and the fourth to follow a disappointing measurement. The cumulative shape of that
+is metric-chasing, whatever each local justification — so this one states in advance what it expects,
+and the readout confirms or falsifies a *prediction* rather than reporting a number we then explain:
+
+1. **Revolts will fire.** The max strength ratio should exceed 1.5 where it topped out at 1.029.
+   If revolts remain at zero, the wounded-patron diagnosis was wrong and §4.3d's inertness has some
+   other cause.
+2. **The cascade distribution is the open question, and both branches are informative.** If it moves
+   toward a heavy tail, accumulation-with-a-failure-mode was the missing ingredient — the campaign's
+   thesis confirmed. **If revolts fire and the distribution stays geometric, that is a *stronger*
+   falsification than the current null**: it would show that even accumulation which can fail does
+   not self-organize in this world, and would push the diagnosis from "the structure cannot break"
+   to something deeper.
+3. **No constant is tuned toward either outcome**, and this is the last mechanism. Whatever §5
+   measures after this ships is the campaign's answer.
+
+### 4.4 Representation and lifecycle
+
+- **Live during the bake** — a relation table on `Bake`, alongside `node_index`. Deterministic
+  container (`BTreeMap`), iterated in key order.
+- **Emitted as dated facts** at the end, exactly as occupation records are: one new registered
+  predicate carrying `Value::Entity(dominant)` on the subordinate's subject, dated by `day`.
+- **Dissolution is a coherence floor, not a feature.** A relation ends when either party's
+  community closes. This is required for the model to be coherent and is *not* the deferred
+  collapse-release; what is deferred is the freed subordinates *cascading*, not the cleanup.
+
+  **Amendment 5 (§4.3e) qualified this rule and it was never restated here; it is restated now.**
+  A close is no longer always a death. A community that closes and reopens elsewhere *as one
+  movement* — driven off by a raider, taking somebody else's cell by force, evicted by a hostile
+  era, or fleeing a patron — has **relocated**, and relocation is **role-asymmetric**:
+
+  - the relations it holds **as patron** survive the move, re-keyed onto the seat it reopens at;
+  - the relation it owes **as subordinate** does not — it is dissolved by the close exactly as a
+    death would dissolve it, and the mover arrives free.
+
+  Dissolution-on-close is still the single unconditional cleanup point; preserving is something a
+  caller does deliberately, immediately before the close, and everything it does not lift is
+  dissolved. A relation that survives a move is **re-established**, not merely carried: the patron
+  on the far side is a new community with a new `EntityId`, so the relation's start day is
+  re-stamped to the reseat year and no emitted fact ever predates either entity it names.
+
+  Two things follow that a reader of the unqualified rule would get wrong. A relation may **outlive
+  the community that formed it** while still naming two living communities, which is why §8.0's
+  fate list has more exits than "either party died". And the deferred collapse-release is
+  *narrower* than it looks: a beaten patron does not free its vassals, it arrives holding them and
+  weakened — which is the state §4.3d's revolt needs in order ever to fire.
+- A community has **at most one** patron, and a subordinate may not itself take one. Slice 2's
+  relation graph is therefore a set of **one-level stars**, not a tree — depth is the deferred
+  chaining lever (§9), so cycles are structurally impossible rather than merely prevented.
+- **A second bid on an already-subordinated community transfers the patronage — but only against
+  hysteresis.** A raider must clear dominance over the **incumbent patron** (`strength(raider) >
+  strength(incumbent) × RAID_MARGIN`), not merely over the subordinate. The old patron still does
+  *not* contest — contesting is the deferred protection lever (§9) — it simply loses the relation
+  to someone who plainly out-muscles it. Stated explicitly because otherwise the bake's iteration
+  order would decide it silently, which is precisely the class of accident the determinism
+  discipline exists to prevent.
+
+  **This was revised on measurement, exactly as §3 said it would be.** Without hysteresis the rule
+  produced ~87% churn: in a fixture where *no community ever closes* — so dissolutions are
+  impossible — 259 formations occurred against a ceiling of 34 first-time subordinations, with only
+  3 relations standing at the end. Rival patrons were swapping the same targets back and forth every
+  epoch. That defeats the slice's own premise: a store cannot accumulate if the collector changes
+  each epoch, and §4.3's adaptive demand can never build history on a relation whose assessment is
+  reset to `eff_capacity × ASSESS_RATE` by every transfer.
+- **Relation depth is forbidden, and must be enforced rather than assumed.** Keying the table by
+  subordinate bounds *out-degree* to one, which is a functional graph — a shape that still admits
+  chains and cycles. One-level stars additionally require that **a raider which is itself a
+  subordinate takes no vassal, and a target which is itself a patron is not subordinated.** Both
+  checks are required; measurement without them showed 57–89% of standing relations sitting under a
+  patron who was themselves paying someone. Depth is the deferred chaining lever (§9), and §5
+  preregisters the headline on its *absence*, so allowing it in by omission would adjudicate a
+  different model than the one preregistered.
+- **Cardinality is deliberately unbounded**: a dominant may hold any number of subordinates. No
+  arbitrary cap is imposed, because whether a runaway hub forms is exactly the kind of thing this
+  slice should *measure* rather than legislate. The maximum subordinates held by any one community
+  is therefore a reported metric (§8), and a runaway is a finding, not a failure.
+
+### 4.5 Determinism (Lorenz-safe)
+
+Assessment, remittance, concealment and adaptation are total, deterministic functions of frozen
+epoch state and authored species data. **No new seed draw.** No agent decision — the "guess" is a
+reading of a visible proxy, not a choice. `BTreeMap`/`BTreeSet`/`Vec` only; every float comparison
+via `f64::total_cmp` with a deterministic tie-break. No wall-clock. Assessment is clamped to
+`[0, eff_capacity × ASSESS_MAX]`, so no relation diverges and no dominant demands more than its
+subordinate's land could ever produce.
+
+**The adaptive loop needs a bound, and the bound must be verified rather than asserted.** A
+first-order feedback *with delay* — which is exactly what §4.3 is, the delay being the epoch step —
+period-doubles into chaos above a critical gain. This is the precise claim the Lorenz guard-rail
+exists to police, so `ADAPT_RATE` carries a stability bound and a test demonstrating the
+per-relation assessment series converges or oscillates boundedly rather than diverging. Note the
+save-format question is separate and already settled: the whole bake replays from the seed, so
+nothing chaotic is ever resumed from a quantized checkpoint.
+
+## 5. The falsification metric (headline)
+
+**Primary — re-measure the cascade-size distribution and adjudicate its shape**, on the same
+instrument The Tumult used (`cascade_sizes` via `history_for`), with its committed pooled sample
+(seeds 1..=30) and its wider replication (1..=100). The preregistered question: **does adding
+accumulation move the branching ratio off σ ≈ 0.051?**
+
+- **Heavy-tailed over ≥ ~1.5 decades** ⇒ accumulation was the missing ingredient; SOC confirmed.
+- **Still geometric / sub-critical** ⇒ a second documented falsification, which ships, and which
+  says accumulation *alone* is not enough — diagnosing depth (chaining) or release as the next
+  lever.
+
+**Secondary, on its own named axis — the secular cycle.** Measure tribute volume and total
+population over bake time and test for **oscillation** (a dominant non-zero period), reported
+whether or not the cascade distribution moves. This is a separate claim on a separate axis and is
+adjudicated separately; it must not be bundled into the primary verdict.
+
+**This axis became live only at amendment 3, and that history is part of the result.** Under the
+pre-amendment cap the axis was a *structurally predictable null* — the health signal could not go
+negative from tribute, so no amount of measurement could have found a tribute-driven cycle. §4.2b
+closed that loop deliberately. So a cycle found here is evidence about the amended mechanism and
+must be reported as such; it is **not** evidence that the original milk-don't-kill formulation
+cycles, and any readout that omits the amendment is misleading. Use the **per-relation** tribute
+series, not raw volume — raw volume tracks the relation count and would report the population's
+shape rather than the demand's.
+
+**No constant is tuned toward a heavy tail.** Both outcomes ship. If the mechanism proves inert or
+the world depopulates, that is a calibration finding for Nathan, never a floor.
+
+## 6. Scope
+
+**Amendment 4 ended this slice's claim to be minimal, deliberately and on the owner's call.** It was
+scoped as "the minimal accumulating structure"; it is now that plus a strategy family (§4.3a),
+horizon-aware subordination (§4.3b), the portfolio effect (§4.3c), and vassal agency (§4.3d). The
+four cohere around one idea — extraction strategy as a discount-rate family — and each was forced by
+a measurement rather than proposed speculatively. They are recorded here as an honest scope change,
+not folded in silently.
+
+Slice 2 is the accumulating structure: the subordination trigger, the three-term
+negotiation, adaptive demand, and lifecycle. **The knobs stacked here are opposed** — assessment
+raises extraction, concealment lowers it — so, per The Tumult's sequencing lesson, they ship in
+**measured stages with a seed-42 readout between each** (`history_for`, not a full census regen —
+the census is a once-per-campaign carve-out at the close), and the plan must preserve attribution.
+
+## 7. The epoch
+
+A genesis epoch: subordination changes which communities survive and how they grow, so the
+committed skeleton moves. Census regenerates on `lefford` (0063 — a carve-out needing Nathan's
+explicit authorization at G6), keystones refreeze at merge. **One new registered predicate** — the
+first committed-vocabulary addition since the slice-1 work, and the reason this spec's §2 opens by
+re-deriving that the `Fact` shape itself does not change.
+
+## 8. Success criteria — measure, don't narrate
+
+0. **Strategies are actually various** (§4.3a's whole point). The distribution of extraction
+   behaviour across patrons must be **multi-modal, not a single attractor** — the pre-amendment
+   state had `assessment / eff_capacity` at exactly one value across all 2258 relations, which is
+   the failure this criterion exists to detect. Report the spread of extraction rate and of relation
+   lifetime *by patron people*, and the share of relations ending in each fate. **Amendment 5
+   (§4.3e) added three exits to this list and they were left unnamed until the campaign's final
+   review; the list is complete here.** A relation ends in exactly one of:
+
+   1. **persisted to `now`** — it never ended;
+   2. **the vassal fled** (§4.3d) — it walked off its cell rather than go on paying;
+   3. **the vassal revolted** (§4.3d) — it came to out-muscle its patron by `RAID_MARGIN`;
+   4. **the vassal was extinguished** — famine, annihilation, or lost on the road;
+   5. **the patron fell** — its community died, and dissolution is two-sided;
+   6. **the vassal was conquered** — driven off its cell by a third party. It survives, but being
+      driven off is a *relocation*, and a relocating community drops its obligation (§4.3e), so it
+      buys its freedom with the eviction;
+   7. **the vassal conquered somebody** — it took another community's cell by force and moved onto
+      it. The same asymmetry, reached from the other side: a vassal that wins a war buys its freedom
+      with the move;
+   8. **the vassal was moved by climate** — its cell turned uninhabitable and it migrated to a
+      refuge. Again a relocation, again the obligation is left behind.
+
+   A **patronage transfer** is deliberately not on this list: it replaces one patron with another
+   rather than ending the relation (§4.4's hysteresis note), and pooling it in would read churn
+   between rival patrons as relation mortality. Exits 6–8 are all the same rule seen three ways —
+   *a living vassal that moves, for any reason, arrives free* — and none of them is a death, so a
+   fate readout that offered only "persisted / fled / revolted / died / patron died" would have to
+   misfile them.
+
+   **Extinction must be the
+   exception and must concentrate among short-horizon patrons** — if the bloodiest outcome is
+   common, or is spread evenly across horizons, the discount model is not doing what §4.3a claims.
+1. **Subordination fires.** Seed-42 forms tribute relations at volume, on targets the shipped
+   covet gate would have ignored — proving branch 2 is new motive, not a relabelling.
+2. **The structure accumulates.** A dominant's strength measurably rises from tribute without it
+   changing cell — the thing predation could not do. Specifically: `stores` rise while `pressure`
+   does **not**, so a successful extractor does not starve itself (§4.2a). The maximum subordinates
+   held by any one community is reported alongside.
+3. **The map is not depopulated** and **no community is farmed below `FARM_FLOOR` by tribute
+   alone** (§4.2b's restatement — a vassal may be bled toward the floor, never through it);
+   alive-at-`now` stays in the walkable band.
+4. **The headline (§5)** is measured and adjudicated, with the secular-cycle axis reported
+   separately.
+5. **A cost gate** bounds the bake wall-time and the relation-table size.
+
+## 9. Non-goals — all captured in the idea registry, none discarded
+
+- **Protection / the down-flow** — a patron shielding its vassals from third-party raids, and the
+  over-reach it creates. The strongest deferred lever; it changes the shipped raid rule.
+- **Chained tribute (depth)** — a vassal's vassal remitting upward. Depth is what makes an
+  avalanche *large*; deferring it is why §5 admits a sub-critical result as a live outcome.
+- **Collapse-release as an avalanche** — freed subordinates cascading. Distinct from §4.4's
+  mandatory dissolution.
+- **Revolt as a distinct event**, captives/enslavement, revenge/grievance, status/prestige,
+  sacred motives, cohesion (ʿasabiyya).
+- **The remaining inhibition gates** — niche-relative value, pairwise aversion, concealment-as-
+  stealth (see `SOC-inhibition`).
+- **Assessment *staleness*.** §4.2's asymmetry is real over time but *not* at the moment of
+  conquest — the dominance test has just measured the target's strength, so the dominant does know
+  its population then. The stronger model is that information is **fresh at conquest and decays**
+  with epochs since last enforcement, which would give adaptive demand a physical cause rather than
+  a bare feedback constant. Deferred, recorded, and the current §4.2 wording is the simplification
+  it is.
+- **Assessment competence varying by species.** Concealment varies (`in_group_radius`) but
+  assessment does not; wiring the dominant's accuracy to `SocietyVector.sociality` would restore
+  the symmetry and add free heterogeneity. Deferred.
+- **A new `Fact` shape, `CauseOfEnd` variant, or stream label.** One predicate; nothing else.
+
+## 10. Definition of Done (per CLAUDE.md)
+
+- The §4 mechanism shipped, deterministic and bounded, in measured stages.
+- The §8 criteria met, or the falsification documented and labelled.
+- Census regenerated on `lefford` (authorized at G6); pins re-pinned in their drifting commits;
+  keystones refrozen at merge.
+- Chronicle, retrospective, book freshness sweep, Confidence Gradient re-score (the SOC bet moves
+  again — in whichever direction it actually moves), registry flips (`SOC-tribute`, and
+  `SOC-criticality` re-scored), full gate + artifact drift.

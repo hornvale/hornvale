@@ -17,7 +17,7 @@ mod budget;
 pub use budget::StrangeSite;
 use budget::StrangenessBudget;
 
-use hornvale_climate::{Biome, GeneratedClimate};
+use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
 use hornvale_terrain::GeneratedTerrain;
 pub use hornvale_terrain::WaterKind;
@@ -28,6 +28,22 @@ use serde::Serialize;
 /// changed meaning mints `locale/room/v2` alongside).
 /// type-audit: bare-ok(identifier-text)
 pub const ROOM_SCHEMA: &str = "locale/room/v2";
+
+/// One placed exotic site, rendered for a reader.
+/// type-audit: bare-ok(index: cell), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome), bare-ok(prose: descriptor)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StrangeSiteRow {
+    /// Canonical-grid cell index.
+    pub cell: u32,
+    /// Site latitude, degrees (quantized).
+    pub latitude: f64,
+    /// Site longitude, degrees (quantized).
+    pub longitude: f64,
+    /// The base biome the site interrupts.
+    pub biome: String,
+    /// What makes it strange — the exotic clause for its negation vector.
+    pub descriptor: String,
+}
 
 /// A room rendered as an observable place — ground truth, re-derivable, never
 /// stored (UNI-20 derived view). Plain serializable values only.
@@ -215,11 +231,92 @@ impl LocaleContext {
         self.budget.sites()
     }
 
+    /// Every placed exotic site, rendered for a reader: where it is, what
+    /// biome it interrupts, and what makes it strange.
+    ///
+    /// The descriptor is not decoration. Sites are differentiated by their
+    /// negation vector (energy × kingdom × endemic), so a listing of bare
+    /// coordinates would render a world's worth of wonders as identical rows.
+    pub fn strange_site_rows(&self) -> Vec<StrangeSiteRow> {
+        self.strange_sites()
+            .into_iter()
+            .map(|s| {
+                let cell = CellId(s.cell);
+                let coord = self.climate.geosphere().coord(cell);
+                StrangeSiteRow {
+                    cell: s.cell,
+                    latitude: quantize(coord.latitude),
+                    longitude: quantize(coord.longitude),
+                    biome: biome_prose_name(self.climate.biome_at(cell)).to_string(),
+                    // `exotic_clause` reads only energy/kingdom/endemic, and a
+                    // StrangeSite carries no substrate of its own (substrate is
+                    // the ROOM's, from its derived regime), so `Ordinary` here
+                    // is lossless rather than a stand-in.
+                    descriptor: crate::grammar::exotic_clause(Negations {
+                        substrate: Substrate::Ordinary,
+                        energy: s.energy,
+                        kingdom: s.kingdom,
+                        endemic: s.endemic,
+                    }),
+                }
+            })
+            .collect()
+    }
+
     /// A room's ground-truth locale at observation time `at`. Pure over
     /// (context, addr, at): same inputs → byte-identical `Locale`. v1 samples
     /// the time-independent annual mean and does not yet vary with `at`
     /// (threaded for the P8 temporal-phase layer).
-    pub fn describe(&self, addr: &RoomAddr, _at: WorldTime) -> Result<Locale, LocaleError> {
+    pub fn describe(&self, addr: &RoomAddr, at: WorldTime) -> Result<Locale, LocaleError> {
+        self.describe_at(addr, at, None)
+    }
+
+    /// The water column at a marine cell: every stratum from the sunlit water
+    /// down to the one the sea floor sits in, shallowest first. Empty on land.
+    ///
+    /// A cell's floor decides how deep its water goes — 50 m of water over a
+    /// reef holds only the epipelagic, while 3,000 m holds three layers. This
+    /// is the list a diver descends.
+    pub fn water_column_at(&self, cell: CellId) -> Vec<Stratum> {
+        let expr = self.climate.biome_expr_at(cell);
+        if expr.realm != Realm::WATERWORLD {
+            return Vec::new();
+        }
+        let floor = expr.stratum;
+        Realm::WATERWORLD
+            .strata()
+            .iter()
+            .copied()
+            .take_while(|s| *s != floor)
+            .chain(std::iter::once(floor))
+            .collect()
+    }
+
+    /// The biome expression at `cell` as seen from `stratum`. At the sea floor
+    /// this is the cell's own community — a reef, a vent, a kelp forest. Above
+    /// it there is only open water: the community lives on the floor, and
+    /// floating a thousand metres over a reef is not being at the reef.
+    pub fn expr_at_stratum(&self, cell: CellId, stratum: Stratum) -> BiomeExpr {
+        let expr = self.climate.biome_expr_at(cell);
+        if stratum == expr.stratum {
+            expr
+        } else {
+            BiomeExpr {
+                realm: expr.realm,
+                formation: Formation::OpenWater,
+                stratum,
+            }
+        }
+    }
+
+    /// [`LocaleContext::describe`], optionally as seen from a stratum within
+    /// the water column rather than from the surface.
+    pub fn describe_at(
+        &self,
+        addr: &RoomAddr,
+        _at: WorldTime,
+        stratum: Option<Stratum>,
+    ) -> Result<Locale, LocaleError> {
         // Fail fast on an unaddressable room (e.g. `path.len() > MAX_DEPTH`)
         // rather than mint a meaningless `id: 0` (fields are public, so a
         // caller can hand us an over-deep address).
@@ -241,7 +338,10 @@ impl LocaleContext {
                 best = cand;
             }
         }
-        let biome = self.climate.biome_at(best.0);
+        let biome = match stratum {
+            Some(st) => self.expr_at_stratum(best.0, st).biome(),
+            None => self.climate.biome_at(best.0),
+        };
 
         // Continuous fields: integer-weighted mean, full precision, quantize
         // at emit.
@@ -258,7 +358,11 @@ impl LocaleContext {
 
         let substrate = crate::substrate::substrate_at(&self.climate, &self.terrain, best.0);
         let micro = crate::micro::micro_field(addr.seed(self.seed));
-        let mut regime = crate::grammar::derived_regime(self.seed, addr, biome, substrate, micro);
+        let expr = match stratum {
+            Some(st) => self.expr_at_stratum(best.0, st),
+            None => self.climate.biome_expr_at(best.0),
+        };
+        let mut regime = crate::grammar::derived_regime(self.seed, addr, expr, substrate, micro);
         if let Some(placed) = self.budget.regime_at(best.0) {
             let negations = Negations {
                 substrate: regime.negations.substrate,
@@ -266,7 +370,7 @@ impl LocaleContext {
                 kingdom: placed.kingdom,
                 endemic: placed.endemic,
             };
-            let descriptor = crate::grammar::render(negations, micro, biome, self.seed, addr);
+            let descriptor = crate::grammar::render(negations, micro, expr, self.seed, addr);
             regime = Regime {
                 negations,
                 micro,
@@ -621,6 +725,35 @@ mod tests {
             ctx.describe(&coarse, WorldTime { day: 0.0 }),
             Err(LocaleError::AboveGrid)
         ));
+    }
+
+    /// The listing must be reachable AND legible: every site carries where it
+    /// is and what makes it strange. A bare coordinate list would render a
+    /// world's worth of wonders as identical rows.
+    #[test]
+    fn strange_site_rows_carry_their_own_descriptor() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let rows = ctx.strange_site_rows();
+        assert_eq!(
+            rows.len(),
+            ctx.strange_sites().len(),
+            "every placed site is listed"
+        );
+        for r in &rows {
+            assert!(
+                !r.descriptor.is_empty(),
+                "cell {} is placed as exotic but reads as nothing",
+                r.cell
+            );
+            assert!(!r.biome.is_empty());
+            assert!((-90.0..=90.0).contains(&r.latitude), "lat {}", r.latitude);
+            assert!(
+                (-180.0..=180.0).contains(&r.longitude),
+                "lon {}",
+                r.longitude
+            );
+        }
     }
 
     #[test]
