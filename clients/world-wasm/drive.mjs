@@ -44,6 +44,18 @@ expect(e.hw_new_pinned(42n, pins.length), 0, "hw_new_pinned(42, plates=12)");
 expect(e.hw_scene_tiles(width), 0, "hw_scene_tiles (pinned)");
 golden(out(), pinnedTilesPath, "scene/tiles/v1 (seed 42, plates=12)");
 
+// Staleness: the catalog caches ONE SceneContext per world (The Cistern), so
+// every hw_new* must drop it with the world. The live context here is the
+// PINNED (plates=12) planet's, built two lines up; a plain hw_new must not let
+// it survive. Byte-identity against the UNPINNED native golden is what proves
+// it did not — a surviving context would serve plates=12 terrain. The mirror
+// direction (a default context surviving into a pinned world) is what the
+// pinned block above already tests, so between them both genesis paths are
+// covered.
+expect(e.hw_new(42n), 0, "hw_new(42) after a pinned world");
+expect(e.hw_scene_tiles_region(0, 3, 4, 4, 16), 0, "hw_scene_tiles_region (context reset)");
+golden(out(), regionPath, "scene/tiles-region/v1 served a stale SceneContext (pinned terrain)");
+
 // Error paths: unknown pin → -3 with envelope; scene without world intact.
 const bad = new TextEncoder().encode(JSON.stringify({ nonsense: "1" }));
 new Uint8Array(e.memory.buffer, e.hw_in_ptr(), bad.length).set(bad);
@@ -52,4 +64,4 @@ if (!JSON.parse(out()).error) fail("unknown pin", "no error envelope");
 // A refused/errored pinned call cleared the world: scenes must refuse too.
 if (e.hw_scene_system() !== -3) fail("scene after cleared world", "expected -3");
 
-console.log("world-wasm smoke OK (system + tiles + tiles-region + pinned byte-identical; error envelopes sound)");
+console.log("world-wasm smoke OK (system + tiles + tiles-region + pinned byte-identical; error envelopes sound; scene context reset)");
