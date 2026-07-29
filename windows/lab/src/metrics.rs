@@ -2312,6 +2312,45 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "kobold")),
         },
+        // --- The Wearing (Task 11): the two readings the campaign's own
+        // claim needs and the character-length column cannot give (spec §7).
+        Metric {
+            name: "name-syllables-goblin",
+            doc: "Mean syllable count of every generated name (settlement, deity, epithet) \
+                   attributed to goblins in this world, counted as maximal vowel runs in the \
+                   committed surface (an orthographic proxy — see the metric's own doc \
+                   comment for its measured error bound); the reading The Wearing's claim \
+                   needs, since character length cannot tell shorter words from the same \
+                   words spelled tighter. Target 2-3; Absent if goblins produced no names",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            },
+            extract: Extractor::Full(|v: &FullView| mean_name_syllables(v, "goblin")),
+        },
+        Metric {
+            name: "name-syllables-kobold",
+            doc: "Mean syllable count of every generated name attributed to kobolds in this \
+                   world (see name-syllables-goblin); Absent if kobolds produced no names",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            },
+            extract: Extractor::Full(|v: &FullView| mean_name_syllables(v, "kobold")),
+        },
+        Metric {
+            name: "name-transparency",
+            doc: "Share of this world's committed settlement names whose surface still \
+                   contains, verbatim, the modern citation form of EVERY concept its own \
+                   committed name-gloss names — read from the ledger and the lexicon, never \
+                   from the naming code. The target is explicitly NOT 1.0 (The Wearing, spec \
+                   §8): transparency was 100% by construction before this campaign, and that \
+                   uniformity is the defect — most real toponyms are opaque to their own \
+                   speakers. A distribution, pinned as a drift witness, never bounded. Absent \
+                   if no settlement carries a non-empty gloss",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(name_transparency),
+        },
         Metric {
             name: "name-collision-rate",
             doc: "Fraction of this world's settlement + deity names (across every species) \
@@ -3854,6 +3893,108 @@ fn mean_name_length(v: &FullView, species: &str) -> MetricValue {
     MetricValue::Number(total as f64 / names.len() as f64)
 }
 
+/// A committed surface string reduced to its comparable form: case-folded,
+/// with the combining tone diacritics [`hornvale_language::tone_mark_roman`]
+/// appends to a toned vowel (U+0300 grave, U+0301 acute, U+0304 macron)
+/// dropped. Tone is a mark ON a nucleus, never a nucleus of its own, so it
+/// must not break a vowel run — and it must not defeat a substring test
+/// either, since a lexicon's citation form and a name that carries it are
+/// rendered by the same `render_views` and so agree on tone by construction.
+/// The filter takes the whole combining-diacritical block (U+0300–U+036F)
+/// rather than the three marks in use, so a fourth tone level added later
+/// cannot silently change either reading.
+fn bare_surface(name: &str) -> String {
+    name.to_lowercase()
+        .chars()
+        .filter(|c| !('\u{0300}'..='\u{036f}').contains(c))
+        .collect()
+}
+
+/// The romanized vowel graphemes of `ph`'s own inventory — every letter that
+/// can stand as (part of) a nucleus in a word of this language. Derived from
+/// the inventory rather than hard-coded `aeiou` so the reading tracks
+/// [`hornvale_language::romanize`] instead of duplicating it; every one is a
+/// single `char` today, and `flat_map` over `chars()` keeps a future
+/// multi-char vowel romanization from silently dropping out of the set.
+///
+/// Completeness argument (why a vowel letter can never fall outside this
+/// set): `phonotactic-validity-<species>` — an invariant, green on every
+/// census row — re-parses every committed name of this species against this
+/// same `ph.inventory`, so a name containing a vowel letter the inventory
+/// does not romanize could not have parsed.
+fn vowel_graphemes(ph: &Phonology) -> std::collections::BTreeSet<char> {
+    ph.inventory
+        .iter()
+        .filter(|s| matches!(s, Segment::Vowel { .. }))
+        .flat_map(|s| romanize(s).chars())
+        .collect()
+}
+
+/// Syllables in `name`, counted as **maximal runs of `vowels`** in its
+/// case-folded, tone-mark-stripped surface (see [`bare_surface`]) — the
+/// orthographic syllable proxy The Wearing (2026-07-27) measured its whole
+/// before/after on, kept identical here so the metric and the campaign's
+/// recorded figures are the same instrument.
+///
+/// It is a proxy, not the namer's own count, and the direction of its error
+/// is known and measured. A run is read as ONE nucleus. Where the phonology
+/// licenses a two-vowel nucleus (`ph.nuclei` containing 2) that is exact.
+/// Where a two-vowel run appears in a language whose only licensed nucleus
+/// is a simple vowel, a strict phonological parse would read two — evolved
+/// roots guarantee inventory membership, not template conformance, and The
+/// Speakable's attested tier admits a native word verbatim rather than
+/// repairing it, so such runs do occur. Measured over the four seeds the
+/// campaign reports (42, 1, 99, 777; 650 settlement names): 478 of 2,130
+/// runs are two vowels long, and the ones in a nuclei-`[1]` language are 17
+/// of 50 goblin runs and 24 of 75 hobgoblin runs — reading every such run as
+/// two nuclei instead of one moves the four-seed mean from 3.277 to 3.340
+/// (+1.9%), and seed 42's from 2.953 to 3.195 (+8.2%). **So this count is a
+/// lower bound, loose by at most those few percent.**
+///
+/// Two abutting onsetless syllables would merge the same way, but that is a
+/// third-order concern at most: `draw_manner_slots` draws a minimum of one
+/// onset slot, so a drawn syllable is never onsetless (Task 9 measured 0 in
+/// 245,613 syllables over 4,096 seeds).
+fn syllable_count(name: &str, vowels: &std::collections::BTreeSet<char>) -> usize {
+    let mut runs = 0usize;
+    let mut in_run = false;
+    for c in bare_surface(name).chars() {
+        if vowels.contains(&c) {
+            if !in_run {
+                runs += 1;
+            }
+            in_run = true;
+        } else {
+            in_run = false;
+        }
+    }
+    runs
+}
+
+/// Mean syllable count ([`syllable_count`]) of every generated name
+/// attributed to `species` in this world — the same name population
+/// [`mean_name_length`] reads, so the two columns are directly comparable;
+/// `Absent` if it produced no names.
+///
+/// Why this exists at all (The Wearing, spec §7): character length cannot
+/// tell "shorter words" from "the same words spelled tighter," and the
+/// campaign's §2.2 diagnosis established that spelling was never the defect
+/// — 3.4 characters per syllable is unremarkable (Bristol 3.5, Winchester
+/// 3.3). Syllable count is the reading that measures the claim. The reading
+/// is taken from the COMMITTED surface string, never from the namer's
+/// internal syllable structures, so it is a measurement of what shipped
+/// rather than an echo of how it was built.
+fn mean_name_syllables(v: &FullView, species: &str) -> MetricValue {
+    let names = species_generated_names(v, species);
+    if names.is_empty() {
+        return MetricValue::Absent;
+    }
+    let ph = language_of_in(v.world(), v.components(), species);
+    let vowels = vowel_graphemes(&ph);
+    let total: usize = names.iter().map(|n| syllable_count(n, &vowels)).sum();
+    MetricValue::Number(total as f64 / names.len() as f64)
+}
+
 /// Fraction of this world's settlement + deity names (across every species)
 /// that duplicate another name in the same world; `Absent` if there are
 /// none. Uniqueness is de-facto, not enforced (Task 9) — this is a measured
@@ -3945,27 +4086,46 @@ fn settlement_site_concepts(
     Some(concepts.into_iter().map(str::to_string).collect())
 }
 
-/// Every gloss composition `Namer::glossed_name` could truthfully produce
-/// from `concepts`: each concept alone, plus every ordered pair joined with
-/// `"-"` — `concepts.len() + concepts.len() * (concepts.len() - 1)`
-/// candidates. Task 5 widened a settlement's site vector from 2 concepts (4
-/// candidates) to up to 11 (11 singles + 110 ordered pairs = 121
-/// candidates), so a gloss now has roughly 30x more ways to coincidentally
-/// match a candidate string than before that widening — see
-/// `name_gloss_true`'s doc comment for what that costs the check below.
-fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> {
-    let mut set = std::collections::BTreeSet::new();
-    for c in concepts {
-        set.insert(c.clone());
+/// Whether `gloss` reads as a truthful composition of `concepts`: it must
+/// segment (uniquely) into a `"-"`-joined sequence of distinct members of
+/// `concepts`, which is exactly what `Namer::glossed_name` writes — its
+/// `chosen.join("-")` over concepts it picked, without repetition, from the
+/// site vector it was handed.
+///
+/// **This replaced an enumerated accept set** (each concept alone plus every
+/// ordered pair) at The Wearing's close, for two reasons, the first of which
+/// was a live defect:
+///
+/// 1. **The pair ceiling was wrong after Task 7.** `NameShape::Qualified`
+///    composes THREE concepts, and a three-concept gloss is not a single or
+///    a pair, so it matched nothing and `name-gloss-true` read `false` for
+///    any world containing one. It read false at every one of the four seeds
+///    the campaign measures (36 of 650 settlement glosses are three-part),
+///    while the gloss was in fact perfectly truthful — the metric had gone
+///    stale against the shapes the namer can now produce. The stale census
+///    fixture hid it: `name_gloss_true_is_100_percent_row_by_row` reads
+///    pre-campaign rows, so it stayed green while the live metric was false.
+///    A parse has no arity ceiling, so it cannot go stale that way again.
+/// 2. **The accept set was loosening as the site vector widened.** Task 5
+///    took the vector from 2 concepts (4 candidates) to up to 11 — 11
+///    singles plus 110 ordered pairs, 121 candidates — roughly 30x more
+///    strings a wrong gloss could coincidentally equal, and admitting
+///    three-part compositions would have taken it past 1,100. Segmenting
+///    instead of enumerating checks the same property without ever
+///    building that set.
+///
+/// The distinctness requirement is not decoration: it is the one thing the
+/// old ordered-pair enumeration (`i != j`) still carried that a bare
+/// segmentation would drop, and dropping it would let `coast-coast` pass.
+fn gloss_is_a_composition_of(gloss: &str, concepts: &[String]) -> bool {
+    let vocab: std::collections::BTreeSet<&str> = concepts.iter().map(String::as_str).collect();
+    let parses = gloss_parses(gloss, &vocab);
+    if parses.len() != 1 {
+        return false;
     }
-    for i in 0..concepts.len() {
-        for j in 0..concepts.len() {
-            if i != j {
-                set.insert(format!("{}-{}", concepts[i], concepts[j]));
-            }
-        }
-    }
-    set
+    let parts = &parses[0];
+    let distinct: std::collections::BTreeSet<&str> = parts.iter().copied().collect();
+    distinct.len() == parts.len()
 }
 
 /// Whether every committed settlement `name-gloss` fact in this world is a
@@ -3987,9 +4147,12 @@ fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> 
 ///   own keystone test,
 ///   `a_settlement_name_gloss_is_truthful_to_its_own_site_facts`, which
 ///   restored it after the same widening dropped it there too).
-/// - `candidate_glosses`'s accept set grew roughly 30x (see its own doc
-///   comment) as the site vector widened, so a wrong gloss is far more
-///   likely to slip through by coincidence than it was before Task 5.
+/// - the accept set was growing roughly 30x with the site vector, so a wrong
+///   gloss was far likelier to slip through by coincidence than before Task
+///   5. The Wearing closed that half: [`gloss_is_a_composition_of`] segments
+///   the gloss instead of enumerating an accept set, which is tighter at
+///   every arity and does not loosen as the vector widens. (It also fixed a
+///   live staleness the enumeration had — see that function's own comment.)
 ///
 /// `Absent` if no settlement in this world carries a gloss.
 fn name_gloss_true(v: &FullView) -> MetricValue {
@@ -4006,7 +4169,7 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
         };
         checked = true;
         match settlement_site_concepts(v, id, climate) {
-            Some(concepts) if candidate_glosses(&concepts).contains(gloss) => {}
+            Some(concepts) if gloss_is_a_composition_of(gloss, &concepts) => {}
             _ => all_true = false,
         }
     }
@@ -4014,6 +4177,159 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
         return MetricValue::Absent;
     }
     MetricValue::Flag(all_true)
+}
+
+/// The exact codomain of [`phenomenon_concept`] — every concept a presiding
+/// phenomenon can contribute to a settlement's site vector, and therefore to
+/// its gloss. Named as a set here because [`name_transparency`] has to READ a
+/// committed gloss back into the concepts it names, and the presiding slot is
+/// the one site concept that cannot be re-derived from terrain and climate
+/// alone (it needs the settlement's own culled sky — `SEQ-5`, the expensive
+/// half of `settlement_site_concepts` above). Taking the whole codomain as
+/// the candidate set instead costs the parse nothing: it is a superset of the
+/// one concept that actually fired, and the segmentation stays unique anyway
+/// (see [`gloss_parses`]). `presiding_concepts_are_phenomenon_concepts_
+/// codomain` pins the two together.
+/// type-audit: bare-ok(identifier-text)
+const PRESIDING_CONCEPTS: &[&str] = &["day", "moon", "star", "sun", "wind"];
+
+/// Every way `gloss` reads as a `"-"`-joined sequence of `vocab` members —
+/// the inverse of `glossed_name`'s own `chosen.join("-")`.
+///
+/// A gloss cannot simply be `split('-')`: a biome concept id is itself
+/// hyphenated (`tropical-seasonal-forest`, `sea-ice`), so `coast-sea-ice`
+/// must read as two concepts and not four. This returns EVERY segmentation
+/// so the caller can insist on a unique one rather than silently preferring
+/// a longest-match; over the four seeds The Wearing measured (650 glossed
+/// settlement names) the parse was unique for every single one, and none
+/// failed to parse.
+fn gloss_parses<'a>(gloss: &str, vocab: &std::collections::BTreeSet<&'a str>) -> Vec<Vec<&'a str>> {
+    let mut out: Vec<Vec<&'a str>> = Vec::new();
+    for word in vocab {
+        if gloss == *word {
+            out.push(vec![word]);
+        } else if let Some(rest) = gloss
+            .strip_prefix(*word)
+            .and_then(|rest| rest.strip_prefix('-'))
+        {
+            for tail in gloss_parses(rest, vocab) {
+                let mut parse = vec![*word];
+                parse.extend(tail);
+                out.push(parse);
+            }
+        }
+    }
+    out
+}
+
+/// The share of this world's committed settlement names whose SURFACE still
+/// contains, verbatim, the modern citation form of every concept its own
+/// committed `name-gloss` names; `Absent` if no settlement carries a
+/// non-empty gloss.
+///
+/// **The target is explicitly not 1.0** (The Wearing, spec §8). Before this
+/// campaign transparency was 100% by construction — a name was its site
+/// words, unworn, plus a drawn stem — and that uniformity is the defect the
+/// campaign names: most real toponyms are opaque to their own speakers, and
+/// no English speaker hears *hām* in "Birmingham". A metric asserting 1.0
+/// would be asserting the defect back. What is wanted is a DISTRIBUTION, so
+/// this is registered `Numeric` and pinned as a drift witness, never bounded.
+/// Measured at the four seeds the campaign reports: 100% before (650 of 650),
+/// 68.8% after (447 of 650).
+///
+/// **Route, and why it is not an echo.** Two committed facts and one
+/// re-derivation, none of them the naming code:
+/// - the committed `name` and `name-gloss` of each settlement, read from the
+///   ledger;
+/// - that settlement's own site vector, from worldgen's own
+///   `settlement_site_concepts` — used only as the VOCABULARY the gloss is
+///   segmented against (with `presiding: None`, so the expensive per-
+///   settlement sky observation `name_gloss_true` pays is skipped and
+///   [`PRESIDING_CONCEPTS`] stands in for that slot);
+/// - the species' lexicon, for each named concept's **citation form** — the
+///   dictionary word, exactly as unworn and unreduced as the lexicon minted
+///   it.
+///
+/// Nothing here calls `glossed_name`, `wear`, `reduce_nuclei`,
+/// `worn_compound` or `repair_phonotactics`. The reading falls precisely
+/// when those change the surface away from the citation form, which is what
+/// makes it a measurement of wear rather than a restatement of it: forced to
+/// the pre-campaign tree it reads 1.0 at every seed, which is the strongest
+/// statement available that it is not vacuous.
+///
+/// **Strictness.** A name counts as transparent only if EVERY concept in its
+/// gloss is present verbatim — the conjunction, not "at least one". A
+/// two-concept name whose second morpheme reduced is therefore opaque even
+/// though its first morpheme still reads; 61 of the 650 measured names are
+/// this partial case, and they count against transparency.
+///
+/// An unparseable or ambiguous gloss counts against transparency too, since
+/// a gloss the metric cannot read into concepts cannot be shown to be
+/// readable in the surface either. That case is not reachable through a
+/// healthy pipeline: `name-gloss-true` (an invariant, pinned 100% row by row
+/// in `calibration.rs`) already asserts every committed gloss is a
+/// composition of that settlement's own site concepts, and this vocabulary
+/// is a superset of that one on its only lossy axis.
+fn name_transparency(v: &FullView) -> MetricValue {
+    let world = v.world();
+    let mut glossed = 0usize;
+    let mut transparent = 0usize;
+    // One lexicon per species per world, not per settlement (the phenomena
+    // seam lesson: `lexicon_from` is a whole-lexicon build). `None` records a
+    // species whose lexicon will not build, so the failure is paid once.
+    let mut lexicons: std::collections::BTreeMap<String, Option<hornvale_language::Lexicon>> =
+        std::collections::BTreeMap::new();
+    for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+        let id = f.subject;
+        let Some(gloss) = world.ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
+            continue;
+        };
+        if gloss.is_empty() {
+            continue;
+        }
+        glossed += 1;
+        let (Some(name), Some(species), Some(Value::Number(cell))) = (
+            world.ledger.text_of(id, hornvale_kernel::NAME),
+            hornvale_species::species_of(world, id),
+            world.ledger.value_of(id, hornvale_settlement::CELL_ID),
+        ) else {
+            continue;
+        };
+        let lexicon = lexicons
+            .entry(species.clone())
+            .or_insert_with(|| lex(v, &species).ok());
+        let Some(lexicon) = lexicon.as_ref() else {
+            continue;
+        };
+        let mut vocab: std::collections::BTreeSet<&str> =
+            worldgen_settlement_site_concepts(CellId(*cell as u32), v.terrain(), v.climate(), None)
+                .into_iter()
+                .collect();
+        vocab.extend(PRESIDING_CONCEPTS.iter().copied());
+        let parses = gloss_parses(gloss, &vocab);
+        if parses.len() != 1 {
+            continue;
+        }
+        let surface = bare_surface(name);
+        let reads = parses[0].iter().all(|concept| {
+            match lexicon.entry(concept) {
+                Some(LexEntry::Root { views, .. }) | Some(LexEntry::Compound { views, .. }) => {
+                    let citation = bare_surface(&views.roman);
+                    !citation.is_empty() && surface.contains(&citation)
+                }
+                // A `Gap` concept has no word to look for, and could not have
+                // been chosen for a name in the first place.
+                _ => false,
+            }
+        });
+        if reads {
+            transparent += 1;
+        }
+    }
+    if glossed == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(transparent as f64 / glossed as f64)
 }
 
 /// Whether every `species` lexicon `Root` entry's recorded sound-change
@@ -5214,8 +5530,236 @@ mod tests {
         // mean-geothermal-gradient), +4 for The Lode (Task 7:
         // cave-fraction, deposit-density, dominant-commodity,
         // mean-ore-grade), +4 for The Vestige (Task 7: vestige-density,
-        // forgotten-fraction, dominant-hazard, mean-warning-legibility).
-        assert_eq!(registry().len(), 169);
+        // forgotten-fraction, dominant-hazard, mean-warning-legibility),
+        // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
+        // per-species, beside the name-length-{species} pair they are read
+        // against — and the world-level name-transparency).
+        assert_eq!(registry().len(), 172);
+    }
+
+    // --- The Wearing (Task 11): the syllable and transparency readings. ---
+
+    /// `syllable_count` on hand-built inputs whose syllable structure is not
+    /// in dispute — the counting rule itself, checked against ground truth
+    /// stated by hand rather than against anything the namer produced.
+    #[test]
+    fn syllable_count_reads_maximal_vowel_runs() {
+        let vowels: std::collections::BTreeSet<char> = "aeiou".chars().collect();
+        for (name, want) in [
+            ("", 0),
+            ("k", 0),
+            ("ba", 1),
+            // B-o-d-o-b-aa-d-o: four runs (`aa` is one).
+            ("Bodobaado", 4),
+            ("dzoxgzhofdzha", 3),
+            // A run of two vowels is ONE nucleus (the documented proxy).
+            ("baado", 2),
+            // Capitalization must not matter: names are committed capitalized.
+            ("BODOBAADO", 4),
+            // Word-initial and word-final runs both count.
+            ("ak", 1),
+            ("ka", 1),
+        ] {
+            assert_eq!(
+                syllable_count(name, &vowels),
+                want,
+                "{name} should read {want} syllables"
+            );
+        }
+    }
+
+    /// A combining tone mark rides ON a nucleus; it must neither break a
+    /// vowel run nor add one. The three marks in use plus a fourth from the
+    /// same block that no tone level claims today.
+    #[test]
+    fn a_tone_mark_neither_breaks_nor_adds_a_syllable() {
+        let vowels: std::collections::BTreeSet<char> = "aeiou".chars().collect();
+        // "báado" — an acute on the first vowel of a two-vowel run.
+        assert_eq!(syllable_count("ba\u{0301}ado", &vowels), 2);
+        // "bàdò" — grave marks on two separate nuclei.
+        assert_eq!(syllable_count("ba\u{0300}do\u{0300}", &vowels), 2);
+        // A macron, and a combining mark from the same block nothing uses.
+        assert_eq!(syllable_count("ba\u{0304}do\u{0308}", &vowels), 2);
+    }
+
+    /// The vowel set comes from the phonology's own inventory, so a language
+    /// that never drew `u` does not count a `u` as a nucleus. Guards the
+    /// tempting hard-coded `aeiou`.
+    #[test]
+    fn vowel_graphemes_come_from_the_inventory_not_a_hardcoded_alphabet() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let ph = language_of_in(view.world(), view.components(), "goblin");
+        let vowels = vowel_graphemes(&ph);
+        assert!(!vowels.is_empty(), "a phonology always has vowels");
+        assert!(
+            vowels.iter().all(|c| "aeiou".contains(*c)),
+            "every romanized vowel is one of the five roman vowel letters: {vowels:?}"
+        );
+        let inventory_vowels = ph
+            .inventory
+            .iter()
+            .filter(|s| matches!(s, Segment::Vowel { .. }))
+            .count();
+        assert!(
+            vowels.len() <= inventory_vowels,
+            "the set never invents a vowel the inventory lacks"
+        );
+    }
+
+    /// A gloss cannot be `split('-')`: biome concept ids are themselves
+    /// hyphenated. The segmentation must read `coast-temperate-forest` as
+    /// two concepts, and must stay unique when a hyphenated id sits beside
+    /// short ones.
+    #[test]
+    fn a_gloss_parses_into_whole_concepts_not_hyphen_pieces() {
+        let vocab: std::collections::BTreeSet<&str> = ["coast", "river", "temperate-forest", "sun"]
+            .into_iter()
+            .collect();
+        assert_eq!(
+            gloss_parses("coast-temperate-forest", &vocab),
+            vec![vec!["coast", "temperate-forest"]]
+        );
+        assert_eq!(
+            gloss_parses("temperate-forest", &vocab),
+            vec![vec!["temperate-forest"]]
+        );
+        assert_eq!(
+            gloss_parses("river-coast-sun", &vocab),
+            vec![vec!["river", "coast", "sun"]]
+        );
+        // A naive `split('-')` would read four concepts here and find no
+        // words for "temperate" or "forest"; the parser reads two.
+        assert_eq!(gloss_parses("coast-temperate-forest", &vocab)[0].len(), 2);
+        // Nothing in the vocabulary: no parse at all, rather than a wrong one.
+        assert!(gloss_parses("hill-marsh", &vocab).is_empty());
+    }
+
+    /// `PRESIDING_CONCEPTS` must be exactly `phenomenon_concept`'s codomain.
+    /// If a later campaign teaches a new phenomenon kind to gloss, this reds
+    /// rather than letting `name-transparency` silently fail to parse the
+    /// glosses that carry it.
+    #[test]
+    fn presiding_concepts_are_phenomenon_concepts_codomain() {
+        let phenomenon = |kind: &str, description: &str| hornvale_kernel::Phenomenon {
+            kind: kind.to_string(),
+            description: description.to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::DaySky,
+        };
+        let cases = [
+            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the moon rides high"),
+            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "a wandering star"),
+            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the disc at noon"),
+            phenomenon(hornvale_astronomy::SEASONAL_CYCLE, "the turning year"),
+            phenomenon(hornvale_astronomy::NIGHT_STAR, "a fixed star"),
+            phenomenon(hornvale_climate::AMBIENT, "the prevailing wind"),
+        ];
+        let mut produced: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        for p in &cases {
+            let concept = phenomenon_concept(p).expect("each of these kinds glosses");
+            assert!(
+                PRESIDING_CONCEPTS.contains(&concept),
+                "{concept} is a presiding gloss concept but is missing from PRESIDING_CONCEPTS"
+            );
+            produced.insert(concept);
+        }
+        let listed: std::collections::BTreeSet<&str> = PRESIDING_CONCEPTS.iter().copied().collect();
+        assert_eq!(
+            produced, listed,
+            "PRESIDING_CONCEPTS lists exactly what phenomenon_concept can return"
+        );
+    }
+
+    /// Seed 42, pinned. The syllable columns exist to say the campaign's own
+    /// claim out loud: both peoples read in (or beside) the 2-3 target, where
+    /// the pre-wear tree read 6.04 over the same four seeds' settlements.
+    #[test]
+    fn seed_42_name_syllables_are_pinned() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        assert_eq!(
+            extract_from(&built, "name-syllables-goblin"),
+            MetricValue::Number(3.031_25)
+        );
+        assert_eq!(
+            extract_from(&built, "name-syllables-kobold"),
+            MetricValue::Number(2.241_379_310_344_827_6)
+        );
+    }
+
+    /// Seed 42, pinned — and pinned strictly BETWEEN the two degenerate
+    /// answers, because both of them would be defects. 1.0 is the
+    /// pre-campaign constant the whole campaign exists to break (spec §3's
+    /// table: "transparency — today 100%, by construction; after: a
+    /// distribution"); 0.0 would mean wear had eaten every name's gloss,
+    /// which the survival guard exists to prevent.
+    #[test]
+    fn seed_42_name_transparency_is_a_distribution_not_a_constant() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let value = extract_from(&built, "name-transparency");
+        let MetricValue::Number(share) = value else {
+            panic!("name-transparency reads a number at seed 42: {value:?}");
+        };
+        assert!(
+            share > 0.0 && share < 1.0,
+            "transparency is a distribution, not a constant: {share}"
+        );
+        // 129 of 169 glossed settlement names.
+        assert_eq!(share, 129.0 / 169.0, "seed 42 transparency drifted");
+    }
+
+    /// The arity regression `name-gloss-true` had, stated as a test so it
+    /// cannot come back: a THREE-concept gloss is truthful, and the retired
+    /// ordered-pair enumeration called it false. Also pins what the check
+    /// still rejects — a concept outside the site vector, and a repeat.
+    #[test]
+    fn a_three_concept_gloss_is_a_truthful_composition() {
+        let site: Vec<String> = ["coast", "river", "temperate-forest", "sun"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        // One, two and three concepts all read as compositions.
+        assert!(gloss_is_a_composition_of("coast", &site));
+        assert!(gloss_is_a_composition_of("coast-river", &site));
+        assert!(gloss_is_a_composition_of(
+            "coast-temperate-forest-river",
+            &site
+        ));
+        // A concept the site never offered.
+        assert!(!gloss_is_a_composition_of("coast-marsh", &site));
+        // A repeat: `glossed_name` picks distinct concepts, and the retired
+        // `i != j` pair enumeration rejected this too.
+        assert!(!gloss_is_a_composition_of("coast-coast", &site));
+        // An empty gloss is not a composition of anything.
+        assert!(!gloss_is_a_composition_of("", &site));
+    }
+
+    /// The end-to-end statement of the same regression: `name-gloss-true`
+    /// reads TRUE on the shipped code at the four seeds The Wearing measures.
+    /// It read false on all four before this fix, on glosses that were
+    /// themselves perfectly truthful.
+    #[test]
+    fn seed_42_name_gloss_is_true_under_the_three_concept_shape() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        assert_eq!(
+            extract_from(&built, "name-gloss-true"),
+            MetricValue::Flag(true)
+        );
+    }
+
+    #[test]
+    fn the_wearing_metrics_are_registered() {
+        let names: Vec<&str> = registry().iter().map(|m| m.name).collect();
+        for want in [
+            "name-syllables-goblin",
+            "name-syllables-kobold",
+            "name-transparency",
+        ] {
+            assert!(names.contains(&want), "{want} is registered");
+        }
     }
 
     #[test]
