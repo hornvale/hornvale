@@ -183,12 +183,30 @@ Collect `approach_ease(graph, cell)` for every cell with non-zero capacity, for 
 Run: `cargo test -p hornvale-worldgen --test approach_ease_calibration -- --ignored --nocapture`
 Expected: five quantile lines printed.
 
-- [ ] **Step 4: Record the measured values in this plan**
+- [x] **Step 4: Record the measured values in this plan**
 
-Write the five printed quantiles into this task, in the plan file, as a permanent record of what the constants were chosen from. Then set:
+**Measured**, 30 seeds (`1..=30`), pooled over 142,595 habitable (non-zero-capacity) cells, present-day connection graph (`connection_graph_of`; see the harness's doc comment for why present stands in for the bake's per-era array). Command:
 
-- `DEF_SCALE` = the **median** (q0.50). This makes `tanh(ease/DEF_SCALE) ≈ 0.762` at the median.
-- `DEF_FLOOR = 0.75`, `DEF_CEIL = 1.40` — authored, chosen so the median cell lands near 1.0 and the spread is roughly ±30%. These are **authored priors, not fits**; say so in the doc comment.
+```bash
+cargo test -p hornvale-worldgen --test approach_ease_calibration -- --ignored --nocapture
+```
+
+Output:
+
+```
+q0.05 = 0.004881
+q0.25 = 0.008302
+q0.50 = 0.012622
+q0.75 = 0.028620
+q0.95 = 1.003891
+```
+
+So `DEF_SCALE = 0.012622` (q0.50). `DEF_FLOOR = 0.75`, `DEF_CEIL = 1.40` — authored, chosen so the median cell lands near 1.0 and the spread is roughly ±30%. These are **authored priors, not fits**; say so in the doc comment.
+
+**Distribution shape — a finding, not smoothed over.** The pooled distribution is heavily right-skewed: the q0.75→q0.95 jump is over 30x (0.0286 → 1.0039), versus a q0.05→q0.75 span of well under one order of magnitude. An unrecorded follow-up pass (same run, diagnostic prints only, not part of the committed harness) put `n = 142,595`, `min ≈ 0` (isolated, single-cell landmasses whose only edges are ocean-touching adjacency, stored at `conductance == 0.0` and filtered out — so a habitable cell can have `approach_ease == 0`), `max ≈ 28.96`, `mean ≈ 0.185`, and `q0.99 ≈ 3.40`. Two consequences for Task 3:
+
+1. Because `DEF_SCALE` is the median and the distribution's upper half is 1-3 orders of magnitude above it, `tanh(ease/DEF_SCALE)` is already within ~2% of its asymptote by q0.75 (ratio ≈ 2.27, `tanh ≈ 0.979`) — differentiation among the *more* defensible half of the map is compressed into a narrow output band near `DEF_FLOOR`, while nearly all of the formula's dynamic range is spent distinguishing cells *below* the median. This is expected of `tanh` on a right-skewed input and is not itself a bug, but it means "defensibility" as this formula defines it is really "how much *worse* than typical is this cell's approach", not a linear rescaling of `approach_ease`.
+2. **Confirmed isolated cells (`approach_ease == 0`) exist in the measured population.** At `ease = 0`, `tanh(0 / DEF_SCALE) = 0`, so `defensibility = DEF_FLOOR + (DEF_CEIL - DEF_FLOOR) * (1 - 0) = DEF_CEIL` **exactly** — not strictly inside `(DEF_FLOOR, DEF_CEIL)`. Task 3 Step 4's test asserts `d_max < 1.40` (strict); on a seed where a habitable, isolated cell is sampled, that assertion will fail as written. Flagging for Task 3/6, not fixing here — this task's deliverable is the measurement, not the formula.
 
 - [ ] **Step 5: Commit**
 
