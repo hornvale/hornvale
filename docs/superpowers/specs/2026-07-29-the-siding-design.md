@@ -205,11 +205,17 @@ Stated as assumptions because they are **unverified**, and this repo's
 recorded failure mode is confident prose about generated output that nobody
 ran.
 
-**A1 — the bare-cargo hole is left open.** Q3 guards the *wrapper*. A bare
-`cargo nextest run --run-ignored only …` on the Mac still writes
-`the-history` and `the-sounding` unguarded — precisely the hole 0079 had to
-close in Rust for the census path. Deliberately deferred, because closing it
-is only justified if A2 says it matters.
+**A1 — RETIRED by A2's measurement.** Q3 guards the *wrapper*, leaving a bare
+`cargo nextest run --run-ignored only …` on the Mac able to write
+`the-history` and `the-sounding` unguarded — the hole 0079 had to close in
+Rust for the census path. A2 (below) measured that **the hosts agree on every
+deterministic value in both artifacts**, so there is nothing for a Rust-level
+guard to protect: the only cross-run variation is wall-clock timing, which no
+host check can stabilise and which decision 0087 reclassifies instead.
+
+The plan's Task 6 (a guard at the three write seams) is therefore **not
+implemented, by measurement rather than by omission**. Had A2 come back dirty
+it would have been required; it did not.
 
 **A2 — MEASURED 2026-07-29, and the question turned out to be partly
 ill-posed.** Regenerated both sweeps on the canonical box at the shared ref
@@ -233,9 +239,27 @@ separately as decision 0087 (a benchmark's timings are a record, not a
 golden), which also fixes this spec's own §7 zero-diff check — a bare
 `git diff --exit-code` over that tree could never have passed.
 
-**Still outstanding:** the Mac half for `the-history`. Its lefford diff was
-clean, so it is reproducible *on one box*; the cross-host comparison for it is
-not yet done. Until it is, A1 stays open on `the-history` alone.
+**Both halves are now in, and A2 is CLEAN.** Running the same sweeps on the
+Mac at `c5fc759c` (no worldgen code differs from `65581f18` — the intervening
+commits are docs, scripts, CI, a comment, and the summary preamble):
+
+- **`the-history`: zero diff on the Mac as well.**
+- **`the-sounding`: deterministic columns byte-identical across 27 rows on
+  BOTH boxes**; only `bake_ns`, `read_ns_per_op`, `replay_ns`, and the
+  `scan_vs_index` timing rows moved.
+
+The comparison needs no diff-of-diffs: both boxes diff against the *same
+committed baseline*, so each producing a zero diff on the deterministic
+content means they produce identical content. Verified with an explicit
+projection onto `(axis, value, peak_bytes, events)` — an earlier eyeball check
+used a filter that could not have distinguished agreement from disagreement,
+and was redone.
+
+**Conclusion: the two hosts agree on everything deterministic.** The heavy
+tier's placement on the canonical box is justified by *artifact authorship and
+machine contention* (§1, §2), not by any measured determinism divergence in
+these two sweeps. That is a narrower justification than the campaign assumed
+at G3, and it is the honest one.
 
 **A3 — the heavy tier's uncontended runtime on lefford is UNKNOWN.** The only
 datapoint is 39:09 under 3× contention. The wait-timeout constant therefore
