@@ -5,7 +5,7 @@
 //! layers stay nearest-cell. The projection here is the normative one, shared
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
-use crate::{SceneError, WaterfallPoint};
+use crate::{SceneContext, SceneError, WaterfallPoint};
 use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, World};
 use serde::Serialize;
 
@@ -294,11 +294,45 @@ pub struct RegionScene {
     pub waterfalls: Vec<WaterfallPoint>,
 }
 
-/// Build the `scene/tiles-region/v1` scene for one tile address. Deterministic:
-/// same world + same address → byte-identical once serialized.
+/// Build the `scene/tiles-region/v1` scene for one tile address, deriving a
+/// fresh [`SceneContext`]. Deterministic: same world + same address →
+/// byte-identical once serialized.
+///
+/// Prefer [`tiles_region_scene_in`] whenever a context is already in hand:
+/// the derivation this performs costs ~638 ms, 91.6% of a region patch (The
+/// Sextant), against far less per-call work.
 /// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples)
 pub fn tiles_region_scene(
     world: &World,
+    face: u32,
+    level: u32,
+    ix: u32,
+    iy: u32,
+    samples: u32,
+) -> Result<RegionScene, SceneError> {
+    // Validate before the expensive derivation, exactly as the `_in` form
+    // does for every caller; duplicating a cheap check beats making a
+    // bad-address call pay ~638 ms first.
+    RegionAddr {
+        face,
+        level,
+        ix,
+        iy,
+        samples,
+    }
+    .validate()?;
+    let ctx = SceneContext::build(world)?;
+    tiles_region_scene_in(world, &ctx, face, level, ix, iy, samples)
+}
+
+/// Build the `scene/tiles-region/v1` scene for one tile address, reusing a
+/// [`SceneContext`] the caller already built — the `_in` half of
+/// [`tiles_region_scene`], the same pairing `surrounds_scene_in` uses.
+/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples)
+#[allow(clippy::too_many_arguments)] // the address is five contract fields, spelled out
+pub fn tiles_region_scene_in(
+    world: &World,
+    ctx: &SceneContext,
     face: u32,
     level: u32,
     ix: u32,
@@ -313,13 +347,11 @@ pub fn tiles_region_scene(
         samples,
     };
     addr.validate()?;
-    let terrain =
-        hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let climate = hornvale_worldgen::climate_from(world, &terrain)
-        .map_err(|e| SceneError::Build(e.to_string()))?;
-    let t_index = NearestCellIndex::new(terrain.geosphere());
-    let c_index = NearestCellIndex::new(climate.geosphere());
-    let biomes = climate.biome_map();
+    let terrain = &ctx.terrain;
+    let climate = &ctx.climate;
+    let t_index = &ctx.terrain_index;
+    let c_index = &ctx.climate_index;
+    let biomes = &ctx.biomes;
     let catalog = hornvale_climate::Biome::catalog();
     let units = addr.node_units();
 
@@ -351,18 +383,18 @@ pub fn tiles_region_scene(
         );
         plate.push(terrain.plate_of(t_cell));
         // Continuous: barycentric.
-        elevation_m.push(interp(tg, &t_index, *s, |c| terrain.elevation_at(c).get()));
-        unrest.push(interp(tg, &t_index, *s, |c| terrain.unrest_at(c)));
-        t_mean_c.push(interp(cg, &c_index, *s, |c| {
+        elevation_m.push(interp(tg, t_index, *s, |c| terrain.elevation_at(c).get()));
+        unrest.push(interp(tg, t_index, *s, |c| terrain.unrest_at(c)));
+        t_mean_c.push(interp(cg, c_index, *s, |c| {
             climate.mean_temperature_at(c).get()
         }));
-        t_swing_c.push(interp(cg, &c_index, *s, |c| climate.seasonal_swing_at(c)));
+        t_swing_c.push(interp(cg, c_index, *s, |c| climate.seasonal_swing_at(c)));
         // Barycentric interpolation is a convex combination in theory, but
         // when several sampled cells sit exactly at the moisture domain's
         // boundary (`1.0` — common now that ocean cells clamp there),
         // floating-point summation can overshoot by an ULP or two; clamp
         // back into the declared `[0, 1]` domain.
-        moisture.push(interp(cg, &c_index, *s, |c| climate.moisture_at(c)).clamp(0.0, 1.0));
+        moisture.push(interp(cg, c_index, *s, |c| climate.moisture_at(c)).clamp(0.0, 1.0));
     }
     let waterfalls = terrain
         .waterfalls()
