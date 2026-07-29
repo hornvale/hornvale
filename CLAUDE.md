@@ -41,6 +41,17 @@ orientation for a fresh session.
 
 ## Commands
 
+**Where things run (decision 0086, The Siding).** Campaign worktrees and the
+commit gate run on the **Mac**; the **heavy tier and censuses run on lefford**,
+the canonical box for the artifacts they author. The heavy tier is an
+*authoring* path, not merely an expensive one — three of its tests write
+committed artifacts and one compares a live probe against lefford-authored
+census fixtures — so `heavy-run.sh` carries the same canonical-host guard a
+census does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>`
+(a SHA, not a branch name). `make gate` on lefford is not forbidden, but it
+oversubscribes a box whose other jobs are long; that contention is what 0086
+exists to remove.
+
 ```bash
 make doctor        # the repo self-map — run this first in a fresh session
 
