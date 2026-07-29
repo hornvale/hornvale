@@ -22,7 +22,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-fast gate-full heavy-remote nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -40,6 +40,17 @@ gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`ma
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
 	@bash scripts/gate-full-heavy.sh
 	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
+
+# Pass a SHA, not a branch name: HV_HEAVY_REF feeds `reset --hard`, which can
+# otherwise land on a stale LOCAL branch of that name on the canonical box.
+# heavy-run.sh echoes the resolved HEAD so you can check what actually ran.
+heavy-remote: ## Run the heavy tier on the canonical box (The Siding); REF=<full-sha> required
+	@test -n "$(REF)" || { \
+		echo "usage: make heavy-remote REF=<full-sha>"; \
+		echo "  push the branch first; the heavy tier authors committed artifacts"; \
+		echo "  and may only run on the canonical box (decisions 0063/0079)."; \
+		exit 1; }
+	ssh lefford 'cd ~/Projects/hornvale && HV_HEAVY_REF=$(REF) scripts/heavy-run.sh'
 
 fmt: ## Format the workspace in place
 	cargo fmt
