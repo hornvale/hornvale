@@ -30,8 +30,8 @@ with the same two lines — derive terrain from the world, then derive climate
 from the world and that terrain — and neither result is kept. Isolated, those
 two derivations cost 543.8 and 94.0 milliseconds: **638 milliseconds of fixed
 overhead on every scene call, whatever the call was for.** A flamegraph over
-a fan of twelve patches measures shares of the whole process: 61.4% in the
-terrain derivation, 9.8% in the climate derivation, and 77.8% in the region
+a fan of twelve patches measures shares of the whole process: 61.36% in the
+terrain derivation, 9.84% in the climate derivation, and 77.77% in the region
 calls themselves, the rest being the one-time world build. Divide the first
 two by the third to bring them inside a single call and **91.6% of a region
 patch is the planet being rebuilt** — a figure the wall clock reaches
