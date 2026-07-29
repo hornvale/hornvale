@@ -3164,6 +3164,51 @@ fn occlusion_lens_at(
     lens
 }
 
+/// The concept naming the people who held `cell` before `current` — the
+/// deepest occupation layer belonging to someone else. `None` where nobody
+/// else ever settled it.
+///
+/// Species-kind concepts already exist and are already exposure-gated by
+/// coexistence, so a people can only name a place for a people it knows of.
+fn predecessor_people(
+    world: &World,
+    cell: hornvale_kernel::CellId,
+    current: &str,
+) -> Option<String> {
+    let mut earliest: Option<(f64, String)> = None;
+    for f in world.ledger.iter() {
+        if f.predicate != hornvale_history::OCC_SITE {
+            continue;
+        }
+        let Some(hornvale_kernel::Value::Number(n)) = Some(&f.object) else {
+            continue;
+        };
+        if (*n as u32) != cell.0 {
+            continue;
+        }
+        let Some(people) = world
+            .ledger
+            .text_of(f.subject, hornvale_history::OCC_PEOPLE)
+        else {
+            continue;
+        };
+        if people == current {
+            continue;
+        }
+        let founded = match world
+            .ledger
+            .value_of(f.subject, hornvale_history::OCC_FOUNDED)
+        {
+            Some(hornvale_kernel::Value::Number(d)) => *d,
+            _ => continue,
+        };
+        if earliest.as_ref().is_none_or(|(d, _)| founded < *d) {
+            earliest = Some((founded, people.to_string()));
+        }
+    }
+    Some(format!("{}-kind", earliest?.1))
+}
+
 /// Derive a species' perception lens from its authored vector (spec §4).
 /// Identity at the goblin baseline (Diurnal, 0.5, 0.5) by construction:
 /// every factor is exactly 1.0 there.
@@ -5010,6 +5055,7 @@ fn build_to(
         // place for. These are what let a name stay translatable AND tell two
         // places apart — the random stem they replace did the second job and
         // none of the first.
+        let predecessor = predecessor_people(&world, s.cell, name);
         let hydrology = hornvale_terrain::sitefact::hydrology_at(&terrain, s.cell);
         let relief = hornvale_terrain::sitefact::relief_at(&terrain, s.cell);
         let mut site_concepts: Vec<&str> = vec![biome_concept];
@@ -5017,6 +5063,12 @@ fn build_to(
         site_concepts.extend(variant.map(|v| v.concept_name()));
         site_concepts.extend(hydrology.concept_name());
         site_concepts.extend(relief.concept_name());
+        // Who held this ground before (The Shibboleth). Real toponymy is full
+        // of the people who were here first — and this world knows, because
+        // history bakes an occupation layer per site. A goblin steading raised
+        // on a gnoll ruin is named for the gnolls, and `hornvale history
+        // --site` will read out the whole stratigraphy behind the name.
+        site_concepts.extend(predecessor.as_deref());
         let site = hornvale_language::SiteConcepts {
             concepts: &site_concepts,
         };
