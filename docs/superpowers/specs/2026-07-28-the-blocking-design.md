@@ -5,7 +5,10 @@ three-campaign carve agreed 2026-07-28 (this, then The Sighting, then The Panes)
 **Date:** 2026-07-28 · **Status:** spec approved at G3; amended 2026-07-28 by
 ledger #7–#12 (the extent derivation §3.4, per-method layout labels §3.2/§5.1, the
 measured epoch §5.2, what the stamp records §5.3, the two role-table constraints
-§4.1). Those amendments post-date G3 and lead the **G6** digest.
+§4.1), by ledger #23–#27 during execution (**a wall is a cell**, §3.3/§3.4/§7,
+at Nathan's direction), and at close (the measured solve cost, §10 risk 1; which
+flagged items survived, §12.1; the declined bump, §8/§11). Those amendments
+post-date G3 and lead the **G6** digest.
 **Parent:** `2026-07-25-the-rose-window-metaplan-design.md` **Amendment 2** (§1b)
 — read that first; this spec builds only on the amended program.
 **Prior rung:** The Lintel (`2026-07-27-the-lintel-design.md`), which made the
@@ -453,9 +456,10 @@ Two of the seven also change form, and both get *stronger*:
 ## 8. Scope
 
 **In:** the lattice and its two layout methods; the ASCII render and its verb;
-chamber roles and the pattern vocabulary they need; the `room/furnishing/v2` bump
-and the `room/layout/v1` declaration; the epoch stamp; the checker; intra-chamber
-`go`; the parity test.
+chamber roles and the pattern vocabulary they need; ~~the `room/furnishing/v2`
+bump~~ **(declined — measured unnecessary, decision 0084; see §12.1)** and the
+`room/layout/v1` declaration; the epoch stamp; the checker; intra-chamber `go`;
+the parity test.
 
 **Out, with a home:**
 
@@ -483,9 +487,25 @@ and the `room/layout/v1` declaration; the epoch stamp; the checker; intra-chambe
 
 ## 10. Risks
 
-1. **The solve's cost is unmeasured.** The Rose Window metaplan §5 caveat 2 still
-   stands, and the placement-scan floor measured during that brainstorm is *not* a
-   solver. Measure a real embedding before any budget claim reaches this spec.
+1. **The solve's cost is unmeasured.** ~~The Rose Window metaplan §5 caveat 2
+   still stands, and the placement-scan floor measured during that brainstorm is
+   *not* a solver. Measure a real embedding before any budget claim reaches this
+   spec.~~ **CLOSED — measured, 2026-07-28.** One `allocate` at the 19×19
+   four-chamber extent is **~9 µs release** (median 9667 ns then 8709 ns across
+   two runs, min 8375, p99 14250) and **174.6 µs debug** — a ~19× gap. Two
+   orders of magnitude under the 1000 µs ceiling. A real embedding, not a
+   placement scan.
+
+   **The profile is part of the number.** Three earlier figures in the ledger
+   are **superseded**: 6.79 µs release at the pre-`owner` 16×16 extent (#15);
+   27.6 µs release after per-cell ownership landed (#18); and 182.9 µs at 19×19
+   with **no profile stated** (#28), which this measurement identifies as the
+   *debug* figure — release had never been taken at that extent. A number
+   without a build profile is not a measurement, and this spec's own risk row is
+   where that rule earns its keep: quoting 182.9 µs here would have recorded a
+   ~20× pessimism as the cost of the solve. The gate-run cost assertion is
+   therefore keyed to the **debug** ceiling, because that is the profile the gate
+   runs in; a ceiling keyed to the release figure looks rigorous and is flaky.
 2. **The epoch's blast radius is the largest this program has taken.** The health
    battery becomes the gate; a census re-pin needs authorization. The failure mode
    is mistaking a real calibration regression for expected drift.
@@ -507,6 +527,12 @@ retrospective; registry rows flipped (`CLIENT-refinement-checker`,
 `CLIENT-district-patterns` partially, `CLIENT-tile-view`) with **Where**
 repointed; Confidence Gradient re-scored if a bet moves.
 
+*Amended at close:* the health battery was green **as a check**, not as a gate,
+because no epoch occurred (§12.1) — the clause above assumed the outcome the
+measurement reversed. The gallery re-pin did land in its own isolated commit
+(`67676f3b`), and the two decisions recorded are 0083 (the layout labels'
+granularity) and 0084 (the furnishing bump, *declined*).
+
 ## 12. Flagged for G3
 
 1. **Byte-identity breaks and the health battery becomes the gate** (§5.2) — the
@@ -519,6 +545,49 @@ repointed; Confidence Gradient re-scored if a bet moves.
 5. **This campaign reverses a decision The Lintel just shipped** (§6.1).
 6. **The parity contract forbids pointer-only capabilities forever** (§6) — a
    permanent constraint on every future pane, accepted for accessibility.
+
+### 12.1 Which flagged items survived contact — recorded at close
+
+The package the owner approved led with an item that **did not happen**, and
+that is recorded here rather than quietly dropped.
+
+- **Item 1 — REVERSED.** No epoch. The outcome was **RE-PIN**: exactly one
+  committed file moved (the seed-42 possession transcript), no metric golden and
+  no census golden moved, and `make gate` came back green at 2413/2413 **as a
+  check**. `room/furnishing` stays at v1; a bump with no moved derivation would
+  be an *empty* epoch. Ratified as decision 0084. The discontinuity is
+  **deferred, not absent** — five patterns carry `at_locale: false` and are
+  unreachable from any live read, and the gate that opens them is the first mark
+  committed inside a chamber.
+- **Item 2 — DID NOT ARISE.** No census re-pin, because no census golden moved.
+  No authorization was requested and none was needed.
+- **Item 3 — HALF SURVIVED.** `room/layout/v1/rectilinear` and
+  `room/layout/v1/grown` were declared causal (decision 0083, one label per
+  *algorithm*, none for a predicted method). The `room/furnishing/v1 → v2` half
+  is the item 1 declination.
+- **Item 4 — SURVIVED AS FLAGGED.** The stamp shipped: a `#[serde(default)]`
+  field on `World`, written by the composition root, recording ten versioned
+  label rows for a seed-42 world with the version segment stripped from the key
+  so a bump is a *value* change. It is schema-adjacent exactly as flagged, and it
+  nearly shipped recording a **retired** label as current (a roster keeps retired
+  rows, marked only in prose); the fix is highest-version-wins, compared
+  numerically.
+- **Item 5 — SURVIVED AS FLAGGED.** The Lintel's indoor `go` refusal is
+  reversed, and both The Lintel's chronicle and its spec carry an inline note
+  saying so, with the reason it is not a flip-flop (§6.1). The band law is
+  unchanged; the *inference* drawn from it changed. `back` stays refused indoors.
+- **Item 6 — SURVIVED AS FLAGGED, and is now permanent.** The structural half of
+  the parity contract holds and the tested half is a test rather than an
+  intention. Any future pane capability must first be a verb.
+
+One item the package did **not** flag turned out to be the campaign's largest
+model change: **a wall became a cell rather than a boundary**, at the owner's
+direction mid-execution (§3.3, §3.4, §7). It reworked Tasks 1–4's lattice core,
+retired the doubled render and its coordinate mapping, and earned the eighth
+checker rule. A mid-campaign model change of that size arriving unflagged is
+itself the finding: the spec had asserted the boundary model as definitional
+("a wall is a non-adjacency, definitionally") rather than as a choice, so there
+was no flag position for it to occupy.
 
 ## 13. Provenance
 

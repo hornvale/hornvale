@@ -2587,7 +2587,7 @@ with an empty stamp, which is the honest answer for such a world."
 
 **This task is the campaign's G6 hard stop.** Present the post-G3 ledger digest to Nathan and wait. Then run `closing-a-campaign`, unchanged — it owns the merge, the worktree, and the final summary. Nothing in this task force-pushes, deletes a branch, or regenerates a census without Nathan's word.
 
-- [ ] **Step 1: The full gate, before anything else**
+- [x] **Step 1: The full gate, before anything else**
 
 ```bash
 make gate-full 2>&1 | tail -30
@@ -2602,16 +2602,18 @@ git status --porcelain
 
 **Revert, never re-pin.** They are nanosecond measurements that differ every run; precedent is 748 commits of every campaign doing the same.
 
-- [ ] **Step 2: Decisions**
+- [x] **Step 2: Decisions**
 
 Next number is **0083** — verify with `ls docs/decisions/ | tail -3` before writing, and follow the house form (Status/Decider, context, consequence, see-also).
+
+*Landed:* **0083** (a seed-derivation label is declared per *algorithm*, and never in advance) and **0084** (an epoch is declared only when a derivation moved — `room/furnishing` stays at v1). Two further records were *proposed, not minted*, per the instruction below: the extent derivation's durable-shell law (ledger #8) and followup 7's band-notation record. Both are the owner's call at G6.
 
 - **The layout labels.** One per method, causal, versioned from the first commit. The decision to record is not "we made a label" but **the granularity rule**: the unit of independent change is the algorithm, so a method gets a label and a *predicted* method does not get one in advance. Cites 0073, 0072, Amendment 2 §1b.7, ledger #7.
 - **The furnishing label's fate**, whichever Task 6 measured — and if the answer was "no bump", record *that*, with the reason: a bump on a label nothing draws from declares a discontinuity that did not occur. A decision log that records only the changes made, never the ones correctly declined, teaches the wrong lesson.
 - **Consider** a record for the extent derivation (ledger #8) if it reads as a law rather than a formula — the durable-shell argument generalizes past this campaign, and "derive geometry from what outlives the tenants, not from who lives there now" is the kind of sentence that silently regrows wrong. Nathan's call at G6; propose it, do not mint it unilaterally.
 - **Consider** followup 7's band-notation record, which The Lintel left owed.
 
-- [ ] **Step 3: Chronicle and freshness**
+- [x] **Step 3: Chronicle and freshness**
 
 Write `book/src/chronicle/the-blocking.md` and register it in `book/src/SUMMARY.md`. The chronicle's job is the *argument*, not the changelog: the inversion (contents → map, §2), the embedder-not-generator discipline and how rule 7 makes it checkable, the reversal of The Lintel's refusal and why it is not a flip-flop, and — whichever it was — the epoch or its honest absence.
 
@@ -2623,7 +2625,7 @@ grep -rn 'refused indoors\|no north\|identical\|four doors onto one room' book/s
 
 Followup 13 is in scope here and cheap: `chamber_nouns`' doc comment (`chamber_prose.rs:26-30`) has been half-stale since The Lintel, and this campaign touches that file twice.
 
-- [ ] **Step 4: Registry, and the 600-char cap**
+- [x] **Step 4: Registry, and the 600-char cap**
 
 Rows are capped at **600 characters** and the cap is **append-never** — write each edit as an index entry pointing at the chronicle, never as a narrative. Flip and repoint **Where**:
 
@@ -2635,7 +2637,7 @@ Rows are capped at **600 characters** and the cap is **append-never** — write 
 
 New rows for what was captured, not built: the **tech-as-span-cap** model, the **durable extent** (both ledger #8), the **content-addressed label** idea (#7), and — if Task 6 landed LATENT — the gated-pattern condition.
 
-- [ ] **Step 5: Retrospective, spec amendments, gradient**
+- [x] **Step 5: Retrospective, spec amendments, gradient**
 
 - `docs/retrospectives/the-blocking.md`, following the house form (decision 0020). Promote `.superpowers/sdd/followups.md` into its follow-up section — the register is scratch and does not survive the worktree.
 - **Amend spec §10 risk 1** with Task 1 Step 5's measured number *and its build profile*. A number without a profile is not a measurement (followup 2a: the same spike measured ~10× slower in debug).
