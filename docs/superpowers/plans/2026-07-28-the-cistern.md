@@ -213,14 +213,45 @@ If the type audit fails, it is telling you a new pub-boundary primitive needs a 
 ### Task 2: The catalog holds the cistern, and the guard closes
 
 **Files:**
+- Modify: `windows/scene/src/region.rs` (the fourth entry point; the assertions)
+- Modify: `windows/scene/src/lib.rs` (the assertions)
 - Modify: `clients/world-wasm/src/lib.rs`
 - Create: `cli/tests/scene_context_discipline.rs`
+- Create: `windows/scene/tests/fixtures/region-seed-1-f0-l3.json` (+ its golden test)
 
 **Interfaces:**
 - Consumes from Task 1: `SceneContext::build`, `tiles_scene_in`, `tiles_region_scene_in`.
 - Produces: nothing importable.
 
 **Read first:** `clients/world-wasm/src/lib.rs` in full — it is 328 lines, it is a **standalone workspace** (its own `Cargo.toml`, `opt-level="z"`), and its module doc says "statics are the whole state model."
+
+- [ ] **Step 0a: Close the fourth terrain-facing entry point**
+
+The Task 1 review found `temperature_grid_region` (`windows/scene/src/region.rs:456`) still opens with `hornvale_worldgen::climate_of(world)` + `NearestCellIndex::new` per call — the full 638 ms. It was missed when the spec's Item 2 table was drafted; the spec is amended and it is in scope.
+
+Give it a `temperature_grid_region_in(world, ctx, face, level, ix, iy, samples, day)` and delegate from the `&World` form, exactly as Task 1 did for the other three. Same rule: **the body changes only where a derivation becomes a context read.** `windows/scene/examples/region_temperature_golden.rs:35` calls it in a day loop and must keep producing identical output.
+
+- [ ] **Step 0b: Enforce the context/world match**
+
+Add as the first line of **each** of the four `_in` variants:
+
+```rust
+debug_assert_eq!(
+    ctx.seed(),
+    world.seed,
+    "SceneContext was built for a different world than this call's"
+);
+```
+
+Not a `SceneError` variant — that would widen the enum with a case the `&World` wrapper path can never take, forcing every caller to handle an impossible branch. A `debug_assert` costs nothing in the `opt-level="z"` catalog (decision 0052), fires in every test run, and is the layer that catches a misplaced `SCENE_CTX` invalidation in Step 1. This is also what `temperature_grid_in`'s otherwise-unused `world` parameter is for — un-prefix it from `_world` where the assert now reads it.
+
+- [ ] **Step 0c: Commit a region golden**
+
+Today the region path's only in-repo byte evidence is the *mutual* equivalence test — it would pass if both paths moved together. The absolute evidence lives in `/tmp` and dies with a reboot. `windows/scene/tests/golden.rs` pins `tiles_scene` (`tiles-seed-1-w16.json`) and the surrounds set, but nothing pins a region patch.
+
+Add one, following `golden.rs`'s existing pattern exactly: a small seed-1 region patch (`face 0, level 3, ix 0, iy 0, samples 8`), its bytes committed under `tests/fixtures/`, and a `#[test]` asserting they are unchanged. Small enough for the commit gate. This is what makes Task 3's ratchet safe to repeat.
+
+Run `cargo test -p hornvale-scene` after 0a-0c and paste the summary before moving on.
 
 - [ ] **Step 1: Add the static and the invalidation**
 
