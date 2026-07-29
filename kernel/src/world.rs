@@ -50,7 +50,10 @@ pub const NAME_GLOSS: &str = "name-gloss";
 /// type-audit: bare-ok(identifier-text)
 pub const KERNEL_CORE_PREDICATES: &[&str] = &[NAME, INSTANCE_OF, NAME_GLOSS];
 
-/// A world is a seed plus everything ever observed about it.
+/// A world is a seed plus everything ever observed about it, plus the record
+/// of which versioned seed-derivation labels it was derived under
+/// ([`World::derived_under`]).
+/// type-audit: bare-ok(identifier-text: derived_under)
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     /// The seed that generated this world.
@@ -59,6 +62,33 @@ pub struct World {
     pub registry: ConceptRegistry,
     /// The ledger of all facts committed to this world.
     pub ledger: Ledger,
+    /// Which versioned seed-derivation labels this world was derived under, as
+    /// `label-without-version -> version` (e.g. `room/furnishing -> v1`).
+    /// Written by the composition root at save time, because only it can see
+    /// every crate's labels (`cli::streams::stamp`); the kernel cannot, since
+    /// `hornvale-vessel`'s labels live downstream of it.
+    ///
+    /// **Metadata about derivation, not derived content.** It exists so a
+    /// reload after an epoch can say WHAT moved rather than silently
+    /// rearranging someone's memory of a place (Rose Window Amendment 1
+    /// §1a.5, which asked for that consequence to be stated rather than
+    /// discovered). It commits no fact and mints no entity — deliberately:
+    /// entity ids are minted sequentially, so a stamp entity at genesis would
+    /// shift every id after it and move every artifact in the project that
+    /// names one, for the sake of metadata.
+    ///
+    /// The keys drop the `/vN` segment so that a bump is a *value* change on a
+    /// stable key, which is what lets a diff name the label that moved instead
+    /// of reporting one key vanishing and another appearing. Unversioned labels
+    /// are absent: they are structural and must never move (decision 0073), so
+    /// recording one would add a row that can never differ.
+    ///
+    /// Empty on any world saved before stamping existed, which is itself the
+    /// honest answer for such a world — hence `#[serde(default)]`. An empty
+    /// stamp makes no claim, and a diff against it must therefore report
+    /// nothing moved rather than reporting everything moved.
+    #[serde(default)]
+    pub derived_under: std::collections::BTreeMap<String, String>,
 }
 
 impl World {
@@ -90,6 +120,9 @@ impl World {
             seed,
             registry,
             ledger: Ledger::default(),
+            // Unstamped: only the composition root can see every crate's
+            // labels, so only it may fill this in (`cli::streams::stamp`).
+            derived_under: std::collections::BTreeMap::new(),
         }
     }
 
@@ -212,6 +245,52 @@ mod tests {
             w.registry.predicate("is-a").unwrap().functional,
             "is-a is functional"
         );
+    }
+
+    /// Exactly what `serde_json::to_string(&World::new(Seed(42)))` emitted
+    /// before `derived_under` existed — captured from a run of the real
+    /// serializer on the commit before this one, not hand-written. A
+    /// plausible-but-wrong fixture would test nothing.
+    const PRE_STAMP_WORLD_JSON: &str = r#"{"seed":42,"registry":{"predicates":{"instance-of":{"name":"instance-of","functional":false,"doc":"the kind an entity is an instance of; the latest fact is its current kind"},"is-a":{"name":"is-a","functional":true,"doc":"the class an entity belongs to"},"name":{"name":"name","functional":true,"doc":"canonical name of an entity"},"name-gloss":{"name":"name-gloss","functional":true,"doc":"the glossed meaning of an entity's generated name"}},"phenomenon_kinds":{},"concepts":{}},"ledger":{"facts":[],"next_entity":0}}"#;
+
+    #[test]
+    fn a_world_saved_before_stamps_existed_still_loads() {
+        // `#[serde(default)]`, asserted rather than assumed: a world.json
+        // written before this campaign must not fail to parse, and an absent
+        // stamp is itself informative — that world predates stamping.
+        let w = World::from_json(PRE_STAMP_WORLD_JSON);
+        assert!(w.is_ok(), "an unstamped world must still load: {w:?}");
+        let w = w.unwrap();
+        assert_eq!(w.seed, Seed(42));
+        assert!(
+            w.derived_under.is_empty(),
+            "an unstamped world's stamp makes no claim"
+        );
+    }
+
+    #[test]
+    fn the_pre_stamp_fixture_matches_the_real_shape_minus_the_stamp() {
+        // Guards the fixture above against becoming a fossil: if the serialized
+        // shape of a fresh world changes for any OTHER reason, this fails and
+        // the fixture gets re-captured rather than silently testing a shape
+        // nothing emits any more.
+        let real = serde_json::to_string(&World::new(Seed(42))).unwrap();
+        let expected = format!(
+            "{},\"derived_under\":{{}}}}",
+            PRE_STAMP_WORLD_JSON.strip_suffix('}').unwrap()
+        );
+        assert_eq!(real, expected);
+    }
+
+    #[test]
+    fn the_stamp_round_trips_through_json() {
+        let mut w = World::new(Seed(42));
+        w.derived_under
+            .insert("room/furnishing".to_string(), "v1".to_string());
+        w.derived_under
+            .insert("room/layout/rectilinear".to_string(), "v1".to_string());
+        let back = World::from_json(&w.to_json()).unwrap();
+        assert_eq!(back.derived_under, w.derived_under);
     }
 
     #[test]

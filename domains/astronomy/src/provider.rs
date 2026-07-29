@@ -9,7 +9,7 @@ use crate::units::StdDays;
 use crate::wanderers::WandererClass;
 use crate::{CELESTIAL_BODY, SkyReport};
 use hornvale_kernel::math;
-use hornvale_kernel::{ObserverContext, PhenomenaSource, Phenomenon, Venue, WorldTime};
+use hornvale_kernel::{ObserverContext, PhenomenaSource, Phenomenon, Venue, Visibility, WorldTime};
 
 #[cfg(test)]
 mod tests {
@@ -26,6 +26,64 @@ mod tests {
 
     fn ctx(day: f64) -> ObserverContext {
         ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day })
+    }
+
+    /// A night sky carrying both a moon and a neighbour star, so occlusion has
+    /// something of each brightness to cull. Day 13.1 is the full-moon night
+    /// the existing moon-prose test already uses.
+    fn night_sky() -> (GeneratedSky, WorldTime) {
+        let s = bare_sky(
+            0.0,
+            vec![luna_like()],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        (s, WorldTime { day: 13.1 })
+    }
+
+    #[test]
+    fn a_clear_visibility_is_identical_to_the_legacy_sky() {
+        let (s, night) = night_sky();
+        assert_eq!(
+            s.sky_at(night),
+            s.sky_at_visibility(night, Visibility::CLEAR)
+        );
+        let noon = WorldTime { day: 13.5 };
+        assert_eq!(s.sky_at(noon), s.sky_at_visibility(noon, Visibility::CLEAR));
+    }
+
+    #[test]
+    fn a_dimmed_sky_keeps_the_moons_and_loses_the_stars() {
+        let (s, night) = night_sky();
+        let d = s
+            .sky_at_visibility(night, Visibility::new(0.4).unwrap())
+            .description;
+        assert!(d.contains("moon"), "moons punch through a deck: {d}");
+        assert!(
+            !d.contains("keep their stations"),
+            "faint neighbour stars must not survive a dimmed sky: {d}"
+        );
+    }
+
+    #[test]
+    fn a_hidden_sky_names_the_dark_and_nothing_else() {
+        let (s, night) = night_sky();
+        let d = s
+            .sky_at_visibility(night, Visibility::new(0.0).unwrap())
+            .description;
+        assert!(!d.contains("moon"), "nothing celestial survives: {d}");
+        assert!(!d.contains("keep their stations"), "{d}");
+        assert!(d.contains("Night") || d.contains("Twilight"), "{d}");
+        assert_eq!(d.trim(), d, "no trailing space where the sky used to be");
+    }
+
+    #[test]
+    fn a_moon_below_the_phase_threshold_is_a_smear_not_a_face() {
+        let (s, night) = night_sky();
+        let d = s
+            .sky_at_visibility(night, Visibility::new(0.3).unwrap())
+            .description;
+        assert!(d.contains("smear of light"), "{d}");
+        assert!(!d.contains("face"), "no phase survives this deck: {d}");
     }
 
     #[test]
@@ -1284,6 +1342,16 @@ pub struct GeneratedSky {
     notes: Vec<String>,
 }
 
+/// Visibility at or above which a moon still shows a discernible face. Below
+/// it the moon is present but featureless.
+const MOON_PHASE_VISIBILITY: f64 = 0.6;
+/// Visibility at or above which a moon is discernible at all. Moons are the
+/// brightest things in a night sky and go last.
+const MOON_VISIBILITY: f64 = 0.25;
+/// Visibility at or above which the fixed neighbour stars are discernible.
+/// They are the faintest things in the sky and go first.
+const STAR_VISIBILITY: f64 = 0.75;
+
 impl GeneratedSky {
     /// Wrap a genesis outcome as a live provider.
     pub fn new(outcome: GenesisOutcome) -> GeneratedSky {
@@ -1314,8 +1382,22 @@ impl GeneratedSky {
         StdDays(time.day.max(0.0))
     }
 
-    /// The sky at a moment, rendered.
+    /// The sky at a moment, rendered under an unobstructed view.
     pub fn sky_at(&self, time: WorldTime) -> SkyReport {
+        self.sky_at_visibility(time, Visibility::CLEAR)
+    }
+
+    /// The sky at a moment, rendered through a view of the given
+    /// [`Visibility`].
+    ///
+    /// Astronomy owns these thresholds because only astronomy knows which
+    /// bodies are bright: a moon punches through a deck as a smear of light
+    /// long after the faint neighbour stars have gone. It never learns *what*
+    /// obstructs the view — a visibility is just a ratio.
+    ///
+    /// At [`Visibility::CLEAR`] this renders exactly the pre-occlusion sky,
+    /// byte for byte.
+    pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
         let t = self.t(time);
         let mut bodies = vec!["the sun".to_string()];
         match &self.system.anchor.rotation {
@@ -1372,27 +1454,41 @@ impl GeneratedSky {
                     for i in 0..self.system.moons.len() {
                         bodies.push(format!("moon {}", i + 1));
                     }
-                    let mut parts: Vec<String> = self
-                        .system
-                        .moons
-                        .iter()
-                        .enumerate()
-                        .map(|(index, moon)| match self.calendar.moon_phase(t, index) {
-                            Some(phase) => capitalize(&format!(
-                                "the {} moon shows its {} face.",
-                                size_word(moon.angular_diameter_rel),
-                                phase_word(phase)
-                            )),
-                            // Degenerate: P_sid ≥ Y, unreachable at genesis
-                            // (the Hill cap keeps P_sid ≤ ~0.15×Y) but handled
-                            // honestly rather than panicking.
-                            None => capitalize(&format!(
-                                "the {} moon shows no phase — its orbit outpaces the year.",
-                                size_word(moon.angular_diameter_rel)
-                            )),
-                        })
-                        .collect();
-                    parts.push(night_star_line(&self.system.neighbors));
+                    let v = vis.get();
+                    let mut parts: Vec<String> = if v >= MOON_VISIBILITY {
+                        self.system
+                            .moons
+                            .iter()
+                            .enumerate()
+                            .map(|(index, moon)| {
+                                let size = size_word(moon.angular_diameter_rel);
+                                match self.calendar.moon_phase(t, index) {
+                                    // Dimmed past the phase threshold a moon is
+                                    // a presence, not a face: the deck glows
+                                    // where it stands.
+                                    Some(_) if v < MOON_PHASE_VISIBILITY => {
+                                        capitalize(&format!("the {size} moon is a smear of light."))
+                                    }
+                                    Some(phase) => capitalize(&format!(
+                                        "the {} moon shows its {} face.",
+                                        size,
+                                        phase_word(phase)
+                                    )),
+                                    // Degenerate: P_sid ≥ Y, unreachable at genesis
+                                    // (the Hill cap keeps P_sid ≤ ~0.15×Y) but handled
+                                    // honestly rather than panicking.
+                                    None => capitalize(&format!(
+                                        "the {size} moon shows no phase — its orbit outpaces the year."
+                                    )),
+                                }
+                            })
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+                    if v >= STAR_VISIBILITY {
+                        parts.push(night_star_line(&self.system.neighbors));
+                    }
                     // SKY-7: within a twentieth of the local day of the
                     // daylight window, the dark is twilight, not night.
                     let twilight =
@@ -1403,8 +1499,15 @@ impl GeneratedSky {
                     } else {
                         "Night.".to_string()
                     };
+                    // A wholly hidden sky is just the dark — no trailing space
+                    // where the moons and stars used to be.
+                    let description = if parts.is_empty() {
+                        dark_words
+                    } else {
+                        format!("{} {}", dark_words, parts.join(" "))
+                    };
                     SkyReport {
-                        description: format!("{} {}", dark_words, parts.join(" ")),
+                        description,
                         bodies,
                     }
                 }

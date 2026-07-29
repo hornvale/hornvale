@@ -23,7 +23,7 @@ drink: root Neobea /neobea/
 earth: root Bee /bee/
 eat: root Koo /koo/
 eclipse: gap (experiential): goblin has no exposure to 'eclipse'
-epipelagic: gap (experiential): no compound recipe for 'epipelagic'
+epipelagic: gap (experiential): no settlement in or beside epipelagic
 eye: root Tao /tao/
 fire: root Tea /tea/
 foot: root Doa /doa/
@@ -89,7 +89,7 @@ sun: root Noaboo /noaboo/
 taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: root Toaneo /toaneo/
+temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
 tide: gap (experiential): goblin has no exposure to 'tide'
 treant-kind: gap (experiential): goblin has no exposure to 'treant-kind'
 tree: root Koonee /koonee/
@@ -194,7 +194,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6
 stone: root Naonea /naonea/
 sun: root Noagoo /noagoo/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toaneo /toaneo/
@@ -302,7 +302,7 @@ star: root Daotoa /daotoa/
 starlit: root Kaodoa /kaodoa/
 stone: root Daodoa /daodoa/
 sun: root Doagoo /doagoo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Doodoa /doodoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toadoo /toadoo/
@@ -314,7 +314,7 @@ tropical-seasonal-forest: root Gootao /gootao/
 tundra: gap (experiential): no settlement in or beside tundra
 twig-blight-kind: gap (experiential): bugbear has no exposure to 'twig-blight-kind'
 two: root Daadaa /daadaa/
-upwelling: gap (experiential): no settlement in or beside upwelling
+upwelling: gap (experiential): no compound recipe for 'upwelling'
 water: root Daokaa /daokaa/
 white-dragon-kind: gap (experiential): bugbear has no exposure to 'white-dragon-kind'
 wind: root Dooqoo /dooqoo/
@@ -372,7 +372,7 @@ hobgoblin-kind: root Ro /ro/
 home: root Ragxo /ragxo/
 hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
 ice: gap (experiential): no settlement in or beside ice
-kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kelp-forest: gap (experiential): no compound recipe for 'kelp-forest'
 killer-whale-kind: gap (experiential): kobold has no exposure to 'killer-whale-kind'
 kobold-kind: root Roro /roro/
 light: root Xaxo /xaxo/
@@ -410,7 +410,7 @@ star: root Rogra /rogra/
 starlit: root Ra /ra/
 stone: root Xa /xa/
 sun: root Rogxa /rogxa/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: root Ro /ro/
 temperate-forest: root Xatxo /xatxo/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Xotro /xotro/
@@ -504,12 +504,12 @@ reef-shark-kind: gap (experiential): gnoll has no exposure to 'reef-shark-kind'
 rest: root Ngzhoodngsoaq /ŋʒoodŋsoaq/
 rhinoceros-kind: gap (experiential): gnoll has no exposure to 'rhinoceros-kind'
 rust-monster-kind: gap (experiential): gnoll has no exposure to 'rust-monster-kind'
-savanna: gap (experiential): no settlement in or beside savanna
+savanna: root Dzaav /dzaav/
 sea: compound many+water -> Nshoagnzhoog /nʃoagnʒoog/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Mzaaqdzhood /mzaaqdʒood/
 shrieker-kind: gap (experiential): gnoll has no exposure to 'shrieker-kind'
-shrubland: gap (experiential): no compound recipe for 'shrubland'
+shrubland: root Gzoav /gzoav/
 sibling: root Nshaaqmsaop /nʃaaqmsaop/
 sleep: root Dzhoav /dʒoav/
 snow: gap (experiential): gnoll has no exposure to 'snow'
@@ -518,10 +518,10 @@ star: root Gzaof /gzaof/
 starlit: root Qshaafmsoof /qʃaafmsoof/
 stone: root Ngzhoop /ŋʒoop/
 sun: root Ngshooqnzhoad /ŋʃooqnʒoad/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: root Dshaox /dʃaox/
 temperate-forest: root Gshaognshaap /gʃaognʃaap/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+temperate-rainforest: root Nsoav /nsoav/
 tide: gap (experiential): gnoll has no exposure to 'tide'
 treant-kind: gap (experiential): gnoll has no exposure to 'treant-kind'
 tree: root Dshooq /dʃooq/

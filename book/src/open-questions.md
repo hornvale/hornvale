@@ -353,6 +353,87 @@ things the seam holding does *not* buy — and the one lesson that now recurs
 often enough to be a rule rather than an anecdote is that every entry on that
 ledger was found by a human looking at output, never by a test.
 
+[The Occlusion](./chronicle/the-occlusion.md) confirms that rule from outside
+the scene-document program entirely, and in the plainest register available:
+its four defects were found not in a picture but in **prose**, by building the
+CLI and reading what it said. The almanac had been opening for most of the
+project's life by naming five stars beneath a flat overcast — a sentence that
+contradicts itself inside its own span — and `possess` printed `Ways on: SE,
+N, SW.` and then answered `No verb 'se'`. Neither is visible in a diff, because
+in both cases each half is correct in isolation: the compass parser accepted
+the token and the dispatch arm that reaches it was simply absent; the weather
+was computed correctly and appended after the sky was already described. A
+codebase with zero TODOs across a hundred thousand lines, a default-deny type
+audit, and a 2,319-test gate said nothing about either. So the visual pass
+generalizes to a **legibility pass**: for a project whose deliverable is prose
+about a world, reading the output is a distinct instrument from testing it, and
+the same one that catches a leaning parallelogram catches a sky that argues
+with itself.
+
+The campaign also put a sharper edge on what "verified" buys. Its spec claimed
+the change could not reach the save format, and *checked* that claim — the sky
+report carries no serializer, confirmed by reading the derive rather than
+assuming it. The check was sound and the conclusion was false, because the
+exposure did not run through serialization but through genesis, where a
+people's gods are derived from the sky they observe. Wiring occlusion into the
+observation path cost seed 42 twenty-three of its forty-eight deities while
+every gate stayed green, since the gate pins facts against the current build
+and not against history. What caught it was the cheapest possible instrument,
+and one no schema discipline implies: build the world before and after, and
+compare the bytes. The ledger's entries were all *found by looking*; this one
+adds that a determinism claim is only as good as the route it was checked
+along, and that the total check — same seed, both binaries, `cmp` — costs
+ninety seconds and subsumes the clever ones.
+
+[The Sextant](./chronicle/the-sextant.md) adds a seventh entry to that ledger,
+and it is the first one an instrument found rather than a human looking. A
+scene document can be faithful, grounded, drawn, legible, and correctly
+assembled with its neighbours — and still be **ruinously expensive to ask
+for**, because a versioned schema is a contract about a document's *contents*
+and says nothing about the cost of producing one. Every terrain-facing entry
+point in the scene window re-derives terrain and climate from the world and
+keeps neither, so each such document carries about 638 ms of fixed setup;
+measured against the
+Orrery's real call pattern, which requests one regional document per
+level-of-detail tile, **91.6% of a scene call is the planet being rebuilt** and
+a single camera move spends roughly fifteen seconds generating the same world
+two dozen times. The bet is untouched — nothing crosses the seam incorrectly,
+and the interface required no change to be measured. What sharpens is the
+same scope lesson The Selvage drew about geometry, transposed to cost: a
+document describes itself and not its relationship to the *other* documents a
+consumer holds, and a consumer's calling pattern is exactly such a
+relationship. So this entry is also the ledger's counter-example to its own
+recurring rule. Six failure modes were found by a human reading output; this
+one is invisible to reading — every document is correct — and visible only to
+a fixture shaped like the consumer's session, since redundancy is a property
+of a sequence of calls and cannot appear in any one of them.
+
+**Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
+entry on that ledger is now mechanized, and the move that mechanized it is
+worth more than the check.** The entries above are all forms of *the drawn thing
+does not match the thing* — undrawn, ungrounded, illegible, mis-assembled,
+misstated geometry — and the standing lament is that only a human noticed. The
+Blocking's parity contract turns one sub-class into a test: **every noun the
+render depicts must answer to `examine`, and every destination it depicts must
+be reachable by a named command.** That is precisely the class of defect that had
+shipped one campaign earlier, where `look` named a water jar and `examine`
+denied it, and it is checkable because the render and the command language are
+required to derive from *one* model rather than to agree by vigilance. The
+structural half is what makes the tested half possible: a pane input
+**synthesizes a command** — an arrow key emits `go n` and the existing verb runs
+— so there is one implementation and no second path to drift from. The accepted
+cost is permanent and is the reason this is a bet moving rather than a feature
+landing: any future pane capability must first be a verb, so nothing will ever be
+expressible only by pointing.
+
+The honest scope: this does not close the ledger, it converts one row. A plan
+whose every glyph answers can still be *ugly*, and legibility remains
+taste-checked — the campaign's own render had to be reworked once because a model
+that was faithful drew no walls at all, which no assertion caught and a human
+reading the picture did. What changed is that "the render depicts something the
+command language denies" has stopped being a thing a human must remember to look
+for.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
@@ -437,6 +518,24 @@ measurement can move at all belongs beside the measurement, not after it.
   Regum* prove pieces of this can work; nobody has done it against a
   fields-plus-ledger substrate at this scope, and the observe-then-commit loop
   is not yet built. Its self-scorable half is named below.
+  **Re-scored by [The Lintel](./chronicle/the-lintel.md) (2026-07-27): the bet
+  moves halfway, and only halfway.** The phrase names two mechanisms, and the
+  campaign shipped exactly one of them. *Derive-on-demand* now exists at the
+  finest band the world has: a chamber's existence, its interior and its prose
+  are a pure function of the derived brief, the address and the seed, computed
+  when a player walks in and discarded when they leave. Against ~4^9 candidate
+  addresses under a single locale, that is the statistical-prior half working at
+  its intended ratio — the overwhelming majority of the space is never
+  materialized because existence is a predicate rather than a given, and it is
+  asserted by test that it stays that way. *Commit-on-observation* does **not**
+  exist and was deliberately excluded: The Lintel commits nothing at all, which
+  is precisely what preserves byte-identity — the player's position has never
+  been a committed datum, so descent needed no schema change and no epoch.
+  Promotion-on-touch — the write half, where an observed detail is *kept* — and
+  the delta store it implies remain unbuilt, and are the harder half, since they
+  are where a lazily generated world can begin to contradict its own prior. So
+  the bet's confidence in *derivation* is materially higher than it was, and its
+  confidence in the *loop* is unchanged.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
@@ -483,6 +582,37 @@ measurement can move at all belongs beside the measurement, not after it.
   resolution — not the client's — is the next floor worth deepening. That
   producer-side deepening stays deferred; what The Massing added is the
   instrument to judge when it is owed.
+  **Re-scored by [The Lintel](./chronicle/the-lintel.md) (2026-07-27):** the
+  substrate now has a *second occupied band*. A possessed body can stand at
+  nine refinements below the walk band — one address space, a longer path — so
+  the uniform-depth restriction is lifted in the narrow case the two-band
+  vocabulary defines, and band changes are confined to visible thresholds
+  precisely to avoid the thrashing an automatic adaptive-depth walk would
+  reintroduce. This does **not** breach the ~110 km physics floor the row draws:
+  a chamber's content derives from the *committed occupation history* of its
+  walk-band ancestor, not from interpolating fields beneath cell scale. The
+  distinction is worth keeping sharp — refining geometry below the floor stays
+  cosmetic, while refining *what is recorded to be there* is fidelity the
+  ledger already holds. The runtime active-region swap and its delta store are
+  still unbuilt.
+  **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): the
+  principle now has a *number*, at the finest band, and that is the largest
+  movement this row has had.** "Higher fidelity refines and never contradicts
+  lower" has always been checked by *agreement* — a field resampled at two grid
+  levels must byte-agree — which tests that the fine layer does not disagree with
+  the coarse one. It says nothing about the fine layer **inventing**. The floor
+  plan is the first fine layer whose entire content is a lowering of a coarse
+  structure (an anchor graph of chambers and links, itself derived from committed
+  history), so the question became answerable in the other direction: how much did
+  the fine layer add? The embedder reports its **residual degrees of freedom** and
+  the checker compares that number against how much freedom the graph leaves free
+  — and it is *exact*, not merely bounded, at every chamber count over two
+  thousand seeds. Being **under** budget is a finding too, since it means the seed
+  is not filling freedom the graph genuinely left. That converts the principle
+  from a design intention into a measured property of one derivation, and it drew
+  a line the phrase had left implicit: a plan's extent derives from chamber count
+  alone and *spends no draw*, because a coarse constraint that consumes randomness
+  is not a constraint, it is another generator.
 
 ## Genuinely open — split by whether the world can grade itself
 
@@ -679,3 +809,73 @@ question; the alternative — shipping the mechanism and narrating it as
 criticality — would have cost nothing and taught nothing, and the drift-check
 would have re-ratified the narration every time it ran. A bet is only worth
 placing at this altitude if losing it is allowed to be published as a loss.
+
+**The successor question has now been asked, and it lost too.** The residual
+bet stated just above — *does accumulation-plus-dissipation self-organize, on
+this world, at this resolution?* — was the whole mandate of *The Tithe*, which
+built the missing term: a raid whose prize is *mobile* subordinates rather than
+evicts, a patron collects tribute from a vassal it cannot fully see, and what
+it collects banks in a store of wealth that feeds strength without ever
+entering the pressure that kills. That is a literal accumulator rather than a
+metaphorical one, and it works — the structure forms at volume, patrons survive
+collecting, and a dominant grows without moving. **The shape of the violence
+did not change.**
+
+Two things moved and they must not be conflated. **σ roughly doubled**, from
+≈ 0.051 to **0.109–0.115** pooled over thirty seeds and 7183 conquests, and to
+0.103–0.109 over a hundred seeds and 22 255 — the same factor on both samples,
+which makes it a real effect of accumulation rather than sample noise. That is
+a genuine result and this chapter should say so. But **σ ≈ 0.1 is not σ ≈ 1**,
+and every reading of *shape* is unmoved: the support still spans **0.48
+decades** against the preregistered ≈ 1.5, the per-octave decay is still
+**17.6-fold** where a heavy tail falls two- to fourfold, and **not one cascade
+exceeds three displacements in roughly twenty-two thousand conquests**. Still
+geometric with a hard cutoff, still deep in the sub-critical regime. No
+constant was tuned toward the hypothesis at any point, and the last mechanism
+the campaign added had its predictions **written into the spec before its code
+existed** — including, explicitly, that revolts firing while the distribution
+stayed geometric would be a *stronger* falsification than the standing null.
+Revolts fired. The distribution stayed geometric. **That is the branch the
+preregistration named as the harder one to explain away, and it is the branch
+that happened.**
+
+The honest rescore is therefore: **the criticality bet moves from falsified for
+the mechanism as built to falsified a second time, against a mechanism built
+specifically to answer the first falsification's diagnosis.** Not "progress
+toward"; not "trending". The right way to hold it is that the *diagnosis* has
+narrowed, not that the *bet* has improved. Two builds bracketed the answer as
+drive-without-dissipation and dissipation-without-accumulation; a third
+supplied accumulation and moved the number without moving the family, which
+eliminates "nothing is stored" as the explanation. What is left is
+**conduction**. A revolt frees exactly one vassal — collapse-release, where a
+fallen patron's entire network is freed at once, was a stated non-goal — and
+the relation graph is a set of one-level stars, because a vassal may not itself
+take a vassal, and depth was the other stated non-goal. A patron's failure has
+nowhere to propagate. An avalanche needs a medium, and this world does not yet
+have one.
+
+So the residual bet narrows again and is now nearly bare: not "does conflict
+self-organize", not "does accumulation self-organize", but **"does a
+*connected* accumulating structure self-organize?"** — with two named,
+already-specified levers as its remaining content and two measured nulls behind
+it. What that costs the gradient is worth stating. A bet that loses twice in a
+row, each time to an instrument, each time with the mechanism built rather than
+argued about, is more expensive to keep than to drop; the case for asking a
+third time rests entirely on each null having eliminated a *different*
+candidate, so that the third question is materially different from the first
+two rather than a rephrasing of them. **If the connected version also comes
+back geometric, the right conclusion is that this world does not sit at a
+critical point, and this chapter should record that as settled rather than
+open.**
+
+One further note the campaign earns a place for, because it bears on how much
+any of the above should be trusted. *The Tithe* amended its own specification
+**five times, four of them following a disappointing measurement** — and that
+count is disclosed in the spec, in the adjudicating test's own documentation,
+and in the chronicle, because a reader who meets only the final histogram has
+been misled about how it was arrived at. The protection taken was
+preregistration of the last amendment. The lesson for this chapter is that a
+confidence score is only as good as the disclosure attached to the measurement
+under it: the number here is a falsification, which is the direction that
+*cannot* be manufactured by adding mechanisms, and that asymmetry is the reason
+the rescore is trustworthy despite the amendment count.

@@ -265,6 +265,340 @@ Not a decision this amendment takes; a tension later work should expect.
 
 ---
 
+## 1b. Amendment 2 (2026-07-27) — the macro/micro band split
+
+**Status of this amendment:** brainstormed 2026-07-27 under autopilot (nine
+ideonomy passes, three overturns — two of them corrections to decisions this
+same session had adopted). It corrects a **scale collision in the word "room"**
+that invalidated §4.4's scope table, re-carves §6's remaining campaigns, and
+raises one owner decision that supersedes a ratified decision (§1b.7). Ledger:
+`.superpowers/sdd/decision-ledger.md` (15 entries).
+
+### 1b.1 The collision
+
+`GLOBE_LEVEL = 6` (`domains/terrain/src/lib.rs:53-62`, documented as 40,962
+cells at ~110 km resolution) and `walk_depth = globe_level + 6`
+(`windows/vessel/src/agent.rs:35`). A `RoomAddr` refinement halves the triangle
+edge, so **the place a possessed body commits to is ~1.7 km across.**
+
+That is not an accident to be fixed: it is the macro worldgen resolution, chosen
+so 1000-world censuses finish, and the owner's stated design target for
+wilderness travel is *something worth stopping for every ~1.7 km*. But houses,
+castles, dungeons and caves are a different regime — human scale, sparse,
+generated on the fly, with only the player's changes persisted — and The Hearth's
+shipped anchor vocabulary (`Hearth`, `Bed`, `Alcove`, `Vessel`, `Screen`) is
+**chamber-band vocabulary currently deriving for a 1.7 km locale.** Drawing that
+interior as a glyph lattice would not merely invent distances; it would invent a
+scale, putting "the bed beside the fire" 200 m apart.
+
+### 1b.2 The vocabulary, because the collision was in the words
+
+- **locale** — a macro place, ~1.7 km, the walk band. Already the codebase's
+  word (`windows/locale`, `Locale` embedded in `vessel/session/v1`).
+- **chamber** — a micro place, human scale, sparse, derived on demand.
+- **place** — either, when the band does not matter.
+- **"room" unqualified is retired** from new specs and doc comments.
+
+`RoomAddr` / `RoomId` are **not** renamed: under §1b.3's third law an address is
+correct at every band, and `RoomId`'s packing is a frozen contract.
+
+### 1b.3 The band notation
+
+```
+  band        extent      exists    generated    persists      adjudicates    render
+  ---------   ---------   -------   ----------   -----------   ------------   -------------
+  GLOBE       ~110 km     always    world seed   seed+ledger   statistical    atlas, orrery
+  WALK        ~1.7 km     always    world seed   seed          TOPOLOGICAL    situated chart
+  STRUCTURE   ~30-300 m   sparse    on demand    seed + marks  metric         glyph lattice
+  CHAMBER     ~3-10 m     sparse    on demand    seed + marks  METRIC         glyph lattice
+  DETAIL      < 1 m       never     never        never         n/a            client eyecandy
+```
+
+Five laws, each load-bearing:
+
+1. **Exhaustive above the walk band, sparse below it.** Existence below the walk
+   band is a *predicate*, not a given — otherwise one locale implies ~262,000
+   phantom chamber-sized children.
+2. **Adjudication changes kind at the band break** — topological above, metric
+   below. This is what dissolves risk 9's "a metric picture claims distances the
+   sim lacks": that was never a property of lattices, only of drawing one at the
+   wrong band.
+3. **Connectivity changes kind too** — mesh adjacency above, a door graph below.
+   So a deep address is **identity, not shape**, which discharges §1a.9's
+   standing "a city is not a tree" caution instead of inheriting it.
+4. **The anchor vocabulary is declared per band.** `Ford`/`Grove` at the walk
+   band; `Hearth`/`Bed` at the chamber band. Borrowed from cartography, biology
+   and text alike: the address space may be uniform while the vocabulary is
+   level-specific — you do not zoom a topographic map into a floor plan.
+5. **Persistence differs by band** — derived above, derived-plus-committed-marks
+   below, which is The First Mark's shipped additive-latent pattern.
+
+### 1b.4 The brief is the contract
+
+Macro answers *who holds this land*; micro answers *what is standing here*. The
+seam between them is one small derived **brief**, so micro generation is a pure
+function of `(brief, address, seed, day)` and is testable without a world — the
+same shape as campaign 1's snapshot, one ring inward.
+
+Every axis it needs is already committed. `OccupationRecord`
+(`domains/history/src/record.rs`) carries:
+
+```
+  committed field        licenses in micro generation
+  --------------------   ------------------------------------------------------
+  people, tongue, deity  pattern vocabulary, materials, inscriptions, shrines
+  function               WHICH structures exist (Agrarian/Mine/Trade/Cult/Fort)
+  tech horizon           construction: thatch vs dressed stone vs vaulting
+  peak_population        how many structures, how dense
+  notability             whether monumental structures exist at all
+  founded / ended        age -> wear, overgrowth, collapse (The Vestige's input)
+  cause of end           THE RUIN SIGNATURE: Burned -> soot and fallen roofs;
+                           Plague -> goods intact beside graves; Fled -> open
+                           doors, valuables gone; Migrated -> stripped fixtures;
+                           Famine -> empty granaries
+  ended_by = By(entity)  the antagonist's marks, spoil, reuse
+  founded_from, lineage  architectural continuity with the parent community
+  stratigraphy           layered foundations, reused stone, an older street grid
+```
+
+Plus, from outside history: per-kind carrying capacity (`niche_per_species_k`),
+the route graph, and terrain. `cause` is the richest row and no prior spec
+anticipated it — it was baked for demography and turns out to make a ruin an
+argument about history rather than decoration.
+
+**The brief must be a coordinate in a small orthogonal space** (function ×
+people × tech × condition × notability), never a label from a catalogue of place
+types. §1a.9 binds: if a later spec's substance is template *count* rather than
+adjacency and composition, it has gone wrong.
+
+The sparseness predicate of law 1 is therefore the stratigraphy: a structure
+stands at a locale iff the cell's occupation history says something stood there.
+That is §7's `DERIVED ENCOUNTER` ("who is there is who lives there") applied to
+buildings instead of creatures — no spawn tables.
+
+### 1b.5 Rung 2 is §2's EMPTY settlement rung, and it is the same machinery
+
+`Pattern { name, kind, attach, requires, needs_cold, built }`
+(`windows/vessel/src/interior/pattern.rs`) is band-agnostic structure, so
+"the-fire requires an alcove" and "the-docks require navigable water" /
+"the-courts require `Notability::Seat`" / "the-walls require tech ≥ Bronze and
+(`Fort` | `Seat`)" are the same shape. **Two bands, one composer, one validator,
+one connectivity rule.** A `Trade` + `Seat` + `Classical` + high-population
+coastal site draws docks, warehouse row, market, curia, temple precinct, uptown
+villas, tenements, walls and gates, an extramural suburb; a `Backwater`
+`Agrarian` `Neolithic` site draws three patterns from the same inventory and is
+a hamlet.
+
+**Extent may cross a cell boundary; identity may not.** A locale's brief reads
+its containing cell *and* its neighbours' occupations (The Excursion's
+neighbour-ring pattern) rather than assuming a city never straddles a boundary —
+which would let an invisible line truncate a city, a defect with no symptom
+until someone walks to the seam.
+
+### 1b.6 Band transitions, and what descent commits
+
+**The band changes only at a threshold, and thresholds are always visible.**
+Descent is a deliberate verb (`enter`, through a threshold anchor); ascent
+likewise; **lateral movement never changes band.** One rule removes silent scale
+changes, thrashing (§4.3's named demand-paging failure mode, which automatic
+transitions would have reintroduced one level up — a player pacing a village
+boundary flipping bands every step), and the mismatched lateral step together.
+§7 already refused stairs by name ("APERTURES, NOT STAIRS"), and
+`AnchorKind::Threshold` already ships as "an anchor that is ALSO a room-graph
+edge (the two-level seam)".
+
+> **Clarified by The Blocking (2026-07-28). The law above is UNCHANGED.** The
+> Lintel read "lateral movement never changes band" as also meaning a compass
+> bearing is meaningless inside a chamber, and refused `go north` indoors on that
+> basis. The Blocking gave a chamber an interior lattice, so `go north` indoors is
+> now one cell north — and the law still holds, because a cell step stays inside
+> the chamber band; it changes no band at all. What the campaign reversed is the
+> *inference* The Lintel drew from this law, not the law. (`back` stays refused
+> indoors: it retraces a walk-band trail, which is a walk-band operation whatever
+> the interior looks like.)
+
+"The world coarsens behind you" survives as a *consequence*, not a rule: fine
+bands exist only inside structures, so there is no fine band to be in once you
+step out the gate. A move's cost still scales with its band's extent (a 1.7 km
+stride is hours, a 3 m step is seconds), which composes with The Action Clock's
+shipped per-agent tempo.
+
+**Descent commits nothing.** `Session::go` mutates `self.agent.position` and
+pushes to `self.trail` without committing a fact (`session.rs:627`), and the
+session's ledger is "written to only by `wait`'s tick (NPC `agent-at` facts).
+Never written back." (`session.rs:121`). The player's position has never been a
+committed datum, so a band change needs no schema change, no epoch, and no new
+save-format surface — and re-entering re-derives identically, which hands us
+§3.1's byte-identical-by-construction property for free. `AGENT_AT` remains what
+it always was: an NPC datum.
+
+One consequence: the `enter`/`exit` refusal becomes **directional** — refused at
+the coarse end (possessing a settlement or culture stays a deferred arc),
+permitted at the fine end. Today one constant sentence answers both
+(`session.rs:578-582`) and it is byte-pinned in the galleries.
+
+### 1b.7 The lattice answers fine spatial queries — an owner call that supersedes 0075
+
+Traditional line-of-sight and pathfinding behaviour is expected "most of the
+time" (owner, 2026-07-27), and that forces the strong form. Lifting the question
+gives **granularity matching**: a query is answered at the granularity at which
+it is posed, and answering a fine question with a coarse structure gives the
+wrong *kind* of answer, not a coarser one. Re-instantiated in databases: **the
+lattice is the base table and the anchor graph is an index over it** — the same
+truth at two resolutions, where the index narrows the search and the base table
+answers the predicate, and where index/table consistency is maintained by
+rebuilding from the table, never by patching. That consistency requirement *is*
+§1b.8's soundness rule.
+
+One word was doing two jobs, so split it: the **specified graph** is what the
+patterns require; the **realized graph** is what the solved place holds, read off
+the lattice, incidental relations included. Static relations (what screens what,
+what lies beside what) come from the realized graph, so outcomes still read
+topology. But *dynamic per-turn queries* — can I see you from where I stand
+now — are not static relations, and routing them through a graph would be
+bookkeeping theatre. **They run on the lattice.**
+
+Therefore: **symmetric shadowcasting for line of sight, A\* over cells for
+pathfinding** (a new `SearchSpace` on the existing kernel planner, as §4.5
+already says). Three things make the trade better than it sounds — integer grid
+algorithms are *more* determinism-friendly than what they replace (no libm, no
+ULP exposure, where the shipped warmth field already uses floats and
+`kernel/src/astar.rs` costs are `u64` precisely to avoid float
+non-determinism); "less tactically oriented" is a real simplification, since
+plausible LOS is wanted and not cover percentages; and §1a.5's mitigation
+already covers the epoch, since committed facts are never retro-changed, so a
+layout epoch rearranges remembered places while events stay durable.
+
+**What this supersedes.** `windows/vessel/src/interior/mod.rs`'s header promises
+that outcomes read topology never metrics, "so a future rendering solve can be
+retuned forever without an epoch." The **rule** survives. The **consequence**
+does not: the solve is causal, so retuning it needs an epoch, in the
+small-blast-radius `room/layout/vN` label §1a.5(a) declared for exactly this
+churn. Decision 0075 is **superseded, not reinterpreted**, and owes a new
+decision record.
+
+**The cheaper alternative, stated so it can be chosen:** do not promote —
+incidental relations stay pure decoration, only pattern-authored relations gate
+outcomes, visual tuning stays free forever, and the doc comment stands. It makes
+this a materially smaller program. It was rejected because 0072 and §1a.5
+explicitly wanted the pillar to conceal ("a creature is genuinely concealed
+because the solver put a pillar between it and the guard, and that is the
+point") — but that is the owner's call, and it leads the G3 package.
+
+### 1b.8 The checker — the campaign's central invariant
+
+```
+  1  soundness    every relation the specified graph asserts is realized
+                  in the solved lattice
+  2  wall law     every drawn wall IS a non-adjacency; no decorative walls
+  3  closure      a fine place's boundary maps entirely onto thresholds
+  4  doorways     a shared threshold derives from the EDGE, so two adjacent
+                  places cannot disagree about it
+  5  occupancy    at most one creature per cell
+  6  determinism  same (brief, address, seed, day) -> identical lattice,
+                  solved from scratch, no carried state
+  7  DOF          residual degrees of freedom reported as a number
+```
+
+Rule 3 came from a structurally empty cell in the transition chart: without
+closure a player walks off the edge of a chamber into undefined space — the same
+bug class as walking through a wall, and invisible until someone tries it.
+Rule 7 turns "does this place have enough variety" into an assertion rather than
+a feeling, which is §9 risk 2's demand for criteria as named constants.
+
+### 1b.9 Evidence — measured, and honestly bounded
+
+Native, `--release`, medians on the canonical box (the spike is preserved in the
+session scratchpad, and the plan should promote it into a cost gate on
+`cli/tests/graph_cost.rs`'s pattern):
+
+```
+  interior_of   (specified graph, per visit)    0.666 us
+  route_within  (anchor A*, per query)          1.000 us
+
+  grid            shadowcast (LOS)   cell A* (worst case)
+  -------------   ----------------   --------------------
+   16x16   256            2.084 us              32.458 us
+   24x24   576            3.458 us              60.833 us
+   48x48  2304            7.041 us             325.375 us
+   96x96  9216           24.208 us            1975.167 us
+```
+
+**Integer LOS is not a budget item.** A 10 m chamber at half-metre cells is
+~24², so 3.5 µs native and ~13 µs extrapolated through wasm, against §5's
+measured 4.75 ms no-op turn floor.
+
+**Pathfinding is the term to watch**: 61 µs at 24² but ~2 ms at 96²,
+worst-case corner-to-corner across a wall. A great hall with ten creatures
+re-pathing every turn is a real fraction of a turn.
+
+Three limits stated rather than buried. **The real constraint solve remains
+unmeasured** — the spike's "solve" column is a placement scan, not a solver, and
+establishes only that bookkeeping is not the cost; §5 caveat 2 still stands.
+**Nothing here is measured through the wasm ABI**; §5's own native→wasm ratios
+(`look` 0.12→0.46 ms, movement 0.32→1.15 ms) give ~3.6–3.8×, which is an
+extrapolation. And **a cost claim without a build profile is not a
+measurement**: the same spike ran ~10× slower in debug (`interior_of` 6.166 µs,
+24² shadowcast 26.8 µs).
+
+### 1b.10 The re-carve — supersedes §6.3's replacement and §6.4's ordering
+
+```
+  campaign        ships                            inherits    epoch?  player sees
+  -------------   ------------------------------   ---------   ------  --------------
+  The Lintel      band law, the brief, chamber      Hearth,     no      enter a house,
+                  derivation, the descent seam      Threshold           walk its rooms
+  The Blocking    the lattice solve, integer LOS,   Lintel      YES     the glyph view
+                  cell A*, the checker                                   is honest
+  The Precincts   rung 2: districts as patterns     Lintel      no      a city has parts
+  The Panes       the browser draws both bands      all         no      the roguelike
+                                                                          client
+```
+
+Vitality (§6.5) is unchanged and still ordered before any combat work. The
+Panes remains §6.4. `The Lintel` is deliberately first because it needs no
+epoch and fixes the contract the other three inherit — the same reasoning that
+put The Snapshot first.
+
+### 1b.11 Settlement density: registered, not fixed here
+
+`Bake::vacant_habitable` (`windows/worldgen/src/history_bake.rs:480-483`)
+requires `!self.node_index.contains_key(&cell)`, so **at most one alive
+community occupies a geosphere cell** and no two living settlements are closer
+than ~110 km. What that forbids is *rival polities in sight of one another*.
+What it does not forbid is several *sites* per cell, which are derived micro
+concerns — a dwarf hold (the alive occupation), a goblin camp (from the cell's
+goblin carrying capacity, independent of settlements), and a human trading post
+(from a route crossing) coexist today with no macro change.
+
+The honest tier model is **commit the contingent, derive the regular**: city
+spacing is contingent (a ford, a pass, a battle), while market-town (~10–20 km),
+village (~2–5 km) and hamlet (~0.5–2 km) spacing follow from agronomy and
+walking speed — physical constants, hence derivable. The arithmetic forbids the
+alternative anyway: a ~10,000 km² cell at medieval English density holds ~1,000
+villages.
+
+Relaxing the founding rule is a small diff and a large revalidation (world
+identity moves, so an epoch, a census re-baseline, and the conversion of every
+history-adjacent study's pins from values to invariants per §1a.5(b); plus
+re-checking The Tumult's, The Margin's and The Accession's invariants). **The
+owner wants it soon-ish**; it belongs to its own history-domain campaign whose
+declared purpose is the city-state case. Registered as `SOC-dense-settlement`
+with `SOC-settlement-tiers` and `SOC-casus-belli`.
+
+### 1b.12 What this leaves open
+
+- The real solver's cost and its algorithm family (BSP / cellular / WFC are all
+  admissible per §7; none is chosen).
+- Whether the situated chart's walk-band render adopts the topology-true
+  "blocking chart" form (recommended) now that the glyph lattice is
+  chamber-band-only.
+- `CLIENT-as-instrument` (§1a.10) is still open.
+- The band notation probably owes its own `docs/decisions/` record; the number
+  is unminted here to avoid colliding with parallel sessions.
+
+---
+
 ## 2. The spine: the first situated *spatial* surface
 
 > **Narrowed by Amendment 1 (§1a.1):** the program is a sim campaign with a
@@ -558,6 +892,11 @@ is the eviction policy, and its eager neighbour-ring fetch is the prefetch.
 
 ### 4.4 Scope: three nested rungs
 
+> **CORRECTED by Amendment 2 (§1b.1–1b.3).** This table conflates two scales
+> under "room": the `agent-at` rung is the ~1.7 km **walk band**, and the
+> human-scale **chamber** band it silently assumes does not exist yet. The
+> band notation in §1b.3 replaces this table; "tile" is a chamber-band cell.
+
 ```
   rung         representation             persisted?   role
   ----------   ------------------------   ----------   ---------------------
@@ -687,6 +1026,10 @@ piece, and the one carrying §10's open fork. Costs measured as it lands, and
 a **controller-driven visual tuning pass budgeted at the outset** — see §9.
 
 ### 6.4 Campaign 4 — The Panes
+
+> **RE-ORDERED by Amendment 2 (§1b.10):** three campaigns now precede this one
+> (The Lintel, The Blocking, The Precincts), and the glyph lattice this pane
+> draws is **chamber-band only** — the walk band gets the topology-true chart.
 
 Client-side, iterative, cheap. Where the tutorial's checklist finally pays
 out. Includes the three near-free panes negation surfaced: **replay** (a save

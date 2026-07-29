@@ -67,6 +67,8 @@ usage:
                           summarize the world's reachability: real regions, the largest, the rest
   hornvale locale --world W [--at LAT,LON | --room ID] [--depth D] [--json]
                           describe one room: biome, fields, regime, exits
+  hornvale locale --world W --strange [--limit N]
+                          list the placed exotic sites: where each is, and what makes it strange
   hornvale locale --world W --sample N [--depth D]
                           sample N rooms across the globe: biome, strangeness, descriptor
   hornvale concepts [--manifest]           dump the concept registry as markdown
@@ -233,6 +235,11 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
     let settlement_pins = parse_settlement_args(args)?;
     let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
         .map_err(|e| e.to_string())?;
+    // Stamped at save time, by the composition root: `build_world` lives in
+    // hornvale-worldgen, upstream of the vessel, so it cannot see
+    // `room/furnishing` or `room/layout/*` at all — it would omit exactly the
+    // labels the stamp exists to record.
+    let world = streams::stamp(world, &streams::versioned_labels());
     world
         .save(std::path::Path::new(out))
         .map_err(|e| format!("saving {out}: {e}"))?;
@@ -439,6 +446,18 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         load_world(args)?
     };
     let day = parse_day_flag(args)?;
+    // Amendment 1 §1a.5: if an epoch moved something under a saved world's
+    // feet, say so before the first turn instead of silently rearranging
+    // someone's memory of a place. A `--seed` build is derived here and now,
+    // so its stamp always agrees and no notice ever fires — which is why the
+    // gallery transcript (generated from `--seed 42`) is unaffected. The
+    // comparison lives here rather than in the vessel: the vessel must not
+    // learn about the composition root, and the session's prose stays a
+    // function of the world it was handed.
+    if let Some(notice) = streams::reload_notice(&world.derived_under, &streams::versioned_labels())
+    {
+        println!("{notice}\n");
+    }
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -477,6 +496,10 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     // The input `--world` file is read-only; only `--out` writes (The First
     // Mark, Task 4 — the played world outlives the session).
     if let Some(out) = flag_value(args, "--out") {
+        // Re-stamped, not carried forward: the labels a file records are the
+        // ones the code that WROTE it derived under, and the notice above has
+        // already reported any disagreement with the world we loaded.
+        let played = streams::stamp(played, &streams::versioned_labels());
         played
             .save(std::path::Path::new(out))
             .map_err(|e| format!("saving {out}: {e}"))?;
@@ -1302,6 +1325,18 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
         None => ctx.globe_level() + 6,
     };
 
+    if args.iter().any(|a| a == "--strange") {
+        let limit = match flag_value(args, "--limit") {
+            Some(s) => Some(
+                s.parse::<usize>()
+                    .map_err(|_| format!("bad --limit: {s}"))?,
+            ),
+            None => None,
+        };
+        print!("{}", render_strange_sites(&ctx, limit));
+        return Ok(());
+    }
+
     if let Some(n) = flag_value(args, "--sample") {
         let n: usize = n.parse().map_err(|_| format!("bad --sample: {n}"))?;
         return cmd_locale_sample(&ctx, depth, n);
@@ -1356,6 +1391,32 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// The `--strange` mode of `cmd_locale`: every placed exotic site as a
+/// markdown table.
+///
+/// `--sample` reports only how MANY exotic sites a world holds, and a random
+/// sample will essentially never land on one — they are a rare minority of
+/// land by design, so the tier was generated but unreachable. This is the
+/// verification surface: where each site is, and what makes it strange.
+fn render_strange_sites(ctx: &hornvale_locale::LocaleContext, limit: Option<usize>) -> String {
+    let rows = ctx.strange_site_rows();
+    let total = rows.len();
+    let shown = limit.unwrap_or(total).min(total);
+    let mut out = format!("{total} placed exotic sites.\n\n");
+    out.push_str("| cell | lat | lon | biome | what makes it strange |\n");
+    out.push_str("|---|---|---|---|---|\n");
+    for r in rows.iter().take(shown) {
+        out.push_str(&format!(
+            "| {} | {:.2} | {:.2} | {} | {} |\n",
+            r.cell, r.latitude, r.longitude, r.biome, r.descriptor
+        ));
+    }
+    if shown < total {
+        out.push_str(&format!("\n…and {} more.\n", total - shown));
+    }
+    out
 }
 
 /// The `--sample N` mode of `cmd_locale`: describe `N` rooms spread evenly

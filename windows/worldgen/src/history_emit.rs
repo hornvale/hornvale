@@ -98,7 +98,9 @@ fn resolve_people(label: &str) -> Option<KindId> {
 /// tagged `is-occupation` plus its ~11 descriptive facts, `is-ruin` for a
 /// dead occupation or `is-settlement`/`population`/`cell-id` for one still
 /// alive at `now` — the present is simply the last frame of the committed
-/// deep history, not a separate placement.
+/// deep history, not a separate placement. Finally, one `pays-tribute-to` fact
+/// per relation still standing at `now`, so a subordination is legible off the
+/// ledger without replaying the bake that imposed it.
 pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
     // Mint one entity per record, strictly in `records` order (determinism:
     // same history ⇒ same ids ⇒ same facts, every time).
@@ -221,6 +223,31 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         } else {
             commit_on(hornvale_history::IS_RUIN, Value::Flag(true), end_day)?;
         }
+    }
+
+    // The tribute relations still standing at `now` (spec §4.4). One fact per
+    // relation, on the SUBORDINATE's subject, carrying its patron's minted
+    // entity — the same `Value::Entity` shape `occ-ended-by` uses, dated by the
+    // day the relation was established rather than by `now`, because that is
+    // the day it became true. Both parties are alive occupations, so both are
+    // in `bake_to_ledger`; the relations arrive in subordinate order, so the
+    // commit order is deterministic.
+    for rel in &h.tribute {
+        let subject = *bake_to_ledger
+            .get(&rel.subordinate)
+            .expect("a tribute subordinate names a community minted in this history");
+        let patron = *bake_to_ledger
+            .get(&rel.patron)
+            .expect("a tribute patron names a community minted in this history");
+        world.ledger.commit(
+            fact(
+                subject,
+                hornvale_history::PAYS_TRIBUTE_TO,
+                Value::Entity(patron),
+                rel.since,
+            ),
+            &world.registry,
+        )?;
     }
     Ok(())
 }

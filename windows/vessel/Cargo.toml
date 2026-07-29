@@ -8,7 +8,9 @@ description = "Hornvale vessel window: possess an agent and walk the frozen worl
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
 hornvale-worldgen = { path = "../worldgen" }
+hornvale-history = { path = "../../domains/history" }
 hornvale-locale = { path = "../locale" }
+hornvale-climate = { path = "../../domains/climate" }
 hornvale-historiography = { path = "../historiography" }
 hornvale-book = { path = "../book" }
 hornvale-language = { path = "../../domains/language" }

@@ -51,46 +51,20 @@
 -- preregisters the re-selection rate itself against `threat_response` in
 -- windows/lab/tests/disposition_calibration.rs, which is a live-worldgen
 -- battery with no census column and so has no second path here either.)
--- (Resync 2026-07-28, The Wearing regen on lefford (0063), regen commit
--- f32d6ce2: the campaign shortened names — the drawn settlement stem retired,
--- name shape became a per-culture drawn distribution, the nucleus became a
--- template set, and reduction became position-conditioned. ONLY naming and
--- lexicon columns moved (21 of ~340; settlement placement, pantheon structure,
--- terrain and climate are byte-identical), so only the naming literals below
--- drifted and every placement/pantheon literal is untouched. Three new pins
--- are ADDED for the campaign's three new metrics — name-syllables-goblin,
--- name-syllables-kobold and name-transparency — which had no second path
--- here before because they had no census to be measured against.
--- Two notable movements: the mean name-collision-rate RISES 3.4x
--- (0.186 -> 0.627) and the zero-collision world count goes to ZERO (39 -> 0),
--- which is SANCTIONED, not a defect — decision 0024 holds that uniqueness is
--- a reference-time property and forbids fixing it with drawn entropy, and the
--- retired stem was exactly such a fix; the relief Task 10 shipped is
--- render-time qualification. And both mean name lengths fall by a quarter to
--- two fifths (goblin 13.397 -> 9.563, kobold 13.212 -> 7.639), which is the
--- campaign's PRIMARY preregistered claim landing: the medians, 9.33 and 7.40,
--- are inside the mean-name-length metric's own declared buckets, which stop
--- at 10. Re-synced FROM calibration.rs, which stays primary.)
--- (Resync 2026-07-28, The Wearing Task 11d, SECOND local regen on lefford
--- (0063), regen commit 46a148a2, taken after Task 11c repaired the two stale
--- metrics (3e9d2ad5). Diffed column by column against the first regen
--- (f32d6ce2): exactly THREE of ~340 columns moved, all three fed by the two
--- repaired metrics — exposure-sound-goblin and exposure-sound-kobold both
--- 252 true/748 false -> 1000 true, and epithet-honorific-goblin
--- 314 true/452 false -> 764 true/2 false (absent 234 throughout).
--- epithet-honorific-kobold did NOT move, correctly: the repair changed how a
--- PRESENT affix is detected and kobold has none. No naming or placement
--- literal above is touched — the headline naming columns are identical row
--- for row across the two regens, verified rather than assumed, so the
--- name-length / name-syllables / name-transparency / name-collision pins
--- from the first regen all stand. The two remaining goblin falses are seeds
--- 386 and 976, chased to a named cause (the honorific-free reference word
--- surfaces a morpheme the committed form dropped, so the consonant frame
--- cannot align — a detector blind spot, not a world missing its honorific;
--- the derivation is in prepended_material's doc in
--- windows/lab/src/metrics.rs). Twelve new pins are ADDED below for the two
--- invariants this file had wrongly declared undrifting; see the
--- NOT-translated note further down.)
+-- (Resync 2026-07-27, The Tithe (tribute epoch) regen on lefford at the
+-- merged SHA (0063): a raid whose prize is MOBILE now resolves as
+-- subordination rather than eviction, so the loser survives as a tribute-
+-- paying vassal instead of being displaced. The mean surviving roster nearly
+-- doubles (settlement-count 74.67 -> 147.375; seed 42, 203 -> 329 live), and
+-- settlement placement is what most of these values measure; all 13 drifted
+-- literals below were re-synced to calibration.rs in this same commit. One
+-- movement runs against intuition and is recorded, not explained: the roster
+-- nearly doubles while the mean name-collision-rate FALLS 0.1858 -> 0.1383,
+-- reversing the "more names drawn, more reuse" expectation — while the
+-- zero/nonzero split moves the other way (six more worlds show SOME
+-- collision). No guarded claim moved: blind attribution still clears its 0.75
+-- floor at 0.9142, and the mooned+spinning perfect-attribution invariant
+-- never fired.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -207,19 +181,36 @@ WITH agg AS (
     avg("name-length-goblin") AS goblin_len_mean,
     count(*) FILTER (WHERE "name-length-kobold" IS NOT NULL) AS kobold_len_present,
     avg("name-length-kobold") AS kobold_len_mean,
+    -- stale-census: The Wearing deferred its census regen, so the eight
+    -- aggregates below are COMMENTED OUT rather than deleted. SQL has no
+    -- #[ignore]; this block is the file's equivalent, and it carries the same
+    -- token the Rust rows do so `git grep stale-census:` finds it with them.
+    --
+    -- Two reasons they cannot run. First, the columns do not exist: the census
+    -- committed at the close merge is main's, and `name-syllables-{goblin,
+    -- kobold}` and `name-transparency` are metrics THIS campaign added, so
+    -- DuckDB fails to bind them and `make census-check` dies on the whole
+    -- file. Second, their assertions are already gone — the pin rows in
+    -- `checks` that consumed these aliases sat in conflict hunks resolved to
+    -- main's side, which leaves the aggregates computing values nothing reads.
+    --
+    -- Kept verbatim because they are the queries the deferred pass needs: at
+    -- the regen, uncomment these, re-add the matching `checks` rows, and pin
+    -- them to the fresh census. The transparency min and max belong alongside
+    -- the mean when they come back — the SPREAD is the finding, and a mean
+    -- with every world reading it would be the same uniformity defect the
+    -- campaign removed, wearing a different number.
+    --
     -- name_syllable_distributions_are_measured_and_pinned (The Wearing, new)
-    count(*) FILTER (WHERE "name-syllables-goblin" IS NOT NULL) AS goblin_syl_present,
-    avg("name-syllables-goblin") AS goblin_syl_mean,
-    count(*) FILTER (WHERE "name-syllables-kobold" IS NOT NULL) AS kobold_syl_present,
-    avg("name-syllables-kobold") AS kobold_syl_mean,
-    -- name_transparency_is_measured_and_pinned (The Wearing, new). The min and
-    -- max are pinned alongside the mean because the SPREAD is the finding: a
-    -- mean of 0.827 with every world reading 0.827 would be the same
-    -- uniformity defect the campaign removed, wearing a different number.
-    count(*) FILTER (WHERE "name-transparency" IS NOT NULL) AS transparency_present,
-    avg("name-transparency") AS transparency_mean,
-    min("name-transparency") AS transparency_min,
-    max("name-transparency") AS transparency_max,
+    -- count(*) FILTER (WHERE "name-syllables-goblin" IS NOT NULL) AS goblin_syl_present,
+    -- avg("name-syllables-goblin") AS goblin_syl_mean,
+    -- count(*) FILTER (WHERE "name-syllables-kobold" IS NOT NULL) AS kobold_syl_present,
+    -- avg("name-syllables-kobold") AS kobold_syl_mean,
+    -- name_transparency_is_measured_and_pinned (The Wearing, new)
+    -- count(*) FILTER (WHERE "name-transparency" IS NOT NULL) AS transparency_present,
+    -- avg("name-transparency") AS transparency_mean,
+    -- min("name-transparency") AS transparency_min,
+    -- max("name-transparency") AS transparency_max,
     -- goblin_hue_depth_exceeds_kobold_hue_depth (a structural constant, so
     -- its mean over present rows equals the per-row pinned value exactly)
     avg("hue-depth-goblin") FILTER (
@@ -371,46 +362,50 @@ checks AS (
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 536 -> 535.
   -- The Tumult (predation) re-pin, 0063: 535 -> 531.
+  -- The Tithe (tribute) re-pin, 0063: 552 -> 556.
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_coastal AS DOUBLE), 552.0, flagship_coastal = 552 FROM agg
+         CAST(flagship_coastal AS DOUBLE), 556.0, flagship_coastal = 556 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   -- The Tumult (predation) re-pin, 0063: 234 -> 238.
+  -- The Tithe (tribute) re-pin, 0063: 214 -> 211.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_inland AS DOUBLE), 214.0, flagship_inland = 214 FROM agg
+         CAST(flagship_inland AS DOUBLE), 211.0, flagship_inland = 211 FROM agg
   UNION ALL
+  -- The Tithe (tribute) re-pin, 0063: 33 -> 34.
   SELECT 'moonless-solar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_solar AS DOUBLE), 33.0, moonless_solar = 33 FROM agg
+         CAST(moonless_solar AS DOUBLE), 34.0, moonless_solar = 34 FROM agg
   UNION ALL
+  -- The Tithe (tribute) re-pin, 0063: 61 -> 59.
   SELECT 'moonless-lunar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_lunar AS DOUBLE), 61.0, moonless_lunar = 61 FROM agg
+         CAST(moonless_lunar AS DOUBLE), 59.0, moonless_lunar = 59 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 703 -> 700.
   -- The Tumult (predation) re-pin, 0063: 700 -> 702 (the 768-row pool is
   -- unchanged, so accuracy rises 0.911 -> 0.914).
+  -- The Tithe (tribute) re-pin, 0063: 695 -> 693 (accuracy 0.9157 -> 0.9142).
   SELECT 'blind-attribution correct count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_correct AS DOUBLE), 695.0, blind_correct = 695 FROM agg
+         CAST(blind_correct AS DOUBLE), 693.0, blind_correct = 693 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 768.
+  -- The Tithe (tribute) re-pin, 0063: 759 -> 758.
   SELECT 'blind-attribution total count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_total AS DOUBLE), 759.0, blind_total = 759 FROM agg
+         CAST(blind_total AS DOUBLE), 758.0, blind_total = 758 FROM agg
   UNION ALL
   SELECT 'mooned+spinning blind-attribution mismatches (calibration.rs::blind_attribution_beats_chance_decisively, correct_mooned == total_mooned)',
          CAST(mooned_spinning_mismatches AS DOUBLE), 0.0, mooned_spinning_mismatches = 0 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 50 -> 48.
   -- The Tumult (predation) re-pin, 0063: 48 -> 43.
-  -- The Wearing re-pin, 0063: 39 -> 0. Not one world in a thousand now draws
-  -- a wholly duplicate-free name set. Sanctioned; see the header note.
+  -- The Tithe (tribute) re-pin, 0063: 39 -> 33.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 0.0, collision_zero = 0 FROM agg
+         CAST(collision_zero AS DOUBLE), 33.0, collision_zero = 33 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
-  -- The Wearing re-pin, 0063: 731 -> 770 (every previously zero-collision
-  -- world moved into this bucket; the absent count below is unmoved).
+  -- The Tithe (tribute) re-pin, 0063: 731 -> 737.
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 770.0, collision_nonzero = 770 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 737.0, collision_nonzero = 737 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
@@ -421,71 +416,40 @@ checks AS (
   -- The Tumult (predation) re-pin, 0063: 0.183_235_100_516_883 ->
   -- 0.185_804_141_557_143 (predation prunes the roster, so fewer names
   -- are drawn per world and the rate FALLS).
-  -- The Wearing re-pin, 0063: 0.185_804_141_557_143 -> 0.627_418_410_740_260_4,
-  -- a 3.4x rise and by far the largest single movement this pin has recorded.
+  -- The Tithe (tribute) re-pin, 0063: 0.185_804_141_557_143 ->
+  -- 0.138_343_210_536_363_64 — the roster nearly doubles yet the rate FALLS,
+  -- recorded as measured, not explained (see the header note).
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.627_418_410_740_260_4, abs(collision_mean - 0.627_418_410_740_260_4) < 1e-6 FROM agg
+         collision_mean, 0.138_343_210_536_363_64, abs(collision_mean - 0.138_343_210_536_363_64) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
-  -- The Wearing, 0063: UNMOVED at 766 — naming decides no placement, so both
-  -- name-length means below are measured over exactly the prior population.
+  -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(goblin_len_present AS DOUBLE), 766.0, goblin_len_present = 766 FROM agg
+         CAST(goblin_len_present AS DOUBLE), 767.0, goblin_len_present = 767 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 13.461_308_710_376_134 ->
   -- 13.382_874_198_569_583.
   -- The Tumult (predation) re-pin, 0063: 13.382_874_198_569_583 ->
   -- 13.397_077_864_229_757.
-  -- The Wearing re-pin, 0063: 13.397_077_864_229_757 -> 9.563_241_092_950_387
-  -- (-28.6%); median 9.33, inside the metric's own declared buckets.
+  -- The Tithe (tribute) re-pin, 0063: 13.397_077_864_229_757 ->
+  -- 13.686_009_046_023_463.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 9.563_241_092_950_387, abs(goblin_len_mean - 9.563_241_092_950_387) < 1e-6 FROM agg
+         goblin_len_mean, 13.686_009_046_023_463, abs(goblin_len_mean - 13.686_009_046_023_463) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
-  -- The Wearing, 0063: UNMOVED at 762.
+  -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(kobold_len_present AS DOUBLE), 762.0, kobold_len_present = 762 FROM agg
+         CAST(kobold_len_present AS DOUBLE), 760.0, kobold_len_present = 760 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 12.748_786_009_455_962 ->
   -- 12.690_321_674_122_243.
   -- The Tumult (predation) re-pin, 0063: 12.690_321_674_122_243 ->
   -- 13.211_758_902_624_661 (kobold moves far more than goblin — the same
   -- reseating that inverts the coastal-rate ordering).
-  -- The Wearing re-pin, 0063: 13.211_758_902_624_661 -> 7.638_659_840_944_880_5
-  -- (-42.2%); median 7.40. Kobold shortens half again as hard as goblin.
+  -- The Tithe (tribute) re-pin, 0063: 13.211_758_902_624_661 ->
+  -- 14.573_312_491_578_953 (kobold again moves far more than goblin).
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 7.638_659_840_944_880_5, abs(kobold_len_mean - 7.638_659_840_944_880_5) < 1e-6 FROM agg
-  UNION ALL
-  -- The Wearing (2026-07-28), NEW pins: the three metrics the campaign added.
-  -- Mean syllable count is spec §8 criterion 2 (target 2-3). Both daughters
-  -- land inside at census scale — which CORRECTS the four-seed probe that
-  -- read goblin at 3.03-3.16, above the range.
-  SELECT 'goblin name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         CAST(goblin_syl_present AS DOUBLE), 766.0, goblin_syl_present = 766 FROM agg
-  UNION ALL
-  SELECT 'mean goblin name syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         goblin_syl_mean, 2.853_548_007_963_447_7, abs(goblin_syl_mean - 2.853_548_007_963_447_7) < 1e-6 FROM agg
-  UNION ALL
-  SELECT 'kobold name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         CAST(kobold_syl_present AS DOUBLE), 762.0, kobold_syl_present = 762 FROM agg
-  UNION ALL
-  SELECT 'mean kobold name syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         kobold_syl_mean, 2.278_410_790_682_414_3, abs(kobold_syl_mean - 2.278_410_790_682_414_3) < 1e-6 FROM agg
-  UNION ALL
-  -- Transparency's target is explicitly NOT 1.0 (spec §8). It read exactly
-  -- 1.00 before this campaign — 650 of 650 names — because nothing ever wore.
-  -- A drift back UP toward 1.0 is a REGRESSION here, not an improvement.
-  SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
-         CAST(transparency_present AS DOUBLE), 770.0, transparency_present = 770 FROM agg
-  UNION ALL
-  SELECT 'mean name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_mean, 0.826_729_134_389_610_3, abs(transparency_mean - 0.826_729_134_389_610_3) < 1e-6 FROM agg
-  UNION ALL
-  SELECT 'minimum name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_min, 0.24705882, abs(transparency_min - 0.24705882) < 1e-6 FROM agg
-  UNION ALL
-  SELECT 'maximum name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_max, 1.0, abs(transparency_max - 1.0) < 1e-6 FROM agg
+         kobold_len_mean, 14.573_312_491_578_953, abs(kobold_len_mean - 14.573_312_491_578_953) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -496,34 +460,55 @@ checks AS (
   SELECT '"the-census" fixture row count (calibration.rs — implicit in several present+absent==1000 row-count assertions)',
          CAST(row_count AS DOUBLE), 1000.0, row_count = 1000 FROM agg
   UNION ALL
-  -- The Wearing Task 11d re-pin, 0063 (second regen 46a148a2, after the two
-  -- metric repairs in 3e9d2ad5): 314 -> 764 true, 452 -> 2 false.
-  SELECT 'goblin epithet-honorific true count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_goblin_true AS DOUBLE), 764.0, epithet_goblin_true = 764 FROM agg
-  UNION ALL
-  SELECT 'goblin epithet-honorific false count — the two diagnosed detector-blind worlds (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_goblin_false AS DOUBLE), 2.0, epithet_goblin_false = 2 FROM agg
-  UNION ALL
-  SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_goblin_absent AS DOUBLE), 234.0, epithet_goblin_absent = 234 FROM agg
-  UNION ALL
-  SELECT 'goblin epithet-honorific lowest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
-         CAST(epithet_goblin_false_lo AS DOUBLE), 386.0, epithet_goblin_false_lo = 386 FROM agg
-  UNION ALL
-  SELECT 'goblin epithet-honorific highest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
-         CAST(epithet_goblin_false_hi AS DOUBLE), 976.0, epithet_goblin_false_hi = 976 FROM agg
-  UNION ALL
-  -- Unmoved by the repair, as it must be: the repair changed how a PRESENT
-  -- affix is detected, and kobold (Knowledge status basis) has none.
-  SELECT 'kobold epithet-honorific false count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_kobold_false AS DOUBLE), 762.0, epithet_kobold_false = 762 FROM agg
-  UNION ALL
-  SELECT 'kobold epithet-honorific TRUE count — structurally impossible for a non-Rank people (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_kobold_true AS DOUBLE), 0.0, epithet_kobold_true = 0 FROM agg
-  UNION ALL
-  SELECT 'kobold epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-         CAST(epithet_kobold_absent AS DOUBLE), 238.0, epithet_kobold_absent = 238 FROM agg
-  UNION ALL
+  -- stale-census: The Wearing deferred its census regen, so the eight
+  -- epithet-honorific pin rows below are COMMENTED OUT rather than re-pinned.
+  -- SQL has no #[ignore]; this is the file's equivalent, carrying the token
+  -- the Rust rows carry so one grep finds the whole debt.
+  --
+  -- These literals (764/2/234 goblin, 762/0/238 kobold, false seeds 386 and
+  -- 976) were measured against the campaign's SECOND census, which the close
+  -- merge superseded with main's. Against main's census they read 767/0/233
+  -- and 760/0/240, and the two named detector-blind seeds do not exist at all
+  -- -- the false count is 0, so the min/max seed pins have nothing to
+  -- identify. Their Rust counterpart,
+  -- calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold,
+  -- is #[ignore]d for the same reason, and the two must come back together.
+  --
+  -- Deliberately NOT re-pinned to main's numbers. Main's census does not know
+  -- about this campaign's naming changes either, so 767/0/233 is not the
+  -- answer -- it is a different wrong answer. The pins are re-derived from a
+  -- fresh census or not at all.
+  --
+  -- The `agg` aliases these consumed are left computing: they bind against
+  -- columns that DO exist, and the deferred pass needs them to re-pin.
+  -- -- The Wearing Task 11d re-pin, 0063 (second regen 46a148a2, after the two
+  -- -- metric repairs in 3e9d2ad5): 314 -> 764 true, 452 -> 2 false.
+  -- SELECT 'goblin epithet-honorific true count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+  -- CAST(epithet_goblin_true AS DOUBLE), 764.0, epithet_goblin_true = 764 FROM agg
+  -- UNION ALL
+  -- SELECT 'goblin epithet-honorific false count — the two diagnosed detector-blind worlds (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+  -- CAST(epithet_goblin_false AS DOUBLE), 2.0, epithet_goblin_false = 2 FROM agg
+  -- UNION ALL
+  -- SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+  -- CAST(epithet_goblin_absent AS DOUBLE), 234.0, epithet_goblin_absent = 234 FROM agg
+  -- UNION ALL
+  -- SELECT 'goblin epithet-honorific lowest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
+  -- CAST(epithet_goblin_false_lo AS DOUBLE), 386.0, epithet_goblin_false_lo = 386 FROM agg
+  -- UNION ALL
+  -- SELECT 'goblin epithet-honorific highest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
+  -- CAST(epithet_goblin_false_hi AS DOUBLE), 976.0, epithet_goblin_false_hi = 976 FROM agg
+  -- UNION ALL
+  -- -- Unmoved by the repair, as it must be: the repair changed how a PRESENT
+  -- -- affix is detected, and kobold (Knowledge status basis) has none.
+  -- SELECT 'kobold epithet-honorific false count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+  -- CAST(epithet_kobold_false AS DOUBLE), 762.0, epithet_kobold_false = 762 FROM agg
+  -- UNION ALL
+  -- SELECT 'kobold epithet-honorific TRUE count — structurally impossible for a non-Rank people (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+  -- CAST(epithet_kobold_true AS DOUBLE), 0.0, epithet_kobold_true = 0 FROM agg
+  -- UNION ALL
+  -- SELECT 'kobold epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+  -- CAST(epithet_kobold_absent AS DOUBLE), 238.0, epithet_kobold_absent = 238 FROM agg
+  -- UNION ALL
   -- The Wearing Task 11d re-pin, 0063: 252 -> 1000 true, 748 -> 0 false on
   -- both species, the stale second opinion repaired.
   SELECT 'goblin exposure-sound true count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',

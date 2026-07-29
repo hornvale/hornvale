@@ -232,7 +232,9 @@ version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
  "hornvale-book",
+ "hornvale-climate",
  "hornvale-historiography",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-locale",

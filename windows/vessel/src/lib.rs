@@ -4,19 +4,28 @@
 //! The Walk).
 
 mod agent;
+pub mod band;
+pub mod brief;
+pub mod chamber_prose;
 pub mod clock;
 mod focalize;
 pub mod interior;
 mod knowledge;
+pub mod lattice;
 pub mod liveness;
 mod purview;
 mod session;
 pub mod snapshot;
 pub mod streams;
+pub mod structure;
 mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
+pub use band::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
+pub use brief::{Brief, brief_of};
+pub use chamber_prose::describe_chamber;
 pub use focalize::*;
 pub use knowledge::*;
+pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
 pub use purview::*;
 pub use session::Session;
 pub use snapshot::{
@@ -24,6 +33,7 @@ pub use snapshot::{
     SensedChannel, SessionSnapshot, SocialEntry, snapshot_json,
 };
 pub use streams::stream_labels;
+pub use structure::{MAX_CHAMBERS, Structure, structure_at};
 pub use vantage::*;
 
 use std::io::{BufRead, Write};

@@ -28,7 +28,8 @@ echo "  - no wall-clock time; no HashMap/HashSet (clippy.toml disallowed-types)"
 echo "  - stream labels and consumption order are save-format contracts (docs/decisions/0006-*)"
 
 section "Committed generated artifacts"
-echo "  - regenerate all: make rebaseline (censuses skip by default; census regen is AWS-only: make regen-remote, once per campaign pre-merge)"
+echo "  - regenerate all: make rebaseline (censuses skip by default)"
+echo "  - census regen is LOCAL (decisions 0063/0081): bash scripts/census-run.sh, once per campaign pre-merge"
 echo "  - byte-golden test fixtures: make rebaseline-goldens (REBASELINE=1 accept path; kernel/src/golden.rs)"
 echo "  - census review surface: make lab-diff STUDY=<name>"
 echo "  - historical pre-<campaign> pins are frozen history: scripts/freeze-fixture.sh, never rebaselined"
@@ -54,7 +55,7 @@ section "Decisions never cited in sources or docs (informational, not a gate)"
 # "(0003)" that only shares a sentence with an earlier "ADR 0002".
 corpus_file="$(mktemp "${TMPDIR:-/tmp}/hv-doctor-corpus.XXXXXX")"
 trap 'rm -f "$corpus_file"' EXIT
-find kernel domains windows cli tools scripts docs book CLAUDE.md \
+find kernel domains windows cli clients tools scripts docs book CLAUDE.md \
     -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.md' \) \
     -not -path '*/target/*' -not -path '*/.git/*' -not -path 'docs/decisions/*' \
     -print0 2>/dev/null \

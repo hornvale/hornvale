@@ -3,8 +3,19 @@ map
 examine a fern-choked draw shaded dry in a hollow
 examine sky
 whoami
+enter
+enter further in
+map
+go n
+map
+examine an alcove
+examine a wall
+out
 go n
 map out 2
+enter
+look
+out
 go ne
 back
 wait 90

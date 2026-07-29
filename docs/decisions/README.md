@@ -120,3 +120,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0078](0078-thresholded-classification-artifacts-are-platform-local.md) | An artifact dominated by thresholded classifications is drift-checked platform-locally, not in CI | Accepted |
 | [0079](0079-census-goldens-are-authored-on-one-enforced-host.md) | Census goldens are authored on one host, and it is enforced | Accepted |
 | [0080](0080-chronicity-is-a-diagnostic-the-alarm-is-stuck.md) | `chronicity` is a diagnostic; the population-health alarm is `stuck` | Accepted |
+| [0081](0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md) | One heavy writer per box, claimed at the write seam | Accepted |
+| [0082](0082-locale-chamber-place.md) | Locale, chamber, place — "room" unqualified is retired | Accepted |
+| [0083](0083-a-label-per-algorithm-and-never-in-advance.md) | A seed-derivation label is declared per *algorithm*, and never in advance | Accepted |
+| [0084](0084-an-epoch-is-declared-only-when-a-derivation-moved.md) | An epoch is declared only when a derivation moved — `room/furnishing` stays at v1 | Accepted |
+| [0085](0085-derived-geometry-reads-the-durable-signal.md) | Derived geometry reads the durable signal, not the living one | Accepted |

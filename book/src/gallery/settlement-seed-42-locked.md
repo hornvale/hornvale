@@ -1,21 +1,21 @@
 # The Peoples of Seed 42
 
-The land holds 166 settlement(s).
-The chief bugbear settlement, Qadoo, holds 110 souls amid tropical-rainforest.
-The chief gnoll settlement, Dzoxgzhofqsooxpshaopzhaamshoa, holds 112 souls amid tropical-seasonal-forest.
-The chief goblin settlement, Nee, holds 89 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Naabee, holds 82 souls amid tropical-seasonal-forest.
-The chief kobold settlement, Xaarrorora, holds 117 souls amid tropical-rainforest.
+The land holds 250 settlement(s).
+The chief bugbear settlement, Vngaobvaoqoa, holds 110 souls amid tropical-rainforest.
+The chief gnoll settlement, Nzhaofngzaagpzhoaqgshaox, holds 112 souls amid tropical-seasonal-forest.
+The chief goblin settlement, Zxobngoknabbeetaonoaboo, holds 88 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Mjaogkoangjaogeetao, holds 82 souls amid tropical-seasonal-forest.
+The chief kobold settlement, Rogxaxorraqxo, holds 117 souls amid tropical-rainforest.
 
 ```text
                                                                         
-                       ooooo                    oo                      
-                         ooo              oooooo@o                      
-                                           oo                           
+                   oooooooooo                  oooo                     
+                         ooooo             ooooo@o                      
                                                                         
                                                                         
                                                    oo                   
-                                                   oo                   
+                                                  ooo                   
+                                                  ooo                   
                                                                         
                                                                         
                                                                         
@@ -25,11 +25,11 @@ The chief kobold settlement, Xaarrorora, holds 117 souls amid tropical-rainfores
                    oo                                                   
                    oo                                                   
                                                  o                      
+                                                 oo                     
                                                                         
+                   ooooo                                                
+                   ooo     o                                            
                                                                         
-                   oooo                                                 
-                   ooo     oo                                           
-                       o ooo                                            
                                                                         
                                                                         
 ```

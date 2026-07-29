@@ -198,6 +198,17 @@ pub enum Departure {
     Conquest,
 }
 
+/// The peak population at or below which a settlement is HAMLET-SCALE — a family
+/// place rather than a community with public business.
+///
+/// Hoisted from inside [`residue_of`] (where it was a function-local `const`)
+/// when The Blocking's `store` chamber role became its second reader: a hamlet's
+/// storeroom has nothing worth locking up, which is the same threshold read for a
+/// different consequence. One number, one meaning — re-typing `150` in the vessel
+/// would have let the two drift.
+/// type-audit: bare-ok(count)
+pub const HAMLET_POPULATION_CEILING: u32 = 150;
+
 /// The small, deterministic set of physical remnants an occupation leaves
 /// behind, as of `now`. Keyed by `(people, cause, tenure-age, notability)`,
 /// plus — for a `Migrated` record only — the caller's [`Departure`] verdict.
@@ -222,8 +233,6 @@ pub enum Departure {
 /// spent identically whichever verdict it passes.
 /// type-audit: bare-ok(count: now)
 pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Departure) -> Residue {
-    const HAMLET_POPULATION_CEILING: u32 = 150;
-
     let mut items = Vec::new();
     let age = occ.ended.map_or(0.0, |end| (now - end).max(0.0));
     let hamlet_scale = occ.peak_population <= HAMLET_POPULATION_CEILING;
