@@ -899,6 +899,69 @@ back geometric, the right conclusion is that this world does not sit at a
 critical point, and this chapter should record that as settled rather than
 open.**
 
+### The third ask is being spent elsewhere (2026-07-29)
+
+That test — *materially different, or a rephrasing?* — has now been applied,
+and the answer is that the connected-cascade question **does not clear its own
+bar by much**, while a different question clears it easily. This chapter is
+therefore rescored: the criticality bet is **not** being asked a third time in
+the form above, and the depth-and-collapse-release levers are **deferred, not
+refuted**.
+
+The reason is that three campaigns have been measuring the size distribution of
+**events** — how long a cascade of displacements runs — while the property the
+project actually wants from its history is a distribution over **entities**:
+how large the largest polity gets, how unequal holdings become, whether an
+empire is a thing a world can produce at all. Those are different variables with
+different mechanisms and different literatures. Event-size criticality is
+Bak–Tang–Wiesenfeld, and the conduction diagnosis is correct on its own terms.
+Entity-size heaviness is Gibrat and Kesten — a random *multiplicative* factor
+against a reflecting lower barrier — which is the standard account of Zipf's law
+for city sizes and of the empire-area distributions. **Hornvale has never
+measured it, and the bake has no empire-size metric at all.**
+
+Reading the mechanism against that second literature explains the two nulls
+without appealing to conduction, and the reading was verified in source rather
+than reasoned about. A Kesten process needs a per-entity random multiplier that
+persists. The bake's strength is `(population + stores × 0.5) × tech_weight`.
+Population is logistic, so its growth is *anti*-proportional to its size near
+capacity. Stores decay at 0.95 per epoch to a fixed point set by inflow, and are
+destroyed on a community's closure. `tech_weight` takes four values capping at
+3.0, is driven by absolute year, and its per-people head start is a draw in
+[0, 300) years against era boundaries at 400/900/1400 — so **the world's only
+irreversible advantage provably converges to zero relative value at year 1400**.
+Every multiplier in the model is shared, capped, or mean-reverting, and no two
+communities of one people differ in any authored dimension at all. A model with
+no persistent per-entity multiplicative heterogeneity cannot produce a heavy
+entity-size tail, and would not do so even with a conduction medium added.
+
+**What replaces the bet is narrower, and it is a different shape of claim.**
+Not a power law: a **sigmoid**. The wager is that annihilation, coexistence and
+domination lie on one saturating response, that the middle is where nearly every
+world sits, and that both extremes are **reachable but rare** — a world with no
+goblins, and a world under one government, each possible and each unusual. This
+is preregisterable, it is falsifiable in both directions, and it is a claim
+about a distribution the Laboratory can compute over seeds rather than about a
+scaling exponent that needs 1.5 decades of support to be well-posed at all.
+
+It also carries a structural requirement the previous framing never surfaced,
+recorded as [decision 0086](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0086-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+clause 3: rare extremes need **asymptotes, not clamps**. Hornvale's saturating
+bounds are presently clamps — population against capacity, `tech_weight` against
+3.0, `coexist.rs`'s viability `FLOOR` — and the probability of exceeding a clamp
+is exactly zero at any input. On the current response forms the tails are not
+rare; they are impossible. That is a build constraint, not a tuning target, and
+it is the first thing a successor campaign owes this chapter.
+
+**Confidence: low, and deliberately so.** The sigmoid has not been measured, the
+claim that per-world conditions vary widely enough to reach either tail is
+**unverified**, and this chapter should not be read as predicting the result. The
+one thing it does now assert with the same confidence as the two falsifications
+above it is the diagnosis: **this world's history evaluates every people on a
+single scalar axis, and on one axis weakness is absolute.** That is checkable in
+forty lines of source, it is the standing charge decision 0086 opens, and it is
+why the third ask is being spent on a second axis rather than on a deeper graph.
+
 One further note the campaign earns a place for, because it bears on how much
 any of the above should be trusted. *The Tithe* amended its own specification
 **five times, four of them following a disappointing measurement** — and that
