@@ -14,50 +14,50 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 738918402, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Vngoashshngaoshshngoogootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodoogogootoodadoo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
 [room 738918402, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Vngoashshngaoshshngoogootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodoogogootoodadoo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [1865] bugbear of Vngoashshngaoshshngoogootao
-  [1866] hobgoblin of Feamjeafeonaoteeqoa
-  [1867] gnoll of Gzaadmzhooqpzhaodmshaofdzhaaxqzaoq
+  [1865] bugbear of Goodoogogootoodadoo
+  [1866] hobgoblin of Toageogeenoa
+  [1867] gnoll of Gzavmzhoanshaavnsa
   [1868] a wild rust-monster
   [1869] a wild otyugh
   [1870] a wild xorn
   [1871] a wild carrion-crawler
 > needs
-The bugbear of Vngoashshngaoshshngoogootao seems content.
+The bugbear of Goodoogogootoodadoo seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
 [room 738918402, day 5]
-Tropical seasonal forest — buttressed canopy — in the lands of Vngoashshngaoshshngoogootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodoogogootoodadoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashshngaoshshngoogootao settles down to rest.
+The bugbear of Goodoogogootoodadoo settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (17 stirred).
 > look
 [room 738918402, day 6]
-Tropical seasonal forest — buttressed canopy — in the lands of Vngoashshngaoshshngoogootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodoogogootoodadoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashshngaoshshngoogootao settles down to rest.
+The bugbear of Goodoogogootoodadoo settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (16 stirred).
 > look
 [room 738918402, day 7]
-Tropical seasonal forest — buttressed canopy — in the lands of Vngoashshngaoshshngoogootao. The sky above: Night. The sky is a low grey rain-deck.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodoogogootoodadoo. The sky above: Night. The sky is a low grey rain-deck.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashshngaoshshngoogootao grows restless.
+The bugbear of Goodoogogootoodadoo grows restless.
 > why hobgoblin
-hobgoblin of Feamjeafeonaoteeqoa:
-- canonical name of an entity: hobgoblin of Feamjeafeonaoteeqoa (asserted by the-quickening)
+hobgoblin of Toageogeenoa:
+- canonical name of an entity: hobgoblin of Toageogeenoa (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
@@ -65,10 +65,10 @@ hobgoblin of Feamjeafeonaoteeqoa:
 Time passes. You sense movement nearby (338 stirred).
 > look
 [room 738918402, day 97]
-Tropical seasonal forest — buttressed canopy — in the lands of Vngoashshngaoshshngoogootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodoogogootoodadoo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashshngaoshshngoogootao grows restless.
+The bugbear of Goodoogogootoodadoo grows restless.
 > release
 You let go.
 ```

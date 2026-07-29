@@ -46,6 +46,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | Label | Meaning |
 |---|---|
 | `climate/weather/phase/v1` | drifting weather-phase noise seed (The Firmament) |
+| `climate/variant/cell/v1` | the characteristic variant of a cell (The Toponym) |
 
 ### hornvale-culture
 
