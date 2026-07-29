@@ -19,7 +19,12 @@
 #   scripts/heavy-run.sh                      # run the heavy tier here
 #   HV_HEAVY_REF=<sha> scripts/heavy-run.sh   # fetch + run that ref in a
 #                                             # dedicated scratch worktree
-#   scripts/heavy-run.sh status               # is a heavy job holding the box?
+#   scripts/heavy-run.sh status               # is a heavy job holding THIS box?
+#
+# `status` reports on the machine it runs on, because the claim lives in that
+# machine's own /tmp. From the other machine use `make heavy-status`, which
+# asks the canonical box rather than the local one — a local `status` on a dev
+# machine is always "no" and is not the question you meant.
 #
 #   # from the other machine (push your branch first, then):
 #   make heavy-remote REF=<full-sha>

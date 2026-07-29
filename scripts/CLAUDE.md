@@ -50,7 +50,9 @@ knobs:
 - **`heavy-run.sh`** — run the heavy tier on THIS box under the shared claim,
   the same way `census-run.sh` runs a census. `HV_HEAVY_REF=<sha>` runs a
   pushed ref in a scratch worktree; `status` asks who holds the box and is
-  legal from any machine. Carries the canonical-host guard, because the tier
+  legal from any machine — but it reads the claim in the **local** `/tmp`, so
+  from the Mac it always says "no". Use **`make heavy-status`** to ask the
+  canonical box instead; that is almost always the question you mean. Carries the canonical-host guard, because the tier
   **authors committed artifacts**: `the-history` (`cli/tests/history_battery.rs`),
   `the-sounding` (`windows/chronicle/tests/sounding_sweep.rs`), and
   `occupancy.csv` (`windows/worldgen/tests/occupancy_readout.rs`) — plus

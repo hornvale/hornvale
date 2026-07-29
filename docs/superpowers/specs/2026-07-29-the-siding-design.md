@@ -275,8 +275,14 @@ its own chosen constants.
   started concurrently on lefford; the second must report the first as holder
   and start only after it exits. Asserting the lock exists is not the same as
   asserting it *excludes* — this repo has shipped tests that assert nothing.
-- `status` returns truthfully from the Mac while lefford holds the claim, and
-  never blocks.
+- `status` never blocks and never refuses, from either machine. **Corrected
+  during execution:** the claim lives in each box's own `/tmp`, so a local
+  `heavy-run.sh status` answers "is a heavy run holding *this* machine?" — run
+  from the Mac that is always "no", which is truthful but not the question the
+  reader meant. Verified against a live holder: on lefford it reports
+  `heavy running: pid … @ main@0715e5ad`; on the Mac it reports no run. The
+  cross-machine question therefore needs `make heavy-status`, added for this
+  reason.
 - A killed holder releases the claim (`flock` frees the fd on process death);
   the next waiter proceeds.
 - `make gate` on the Mac is green and within its ~4-minute budget on a quiet
