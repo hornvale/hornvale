@@ -208,6 +208,46 @@ So `DEF_SCALE = 0.012622` (q0.50). `DEF_FLOOR = 0.75`, `DEF_CEIL = 1.40` — aut
 1. Because `DEF_SCALE` is the median and the distribution's upper half is 1-3 orders of magnitude above it, `tanh(ease/DEF_SCALE)` is already within ~2% of its asymptote by q0.75 (ratio ≈ 2.27, `tanh ≈ 0.979`) — differentiation among the *more* defensible half of the map is compressed into a narrow output band near `DEF_FLOOR`, while nearly all of the formula's dynamic range is spent distinguishing cells *below* the median. This is expected of `tanh` on a right-skewed input and is not itself a bug, but it means "defensibility" as this formula defines it is really "how much *worse* than typical is this cell's approach", not a linear rescaling of `approach_ease`.
 2. **Confirmed isolated cells (`approach_ease == 0`) exist in the measured population.** At `ease = 0`, `tanh(0 / DEF_SCALE) = 0`, so `defensibility = DEF_FLOOR + (DEF_CEIL - DEF_FLOOR) * (1 - 0) = DEF_CEIL` **exactly** — not strictly inside `(DEF_FLOOR, DEF_CEIL)`. Task 3 Step 4's test asserts `d_max < 1.40` (strict); on a seed where a habitable, isolated cell is sampled, that assertion will fail as written. Flagging for Task 3/6, not fixing here — this task's deliverable is the measurement, not the formula.
 
+**Task 2b addendum (approved follow-up, measurement only): `sum` conflates "how good the best approach is" with "how many approaches there are".** An ideonomy pass on the right-skew finding above raised a real objection: an attacker uses ONE approach, so a sum over all approaches (Thermopylae's many bad ones and one good one, added together) is not obviously the right statistic for "defensibility". The harness was extended with two companion per-cell measurements — `max_approach` (the single largest traversable conductance) and `approach_count` (how many traversable edges) — over the **same** 30 seeds, same present-day era, same habitable-cell set. Command (unchanged):
+
+```bash
+cargo test -p hornvale-worldgen --test approach_ease_calibration -- --ignored --nocapture
+```
+
+Output (all three series in one run; `sum` reproduced byte-identical to the Step 4 record above):
+
+```
+q0.05 = 0.004881
+q0.25 = 0.008302
+q0.50 = 0.012622
+q0.75 = 0.028620
+q0.95 = 1.003891
+max_conductance q0.05 = 0.001079
+max_conductance q0.25 = 0.001616
+max_conductance q0.50 = 0.002574
+max_conductance q0.75 = 0.005602
+max_conductance q0.95 = 0.998020
+max_conductance min = 0.000000
+max_conductance mean = 0.103236
+max_conductance max = 1.000000
+edge_count q0.05 = 4.000000
+edge_count q0.25 = 6.000000
+edge_count q0.50 = 6.000000
+edge_count q0.75 = 6.000000
+edge_count q0.95 = 6.000000
+edge_count min = 0.000000
+edge_count mean = 5.829377
+edge_count max = 45.000000
+```
+
+**The 28.96-max question, resolved as fact, not guess:**
+
+- **No individual `conductance` can exceed 1.0.** Measured `max_conductance max = 1.000000` exactly, over 142,595 cells and 30 seeds — never observed above 1. This matches all three producers in `windows/worldgen/src/graph_derive.rs`: `cost_conductance` (line 224, `1.0 / ((a + b) / 2.0)`, floored at cost 1 per side so bounded ≤ 1) for `Adjacency` edges; the `LandRoute` conductance (line 371, `1.0 / total.max(1)`) is likewise ≤ 1; and the `WaterRoute` conductance (line 326, `vector_magnitude(*current.get(launch))`, `domains/climate/src/currents.rs`) is provably ≤ 1 because `wind_east_tangent` (`domains/climate/src/circulation.rs:75-83`) explicitly unit-normalizes the wind, the 45° Ekman rotation (`currents.rs`, `ocean_current`) preserves that unit norm, and the subsequent coastal-land projection only *subtracts* a component (never adds one) — so a single edge cannot be the source of a 28.96 sum.
+- **A habitable cell CAN carry far more traversable edges than its ~5-6 mesh neighbours.** Measured `edge_count`: median 6 (matching bare adjacency) and `q0.95` still 6, but `max = 45` — a small minority of cells accumulate dramatically more edges. Cause: `add_land_routes` (`graph_derive.rs:349-378`) adds one `LandRoute` edge per *settlement pair* within `land_route_radius` (12 hops) whose corridor clears `corridor_max_cost` — not restricted to mesh adjacency at all, so a well-connected settlement in a dense cluster accumulates one edge per nearby settlement, easily exceeding 6. `add_water_routes` (`graph_derive.rs:304-333`) compounds this with fan-in: it launches one route per *coastal source* cell and adds the mirrored edge at whatever cell that route's current-trace lands on, so a single convergent destination cell can receive edges from many distinct, non-adjacent source cells. A cell with 45 traversable edges each ≤ 1.0 easily sums past 28 — no single outsized edge is needed, or observed.
+- **A genuine, separate double-counting defect also exists, confirmed empirically.** `traversable_neighbors` (`windows/worldgen/src/history_bake.rs`, ~line 40) sorts-and-dedups its neighbor list specifically because a cell's raw edge list can hold two edges to the *same* neighbor (e.g. `Adjacency` + `LandRoute` for a settlement pair that happens to also be mesh-adjacent) — `add_land_routes` never checks whether an `Adjacency` edge for that pair already exists before adding a `LandRoute` one. A one-off diagnostic (not part of the committed harness) confirmed this is real, not merely theoretical: of the 142,595 habitable cells measured, **9,608 (≈6.7%) have at least one duplicate `to` value among their traversable edges, totaling 15,968 extra double-counted edge entries.** `approach_ease` (both the private original and this harness's mirror) sums the raw edge list without deduping by neighbor, so for those cells the sum genuinely double-counts one physical neighbor's contribution. This is real but secondary to the fan-in effect above (avg ≈1.66 duplicate edges per affected cell, vs. a 45-edge outlier) — it inflates the sum statistic somewhat but is not, by itself, what produces a value near 29.
+
+None of this changes the frozen `DEF_SCALE`/`DEF_FLOOR`/`DEF_CEIL` above (still a measurement task, not a redesign) — it is handed forward to whichever task next touches the `approach_ease`/`defensibility` formula, since "sum vs. max vs. count" is a design choice this task does not make.
+
 - [ ] **Step 5: Commit**
 
 ```bash

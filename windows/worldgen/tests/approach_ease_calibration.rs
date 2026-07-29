@@ -44,10 +44,58 @@ fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
         .sum()
 }
 
+/// Task 2b companion measurement: the single largest conductance among
+/// `cell`'s traversable (`conductance > 0.0`) edges, or `0.0` if it has
+/// none. A sum conflates "how many ways in" with "how good the best way in
+/// is" (an attacker uses one approach — Thermopylae is defensible because
+/// its best approach is bad, not because a total is low); this isolates the
+/// latter.
+fn max_approach(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    graph
+        .edges(cell)
+        .iter()
+        .filter(|e| e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .fold(0.0_f64, f64::max)
+}
+
+/// Task 2b companion measurement: how many traversable (`conductance >
+/// 0.0`) edges lead into `cell`. Isolates "how many ways in" from `sum`'s
+/// conflation of that with "how good the best way in is".
+fn approach_count(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    graph
+        .edges(cell)
+        .iter()
+        .filter(|e| e.conductance > 0.0)
+        .count() as f64
+}
+
+/// Sort `values` and print its five brief-standard quantiles under `label`
+/// (empty for the original, unlabeled `sum` series so its output stays
+/// byte-identical to Task 2a's). `with_stats` additionally prints min/mean/max
+/// (Task 2b asks for these on the two new series, not on `sum`, which Task 2a
+/// already froze in the plan without them).
+fn print_quantiles(label: &str, mut values: Vec<f64>, with_stats: bool) {
+    values.sort_by(f64::total_cmp);
+    for q in [0.05, 0.25, 0.50, 0.75, 0.95] {
+        let i = ((values.len() as f64 - 1.0) * q).round() as usize;
+        println!("{label}q{:.2} = {:.6}", q, values[i]);
+    }
+    if with_stats {
+        let n = values.len();
+        let sum: f64 = values.iter().sum();
+        println!("{label}min = {:.6}", values[0]);
+        println!("{label}mean = {:.6}", sum / n as f64);
+        println!("{label}max = {:.6}", values[n - 1]);
+    }
+}
+
 #[test]
 #[ignore = "calibration: run by hand, prints the approach_ease quantiles"]
 fn print_approach_ease_quantiles() {
     let mut all: Vec<f64> = Vec::new();
+    let mut all_max: Vec<f64> = Vec::new();
+    let mut all_count: Vec<f64> = Vec::new();
     for seed in 1u64..=30 {
         // Build to Settlements depth: the terrain/climate the present-day
         // connection graph and the capacity field both read off exist there,
@@ -85,12 +133,12 @@ fn print_approach_ease_quantiles() {
         for (cell, cap) in capacity.iter() {
             if *cap > 0.0 {
                 all.push(approach_ease(&graph, cell));
+                all_max.push(max_approach(&graph, cell));
+                all_count.push(approach_count(&graph, cell));
             }
         }
     }
-    all.sort_by(f64::total_cmp);
-    for q in [0.05, 0.25, 0.50, 0.75, 0.95] {
-        let i = ((all.len() as f64 - 1.0) * q).round() as usize;
-        println!("q{:.2} = {:.6}", q, all[i]);
-    }
+    print_quantiles("", all, false);
+    print_quantiles("max_conductance ", all_max, true);
+    print_quantiles("edge_count ", all_count, true);
 }
