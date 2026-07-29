@@ -408,6 +408,32 @@ one is invisible to reading — every document is correct — and visible only t
 a fixture shaped like the consumer's session, since redundancy is a property
 of a sequence of calls and cannot appear in any one of them.
 
+**Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
+entry on that ledger is now mechanized, and the move that mechanized it is
+worth more than the check.** The entries above are all forms of *the drawn thing
+does not match the thing* — undrawn, ungrounded, illegible, mis-assembled,
+misstated geometry — and the standing lament is that only a human noticed. The
+Blocking's parity contract turns one sub-class into a test: **every noun the
+render depicts must answer to `examine`, and every destination it depicts must
+be reachable by a named command.** That is precisely the class of defect that had
+shipped one campaign earlier, where `look` named a water jar and `examine`
+denied it, and it is checkable because the render and the command language are
+required to derive from *one* model rather than to agree by vigilance. The
+structural half is what makes the tested half possible: a pane input
+**synthesizes a command** — an arrow key emits `go n` and the existing verb runs
+— so there is one implementation and no second path to drift from. The accepted
+cost is permanent and is the reason this is a bet moving rather than a feature
+landing: any future pane capability must first be a verb, so nothing will ever be
+expressible only by pointing.
+
+The honest scope: this does not close the ledger, it converts one row. A plan
+whose every glyph answers can still be *ugly*, and legibility remains
+taste-checked — the campaign's own render had to be reworked once because a model
+that was faithful drew no walls at all, which no assertion caught and a human
+reading the picture did. What changed is that "the render depicts something the
+command language denies" has stopped being a thing a human must remember to look
+for.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
@@ -569,6 +595,24 @@ measurement can move at all belongs beside the measurement, not after it.
   cosmetic, while refining *what is recorded to be there* is fidelity the
   ledger already holds. The runtime active-region swap and its delta store are
   still unbuilt.
+  **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): the
+  principle now has a *number*, at the finest band, and that is the largest
+  movement this row has had.** "Higher fidelity refines and never contradicts
+  lower" has always been checked by *agreement* — a field resampled at two grid
+  levels must byte-agree — which tests that the fine layer does not disagree with
+  the coarse one. It says nothing about the fine layer **inventing**. The floor
+  plan is the first fine layer whose entire content is a lowering of a coarse
+  structure (an anchor graph of chambers and links, itself derived from committed
+  history), so the question became answerable in the other direction: how much did
+  the fine layer add? The embedder reports its **residual degrees of freedom** and
+  the checker compares that number against how much freedom the graph leaves free
+  — and it is *exact*, not merely bounded, at every chamber count over two
+  thousand seeds. Being **under** budget is a finding too, since it means the seed
+  is not filling freedom the graph genuinely left. That converts the principle
+  from a design intention into a measured property of one derivation, and it drew
+  a line the phrase had left implicit: a plan's extent derives from chamber count
+  alone and *spends no draw*, because a coarse constraint that consumes randomness
+  is not a constraint, it is another generator.
 
 ## Genuinely open — split by whether the world can grade itself
 

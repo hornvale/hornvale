@@ -37,6 +37,22 @@ pub enum AnchorKind {
     Ground,
     /// A recess off the main space: what makes a room deeper than a hub.
     Alcove,
+    // --- appended by The Blocking (Task 6), for the chamber ROLES ---
+    //
+    // Appended rather than inserted. `Ord` here is derivation order, and
+    // `pattern::compose` keys two `BTree*` collections on it — by lookup only,
+    // never by iteration — so declaration order does not reach a composition
+    // today. Appending keeps it that way without needing that argument to hold.
+    /// A locked chest: what a place with more than a hamlet's people has to keep.
+    Strongbox,
+    /// The seat that commands the entrance — a regional seat's own chair.
+    HighSeat,
+    /// An upright loom: the domestic craft, and it wants the light of a doorway.
+    Loom,
+    /// A smith's anvil, which is why it stands within reach of the quenching water.
+    Anvil,
+    /// An altar, and the basin beside it is the washing the rite asks for first.
+    Altar,
 }
 
 /// One anchor: what it is, and the anchor it lies strictly within, if any.

@@ -29,12 +29,44 @@ Night. The vast moon is a smear of light. The small, distant moon is a smear of 
 A bugbear of Qvooshtvoagootao (agent 7225590595188407000), day 0, room 738918402.
 > enter
 [chamber 193703028372802, day 0]
-A small room, holding a doorway, an alcove, a water jar and a screen.
+A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > enter further in
 [chamber 193703027969442, day 0]
-A small room, holding a doorway, an alcove, a water jar and a screen.
+A small room, holding a doorway and an alcove.
 Ways on: out.
+> map
+[plan: chamber 193703027969442, 2 of 2]
+###################
+#..........#......#
+#..........#......#
+#..........#......#
+#..........#......#
+#..........+@.....#
+#..........#......#
+#..........#......#
+#..........#......#
+###################
+  legend: . the floor, # a wall, + a doorway, @ you
+> go n
+You step north. Ways on: N, E, S.
+> map
+[plan: chamber 193703027969442, 2 of 2]
+###################
+#..........#......#
+#..........#......#
+#..........#......#
+#..........#@.....#
+#..........+......#
+#..........#......#
+#..........#......#
+#..........#......#
+###################
+  legend: . the floor, # a wall, + a doorway, @ you
+> examine an alcove
+A recess cut back from the main space, deep enough to sit in.
+> examine a wall
+Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room 738918402, day 0]
 Tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.

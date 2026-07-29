@@ -5,6 +5,11 @@ examine sky
 whoami
 enter
 enter further in
+map
+go n
+map
+examine an alcove
+examine a wall
 out
 go n
 map out 2

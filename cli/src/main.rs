@@ -235,6 +235,11 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
     let settlement_pins = parse_settlement_args(args)?;
     let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
         .map_err(|e| e.to_string())?;
+    // Stamped at save time, by the composition root: `build_world` lives in
+    // hornvale-worldgen, upstream of the vessel, so it cannot see
+    // `room/furnishing` or `room/layout/*` at all — it would omit exactly the
+    // labels the stamp exists to record.
+    let world = streams::stamp(world, &streams::versioned_labels());
     world
         .save(std::path::Path::new(out))
         .map_err(|e| format!("saving {out}: {e}"))?;
@@ -441,6 +446,18 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         load_world(args)?
     };
     let day = parse_day_flag(args)?;
+    // Amendment 1 §1a.5: if an epoch moved something under a saved world's
+    // feet, say so before the first turn instead of silently rearranging
+    // someone's memory of a place. A `--seed` build is derived here and now,
+    // so its stamp always agrees and no notice ever fires — which is why the
+    // gallery transcript (generated from `--seed 42`) is unaffected. The
+    // comparison lives here rather than in the vessel: the vessel must not
+    // learn about the composition root, and the session's prose stays a
+    // function of the world it was handed.
+    if let Some(notice) = streams::reload_notice(&world.derived_under, &streams::versioned_labels())
+    {
+        println!("{notice}\n");
+    }
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -479,6 +496,10 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     // The input `--world` file is read-only; only `--out` writes (The First
     // Mark, Task 4 — the played world outlives the session).
     if let Some(out) = flag_value(args, "--out") {
+        // Re-stamped, not carried forward: the labels a file records are the
+        // ones the code that WROTE it derived under, and the notice above has
+        // already reported any disagreement with the world we loaded.
+        let played = streams::stamp(played, &streams::versioned_labels());
         played
             .save(std::path::Path::new(out))
             .map_err(|e| format!("saving {out}: {e}"))?;

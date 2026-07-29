@@ -137,12 +137,12 @@ mod tests {
     }
 
     fn built_brief() -> Brief {
-        Brief::from_parts(None, None, None, None, true, true)
+        Brief::from_parts(None, None, None, None, 0, true, true)
     }
 
     #[test]
     fn an_unbuilt_locale_has_no_structure() {
-        let wild = Brief::from_parts(None, None, None, None, false, true);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, true);
         assert!(structure_at(&locale(), &wild, Seed(42), WALK).is_none());
     }
 
