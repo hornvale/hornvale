@@ -14,6 +14,7 @@ pub mod render;
 pub mod streams;
 pub mod substellar;
 pub mod temperature;
+pub mod variants;
 pub mod weather;
 
 pub use biome::{Biome, SeafloorFeature};
@@ -29,6 +30,7 @@ pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
 };
 pub use temperature::locked_temperature_at_position;
+pub use variants::{GroundKind, Variant, VariantEntry, variant_pool};
 pub use weather::{
     CloudType, WeatherState, cloud_type, storm_propensity, weather_phase, weather_seed,
     weather_state,
