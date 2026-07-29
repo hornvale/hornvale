@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Vngoashshngaoshshngoogootao
-==============================================
+The connections of Daadoo
+=========================
 
-A natural route runs to Vngaoshkvoashdvoagoogootao and Kvaavngoagoogootao, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+A natural route runs to Gootaogoo and Doodaogoo, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Vngoashshngaoshshngoogootao sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+Daadoo sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -30,13 +30,13 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Mjoexaegao
-=============================
+The connections of Neetoe
+=========================
 
-Mjoexaegao is linked by sea-lane to Qvaoshvngooshdoodoa, cell 28374, and Veebtaenoenoa -- a current-borne crossing, not a road.
-A natural route runs to Njoeqteakboanoagoogoa, Veebtaenoenoa, Qgeavoonoagoo, and Kvaovngooshshngooshdoodoa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Neetoe is linked by sea-lane to Daadoo, cell 28374, and Naanoe -- a current-borne crossing, not a road.
+A natural route runs to Noagooneetoe, Naanoe, Toaneo, and Goadoo, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Mjoexaegao's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+Neetoe's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum

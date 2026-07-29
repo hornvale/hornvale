@@ -25,10 +25,10 @@
 //! ```
 //! - Baseline (`cargo run -q -p hornvale -- new --seed 42 --out
 //!   /tmp/wl-before.json`): `world of seed 42 written to
-//!   /tmp/wl-before.json (3553 facts; village: Vngoashshngaoshshngoogootao)` — matches
+//!   /tmp/wl-before.json (3553 facts; village: Daadoo)` — matches
 //!   the expected line exactly.
 //! - Gated (`--out /tmp/wl-after.json`): `world of seed 42 written to
-//!   /tmp/wl-after.json (3553 facts; village: Vngoashshngaoshshngoogootao)` — same fact
+//!   /tmp/wl-after.json (3553 facts; village: Daadoo)` — same fact
 //!   count, same village name.
 //! - `cargo test -p hornvale --test lens_purity`:
 //!   `seed_42_world_json_matches_the_committed_fixture ... ok` — the

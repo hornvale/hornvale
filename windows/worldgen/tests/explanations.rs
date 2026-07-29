@@ -197,14 +197,14 @@ fn no_deity_bearing_schema_ever_fires_agentless() {
 fn moons_explained_only_where_kept() {
     // Seed 2: kobold keeps the moons (moon-count Kept), goblin loses them
     // (BeyondCapability). Measured: kobold's moon-count fires Agentive,
-    // bound to the SLOWEST cyclic belief ("Nggo", period 1174.61, the
+    // bound to the SLOWEST cyclic belief ("Qshoshtngo", period 1174.61, the
     // pantheon's longest — manner Slow); goblin's stays plain Lost, never
     // Explained.
     //
     // Re-pinned again under The Living Community epoch (history is the sole
     // settlement placer, this merge): seed 2's kobold re-derived its
     // settlement demography once more, so its language re-mapped and the Slow
-    // manner verb shifted "stalks" -> "strides". The agent ("Nggo"), schema
+    // manner verb shifted "stalks" -> "strides". The agent ("Qshoshtngo"), schema
     // (Agentive), underlying (Kept), and manner (Slow) are all unchanged —
     // only the drawn lexeme moved, the expected signature of a language
     // re-derivation. (Prior drifts: strides -> drives -> stalks -> strides.)
@@ -230,7 +230,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Nggo".to_string()),
+            agent: Some("Qshoshtngo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

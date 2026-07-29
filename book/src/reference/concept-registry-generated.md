@@ -155,6 +155,8 @@
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
 | `alpine` | climate | terrain | a biome class |
 | `bait-ball` | climate | substance | A dense turning mass of fish. |
+| `barley` | climate | substance | a staple crop |
+| `basin` | terrain | terrain | a closed hollow where water gathers and does not leave |
 | `bathypelagic` | climate | terrain | a biome class |
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
@@ -167,10 +169,12 @@
 | `carrion-crawler-kind` | species | living | a carrion crawler |
 | `child` | language | kin | one's son or daughter |
 | `closed-canopy` | climate | substance | Tall closed-canopy tropical forest. |
+| `coast` | terrain | terrain | where the land meets the sea |
 | `cold` | climate | quality | felt, biting chill |
 | `cold-upwelling` | climate | substance | Cold nutrient-rich water rising from below. |
 | `coral-head` | climate | substance | A massive coral colony standing proud of the reef. |
 | `coral-reef` | climate | terrain | a biome class |
+| `creek` | terrain | terrain | a lesser watercourse |
 | `crevasse-field` | climate | substance | Ice split by crevasses. |
 | `damp-hollow` | climate | substance | A shaded, wet fold in the forest floor. |
 | `dark` | language | quality | the color term for black/dark hues |
@@ -225,10 +229,12 @@
 | `liana-forest` | climate | substance | Tropical forest tangled with climbing vines. |
 | `light` | language | quality | the color term for white/light hues |
 | `lightless-water` | climate | substance | Water below all light. |
+| `lowland` | terrain | terrain | ground below the land around it |
 | `many` | language | quality | an indefinitely large count |
 | `marine-snow` | climate | substance | Organic debris drifting endlessly down. |
 | `melt-pond` | climate | substance | A pool of meltwater on sea ice. |
 | `mesopelagic` | climate | terrain | a biome class |
+| `millet` | climate | substance | a staple crop |
 | `moon` | astronomy | celestial | a moon |
 | `mossy-deadfall` | climate | substance | Fallen timber going back to moss and lichen. |
 | `mountain` | terrain | terrain | high ground |
@@ -257,6 +263,8 @@
 | `reg` | climate | substance | A desert floor of wind-swept gravel. |
 | `rest` | language | act | to stop and recover strength |
 | `rhinoceros-kind` | species | living | a rhinoceros |
+| `rice` | climate | substance | a staple crop |
+| `river` | terrain | terrain | a watercourse |
 | `rust-monster-kind` | species | living | a rust monster |
 | `sargassum-drift` | climate | substance | A drifting raft of floating weed. |
 | `savanna` | climate | terrain | a biome class |
@@ -292,15 +300,19 @@
 | `trench-wall` | climate | substance | The steep side of an ocean trench. |
 | `tropical-rainforest` | climate | terrain | a biome class |
 | `tropical-seasonal-forest` | climate | terrain | a biome class |
+| `tuber` | climate | substance | a staple crop |
 | `tubeworm-thicket` | climate | substance | Vent fauna crowded around hot water. |
 | `tundra` | climate | terrain | a biome class |
 | `twig-blight-kind` | species | living | a twig blight |
 | `twilight-water` | climate | substance | Water at the edge of the light. |
 | `two` | language | quality | the cardinal number 2 |
+| `upland` | terrain | terrain | ground above the land around it |
 | `upwelling` | climate | terrain | a biome class |
 | `urchin-barren` | climate | substance | Seabed grazed bare of kelp. |
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
+| `vine` | climate | substance | a staple crop |
 | `water` | language | substance | the drinkable liquid |
+| `wheat` | climate | substance | a staple crop |
 | `white-dragon-kind` | species | living | a white dragon |
 | `wind` | language | substance | moving air |
 | `wind-scour` | climate | substance | Ground swept bare by wind. |

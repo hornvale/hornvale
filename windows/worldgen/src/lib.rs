@@ -3939,6 +3939,38 @@ fn exposure_of_impl(
         }
     }
 
+    // Steeped/Unknown: the STAPLE of every settled cell (The Shibboleth). A
+    // people that raises a crop has a word for it; one that fishes, herds, or
+    // forages has met the plant but never named it as a staple, which is an
+    // EXPERIENTIAL gap, not a perceptual one — their eyes are fine, their
+    // living is elsewhere. Subsistence is read per cell, so a people farming
+    // one valley and fishing another is steeped in the valley's grain.
+    for &cell in settled {
+        let expr = climate.biome_expr_at(cell);
+        let Some(crop) = hornvale_climate::crop_at(
+            expr.formation,
+            climate.mean_temperature_at(cell),
+            climate.moisture_at(cell),
+        ) else {
+            continue;
+        };
+        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let subsistence =
+            hornvale_culture::subsistence(biome_class(climate.biome_at(cell)), coastal);
+        let concept = crop.concept_name().to_string();
+        if subsistence == hornvale_culture::Subsistence::Farming {
+            classes.insert(concept, ExposureClass::Steeped);
+        } else {
+            // Never downgrade: another cell may have steeped this crop.
+            classes.entry(concept).or_insert(ExposureClass::Unknown {
+                reason: GapReason::Experiential(format!(
+                    "{species} lives by {} here and raises no staple",
+                    subsistence.name()
+                )),
+            });
+        }
+    }
+
     // Steeped: the VARIANT of every settled cell (The Toponym). A people that
     // has lived in a grass sward has a word for a grass sward, by exactly the
     // reasoning that gives them a word for the savanna it is a kind of — and
@@ -5069,6 +5101,20 @@ fn build_to(
         // on a gnoll ruin is named for the gnolls, and `hornvale history
         // --site` will read out the whole stratigraphy behind the name.
         site_concepts.extend(predecessor.as_deref());
+        // What grows here (The Shibboleth). The staple is offered
+        // unconditionally and the LEXICON decides: `holds_word` admits it
+        // only for a people whose exposure steeped it, so a fishing people
+        // simply has no word to name its home with. Agriculture gets no
+        // special case in the namer — it is gated exactly where colour and
+        // kinship are.
+        site_concepts.extend(
+            hornvale_climate::crop_at(
+                expr.formation,
+                climate.mean_temperature_at(s.cell),
+                climate.moisture_at(s.cell),
+            )
+            .map(|c| c.concept_name()),
+        );
         let site = hornvale_language::SiteConcepts {
             concepts: &site_concepts,
         };
@@ -9463,8 +9509,12 @@ mod tests {
                 remainder = remainder.replace(concept, "");
             }
             // The Toponym: a gloss may also name the VARIANT of the
-            // settlement's own cell. Stripped by the same rule as the biome —
-            // the assertion is that nothing OUTSIDE its own site facts appears.
+            // settlement's own cell. The Shibboleth adds the rest of the
+            // site — hydrology, relief, the staple, and any people who held
+            // this ground before. All stripped by the same rule as the biome:
+            // the assertion is that nothing OUTSIDE its own site facts
+            // appears, so every legitimate site fact must be re-derived here
+            // or the test rejects a truthful gloss.
             if let Some(hornvale_kernel::Value::Number(n)) =
                 world.ledger.value_of(id, hornvale_settlement::CELL_ID)
             {
@@ -9478,6 +9528,41 @@ mod tests {
                     hornvale_climate::GroundKind::Ordinary,
                 ) {
                     remainder = remainder.replace(var.concept_name(), "");
+                }
+                if let Some(c) =
+                    hornvale_terrain::sitefact::hydrology_at(&terrain, cell).concept_name()
+                {
+                    remainder = remainder.replace(c, "");
+                }
+                if let Some(c) =
+                    hornvale_terrain::sitefact::relief_at(&terrain, cell).concept_name()
+                {
+                    remainder = remainder.replace(c, "");
+                }
+                if let Some(crop) = hornvale_climate::crop_at(
+                    expr.formation,
+                    climate.mean_temperature_at(cell),
+                    climate.moisture_at(cell),
+                ) {
+                    remainder = remainder.replace(crop.concept_name(), "");
+                }
+                // Every people who ever held THIS cell is a site fact of it,
+                // so strip each — not merely the one `predecessor_people`
+                // would pick. A people who never occupied this cell still
+                // fails the assertion, which is the property under test.
+                for occ in world.ledger.find(hornvale_history::OCC_SITE) {
+                    let Some(hornvale_kernel::Value::Number(at)) = Some(&occ.object) else {
+                        continue;
+                    };
+                    if (*at as u32) != cell.0 {
+                        continue;
+                    }
+                    if let Some(people) = world
+                        .ledger
+                        .text_of(occ.subject, hornvale_history::OCC_PEOPLE)
+                    {
+                        remainder = remainder.replace(&format!("{people}-kind"), "");
+                    }
                 }
             }
             assert!(

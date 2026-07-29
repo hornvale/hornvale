@@ -174,7 +174,7 @@ fn doctrine_keeps_what_folk_lose() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Soevvae".to_string()),
+            agent: Some("Soevoa".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Slow,
         }

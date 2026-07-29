@@ -46,3 +46,5 @@ Its low `cpu_ratio` (3.6 on a 10-core box) is the contention signature.
 | 2026-07-29T02:33:03Z | census | 878.899 | 12427.595 | 295.149 | 14.48 | 0 | 03edfe6b | the-toponym | lefford | 40 |
 | 2026-07-29T03:46:29Z | census | 1283.922 | 12240.453 | 150.414 | 9.65 | 365 | 03edfe6b | the-toponym | lefford | 40 |
 | 2026-07-28T19:55:30Z | scene-profile | 8.322 | 8.098 | 0.224 | 1.00 | 0 | ef762ca6 | the-sextant | lefford | 40 |
+| 2026-07-29T12:20:54Z | rebaseline | 779.075 | 1065.510 | 34.003 | 1.41 | 0 | 261789e7 | the-shibboleth | lefford | 40 |
+| 2026-07-29T17:13:03Z | rebaseline | 682.566 | 817.004 | 14.695 | 1.22 | 0 | 261789e7 | the-shibboleth | lefford | 40 |

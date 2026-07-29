@@ -9,7 +9,7 @@ use hornvale_vessel::{PossessOpts, Session, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 /// Seed 42 — the canonical world, and it has a settlement (its village is
-/// `Vngoashshngaoshshngoogootao`), so possession succeeds. Setup copied from
+/// `Daadoo`), so possession succeeds. Setup copied from
 /// `windows/vessel/tests/the_purview.rs`.
 fn world() -> World {
     build_world(

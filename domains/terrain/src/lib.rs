@@ -121,13 +121,18 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "the globe's one drawn global spreading rate",
     )?;
 
+    // Site facts (The Shibboleth): the local features real toponymy names a
+    // place for. A settlement's name compounds these with its biome and
+    // variant, so it stays translatable AND tells two places apart.
+    //
+    // Their lexeme is a GAP, not `Expected`: no language pack carries a root
+    // or a compound recipe for them. Their words are minted per species by
+    // the proto-root walk when exposure steeps them, which is exactly how a
+    // people that has never seen the sea ends up with no word for a coast.
+    // `Expected` would promise a pack realization that does not exist —
+    // `correspondence::every_expected_lexeme_is_actually_lexicalizable`
+    // catches the lie.
     for (name, kind, doc) in [
-        ("stone", ConceptKind::Substance, "rock"),
-        ("mountain", ConceptKind::Terrain, "high ground"),
-        ("sea", ConceptKind::Terrain, "a body of salt water"),
-        // Site facts (The Shibboleth): the local features real toponymy names
-        // a place for. A settlement's name compounds these with its biome and
-        // variant, so it stays translatable AND tells two places apart.
         ("river", ConceptKind::Terrain, "a watercourse"),
         ("creek", ConceptKind::Terrain, "a lesser watercourse"),
         (
@@ -150,6 +155,28 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             ConceptKind::Terrain,
             "ground below the land around it",
         ),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "terrain".to_string(),
+                kind,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap(
+                "no language pack names site facts; exposure mints them per species",
+            )),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
+    for (name, kind, doc) in [
+        ("stone", ConceptKind::Substance, "rock"),
+        ("mountain", ConceptKind::Terrain, "high ground"),
+        ("sea", ConceptKind::Terrain, "a body of salt water"),
     ] {
         registry.register_manifest(Manifest {
             concept: ConceptDef {

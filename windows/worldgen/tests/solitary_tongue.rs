@@ -307,9 +307,22 @@ const PEOPLES: [&str; 5] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll"]
 ///    A genesis epoch that re-places settlements is expected to move these
 ///    lines.
 ///
+/// 3. **A deliberate lexicon epoch** -- a campaign changes how words are
+///    BUILT, so many roots change form at once while meaning nothing about
+///    correctness. The Shibboleth (2026-07-29) was case 3: sonority
+///    sequencing reordered onset clusters (`Nsaav` -> `Smaav`, `Ngshaap` ->
+///    `Sngaap` -- the less sonorous consonant moves first), changing 56 of
+///    ~300 entries, alongside 12 pure additions and zero deletions from the
+///    new site-fact and staple concepts. Case 3 is distinguished from case 1
+///    by being SYSTEMATIC: the changed words share one describable
+///    transformation, and no word loses or gains a derivation. Rebaselining
+///    is correct only when the campaign OWNS that transformation and says so
+///    here.
+///
 /// Tell them apart by diffing the golden and checking whether any `root`/
 /// `compound` line changed into a DIFFERENT `root`/`compound` line. If none
-/// did, it is case 2. (The Tumult's predation epoch, 2026-07-26, was case 2
+/// did, it is case 2. If many did and they share one rule, it is case 3; if
+/// a few did and they do not, it is case 1 and there is a bug. (The Tumult's predation epoch, 2026-07-26, was case 2
 /// exactly: 6 of 304 entries moved, all exposure-shaped, and all 188 words
 /// present in both versions byte-identical.)
 ///

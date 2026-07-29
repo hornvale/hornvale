@@ -10,15 +10,15 @@ prints them side by side. Seed 1's volume now ends like this:
 
 > **As the Vavako tell it.**
 > The Vavako are goblins — ourselves.
-> The Ddenke are hobgoblins — neighbors.
+> The Dankom are hobgoblins — neighbors.
 > Vebe is the earth.
 >
 > *In truth, Vebe is a planet with two moons, orbiting a yellow-white
 > dwarf (F); its day lasts about 1.5 standard days.*
 >
-> **As the Ddenke tell it.**
+> **As the Dankom tell it.**
 > The Vavako are goblins — rivals.
-> The Ddenke are hobgoblins — ourselves.
+> The Dankom are hobgoblins — ourselves.
 > Vebe is the earth.
 
 Nothing in those paragraphs was authored per culture, and nothing was

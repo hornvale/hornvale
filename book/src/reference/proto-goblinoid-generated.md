@@ -39,6 +39,8 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `abyssal-plain` | The flat floor of the deep ocean. | *Neenea | /neenea/ |
 | `alpine` | a biome class | *Poe | /poe/ |
 | `bait-ball` | A dense turning mass of fish. | *Naaqaa | /naaqaa/ |
+| `barley` | a staple crop | *Naonoa | /naonoa/ |
+| `basin` | a closed hollow where water gathers and does not leave | *Naoqee | /naoqee/ |
 | `bathypelagic` | a biome class | *Nae | /nae/ |
 | `black-dragon-kind` | a black dragon | *Poopae | /poopae/ |
 | `blood` | the circulating fluid of a body | *Neo | /neo/ |
@@ -51,10 +53,12 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `carrion-crawler-kind` | a carrion crawler | *Geakea | /geakea/ |
 | `child` | one's son or daughter | *Daekoa | /daekoa/ |
 | `closed-canopy` | Tall closed-canopy tropical forest. | *Naotee | /naotee/ |
+| `coast` | where the land meets the sea | *Naanoe | /naanoe/ |
 | `cold` | felt, biting chill | *Geonoa | /geonoa/ |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | *Geo | /geo/ |
 | `coral-head` | A massive coral colony standing proud of the reef. | *Peopaa | /peopaa/ |
 | `coral-reef` | a biome class | *Doakae | /doakae/ |
+| `creek` | a lesser watercourse | *Teokoo | /teokoo/ |
 | `crevasse-field` | Ice split by crevasses. | *Paopao | /paopao/ |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | *Taedoe | /taedoe/ |
 | `dark` | the color term for black/dark hues | *Taanoo | /taanoo/ |
@@ -109,10 +113,12 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Neanae | /neanae/ |
 | `light` | the color term for white/light hues | *Toeqea | /toeqea/ |
 | `lightless-water` | Water below all light. | *Neanaa | /neanaa/ |
+| `lowland` | ground below the land around it | *Noonae | /noonae/ |
 | `many` | an indefinitely large count | *Neodoa | /neodoa/ |
 | `marine-snow` | Organic debris drifting endlessly down. | *Naonae | /naonae/ |
 | `melt-pond` | A pool of meltwater on sea ice. | *Kaadee | /kaadee/ |
 | `mesopelagic` | a biome class | *Neanoa | /neanoa/ |
+| `millet` | a staple crop | *Too | /too/ |
 | `moon` | a moon | *Teapae | /teapae/ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Geanee | /geanee/ |
 | `mountain` | high ground | *Teo | /teo/ |
@@ -141,6 +147,8 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `reg` | A desert floor of wind-swept gravel. | *Naegao | /naegao/ |
 | `rest` | to stop and recover strength | *Kaanee | /kaanee/ |
 | `rhinoceros-kind` | a rhinoceros | *Qaatee | /qaatee/ |
+| `rice` | a staple crop | *Naapaa | /naapaa/ |
+| `river` | a watercourse | *Gaotae | /gaotae/ |
 | `rust-monster-kind` | a rust monster | *Kao | /kao/ |
 | `sargassum-drift` | A drifting raft of floating weed. | *Neekoe | /neekoe/ |
 | `savanna` | a biome class | *Naadae | /naadae/ |
@@ -176,15 +184,19 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `trench-wall` | The steep side of an ocean trench. | *Qoogaa | /qoogaa/ |
 | `tropical-rainforest` | a biome class | *Qoa | /qoa/ |
 | `tropical-seasonal-forest` | a biome class | *Geetao | /geetao/ |
+| `tuber` | a staple crop | *Naopoe | /naopoe/ |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | *Gea | /gea/ |
 | `tundra` | a biome class | *Kaekoa | /kaekoa/ |
 | `twig-blight-kind` | a twig blight | *Qoanoa | /qoanoa/ |
 | `twilight-water` | Water at the edge of the light. | *Teataa | /teataa/ |
 | `two` | the cardinal number 2 | *Naanaa | /naanaa/ |
+| `upland` | ground above the land around it | *Goonao | /goonao/ |
 | `upwelling` | a biome class | *Qoo | /qoo/ |
 | `urchin-barren` | Seabed grazed bare of kelp. | *Gee | /gee/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Naaneo | /naaneo/ |
+| `vine` | a staple crop | *Toepeo | /toepeo/ |
 | `water` | the drinkable liquid | *Daokaa | /daokaa/ |
+| `wheat` | a staple crop | *Neetoe | /neetoe/ |
 | `white-dragon-kind` | a white dragon | *Poo | /poo/ |
 | `wind` | moving air | *Noeqoo | /noeqoo/ |
 | `wind-scour` | Ground swept bare by wind. | *Kaagaa | /kaagaa/ |

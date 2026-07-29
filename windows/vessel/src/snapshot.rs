@@ -243,7 +243,7 @@ mod tests {
             me: SelfChannel {
                 agent: 7225590595188407000,
                 species: "bugbear".to_string(),
-                settlement: "Vngoashshngaoshshngoogootao".to_string(),
+                settlement: "Daadoo".to_string(),
                 population: 118,
                 room: 738918402,
             },
@@ -259,7 +259,7 @@ mod tests {
             known: KnownChannel {
                 entries: vec![KnownEntry {
                     key: "settlement/7/name".to_string(),
-                    value: "Vngoashshngaoshshngoogootao".to_string(),
+                    value: "Daadoo".to_string(),
                 }],
             },
             social: vec![SocialEntry {

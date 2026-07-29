@@ -7,14 +7,17 @@ campaign — the metaplan's third, first after the inserted Echo — gives
 each placed people its own voice. At the end of every volume of The Book,
 the peoples now state who they are in their own languages:
 
-> Saa We Vavako. *(in the goblin tongue: "The Vavako are goblins.")*
-> Ddenke Babo. *(in the hobgoblin tongue: "The Ddenke are hobgoblins.")*
+> Saa Wowe Vavako. *(in the goblin tongue: "The Vavako are goblins.")*
+> Dankom Babo Be Bo. *(in the hobgoblin tongue: "The Dankom are hobgoblins.")*
 
 Nothing in those lines was authored. The goblins' language drew a
 verb-initial constituent order and an overt copula — *Saa*, a word built
 from the goblin phonology by the same machinery that builds every goblin
-word. The hobgoblins drew zero-copula predication, so their sentence is
-two bare nominals, which is how Russian or Arabic says the same thing.
+word. The hobgoblins drew zero-copula predication, so their sentence
+opens on two bare nominals, which is how Russian or Arabic says the same
+thing; the trailing *Be Bo* are the particles a later campaign spliced in
+for evidential and noun-class marking, and were not yet drawn when this
+was written.
 Word order and copula presence are seeded draws on three new permanent
 streams, weighted by the real cross-linguistic frequencies (SOV and SVO
 dominate, as they do on Earth), and drawn *per species* — because on
