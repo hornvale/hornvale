@@ -708,18 +708,30 @@ answer and the first real datapoint (the only prior number, 39:09, was under
 
 - [ ] **Step 2: Verify the run changed nothing (spec §7, zero diff)**
 
+A bare `git diff --exit-code book/src/laboratory/generated` **cannot pass** —
+The Sounding records wall-clock nanoseconds, which move between any two runs
+(decision 0087). This step therefore checks the *deterministic* artifacts
+strictly and tolerates timing drift explicitly:
+
 ```bash
-ssh lefford 'cd ~/Projects/hornvale && git diff --exit-code \
-  book/src/laboratory/generated windows/worldgen/tests/fixtures/occupancy.csv \
-  && echo "ZERO DIFF: the claim changed nothing computed"'
+ssh lefford 'cd ~/Projects/hornvale && \
+  git diff --exit-code \
+    book/src/laboratory/generated \
+    windows/worldgen/tests/fixtures/occupancy.csv \
+    ":(exclude)book/src/laboratory/generated/the-sounding/rows.csv" \
+    ":(exclude)book/src/laboratory/generated/the-sounding/summary.md" \
+  && echo "ZERO DIFF on every deterministic artifact"'
 ```
 
 Expected: exit 0 and the confirmation line. Serialising a run must not alter
-what it computes — this is the same consequence decision 0081 asserted for the
-census. **A non-zero diff here is a stop condition**, not something to
-rebaseline away: it means either the artifacts were stale before this campaign
-or the run is not reproducible, and both need diagnosis before the campaign
-proceeds.
+what it computes — the same consequence 0081 asserted for the census.
+`the-sounding/sample-biographies.txt` is deliberately still inside the strict
+check: it is the file that would catch a real regression in what The Sounding
+computes.
+
+**A non-zero diff here is a stop condition**, not something to rebaseline
+away: it means either the artifacts were stale before this campaign or the run
+is not reproducible, and both need diagnosis first.
 
 - [ ] **Step 3: Revisit the timeout against the measurement**
 

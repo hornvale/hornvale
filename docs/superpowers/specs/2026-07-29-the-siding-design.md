@@ -211,12 +211,31 @@ ran.
 close in Rust for the census path. Deliberately deferred, because closing it
 is only justified if A2 says it matters.
 
-**A2 — whether `the-history` and `the-sounding` actually diverge Mac-vs-
-lefford is UNMEASURED.** 0063 documents divergence for discrete-count metrics
-in general; nobody has checked these two sweeps. The experiment that settles
-it: regenerate both artifacts on each box from the same ref and diff. A clean
-diff retires A1; a dirty one promotes it to a Rust-level guard at the write
-seam, mirroring `census_guard.rs`.
+**A2 — MEASURED 2026-07-29, and the question turned out to be partly
+ill-posed.** Regenerated both sweeps on the canonical box at the shared ref
+`65581f18` (`cargo nextest run --workspace --run-ignored only -E
+'test(/run_the_sounding_and_write_the_report$/) |
+test(/history_gates_full_world_and_cross_seed$/)'`), then diffed against the
+committed state:
+
+- **`the-history`: zero diff.**
+- **`the-sounding`: `rows.csv` 62 lines, `summary.md` 16 lines.**
+
+Reading *which* columns moved settled it. Every `peak_bytes,events` pair
+appeared exactly twice in the diff, once as `-` and once as `+` — the
+deterministic columns were byte-identical. Only `bake_ns`, `read_ns_per_op`,
+and `replay_ns` moved, and `summary.md`'s whole diff was statistics fitted
+from them (exponents 2.14 → 1.95, scan-vs-index 13× → 14×).
+
+So The Sounding does not diverge across *hosts*; it diverges across **runs**,
+because it records wall-clock time. No host guard can address that. Ratified
+separately as decision 0087 (a benchmark's timings are a record, not a
+golden), which also fixes this spec's own §7 zero-diff check — a bare
+`git diff --exit-code` over that tree could never have passed.
+
+**Still outstanding:** the Mac half for `the-history`. Its lefford diff was
+clean, so it is reproducible *on one box*; the cross-host comparison for it is
+not yet done. Until it is, A1 stays open on `the-history` alone.
 
 **A3 — the heavy tier's uncontended runtime on lefford is UNKNOWN.** The only
 datapoint is 39:09 under 3× contention. The wait-timeout constant therefore

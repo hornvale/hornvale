@@ -77,7 +77,28 @@ jobs:
             ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \
             ':(exclude)book/src/reference/locale-seed-42.json' \
             ':(exclude)book/src/gallery/scene-surrounds-seed-42.json' \
-            ':(exclude)book/src/gallery/generated/surrounds-seed-42/*'
+            ':(exclude)book/src/gallery/generated/surrounds-seed-42/*' \
+            ':(exclude)book/src/laboratory/generated/the-sounding/rows.csv' \
+            ':(exclude)book/src/laboratory/generated/the-sounding/summary.md'
+          # The Sounding is a BENCHMARK, and these two files record wall-clock
+          # nanoseconds (`bake_ns`, `read_ns_per_op`, `replay_ns`) plus the
+          # scaling exponents and scan-vs-index ratio fitted from them. They
+          # cannot be byte-stable — not across hosts, and not across two runs
+          # on one host under different load — so a strict check on them
+          # asserts something no run can satisfy (The Siding; decision 0087).
+          # Measured: regenerating on the canonical box moved every timing
+          # column while `peak_bytes` and `events` stayed byte-identical.
+          #
+          # sample-biographies.txt is deliberately NOT excluded: the generator
+          # states the biographies are byte-deterministic, so it stays under
+          # the strict check and is the file that would catch a real
+          # regression in what The Sounding computes.
+          #
+          # Coverage this costs, recorded honestly: rows.csv's deterministic
+          # `peak_bytes`/`events` columns and summary.md's workload-census
+          # counts are deterministic but now unchecked, because they share a
+          # file with the timings. Splitting the timing columns into their own
+          # file would regain both; see the campaign follow-ups.
 
   atlas:
     name: Atlas client

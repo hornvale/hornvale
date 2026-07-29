@@ -126,3 +126,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0084](0084-an-epoch-is-declared-only-when-a-derivation-moved.md) | An epoch is declared only when a derivation moved — `room/furnishing` stays at v1 | Accepted |
 | [0085](0085-derived-geometry-reads-the-durable-signal.md) | Derived geometry reads the durable signal, not the living one | Accepted |
 | [0086](0086-the-heavy-tier-runs-on-the-canonical-box.md) | The heavy tier runs on the canonical box; campaigns run on the Mac | Accepted |
+| [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md) | A benchmark's timings are a record, not a golden | Accepted |
