@@ -276,6 +276,7 @@
 - [The Tare](./chronicle/the-tare.md)
 - [The Column](./chronicle/the-column.md)
 - [The Effacement](./chronicle/the-effacement.md)
+- [The Toponym](./chronicle/the-toponym.md)
 
 # Appendix: The Frontier
 
