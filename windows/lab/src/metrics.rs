@@ -3985,6 +3985,18 @@ fn syllable_count(name: &str, vowels: &std::collections::BTreeSet<char>) -> usiz
 /// internal syllable structures, so it is a measurement of what shipped
 /// rather than an echo of how it was built.
 fn mean_name_syllables(v: &FullView, species: &str) -> MetricValue {
+    // A no-op today, kept because the reason it is a no-op is an argument
+    // rather than a check, and `language_of_in` PANICS on a species outside
+    // `v.components()`. The argument: every name `species_generated_names`
+    // returns comes from a settlement or flagship this world committed, and a
+    // world can only commit those for kinds in the roster it was built from —
+    // so a non-empty name list already implies membership, and the empty list
+    // returns above. `name_transparency`'s roster guard is the same hazard
+    // met from the other side, where the argument does NOT hold because the
+    // species comes from the ledger rather than from this call's own literal.
+    if !in_roster(v, species) {
+        return MetricValue::Absent;
+    }
     let names = species_generated_names(v, species);
     if names.is_empty() {
         return MetricValue::Absent;
@@ -4270,8 +4282,57 @@ fn gloss_parses<'a>(gloss: &str, vocab: &std::collections::BTreeSet<&'a str>) ->
 /// in `calibration.rs`) already asserts every committed gloss is a
 /// composition of that settlement's own site concepts, and this vocabulary
 /// is a superset of that one on its only lossy axis.
+///
+/// **The denominator, and the one thing excluded from it.** A settlement
+/// whose species the canonical roster does not know as a speaking kind is
+/// excluded from BOTH the numerator and the denominator — it is not counted
+/// as opaque, it is not counted at all.
+///
+/// This is the null control's synthetic twin. `census-of-the-meeting` builds
+/// worlds under a `goblin-twin-solo` roster whose settlements are peopled by
+/// `goblin-twin`, a comparison species that exists only to be a goblin with a
+/// different name salt. It has no entry in the canonical roster that
+/// `lexicon_from` reconstructs against, so there is no citation form to look
+/// for — the question this metric asks cannot be put about it at all.
+///
+/// Exclusion, rather than counting it opaque or making the world `Absent`:
+/// - counting it opaque would drag the reading down for a reason with nothing
+///   to do with wear, which is exactly how a drift witness starts lying;
+/// - `Absent` for the whole world would throw away the real peoples'
+///   settlements in any world that also held a twin.
+///
+/// Exclusion needs no special case to get the null control right, either: in
+/// `goblin-twin-solo` EVERY settlement is the twin, so the denominator is
+/// zero and the world reads `Absent` — correctly, there is nothing measurable
+/// — while `goblin-solo` is fully measured.
+///
+/// **And it cannot silently shift the census denominator**, which is the
+/// property that keeps the drift witness honest: `the-census` builds under
+/// the default roster, which IS the roster `lexicon_from` assembles, so every
+/// species that can people a settlement there resolves by construction and
+/// nothing is ever excluded. The rule can only fire under a synthetic roster.
+///
+/// The check is a precondition, deliberately, not a caught failure: both
+/// `resolve_kind` (unknown species) and `language_of_wc` (a known kind with
+/// no articulation row) panic rather than returning `Err` on the path
+/// `lexicon_from` takes, so `lex(...).ok()` below cannot see either. This is
+/// the first metric that asks for a lexicon for whatever species happens to
+/// people a settlement rather than for a hardcoded `"goblin"`/`"kobold"`,
+/// which is what made it the first to meet them.
 fn name_transparency(v: &FullView) -> MetricValue {
     let world = v.world();
+    // The roster `lexicon_from` reconstructs against — assembled once here so
+    // an unresolvable species is skipped BEFORE the call that would panic on
+    // it, rather than after. Both stores are checked: biosphere membership is
+    // what `resolve_kind` needs, an articulation row is what `language_of_wc`
+    // needs, and each panics separately.
+    let Ok(canonical) = WorldComponents::assemble() else {
+        return MetricValue::Absent;
+    };
+    let speaks = |species: &str| {
+        canonical.biosphere.get_by_label(species).is_some()
+            && canonical.articulation.get_by_label(species).is_some()
+    };
     let mut glossed = 0usize;
     let mut transparent = 0usize;
     // One lexicon per species per world, not per settlement (the phenomena
@@ -4287,10 +4348,18 @@ fn name_transparency(v: &FullView) -> MetricValue {
         if gloss.is_empty() {
             continue;
         }
+        // Out of the denominator entirely, before it is counted — see the
+        // denominator note above. A settlement MISSING its species fact is a
+        // different case and stays in: that is a broken ledger, not a
+        // synthetic species, and it counts against transparency below.
+        let species = hornvale_species::species_of(world, id);
+        if species.as_deref().is_some_and(|s| !speaks(s)) {
+            continue;
+        }
         glossed += 1;
         let (Some(name), Some(species), Some(Value::Number(cell))) = (
             world.ledger.text_of(id, hornvale_kernel::NAME),
-            hornvale_species::species_of(world, id),
+            species,
             world.ledger.value_of(id, hornvale_settlement::CELL_ID),
         ) else {
             continue;
@@ -5747,6 +5816,79 @@ mod tests {
         assert_eq!(
             extract_from(&built, "name-gloss-true"),
             MetricValue::Flag(true)
+        );
+    }
+
+    /// The null control's synthetic twin, which panicked the first census
+    /// regen 934 seconds in. `goblin-twin` peoples every settlement in this
+    /// roster and is NOT in the canonical roster `lexicon_from` reconstructs
+    /// against, so asking for its lexicon panics inside `resolve_kind`.
+    /// `name-transparency` must skip it — and with every settlement skipped
+    /// the denominator is zero, so the world reads `Absent`, which is the
+    /// right answer: nothing here is measurable.
+    ///
+    /// The two other new columns must survive the same roster: both are
+    /// hardcoded to `goblin`/`kobold`, neither of which this roster holds, so
+    /// both read `Absent` rather than panicking on `language_of_in`.
+    #[test]
+    fn the_null_controls_twin_is_skipped_not_panicked_on() {
+        let view = FullView::build_with_components(
+            Seed(42),
+            &SkyPins::default(),
+            crate::goblin_twin_solo_components(),
+        )
+        .unwrap();
+        // Not vacuous: the twin really did people this world's settlements,
+        // so the skip below is exercised rather than trivially satisfied.
+        let twin_settlements = view
+            .world()
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .filter(|f| {
+                hornvale_species::species_of(view.world(), f.subject).as_deref()
+                    == Some("goblin-twin")
+            })
+            .count();
+        assert!(
+            twin_settlements > 0,
+            "the twin-solo roster places twin settlements"
+        );
+        let built = BuiltView::Full(view);
+        assert_eq!(
+            extract_from(&built, "name-transparency"),
+            MetricValue::Absent,
+            "every settlement is the twin, so nothing is measurable"
+        );
+        assert_eq!(
+            extract_from(&built, "name-syllables-goblin"),
+            MetricValue::Absent
+        );
+        assert_eq!(
+            extract_from(&built, "name-syllables-kobold"),
+            MetricValue::Absent
+        );
+    }
+
+    /// The other half of the null control: the `goblin-solo` roster peoples
+    /// its settlements with a species the canonical roster DOES know, so
+    /// nothing is excluded and the metric reads a real number. Pins that the
+    /// twin guard did not simply switch the metric off for solo rosters.
+    #[test]
+    fn the_null_controls_goblin_solo_still_reads_a_number() {
+        let view = FullView::build_with_components(
+            Seed(42),
+            &SkyPins::default(),
+            crate::goblin_solo_components(),
+        )
+        .unwrap();
+        let built = BuiltView::Full(view);
+        let value = extract_from(&built, "name-transparency");
+        let MetricValue::Number(share) = value else {
+            panic!("goblin-solo is fully measurable: {value:?}");
+        };
+        assert!(
+            (0.0..=1.0).contains(&share),
+            "transparency is a share: {share}"
         );
     }
 
