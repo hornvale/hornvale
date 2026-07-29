@@ -643,6 +643,33 @@ its honest size.
    away and may need ideas that don't exist yet. The honest move is to build
    the consistency tier — checkable now — and stop letting the taste half make
    the whole problem look untouchable.
+   **Re-scored by [The Wearing](./chronicle/the-wearing.md) (2026-07-29): the
+   taste half shrank, exactly along the template this section's preamble
+   predicts.** *A generated place name is too long to say and too uniform to
+   believe* reads like pure taste, and had been treated that way. Decomposed,
+   most of it was not. **Length** was already instrumented and the instrument
+   was being ignored — the metric's declared buckets stopped at 10 characters
+   and every world in a thousand-seed census overflowed them, silently, for
+   several campaigns; a declared bucket range nothing enforces is an intent, not
+   a check. **Syllable count** is a second instrument the campaign had to add,
+   because character length cannot separate *shorter words* from *the same
+   words spelled tighter* and the diagnosis turned on precisely that
+   distinction. **Transparency** is the interesting one: the property that made
+   the names read as generated was not any name's opacity but the *uniformity*
+   of their readability — 650 of 650 names fully glossable, by construction —
+   so the metric that closes it is a **distribution witness whose target is
+   explicitly not its maximum**, and whose comment records that a drift back
+   toward 1.0 is a regression. Three self-scorable readings where the honest
+   prior expectation was one human read. What did **not** move is the residue
+   the decomposition leaves: whether a given name is *pleasant*, and whether a
+   world's toponymy reads as inherited rather than issued, are still a human's
+   call, and the campaign's own success criterion for that half was written
+   down as the owner's judgement rather than as a number. So this row's
+   confidence in *scoring aesthetic constraints* is materially higher than "the
+   half that is years away" allowed; its confidence in *closing* them is
+   unchanged. The complementary lesson is a caution for the whole gradient: an
+   instrument only scores a bet if something reads it. This one existed,
+   drift-checked green, and measured a failure nobody was told about.
 
 2. **Emergent economics that don't degenerate.** The mermaid-bone-farm
    problem: static value tables meeting exploitable production collapse into

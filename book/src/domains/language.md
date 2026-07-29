@@ -597,7 +597,9 @@ down regardless of how thoroughly the world exposed the color. Two
 provenances, never a shrug: a lexicon is allowed to be silent, but never
 silently.
 
-**Glossed names.** A proper name has always been a real sound; it now also
+**Glossed names (as Campaign 27, The Words, built them — the drawn stem
+below has since been retired; see "Names you can say," below).** A proper
+name has always been a real sound; it now also
 carries a real meaning, and that meaning is never invented for the
 occasion — it compounds the entity's own committed facts. A settlement's
 name draws from its own cell's biome, its notable sky, and the phenomenon
@@ -616,7 +618,9 @@ a proper-name element that names no concept and so never enters the gloss,
 there because a census showed site words alone give a species only a
 handful of names against a hundred settlements (Study 011; see
 [Settlement](./settlement.md) for the exact collision figures the census
-pinned before and after this stem existed). A name's
+pinned before and after this stem existed). *The stem is retired: it bought
+uniqueness with length, which is precisely what decision 0024 later
+forbade, and* **Names you can say** *below is where it goes.* A name's
 sound already rendered three views of one drawn segment sequence — a
 romanization, an IPA transcription, and an espeak formulation; it now
 renders a fourth, a gloss — the concepts it compounds, and the site facts
@@ -879,3 +883,99 @@ word really must bend to a native shape. The change draws nothing: repair
 and the attested admission are pure functions over already-drawn material,
 so it rebaselines the names it moves rather than retiring a stream, and
 every previously-conformant name is byte-identical.
+
+**Names you can say (The Wearing).** Every axis of name construction above is
+a **constant**, and the uniformity — not any single name — is what reads as
+generated. A name is always a stem plus its site words; every syllable of a
+language carries the same vowel count; no morpheme ever wears; transparency is
+100% by construction; and a site offers exactly two facts about itself. Five
+constants; this campaign replaces each with a distribution.
+
+*The site vector.* When the composition root asked a settlement what it was,
+the answer was its biome and the sky phenomenon its presiding belief revered —
+a dozen biomes against a handful of phenomena, for a species that may place a
+hundred settlements. The facts to say more were already in scope at the call
+site; the **words** were not, and there was no concept for `hill`. Nineteen
+arrive — `hill`, `river`, `valley`, `island`, `ford`, `marsh`, `spring`,
+`coast`, `lake`, and the qualifiers `high`, `low`, `great`, `little`, `new`,
+`old`, `north`, `south`, `over`, `under` — gated on real terrain readings
+(water kind, drainage, elevation against the neighbourhood, sea level, land
+degree). Seven of them are **toponymic core**: they win the short proto-root
+form, because they are the highest-frequency morphemes in the entire name
+corpus. `coast` and `lake` deliberately are not — neither can ever be
+`Steeped` (a people can know a shore without living on one), so neither ever
+wins a root to prioritize, and both render as compounds of `earth` and
+`water` exactly as `sea` and `mountain` already do.
+
+Who gets which word is not authored anywhere. It falls out of the exposure
+gates the lexicon already ran: at seed 42 one people holds `hill` — the one
+whose flagship sits on a strict local elevation maximum — nobody holds
+`valley` or `island`, and `spring` is a gap for goblin alone. And where the
+family tree already exists the new words inherit it: proto-goblinoid `*Neede`
+"river" descends to bugbear *Doodo*, goblin *Neede*, hobgoblin *Neebe*.
+
+*Name shape.* A name is no longer always the same construction. Each culture
+draws a weighted distribution over three shapes — the bare simplex, a
+specific-plus-generic compound, and a three-concept form as the tail — and
+each settlement draws from its own culture's distribution. The weights read
+that people's in-group radius; the sharpening exponent, which is the "how
+stereotyped is this toponymy" dial, reads its time horizon. Two dimensions
+deliberately: one trait cannot encode both *which* shape a people prefers and
+*how strongly*.
+
+*Nuclei become a set.* The phonology drew `nuclei` as a single language-wide
+obligatory count in `{1, 2}`, so half of all languages put a diphthong in
+**every** syllable — most of what read as obnoxious in *Qvooshtvoagootao*.
+It is now a template set, drawn in the same count-then-templates shape onsets
+and codas already use, with the simple vowel always admitted; a syllable picks
+its size from the set. On every seed sampled, the share of a people's
+syllables that are two-vowel fell off the ≥95% shelf entirely.
+
+*Wear.* Erosion is keyed to a morpheme's **frequency in its own culture's name
+corpus**, never to its syntactic slot. Keying on the slot would *author* the
+generic/specific asymmetry; keying on frequency *derives* it — the generic
+wears most because it recurs most, which is Zipf's law of abbreviation and the
+actual mechanism behind OE *hām* → `-ham` and ON *býr* → `-by`. It also gets
+right the case a slot rule gets wrong: a *specific* that happens to be
+ubiquitous in a culture wears too. No new erosion machinery was needed: `evolve`
+is pure and total over an arbitrary segment slice, and `RULE_KINDS` already
+holds `VowelShift`, `ClusterSimplify` and `FinalLoss` — precisely the three
+sound changes that perform real toponymic wear. So the wear is
+Neogrammarian-regular by construction and every worn name carries a printable
+derivation like every other root.
+
+Unstressed-vowel reduction *is* erosion seen at a shorter time-scale, so the
+two share one rule rather than duplicating two. `reduce_nuclei` cuts every
+unstressed nucleus to the language's smallest licensed size, sparing the
+word's first; the diachronic path runs it under no prominence at all, the
+synchronic path per morpheme under that morpheme's **surface** position, and a
+frequent morpheme reduces even under stress — which is why *Hampton* keeps its
+`-ham` short while *Ham* in Surrey does not reduce at all.
+
+*The guard, and the honest result.* Wear plus phonotactic repair can
+**delete** a morpheme rather than reduce it, and a settlement whose gloss names
+a word its name does not contain is a ledger falsehood. So a worn morpheme must
+leave a contiguous reflex in the repaired surface, or the wear is surrendered,
+least-frequent morpheme first. Opacification is a reduced survival, never an
+erasure. Measured across four worlds and 650 names: 940 morphemes, of which
+611 clear the frequency floor, of which the drawn cascade alters **53**, of
+which the guard rejects 40 — all forty genuine deletions, none an interrupted
+reflex — leaving **14 names** carrying surviving wear. The guard is innocent
+and the bottleneck is the cascade's match rate. Part of it has a name:
+`Tonogenesis` reads its conditioning from a merger earlier in the same cascade,
+so a leading `Tonogenesis` is provably the identity, and in a one-to-two-rule
+wear regime it is the *entire* cascade for three of twenty production cultures.
+The name cycle's opacification phase is therefore in progress, not shipped.
+
+*What was given up.* Frequency requires the whole scatter, so a glossed
+settlement name now depends on which *other* settlements its species placed.
+Determinism is intact and `naming.rs` stays a pure function of its arguments —
+the corpus arrives as an explicit read-only parameter, with no shared mutable
+set and no re-draw — but **world-level pin isolation for glossed settlement
+names is deliberately surrendered**: a pin that moves a species' scatter can
+move that species' names. The magnitude is small and seed-dependent (swapping
+the corpus for an empty one with the scatter held fixed changes 4 of 79 names
+at one seed, 7 of 207 at another, and 0 of 169 at seed 42), and deity and
+epithet names are untouched, their corpus being settlement-only. The
+alternative preserved the property exactly and reversed the mechanism, and the
+trade was taken deliberately rather than discovered.

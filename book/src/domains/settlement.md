@@ -145,18 +145,62 @@ mouth. The composition root now draws every settlement's name from
 `domains/language`'s `Namer`, built over that species' own drawn phonology
 under its authored articulation envelope; settlement only ever receives the
 finished name back and commits it under the same `name` predicate it always
-used. Name generation is pin-isolated by construction — a pure function of
-seed, species, name-kind, and the settlement's own cell salt, with no
-shared "used names" set threading between settlements — so cross-world
-uniqueness is measured as a calibration, not enforced by re-draw. The
-Tongues-era free stem calibrated at 2.79% mean collision at 10k worlds
-(Study 008); Campaign 27 (The Words) replaced that free stem with a
+used. Cross-world uniqueness is measured as a calibration, never enforced by
+re-draw. The Tongues-era free stem calibrated at 2.79% mean collision at 10k
+worlds (Study 008); Campaign 27 (The Words) replaced that free stem with a
 name that also glosses truthfully to a settlement's own site facts, which
 narrowed the name space enough to raise the mean to **4.91%** at the
 CI-guarded 500-seed population (4.94% at 10k) — measured, reported, and
 left as a standing open question rather than tuned back down (Study 011).
 See [Language](./language.md) for the phonology, the gloss, and the naming
 grammar themselves.
+
+*Two claims in this paragraph were true when it was written and are not
+now, both moved by The Wearing.* Name generation is no longer **pin-isolated
+by construction**: it is still a pure function of its arguments, with no
+shared mutable "used names" set and no re-draw, but one of those arguments is
+the culture's own name corpus — toponymic wear is keyed to how often a
+morpheme recurs across a people's settlements — so a pin that moves a species'
+scatter can move that species' names. Determinism is untouched; what is given
+up is world-level pin isolation, deliberately, and only for glossed settlement
+names. And the collision rate has risen a long way past 4.91%: the drawn stem
+that bought the low rate has been retired, on decision 0024's own instruction
+that no future work fix the collision rate by adding entropy, and the census
+median now reads **0.65**.
+
+**Ambiguity is a property of a reference (The Wearing).** Decision 0024 held
+that settlement-name uniqueness belongs to a *reference*, not to a name, and
+named the remedy it deferred: qualify a name where an actual ambiguity
+appears, in a rendered document, never in the ledger. That remedy now exists.
+A rendered listing — the almanac's land roster, a settlement's connections
+document, the REPL's settlement list — groups the entries it is about to
+print, and where two would render identically it walks a ladder of qualifiers
+drawn from the entities' own site facts: the people, the biome, both, then the
+coordinate. **The first rung that separates the whole group is taken.** A rung
+that separates only part of the group is refused, and a group no rung can
+separate is left bare rather than given a counter, which 0024 forbids. Scope
+is one document at a time: a name shared with a settlement on the far side of
+the world is not ambiguous to anyone reading about either.
+
+It is a **view**, and that is checked rather than asserted — seed 42's
+`world.json` is byte-identical with the feature present and absent. No fact,
+no stream, no epoch. Two entries in a listing that already prints the biome
+are ambiguous only when the *whole line* coincides, so grouping is by the
+rendered line and not by the name alone; that also makes a
+`- **Roa (taiga)** — taiga` impossible by construction, since the biome rung
+can never separate a group that already shares a biome. At seed 42, 102 of
+334 land entries need no qualifier at all, and all 334 rendered lines are
+distinct.
+
+The measurement that came out of building it is the durable part. Colliding
+names **agree on their descriptors by construction** — the gloss *is* the
+site-descriptor set the name was compounded from, so two settlements sharing a
+name necessarily share the facts that named them (at seed 42, all 51 colliding
+name-groups share a single gloss). Widening the descriptor vocabulary, the
+obvious lever, therefore cannot separate a collision: any fact fed *into*
+naming is a fact the collision already agrees on. Only facts *outside* the
+gloss can, which is why the coordinate rung carries nearly every live
+qualification.
 
 **History places now; the field became substrate (The Living
 Community).** The carrying-capacity field no longer *places* settlements. It

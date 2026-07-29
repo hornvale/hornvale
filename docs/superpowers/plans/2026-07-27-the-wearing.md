@@ -1,5 +1,15 @@
 # The Wearing Implementation Plan
 
+> **STATUS: COMPLETE — all eleven tasks executed, merged 2026-07-29.**
+> Chronicle: `book/src/chronicle/the-wearing.md`. Retrospective:
+> `docs/retrospectives/the-wearing.md`. Spec scoring against §8 is in the
+> spec's own header. Task 11 step 4 (the census regen) was run twice, both
+> runs invalidated by concurrent work on `main`, and then **deferred by owner
+> decision** — 35 rows carry a greppable `stale-census:` ignore and owe a
+> re-derivation (followup F11, carried into the retrospective).
+> Three of this plan's own acceptance tests were vacuous as written
+> (Tasks 2, 4, 7) and one snippet did not compile; see the retrospective.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Place names get shorter, mean something about where they are, and wear down the way real toponyms do.

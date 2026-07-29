@@ -1,5 +1,42 @@
 # Campaign: The Wearing — Design
 
+**Status:** **COMPLETE — shipped and merged 2026-07-29.** Chronicle:
+`book/src/chronicle/the-wearing.md`. Retrospective:
+`docs/retrospectives/the-wearing.md`. No decision was minted; §6 was amended
+mid-execution by owner call (ledger #10, world-level pin isolation for glossed
+settlement names), and ledger #9 and #11 are the campaign's two other owner
+carve-outs.
+
+**Scoring against §8, at close:**
+
+1. *Median mean-name-length inside the declared buckets (≤ 10 chars)* — **MET.**
+   1000-seed census medians `name-length-goblin` 13.15 → **9.33** and
+   `name-length-kobold` 12.51 → **7.40**.
+2. *Mean syllable count in 2–3* — **MET.** New `name-syllables-*` metrics read
+   **2.85** (goblin) and **2.28** (kobold) at census scale. A four-seed probe
+   had read goblin *above* the range; the population, not the sample, is the
+   answer.
+3. *A recognizably transparent name and a fully opaque worn form at seed 42* —
+   the transparent half is demonstrated (gnoll `Dzoxgzhofdzha`, `ford` + `river`
+   from that language's own words). The distribution exists — census
+   transparency runs 0.247–1.000, median 0.856 — but it is carried by
+   positional reduction far more than by the drawn wear cascade. **Owner's call
+   as written; the campaign does not self-score it.**
+4. *Determinism and phonotactic invariants green* — **MET.** Repeated builds
+   byte-identical at every seed sampled; `phonotactic-validity-*` and
+   `name-gloss-true` hold (the latter after a metric arity repair, §7's
+   anticipated "doc and scope edit").
+5. *The naming census rows re-pinned with stated causes* — **DONE, then
+   deferred.** Every row was re-pinned against a campaign census; the close
+   merge took `main`'s census instead, so 35 rows are `#[ignore]`d behind a
+   greppable `stale-census:` token and owe a re-derivation. Owner decision,
+   taken knowingly (followup F11, carried into the retrospective).
+
+**The §7 collision prediction FAILED and is recorded, not chased.** The
+expected direction was *down*; measured 0.172 → 0.627 mean over 1000 worlds.
+Decision 0024 governs, the rate is a witness rather than a bound, and Task 10
+shipped 0024's own deferred remedy. Per ADR 0016 the prediction stands as made.
+
 **Date:** 2026-07-27
 **Registry rows:** LANG-55 (→ `shipped`), LANG-9 (→ `shipped`), LANG-11
 (→ in-progress at the opacification phase), LANG-27 (constraint lifted by S1)
