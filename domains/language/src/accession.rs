@@ -174,11 +174,20 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "xorn-kind",
         "yellow",
     ],
-    // Epoch 2 — The Vacancy (2026-07-27): the fifth people and the twelve
+    // Epoch 1 — The Vacancy (2026-07-27): the fifth people and the twelve
     // fauna that filled the model's uninhabited declared states — three
     // unoccupied land climate regions, nine of the ten marine biomes, and the
-    // dark trait combinations. Appended for the same reason epoch 1 was: every
-    // word already spoken keeps its form.
+    // dark trait combinations. Appended for the same reason the original
+    // epoch 1 was: every word already spoken keeps its form.
+    //
+    // This cohort was authored as epoch 2 and is epoch 1 now: The Wearing
+    // re-founded cohort 0 and folded the original epoch 1 (The Actants) into
+    // it, so everything above this line slid down one index. The label was
+    // stale for a day and was caught by the loanword measurement, not by a
+    // test — `concept_epoch` reads the position, never the comment, so
+    // nothing could have failed. A comment asserting a property the code
+    // lacks: the thirteenth of this campaign, and the second the controller
+    // committed.
     //
     // The two campaigns met here by accident and agreed. The Actants ruled
     // that every kind the biosphere registry holds owes a name, not only the
