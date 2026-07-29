@@ -4,7 +4,7 @@
 
 A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars. The sky is a flat overcast.
 
-Visible bodies: the sun, moon 1, moon 2.
+This sky holds: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 

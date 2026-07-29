@@ -271,8 +271,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
 
     doc.push_str("## The Sky\n\n");
     doc.push_str(&format!("{}\n\n", ctx.sky.description));
+    // NOT "visible": `SkyReport.bodies` is the sky's ROSTER, and tier-0's
+    // `ConstantSun` puts the sun in it at every hour. "Coarse constrains fine"
+    // (Constitution) makes that a superset the generated sky may only add to,
+    // never retract — `tier_refinement.rs` asserts exactly that. So the sun
+    // appears here at midnight by design, and the honest fix for "the sun is
+    // listed at night, under an overcast" is this label, not the list.
     doc.push_str(&format!(
-        "Visible bodies: {}.\n\n",
+        "This sky holds: {}.\n\n",
         ctx.sky.bodies.join(", ")
     ));
 

@@ -4,7 +4,7 @@
 
 A golden sun hangs fixed at zenith. It has never been seen to move. The sky is fair, with scattered cumulus.
 
-Visible bodies: the sun.
+This sky holds: the sun.
 
 Salient phenomena, most attention-demanding first:
 
