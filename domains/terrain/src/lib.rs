@@ -18,6 +18,7 @@ pub mod provider;
 pub mod render;
 pub mod rift;
 pub mod shape;
+pub mod sitefact;
 pub mod strata;
 pub mod streams;
 pub mod water;
@@ -124,6 +125,31 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         ("stone", ConceptKind::Substance, "rock"),
         ("mountain", ConceptKind::Terrain, "high ground"),
         ("sea", ConceptKind::Terrain, "a body of salt water"),
+        // Site facts (The Shibboleth): the local features real toponymy names
+        // a place for. A settlement's name compounds these with its biome and
+        // variant, so it stays translatable AND tells two places apart.
+        ("river", ConceptKind::Terrain, "a watercourse"),
+        ("creek", ConceptKind::Terrain, "a lesser watercourse"),
+        (
+            "coast",
+            ConceptKind::Terrain,
+            "where the land meets the sea",
+        ),
+        (
+            "basin",
+            ConceptKind::Terrain,
+            "a closed hollow where water gathers and does not leave",
+        ),
+        (
+            "upland",
+            ConceptKind::Terrain,
+            "ground above the land around it",
+        ),
+        (
+            "lowland",
+            ConceptKind::Terrain,
+            "ground below the land around it",
+        ),
     ] {
         registry.register_manifest(Manifest {
             concept: ConceptDef {

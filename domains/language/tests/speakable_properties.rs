@@ -105,12 +105,15 @@ fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
                 }
             }
             if kind == NameKind::Settlement {
+                // The Shibboleth: settlement names carry no per-salt drawn
+                // element any more, so the same site yields the SAME name —
+                // that is the trade (a translatable name for a unique one),
+                // and the distinguishing work moved to the site facts the
+                // composition root supplies. What must still hold is that
+                // every name is audibly its own words, asserted above.
                 assert!(
-                    settlement_names.len() >= 5,
-                    "seed {seed}: settlement names over salts 0..6 must stay distinct \
-                     (the per-salt stem keeps spreading them) — got {} distinct of 6: \
-                     {settlement_names:?}",
-                    settlement_names.len()
+                    !settlement_names.is_empty(),
+                    "seed {seed}: a settled site must still yield a name"
                 );
             }
         }

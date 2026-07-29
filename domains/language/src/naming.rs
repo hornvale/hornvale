@@ -246,7 +246,11 @@ impl<'a> Namer<'a> {
             1
         } else {
             stream.range_u32(1, 2) as usize
-        };
+        }
+        // Never more than there are: `pool.remove` indexes `pool.len() - 1`,
+        // which underflows to a vast index on an empty pool. Latent until
+        // The Shibboleth raised the take above the old ceiling of two.
+        .min(candidates.len());
         let mut pool = candidates;
         let mut chosen: Vec<&str> = Vec::with_capacity(take);
         for _ in 0..take {
@@ -254,7 +258,7 @@ impl<'a> Namer<'a> {
             chosen.push(pool.remove(idx));
         }
 
-        let mut segments = compound_segments(lexicon, &chosen);
+        let segments = compound_segments(lexicon, &chosen);
         if kind == NameKind::Settlement {
             // The toponymic unique element (the collision fix — Task 12's
             // census measured an ~86% in-world collision rate for pure
@@ -274,9 +278,16 @@ impl<'a> Namer<'a> {
             // glosses stay truthful compositions of site concepts alone.
             // Deity and Epithet names carry no stem (their name spaces
             // are one-per-belief, not pigeonholed by settlement counts).
-            let stem_syllables = self.draw_syllables(&mut stream, 2, 3, false);
-            let stem = segments_of(&stem_syllables);
-            segments = join_by_headedness(lexicon.headedness, stem, segments);
+            // The unique stem is gone (The Shibboleth). It was 2-3 drawn
+            // syllables naming nothing, added when a pure site-concept
+            // compound collided ~86% of the time — and it did all the
+            // distinguishing while carrying none of the meaning, turning
+            // `Gootao` into `Vngoashshngaoshshngoogootao`.
+            //
+            // Its job now belongs to the SITE FACTS the composition root
+            // supplies: a river, a coast, a closed basin, high or low ground.
+            // Those distinguish AND translate, which is what real toponymy
+            // does — Newcastle-upon-Tyne, not Newcastle-vngoashshng.
         }
         // Repair AFTER compounding, BEFORE morphology (the permanent order):
         // evolved roots only guarantee inventory membership, not template
@@ -1307,13 +1318,12 @@ mod tests {
     }
 
     #[test]
-    fn settlement_names_carry_a_per_salt_stem_beyond_the_site_words() {
-        // The collision fix (Task 12's census exposed an 86% in-world
-        // collision rate): a settlement's glossed name compounds its site
-        // word(s) with a per-salt DRAWN stem — the toponymic descriptor +
-        // unique element pattern — so the same site yields distinct names
-        // across salts. Deity names carry no stem: a single-candidate site
-        // yields exactly the repaired site word.
+    fn a_settlement_name_is_exactly_its_site_words() {
+        // The Shibboleth replaced the per-salt drawn stem with SITE FACTS. A
+        // settlement name is now a pure compound of the concepts its site
+        // supplies, so it is translatable end to end — and two settlements
+        // sharing every site fact share a name, which is the trade this
+        // campaign makes deliberately and which real toponymy also makes.
         let ph = wordy_ph();
         let lex = two_word_lexicon(9);
         let site = SiteConcepts {
@@ -1330,30 +1340,40 @@ mod tests {
         ))
         .roman;
 
-        // Deity: exactly the site word — the stem is Settlement-only.
+        // A deity name was always exactly the site word; it still is.
         let (deity, deity_gloss) = namer.glossed_name(NameKind::Deity, 3, &morph, &site, &lex);
-        assert_eq!(deity.roman, plain, "a deity name gains no stem element");
+        assert_eq!(deity.roman, plain);
         assert_eq!(deity_gloss, "water");
 
-        // Settlement: distinct names across salts, all glossing to the same
-        // concept — the stem is a proper-name element with no concept.
-        let mut names = std::collections::BTreeSet::new();
+        // A settlement name is now the same: no drawn element, so the salt
+        // moves nothing and every name is a word its speakers can translate.
         for salt in 0..12u64 {
             let (name, gloss) = namer.glossed_name(NameKind::Settlement, salt, &morph, &site, &lex);
+            assert_eq!(gloss, "water", "salt {salt}: the gloss is the site concept");
             assert_eq!(
-                gloss, "water",
-                "salt {salt}: the stem must not enter the gloss"
-            );
-            assert_ne!(
                 name.roman, plain,
-                "salt {salt}: a settlement name must carry a stem beyond the site word"
+                "salt {salt}: a settlement name carries no element naming nothing"
             );
-            names.insert(name.roman);
         }
-        assert!(
-            names.len() >= 10,
-            "per-salt stems must spread settlement names across salts, got {names:?}"
-        );
+    }
+
+    #[test]
+    fn a_name_never_takes_more_concepts_than_it_has() {
+        // `pool.remove` indexes `pool.len() - 1`, which underflows to a vast
+        // index on an empty pool — reachable the moment the take may exceed
+        // the candidate count, which The Shibboleth's richer site made
+        // possible. A single-candidate site is the boundary case.
+        let ph = wordy_ph();
+        let lex = two_word_lexicon(9);
+        let morph = MorphOptions { honorifics: false };
+        let namer = Namer::new(&Seed(9), "test", &ph);
+        for concepts in [&["water"][..], &["water", "stone"][..]] {
+            let site = SiteConcepts { concepts };
+            for salt in 0..24u64 {
+                let (name, _) = namer.glossed_name(NameKind::Settlement, salt, &morph, &site, &lex);
+                assert!(!name.roman.is_empty());
+            }
+        }
     }
 
     #[test]

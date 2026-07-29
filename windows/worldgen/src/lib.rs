@@ -3879,6 +3879,21 @@ fn exposure_of_impl(
         classes.insert(name, ExposureClass::Steeped);
     }
 
+    // Steeped: the SITE FACTS of every settled cell (The Shibboleth). A people
+    // that has lived on a river has a word for a river, and one that has never
+    // seen the sea does not have a word for a coast. Same reasoning as the
+    // biome and the variant below, and the same cells.
+    for &cell in settled {
+        let hy = hornvale_terrain::sitefact::hydrology_at(terrain, cell);
+        if let Some(c) = hy.concept_name() {
+            classes.insert(c.to_string(), ExposureClass::Steeped);
+        }
+        let rl = hornvale_terrain::sitefact::relief_at(terrain, cell);
+        if let Some(c) = rl.concept_name() {
+            classes.insert(c.to_string(), ExposureClass::Steeped);
+        }
+    }
+
     // Steeped: the VARIANT of every settled cell (The Toponym). A people that
     // has lived in a grass sward has a word for a grass sward, by exactly the
     // reasoning that gives them a word for the savanna it is a kind of — and
@@ -4991,9 +5006,17 @@ fn build_to(
             expr.stratum,
             hornvale_climate::GroundKind::Ordinary,
         );
+        // Site facts (The Shibboleth): the local features real toponymy names a
+        // place for. These are what let a name stay translatable AND tell two
+        // places apart — the random stem they replace did the second job and
+        // none of the first.
+        let hydrology = hornvale_terrain::sitefact::hydrology_at(&terrain, s.cell);
+        let relief = hornvale_terrain::sitefact::relief_at(&terrain, s.cell);
         let mut site_concepts: Vec<&str> = vec![biome_concept];
         site_concepts.extend(presiding);
         site_concepts.extend(variant.map(|v| v.concept_name()));
+        site_concepts.extend(hydrology.concept_name());
+        site_concepts.extend(relief.concept_name());
         let site = hornvale_language::SiteConcepts {
             concepts: &site_concepts,
         };

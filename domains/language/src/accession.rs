@@ -216,6 +216,8 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "wind-scour",
         "wooded-grassland",
     ],
+    // Epoch 4 — The Shibboleth: the site facts a place is named for.
+    &["basin", "coast", "creek", "lowland", "river", "upland"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or
