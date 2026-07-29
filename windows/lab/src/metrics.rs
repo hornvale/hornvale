@@ -3781,6 +3781,96 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
     )
 }
 
+/// Whether `committed` carries surface material IN FRONT of `plain`'s
+/// consonantal frame — the reduction-proof shape of "something was
+/// prepended to this word" (The Wearing, Task 11c).
+///
+/// # Why the frame, and not the word
+///
+/// The natural test is `committed.ends_with(plain)`, and that is what this
+/// metric ran until Task 9. Task 9's position-conditioned reduction voided
+/// it: `glossed_name` reduces the compound under
+/// `Prominence::None` when an honorific is prefixed (the affix takes the
+/// word's stress) and under `Prominence::InitialVowel` when it is not, so
+/// the honorific-free re-derivation is no longer a literal tail of the
+/// honorific-bearing form. Seed 0, belief 1: committed `Teeloflof` against
+/// an off-re-derivation of `loeflof` — the same stem, reduced `lo-` in one
+/// and `loe-` in the other.
+///
+/// The projection that survives is the **consonant skeleton**.
+/// `reduce_nuclei` only ever shortens a vowel run and never touches a
+/// consonant, and it keeps at least `min(ph.nuclei)` vowels of every run,
+/// so the consonant sequence of a word is invariant under the reduction
+/// that broke the old test. Comparing skeletons puts the two forms back on
+/// speaking terms without asking the generator anything.
+///
+/// # Why `contains`, and not `ends_with`, even on the skeleton
+///
+/// Measured, not assumed: over 862 committed epithets across seeds 0-39
+/// and four peoples, a `ends_with` test on the skeleton read true on 861
+/// and false on one — seed 26, bugbear, belief 1, committed
+/// `Sxaoxddoapzhdapddoo` against an off-re-derivation of `Ddoapzhdap`. The
+/// committed form is `Sxaox` + `ddoapzhdap` + `ddoo`: the plain word is
+/// there whole, with the affix in front of it AND extra material behind it.
+///
+/// That trailing divergence was chased to its cause rather than assumed.
+/// Both derivations of that belief return the gloss `"shadow-moon"`, so
+/// both chose the same two morphemes; only the honorific-free surface
+/// dropped one of them. `worn_compound` repairs the compound AFTER reducing
+/// it, and repair may annihilate a morpheme, in which case the ladder gives
+/// that morpheme's wear back and retries — so two differently-reduced forms
+/// of the same compound can land on different rungs and surface different
+/// numbers of morphemes. Reduction is invariant on consonants; the repair
+/// that runs downstream of it is not. The claim this function can honestly
+/// make is therefore about the FRONT of the word, which is the only place
+/// an honorific can be, and it makes no claim about the tail.
+///
+/// Returns the prepended surface material for the earliest reading that
+/// places at least one consonant before the frame, or `None` if the frame
+/// only ever sits at the very start (which is exactly the honorific-free
+/// case: a species that commits its plain word commits `plain` itself, so
+/// the skeletons are equal, the only alignment is at offset zero, and this
+/// returns `None`). Every candidate offset is tried rather than only the
+/// first, so a coincidental early alignment cannot mask the real one.
+fn prepended_material(
+    committed: &str,
+    plain: &str,
+    vowels: &std::collections::BTreeSet<char>,
+) -> Option<String> {
+    let c: Vec<char> = bare_surface(committed).chars().collect();
+    let frame: Vec<char> = bare_surface(plain)
+        .chars()
+        .filter(|ch| !vowels.contains(ch))
+        .collect();
+    // A frameless plain word gives nothing to align against. Unreachable
+    // for a drawn phonology (`draw_manner_slots` gives every onset template
+    // at least one slot, so every drawn syllable has an onset consonant),
+    // but a hand-built phonology in a test could reach it and a silent
+    // `true` there would be the worst possible answer.
+    if frame.is_empty() {
+        return None;
+    }
+    // Surface positions of the committed form's own consonants, so an
+    // alignment found in skeleton space can be read back as a surface cut.
+    let cons: Vec<usize> = (0..c.len()).filter(|&i| !vowels.contains(&c[i])).collect();
+    if cons.len() < frame.len() {
+        return None;
+    }
+    for k in 1..=(cons.len() - frame.len()) {
+        if (0..frame.len()).all(|j| c[cons[k + j]] == frame[j]) {
+            let cut = cons[k];
+            let prefix: String = c[..cut].iter().collect();
+            // A whole syllable, not a stray consonant: the honorific is a
+            // drawn template syllable, so the material in front of the
+            // frame must carry a nucleus of its own.
+            if prefix.chars().any(|ch| vowels.contains(&ch)) {
+                return Some(prefix);
+            }
+        }
+    }
+    None
+}
+
 /// Whether every committed deity epithet of `species`' flagship pantheon
 /// carries a prepended honorific affix, DETECTED from the committed epithet
 /// content (not read back from the config that drove generation — that would
@@ -3799,17 +3889,34 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// itself is no longer the belief id — it is
 /// `hornvale_worldgen::deity_name_seed_for(world_seed, species,
 /// phenomenon.kind, rank)`, re-derived here with the same species/kind/rank
-/// the committed epithet was generated with, never the belief id. The
-/// honorific affix is one template syllable drawn AFTER the site-concept
-/// picks and PREPENDED, so re-deriving the same glossed epithet with
-/// honorifics OFF yields exactly the plain word the committed epithet was
-/// built from: the committed epithet carries the honorific iff, lowercased,
-/// it ends with the lowercased plain word AND is strictly longer.
-/// `Flag(true)` iff EVERY committed epithet carries it (goblin, Rank),
-/// `Flag(false)` iff none does (kobold, Knowledge). A broken honorific
-/// pipeline — a goblin epithet committed without its affix — would equal
-/// its plain word here and flip the flag to false, which the preregistered
-/// calibration catches.
+/// the committed epithet was generated with, never the belief id.
+///
+/// The honorific affix is one template syllable drawn AFTER the site-concept
+/// picks and PREPENDED, so the honorific-free re-derivation of the same
+/// belief is the plain word the committed epithet was built from — and the
+/// committed epithet carries the honorific iff it holds that plain word's
+/// consonantal frame with a whole syllable in front of it
+/// ([`prepended_material`], which carries the argument for why the frame
+/// and not the word itself, and the measurement behind it). `Flag(true)`
+/// iff EVERY committed epithet carries it (goblin, Rank), `Flag(false)` iff
+/// none does (kobold, Knowledge).
+///
+/// **This is still a detection, not a reading.** Nothing here asks the
+/// generator whether it prefixed an affix, and nothing compares the
+/// committed epithet against an honorific-ON re-derivation of itself; the
+/// only re-derivation is the honorific-FREE one, used as the reference
+/// word the committed content is measured against. A broken honorific
+/// pipeline — a goblin epithet committed without its affix — would BE its
+/// plain word here, the frame would align only at offset zero, and the flag
+/// would go false. That was measured, not argued: with the affix prepend
+/// deleted from BOTH of `glossed_name`'s paths (the compound path and the
+/// no-word-in-the-lexicon `build_name` fallback), all ten of seed 42's
+/// hobgoblin epithets and all five of seed 26's bugbear epithets read "no
+/// affix" — no false positive on either, including the one belief whose
+/// tail diverges. The in-repo half of that mutation is
+/// `prepended_material_detects_the_affix_and_reports_none_without_it`; the
+/// live half is kobold, which commits plain glossed words on every census
+/// row and reads false there.
 fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
     let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
@@ -3829,6 +3936,10 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     };
     let ph = language_of_in(v.world(), v.components(), species);
+    // The language's own vowel letters, so the consonantal frame
+    // `prepended_material` aligns on tracks `romanize` rather than a
+    // hardcoded `aeiou`.
+    let vowels = vowel_graphemes(&ph);
     let namer = Namer::new(&v.world().seed, species, &ph);
     // Resolved through the composition root's own mapping — never a
     // parallel definition of "this people's naming morphology".
@@ -3856,10 +3967,14 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
         // toponymic wear is settlement-only, so re-deriving the plain word
         // here must wear nothing either.
         // The species' real naming morphology with the honorific SWITCHED
-        // OFF, which is the whole trick this metric turns: the honorific
-        // affix is drawn after the concepts are picked, so clearing that
-        // one flag yields the same name minus its prefix. Everything else
-        // — in particular the shape weights, which decide how many
+        // OFF: the honorific affix is drawn after the concepts are picked,
+        // so clearing that one flag yields the plain word for this same
+        // belief — the reference the committed epithet is measured against.
+        // It is NOT the committed epithet minus its prefix, and the
+        // campaign's own defect was a comment that said it was: since Task
+        // 9 the plain word also reduces differently, because the affix
+        // takes the word's stress (see `prepended_material`). Everything
+        // else — in particular the shape weights, which decide how many
         // concepts get compounded — must match what worldgen passed, or
         // this re-derivation names a different deity and the flag flips
         // for a reason that has nothing to do with honorifics.
@@ -3875,9 +3990,7 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
             &lexicon,
             &hornvale_language::NameCorpus::none(),
         );
-        let plain = plain.roman.to_lowercase();
-        let committed = b.epithet.to_lowercase();
-        committed.ends_with(&plain) && committed.chars().count() > plain.chars().count()
+        prepended_material(&b.epithet, &plain.roman, &vowels).is_some()
     };
     MetricValue::Flag(beliefs.iter().enumerate().all(carries))
 }
@@ -4439,6 +4552,141 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
     MetricValue::Flag(regular)
 }
 
+// --- The Wearing (Task 11c): the lab's own reading of the toponymic gates.
+//
+// Task 4 gave `hornvale_worldgen::exposure_of` seven new `Steeped` rules —
+// `river`, `ford`, `hill`, `valley`, `marsh`, `spring`, `island` — each
+// gated on a real terrain query over a species' settled cells rather than
+// on roster membership. `independently_steeped_concepts` never learned
+// them, so from the regen at `f32d6ce2` it classified as non-Steeped seven
+// concepts worldgen classifies `Steeped`, and `exposure-sound-{goblin,
+// kobold}` read false on 252 of 1000 worlds for a lexicon that was doing
+// exactly what `exposure_of` told it to.
+//
+// The rules below are re-derived here rather than imported, and that is
+// the whole point of the duplicate: the metric is a SECOND OPINION on
+// `exposure_of`, so calling `hornvale_worldgen::exposure_of` (or its
+// private `is_river_cell`/`is_hill_cell`/… helpers, which are not `pub`
+// in any case) would turn the check into an echo of the thing it exists
+// to check. What these functions share with worldgen is only the terrain
+// domain's own public readings — `water_kind_at`, `drainage_at`,
+// `elevation_at`, `sea_level`, `hydro_at`, `is_ocean`, and the geosphere's
+// adjacency — which are measurements of the world, not classifications of
+// it. The classification is restated.
+//
+// The two thresholds worldgen keeps private (its `MARSH_MIN_DRAINAGE` and
+// `ISLAND_CELL_CAP`) are therefore restated as literals below rather than
+// imported, and the drift that creates is the CORRECT drift for a
+// soundness check. `exposure_sound` asserts "no `Root` at a concept this
+// set does not hold", so an over-inclusive set here is silent and an
+// under-inclusive one is loud: if worldgen ever RELAXES a gate (a lower
+// marsh floor, a larger island cap) it will mint a `Root` for a concept
+// this reading does not steep and the invariant goes red, which is the
+// alarm firing. If worldgen TIGHTENS one, this reading is merely a
+// superset and nothing fires — a soundness check has no business
+// complaining that the generator was more conservative than its second
+// opinion expected.
+//
+// `coast` and `lake` are deliberately absent: `exposure_of` classes both
+// `KnowsOf`, and `build_lexicon` mints a `Root` only from `Steeped`, so
+// they cannot reach the check (the same argument the doc comment below
+// already makes for the KnowsOf-via-neighbour and sea-proximity rules).
+
+/// One toponymic gate: does this cell satisfy the terrain condition that
+/// steeps a concept? Named so the seven-entry table below reads as a table
+/// rather than as a type signature.
+type TerrainGate = fn(&hornvale_terrain::GeneratedTerrain, CellId) -> bool;
+
+/// The wetness floor `marsh` sits above. Restated, not imported —
+/// worldgen's own `MARSH_MIN_DRAINAGE` is private, and see the module note
+/// above for why restating is the intended relationship rather than a
+/// workaround.
+const LAB_MARSH_MIN_DRAINAGE: f64 = 5.0;
+
+/// The small-landmass ceiling `island` sits under. Restated for the same
+/// reason as [`LAB_MARSH_MIN_DRAINAGE`].
+const LAB_ISLAND_CELL_CAP: usize = 200;
+
+/// Whether `cell` is a river channel: its water kind is exactly `River`.
+fn lab_is_river_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
+}
+
+/// Whether `cell` is a river shallow enough to cross: a river cell whose
+/// drainage has not reached waterfall scale.
+fn lab_is_ford_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    lab_is_river_cell(terrain, cell)
+        && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+}
+
+/// Whether `cell` is a strict local elevation maximum over its full
+/// neighbour ring, with an ocean neighbour read at sea level rather than at
+/// its true depth — otherwise every coastal cell is a hill, since an ocean
+/// cell is by definition below any land cell.
+fn lab_is_hill_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    let sea_level = terrain.sea_level().get();
+    let here = terrain.elevation_at(cell).get();
+    let neighbors = terrain.geosphere().neighbors(cell);
+    !neighbors.is_empty()
+        && neighbors
+            .iter()
+            .all(|&n| terrain.elevation_at(n).get().max(sea_level) < here)
+}
+
+/// The symmetric counterpart of [`lab_is_hill_cell`]: a strict local
+/// elevation minimum over the same sea-level-clamped ring.
+fn lab_is_valley_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    let sea_level = terrain.sea_level().get();
+    let here = terrain.elevation_at(cell).get();
+    let neighbors = terrain.geosphere().neighbors(cell);
+    !neighbors.is_empty()
+        && neighbors
+            .iter()
+            .all(|&n| terrain.elevation_at(n).get().max(sea_level) > here)
+}
+
+/// Whether `cell` is damp ground that has not channelized: dry land whose
+/// drainage clears [`LAB_MARSH_MIN_DRAINAGE`].
+fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
+        && terrain.drainage_at(cell) >= LAB_MARSH_MIN_DRAINAGE
+}
+
+/// Whether `cell` is a karst conduit carrying enough flow to surface: karst
+/// lithology at or above the river drainage floor. (`Hydro::Spring` is
+/// structurally unreachable on every seed, so the reachable half of the
+/// lithology model is what both readings gate on.)
+fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    terrain.hydro_at(cell) == Hydro::Karst
+        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+}
+
+/// Whether the contiguous non-ocean landmass under `cell` stays within
+/// [`LAB_ISLAND_CELL_CAP`] cells — a flood-fill that stops as soon as it
+/// has seen more than the cap, so a continent costs the same bounded walk
+/// as an islet. Tests the ground underfoot, not proximity to open water.
+fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
+    let geo = terrain.geosphere();
+    let mut visited: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+    visited.insert(cell);
+    let mut frontier = vec![cell];
+    while !frontier.is_empty() {
+        let mut next = Vec::new();
+        for &c in &frontier {
+            for &n in geo.neighbors(c) {
+                if !terrain.is_ocean(n) && visited.insert(n) {
+                    if visited.len() > LAB_ISLAND_CELL_CAP {
+                        return false;
+                    }
+                    next.push(n);
+                }
+            }
+        }
+        frontier = next;
+    }
+    true
+}
+
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
 /// classify `Steeped` — duplicating `exposure_of`'s own Steeped rules
 /// (`windows/worldgen/src/lib.rs`) directly from ledger/roster/terrain/
@@ -4451,7 +4699,11 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
 /// (`KnowsOf`/`Unknown` both fall through to `Compound`/`Gap`), so the
 /// KnowsOf-via-neighbor and sea-proximity rules `exposure_of` also carries
 /// are irrelevant to this specific soundness check and are not reproduced
-/// here. `None` if `species` is not in this world's roster.
+/// here. The seven toponymic terrain rules Task 4 added ARE reproduced,
+/// because those ones are `Steeped` and so do reach the check — see the
+/// module note above `LAB_MARSH_MIN_DRAINAGE` for how they are restated
+/// and why that keeps the second opinion second. `None` if `species` is
+/// not in this world's roster.
 fn independently_steeped_concepts(
     v: &FullView,
     species: &str,
@@ -4522,6 +4774,31 @@ fn independently_steeped_concepts(
             }
         }
     }
+
+    // The seven toponymic terrain gates (Task 4), each fired by a settled
+    // cell that actually satisfies it. The tuple table is deliberate: the
+    // rules are uniform ("any settled cell where this predicate holds
+    // steeps this concept"), so writing them as seven near-identical loops
+    // would only invite one of them to drift out of the shape. `valley` is
+    // in the table even though the census never saw it fire — a rule left
+    // out because it is currently rare is a rule that goes stale silently
+    // the first time terrain moves.
+    let terrain = v.terrain();
+    let gates: [(&str, TerrainGate); 7] = [
+        ("river", lab_is_river_cell),
+        ("ford", lab_is_ford_cell),
+        ("hill", lab_is_hill_cell),
+        ("valley", lab_is_valley_cell),
+        ("marsh", lab_is_marsh_cell),
+        ("spring", lab_is_spring_cell),
+        ("island", lab_is_island_cell),
+    ];
+    for (concept, holds) in gates {
+        if settled.iter().any(|&cell| holds(terrain, cell)) {
+            steeped.insert(concept.to_string());
+        }
+    }
+
     Some(steeped)
 }
 
@@ -4534,6 +4811,28 @@ fn exposure_sound(v: &FullView, species: &str) -> MetricValue {
     let Some(steeped) = independently_steeped_concepts(v, species) else {
         return MetricValue::Absent;
     };
+    exposure_sound_against(v, species, &steeped)
+}
+
+/// [`exposure_sound`]'s scan over `species`' committed lexicon, against an
+/// EXPLICIT `steeped` set rather than the one
+/// [`independently_steeped_concepts`] derives.
+///
+/// Split out for one reason (The Wearing, Task 11c): it makes the metric
+/// mutation-testable in-repo. A soundness flag that cannot be made to read
+/// false is worse than one that reads false wrongly, and the only way to
+/// break the property this flag detects — "no `Root` stands at a concept
+/// the independent reading does not steep" — is to hand it a set missing a
+/// concept the lexicon really did root. See
+/// `exposure_sound_reports_false_when_the_toponymic_gates_are_removed`,
+/// which strips exactly the seven toponymic concepts Task 4 added and
+/// confirms the flag flips. Nothing in the shipped metric path passes a set
+/// from anywhere but the independent derivation.
+fn exposure_sound_against(
+    v: &FullView,
+    species: &str,
+    steeped: &std::collections::BTreeSet<String>,
+) -> MetricValue {
     let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
@@ -6070,6 +6369,158 @@ mod tests {
             "kobold (Knowledge-status) flagships under the epoch and commits \
              plain glossed epithets, the honorific-free 'false' branch"
         );
+    }
+
+    /// The mutation test for [`prepended_material`], on the two real
+    /// witnesses The Wearing's Task 11b and Task 11c recorded (The
+    /// Wearing, Task 11c).
+    ///
+    /// The property under test is "an honorific syllable stands in front of
+    /// the plain word." Breaking it means committing the plain word itself
+    /// — which is what a species with `honorifics: false` does, and what a
+    /// goblin epithet would become if `glossed_name` stopped prepending the
+    /// affix — so the mutation here is to hand the detector the plain word
+    /// in the committed slot and require `None`.
+    #[test]
+    fn prepended_material_detects_the_affix_and_reports_none_without_it() {
+        // Seed 0's goblin phonology, which is the language the first
+        // witness is a word of; its vowel letters are {a, e, o}. Read from
+        // the drawn phonology rather than written down, so the test cannot
+        // outlive a change to `romanize`.
+        let view = AstronomyView::build(Seed(0), &SkyPins::default()).unwrap();
+        let goblin = vowel_graphemes(&hornvale_worldgen::language_of(&view.world, "goblin"));
+
+        // Witness 1 (Task 11b, seed 0, belief 1): the committed epithet and
+        // the honorific-free re-derivation of the same belief. The old
+        // `ends_with` test failed on this pair — `loeflof` is not a tail of
+        // `Teeloflof`, because the stem reduces `lo-` under the affix's
+        // stress and `loe-` without it. The frame reading finds it.
+        assert_eq!(
+            prepended_material("Teeloflof", "loeflof", &goblin).as_deref(),
+            Some("tee"),
+            "the honorific syllable must be detected in front of the plain word's frame"
+        );
+
+        // THE MUTATION: the same belief with the affix never prepended —
+        // the committed epithet IS the plain word. The detector must say so.
+        assert_eq!(
+            prepended_material("loeflof", "loeflof", &goblin),
+            None,
+            "an epithet committed without its affix must not read as carrying one"
+        );
+
+        // Witness 2 (Task 11c, seed 26, bugbear, belief 1): the one pair in
+        // 862 where the honorific-bearing form also diverges at the TAIL,
+        // because a differently-reduced compound took a different rung of
+        // the wear/repair ladder. `Sxaox` + `ddoapzhdap` + `ddoo`. This is
+        // the case that rules out `ends_with` on the skeleton as well as on
+        // the word; bugbear's seed-26 vowel letters are {a, o}.
+        let bugbear_view = AstronomyView::build(Seed(26), &SkyPins::default()).unwrap();
+        let bugbear = vowel_graphemes(&hornvale_worldgen::language_of(
+            &bugbear_view.world,
+            "bugbear",
+        ));
+        assert_eq!(
+            prepended_material("Sxaoxddoapzhdapddoo", "Ddoapzhdap", &bugbear).as_deref(),
+            Some("sxaox"),
+            "a tail that diverged through repair must not hide the affix at the front"
+        );
+        assert_eq!(
+            prepended_material("Ddoapzhdap", "Ddoapzhdap", &bugbear),
+            None,
+            "the same word standing alone carries no affix"
+        );
+    }
+
+    /// The mutation test for [`exposure_sound`] (The Wearing, Task 11c).
+    ///
+    /// The property under test is "no lexicon `Root` stands at a concept
+    /// the INDEPENDENT exposure reading does not steep." Seed 7's goblins
+    /// root five of the seven toponymic concepts Task 4 added — `river`,
+    /// `ford`, `hill`, `valley`, `spring` — so this seed exercises the
+    /// elevation gates and the karst gate, not just the river one every
+    /// seed hits.
+    ///
+    /// Breaking the property means removing those gates from the
+    /// independent reading, which is precisely the stale state this task
+    /// repaired: before Task 11c the lab's duplicate knew none of them and
+    /// `exposure-sound-{goblin,kobold}` read false on 252 of 1000 census
+    /// worlds. The stripped set below reconstructs that state exactly, and
+    /// the flag must flip.
+    #[test]
+    fn exposure_sound_reports_false_when_the_toponymic_gates_are_removed() {
+        const TOPONYMIC: [&str; 7] = [
+            "river", "ford", "hill", "valley", "marsh", "spring", "island",
+        ];
+        let view = FullView::build(Seed(7), &SkyPins::default()).unwrap();
+        let steeped = independently_steeped_concepts(&view, "goblin")
+            .expect("goblin is in the default roster");
+        let lexicon = lex(&view, "goblin").expect("seed 7 goblins hold a lexicon");
+
+        // The precondition, asserted rather than assumed: this seed must
+        // actually root toponymic concepts, or the mutation below would
+        // pass for the wrong reason (an unbroken flag on a world with
+        // nothing to break).
+        let rooted: Vec<&str> = TOPONYMIC
+            .iter()
+            .copied()
+            .filter(|c| matches!(lexicon.entry(c), Some(LexEntry::Root { .. })))
+            .collect();
+        assert_eq!(
+            rooted,
+            vec!["river", "ford", "hill", "valley", "spring"],
+            "seed 7 goblins must root these five toponymic concepts for this test to bite"
+        );
+        for concept in &rooted {
+            assert!(
+                steeped.contains(*concept),
+                "the independent reading must steep {concept}, which the lexicon rooted"
+            );
+        }
+
+        assert_eq!(
+            exposure_sound(&view, "goblin"),
+            MetricValue::Flag(true),
+            "seed 7 goblins are exposure-sound"
+        );
+
+        // THE MUTATION: the pre-Task-11c reading, which knew no toponymic
+        // gate at all.
+        let mut stale = steeped.clone();
+        for concept in TOPONYMIC {
+            stale.remove(concept);
+        }
+        assert_eq!(
+            exposure_sound_against(&view, "goblin", &stale),
+            MetricValue::Flag(false),
+            "stripping the toponymic gates must flip the flag — a soundness check \
+             that cannot report false is worse than one that reports it wrongly"
+        );
+    }
+
+    /// The independent toponymic reading agrees with the lexicon it is
+    /// checking on the two rarest gates, `island` and `valley` (The
+    /// Wearing, Task 11c) — seed 1's kobolds root `island` and `hill`,
+    /// which no goblin seed under 12 does, so the flood-fill and the
+    /// elevation-maximum gates both get a live witness rather than resting
+    /// on the census alone.
+    #[test]
+    fn the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them() {
+        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        let steeped = independently_steeped_concepts(&view, "kobold")
+            .expect("kobold is in the default roster");
+        let lexicon = lex(&view, "kobold").expect("seed 1 kobolds hold a lexicon");
+        for concept in ["island", "hill"] {
+            assert!(
+                matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
+                "seed 1 kobolds must root {concept} for this test to bite"
+            );
+            assert!(
+                steeped.contains(concept),
+                "the independent reading must steep {concept} too"
+            );
+        }
+        assert_eq!(exposure_sound(&view, "kobold"), MetricValue::Flag(true));
     }
 
     #[test]
