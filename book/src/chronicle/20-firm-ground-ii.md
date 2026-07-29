@@ -1,6 +1,6 @@
-# Campaign 20: Firm Ground II
+# Firm Ground II
 
-**July 2026 · outcome: complete, merged — the sky given a past, the observer
+**Campaign 20 · July 2026 · outcome: complete, merged — the sky given a past, the observer
 given a place, and the ground the rest of Year 3 stands on**
 
 ## What was attempted

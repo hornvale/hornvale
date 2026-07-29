@@ -1,4 +1,4 @@
-# An Abandoned Clearing — Seed 42
+# The Abandoned Clearing of Seed 42
 
 A site read back out of the ledger by the `history` verb: the stratigraphy
 of every people that ever settled one cell, oldest layer deepest, and the

@@ -463,7 +463,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
         let mut out = stdout.lock();
         use std::io::Write;
-        writeln!(out, "# A Possession — seed {}, day {day}\n", world.seed.0)
+        writeln!(out, "# A Possession of Seed {} — day {day}\n", world.seed.0)
             .map_err(|e| e.to_string())?;
         writeln!(out, "```text").map_err(|e| e.to_string())?;
         let played = hornvale_vessel::run(

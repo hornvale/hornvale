@@ -1,6 +1,6 @@
 <!-- GENERATED FILE — do not edit. Regenerate with `hornvale concepts --manifest`. -->
 
-# Concept Manifest — the correspondence ledger
+# The Concept Manifest
 
 Every registered concept is carried across three correspondence ledgers — **lexicon** (a word), **perception** (a phenomenon kind), and **cognition** (a handle) — or is explicitly, reason-bearingly *absent* from one, an absence that must name why. The *concept* anchor and the *compute* ledger are implicit and omitted below: every registered concept IS modeled, so those columns are always covered. This page is the negative space made honest — the gaps are typed, not silent. The audit also runs in reverse: **orphan phenomena** are kinds the world can emit that no concept names, so an observation exists with nothing to attach it to; **orphan species** are creatures the world simulates and narrates with no word in any language; **orphan acts** are things creatures do that nothing can be said about. A fourth reverse direction — the player-facing prose vocabulary — is named below but not yet audited.
 

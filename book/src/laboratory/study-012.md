@@ -1,4 +1,4 @@
-# Study 012: The Chorus's Dial
+# The Chorus's Dial
 
 The Chorus gives every placed people its own account of the same ground
 truth: an emic paragraph filtered through what that culture can see, know,

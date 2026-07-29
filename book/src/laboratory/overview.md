@@ -1,4 +1,4 @@
-# The Laboratory
+# Studies Are Data, Metrics Are Code
 
 A study is a small JSON file naming a range of seeds, a set of sky pins, and
 a selection of metrics — data selecting code-side measurements, not code

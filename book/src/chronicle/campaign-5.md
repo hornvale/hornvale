@@ -1,6 +1,6 @@
-# Campaign 5: The Gods
+# The Gods
 
-**July 2026 · 7 commits · outcome: complete, merged — Campaign 5 (The Gods)
+**Campaign 5 · July 2026 · 7 commits · outcome: complete, merged — Campaign 5 (The Gods)
 closes with religion at tier 1, and closes Year 1**
 
 ## What was attempted

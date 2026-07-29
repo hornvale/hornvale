@@ -1,6 +1,7 @@
 # The Running Head — Design
 
-**Status:** draft, awaiting G3 · **Date:** 2026-07-29 · **Campaign:** The Running Head
+**Status:** approved at G3 and executed (D5 superseded during execution) ·
+**Date:** 2026-07-29 · **Campaign:** The Running Head
 
 A retitling and reorganization pass over the project book. No mechanism, no
 new facts, no draws. Every change is a chapter title, a heading string, or a
@@ -93,11 +94,20 @@ Laboratory part's lead chapter. Following the Architecture/Domains model
 **`Studies Are Data, Metrics Are Code`** — decision 0011's ratified phrase,
 and the chapter's actual thesis.
 
-**D5 — `# The Book` → `# The Book of Seed {n}`.** Resolves the part/chapter
-echo and brings the page under the D1 convention. No test or golden pins the
-current string (verified: `grep -rn '# The Book'` over `cli/tests/`,
-`clients/`, `book/`, `docs/` returns only the page itself, the unrelated
-`The Book Polish` chronicle entry, and a historical plan document).
+**D5 — drop the `# The Book` part header; leave the H1 alone.**
+
+*Superseded during execution.* This record originally specified
+`# The Book` → `# The Book of Seed {n}`. That was wrong: `cmd_book`
+(`cli/src/main.rs:856`) takes no `--world` and builds **seeds 1, 2, and 3** as
+three volumes, so a "of Seed 42" title would have been simply false. Caught by
+reading the function before editing it.
+
+The echo D5 was solving is `# The Book` (part header) above `[The Book]`
+(its only chapter). Removing the *part header* fixes it with no code change
+at all, and lands the page directly after the Introduction as the book's front
+door — which is precisely decision 0059's intent ("the project book needing
+exactly one thing at its front door"). `cli/src/main.rs` is untouched by this
+decision, and `book/src/gallery/the-book.md` does not appear in the regen diff.
 
 **D6 — Reference: fix the one mismatch, leave the cosmetics.** `# Concept
 Manifest — the correspondence ledger` → `# The Concept Manifest`, matching
@@ -169,7 +179,7 @@ studies nest one level under it in `SUMMARY.md`, matching Domains.
 | `strange-sites-seed-42.md` | Strange Sites — Seed 42 | The Strange Sites of Seed 42 | script L305 |
 | `possession-seed-42.md` | A Possession — seed 42, day 0 | A Possession of Seed 42 — day 0 | `main.rs:466` |
 | `possession-over-time-seed-42.md` | A Possession — seed 42, day 0 | A Possession of Seed 42 — over time | script L137 block |
-| `the-book.md` | The Book | The Book of Seed 42 | `main.rs:856` |
+| `the-book.md` | The Book | *unchanged* | D5 (part header dropped instead) |
 | `room-sample-seed-42.md` | The Look of the World — Seed 42 | *unchanged* | D1 exception |
 
 The 11 pages already on `of Seed 42` are untouched, so
@@ -182,8 +192,8 @@ assertion at `concepts.rs:391` updated.
 
 ### Organization
 
-- `# The Book` part: lead chapter becomes `The Book of Seed 42` (D5),
-  ending the header/chapter echo.
+- `# The Book` part header is removed (D5); `[The Book]` becomes the first
+  chapter after the Introduction, ending the header/chapter echo.
 - `# The Laboratory` part: lead chapter becomes `Studies Are Data, Metrics
   Are Code` (D4); the 16 studies nest beneath it.
 - `# The Constitution` / `Six Principles` and `# Open Questions` / `The
@@ -215,7 +225,7 @@ assertion at `concepts.rs:391` updated.
 
 ## 7. Definition of Done
 
-Per decision 0013: a chronicle entry (`book/src/chronicle/the-running-head.md`)
-and a retrospective (`docs/retrospectives/`). Flagged for Nathan at G3: this
-is ceremony for a pass with no mechanism change, and is his call to keep or
-drop.
+Nathan waived the chronicle entry and the retrospective at G3 ("skip the
+overhead") — this pass changes no mechanism, so decision 0013's book-freshness
+obligation is satisfied by the retitling itself. The Chronicle era-grouping
+followup is filed as registry row `PROC-chronicle-eras`.

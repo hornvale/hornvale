@@ -1,4 +1,4 @@
-# Study 004: The Census of Faiths
+# The Census of Faiths
 
 Ten thousand worlds, unpinned — the same seeds 0 through 9,999 every earlier
 census has walked, each now carrying a flagship pantheon derived from its

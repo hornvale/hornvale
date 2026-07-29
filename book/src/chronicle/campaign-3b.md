@@ -1,6 +1,6 @@
-# Campaign 3b: The Tectonic Globe
+# The Tectonic Globe
 
-**July 2026 · 5 commits (3a, the Geosphere) + 11 commits (3b, the tectonic
+**Campaign 3b · July 2026 · 5 commits (3a, the Geosphere) + 11 commits (3b, the tectonic
 globe) · outcome: complete, merged — the world gets a shape**
 
 ## What was attempted

@@ -1,4 +1,4 @@
-# Study 006: The Census of Peoples II: Two Peoples
+# The Census of Peoples II
 
 Ten thousand worlds, unpinned — the same seeds 0 through 9,999 every prior
 census has walked, each now peopled by two species instead of one. Campaign

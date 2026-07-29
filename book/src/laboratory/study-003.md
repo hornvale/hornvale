@@ -1,4 +1,4 @@
-# Study 003: The Census of Peoples
+# The Census of Peoples
 
 Ten thousand worlds, unpinned — the same seeds 0 through 9,999 Study 001 and
 Study 002 already walked, each now carrying a scatter of generated

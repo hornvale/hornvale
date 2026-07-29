@@ -1,4 +1,4 @@
-# A Possession — seed 42, day 0
+# A Possession of Seed 42 — day 0
 
 *(This transcript is frozen. [The live pane](./possession-live.md) derives
 the same world in your browser — same crates, same bytes.)*

@@ -1,6 +1,6 @@
-# Campaign 1b: The Tier-0 Cascade
+# The Tier-0 Cascade
 
-**July 2026 · 15 commits · outcome: complete, merged**
+**Campaign 1b · July 2026 · 15 commits · outcome: complete, merged**
 
 ## What was attempted
 

@@ -1,4 +1,4 @@
-# Study 007: The Census of Eyes
+# The Census of Eyes
 
 Ten thousand worlds, unpinned — the same seeds 0 through 9,999 every prior
 census has walked, each now carrying **two** pantheons instead of one.

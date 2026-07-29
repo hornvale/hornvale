@@ -1,4 +1,4 @@
-# Study 005: The Frozen Worlds
+# The Frozen Worlds
 
 Study 002 already put a number on it without asking why: across the
 10,000-seed Census of Lands, ice dominates 37.8% of worlds and alpine
