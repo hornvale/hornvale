@@ -36,10 +36,8 @@ CLIENT-room-grid-authority
 CLIENT-room-paging
 CLIENT-scribe
 CLIENT-semilattice-caution
-CLIENT-tile-view
 CLIENT-tiles-as-deeper-rooms
 CLIENT-turn-cost-ratchet
-CLIENT-two-tier-position
 CLIENT-vitality-folds
 CLIM-clouds
 CLIM-felt-weather
