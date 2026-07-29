@@ -2588,10 +2588,18 @@ mod tests {
         // only on a word-final consonant, so a lexicon of open CV roots
         // would make this test vacuously green. Re-searched from 19 after
         // The Wearing's nucleus fix reseeded `wordy_ph`; the precondition
-        // is what caught it, and seed 186 is the ONLY pair in 0..300 that
-        // satisfies every clause — this fixture is narrow, so expect to
-        // re-search it again after the next phonotactic change.
-        let lex = two_word_lexicon(186);
+        // is what caught it, and seed 186 was then the ONLY pair in 0..300
+        // that satisfied every clause — this fixture is narrow, so the note
+        // said to expect another re-search after the next phonotactic change.
+        //
+        // That happened at the 2026-07-29 reversal: withdrawing `ROOT_EPOCH`
+        // v4 reseeded the lexicon draws again and seed 186 stopped satisfying
+        // the survive-repair precondition (both worn forms surrendered, 1/1
+        // against a required 0/0) — the precondition caught it a second time,
+        // exactly as designed. Re-swept 0..600 on all six clauses: seed 19 is
+        // the ONLY one, so the fixture is narrower than ever and this comment
+        // is the standing warning for the next reseed.
+        let lex = two_word_lexicon(19);
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);

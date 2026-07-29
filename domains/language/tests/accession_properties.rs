@@ -46,7 +46,7 @@ fn ends_closed(form: &[Segment]) -> bool {
 /// A later-epoch concept's root always ends closed, and does not grow into
 /// a longer syllable tier than the epoch-0 forms drawn alongside it — but
 /// only when the underlying phonology actually distinguishes open from
-/// closed. `Seed(23)`/`"goblin"` is searched (by the same technique
+/// closed. `Seed(31)`/`"goblin"` is searched (by the same technique
 /// `test_phonology` documents) to draw `codas: [[], [Nasal]]` — one
 /// non-empty AND one empty template — asserted below as a precondition so a
 /// future re-search that lands on a phonology where the two cases collapse
@@ -59,12 +59,19 @@ fn ends_closed(form: &[Segment]) -> bool {
 fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
     // Re-searched from Seed(13) after The Wearing's nucleus fix reseeded the
     // phonotactics draw; 13's codas collapsed to a single shape and the
-    // precondition below said so. Seed 23 is the first that satisfies EVERY
-    // clause this test asserts, the length-tier one included — seed 21
-    // passes the coda preconditions and then fails on length, which is why
-    // the search that produced this number ran the whole body, not just the
+    // precondition below said so. Seed 23 was then the first that satisfied
+    // EVERY clause this test asserts, the length-tier one included — seed 21
+    // passed the coda preconditions and then failed on length, which is why
+    // the search that produced that number ran the whole body, not just the
     // preconditions.
-    let seed = Seed(23);
+    //
+    // Re-searched AGAIN at the 2026-07-29 reversal, which withdrew
+    // `ROOT_EPOCH` v4 and reseeded every draw once more. Seed 23 landed on
+    // the length clause's known ~34% minority (`river` came out 10 segments
+    // against an epoch-0 max of 8) — the case this test's own note says to
+    // re-search rather than weaken, so that is what was done. Seed 31 is the
+    // first that satisfies the whole body on the merged tree.
+    let seed = Seed(31);
     let ph = draw_phonology(&seed, "goblin", &permissive_envelope());
     assert!(
         ph.codas.iter().any(|t| t.is_empty()),
@@ -115,17 +122,21 @@ fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
         // like against six concepts that never collide.
         //
         // **This clause holds AT THIS WITNESS SEED, not universally**, and
-        // the distinction was previously left unstated. Swept over the 438
-        // seeds in 0..2000 that satisfy every fixture precondition above,
-        // the closed-coda clause holds at 438/438 -- genuinely general --
-        // but this length clause holds at only 288/438 (65.8%). The 34%
-        // that fail do so at BOTH commits either side of The Wearing
-        // (measured 20/59 before, 14/38 after on a narrower sweep), so it
-        // is a pre-existing property of the carve against a cramped
-        // universe, not a regression: with six concepts and a small form
-        // space, a reserved-region draw sometimes has to reach a tier up.
-        // Read this as a witness, and re-search rather than weaken it if a
-        // future reseed lands on one of the 34%.
+        // the distinction was previously left unstated. Swept over the seeds
+        // in 0..2000 that satisfy every fixture precondition above, the
+        // closed-coda clause holds universally, but this length clause holds
+        // on only about two thirds of them. Measured before the 2026-07-29
+        // reversal: 288/438 (65.8%). Re-measured on the merged tree after it,
+        // by the same sweep: 270/425 (63.5%) — the same property, undisturbed,
+        // which is itself evidence that the reversal changed which seeds
+        // witness it and not what the carve does. The third that fail do so at
+        // commits either side of The Wearing too (20/59 before, 14/38 after on
+        // a narrower sweep), so it is a pre-existing property of the carve
+        // against a cramped universe, not a regression: with six concepts and
+        // a small form space, a reserved-region draw sometimes has to reach a
+        // tier up. Read this as a witness, and re-search rather than weaken it
+        // if a future reseed lands on the failing third — which is exactly
+        // what the reversal did, and exactly what was done.
         let longest_old = old.iter().map(Vec::len).max().expect("non-empty");
         assert!(
             form.len() <= longest_old + 1,

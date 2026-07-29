@@ -1168,15 +1168,19 @@ mod tests {
         let mut base = core_concept_batch();
         base.push("aa0");
         base.push("aa1");
-        // Seed 10, matching the two tests below so the whole insertion-
+        // Seed 256, matching the two tests below so the whole insertion-
         // stability cluster shares one fixture with one negative control.
-        let before = assign_proto_roots(&Seed(10), "fam", &ph, &base, &[]);
+        // Re-searched at the 2026-07-29 reversal: withdrawing The Wearing's
+        // `ROOT_EPOCH` v4 reseeded every draw and Seed(10) stopped displacing
+        // anything at all, which is precisely the vacuous pass the control
+        // exists to detect. Same search, same criterion, new answer.
+        let before = assign_proto_roots(&Seed(256), "fam", &ph, &base, &[]);
 
         // "zzz-late" is non-core (sorts after every core concept) and its id
         // sorts after "aa1" — so it lands strictly last.
         let mut grown = base.clone();
         grown.push("zzz-late");
-        let after = assign_proto_roots(&Seed(10), "fam", &ph, &grown, &[]);
+        let after = assign_proto_roots(&Seed(256), "fam", &ph, &grown, &[]);
 
         for concept in &base {
             assert_eq!(
@@ -1196,7 +1200,7 @@ mod tests {
         let ph = cramped_phonology();
         let base = core_concept_batch();
         let epoch0 = |_: &str| 0u32;
-        // Seed 10, and the negative control below MUST stay on the same seed:
+        // Seed 256, and the negative control below MUST stay on the same seed:
         // the control is what proves this fixture can collide at all, so a
         // pairing split across two seeds proves nothing about this one. Task 8
         // reseeded every phonotactic draw and left this test at Seed(4), where
@@ -1204,8 +1208,14 @@ mod tests {
         // pass the control exists to detect, with the control looking green on
         // a different seed. Measured over the re-searched candidates:
         // seed 0 displaces 1, seed 10 displaces 3, seed 14 displaces 1, and
-        // seed 4 displaces 0. Seed 10 is the strongest pairing available.
-        let before = assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &base, &[], epoch0);
+        // seed 4 displaces 0. Seed 10 was the strongest of those.
+        //
+        // Re-searched again at the 2026-07-29 reversal, which withdrew
+        // `ROOT_EPOCH` v4 and so reseeded every draw once more: Seed(10) now
+        // displaces ZERO, the vacuous case. Swept 0..300 on the same criterion
+        // — 139 seeds displace at least one, and Seed(256) displaces FIVE, the
+        // strongest available and stronger than the old fixture ever was.
+        let before = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &base, &[], epoch0);
 
         // "moon" is core and sorts into the MIDDLE of the core block (between
         // "many" and "mouth") -- the position that was unsafe before this
@@ -1215,7 +1225,7 @@ mod tests {
         grown.push("moon");
         let epoch1_for_newcomer = |c: &str| u32::from(c == "moon");
         let after =
-            assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &grown, &[], epoch1_for_newcomer);
+            assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &grown, &[], epoch1_for_newcomer);
 
         for concept in &base {
             assert_eq!(
@@ -1241,13 +1251,14 @@ mod tests {
         // nothing. **This seed must equal the one the two stability tests
         // above use** -- a control on a different fixture from the test it
         // guards is not a control, which is the defect Task 8's first pass
-        // shipped. Seed 10 displaces 3 of the base assignments, the largest
-        // of the candidates measured (0 -> 1, 10 -> 3, 14 -> 1).
-        let before = assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &base, &[], epoch0);
+        // shipped. Re-searched at the 2026-07-29 v4 reversal (Seed(10) fell to
+        // zero displacements there): Seed(256) displaces 5 of the base
+        // assignments, the largest over 0..300.
+        let before = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &base, &[], epoch0);
 
         let mut grown = base.clone();
         grown.push("moon");
-        let after = assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &grown, &[], epoch0);
+        let after = assign_proto_roots_with_epoch(&Seed(256), "fam", &ph, &grown, &[], epoch0);
 
         let moved = base.iter().filter(|c| before[**c] != after[**c]).count();
         assert!(
