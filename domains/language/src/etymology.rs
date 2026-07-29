@@ -289,12 +289,25 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
 /// concept's in any daughter (driving core homophony to zero). Deliberate
 /// regeneration uses an epoch suffix, never a rename — the save-format
 /// contract — so `v3` reseeds every root and old saves' `v2` forms are gone by
-/// design, regenerated with the world. `v4` is The Wearing's (2026-07-27)
-/// re-founding of the accession cohort baseline (`accession::EPOCH_COHORTS`,
-/// ledger #9) ahead of that campaign's own toponymic-concept additions and
-/// nucleus-shape rework — every root reseeds again, deliberately and for the
-/// last time under the old baseline.
-const ROOT_EPOCH: &str = "v4";
+/// design, regenerated with the world.
+///
+/// **What this label is for, and the `v4` that was withdrawn.** The suffix
+/// exists so that a deliberate change to the *assignment algorithm* — which
+/// concepts are drawn in which order, which candidates are rejected — forces
+/// fresh draws instead of silently reinterpreting saved worlds. It documents a
+/// regeneration; it does not cause one. The Wearing briefly moved it to `v4`
+/// (2026-07-27) to legalise re-founding the accession cohort baseline under
+/// ledger #9's since-falsified loanword premise. That campaign never touched
+/// the assignment algorithm: it changed the *phonology the algorithm draws
+/// from* (the nucleus template set in `phonology.rs`), which reseeds every root
+/// on its own, at every epoch label, and has never owed a bump. The bump was
+/// therefore doing no work the phonology change was not already doing, and
+/// `v4` was withdrawn on 2026-07-29 along with the re-founding it was minted to
+/// permit (see `accession`'s module doc and ledger #9's amendment). Nothing
+/// about worlds generated in those two days survives — a save re-derives its
+/// whole lexicon from the seed — so the withdrawal costs a regeneration and
+/// nothing else.
+const ROOT_EPOCH: &str = "v3";
 
 /// Assign a distinct proto-root to every concept in `concepts` under
 /// `family`'s proto-phonology `proto_ph` — the injective, collision-resolved
