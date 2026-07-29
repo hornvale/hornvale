@@ -1,13 +1,14 @@
 //! Emit the cross-repo temperature contract golden for seed 42: quantized
 //! per-tile temperatures from the Rust producer's actual `temperature_at`
-//! (via [`hornvale_scene::temperature_grid`]), at a fixed set of
+//! (via [`hornvale_scene::temperature_grid_in`], the shared-context half of
+//! `temperature_grid`), at a fixed set of
 //! (tile-index, day) rows. The orrery client reconstructs temperature from
 //! the `t_mean_c`/`t_swing_c` scene layers; this golden is the independent
 //! ground truth its equivalence test pins against — not a JS reconstruction
 //! of the formula, the sim's own answer.
 use hornvale_kernel::Seed;
 use hornvale_kernel::quantize::quantize;
-use hornvale_scene::temperature_grid;
+use hornvale_scene::{SceneContext, temperature_grid_in};
 use hornvale_worldgen::{SkyChoice, build_world};
 
 /// Lattice width; height is width / 2 (matches `scene/tiles/v1`).
@@ -32,10 +33,16 @@ fn main() {
     )
     .expect("seed 42 builds");
 
+    // One context for all five rows: `temperature_grid` derives the whole
+    // planet per call, so a row loop through the `&World` form would pay for
+    // it five times over. Same values, one derivation — `temperature_grid` is
+    // itself a one-line delegation to `temperature_grid_in`.
+    let ctx = SceneContext::build(&world).expect("scene context builds");
+
     let rows: Vec<String> = ROWS
         .iter()
         .map(|&(i, day)| {
-            let grid = temperature_grid(&world, WIDTH, day).expect("grid builds");
+            let grid = temperature_grid_in(&world, &ctx, WIDTH, day).expect("grid builds");
             let t = quantize(grid[i]);
             format!("{{\"i\":{i},\"day\":{day},\"t\":{t}}}")
         })

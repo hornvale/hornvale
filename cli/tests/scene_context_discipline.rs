@@ -29,15 +29,35 @@ fn repo_root() -> PathBuf {
 /// Why this rule exists, appended to every failure message. A guard whose
 /// failure does not teach is a guard someone deletes.
 const WHY: &str = "\n\n\
-    The catalog must build ONE `hornvale_scene::SceneContext` per world (the \
-    `SCENE_CTX` static) and pass it to the `_in` variants. The `&World` forms \
-    (`tiles_scene`, `tiles_region_scene`) derive a fresh context internally — \
-    terrain plus climate plus both nearest-cell indices, ~638 ms, 91.6% of a \
-    region patch (The Sextant's measurement) — so calling one from the catalog \
-    re-derives the entire planet on every scene request the client makes, \
-    which is precisely the cost The Cistern removed. See \
-    docs/superpowers/specs/2026-07-28-the-cistern-design.md.\n\
+    The catalog must build ONE `hornvale_scene::SceneContext` per world — the \
+    `SCENE_CTX` static, reached ONLY through the `scene_ctx` accessor — and \
+    pass it to the `_in` variants. Two things have to hold, and calling an \
+    `_in` variant is only the first: the context handed to it must be the \
+    REUSED one. A scene export that builds its own context and then passes it \
+    to an `_in` variant is byte-identical and just as slow as the `&World` \
+    form — it is the regression this guard exists to catch, and no golden or \
+    equivalence test can see it, because only the cost changes.\n\
+    Deriving a context is terrain plus climate plus both nearest-cell indices, \
+    ~638 ms, 91.6% of a region patch (The Sextant's measurement), so a \
+    per-call rebuild re-derives the entire planet on every scene request the \
+    client makes — precisely the cost The Cistern removed (11.1x on region \
+    tiles). See docs/superpowers/specs/2026-07-28-the-cistern-design.md.\n\
     If you are deliberately changing this contract, change the spec first.";
+
+/// The catalog's terrain-facing scene exports, by the signature line each
+/// one's body is sliced from. These are the exports whose cost is dominated
+/// by context derivation; the terrain-free ones (`system`, `moons`,
+/// `neighbors`, `eclipses`) take no context and are not governed here.
+const TERRAIN_EXPORTS: &[(&str, &str)] = &[
+    (
+        "hw_scene_tiles",
+        "pub extern \"C\" fn hw_scene_tiles(width: u32) -> i32 {",
+    ),
+    (
+        "hw_scene_tiles_region",
+        "pub extern \"C\" fn hw_scene_tiles_region(",
+    ),
+];
 
 #[test]
 fn the_catalog_reuses_one_scene_context_per_world() {
@@ -65,6 +85,40 @@ fn the_catalog_reuses_one_scene_context_per_world() {
             "{CATALOG} calls `{banned}` — the context-deriving `&World` form.{WHY}"
         );
     }
+
+    // Calling an `_in` variant is necessary but NOT sufficient: an export can
+    // call `SceneContext::build` itself and hand the result to the `_in`
+    // variant, which is byte-identical, passes every assertion above, and is
+    // exactly as slow as the `&World` form. So each terrain-facing export
+    // must reach the shared context through the `scene_ctx` accessor.
+    for (name, signature) in TERRAIN_EXPORTS {
+        let body = fn_body(&text, signature);
+        assert!(
+            body.contains("scene_ctx("),
+            "{CATALOG}'s `{name}` does not call `scene_ctx(` — it is not reusing \
+             the per-world context.{WHY}"
+        );
+    }
+
+    // ...and the accessor must be the ONLY place a context is built. This is
+    // the assertion that closes the loop: with exactly one `SceneContext::build`
+    // in the file, and it inside `scene_ctx`, no export can have grown a
+    // private derivation.
+    let builds = text.matches("SceneContext::build").count();
+    assert_eq!(
+        builds, 1,
+        "{CATALOG} contains {builds} `SceneContext::build` call(s); exactly one \
+         is allowed, inside the `scene_ctx` accessor.{WHY}"
+    );
+    let accessor = fn_body(
+        &text,
+        "fn scene_ctx(world: &World) -> Result<&'static SceneContext, hornvale_scene::SceneError> {",
+    );
+    assert!(
+        accessor.contains("SceneContext::build"),
+        "{CATALOG}'s one `SceneContext::build` is not inside the `scene_ctx` \
+         accessor.{WHY}"
+    );
 
     // The context is only sound because it is dropped with the world it
     // describes. Both `hw_new*` entry points clear it; if either stops, a

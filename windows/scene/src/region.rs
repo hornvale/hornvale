@@ -329,7 +329,6 @@ pub fn tiles_region_scene(
 /// [`SceneContext`] the caller already built — the `_in` half of
 /// [`tiles_region_scene`], the same pairing `surrounds_scene_in` uses.
 /// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples)
-#[allow(clippy::too_many_arguments)] // the address is five contract fields, spelled out
 pub fn tiles_region_scene_in(
     world: &World,
     ctx: &SceneContext,
