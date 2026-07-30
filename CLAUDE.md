@@ -52,6 +52,25 @@ census does. Dispatch it from the Mac with `make heavy-remote REF=<full-sha>`
 oversubscribes a box whose other jobs are long; that contention is what 0086
 exists to remove.
 
+**One gating agent at a time on the Mac.** 0081's claim serializes the
+canonical box at the *write seam* — censuses and `heavy-run.sh` take it, gates
+deliberately do not — so **lefford is protected and the Mac is not**. Nothing
+stops N parallel sessions from running gates on ten cores, and during The
+Timekeeper that put this box at loadavg 42–63. The measured reason it is not
+worth doing: a single `make ci` already reports `cpu_ratio` **8.25–8.50 on ten
+cores** (the `ci` rows in `docs/timings.md`), so nextest is saturating the
+machine on its own. Two concurrent gates do not cost 15 minutes each — they
+cost about thirty, and both look hung.
+
+So: edit, read, plan, and review across as many worktrees as you like — that
+is what worktrees are for — but **stagger the gates**, and treat two to three
+active campaigns as the Mac's working ceiling. This is a human-staggering
+rule, not a lock: 0081 declined to claim the gate because waiting twelve
+minutes to start a four-minute gate is worse than the contention. That
+arithmetic assumed a four-minute gate. At ~15 min it may now argue the other
+way, which is new information rather than relitigation — reopen it with the
+`cpu_ratio` rows in hand, do not merely re-express the preference.
+
 ```bash
 make doctor        # the repo self-map — run this first in a fresh session
 
@@ -92,6 +111,24 @@ make doctor        # the repo self-map — run this first in a fresh session
 #                     # box is contended, so a contended run can neither false-
 #                     # alarm nor poison the baseline it would compare against
 #                     # next time.
+#                     # TWO KNOWN BLIND SPOTS, both open follow-ups in
+#                     # docs/retrospectives/the-timekeeper.md:
+#                     # (1) THE GUARD CANNOT SEE ORDINARY LOAD. It asks only
+#                     #     whether a CENSUS CLAIM is held, so parallel agent
+#                     #     sessions are invisible to it and `make ci` will
+#                     #     enforce against thoroughly contended timings — it
+#                     #     did exactly that at loadavg 42-63 during The
+#                     #     Timekeeper's own runs. Run `make ci` on a QUIET box
+#                     #     and distrust a red alarm from a busy one. Candidate
+#                     #     fix: also suppress when loadavg exceeds core count.
+#                     # (2) THE BASELINE IS KEYED ON `hostname -s`, today
+#                     #     `MacBookPro` (NOT the machine's familiar name).
+#                     #     Rename the box and the baseline FORKS: the first
+#                     #     run under the new name finds no file, records
+#                     #     silently, and cannot alarm. Same free pass the
+#                     #     first time lefford runs `make ci`. First-run-never-
+#                     #     fails is deliberate; knowing when you are spending
+#                     #     it is not automatic.
 #   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 # nextest is a dev tool, not a workspace dependency (decision 0040); install
@@ -336,6 +373,19 @@ to its cause instead of surfacing it at a 105-commit merge. Campaigns run in
 git worktrees under `.claude/worktrees/<campaign>/` (untracked); `make
 prewarm` warms a fresh one's `target/` — start it in the background right
 after `git worktree add`, before the first gate.
+
+`make preflight` mechanizes only the **checkable** half. It compares ancestry
+and peeks at main's checkout; it has no opinion about whether two campaigns
+changed the same idea in incompatible ways. The Tumult and The Waterline
+collided semantically with a clean GO. Read the other branches' chronicles,
+not just their diffs.
+
+**A campaign's scratch is per-worktree and dies with it.** `.superpowers/sdd/`
+is git-ignored (never force-add it: a committed ledger silently clobbers every
+parallel session's on absorption, raising no conflict), so promote findings
+into the retrospective *before* teardown or they are gone. On lefford, the
+regeneration worktree is **shared** — ask before reusing it, verify its HEAD,
+and sweep orphans rather than assuming it is parked where you left it.
 
 **Measurement is preregistered.** A study freezes its hypothesis and its
 success criteria *before* the code that would move them (decision 0016), and
