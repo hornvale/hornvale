@@ -128,6 +128,81 @@ pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
     Ok(out)
 }
 
+/// Below this, a doubling is scheduler noise: most of the suite runs in
+/// single-digit milliseconds. CHOSEN, not derived (spec A1) — revisit against
+/// the baseline's own spread once several runs exist.
+/// type-audit: bare-ok(diagnostic-value)
+pub const PER_TEST_FLOOR_SECS: f64 = 5.0;
+
+/// A test must exceed this multiple of its baseline to alarm.
+/// CHOSEN, not derived (spec A1).
+/// type-audit: bare-ok(ratio)
+pub const PER_TEST_MULTIPLE: f64 = 2.0;
+
+/// Fractional growth of the whole suite's total that alarms.
+/// CHOSEN, not derived (spec A1).
+/// type-audit: bare-ok(ratio)
+pub const SUITE_TOLERANCE: f64 = 0.25;
+
+/// One duration that moved beyond tolerance.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: baseline), bare-ok(diagnostic-value: current)
+#[derive(Debug, Clone, PartialEq)]
+pub struct Shift {
+    /// Test id, or `<whole suite>` for the aggregate.
+    pub id: String,
+    /// The recorded baseline, in seconds.
+    pub baseline: f64,
+    /// What this run measured, in seconds.
+    pub current: f64,
+}
+
+fn lookup(rows: &[TestDuration], id: &str) -> Option<f64> {
+    rows.binary_search_by(|r| r.id.as_str().cmp(id))
+        .ok()
+        .map(|i| rows[i].seconds)
+}
+
+/// Tests that crossed BOTH the absolute floor and the multiple. A test absent
+/// from the baseline is new and never alarms.
+/// type-audit: bare-ok(diagnostic-value: current), bare-ok(diagnostic-value: baseline)
+pub fn per_test_shifts(current: &[TestDuration], baseline: &[TestDuration]) -> Vec<Shift> {
+    let mut out = Vec::new();
+    for c in current {
+        let Some(b) = lookup(baseline, &c.id) else {
+            continue;
+        };
+        if c.seconds >= PER_TEST_FLOOR_SECS && c.seconds > b * PER_TEST_MULTIPLE {
+            out.push(Shift {
+                id: c.id.clone(),
+                baseline: b,
+                current: c.seconds,
+            });
+        }
+    }
+    out.sort_by(|a, b| b.current.total_cmp(&a.current));
+    out
+}
+
+/// The aggregate alarm. Load-bearing and easy to omit: a suite can grow by
+/// half without any single test doubling, which is the 234s -> 934s shape the
+/// per-test alarm cannot see. An empty baseline is a first run: record only.
+/// type-audit: bare-ok(diagnostic-value: current), bare-ok(diagnostic-value: baseline)
+pub fn suite_shift(current: &[TestDuration], baseline: &[TestDuration]) -> Option<Shift> {
+    if baseline.is_empty() {
+        return None;
+    }
+    let now: f64 = current.iter().map(|r| r.seconds).sum();
+    let was: f64 = baseline.iter().map(|r| r.seconds).sum();
+    if was > 0.0 && now > was * (1.0 + SUITE_TOLERANCE) {
+        return Some(Shift {
+            id: "<whole suite>".to_string(),
+            baseline: was,
+            current: now,
+        });
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,5 +303,74 @@ mod tests {
         let err = parse_baseline("a::one\t-1.5\tdeadbeef\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
         assert!(err.contains("finite"), "got: {err}");
+    }
+
+    fn d(id: &str, s: f64) -> TestDuration {
+        TestDuration {
+            id: id.into(),
+            seconds: s,
+        }
+    }
+
+    #[test]
+    fn a_fast_test_doubling_is_below_the_floor_and_does_not_alarm() {
+        // 7ms -> 15ms is scheduler noise across 2548 tests.
+        let shifts = per_test_shifts(&[d("a", 0.015)], &[d("a", 0.007)]);
+        assert!(shifts.is_empty(), "got {shifts:?}");
+    }
+
+    #[test]
+    fn a_slow_test_doubling_alarms() {
+        let shifts = per_test_shifts(&[d("a", 20.0)], &[d("a", 6.0)]);
+        assert_eq!(shifts.len(), 1);
+        assert_eq!(shifts[0].id, "a");
+    }
+
+    #[test]
+    fn a_slow_test_growing_under_the_multiple_does_not_alarm() {
+        let shifts = per_test_shifts(&[d("a", 9.0)], &[d("a", 6.0)]);
+        assert!(shifts.is_empty(), "1.5x is under the 2x multiple");
+    }
+
+    #[test]
+    fn a_test_with_no_baseline_never_alarms() {
+        let shifts = per_test_shifts(&[d("brand-new", 600.0)], &[]);
+        assert!(
+            shifts.is_empty(),
+            "a new test has nothing to regress against"
+        );
+    }
+
+    #[test]
+    fn death_by_a_thousand_cuts_alarms_on_the_suite_total() {
+        // No single test doubles; the suite grows 40%. This is the 234s -> 934s
+        // shape, and the per-test alarm is structurally blind to it.
+        let base: Vec<_> = (0..100).map(|i| d(&format!("t{i:03}"), 1.0)).collect();
+        let now: Vec<_> = (0..100).map(|i| d(&format!("t{i:03}"), 1.4)).collect();
+        assert!(
+            per_test_shifts(&now, &base).is_empty(),
+            "no single test alarms"
+        );
+        let s = suite_shift(&now, &base).expect("the suite alarms");
+        assert_eq!(s.id, "<whole suite>");
+        assert_eq!(s.baseline, 100.0);
+    }
+
+    #[test]
+    fn a_suite_within_tolerance_does_not_alarm() {
+        let base: Vec<_> = (0..100).map(|i| d(&format!("t{i:03}"), 1.0)).collect();
+        let now: Vec<_> = (0..100).map(|i| d(&format!("t{i:03}"), 1.2)).collect();
+        assert!(
+            suite_shift(&now, &base).is_none(),
+            "20% is under the 25% bound"
+        );
+    }
+
+    #[test]
+    fn an_empty_baseline_never_alarms_the_suite() {
+        assert!(
+            suite_shift(&[d("a", 99.0)], &[]).is_none(),
+            "first run records only"
+        );
     }
 }
