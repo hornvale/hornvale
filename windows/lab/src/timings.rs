@@ -89,7 +89,12 @@ pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
 
 /// Parse a baseline back. Comment lines (`#`) and blanks are skipped; a
 /// malformed data row is an error rather than a skipped line, so a corrupted
-/// baseline cannot quietly disable the alarm.
+/// baseline cannot quietly disable the alarm. "Malformed" covers: not
+/// exactly three tab-separated fields (a fourth means a tab leaked into the
+/// id, and silently keeping it would corrupt the mapping), a non-numeric
+/// duration, and a duration that is negative, `NaN`, or infinite — any of
+/// which would compare false against a threshold downstream and silently
+/// defeat the regression alarm for that row.
 /// type-audit: bare-ok(prose: text), bare-ok(prose: return)
 pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
     let mut out = Vec::new();
@@ -97,16 +102,23 @@ pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
         if line.trim().is_empty() || line.starts_with('#') {
             continue;
         }
-        let mut parts = line.split('\t');
-        let (Some(id), Some(secs)) = (parts.next(), parts.next()) else {
+        let fields: Vec<&str> = line.split('\t').collect();
+        let [id, secs, _sha] = fields[..] else {
             return Err(format!(
-                "baseline line {}: expected <id>\\t<seconds>\\t<sha>",
-                n + 1
+                "baseline line {}: expected <id>\\t<seconds>\\t<sha>, got {} field(s)",
+                n + 1,
+                fields.len()
             ));
         };
         let seconds: f64 = secs
             .parse()
             .map_err(|_| format!("baseline line {}: '{secs}' is not a number", n + 1))?;
+        if !seconds.is_finite() || seconds < 0.0 {
+            return Err(format!(
+                "baseline line {}: '{secs}' is not a finite, non-negative duration",
+                n + 1
+            ));
+        }
         out.push(TestDuration {
             id: id.to_string(),
             seconds,
@@ -174,5 +186,47 @@ mod tests {
             p,
             std::path::Path::new("/repo/docs/timings/test-baseline-lefford.tsv")
         );
+    }
+
+    #[test]
+    fn parse_baseline_rejects_a_row_missing_the_sha() {
+        let err = parse_baseline("a::one\t1.5\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("2 field"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_a_row_with_an_extra_field() {
+        let err = parse_baseline("a::one\t1.5\tdeadbeef\textra\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("4 field"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_a_non_numeric_duration() {
+        let err = parse_baseline("a::one\tabc\tdeadbeef\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("not a number"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_nan() {
+        let err = parse_baseline("a::one\tnan\tdeadbeef\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("finite"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_infinity() {
+        let err = parse_baseline("a::one\tinf\tdeadbeef\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("finite"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_a_negative_duration() {
+        let err = parse_baseline("a::one\t-1.5\tdeadbeef\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("finite"), "got: {err}");
     }
 }
