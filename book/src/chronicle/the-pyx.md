@@ -137,13 +137,29 @@ enforcement that keeps goldens coming from one box is deliberately untouched.
 What changed is that the single-platform rule now rests on a premise that has
 been re-measured rather than inherited — and the premise has moved beneath it.
 
-Nor was the mechanism found. The codegen story is consistent with every
-result and remains unproven; confirming it would mean rebuilding without the
-raised baseline and showing the disagreement return. IEEE-754 floor is exactly
-representable, so a conforming library should not have diverged in the first
-place. Either the cause lies elsewhere, or one of those two machines was doing
-something it should not have been. The observation of 19 July stands as an
-observation, and its cause is still unknown.
+Nor was the mechanism found. The codegen story is consistent with every result
+and remains unproven, and the obvious way to settle it turns out not to work.
+Rebuilding without the raised baseline would move only one of the two
+machines: the flag is declared for x86-64 targets alone, and the Mac's
+architecture lowers a floor to a single hardware instruction with or without
+it. The comparison that produces is a library routine against an instruction,
+which is not the arrangement that disagreed in July — two x86-64 Linux boxes,
+each with a library to call. For the same reason the probe that passed never
+touched the suspect path at all: both machines floored in hardware, by
+different instructions, and agreed.
+
+What would test it is two x86-64 Linux hosts carrying *different* system
+libraries, neither given the flag. The project has one such host. A container
+on a second one would pin that library deliberately rather than inherit it,
+which is a better instrument than the machine the original disagreement was
+measured against — and the reason to build it is now a question rather than a
+convenience.
+
+Underneath all of which sits a reason to hold the hypothesis loosely. IEEE-754
+floor is exactly representable, so a conforming library should not have
+diverged in the first place. Either the cause lies elsewhere, or one of those
+two machines was doing something it should not have been. The observation of
+19 July stands as an observation, and its cause is still unknown.
 
 A mint that assays itself and passes has not proven its dies will never wear.
 It has established that today they have not, and that it owns an instrument

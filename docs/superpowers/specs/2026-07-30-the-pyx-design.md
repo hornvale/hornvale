@@ -249,6 +249,9 @@ story is *consistent* but unproven; proving it requires rebuilding without the
 `x86-64-v2` flag and showing divergence returns. That is a named optional
 extension (§7), not a requirement.
 
+**Correction (2026-07-30, post-campaign).** The sentence above, and §7's
+extension, are wrong about what that rebuild can establish — see §7.
+
 ## 6. Non-goals
 
 - **Recruiting velaryon.** No container image, no Job manifest, no registry
@@ -277,9 +280,32 @@ extension (§7), not a requirement.
   5-vs-6 disagreement 0063 recorded.
 - Every run's evidence is written to a file, not piped to `tail` — an
   expensive run must never need repeating to see a line that scrolled past.
-- Optional extension, only if L2 is green and the mechanism is wanted:
+- ~~Optional extension, only if L2 is green and the mechanism is wanted:
   rebuild without `target-cpu=x86-64-v2` and re-run L2. Divergence returning
-  would confirm §2's hypothesis outright.
+  would confirm §2's hypothesis outright.~~
+
+  **Withdrawn (2026-07-30, post-campaign) — this experiment could not have
+  settled the question.** `target-cpu=x86-64-v2` is declared under
+  `[target.'cfg(target_arch = "x86_64")']` (`.cargo/config.toml:36`), so the
+  **Mac arm never carried it**, and aarch64 lowers `f64::floor()` to the
+  base-ISA `frintm` instruction with or without any flag. Removing the flag
+  therefore moves the lefford arm only, turning the comparison into "glibc's
+  `floor` against ARM's floor instruction" — which is not the configuration
+  0063 measured (two **x86_64 Linux** boxes, both glibc) and cannot reproduce
+  it even in principle. Note also that the campaign's green L2 exercised
+  `roundsd` on lefford against `frintm` on the Mac: two hardware paths, both
+  IEEE-exact, so it never touched the library-call path the hypothesis is
+  about.
+
+  **What would actually test it:** two x86_64 Linux hosts with *different
+  glibc versions*, both built unflagged. The project has one such host;
+  velaryon is the second, and a container pins glibc deliberately rather than
+  inheriting it — a sharper instrument than the AWS box 0063 compared against.
+  Folded into the velaryon campaign (build the image with and without the
+  flag), where four cheap builds settle it now that binary hashing is the
+  oracle. Standing caveat unchanged: IEEE-754 `floor` is exactly
+  representable, so the hypothesis requires a *non-conforming* libm and was
+  always the best-localized story rather than a likely one.
 
 ## 8. Definition of Done
 

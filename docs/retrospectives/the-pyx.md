@@ -141,7 +141,7 @@ after edits, not care at edit time.
 | 3 | Test that release builds stay debuginfo-free | Decision 0090's cheap oracle silently depends on it; adding `debug` to `[profile.release]` would revoke it with nothing noticing | TOOL-cross-host-assay |
 | 4 | Diagnose `census-run.sh status` vs the lock | `status` reported idle during a live run; `make ci`'s contention suppressor asks the same question | TOOL-cross-host-assay |
 | 5 | Campaign two — velaryon recruitment | Gated on this campaign's green result; now starts with a binary-hash comparison, not a census | spec §6 |
-| 6 | Optional: rebuild without `target-cpu=x86-64-v2` and re-probe | Would confirm-or-refute the §2 codegen hypothesis outright; currently consistent-but-unproven | spec §7 |
+| 6 | Test the §2 codegen hypothesis **in campaign two**, not against the Mac | The rebuild-and-re-probe as originally scoped could not have settled it: `target-cpu=x86-64-v2` is `cfg(target_arch = "x86_64")`-scoped, so the Mac arm never carried it and aarch64 floors in hardware (`frintm`) regardless — removing the flag moves one arm and not the other, and never reproduces 0063's two-x86_64-Linux-boxes configuration. Needs two x86_64 Linux hosts with **different glibc**, both unflagged; velaryon in a container is that instrument, and pins glibc deliberately | spec §7 (corrected) |
 
 ## What did not happen
 

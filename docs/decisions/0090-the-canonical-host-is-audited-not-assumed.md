@@ -97,3 +97,34 @@ currently detects that.
   clearly the right shape — a hostname cannot catch lefford drifting from
   itself, and L0/L1 together are what a fingerprint would assert. Carried as a
   followup under TOOL-cross-host-assay, not built here.
+
+## Amendment (2026-07-30, same day, after merge)
+
+Additive correction of a factual claim about *future work*; the ruling above
+and every measurement in it are unchanged.
+
+The ruling states that confirming the §2 codegen hypothesis "requires
+rebuilding without `target-cpu=x86-64-v2` and showing divergence return."
+**That experiment, as scoped, could not have shown it.** The flag is declared
+under `[target.'cfg(target_arch = "x86_64")']` (`.cargo/config.toml:36`), so
+the Mac never carried it, and aarch64 lowers `f64::floor()` to the base-ISA
+`frintm` instruction regardless. Removing the flag moves the lefford arm and
+leaves the Mac arm untouched, which compares glibc's `floor` against ARM's
+floor instruction — **not** the two-x86_64-Linux-boxes configuration 0063
+measured.
+
+The same correction sharpens what L2's green result did and did not exercise:
+lefford floored with `roundsd`, the Mac with `frintm`. Both hardware, both
+IEEE-exact. The agreement is real and is what the decision claims, but it
+never ran the library-call path the hypothesis concerns.
+
+Testing the hypothesis needs two x86_64 Linux hosts with **different glibc
+versions**, both built unflagged. That is the velaryon campaign, where a
+container pins glibc deliberately instead of inheriting it. Recorded here
+rather than left to imply that a cheap experiment was declined; the cheap
+experiment does not exist.
+
+Nothing here changes the standing caveat that IEEE-754 `floor` is exactly
+representable, so the hypothesis requires a non-conforming libm and remains
+the best-localized story rather than a likely one. The 2026-07-19 observation
+still stands as an observation whose cause is unknown.
