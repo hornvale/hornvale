@@ -2299,6 +2299,34 @@ choice the caller must declare, not one the builder may invent."
 
 ### Task 9: The `colour` lens
 
+**What the rocks actually look like (measured in Task 5, under Sol
+daylight, at the silica values `classify_rock` really hands these
+classes).** Do not be surprised by these, and **do not retune the endmember
+table to make them prettier**:
+
+| rock | silica | sRGB | reads as |
+|---|---|---|---|
+| granite | 0.85 | `#BABAB0` | pale grey |
+| basalt | 0.15 | `#6E6D61` | dark grey |
+| ironstone | 0.30 | `#8F8262` | tan / khaki |
+
+Granite-vs-basalt is a strong unambiguous lightness split, which is right.
+**Ironstone lands tan rather than red**, and the mechanism is understood:
+its reflectance peaks in bands 7–9 (summing 1.86) exactly where the
+observer's long channel has fallen to 1.11 and its medium channel to 0.33,
+so most of the iron's reflected energy arrives where the eye barely
+responds. Its warmth is therefore blue-*deficiency* (R−B = 45) rather than
+red-dominance (R−G = 11).
+
+**This is the correct answer, not a defect.** `IRON_OXIDE` is ~0.83× the
+`red` exemplar in shape, so pure iron sits squarely in the red family; the
+tan comes from the 45% neutral silicate it is mixed with, which is what
+ironstone actually is. Real ochre is tan-brown. Steepening the iron curve
+to produce "red rocks" would be tuning toward a desired picture rather than
+from the mineralogy, and it would also corrupt Task 7's naming — ironstone
+naming as *brown* is precisely what makes claim 1 legible, since a kobold
+at ladder depth 2 cannot say brown and must fall back.
+
 **Files:**
 - Modify: `windows/scene/src/surrounds_ascii.rs` (the `SURROUNDS_LENSES` const near line 11, and `render_surrounds_ascii` at line 63)
 - Modify: `cli/src/main.rs:1246-1274` (pass the lens through)
