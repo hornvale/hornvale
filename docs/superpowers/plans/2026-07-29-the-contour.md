@@ -248,6 +248,49 @@ edge_count max = 45.000000
 
 None of this changes the frozen `DEF_SCALE`/`DEF_FLOOR`/`DEF_CEIL` above (still a measurement task, not a redesign) — it is handed forward to whichever task next touches the `approach_ease`/`defensibility` formula, since "sum vs. max vs. count" is a design choice this task does not make.
 
+**Task 2c addendum (approved follow-up, measurement only): does the bimodality split by `EdgeKind`?** Task 2b's bimodal `max_conductance` (a low cluster near 0.001-0.006 and a high cluster near 0.998-1.0) survived the switch from `sum` to `max`, ruling out a summing artifact. The successor hypothesis: the two populations are water-connected vs. land-only cells, since `WaterRoute` conductance is a current magnitude (bounded ≤ 1 but often near it) while `Adjacency`/`LandRoute` conductance is `1/cost` over terrain costs that are typically much larger than 1. Measured (same 30 seeds, same present-day era, same 142,595-habitable-cell pool):
+
+```
+adjacency_max q0.05 = 0.000977
+adjacency_max q0.25 = 0.001446
+adjacency_max q0.50 = 0.002099
+adjacency_max q0.75 = 0.003690
+adjacency_max q0.95 = 0.008511
+adjacency_max min = 0.000000
+adjacency_max mean = 0.003141
+adjacency_max max = 0.046512
+adjacency_present = 142196 / 142595
+
+water_route_max q0.05 = 0.000000
+water_route_max q0.25 = 0.000000
+water_route_max q0.50 = 0.000000
+water_route_max q0.75 = 0.000000
+water_route_max q0.95 = 0.998020
+water_route_max min = 0.000000
+water_route_max mean = 0.100356
+water_route_max max = 1.000000
+water_route_present = 18257 / 142595
+
+land_route_max q0.05 = 0.000000
+land_route_max q0.25 = 0.000000
+land_route_max q0.50 = 0.000000
+land_route_max q0.75 = 0.000000
+land_route_max q0.95 = 0.000000
+land_route_max min = 0.000000
+land_route_max mean = 0.000062
+land_route_max max = 0.020000
+land_route_present = 2696 / 142595
+```
+
+**The cross-tab that answers the question** (thresholds: high ≥ 0.5, low ≤ 0.01 — used as the coordinator suggested, since Task 2b's `max_conductance` quantiles already show a clean gap there: q0.75 = 0.005602 well under 0.01, q0.95 = 0.998020 well over 0.5; 164 habitable cells with zero traversable edges at all are excluded rather than folded into "low"):
+
+```
+cross_tab high (max >= 0.5): n = 14702, adjacency = 0.0000, water_route = 1.0000, land_route = 0.0000
+cross_tab low  (max <= 0.01): n = 119797, adjacency = 0.9881, water_route = 0.0003, land_route = 0.0117
+```
+
+**Verdict: the water/land hypothesis holds, cleanly.** `adjacency_max`'s own global maximum (0.046512) never reaches the high-population threshold at all — every habitable cell's own bare-terrain adjacency conductance measured across all 30 seeds tops out below 0.05, so the high population being 100.00% `WaterRoute` is not a close call, it is structurally guaranteed by the cost floor in `cost_conductance` versus a current magnitude that can sit near its own ceiling of 1. Reciprocally, only 18,257 of 142,595 habitable cells (≈12.8%) have any `WaterRoute` edge at all, and the low population is 98.81% `Adjacency`-supplied (`LandRoute` contributes a small 1.17% — land corridors exist but their conductance stays tiny, `max = 0.020000`, because `corridor_max_cost` keeps their total cost well above 1). The bimodality is therefore not a nuisance artifact of the statistic — it is water-connectivity itself, the single most meaningful signal in this field. This changes the design question for whichever task next builds `defensibility`: whether a cell has *any* sea approach may be more load-bearing than a smooth transform of a scalar.
+
 - [ ] **Step 5: Commit**
 
 ```bash
