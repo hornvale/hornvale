@@ -4,7 +4,7 @@
 //! a test cannot observe its own suite's durations, so the alarm is a separate
 //! pass over the previous step's artifact.
 
-use hornvale_lab::census_claim::current_holder;
+use hornvale_lab::census_claim::{ClaimInfo, current_holder};
 use hornvale_lab::timings::{
     baseline_path, parse_baseline, parse_run, per_test_shifts, suite_shift, total_seconds,
 };
@@ -32,12 +32,30 @@ fn host() -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-/// Whether THIS machine currently holds the box claim. Timing budgets are
-/// meaningless under contention: The Siding measured `scene_api_cost`'s
-/// genesis step at 19,722 ms contended and 3,818 ms quiet, a 5.2x swing that
-/// would false-alarm every budget in the suite.
-fn box_is_ours() -> bool {
-    current_holder().is_some_and(|h| h.host == host())
+/// Whether a live claim means this run's timings are trustworthy enough to
+/// enforce.
+///
+/// `make ci` does not itself acquire the census-claim lock, so the presence
+/// of a claim can only mean some OTHER heavy job (a census, the heavy tier)
+/// is holding this box RIGHT NOW — timings are contended and meaningless.
+/// The claim file is already per-machine (`current_holder` reads a local
+/// path), so any claim we can read at all names a job on THIS host; there is
+/// no cross-host comparison to make, and an earlier version of this function
+/// wrongly compared `h.host` against our own hostname, which had the whole
+/// polarity backwards:
+///
+/// - No claim (`None`) → the box is QUIET → this is the best moment to
+///   enforce a budget. Enforce.
+/// - A claim present (`Some`) → something else is running here → timings are
+///   contended (The Siding measured `scene_api_cost`'s genesis step at
+///   19,722 ms contended vs 3,818 ms quiet, a 5.2x swing that would
+///   false-alarm every budget in the suite). Suppress.
+///
+/// Pulled apart from `current_holder()`'s I/O so the decision itself — a
+/// pure function of `Option<ClaimInfo>` — is unit-testable without a real
+/// claim file; see `mod tests` below.
+fn enforcement_is_appropriate(claim: &Option<ClaimInfo>) -> bool {
+    claim.is_none()
 }
 
 #[test]
@@ -67,10 +85,14 @@ fn durations_have_not_regressed() {
     let per_test = per_test_shifts(&current, &baseline);
     let suite = suite_shift(&current, &baseline);
 
-    if !box_is_ours() {
+    let claim = current_holder();
+    if !enforcement_is_appropriate(&claim) {
+        let holder = claim.expect("enforcement_is_appropriate(&claim) is false only for Some");
         eprintln!(
-            "timekeeper: this machine does not hold the box claim, so timings are \
-             contended and NOT enforced. Observed {} per-test shift(s), suite shift: {}.",
+            "timekeeper: {} (pid {}) is holding this box, so timings are contended \
+             and NOT enforced. Observed {} per-test shift(s), suite shift: {}.",
+            holder.label,
+            holder.pid,
             per_test.len(),
             suite.is_some()
         );
@@ -132,4 +154,47 @@ fn the_raw_output_was_persisted() {
         "raw output at {} names no hornvale tests — wrong file?",
         p.display()
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fake_claim() -> ClaimInfo {
+        ClaimInfo {
+            pid: 1234,
+            host: "somebox".to_string(),
+            user: "someone".to_string(),
+            started: "2026-07-29T00:00:00Z".to_string(),
+            goldens: "/tmp/goldens".to_string(),
+            label: "the-census".to_string(),
+            reference: "main@deadbeef".to_string(),
+            cmdline: "hornvale lab run studies/the-census.study.json".to_string(),
+        }
+    }
+
+    // Fix round 1: the shipped version of this decision had the polarity
+    // backwards — it enforced exactly when a claim was present (contended)
+    // and suppressed exactly when the box was quiet. Neither
+    // `durations_have_not_regressed` nor `the_raw_output_was_persisted`
+    // exercises this branch (both are `#[ignore]`d and read a real
+    // `run.json`), which is how the inversion survived review. These pin the
+    // polarity directly against the pure decision function so a future
+    // regression here fails a normal, non-ignored `cargo test`.
+
+    #[test]
+    fn no_claim_means_the_box_is_quiet_and_enforcement_is_appropriate() {
+        assert!(
+            enforcement_is_appropriate(&None),
+            "no claim on this host -> nothing else is running -> enforce"
+        );
+    }
+
+    #[test]
+    fn a_live_claim_means_the_box_is_contended_and_enforcement_is_not_appropriate() {
+        assert!(
+            !enforcement_is_appropriate(&Some(fake_claim())),
+            "a live claim -> some other heavy job holds this box -> suppress"
+        );
+    }
 }
