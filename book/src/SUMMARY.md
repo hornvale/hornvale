@@ -281,6 +281,7 @@
 - [The Toponym](./chronicle/the-toponym.md)
 - [The Siding](./chronicle/the-siding.md)
 - [The Timekeeper](./chronicle/the-timekeeper.md)
+- [The Pigment](./chronicle/the-pigment.md)
 
 # Appendix: The Frontier
 
