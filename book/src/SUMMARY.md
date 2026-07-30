@@ -280,6 +280,7 @@
 - [The Cistern](./chronicle/the-cistern.md)
 - [The Toponym](./chronicle/the-toponym.md)
 - [The Siding](./chronicle/the-siding.md)
+- [The Timekeeper](./chronicle/the-timekeeper.md)
 
 # Appendix: The Frontier
 

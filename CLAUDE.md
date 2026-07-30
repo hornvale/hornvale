@@ -60,11 +60,13 @@ make doctor        # the repo self-map — run this first in a fresh session
 # doctests. The heavy live-worldgen batteries (censuses, the full pin
 # product, byte-identity rebuilds) are #[ignore]d out of it and run in
 # `make gate-full`. The #[ignore] tier AND nextest's parallelism together
-# put the commit gate near ~4 min; neither lever alone gets there. The
-# batteries this tiering deferred carry a `heavy:` ignore-reason token
-# (see cli/tests/heavy_tier.rs):
+# got the commit gate to ~4 min at decision 0040 (234 s, 2026-07-13);
+# neither lever alone got there. It has since drifted to ~15 min
+# (934.5 s measured on a quiet Mac, 2026-07-29 — The Timekeeper), which is
+# what `make ci` now watches. The batteries this tiering deferred carry a
+# `heavy:` ignore-reason token (see cli/tests/heavy_tier.rs):
 #   make quick       # cheap half only: fmt-check + clippy + type-audit
-#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~4 min)
+#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~15 min; 0040 budgeted 4)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
 #   make ci          # THE TIMEKEEPER: whole-workspace suite under the `ci` nextest
@@ -344,5 +346,5 @@ prediction after unblinding without saying so in the chronicle.
 
 **The tooling/process backlog is `WORKFLOW_IMPROVEMENTS_PLAN.md`** (TOOL-*
 and PROC-* registry rows, staged). Per-campaign process lessons land in
-`docs/retrospectives/`; settled choices land in `docs/decisions/` (82
+`docs/retrospectives/`; settled choices land in `docs/decisions/` (88
 records, append-only — grep before relitigating).

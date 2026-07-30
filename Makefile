@@ -31,7 +31,7 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit ## Cheap half of the gate (fmt-check + clippy + type-audit)
 
-gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~4 min)
+gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
 	@bash scripts/census-advisory.sh || true
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)

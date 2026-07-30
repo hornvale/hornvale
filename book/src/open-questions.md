@@ -46,6 +46,20 @@ them. So the gradient has a floor beneath checkability: a claim is only as
 checkable as the *pairing* of its generator with its verifier, and an unpaired
 check scores as unchecked no matter how good its anchor.
 
+The successor campaign (The Timekeeper, 2026-07-30) built the instrument that
+was supposed to close that gap and produced eight more instances of the same
+shape *from its own plan text*, four of them inside the machine built to
+detect them — including a duration alarm that compared each run against itself
+and so could never fire. The count is now sixteen across the two campaigns, so
+the floor needs stating as a practice rather than an observation: **the only
+thing that reliably distinguishes a check that fires from one that does not is
+making it fail on command.** A mutation step — corrupt the input, require the
+red — found the never-firing alarm; five further findings came from a final
+review that ran the system instead of reading it. Reviewing a check against
+its specification cannot catch a specification that disagrees with itself, and
+one of these did: the contention guard was wired backwards against a rationale
+written three lines above it, and passed review as faithful to the plan.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

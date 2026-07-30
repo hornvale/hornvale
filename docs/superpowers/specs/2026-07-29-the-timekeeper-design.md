@@ -1,7 +1,10 @@
 # The Timekeeper — Design
 
-**Status:** drafted, awaiting G3 · **Date:** 2026-07-29 ·
-**Campaign:** The Timekeeper
+**Status:** implemented and closed 2026-07-30 · **Date:** 2026-07-29 ·
+**Campaign:** The Timekeeper · **Decision:**
+[0088](../../decisions/0088-the-suite-watches-its-own-clock.md) ·
+**Chronicle:** `book/src/chronicle/the-timekeeper.md` · **Retrospective:**
+[`docs/retrospectives/the-timekeeper.md`](../../retrospectives/the-timekeeper.md)
 
 The suite has never watched its own clock. This campaign gives every test a
 recorded duration, a committed baseline, and an alarm when it shifts — plus

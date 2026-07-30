@@ -11,8 +11,18 @@ deliberate milestone run, written by [`scripts/timed.sh`](../scripts/timed.sh)
 time spent QUEUED behind another heavy run (decision 0081), not work — it
 separates a *queued* run from a *slow* one. Rows predating the column simply
 lack it; this file is not drift-checked, so history is left as it was. This file is
-NOT drift-checked and never gates the build; it is a record you read. The
-build-failing tolerance-band version is a later step (`TOOL-suite-timing-ledger`).
+NOT drift-checked and never gates the build; it is a record you read.
+
+**The build-failing half now exists, and it is a different file.** The
+Timekeeper (decision
+[0088](decisions/0088-the-suite-watches-its-own-clock.md)) gave the suite a
+per-test clock: `make ci` runs the workspace under the `ci` nextest profile,
+compares every test against a committed per-host baseline at
+`docs/timings/test-baseline-<host>.tsv`, fails on a per-test shift (≥ 5 s and
+> 2× recorded) or a whole-suite shift (> 25 % on the id intersection), and only
+then rewrites the baseline. A red run never records. That file is the one to
+read with `git log -p`; *this* one keeps the wall time of each deliberate run,
+including `make ci` itself under the label `ci`.
 
 The first row is backfilled by hand from the fast-gate-tiers investigation
 (2026-07-13): the pre-tiering `cargo test --workspace` on an M1 Max under

@@ -1,5 +1,15 @@
 # The Timekeeper Implementation Plan
 
+> **COMPLETE — executed and closed 2026-07-30**, inline on `main`
+> (`40bc4124..36c57e57`, 22 commits). All seven tasks landed, followed by a
+> six-finding fix wave and a Nathan-directed hysteresis pass. The step
+> checkboxes below were never ticked — execution ran under
+> `subagent-driven-development`, which tracks in its own ledger — so read them
+> as the plan as written, not as progress. Four of the plan's own steps were
+> found defective during execution and are recorded in
+> [the retrospective](../../retrospectives/the-timekeeper.md); Task 5 Step 5
+> (the mutation check) is the step that caught the never-firing alarm.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give every test a recorded duration, a committed per-host baseline,
