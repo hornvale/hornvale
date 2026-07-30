@@ -47,23 +47,40 @@ gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged 
 # ORDER IS LOAD-BEARING: the alarm must compare this run against the baseline
 # still sitting on disk from the LAST recorded run, so it runs BEFORE
 # ci-record overwrites that file — recording first would make every run
-# compare against itself and the alarm could never fire. A failing alarm
-# stops `make` here (no `|| true`), so ci-record does not run and the
-# baseline is left untouched for `git log -p` archaeology; recording a
-# regression is a deliberate act (re-record in the same commit), not
-# automatic on every red run.
+# compare against itself and the alarm could never fire.
+#
+# The libtest-json-plus stream must survive a failing nextest run — the
+# alarm and ci-record still need to read it, and a red run's durations
+# belong on disk for archaeology — so this recipe cannot simply abort the
+# moment nextest exits nonzero. The whole recipe is one shell script (note
+# the backslash continuations) with no `set -e`, so a mid-script nonzero
+# exit does not by itself stop anything; the FIX is that nextest's status is
+# now CAPTURED immediately (`nextest_status=$$?`) instead of being discarded
+# by an `|| true` on that line — discarding it entirely was the original
+# bug: `make ci` reported success on a fully failing suite because nothing
+# downstream ever re-checked pass/fail. The alarm and ci-record still run in
+# the same order as before, and the captured status is re-raised at the very
+# end, after the summary prints, so a red suite now fails `make ci` while
+# still leaving every artifact on disk for inspection.
 ci: ## Run the suite under the ci profile, alarm on a shift, then record this run's baseline
 	@mkdir -p target/nextest/ci docs/timings
-	NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
 	    --profile ci --message-format libtest-json-plus \
-	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log || true
-	cargo test -q -p hornvale --test timings_alarm -- --ignored
-	cargo run --quiet -p hornvale -- ci-record
-	@echo ""
-	@echo "== make ci: detail written to =="
-	@echo "  target/nextest/ci/run.json   structured per-test durations"
-	@echo "  target/nextest/ci/run.log    human output, including failures"
-	@echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"
+	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
+	nextest_status=$$?; \
+	cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
+	alarm_status=$$?; \
+	cargo run --quiet -p hornvale -- ci-record; \
+	echo ""; \
+	echo "== make ci: detail written to =="; \
+	echo "  target/nextest/ci/run.json   structured per-test durations"; \
+	echo "  target/nextest/ci/run.log    human output, including failures"; \
+	echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"; \
+	if [ $$nextest_status -ne 0 ]; then \
+	    echo "make ci: FAILED — the nextest run itself was red (exit $$nextest_status); see target/nextest/ci/run.log" >&2; \
+	    exit $$nextest_status; \
+	fi; \
+	exit $$alarm_status
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is

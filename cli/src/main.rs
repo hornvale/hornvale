@@ -1112,8 +1112,28 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// Record this run's per-test durations as the host's baseline (The
 /// Timekeeper). Reads what `make ci` just wrote; writes the rolling baseline
 /// that `cli/tests/timings_alarm.rs` compares against.
+///
+/// Refuses on a CONTENDED box: `hornvale_lab::census_claim::current_holder()`
+/// naming a live holder means some other heavy job (a census, the heavy
+/// tier) is running here right now, so this run's durations are inflated
+/// (measured: a 5.2x swing under contention) and unfit to become the new
+/// baseline. Recording anyway is a one-way ratchet — once a contended
+/// baseline lands, every future alarm compares against the inflated numbers
+/// and can never fire again, silently. Refusing loudly (a non-zero exit) is
+/// chosen over a quiet no-op: `ci-record` run by hand or from a script should
+/// not look like it succeeded when it wrote nothing.
 fn cmd_ci_record() -> Result<(), String> {
+    use hornvale_lab::census_claim::current_holder;
     use hornvale_lab::timings::{baseline_path, parse_run, render_baseline};
+
+    if let Some(holder) = current_holder() {
+        return Err(format!(
+            "ci-record: refusing to record — {} (pid {}) holds this box, so \
+             this run's durations are contended and would poison the \
+             baseline. Re-run `make ci` once the box is quiet.",
+            holder.label, holder.pid
+        ));
+    }
 
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
