@@ -67,6 +67,27 @@ make doctor        # the repo self-map — run this first in a fresh session
 #   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~4 min)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
+#   make ci          # THE TIMEKEEPER: whole-workspace suite under the `ci` nextest
+#                     # profile (~15 min), writes target/nextest/ci/run.json +
+#                     # run.log, alarms on a per-test or whole-suite duration
+#                     # shift against docs/timings/test-baseline-<host>.tsv,
+#                     # THEN (only if the alarm passed) rewrites that baseline
+#                     # from this run. The baseline is per HOST and committed,
+#                     # so `git log -p` on it is the archaeology of how the
+#                     # suite's cost moved over time; a red run leaves it
+#                     # untouched, and re-recording a regression is deliberate
+#                     # (re-record in the same commit that caused it).
+#                     # ENFORCEMENT NEEDS A HELD BOX CLAIM: the alarm only
+#                     # asserts when `hornvale_lab::census_claim::current_holder()`
+#                     # names THIS host (HV_CENSUS_CLAIM_PATH or the default
+#                     # /tmp/hv-census.claim) — nothing in `make ci` acquires
+#                     # that claim itself, so on an ordinary machine with no
+#                     # concurrent heavy run it always records and never
+#                     # enforces. Verified both branches by hand: a claim file
+#                     # naming this host makes a divided-by-ten baseline alarm
+#                     # (RED); a claim path pointed at a nonexistent file makes
+#                     # the same divided baseline record-only (GREEN, with a
+#                     # stderr line naming the suppressed shift count).
 #   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 # nextest is a dev tool, not a workspace dependency (decision 0040); install

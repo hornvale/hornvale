@@ -22,7 +22,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-fast gate-full ci heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -40,6 +40,30 @@ gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`ma
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
 	@bash scripts/gate-full-heavy.sh
 	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
+
+# The CI entry point. A WRAPPER: every decision it makes lives in Rust
+# (windows/lab/src/timings.rs, cli/tests/timings_alarm.rs). Raw output is
+# persisted before anything summarises it, so a surprise never costs a re-run.
+# ORDER IS LOAD-BEARING: the alarm must compare this run against the baseline
+# still sitting on disk from the LAST recorded run, so it runs BEFORE
+# ci-record overwrites that file — recording first would make every run
+# compare against itself and the alarm could never fire. A failing alarm
+# stops `make` here (no `|| true`), so ci-record does not run and the
+# baseline is left untouched for `git log -p` archaeology; recording a
+# regression is a deliberate act (re-record in the same commit), not
+# automatic on every red run.
+ci: ## Run the suite under the ci profile, alarm on a shift, then record this run's baseline
+	@mkdir -p target/nextest/ci docs/timings
+	NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --profile ci --message-format libtest-json-plus \
+	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log || true
+	cargo test -q -p hornvale --test timings_alarm -- --ignored
+	cargo run --quiet -p hornvale -- ci-record
+	@echo ""
+	@echo "== make ci: detail written to =="
+	@echo "  target/nextest/ci/run.json   structured per-test durations"
+	@echo "  target/nextest/ci/run.log    human output, including failures"
+	@echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is

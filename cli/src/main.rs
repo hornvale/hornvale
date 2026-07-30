@@ -90,6 +90,7 @@ usage:
   hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
   hornvale lab claim-status                is a heavy run holding the box? (0081)
+  hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
 ";
@@ -139,6 +140,7 @@ fn main() -> ExitCode {
         Some("book") => cmd_book(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
+        Some("ci-record") => cmd_ci_record(),
         Some("help") | None => {
             print!("{}", usage());
             Ok(())
@@ -1104,6 +1106,44 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
 
 fn cmd_lab_list_metrics() -> Result<(), String> {
     print!("{}", hornvale_lab::render_metric_list());
+    Ok(())
+}
+
+/// Record this run's per-test durations as the host's baseline (The
+/// Timekeeper). Reads what `make ci` just wrote; writes the rolling baseline
+/// that `cli/tests/timings_alarm.rs` compares against.
+fn cmd_ci_record() -> Result<(), String> {
+    use hornvale_lab::timings::{baseline_path, parse_run, render_baseline};
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("cli/ has a parent")?
+        .to_path_buf();
+    let run = root.join("target/nextest/ci/run.json");
+    let text = std::fs::read_to_string(&run)
+        .map_err(|e| format!("ci-record: no run at {} ({e})", run.display()))?;
+    let rows = parse_run(&text).map_err(|e| format!("ci-record: {e}"))?;
+
+    let out = |cmd: &str, args: &[&str]| -> String {
+        std::process::Command::new(cmd)
+            .args(args)
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "unknown".to_string())
+    };
+    let sha = out("git", &["rev-parse", "--short", "HEAD"]);
+    let host = out("hostname", &["-s"]);
+
+    let path = baseline_path(&root, &host);
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("ci-record: {e}"))?;
+    }
+    std::fs::write(&path, render_baseline(&rows, &sha))
+        .map_err(|e| format!("ci-record: writing {}: {e}", path.display()))?;
+    println!("ci-record: {} durations -> {}", rows.len(), path.display());
     Ok(())
 }
 
