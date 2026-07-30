@@ -146,10 +146,24 @@ cost or cite a decision.
 records the residual gap that a census-class study named outside the
 convention slips past. `the-pyx-probe` uses that gap **on purpose and
 narrowly**: the probe must run on every machine, and it is safe to do so
-because it publishes nothing into `book/src/laboratory/generated/` — it writes
-to a scratch path and its output is compared, never committed. This is stated
-explicitly so a future reader does not mistake it for an end-run around 0079.
-If the probe is ever wired to publish, it must take the guard.
+because nothing it writes is ever committed.
+
+**Correction, verified against the code after this decision was first
+drafted.** The original wording claimed the probe "publishes nothing into
+`book/src/laboratory/generated/`". That is false. `hornvale lab run <PATH>`
+takes **no output flag** (`cli/src/main.rs:1018-1044`): it always writes an
+ephemeral CSV to `lab-out/` (gitignored) *and* calls `publish`, which creates
+`book/src/laboratory/generated/<study-name>/` containing `rows.csv`,
+`<name>-summary.md`, and charts (`windows/lab/src/publish.rs:53-70`). So the
+probe **does** write into the goldens tree, as an untracked directory that
+`git diff --exit-code` cannot see.
+
+Two consequences, both handled in the plan rather than by changing the CLI:
+the comparison artifact is the gitignored `lab-out/` copy, and every probe run
+ends with an explicit removal of
+`book/src/laboratory/generated/the-pyx-probe/` on both hosts. Adding an
+`--out` flag would be the cleaner fix and is recorded as a followup, not built
+here — it is CLI surface change for a three-run experiment.
 
 ## 4. The design
 
