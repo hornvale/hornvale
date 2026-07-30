@@ -97,15 +97,7 @@ fn numbers(idx: usize) -> Vec<f64> {
         .collect()
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn lexicon_regular_family_holds_on_every_swept_seed() {
     // Preregistered (spec §9.1, generalized family-wide): Neogrammarian
     // regularity is mechanical (`evolve` is a pure per-segment function),
@@ -131,15 +123,7 @@ fn lexicon_regular_family_holds_on_every_swept_seed() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn monophyly_goblinoid_holds_on_every_swept_seed() {
     // Preregistered (spec §3): every goblinoid daughter's Root traces to
     // the shared family proto-root by construction (`build_lexicon` draws
@@ -154,15 +138,7 @@ fn monophyly_goblinoid_holds_on_every_swept_seed() {
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn inventory_closure_holds_on_every_swept_seed_for_every_daughter() {
     // Preregistered (spec §2.2): `evolve`'s codomain constraint plus its
     // final `nativize` pass together guarantee every modern form lands in
@@ -183,15 +159,7 @@ fn inventory_closure_holds_on_every_swept_seed_for_every_daughter() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn divergence_real_holds_on_every_swept_seed() {
     // Preregistered (spec §3's stemmatics guard, the seed-swept form of the
     // Task 6 `goblinoid_daughters_actually_diverge` guard): the daughters'
@@ -239,22 +207,33 @@ fn divergence_real_holds_on_every_swept_seed() {
 /// `inventory_closure_holds_on_every_swept_seed_for_every_daughter` pass with
 /// no exceptions. If those had moved too, this would be a boundary break and
 /// not a re-pin.
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn clean_outgroup_kobold_holds_on_every_swept_seed() {
     let rows = flags(col("clean-outgroup-kobold"));
     assert_eq!(rows.len(), 1000);
     let failures: Vec<u64> = rows.iter().filter(|(_, v)| !v).map(|(s, _)| *s).collect();
     assert_eq!(
         failures,
-        vec![171],
+        // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
+        // {171} -> {47, 731, 752, 797, 825}. Seed 171 is no longer among them
+        // — the whole population turned over — and the tail is now five seeds
+        // wide rather than one, 995/1000 clean.
+        //
+        // This is the fourth observation of a tail the doc above has always
+        // described as a STATISTICAL near-certainty: 2 seeds under The Words,
+        // 0 under `root/v2`, 1 at The Wearing, 5 now. Five in a thousand is
+        // well within what independent proto-root draws produce by chance, and
+        // the re-pin keeps the EXCEPTION-LIST form rather than relaxing to a
+        // rate — a sixth coincidence still fails loudly and names its seed.
+        //
+        // Checked, not assumed, before re-pinning: the sibling STRUCTURAL
+        // guards are all green on this same census —
+        // `monophyly_goblinoid_holds_on_every_swept_seed`,
+        // `divergence_real_holds_on_every_swept_seed` and
+        // `inventory_closure_holds_on_every_swept_seed_for_every_daughter`
+        // each pass with no exceptions. A real family-boundary break would
+        // have moved those too; a widening chance tail moves only this one.
+        vec![47, 731, 752, 797, 825],
         "clean-outgroup-kobold coincided with the goblinoid family on seeds \
          {failures:?} — re-derive and re-pin, don't force back to empty"
     );
@@ -270,27 +249,15 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
 /// so the ordering is claimed at the POPULATION level (the mean over the
 /// sweep), not as a per-seed total order — three independently noisy counts
 /// are not expected to rank identically on every single seed. Measured over
-/// 1,000 seeds: mean divergence magnitude goblin 3.059, hobgoblin 2.486,
-/// bugbear 4.480 — the aggregate ordering HOLDS decisively (bugbear's mean
+/// 1,000 seeds: mean divergence magnitude goblin 3.037, hobgoblin 2.472,
+/// bugbear 4.475 — the aggregate ordering HOLDS decisively (bugbear's mean
 /// is roughly 1.8x hobgoblin's). Per-seed, the full strict chain holds on
-/// only 588/1000 seeds (58.8%) — NOT a universal invariant, reported
+/// only 591/1000 seeds (59.1%) — NOT a universal invariant, reported
 /// honestly rather than forced; the pairwise majorities are directionally
-/// consistent: bugbear ≥ goblin on 860/1000, goblin ≥ hobgoblin on 718/1000,
-/// bugbear ≥ hobgoblin on 909/1000. (Re-measured at each epoch; the pinned
+/// consistent: bugbear ≥ goblin on 864/1000, goblin ≥ hobgoblin on 717/1000,
+/// bugbear ≥ hobgoblin on 908/1000. (Re-measured at each epoch; the pinned
 /// rates below and this sentence are kept in step.)
-// Merge reconciliation (The Wearing x The Toponym, 2026-07-29). This row is
-// IGNORED, not re-pinned and not weakened: it reconstructs the committed
-// census fixture, and that fixture no longer matches the study schema (this
-// campaign adds naming metrics, and `the-census` is "all registered metrics").
-// The numbers below are THE TOPONYM'S, kept deliberately over this branch's
-// own: the branch measured its values against a census (f32d6ce2) the merge
-// replaced, so pinning them would assert a number whose evidence is nowhere in
-// the tree, while The Toponym's were measured against the rows.csv that IS
-// committed here. Both are stale against the merged physics; neither is
-// guessed. Discharge with the single regen in .superpowers/sdd/followups.md
-// (F11), which must re-measure, not re-assert.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     let goblin = numbers(col("divergence-magnitude-goblin"));
     let hobgoblin = numbers(col("divergence-magnitude-hobgoblin"));
@@ -313,24 +280,22 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // The Tumult (predation epoch; lefford regen, 0063): 3.059 -> 3.058 —
     // predation reseats settlements, moving a discrete count on ~1 seed;
     // hobgoblin and bugbear are unmoved, and the aggregate ordering holds.
-    // Merge reconciliation (The Wearing x The Toponym, 2026-07-29). This row is
-    // IGNORED, not re-pinned and not weakened: it reconstructs the committed
-    // census fixture, and that fixture no longer matches the study schema (this
-    // campaign adds naming metrics, and `the-census` is "all registered metrics").
-    // Merge reconciliation (The Wearing x The Toponym, 2026-07-29).
-    // The numbers below are THE TOPONYM'S, kept deliberately over this branch's
-    // own: the branch measured its values against a census (f32d6ce2) the merge
-    // replaced, so pinning them would assert a number whose evidence is nowhere in
-    // the tree, while The Toponym's were measured against the rows.csv that IS
-    // committed here. Both are stale against the merged physics; neither is
-    // guessed. Discharge with the single regen in .superpowers/sdd/followups.md
-    // (F11), which must re-measure, not re-assert.
     // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
     // settlement name glosses, so every name in every world is redrawn and the
     // lexical metrics move by one discrete count. The HYPOTHESIS is unmoved —
     // bugbear 4.484 >= goblin 3.059 >= hobgoblin 2.487, with pairwise
     // majorities 860/718/909 against the documented 860/719/908.
-    assert!((mg - 3.059).abs() < 1e-9, "goblin mean drifted: {mg}");
+    //
+    // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): goblin
+    // 3.059 -> 3.037, hobgoblin 2.487 -> 2.472, bugbear 4.484 -> 4.475. The
+    // PREREGISTERED ORDERING HOLDS and is re-checked, not assumed: bugbear
+    // 4.475 >= goblin 3.037 >= hobgoblin 2.472, bugbear's mean still ~1.8x
+    // hobgoblin's. Pairwise majorities re-measured 860/718/909 -> 864/717/908
+    // (bugbear >= goblin, goblin >= hobgoblin, bugbear >= hobgoblin), and the
+    // full strict chain 588/1000 -> 591/1000 (59.1%) — still emphatically NOT
+    // a per-seed invariant, which is the honest finding this row was written
+    // to carry and which no re-pin has ever softened.
+    assert!((mg - 3.037).abs() < 1e-9, "goblin mean drifted: {mg}");
     // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
     // re-measured (was 2.485) — accumulated lexeme-space drift (the person
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
@@ -354,13 +319,13 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // hobgoblin 2.487 -> 2.486 (goblin and bugbear are unmoved to 1e-9).
     // The aggregate ordering holds decisively (4.483 >= 3.058 >= 2.486).
     // The Toponym (name-gloss epoch): 2.486 -> 2.487.
-    assert!((mh - 2.487).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mh - 2.472).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
     // 4.481 -> 4.483 (same cause as hobgoblin above).
     // The Toponym (name-gloss epoch): 4.483 -> 4.484.
-    assert!((mb - 4.484).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mb - 4.475).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -380,12 +345,25 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // regen, commit 1c954d0): per-seed rates re-measured below.
     // The Toponym (name-gloss epoch; lefford regen, 0063): the redrawn names
     // move each rate by at most one seed. The ordering they test is unmoved.
-    assert_eq!(bg, 860, "bugbear>=goblin rate drifted: {bg}/{n}");
-    assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
     // bugbear>=hobgoblin 908 -> 909; the other three rates are unmoved.
-    assert_eq!(bh, 909, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
-    assert_eq!(chain, 587, "full-chain per-seed rate drifted: {chain}/{n}");
+    //
+    // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): bugbear>=
+    // goblin 860 -> 864, goblin>=hobgoblin 718 -> 717, bugbear>=hobgoblin
+    // 909 -> 908, full chain 587 -> 591. All four re-measured off the
+    // committed census and cross-checked in DuckDB against the same file.
+    //
+    // One correction to the RECORD while re-pinning it, not to the physics:
+    // the doc comment above this test used to say the full chain held on
+    // "588/1000 seeds (58.8%)" while the assertion below pinned 587. Both
+    // could not be right, and the prose was the one that had drifted — an
+    // assertion is re-measured every time the suite runs and a sentence is
+    // not. The doc now reads 591/1000 (59.1%), which is what the assertion
+    // pins and what the census shows.
+    assert_eq!(bg, 864, "bugbear>=goblin rate drifted: {bg}/{n}");
+    assert_eq!(gh, 717, "goblin>=hobgoblin rate drifted: {gh}/{n}");
+    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    assert_eq!(chain, 591, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
 /// Observation, not a pass/fail invariant (spec §3's merger-induced
@@ -405,15 +383,7 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
 /// proto-contrasts back together). The residual is merger-induced (distinct
 /// protos re-merged by the cascade or nativization — see `homophony-merger-share-*`),
 /// atonal-tail accounting (`confusable-homophony-*`) now measures.
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn homophony_count_is_measured_and_pinned() {
     let goblin = numbers(col("homophony-count-goblin"));
     let hobgoblin = numbers(col("homophony-count-hobgoblin"));
@@ -506,10 +476,27 @@ fn homophony_count_is_measured_and_pinned() {
     // 1.845 -> 2.535, bugbear 7.539 -> 10.129, kobold 2.124 -> 2.743. Bugbear stays
     // highest by better than 3x (3.95x over goblin, 4.00x over hobgoblin), which
     // is the claim this test guards; these re-pin the witnesses.
-    assert!((mg - 2.564).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.535).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 10.129).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.743).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): goblin
+    // 2.564 -> 2.743, hobgoblin 2.535 -> 2.681, bugbear 10.129 -> 9.861,
+    // kobold 2.743 -> 2.813. The three goblinoid daughters drift a few
+    // percent while bugbear falls slightly, so the RATIO narrows — and the
+    // claim this row guards was re-checked rather than assumed: bugbear is
+    // still highest among the goblinoid daughters by better than 3x (3.60x
+    // over goblin, 3.68x over hobgoblin, down from 3.95x/4.00x). These
+    // re-pin the witnesses, not the observation.
+    //
+    // Note for a reader arriving from the naming pins in `calibration.rs`:
+    // these homophony counts are a CASCADE-WEAR reading — protos re-merged by
+    // sound change and nativization, LANG-11 opacification — and they are NOT
+    // the same phenomenon as the positional reduction that shortened generated
+    // names over the same interval. The two must not be pooled or read as one
+    // trend; this campaign corrected that conflation twice. A daughter can get
+    // more homophonous while its names get shorter for entirely unrelated
+    // reasons, and here they moved in opposite directions.
+    assert!((mg - 2.743).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 2.681).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 9.861).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.813).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

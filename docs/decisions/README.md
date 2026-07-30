@@ -128,3 +128,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0086](0086-the-heavy-tier-runs-on-the-canonical-box.md) | The heavy tier runs on the canonical box; campaigns run on the Mac | Accepted |
 | [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md) | A benchmark's timings are a record, not a golden | Accepted |
 | [0088](0088-the-suite-watches-its-own-clock.md) | The suite watches its own clock — a failing test, not a dashboard | Accepted |
+| [0089](0089-an-epoch-freezes-when-it-can-be-stamped-on-a-saved-world.md) | An epoch freezes when a world saved from `main` can carry it (refines 0006) | Accepted |
