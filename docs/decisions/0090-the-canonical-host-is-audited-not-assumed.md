@@ -96,4 +96,4 @@ currently detects that.
 - Migrating 0079's guard from a hostname to a toolchain fingerprint is now
   clearly the right shape — a hostname cannot catch lefford drifting from
   itself, and L0/L1 together are what a fingerprint would assert. Carried as a
-  followup under TOOL-24, not built here.
+  followup under TOOL-cross-host-assay, not built here.

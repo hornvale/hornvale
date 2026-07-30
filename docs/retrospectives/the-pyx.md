@@ -1,6 +1,6 @@
 # The Pyx — retrospective
 
-**Campaign:** The Pyx (TOOL-24) · **Closed:** 2026-07-30 ·
+**Campaign:** The Pyx (TOOL-cross-host-assay) · **Closed:** 2026-07-30 ·
 **Spec:** `docs/superpowers/specs/2026-07-30-the-pyx-design.md` ·
 **Decision:** [0090](../decisions/0090-the-canonical-host-is-audited-not-assumed.md)
 
@@ -98,6 +98,30 @@ investigated in this campaign; filed as a followup rather than fixed, because
 diagnosing it properly means reading the lock/claim interaction across
 `census-run.sh`, `heavy-run.sh`, and `census_claim.rs`.**
 
+## The campaign ran under a colliding ID for its whole life
+
+The backlog row was minted as **TOOL-24** by reading
+`WORKFLOW_IMPROVEMENTS_PLAN.md`, whose list stops at TOOL-23, and taking the
+next integer. `TOOL-24` was already the idea registry's **"World-derivation
+performance — the recompute pattern."** The ID travelled through the spec, the
+plan, the study JSON's description, decision 0090, and the followup table
+before the close caught it. Renamed to `TOOL-cross-host-assay`.
+
+Two things made it survive so long. The obvious one: the backlog file is not
+the ID authority, the **registry** is, and the two disagree because the
+registry has kept minting TOOL rows that the backlog never listed. The
+subtler one: `cli/tests/fixtures/registry-numbered-ids.txt` *contains*
+TOOL-24, so the check for "no new numbered ID" would have stayed green — the
+frozen list makes a taken ID look available to anyone who greps it for
+permission rather than for occupancy.
+
+Decision `0026-slugs-not-numbers` already prescribes the fix, and following it
+from the start would have avoided this entirely: **a new ID should be a slug,
+because slugs cannot collide by arithmetic.** This lesson is already in the
+project's memory as "scan the registry category, don't grep — IDs may be
+banked," and it still happened, because the number was derived from a file
+that looked authoritative and was not.
+
 ## Two path slips, both caught by the tooling
 
 The decision ledger was first written to the main checkout's path (the Edit
@@ -112,10 +136,10 @@ after edits, not care at edit time.
 
 | # | Item | Why | Where |
 |---|---|---|---|
-| 1 | Migrate 0079's guard from hostname to **toolchain fingerprint** | A hostname cannot catch lefford drifting from itself — the exact failure L0 was built to detect. L0+L1 together are what a fingerprint would assert | TOOL-24 |
-| 2 | Add `--out` to `hornvale lab run` | A probe should not have to write 175 files into the goldens tree and then delete them; the untracked directory is invisible to `git diff --exit-code` | TOOL-24 |
-| 3 | Test that release builds stay debuginfo-free | Decision 0090's cheap oracle silently depends on it; adding `debug` to `[profile.release]` would revoke it with nothing noticing | TOOL-24 |
-| 4 | Diagnose `census-run.sh status` vs the lock | `status` reported idle during a live run; `make ci`'s contention suppressor asks the same question | TOOL-24 |
+| 1 | Migrate 0079's guard from hostname to **toolchain fingerprint** | A hostname cannot catch lefford drifting from itself — the exact failure L0 was built to detect. L0+L1 together are what a fingerprint would assert | TOOL-cross-host-assay |
+| 2 | Add `--out` to `hornvale lab run` | A probe should not have to write 175 files into the goldens tree and then delete them; the untracked directory is invisible to `git diff --exit-code` | TOOL-cross-host-assay |
+| 3 | Test that release builds stay debuginfo-free | Decision 0090's cheap oracle silently depends on it; adding `debug` to `[profile.release]` would revoke it with nothing noticing | TOOL-cross-host-assay |
+| 4 | Diagnose `census-run.sh status` vs the lock | `status` reported idle during a live run; `make ci`'s contention suppressor asks the same question | TOOL-cross-host-assay |
 | 5 | Campaign two — velaryon recruitment | Gated on this campaign's green result; now starts with a binary-hash comparison, not a census | spec §6 |
 | 6 | Optional: rebuild without `target-cpu=x86-64-v2` and re-probe | Would confirm-or-refute the §2 codegen hypothesis outright; currently consistent-but-unproven | spec §7 |
 

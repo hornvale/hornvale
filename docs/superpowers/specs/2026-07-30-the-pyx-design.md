@@ -1,7 +1,7 @@
 # The Pyx — Design
 
 **Campaign:** The Pyx · **Date:** 2026-07-30 · **Status:** spec, awaiting G3
-· **Backlog row:** TOOL-24
+· **Backlog row:** TOOL-cross-host-assay
 
 Named for the Trial of the Pyx, the Royal Mint's assay of a random sample of
 struck coins against a reference standard — held annually since 1282,
@@ -295,6 +295,6 @@ extension (§7), not a requirement.
 - [ ] Retrospective (`docs/retrospectives/the-pyx.md`), including the
       followup table (the durable record — the scratch ledger dies with the
       worktree).
-- [ ] TOOL-24 row in `WORKFLOW_IMPROVEMENTS_PLAN.md`; the
+- [ ] TOOL-cross-host-assay row in `WORKFLOW_IMPROVEMENTS_PLAN.md`; the
       hostname-to-fingerprint followup captured there.
 - [ ] `make gate` green on the Mac before merge.

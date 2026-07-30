@@ -21,7 +21,7 @@ registry as **TOOL-14…23** and **PROC-6…10** (20 originals consolidated into
 - **TOOL-21** — mutation-test the determinism guards
 - **TOOL-22** — scheduled full 10k census
 - **TOOL-23** — cross-profile determinism sweep
-- **TOOL-24** — cross-HOST reproducibility assay (The Pyx); sibling to
+- **TOOL-cross-host-assay** — cross-HOST reproducibility assay (The Pyx); sibling to
   TOOL-23, which sweeps build *profiles* on one box — this assays one build
   across *hosts and time*. Carries the hostname-to-toolchain-fingerprint
   followup for decision 0079's guard.
@@ -149,7 +149,7 @@ provenance, doc map, live git state) plus an orphaned-decision scan.
 
 ## Stage 4+ (later passes)
 
-TOOL-24 (The Pyx) is specced at
+TOOL-cross-host-assay (The Pyx) is specced at
 `docs/superpowers/specs/2026-07-30-the-pyx-design.md` and runs on lefford +
 the Mac; it needs no CI topology. TOOL-17/21/22/23 are CI-topology changes
 needing CI iteration. PROC-7 (the
