@@ -3296,19 +3296,18 @@ pub fn registry() -> Vec<Metric> {
         // the finding and the proposed accessor if a true end-state figure
         // is ever needed.
         //
-        // M4 (defensibility-capacity-rank-corr) is round 2's addition to
-        // this comment: the per-cell defensibility half is now a real,
-        // named accessor (`hornvale_worldgen::weakest_point_defensibility`,
-        // spec §2.4's minimum-over-approaches view), but the metric is
-        // STILL not registered — the effective-capacity half needs the
-        // bake's final-era `(ConnectionGraph, CellMap<f64> capacity)` pair,
-        // which `bake_history_from` computes and discards on every build
-        // path (`windows/worldgen/src/lib.rs`); `FullView` has no field for
-        // it, and reconstructing it from `v.terrain()`/`v.climate()` alone
-        // is only correct on a constant-sky world — a world with real
-        // orbital forcing can have the bake's final era differ from the
-        // present-day reconstruction (`bake_eras`'s deep-time integration is
-        // itself private). See task-4-report.md for the proposed accessor.
+        // M4 (defensibility-capacity-rank-corr), round 3 / spec §2.4
+        // amendment 4: registered on PRESENT-DAY terrain, not the bake's
+        // own final era. `bake_history_from` computes and discards its own
+        // final-era `(ConnectionGraph, capacity)` on every build path, and
+        // `FullView` has no field for it (round 2's finding, still true);
+        // present-day terrain/climate is a DIFFERENT, honestly-labelled
+        // reading — spec §2.2's claim is about whether defensible ground is
+        // also poor ground, a structural fact about the geography that
+        // present-day terrain samples fully, so the substitution is
+        // legitimate as long as it says so out loud (the metric's own `doc`
+        // carries the label, not just this comment — see
+        // `spearman_defensibility_capacity`).
         Metric {
             name: "peoples-alive-at-bake-end",
             doc: "M3: how many distinct peoples still hold a live community when the \
@@ -3351,6 +3350,21 @@ pub fn registry() -> Vec<Metric> {
                 let max = pops.iter().copied().fold(f64::NEG_INFINITY, f64::max);
                 MetricValue::Number(max / total)
             }),
+        },
+        Metric {
+            name: "defensibility-capacity-rank-corr",
+            doc: "M4: Spearman rank correlation between a habitable cell's weakest-point \
+                  defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY \
+                  terrain, climate, and connection graph — NOT the bake's own final era, \
+                  which can differ on a world with real orbital forcing (spec §2.4 \
+                  amendment 4). Checks §2.2's structural claim that defensible ground \
+                  is also poor ground, on the geography as it stands today. Ties get \
+                  average ranks; Absent if fewer than 2 habitable cells, or if either \
+                  series is constant (no variance, so no correlation is defined)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.6, -0.3, 0.0, 0.3, 0.6],
+            },
+            extract: Extractor::Full(spearman_defensibility_capacity),
         },
     ]
 }
@@ -3517,6 +3531,107 @@ fn chorus_sky_calibration_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 
 fn chorus_sky_calibration_metric(v: &FullView) -> MetricValue {
     chorus_sky_calibration_metric_over(&chorus_voices(v))
+}
+
+// --- The Contour (Task 4, round 3): the Spearman rank-correlation helpers
+// M4 (`defensibility-capacity-rank-corr`) uses. ---
+
+/// Average-rank ranking of `values` (Spearman's standard tie handling):
+/// ascending order via `f64::total_cmp` (never `partial_cmp().unwrap()`),
+/// with a tied group of values sharing the MEAN of the 1-based integer
+/// ranks its group spans, rather than an arbitrary tie-break order. Returns
+/// one rank per input value, in `values`' original order (not sorted
+/// order), so the caller can zip it against a second series' ranks.
+fn average_ranks(values: &[f64]) -> Vec<f64> {
+    let mut order: Vec<usize> = (0..values.len()).collect();
+    order.sort_by(|&a, &b| values[a].total_cmp(&values[b]));
+    let mut ranks = vec![0.0; values.len()];
+    let mut i = 0;
+    while i < order.len() {
+        let mut j = i;
+        while j + 1 < order.len() && values[order[j + 1]] == values[order[i]] {
+            j += 1;
+        }
+        // Positions i..=j (0-based, already sorted) share the mean of the
+        // 1-based ranks (i+1)..=(j+1) their tie group spans.
+        let shared_rank = ((i + 1) + (j + 1)) as f64 / 2.0;
+        for &idx in &order[i..=j] {
+            ranks[idx] = shared_rank;
+        }
+        i = j + 1;
+    }
+    ranks
+}
+
+/// Pearson correlation of `xs` and `ys` (equal length) — Spearman IS this,
+/// applied to `average_ranks`' output rather than the raw values. `None`
+/// when fewer than 2 points, or when either series is constant (zero
+/// variance leaves the coefficient undefined, not zero).
+fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
+    debug_assert_eq!(xs.len(), ys.len(), "paired series must be the same length");
+    let n = xs.len();
+    if n < 2 {
+        return None;
+    }
+    let mean_x = xs.iter().sum::<f64>() / n as f64;
+    let mean_y = ys.iter().sum::<f64>() / n as f64;
+    let (mut cov, mut var_x, mut var_y) = (0.0, 0.0, 0.0);
+    for i in 0..n {
+        let dx = xs[i] - mean_x;
+        let dy = ys[i] - mean_y;
+        cov += dx * dy;
+        var_x += dx * dx;
+        var_y += dy * dy;
+    }
+    if var_x <= 0.0 || var_y <= 0.0 {
+        return None;
+    }
+    Some(cov / (var_x.sqrt() * var_y.sqrt()))
+}
+
+/// M4's extractor (spec §2.4 amendment 4): Spearman rank correlation
+/// between [`hornvale_worldgen::weakest_point_defensibility`] and
+/// [`hornvale_demography::carrying_capacity`], over every PRESENT-DAY
+/// habitable cell (`v.climate().habitability()`) — NOT the bake's own final
+/// era. `hornvale_worldgen::connection_graph_of` is the crate's existing
+/// present-day-graph entry point (already used by the legibility surface
+/// and the DoD check), reused here wholesale rather than reconstructed by
+/// hand; `hornvale_demography::carrying_capacity` over
+/// `hornvale_worldgen::carrying_inputs_of` is the SAME species-agnostic
+/// capacity field `bake_history_from` itself feeds into the bake (up to
+/// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
+/// correlation — Spearman is invariant under any positive linear
+/// rescaling). Cells iterate in ascending `CellId` order
+/// (`Geosphere::cells()`), so this is deterministic without an explicit
+/// sort of the cell set itself.
+fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
+    let geo = v.terrain().geosphere();
+    let habitability = v.climate().habitability();
+    let capacity = hornvale_demography::carrying_capacity(
+        geo,
+        &hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate()),
+    );
+    let graph = hornvale_worldgen::connection_graph_of(
+        v.world(),
+        &hornvale_worldgen::GraphConfig::default(),
+    );
+
+    let mut defs: Vec<f64> = Vec::new();
+    let mut caps: Vec<f64> = Vec::new();
+    for cell in geo.cells() {
+        if !*habitability.get(cell) {
+            continue;
+        }
+        defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
+        caps.push(*capacity.get(cell));
+    }
+    if defs.len() < 2 {
+        return MetricValue::Absent;
+    }
+    match pearson_correlation(&average_ranks(&defs), &average_ranks(&caps)) {
+        Some(rho) => MetricValue::Number(rho),
+        None => MetricValue::Absent,
+    }
 }
 
 /// The median of `values` (sorted in place by `total_cmp`); `None` when
@@ -6073,14 +6188,13 @@ mod tests {
         // forgotten-fraction, dominant-hazard, mean-warning-legibility),
         // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
         // per-species, beside the name-length-{species} pair they are read
-        // against — and the world-level name-transparency), +2 for The
-        // Contour (Task 4: peoples-alive-at-bake-end, largest-holding-share;
-        // defensibility-capacity-rank-corr is STILL not counted here after
-        // round 2 — `weakest_point_defensibility` landed in
-        // hornvale-worldgen, but the metric also needs the bake's
-        // effective-capacity-at-the-final-era, which is a second, separate
-        // accessor Task 4 proposed but did not add).
-        assert_eq!(registry().len(), 174);
+        // against — and the world-level name-transparency), +3 for The
+        // Contour (Task 4: peoples-alive-at-bake-end, largest-holding-share,
+        // and — round 3, spec §2.4 amendment 4 —
+        // defensibility-capacity-rank-corr, registered on present-day
+        // terrain/connection-graph rather than the bake's own final era,
+        // labelled as such in its own doc string).
+        assert_eq!(registry().len(), 175);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -7808,21 +7922,17 @@ mod tests {
 
     // --- The Contour (Task 4): the measurement instrument. ---
 
-    /// M2/M3 are registered, read the full stack, and carry a doc string.
-    /// M4 (`defensibility-capacity-rank-corr`) is deliberately absent — see
-    /// the registry comment above the two `Metric` entries.
-    ///
-    /// Round 2: `hornvale_worldgen::weakest_point_defensibility` (spec
-    /// §2.4's minimum-over-approaches view) now exists, so the
-    /// defensibility half of M4 is no longer blocked — only the
-    /// effective-capacity-at-the-final-era half is. Once THAT plumbing
-    /// lands too and M4 is registered, this assertion (and its `for` loop
-    /// above) should just absorb `defensibility-capacity-rank-corr` as a
-    /// third name rather than staying a standalone negative check.
+    /// M2/M3/M4 are all registered now (round 3 landed M4 on present-day
+    /// terrain, spec §2.4 amendment 4), read the full stack, and carry a
+    /// doc string.
     #[test]
     fn the_contour_metrics_are_registered_and_full_rung() {
         let reg = registry();
-        for name in ["peoples-alive-at-bake-end", "largest-holding-share"] {
+        for name in [
+            "peoples-alive-at-bake-end",
+            "largest-holding-share",
+            "defensibility-capacity-rank-corr",
+        ] {
             let m = reg
                 .iter()
                 .find(|m| m.name == name)
@@ -7834,21 +7944,15 @@ mod tests {
             );
             assert!(!m.doc.is_empty(), "{name} needs a doc");
         }
-        assert!(
-            !reg.iter()
-                .any(|m| m.name == "defensibility-capacity-rank-corr"),
-            "M4 needs a pub effective-capacity-at-the-final-era accessor Task 4 did not \
-             add (the defensibility half now exists as \
-             weakest_point_defensibility); remove this assertion once that second \
-             accessor lands and the metric is registered"
-        );
     }
 
-    /// Seed 42 places a live roster at bake end, so M2/M3 both extract real
-    /// numbers, not `Absent`: at least one people alive, and the largest
-    /// community's share strictly between 0 (something must hold population)
-    /// and 1 (a lone community would be the whole world, which seed 42's
-    /// four-people roster does not produce).
+    /// Seed 42 places a live roster at bake end, so M2/M3/M4 all extract
+    /// real numbers, not `Absent`: at least one people alive; the largest
+    /// community's share strictly between 0 (something must hold
+    /// population) and 1 (a lone community would be the whole world, which
+    /// seed 42's four-people roster does not produce); and M4's rank
+    /// correlation in `[-1, 1]` (seed 42 places land varied enough that the
+    /// series isn't constant).
     #[test]
     fn the_contour_metrics_extract_sane_values_for_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -7866,5 +7970,73 @@ mod tests {
             }
             other => panic!("largest-holding-share: {other:?}"),
         }
+        match extract_from(&built, "defensibility-capacity-rank-corr") {
+            MetricValue::Number(rho) => {
+                assert!((-1.0..=1.0).contains(&rho), "rho out of range: {rho}");
+            }
+            other => panic!("defensibility-capacity-rank-corr: {other:?}"),
+        }
+    }
+
+    // --- The Contour (Task 4, round 3): the Spearman helpers themselves,
+    // driven by hand-built inputs whose rank correlation is not in
+    // dispute — the counting rule, checked against ground truth stated by
+    // hand, mirroring `syllable_count_reads_maximal_vowel_runs`' idiom
+    // above. ---
+
+    #[test]
+    fn average_ranks_gives_ties_the_mean_of_the_ranks_they_span() {
+        // 10, 20, 20, 30 -> tied pair at positions 2-3 (1-based) share 2.5;
+        // the untied ends keep their plain rank.
+        assert_eq!(
+            average_ranks(&[10.0, 20.0, 20.0, 30.0]),
+            vec![1.0, 2.5, 2.5, 4.0]
+        );
+        // A three-way tie at the front: positions 1-3 share (1+2+3)/3 = 2.0.
+        assert_eq!(
+            average_ranks(&[5.0, 5.0, 5.0, 9.0]),
+            vec![2.0, 2.0, 2.0, 4.0]
+        );
+        // Ranking is by VALUE, not input position: descending input order
+        // must still rank ascending by value.
+        assert_eq!(average_ranks(&[3.0, 2.0, 1.0]), vec![3.0, 2.0, 1.0]);
+        // All tied: every rank is the mean of 1..=n.
+        assert_eq!(average_ranks(&[7.0, 7.0, 7.0]), vec![2.0, 2.0, 2.0]);
+    }
+
+    #[test]
+    fn pearson_correlation_reads_perfect_and_inverse_and_undefined() {
+        // Exact equality would be fragile here (the sqrt/division chain
+        // lands at 0.9999999999999998, not bitwise 1.0), so these check a
+        // tight tolerance instead of `assert_eq!` — the ONE place in this
+        // battery that isn't exact, because floating-point summation, not a
+        // logic choice, is why.
+        let perfect = pearson_correlation(&[1.0, 2.0, 3.0], &[10.0, 20.0, 30.0]).unwrap();
+        assert!((perfect - 1.0).abs() < 1.0e-12, "got {perfect}");
+        let inverse = pearson_correlation(&[1.0, 2.0, 3.0], &[30.0, 20.0, 10.0]).unwrap();
+        assert!((inverse - (-1.0)).abs() < 1.0e-12, "got {inverse}");
+        // A constant series has no defined correlation (zero variance), not
+        // a zero correlation.
+        assert_eq!(
+            pearson_correlation(&[1.0, 1.0, 1.0], &[1.0, 2.0, 3.0]),
+            None
+        );
+        assert_eq!(pearson_correlation(&[1.0], &[1.0]), None);
+    }
+
+    #[test]
+    fn spearman_over_ranks_is_invariant_to_a_positive_rescaling() {
+        // The whole reason a rank correlation, rather than a raw Pearson
+        // correlation, is the right read for M4: capacity's scale
+        // (SETTLERS_PER_CAPACITY, private to history_bake.rs) must not be
+        // able to move the answer. Scale one series by an arbitrary
+        // positive constant and the ranks -- hence the Spearman value --
+        // must be untouched.
+        let xs = [3.0, 1.0, 4.0, 1.0, 5.0];
+        let ys = [9.0, 2.0, 6.0, 2.0, 1.0];
+        let scaled_ys: Vec<f64> = ys.iter().map(|y| y * 100.0).collect();
+        let rho_a = pearson_correlation(&average_ranks(&xs), &average_ranks(&ys));
+        let rho_b = pearson_correlation(&average_ranks(&xs), &average_ranks(&scaled_ys));
+        assert_eq!(rho_a, rho_b);
     }
 }
