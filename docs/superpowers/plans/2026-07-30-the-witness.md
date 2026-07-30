@@ -475,6 +475,27 @@ Temporarily remove one staple from the lab roster, re-run, and confirm **RED**
 naming that staple. Then restore it and confirm **GREEN**. Record both outputs in
 the task report.
 
+- [ ] **Step 4b: Discharge the ignore whose debt Task 2 just paid**
+
+*(Added 2026-07-30 after Task 2. Found by the Task 2 agent, not by this plan.)*
+
+`exposure_sound_reports_false_when_the_toponymic_gates_are_removed`
+(`windows/lab/src/metrics.rs:6719`) is `#[ignore]`d with the reason
+`stale-second-opinion: the lab's independently_steeped_concepts duplicate has
+not learned The Watershed's staple Steeped rules…`, and its doc comment says
+outright **"It comes back with the staple repair, and both halves must be
+re-derived then."** Task 2 *is* the staple repair. The condition is met.
+
+This is **F11's lesson recurring inside the campaign that cites it**: an
+ignore-token debt marker does not know when its debt is discharged by someone
+else. F11 discharged 38 such markers and found 23 needed only deletion.
+
+Re-enable it, re-derive **both halves** as its doc comment requires, and confirm
+it still mutates — a mutation test that has stopped mutating is the failure the
+test itself was written to prevent. If it cannot be made to read false, that is a
+finding about the soundness flag and it gets reported, **not** re-`#[ignore]`d
+with a fresh reason.
+
 - [ ] **Step 5: Commit**
 
 ```bash
