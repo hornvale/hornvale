@@ -83,18 +83,30 @@ pub fn baseline_path(repo_root: &Path, host: &str) -> PathBuf {
 ///
 /// The file holds only the PRESENT; git holds the history, which is what makes
 /// `git log -p` the archaeology tool (spec N1). Appending every run instead
-/// would grow without bound.
+/// would grow without bound. `git log -p` on this file is the file's whole
+/// stated purpose, and that purpose only works if a row that did not
+/// meaningfully move does not appear as a diff line. Two things previously
+/// defeated it on every single run across ~2574 rows: the sha was stamped
+/// PER ROW (constant across the file, so it carried zero per-row
+/// information but still touched every line), and durations were written at
+/// full nanosecond precision, which never repeats bit-for-bit run to run.
+/// The sha now lives once, in the header; durations are rounded to
+/// milliseconds (3 decimal places) — below that, `PER_TEST_FLOOR_SECS`
+/// (5s) means the noise is irrelevant to the alarm anyway.
 /// type-audit: bare-ok(identifier-text: sha), bare-ok(prose: return)
 pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
     let mut sorted = rows.to_vec();
     sorted.sort_by(|a, b| a.id.cmp(&b.id));
-    let mut s = String::from(
-        "# Hornvale test-duration baseline (The Timekeeper). One row per test:\n\
-         # <test-id>\\t<seconds>\\t<sha-recorded-at>. Rewritten by `make ci`;\n\
-         # history lives in git, so `git log -p` on this file is the record.\n",
+    let mut s = String::new();
+    let _ = writeln!(
+        s,
+        "# Hornvale test-duration baseline (The Timekeeper). Recorded at {sha}.\n\
+         # One row per test: <test-id>\\t<seconds, millisecond precision>.\n\
+         # Rewritten by `make ci`; history lives in git, so `git log -p` on\n\
+         # this file is the record."
     );
     for r in &sorted {
-        let _ = writeln!(s, "{}\t{}\t{}", r.id, r.seconds, sha);
+        let _ = writeln!(s, "{}\t{:.3}", r.id, r.seconds);
     }
     s
 }
@@ -102,7 +114,7 @@ pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
 /// Parse a baseline back. Comment lines (`#`) and blanks are skipped; a
 /// malformed data row is an error rather than a skipped line, so a corrupted
 /// baseline cannot quietly disable the alarm. "Malformed" covers: not
-/// exactly three tab-separated fields (a fourth means a tab leaked into the
+/// exactly two tab-separated fields (a third means a tab leaked into the
 /// id, and silently keeping it would corrupt the mapping), a non-numeric
 /// duration, and a duration that is negative, `NaN`, or infinite — any of
 /// which would compare false against a threshold downstream and silently
@@ -115,9 +127,9 @@ pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
             continue;
         }
         let fields: Vec<&str> = line.split('\t').collect();
-        let [id, secs, _sha] = fields[..] else {
+        let [id, secs] = fields[..] else {
             return Err(format!(
-                "baseline line {}: expected <id>\\t<seconds>\\t<sha>, got {} field(s)",
+                "baseline line {}: expected <id>\\t<seconds>, got {} field(s)",
                 n + 1,
                 fields.len()
             ));
@@ -318,6 +330,50 @@ mod tests {
     }
 
     #[test]
+    fn the_sha_appears_once_in_the_header_not_per_row() {
+        // Finding 5: a per-row sha (constant across the file) touched every
+        // one of ~2574 lines on every run, defeating `git log -p` as a
+        // review surface. The sha belongs in the header exactly once.
+        let rows = vec![TestDuration {
+            id: "a::one".into(),
+            seconds: 0.125,
+        }];
+        let text = render_baseline(&rows, "deadbeef");
+        assert_eq!(
+            text.matches("deadbeef").count(),
+            1,
+            "the sha should appear exactly once (in the header), got: {text}"
+        );
+        let data_line = text
+            .lines()
+            .find(|l| !l.starts_with('#') && !l.trim().is_empty())
+            .expect("a data row");
+        assert_eq!(
+            data_line.split('\t').count(),
+            2,
+            "a data row is <id>\\t<seconds> now that the sha lives in the header, got: {data_line}"
+        );
+    }
+
+    #[test]
+    fn durations_are_rendered_at_millisecond_precision() {
+        // Full nanosecond precision (e.g. 0.010709583) never repeats
+        // bit-for-bit run to run, so every row changed on every `make ci` —
+        // the opposite of a reviewable diff. Rounding to 3 decimal places
+        // (milliseconds) means a test that did not meaningfully move
+        // produces an identical row.
+        let rows = vec![TestDuration {
+            id: "a::one".into(),
+            seconds: 0.010_709_583,
+        }];
+        let text = render_baseline(&rows, "deadbeef");
+        assert!(
+            text.contains("a::one\t0.011"),
+            "expected a row rounded to 3 decimal places, got: {text}"
+        );
+    }
+
+    #[test]
     fn the_baseline_path_is_per_host() {
         let p = baseline_path(std::path::Path::new("/repo"), "lefford");
         assert_eq!(
@@ -327,43 +383,43 @@ mod tests {
     }
 
     #[test]
-    fn parse_baseline_rejects_a_row_missing_the_sha() {
-        let err = parse_baseline("a::one\t1.5\n").unwrap_err();
+    fn parse_baseline_rejects_a_row_missing_the_duration() {
+        let err = parse_baseline("a::one\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
-        assert!(err.contains("2 field"), "got: {err}");
+        assert!(err.contains("1 field"), "got: {err}");
     }
 
     #[test]
     fn parse_baseline_rejects_a_row_with_an_extra_field() {
-        let err = parse_baseline("a::one\t1.5\tdeadbeef\textra\n").unwrap_err();
+        let err = parse_baseline("a::one\t1.5\textra\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
-        assert!(err.contains("4 field"), "got: {err}");
+        assert!(err.contains("3 field"), "got: {err}");
     }
 
     #[test]
     fn parse_baseline_rejects_a_non_numeric_duration() {
-        let err = parse_baseline("a::one\tabc\tdeadbeef\n").unwrap_err();
+        let err = parse_baseline("a::one\tabc\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
         assert!(err.contains("not a number"), "got: {err}");
     }
 
     #[test]
     fn parse_baseline_rejects_nan() {
-        let err = parse_baseline("a::one\tnan\tdeadbeef\n").unwrap_err();
+        let err = parse_baseline("a::one\tnan\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
         assert!(err.contains("finite"), "got: {err}");
     }
 
     #[test]
     fn parse_baseline_rejects_infinity() {
-        let err = parse_baseline("a::one\tinf\tdeadbeef\n").unwrap_err();
+        let err = parse_baseline("a::one\tinf\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
         assert!(err.contains("finite"), "got: {err}");
     }
 
     #[test]
     fn parse_baseline_rejects_a_negative_duration() {
-        let err = parse_baseline("a::one\t-1.5\tdeadbeef\n").unwrap_err();
+        let err = parse_baseline("a::one\t-1.5\n").unwrap_err();
         assert!(err.contains("line 1"), "got: {err}");
         assert!(err.contains("finite"), "got: {err}");
     }
