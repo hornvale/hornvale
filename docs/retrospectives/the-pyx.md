@@ -1,0 +1,127 @@
+# The Pyx — retrospective
+
+**Campaign:** The Pyx (TOOL-24) · **Closed:** 2026-07-30 ·
+**Spec:** `docs/superpowers/specs/2026-07-30-the-pyx-design.md` ·
+**Decision:** [0090](../decisions/0090-the-canonical-host-is-audited-not-assumed.md)
+
+Process lessons, not product. The product is in the decision record and the
+chronicle.
+
+## The ideonomy pass inverted the recommendation, and that was the campaign
+
+The session opened on a hardware question — a Kubernetes node had become
+available, could it run censuses? — and the first recommendation was to
+recruit it. One ideonomy pass (abstraction-lift + cross-domain
+re-instantiation over a map organon) overturned that before any work started,
+on three moves worth naming because each is reusable:
+
+- **Materiality.** Compare the *binaries*, not the outputs. Output equality is
+  implied by binary equality, and a binary comparison costs seconds. The
+  expensive measurement had been assumed to be the only one available.
+- **ISO 5725 (cross-domain: analytical chemistry).** *Repeatability* and
+  *reproducibility* are different claims. The project had been enforcing the
+  first and describing it as the second. Naming the distinction produced the
+  control experiment — lefford against its own past — which nobody had ever
+  run and which needed no new infrastructure at all.
+- **Cardinality-in-time.** The interesting second apparatus was not another
+  machine; it was the *same* machine later.
+
+The campaign that shipped shares no tasks with the campaign that was about to
+be planned. **The pass earns its keep on the decisions that feel settled** —
+this one felt like a straightforward infrastructure question.
+
+## The most valuable result was the falsified prediction
+
+Three predictions were frozen in spec §5 before anything ran. Two held. The
+third — that the binary comparison would fail benignly on embedded build paths
+— was wrong, and it was the only one that changed what the project can do
+next: binary hashing is a *live* cross-host oracle, so qualifying a machine
+costs seconds rather than a census.
+
+Had the prediction not been frozen, the green result would have read as
+unremarkable confirmation rather than as a discovery. **Preregistration is
+what converted "the hashes matched" into "the cheap oracle is available and
+we assumed it wasn't."**
+
+The same result carries a conditional nobody chose deliberately: it holds only
+because the workspace declares no `[profile.release]` and cargo's default
+omits debug info. `[profile.profiling]` sets `debug = true` and is not
+directory-reproducible. A property this useful, resting on an unstated
+default, is worth a test — see followups.
+
+## Three claims were drafted confidently and were wrong
+
+All three were caught by running a command, and all three had already been
+written into a document:
+
+1. **Thread-count divergence.** The leading hypothesis for 0063's unexplained
+   disagreement was that `available_parallelism()` differs between a 40-core
+   and a 24-core box, changing a reduction order. Reading
+   `windows/lab/src/runner.rs:210-258` falsified it in two minutes: workers
+   own contiguous seed ranges, results land in per-offset slots, and every row
+   is computed independently. Core count changes *who* computes a row, never
+   the row.
+2. **`preregistration_guard`.** A content-grep for the identifier found
+   nothing, which suggested the guard did not exist; it exists only as a
+   *filename*. Then the name suggested it enforces study hypotheses; it
+   actually scans `#[ignore]` reason strings. **Two wrong conclusions in
+   opposite directions about the same file**, from a grep and a name.
+3. **Where the probe writes.** Spec D5 asserted the probe "publishes nothing
+   into `book/src/laboratory/generated/`" — and that claim passed the G3
+   review. It is false: `lab run` takes no output flag and always calls
+   `publish`, which wrote **175 files** into the goldens tree. Because the
+   directory is untracked, `git diff --exit-code` — the repo's standard
+   freshness check — cannot see it.
+
+The third is the one to generalize. It was verified only because the *plan*
+needed a literal command, which forced the question "what path, exactly?"
+The spec had been approved with the claim in it. **Drafting-time verification
+catches what review does not**, which is the standing autopilot rule, and this
+campaign is another instance of the rule being needed rather than a
+counterexample.
+
+## `census-run.sh status` reported "no heavy run in progress" during a run
+
+A completion watcher polled `bash scripts/census-run.sh status` and broke out
+after one 30-second iteration, reporting the run complete. The run had 14
+minutes left. The log shows the run holding `/tmp/hv-census.lock`, while
+`status` reports on the *claim* (`/tmp/hv-census.claim`) — so a
+`census-run.sh` invocation that takes the lock is not necessarily visible to
+`status`.
+
+This did no harm here (the log tail was read after the run finished, and the
+diff was taken later still). It matters because `status` is the documented way
+to ask whether the canonical box is busy, and because `make ci`'s contention
+suppressor asks the *same* question — a heavy run invisible to `status` is
+also invisible to the timing alarm's "am I contended?" check. **Not
+investigated in this campaign; filed as a followup rather than fixed, because
+diagnosing it properly means reading the lock/claim interaction across
+`census-run.sh`, `heavy-run.sh`, and `census_claim.rs`.**
+
+## Two path slips, both caught by the tooling
+
+The decision ledger was first written to the main checkout's path (the Edit
+failed — the file did not exist there, which is exactly the scratch-in-worktree
+rule protecting itself), and a backlog edit did land in the main checkout
+before being reverted. Neither reached a commit. Working across a main
+checkout and a worktree with near-identical absolute paths is a live hazard;
+the mitigation that worked was checking `git status` in the main checkout
+after edits, not care at edit time.
+
+## Follow-ups
+
+| # | Item | Why | Where |
+|---|---|---|---|
+| 1 | Migrate 0079's guard from hostname to **toolchain fingerprint** | A hostname cannot catch lefford drifting from itself — the exact failure L0 was built to detect. L0+L1 together are what a fingerprint would assert | TOOL-24 |
+| 2 | Add `--out` to `hornvale lab run` | A probe should not have to write 175 files into the goldens tree and then delete them; the untracked directory is invisible to `git diff --exit-code` | TOOL-24 |
+| 3 | Test that release builds stay debuginfo-free | Decision 0090's cheap oracle silently depends on it; adding `debug` to `[profile.release]` would revoke it with nothing noticing | TOOL-24 |
+| 4 | Diagnose `census-run.sh status` vs the lock | `status` reported idle during a live run; `make ci`'s contention suppressor asks the same question | TOOL-24 |
+| 5 | Campaign two — velaryon recruitment | Gated on this campaign's green result; now starts with a binary-hash comparison, not a census | spec §6 |
+| 6 | Optional: rebuild without `target-cpu=x86-64-v2` and re-probe | Would confirm-or-refute the §2 codegen hypothesis outright; currently consistent-but-unproven | spec §7 |
+
+## What did not happen
+
+No container image, no Job manifest, no registry push, no change to 0079's
+guard, no supersession of 0063 — all §6 non-goals, all respected. The audit
+did not run velaryon, and the decision record says so at that width rather
+than implying a second authoring host has been qualified.

@@ -264,14 +264,21 @@ contradicts, lower ("coarse constrains fine").
 - Same seed + same pins → byte-identical worlds, almanacs, and artifacts.
   Tests assert this; CI's drift check enforces it on committed artifacts.
 - **Cross-platform byte-identity via quantization** (decision
-  0033): `f64`
-  transcendentals route to the platform libm (Apple's vs glibc's), which
-  differ in the last ULP, so serialized floats are quantized to 8
+  0033): serialized floats are quantized to 8
   significant digits (`hornvale_kernel::quantize`, libm-free) at every
   serialization boundary — `Ledger::commit`, the lab `render_csv`, and the
   scene/ephemeris JSON. Quantization is at the emit boundary **only**, never
   in the compute path (the noise fields, sculpting, and orbital mechanics
-  run at full precision). **Lorenz guard-rail:** a lossy save is safe only
+  run at full precision). **Why it exists, and what has since changed:** 0033
+  was written when `f64` transcendentals dispatched to the *platform* libm
+  (Apple's vs glibc's), which differ in the last ULP. Decision 0041 removed
+  that source — every transcendental now routes through the pure-Rust `libm`
+  crate via `kernel/src/math.rs`, making the **compute path** bit-identical
+  too (see `kernel/CLAUDE.md`). Quantization stays as the durable emit-boundary
+  guarantee, not because the platform libm is still in the path. The Pyx
+  (decision 0090) measured the combined result: a
+  40-world, all-metric probe is byte-identical between x86_64/Linux and
+  aarch64/Darwin. **Lorenz guard-rail:** a lossy save is safe only
   because reload re-derives from the lossless seed — never seed a chaotic
   forward-integrator from quantized ledger floats; resumption re-derives
   from the seed, and any chaotic checkpoint needs its own full-precision
@@ -388,9 +395,14 @@ regeneration worktree is **shared** — ask before reusing it, verify its HEAD,
 and sweep orphans rather than assuming it is parked where you left it.
 
 **Measurement is preregistered.** A study freezes its hypothesis and its
-success criteria *before* the code that would move them (decision 0016), and
-`preregistration_guard` enforces that a study can't be quietly edited to
-match a result. A falsified prediction is a finding, not a failure — several
+success criteria *before* the code that would move them (decision 0016). Note
+what does and does not enforce that: a study JSON has **no hypothesis field**
+(only `name`/`description`/`seeds`/`pin_sets`/`metrics`), so the freeze lives
+in the campaign's **spec**, and nothing mechanical compares a result to it.
+`windows/lab/tests/preregistration_guard.rs` is narrower than its name — it is
+PROC-6's *result-quieting* guard, a default-deny scan requiring every
+`#[ignore]` in a lab calibration test to carry a reason that names a cost or
+cites a decision number. A falsified prediction is a finding, not a failure — several
 campaigns ship the null as the headline. Don't retune a constant to rescue a
 prediction after unblinding without saying so in the chronicle.
 

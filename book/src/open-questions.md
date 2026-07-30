@@ -444,6 +444,27 @@ one is invisible to reading — every document is correct — and visible only t
 a fixture shaped like the consumer's session, since redundancy is a property
 of a sequence of calls and cannot appear in any one of them.
 
+[The Pyx](./chronicle/the-pyx.md) adds an eighth entry, and it generalizes the
+ledger's own recurring rule one step further. The Cartographer's lesson was
+that a determinism claim is only as good as the *route* it was checked along.
+The Pyx's is that it is only as good as the **apparatus** it was checked on:
+every check in this repository regenerates on the canonical box and compares
+against a golden authored on the canonical box, so the machine sits on both
+sides of the comparison and cannot be what the comparison detects. In the
+vocabulary metrology uses for exactly this distinction, the project had been
+enforcing *repeatability* and describing it as *reproducibility*. The audit
+that closed the gap found nothing wrong — a full census reproduced on its
+authoring host eleven days later with zero bytes different, two clean builds
+of one commit hashed identically, and a forty-world all-metric probe was
+byte-identical between x86_64/Linux and aarch64/Darwin, including the one
+seed whose count decision 0063 had recorded two
+machines disagreeing on. The bet on deterministic serialization is
+**strengthened, and for the first time by evidence from outside the machine
+that authors the goldens**. What sharpens is the scoring instrument rather
+than the claim: the cheapest sufficient check turned out to be a comparison of
+*binaries* rather than of outputs, which nobody had tried and which the
+campaign's own frozen prediction said would not work.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing
