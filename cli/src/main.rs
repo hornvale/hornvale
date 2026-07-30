@@ -54,9 +54,13 @@ usage:
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
   hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
-                            [--render json|ascii]
+                            [--render json|ascii] [--lens terrain|colour]
                                                       emit scene/surrounds/v1 JSON to stdout, or
-                                                      (--render ascii) the terrain-lens chart
+                                                      (--render ascii) the chart through a lens
+                                                      (--lens colour tints each glyph with the
+                                                      bedrock's colour, and withholds the tint from
+                                                      water, marks and you — the caption says how
+                                                      many it withheld)
                                                       (--room and --depth are mutually exclusive —
                                                       a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
@@ -1202,9 +1206,10 @@ fn cmd_ci_record() -> Result<(), String> {
 /// eclipses` renders dated eclipse events over a closed `[from, until]` day window
 /// (scene/eclipses/v1), and `scene surrounds` renders the situated chart around
 /// an observer's room (scene/surrounds/v1) — JSON by default, or (`--render
-/// ascii`) the same `terrain`-lens picture the possession's own `map` verb
-/// draws, via `hornvale_scene::render_surrounds_ascii`. Deterministic; CI
-/// drift-checks the committed example scene.
+/// ascii`) the same picture the possession's own `map` verb draws, via
+/// `hornvale_scene::render_surrounds_ascii` — through the `terrain` lens by
+/// default, or `--lens colour` to tint it. Deterministic; CI drift-checks the
+/// committed example scene, which is rendered through `terrain`.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -1295,6 +1300,16 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     "unknown --render mode '{render_mode}'; known modes: json, ascii"
                 ));
             }
+            // Same discipline: validate against the renderer's own registry
+            // rather than a second list here, so a lens added there is
+            // spellable here the same day.
+            let lens = flag_value(args, "--lens").unwrap_or("terrain");
+            if !hornvale_scene::SURROUNDS_LENSES.contains(&lens) {
+                return Err(format!(
+                    "unknown --lens '{lens}'; registered lenses: {}",
+                    hornvale_scene::SURROUNDS_LENSES.join(", ")
+                ));
+            }
             let world = load_world(args)?;
             let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
             let depth = match flag_value(args, "--depth") {
@@ -1327,8 +1342,24 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     settlement_room(&world, v.id, depth)?
                 }
             };
-            let scene = hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day })
-                .map_err(|e| e.to_string())?;
+            // `ctx` is already in hand, so build through the `_in` variants:
+            // `surrounds_scene` would build a second `LocaleContext` (~1.2 s
+            // in release) identical to this one. The colour path needs a
+            // context anyway, and taking the same route for both keeps the
+            // two lenses reading the same document.
+            let scene = if lens == "colour" {
+                hornvale_scene::surrounds_scene_colored_in(
+                    &world,
+                    &ctx,
+                    &room,
+                    radius,
+                    WorldTime { day },
+                    &hornvale_kernel::color::standard_observer(),
+                )
+            } else {
+                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime { day })
+            }
+            .map_err(|e| e.to_string())?;
             if render_mode == "ascii" {
                 // The footer names the observer room's own lateral exits,
                 // the same source the possession's `map` verb reads
@@ -1352,7 +1383,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     .collect();
                 print!(
                     "{}",
-                    hornvale_scene::render_surrounds_ascii(&scene, "terrain", &ways)
+                    hornvale_scene::render_surrounds_ascii(&scene, lens, &ways)
                 );
             } else {
                 println!("{}", hornvale_scene::surrounds_json(&scene));
