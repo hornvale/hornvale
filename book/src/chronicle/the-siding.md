@@ -2,7 +2,7 @@
 
 At 15:15 on 29 July, Lefford's load average was **85.27** on forty cores.
 Three campaign sessions were running test suites at once, each in its own
-worktree, each unaware of the others. A commit gate budgeted at four minutes
+checkout, each unaware of the others. A commit gate budgeted at four minutes
 had been running for **fourteen minutes and fifty-six seconds** and was not
 finished. Nothing was broken. No lock had leaked and no guard had been
 bypassed — the gates do not take the box's claim, deliberately, because
@@ -22,7 +22,7 @@ rejected it in one sentence: a design that needs to *rank* a four-minute job
 against a forty-minute one on the same box has a problem upstream of the lock.
 
 So the differentiation moved out of the lock and into the machine. Campaign
-worktrees and the commit gate run on the Mac; the heavy tier and the censuses
+checkouts and the commit gate run on the Mac; the heavy tier and the censuses
 run on Lefford. Once the gate is off the canonical box every remaining claim
 holder is long, 0081's aggregate arithmetic applies cleanly, and
 first-come-first-served has no starvation case left to engineer around. The
