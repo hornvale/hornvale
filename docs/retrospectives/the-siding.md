@@ -30,13 +30,29 @@ Gradient as a floor beneath checkability.
 
 ## Golden-pin discipline: it did not hold, and not by this campaign
 
-Four calibration pins are red at close (`name_collision_rate_is_measured_and_pinned`,
-`name_length_distributions_are_measured_and_pinned`,
-`lexicon_is_regular_and_exposure_sound_for_both_species`,
-`null_control_name_length_smd_is_pinned`). Per the closing walk, a red pin at
-close is a missed re-pin to chase back, not a value to accept quietly — and
-the chase leads to `00ed687b merge: absorb origin/main at the close, deferring
-the census regen`.
+**Seven** calibration pins are red at close, across two suites:
+
+```
+calibration.rs                     name_collision_rate_is_measured_and_pinned
+                                   name_length_distributions_are_measured_and_pinned
+                                   lexicon_is_regular_and_exposure_sound_for_both_species
+                                   null_control_name_length_smd_is_pinned
+branches_family_calibration.rs     homophony_count_is_measured_and_pinned
+                                   divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed
+                                   clean_outgroup_kobold_holds_on_every_swept_seed
+gathering_calibration.rs           (4 passed — clean)
+```
+
+Recorded as four in the regen commit (`9855048d`) and corrected here: that
+suite takes ~14 minutes and had not finished when the message was written, so
+the count came from a partial run. The commit is pushed and append-only; this
+file is the accurate record. **Reporting a count before the run finishes is
+the same error as the rest of this campaign** — believing a check that had not
+completed.
+
+Per the closing walk, a red pin at close is a missed re-pin to chase back, not
+a value to accept quietly — and the chase leads to `00ed687b merge: absorb
+origin/main at the close, deferring the census regen`.
 
 They were **left red deliberately.** They encode The Wearing's measured
 values; accepting them is a claim about that campaign's physics, and

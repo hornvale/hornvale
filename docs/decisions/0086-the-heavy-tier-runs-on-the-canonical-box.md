@@ -98,3 +98,26 @@ buy nothing and would break a legitimate debugging path.
 - Migration is per-campaign and **never mid-measurement**: a preregistered
   study's baseline and readout must see the same physics, and here they would
   additionally see the same host.
+
+## Amendment (2026-07-29, same day, before merge)
+
+Additive correction of a factual premise; the ruling above is unchanged.
+
+The ruling cited 0040's "~4 minute" gate budget to argue that the Mac is the
+gate's design target rather than a downgrade. **That figure no longer holds.**
+Measured the same day on a quiet Mac: `make gate` ran **934.5 s** — 2548 tests
+passed, 86 skipped — roughly 4× the documented budget. A contended run on the
+same machine read 940.8 s, so contention accounted for six seconds; the suite
+itself has simply grown. `docs/timings.md` carries **zero rows labelled
+`gate`**, so the creep was never observable: the ledger built to catch a suite
+creeping "65s → 43.5 min" was never wired to the most-run expensive command in
+the repo.
+
+The consequence for this decision is narrow but real. The **artifact-authorship**
+justification is untouched — the heavy tier writes committed artifacts and
+probes lefford-authored fixtures, and must run on the canonical box. The
+**performance** half is weaker than the ruling implies: a quiet Mac gate
+(934.5 s) is not clearly better than the contended lefford gate (14:56) that
+prompted the campaign, and nobody has measured a gate on an idle lefford, so
+the comparison that would settle it does not exist. Recorded here rather than
+left to imply a benefit that has not been demonstrated.
