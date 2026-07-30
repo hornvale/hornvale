@@ -85,7 +85,7 @@ gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged 
 # LABEL=ci` reads it back. timed.sh passes the wrapped command's exit status
 # through, so a red suite still fails `make ci`.
 ci: ## Run the suite under the ci profile, alarm on a shift, then record this run's baseline
-	@bash scripts/timed.sh ci -- $(MAKE) --no-print-directory ci-run
+	@bash scripts/timed.sh ci -- make --no-print-directory ci-run
 
 ci-run:
 	@mkdir -p target/nextest/ci docs/timings
