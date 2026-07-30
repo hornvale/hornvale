@@ -58,8 +58,8 @@ pub use star::{
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
-    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, LightYears, LocalDays, LunarMasses,
-    Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
+    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, Kelvin, LightYears, LocalDays,
+    LunarMasses, Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
