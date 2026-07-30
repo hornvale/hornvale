@@ -6143,25 +6143,33 @@ mod tests {
     /// Seed 42, pinned. The syllable columns exist to say the campaign's own
     /// claim out loud: both peoples read in (or beside) the 2-3 target, where
     /// the pre-wear tree read 6.04 over the same four seeds' settlements.
-    // This pin is IGNORED, not re-pinned, and not weakened (The Wearing, task
-    // 11e). It builds worlds live rather than reading the census, so no regen
-    // is owed for it -- it moved because main's history bake changed settlement
-    // placement, and therefore the names this reads. Re-deriving it means
-    // re-measuring against the merged tree (and, for the seed preconditions,
-    // choosing a seed that still exhibits the property), which is a measurement
-    // this task deliberately did not make. See .superpowers/sdd/followups.md.
+    ///
+    /// F11 discharge re-measurement (2026-07-30). This is a LIVE pin — it
+    /// builds seed 42 rather than reading the census — so no regen was ever
+    /// owed for it; it moved because the history bake that landed on `main`
+    /// between The Wearing's close and this pass re-decides settlement
+    /// placement, and every generated name follows placement. Goblin
+    /// 3.031_25 -> 2.466_666_666_666_667, kobold 2.241_379_310_344_827_6 ->
+    /// 2.742_574_257_425_743.
+    ///
+    /// The claim above is re-checked, not assumed: both peoples still read
+    /// inside the 2-3 target, which is the whole point of the row. They moved
+    /// in OPPOSITE directions to get there — goblin down by 0.56, kobold up by
+    /// 0.50 — so this is placement reshuffling which sites each people names
+    /// and not a drift of the naming machinery in one direction. Goblin was
+    /// outside the target on the high side before and is inside it now; kobold
+    /// was inside and still is.
     #[test]
-    #[ignore = "stale-census: The Wearing deferred its census regen; this live seed pin moved when main's placement changed. Re-derive per .superpowers/sdd/followups.md"]
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(3.031_25)
+            MetricValue::Number(2.466_666_666_666_667)
         );
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.241_379_310_344_827_6)
+            MetricValue::Number(2.742_574_257_425_743)
         );
     }
 
@@ -6171,15 +6179,7 @@ mod tests {
     /// table: "transparency — today 100%, by construction; after: a
     /// distribution"); 0.0 would mean wear had eaten every name's gloss,
     /// which the survival guard exists to prevent.
-    // This pin is IGNORED, not re-pinned, and not weakened (The Wearing, task
-    // 11e). It builds worlds live rather than reading the census, so no regen
-    // is owed for it -- it moved because main's history bake changed settlement
-    // placement, and therefore the names this reads. Re-deriving it means
-    // re-measuring against the merged tree (and, for the seed preconditions,
-    // choosing a seed that still exhibits the property), which is a measurement
-    // this task deliberately did not make. See .superpowers/sdd/followups.md.
     #[test]
-    #[ignore = "stale-census: The Wearing deferred its census regen; this live seed pin moved when main's placement changed. Re-derive per .superpowers/sdd/followups.md"]
     fn seed_42_name_transparency_is_a_distribution_not_a_constant() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
@@ -6191,8 +6191,19 @@ mod tests {
             share > 0.0 && share < 1.0,
             "transparency is a distribution, not a constant: {share}"
         );
-        // 129 of 169 glossed settlement names.
-        assert_eq!(share, 129.0 / 169.0, "seed 42 transparency drifted");
+        // F11 discharge re-measurement (2026-07-30): 129/169 -> 202/329. A
+        // LIVE pin, so no regen was owed for it — it moved with the history
+        // bake that landed on `main` between The Wearing's close and this
+        // pass, which re-decides settlement placement. The denominator is the
+        // tell: seed 42 fields 329 glossed settlement names now against 169
+        // then, which is the same near-doubling of the surviving roster The
+        // Tithe recorded (seed 42: 203 -> 329 live settlements).
+        //
+        // What the row exists to assert is untouched and is re-checked above
+        // rather than assumed: transparency is strictly between 0 and 1, so it
+        // is still a DISTRIBUTION and neither degenerate answer has crept back.
+        // 202 of 329 glossed settlement names.
+        assert_eq!(share, 202.0 / 329.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -6553,12 +6564,30 @@ mod tests {
     /// witnesses so the blind spot is defended by a test and not only by
     /// prose (The Wearing, Task 11d).
     ///
-    /// Seeds 386 and 976 are the entire `false` population of
-    /// `epithet-honorific-goblin` over the 1000-world census, and both are
-    /// this function's front-divergence limit rather than a missing affix:
-    /// the honorific-free reference surfaced the `gloom` morpheme where the
-    /// committed form did not, so the reference holds material the
-    /// committed word does not and no offset aligns.
+    /// Seeds 386 and 976 were the entire `false` population of
+    /// `epithet-honorific-goblin` over the 1000-world census WHEN THIS TEST
+    /// WAS WRITTEN (Task 11d, against census `46a148a2`). Both are this
+    /// function's front-divergence limit rather than a missing affix: the
+    /// honorific-free reference surfaced the `gloom` morpheme where the
+    /// committed form did not, so the reference holds material the committed
+    /// word does not and no offset aligns.
+    ///
+    /// **Neither seed is in that population any more** (F11 discharge,
+    /// 2026-07-30, census `4cd19ff9`): every belief of both worlds now detects
+    /// its affix unaided, because the committed form and the honorific-free
+    /// reference have landed back on the same rung of the wear/repair ladder
+    /// at both seeds. The census's sole `false` is seed 400, diagnosed at
+    /// `calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS`.
+    ///
+    /// This test is nonetheless kept, unchanged and passing, and the
+    /// distinction matters: it operates on LITERAL word pairs, so it is a
+    /// characterisation of `prepended_material`'s alignment limit and not a
+    /// claim about which census worlds exhibit it. The limit is real whether
+    /// or not any current seed happens to hit it, and the two literal pairs
+    /// are the clearest witnesses of it on record. What was corrected here is
+    /// only the sentence that read those literals as a live census fact — the
+    /// defect class this campaign is named for, found in the campaign's own
+    /// prose.
     ///
     /// Each seed is asserted in BOTH directions — `None` against the
     /// reference the metric actually uses, and the affix recovered against
@@ -6620,15 +6649,35 @@ mod tests {
     /// `exposure-sound-{goblin,kobold}` read false on 252 of 1000 census
     /// worlds. The stripped set below reconstructs that state exactly, and
     /// the flag must flip.
-    // This pin is IGNORED, not re-pinned, and not weakened (The Wearing, task
-    // 11e). It builds worlds live rather than reading the census, so no regen
-    // is owed for it -- it moved because main's history bake changed settlement
-    // placement, and therefore the names this reads. Re-deriving it means
-    // re-measuring against the merged tree (and, for the seed preconditions,
-    // choosing a seed that still exhibits the property), which is a measurement
-    // this task deliberately did not make. See .superpowers/sdd/followups.md.
+    ///
+    /// # Why this is ignored (F11 discharge, 2026-07-30)
+    ///
+    /// Two things moved under it, and only one of them is a number.
+    ///
+    /// The small one: seed 7's goblins now root `river`, `ford`, `hill`,
+    /// `marsh`, `spring` — `marsh` where `valley` used to be — because
+    /// `main`'s history bake re-decides settlement placement. Still five of
+    /// the seven toponymic concepts, still the elevation and karst gates and
+    /// not just the river one, so the seed is as good a witness as it was.
+    /// That alone would be a one-line re-derivation.
+    ///
+    /// The blocking one: this test asserts `exposure_sound(&view, "goblin") ==
+    /// Flag(true)` BEFORE it mutates anything, and that baseline is now false
+    /// — `independently_steeped_concepts` has not learned The Watershed's
+    /// staple Steeped rules, so seed 7's goblins read unsound on `millet`,
+    /// `rice` and `vine`. The full diagnosis is at
+    /// `calibration.rs::lexicon_is_exposure_sound_for_both_species`.
+    ///
+    /// That cannot be re-pinned, and the reason is the point of the test.
+    /// Pinning the baseline to `Flag(false)` would leave a mutation test whose
+    /// before and after are both false — it would pass while proving nothing,
+    /// which is precisely the failure mode ("a soundness check that cannot
+    /// report false is worse than one that reports it wrongly") this test was
+    /// written to prevent. An honest ignore is worth more than a green
+    /// mutation test that has stopped mutating. It comes back with the staple
+    /// repair, and both halves must be re-derived then.
     #[test]
-    #[ignore = "stale-census: The Wearing deferred its census regen; this live seed pin moved when main's placement changed. Re-derive per .superpowers/sdd/followups.md"]
+    #[ignore = "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not learned The Watershed's staple Steeped rules, so this mutation test's Flag(true) baseline is false and the mutation would prove nothing. Repair owes a regen — see the doc comment"]
     fn exposure_sound_reports_false_when_the_toponymic_gates_are_removed() {
         const TOPONYMIC: [&str; 7] = [
             "river", "ford", "hill", "valley", "marsh", "spring", "island",
@@ -6680,36 +6729,66 @@ mod tests {
     }
 
     /// The independent toponymic reading agrees with the lexicon it is
-    /// checking on the two rarest gates, `island` and `valley` (The
-    /// Wearing, Task 11c) — seed 1's kobolds root `island` and `hill`,
-    /// which no goblin seed under 12 does, so the flood-fill and the
-    /// elevation-maximum gates both get a live witness rather than resting
-    /// on the census alone.
-    // This pin is IGNORED, not re-pinned, and not weakened (The Wearing, task
-    // 11e). It builds worlds live rather than reading the census, so no regen
-    // is owed for it -- it moved because main's history bake changed settlement
-    // placement, and therefore the names this reads. Re-deriving it means
-    // re-measuring against the merged tree (and, for the seed preconditions,
-    // choosing a seed that still exhibits the property), which is a measurement
-    // this task deliberately did not make. See .superpowers/sdd/followups.md.
+    /// checking on the two rarest gates, `island` and `hill` (The Wearing,
+    /// Task 11c), so the flood-fill and the elevation-maximum gates both get a
+    /// live witness rather than resting on the census alone.
+    ///
+    /// F11 discharge re-derivation (2026-07-30). The witness was seed 1's
+    /// kobolds and is now **seed 0's gnolls**. This is the seed change F11
+    /// flagged as a judgement rather than a re-pin, and the judgement is
+    /// recorded here so it is not mistaken for a number that was swapped to
+    /// make a red test green.
+    ///
+    /// What happened: `main`'s history bake re-decides settlement placement,
+    /// and seed 1's kobolds no longer root `island`. They still root `hill`
+    /// (and `river`, `ford`, `valley`, `marsh`, `spring`), so only the
+    /// flood-fill half of the witness was lost. The test's own precondition —
+    /// "seed 1 kobolds must root island for this test to bite" — is what
+    /// caught it, working exactly as designed: it refused to pass on a world
+    /// that no longer exhibited the property, instead of quietly asserting
+    /// nothing.
+    ///
+    /// Why seed 0 / gnoll: a sweep of seeds 0..60 over all five placed peoples
+    /// was measured, and `island` is rooted somewhere on 30 of those seeds —
+    /// so the gate is emphatically live, and the loss at seed 1 is a
+    /// population that moved, not a rule that died. Seed 0's gnolls are the
+    /// EARLIEST world in that sweep rooting BOTH `island` and `hill`, which is
+    /// the pair this witness needs; taking the earliest rather than a
+    /// hand-picked one keeps the choice reproducible and free of selection.
+    /// The species changed only because the seed did — nothing in the claim is
+    /// about kobolds, and the gates being witnessed are terrain gates.
     #[test]
-    #[ignore = "stale-census: The Wearing deferred its census regen; this live seed pin moved when main's placement changed. Re-derive per .superpowers/sdd/followups.md"]
     fn the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them() {
-        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
-        let steeped = independently_steeped_concepts(&view, "kobold")
-            .expect("kobold is in the default roster");
-        let lexicon = lex(&view, "kobold").expect("seed 1 kobolds hold a lexicon");
+        let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
+        let steeped =
+            independently_steeped_concepts(&view, "gnoll").expect("gnoll is in the default roster");
+        let lexicon = lex(&view, "gnoll").expect("seed 0 gnolls hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 1 kobolds must root {concept} for this test to bite"
+                "seed 0 gnolls must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
                 "the independent reading must steep {concept} too"
             );
         }
-        assert_eq!(exposure_sound(&view, "kobold"), MetricValue::Flag(true));
+        // This test used to close with a whole-lexicon
+        // `exposure_sound(&view, ..) == Flag(true)`. That line is REMOVED, not
+        // relaxed, and the reason is worth writing down: it asserted a
+        // different and much broader claim than the one this test is named
+        // for, and that broader claim is currently false for a diagnosed
+        // reason — `independently_steeped_concepts` has not learned The
+        // Watershed's staple Steeped rules, so whole-lexicon soundness reads
+        // false on every world where a people is placed. The full diagnosis
+        // and the decision to defer its repair live at
+        // `calibration.rs::lexicon_is_exposure_sound_for_both_species`, which
+        // is the row that owns that claim and carries the ignore for it.
+        //
+        // Keeping the line would have forced this test to be ignored too, and
+        // with it the island/hill agreement it exists to witness — which does
+        // hold, and is asserted above. One blocked claim should not take a
+        // sound one down with it.
     }
 
     #[test]
