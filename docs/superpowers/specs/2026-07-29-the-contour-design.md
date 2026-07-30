@@ -247,15 +247,49 @@ Four metrics. **M2 is the headline**; M1 is inherited and explicitly demoted.
   reported, retained for continuity. **Not the headline and not the
   hypothesis.** Reported so the two prior nulls remain comparable.
 - **M2 — the entity-size distribution.** The rank-size distribution of
-  community populations and of holding sizes at bake end, pooled over seeds,
-  read against Zipf. **Hornvale has never measured this.** This is the
-  variable the sigmoid wager is about.
+  community **peak** populations and of holding sizes, pooled over seeds, read
+  against Zipf. **Hornvale has never measured this.** This is the variable the
+  sigmoid wager is about.
+
+  > **Amendment 3 (2026-07-30), pre-readout.** This originally read "at bake
+  > end". It cannot: `OccupationRecord.peak_population` is a high-water mark
+  > (`Bake::touch` never lowers it), and there is **no end-state population
+  > accessor anywhere** — `Community.population` is bake-internal and dropped
+  > when `bake()` returns. Exposing it would add a field to a committed record,
+  > i.e. a save-format change and an epoch, which §7 lists as a non-goal.
+  >
+  > Peak is accepted on its merits rather than as a workaround: the question
+  > M2 exists to ask is *how large do polities get*, and peak extent is the
+  > standard target for exactly that — Taagepera's empire-size work measures
+  > peak reach precisely because maximal extent is the meaningful scale, and an
+  > end-state snapshot catches every polity mid-collapse. The Gibrat/Kesten
+  > question is about the distribution of attained sizes, which peak answers
+  > directly. **But this is a reworded preregistered headline metric, and that
+  > is disclosed here, in the plan, and in the readout rather than settled
+  > quietly.**
+
 - **M3 — peoples-diversity at bake end.** Count of peoples with a live
   community, and the effective diversity (the same reading `coexist.rs` uses
   in space, computed here in time). This is the 0089 compliance metric.
-- **M4 — the defensibility/value correlation.** Rank correlation between
-  `defensibility` and `eff_capacity` over habitable cells. A check on §2.2's
-  frontier hypothesis, not on the campaign's.
+  Unaffected by amendment 3: liveness is a record flag, not a population read.
+- **M4 — the defensibility/value correlation.** Rank correlation between a
+  cell's **weakest-point** defensibility (§2.4 — the minimum over its
+  approaches) and its capacity, over habitable cells **on present-day
+  terrain**. A check on §2.2's frontier hypothesis, not on the campaign's.
+
+  > **Amendment 4 (2026-07-30), pre-readout.** This originally read
+  > `eff_capacity`, i.e. the bake's final era. That era's `ConnectionGraph`
+  > and capacity map are computed by `bake_history_from` and **discarded**, and
+  > substituting present-day terrain silently would have been wrong — the final
+  > era comes from a deep-time ice/eccentricity integration and is not
+  > guaranteed to equal present-day on a world with real orbital forcing.
+  >
+  > Present-day terrain is used instead, **labelled**, because §2.2's claim is
+  > about whether defensible ground is *also poor* ground — a statement about
+  > the structure of the geography, which present-day terrain samples fully.
+  > A labelled approximation is worth more than no measurement; a silent one
+  > would have been worth less than nothing. M4 is the least load-bearing of
+  > the four and this weakens nothing the campaign's verdict rests on.
 
 Sample: seeds 1..=30 for the primary readout and 1..=100 for replication,
 matching the two prior campaigns exactly so the numbers are comparable.
@@ -297,12 +331,28 @@ constants do not move; the finding is reported. Any deviation from this is an
 amendment and is disclosed in the chronicle with its count, as *The Tithe*'s
 was.
 
-**Standing amendment count: 2**, both taken **pre-readout** — no behavioural
-measurement existed at either point, so nothing was being chased. The
-distinction that matters to a reader is not how many amendments a campaign
-made but whether any followed a number somebody disliked; neither of these
-did. Two is nonetheless where *The Tithe*'s pattern began, and the count is
-stated here rather than left to be reconstructed.
+**Standing amendment count: 4**, all taken **pre-readout** — no behavioural
+measurement existed at any of the four points, so nothing was being chased.
+The distinction that matters to a reader is not how many amendments a campaign
+made but whether any followed a number somebody disliked; none of these did.
+
+**Four is nonetheless exactly *The Tithe*'s number, and the shape rhymes.**
+The honest reading of *why* there were four: amendments 1 and 2 came from a
+calibration this spec deliberately scheduled ahead of the code, and are the
+process working. Amendments 3 and 4 are different and worse — they exist
+because **§4 specified metrics against a data model that had not been checked
+could produce them.** The plan's §5 wrote "this is an assertion to be verified
+by test, not assumed" about determinism while §4 made an unverified assumption
+about data reachability on the very next page. A future spec in this program
+should verify that each preregistered metric's inputs are *reachable* before
+freezing the metric, and that check costs one grep.
+
+| # | What changed | Why | Chased a number? |
+|---|---|---|---|
+| 1 | Aggregate → per-approach | Calibration: two disjoint regimes | No — pre-readout |
+| 2 | Uncentred → centred `tanh` | Pre-specified fallback was wrong | No — pre-readout |
+| 3 | M2: bake-end → peak population | No end-state accessor exists | No — pre-readout |
+| 4 | M4: final-era → present-day terrain | Final-era inputs are discarded | No — pre-readout |
 
 ### 4.4a The pre-specified fallback was wrong, and that is the more useful record
 
