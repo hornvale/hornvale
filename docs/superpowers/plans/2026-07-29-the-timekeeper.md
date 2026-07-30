@@ -253,7 +253,7 @@ Add above `mod tests` in `windows/lab/src/timings.rs`:
 use serde_json::Value;
 
 /// One test's measured wall time from a nextest run.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(seconds: seconds)
+/// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: seconds)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestDuration {
     /// Fully-qualified nextest test id, e.g. `hornvale-kernel::lib$mod::name`.
@@ -530,7 +530,7 @@ Expected: FAIL — `cannot find function 'per_test_shifts'`.
 /// Below this, a doubling is scheduler noise: most of the suite runs in
 /// single-digit milliseconds. CHOSEN, not derived (spec A1) — revisit against
 /// the baseline's own spread once several runs exist.
-/// type-audit: bare-ok(seconds)
+/// type-audit: bare-ok(diagnostic-value)
 pub const PER_TEST_FLOOR_SECS: f64 = 5.0;
 
 /// A test must exceed this multiple of its baseline to alarm.
@@ -544,7 +544,7 @@ pub const PER_TEST_MULTIPLE: f64 = 2.0;
 pub const SUITE_TOLERANCE: f64 = 0.25;
 
 /// One duration that moved beyond tolerance.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(seconds: baseline), bare-ok(seconds: current)
+/// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: baseline), bare-ok(diagnostic-value: current)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Shift {
     /// Test id, or `<whole suite>` for the aggregate.
