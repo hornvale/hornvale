@@ -477,10 +477,15 @@ trigger obtains. Task 2d."
 
 ### Task 3: `defensibility` — the per-approach field
 
-> **Amended 2026-07-30 (spec amendment 1, pre-readout).** Task 2's calibration
-> found approach ease is two disjoint regimes split on `WaterRoute` vs
-> `Adjacency`, not one distribution — so defensibility now reads **the
-> approach's own conductance**, not a per-cell aggregate. See spec §2.3/§2.3a.
+> **Amended 2026-07-30 (spec amendments 1 AND 2, both pre-readout).**
+> Amendment 1: Task 2's calibration found approach ease is two disjoint regimes
+> split on `WaterRoute` vs `Adjacency`, not one distribution — so defensibility
+> reads **the approach's own conductance**, not a per-cell aggregate.
+> Amendment 2: Task 2d's fallback trigger FIRED (land spread 0.077 < 0.10), and
+> the pre-specified fallback was checked before being executed and found to
+> **erase the water/land distinction** — every kind medians at 1.0 by
+> construction. It was replaced with a **centred** `tanh` and bounds symmetric
+> about 1.0. See spec §2.3 and §4.4a.
 > `approach_ease` from Task 1 is retained: it is what the calibration measures
 > and what Task 2's record is written against, but **nothing in the shipped
 > mechanism calls it**, so its `#[allow(dead_code)]` stays.
@@ -527,16 +532,30 @@ fn defensibility_rises_strictly_as_the_route_gets_dearer() {
 }
 
 #[test]
-fn a_free_route_attains_the_floor_and_nothing_reaches_the_ceiling() {
-    // conductance == 1.0 is real (the calibration measured it) and SHOULD sit
-    // exactly at DEF_MIN: an unobstructed sea lane is the most exposed ground
-    // there is. Spec §2.3 corrects an earlier over-reading of decision 0089
-    // clause 3, which governs world OUTCOMES, not intermediate fields.
+fn the_bounds_are_approached_and_never_attained() {
+    // A free sea lane is the most exposed ground there is and sits AT the
+    // floor to six places — but not exactly, because `tanh` is asymptotic in
+    // both directions and DEF_CENTER is finite. Strict interiority, with the
+    // approach pinned to a stated tolerance.
     let free = defensibility(&link(&[(EdgeKind::WaterRoute, 1.0)]), CellId(0), CellId(1));
-    assert!((free - 0.75).abs() < 1e-12, "a free route sits at DEF_MIN: got {free}");
+    assert!(free > 0.75, "strictly above DEF_MIN: got {free}");
+    assert!(free < 0.75 + 1.0e-5, "within 1e-5 of DEF_MIN: got {free}");
 
     let dear = defensibility(&link(&[(EdgeKind::Adjacency, 1.0e-9)]), CellId(0), CellId(1));
-    assert!(dear < 1.40, "nothing reaches DEF_MAX: got {dear}");
+    assert!(dear < 1.25, "strictly below DEF_MAX: got {dear}");
+    assert!(dear > 1.25 - 1.0e-5, "within 1e-5 of DEF_MAX: got {dear}");
+}
+
+#[test]
+fn the_median_approach_is_exactly_neutral() {
+    // THE centring property, and the one the pre-amendment form claimed and
+    // did not have (it put the median at 0.905). An approach whose cost
+    // exponent equals DEF_CENTER must map to exactly 1.0, so the median world
+    // is genuinely unchanged and only the extremes of the terrain move.
+    // exp(-6.256709) — the conductance whose -ln IS DEF_CENTER.
+    let at_center = 0.0019175460679594725_f64;
+    let d = defensibility(&link(&[(EdgeKind::Adjacency, at_center)]), CellId(0), CellId(1));
+    assert!((d - 1.0).abs() < 1.0e-9, "the median approach must be neutral: got {d}");
 }
 
 #[test]
@@ -573,21 +592,27 @@ Expected: FAIL — `defensibility_for_test` not found in `hornvale_worldgen`
 In `history_bake.rs`, beside the other bake constants:
 
 ```rust
-/// AUTHORED prior: the defensibility of a free route — the value a wholly
-/// unobstructed approach yields. ATTAINED, not approached: a cell reached by
-/// an open sea lane is the most exposed ground there is (spec §2.3).
+/// AUTHORED prior: the defensibility a wholly unobstructed approach tends to.
+/// Approached, never attained — `tanh` is asymptotic in both directions.
+/// Symmetric with `DEF_MAX` about 1.0, which is what lets the centred form
+/// put the median approach at exactly 1.0 (spec §2.3).
 /// type-audit: bare-ok(ratio: DEF_MIN)
 const DEF_MIN: f64 = 0.75;
 /// AUTHORED prior: the defensibility an infinitely dear approach tends to.
-/// Approached and never reached, since `tanh` is asymptotic.
 /// type-audit: bare-ok(ratio: DEF_MAX)
-const DEF_MAX: f64 = 1.40;
-/// CALIBRATED (Task 2d): scales `-ln(conductance)` so the MEDIAN traversable
-/// approach sits at defensibility 1.0. Measured over seeds 1..=30 before any
-/// behavioural readout existed, and frozen thereafter (spec §4.4). A
-/// save-format constant from here on.
+const DEF_MAX: f64 = 1.25;
+/// CALIBRATED (Task 2d): the pooled median `cost_exponent` over 756,510
+/// ordered pairs across seeds 1..=30, measured before any behavioural readout
+/// existed and frozen thereafter (spec §4.4). Centring here is what makes the
+/// MEDIAN approach in the world map to exactly 1.0. A save-format constant.
+/// type-audit: bare-ok(ratio: DEF_CENTER)
+const DEF_CENTER: f64 = 6.256709;
+/// AUTHORED: how many log-cost units the transition spans. A SHAPE parameter,
+/// not a scale of the quantity — the quantity's scale is `DEF_CENTER` — so
+/// this is authored at 1.0 rather than fitted. At this value the land
+/// population grades across 0.376, five times spec §4.4's trigger threshold.
 /// type-audit: bare-ok(ratio: DEF_SCALE)
-const DEF_SCALE: f64 = 0.0; // <- REPLACE with Task 2d's measured value
+const DEF_SCALE: f64 = 1.0;
 ```
 
 And the function, beside `approach_ease`:
@@ -623,7 +648,8 @@ fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
         return DEF_MAX;
     }
     let cost_exponent = -hornvale_kernel::math::ln(best);
-    DEF_MIN + (DEF_MAX - DEF_MIN) * hornvale_kernel::math::tanh(cost_exponent / DEF_SCALE)
+    let shaped = hornvale_kernel::math::tanh((cost_exponent - DEF_CENTER) / DEF_SCALE);
+    DEF_MIN + (DEF_MAX - DEF_MIN) * (shaped + 1.0) / 2.0
 }
 
 /// Test-only re-export of [`defensibility`] so the property battery in
@@ -638,7 +664,7 @@ pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId)
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `cargo test -p hornvale-worldgen --test defensibility_field`
-Expected: PASS, 4 tests
+Expected: PASS, 5 tests
 
 - [ ] **Step 5: Mutation-verify the parallel-edge test**
 

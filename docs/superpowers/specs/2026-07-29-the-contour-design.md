@@ -88,6 +88,12 @@ Defensibility is a property of **the approach**, not of the cell. A raid
 arrives along one route, and what shelters the defender is the resistance of
 *that* route.
 
+> **Amendment 2 (2026-07-30), also pre-readout.** The `tanh` is **centred on
+> the measured median** rather than saturating from zero, and the bounds are
+> symmetric about 1.0. §4.4 records why — the fallback this spec pre-specified
+> for exactly this situation turned out to be wrong, and taking it would have
+> destroyed amendment 1's finding.
+
 ```
 best_edge(from, to, graph)
     = the MAXIMUM-conductance edge from `from` to `to`
@@ -98,17 +104,23 @@ cost_exponent(edge) = -ln(edge.conductance)
     # bound as the route gets dearer. It is log(traversal cost).
 
 defensibility(from, to, graph)
-    = DEF_MIN + (DEF_MAX - DEF_MIN) * tanh(cost_exponent(best_edge) / DEF_SCALE)
+    = DEF_MIN + (DEF_MAX - DEF_MIN)
+                * (tanh((cost_exponent(best_edge) - DEF_CENTER) / DEF_SCALE) + 1) / 2
 ```
 
 `tanh` and `ln` are available libm-backed in `hornvale_kernel::math` (decision
-0041). Four properties are load-bearing:
+0041). Five properties are load-bearing:
 
-- **It is bounded in `[DEF_MIN, DEF_MAX)`.** `DEF_MIN` *is* attained, by a
-  free route (`conductance == 1.0`, which the calibration measured as real).
-  That is correct and intended: a cell reached by an unobstructed sea lane is
-  the most exposed ground there is, and the model should say so rather than
-  reserve an unreachable ideal.
+- **It is bounded in `(DEF_MIN, DEF_MAX)`,** and — unlike the pre-amendment
+  form — neither bound is attained, because `tanh` is asymptotic in both
+  directions. A free sea lane at `cost_exponent = 0` sits at 0.7500 to four
+  places but not exactly, since `DEF_CENTER` is finite. The property test
+  therefore asserts *approach* to the floor within a stated tolerance, and
+  strict interiority.
+- **It is centred**, so the *median approach in the world* maps to exactly
+  1.0 and the median world is genuinely unchanged. This is the property the
+  original form claimed and did not have: the uncentred `tanh` put the median
+  at 0.905.
 - **It is strictly monotone** in cost, so the ordering of approaches is total
   and deterministic with no plateau to tie-break inside.
 - **It is a pure function of `(from, to, graph)`** — no time, no seed, no bake
@@ -119,9 +131,22 @@ defensibility(from, to, graph)
   and a `LandRoute` to the same neighbour — which an aggregate double-counts
   and a max does not.
 
-`DEF_MIN` and `DEF_MAX` are authored priors. `DEF_SCALE` is **calibrated from
-the measured distribution of `cost_exponent` over traversable edges, before
-any behavioural constant is written**, and frozen thereafter (§4.4).
+Measured values, and what they yield (Task 2d, 756,510 ordered pairs over 30
+seeds):
+
+```
+DEF_MIN = 0.75   DEF_MAX = 1.25   symmetric about 1.0
+DEF_CENTER = 6.256709            MEASURED: the pooled cost_exponent median
+DEF_SCALE  = 1.0                 AUTHORED: a SHAPE parameter — how many
+                                 log-cost units the transition spans — not a
+                                 scale of the quantity, so it is not fitted
+
+pooled median  -> 1.0000    the median world is unchanged
+water median   -> 0.7500    an open sea lane is the most exposed ground
+adjacency q05  -> 0.7795
+adjacency q95  -> 1.1555    land spread 0.376, five times §4.4's trigger
+adjacency max  -> 1.2441    approached, never attained
+```
 
 **A correction to this spec's earlier reasoning.** The original §2.3 required
 defensibility to be a strict asymptote at both ends, citing decision 0089
@@ -272,22 +297,44 @@ constants do not move; the finding is reported. Any deviation from this is an
 amendment and is disclosed in the chronicle with its count, as *The Tithe*'s
 was.
 
-**Standing amendment count: 1** (§2.3's form change), taken **pre-readout** —
-no behavioural measurement existed at the time, so nothing was being chased.
-The distinction that matters to a reader is not how many amendments a campaign
-made but whether any of them followed a number somebody disliked; this one
-followed a number nobody had yet asked for.
+**Standing amendment count: 2**, both taken **pre-readout** — no behavioural
+measurement existed at either point, so nothing was being chased. The
+distinction that matters to a reader is not how many amendments a campaign
+made but whether any followed a number somebody disliked; neither of these
+did. Two is nonetheless where *The Tithe*'s pattern began, and the count is
+stated here rather than left to be reconstructed.
 
-**One decision rule is fixed here in advance**, because the calibration has
-already shown it may be needed. `cost_exponent` over land approaches spans
-roughly 3.1 to 6.9 (conductance 0.047 down to 0.001) while free water routes
-sit near 0. If, at a `DEF_SCALE` chosen to put the median approach at
-defensibility 1.0, the land population's defensibility range turns out to span
-**less than 0.10**, then a single scale cannot grade the 87% of the world that
-is land-only, and the fallback is to normalize `cost_exponent` **within the
-approach's `EdgeKind`** before the `tanh`. That fallback is specified now,
-with its trigger, so that taking it later is executing this spec rather than
-amending it. Which branch obtains is a measurement, not a preference.
+### 4.4a The pre-specified fallback was wrong, and that is the more useful record
+
+This spec pre-specified a fallback with a numeric trigger, so that taking it
+would be *executing* the spec rather than amending it again: if the land
+population's defensibility range spanned less than 0.10, `cost_exponent` would
+be normalized **within the approach's `EdgeKind`** before the `tanh`.
+
+**The trigger fired** — Task 2d measured the land spread at **0.077**. And the
+fallback was then checked before being executed, which is the only reason this
+is a record rather than a defect:
+
+```
+within-EdgeKind normalization:   q0.05    q0.50    q0.95
+              Adjacency          0.9475   1.0000   1.0242
+              WaterRoute         0.7500   1.0000   1.4000
+              LandRoute          0.9672   1.0000   1.0097
+```
+
+Every kind medians at 1.0 **by construction**. Normalizing within kind erases
+the water/land distinction — which is the entire finding amendment 1 was built
+on — and would have made a coastal cell no more exposed, on average, than an
+inland one. It fixes within-land grading by destroying the thing that mattered.
+
+The lesson is worth more than the fix. **Pre-specifying a fallback protects
+against metric-chasing and does nothing at all about being wrong** — and it
+reads as more authoritative for having been written first, which makes it
+*more* likely to be executed unexamined, not less. A pre-registered rule still
+has to be checked against what it does before it is run. Amendment 2 replaces
+the fallback with a centred `tanh` (§2.3), which grades land across 0.376,
+holds water at the floor, and puts the median at exactly 1.0 — all three at
+once, which neither the original form nor the fallback managed.
 
 ## 5. Determinism and save format
 
