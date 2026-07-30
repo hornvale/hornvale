@@ -155,6 +155,7 @@
 | `abyssal-plain` | climate | substance | The flat floor of the deep ocean. |
 | `alpine` | climate | terrain | a biome class |
 | `bait-ball` | climate | substance | A dense turning mass of fish. |
+| `barley` | climate | substance | a staple crop |
 | `bathypelagic` | climate | terrain | a biome class |
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
@@ -239,6 +240,7 @@
 | `marsh` | terrain | terrain | soft wet ground |
 | `melt-pond` | climate | substance | A pool of meltwater on sea ice. |
 | `mesopelagic` | climate | terrain | a biome class |
+| `millet` | climate | substance | a staple crop |
 | `moon` | astronomy | celestial | a moon |
 | `mossy-deadfall` | climate | substance | Fallen timber going back to moss and lichen. |
 | `mountain` | terrain | terrain | high ground |
@@ -271,6 +273,7 @@
 | `reg` | climate | substance | A desert floor of wind-swept gravel. |
 | `rest` | language | act | to stop and recover strength |
 | `rhinoceros-kind` | species | living | a rhinoceros |
+| `rice` | climate | substance | a staple crop |
 | `river` | terrain | terrain | fresh water running across land |
 | `rust-monster-kind` | species | living | a rust monster |
 | `sargassum-drift` | climate | substance | A drifting raft of floating weed. |
@@ -309,6 +312,7 @@
 | `trench-wall` | climate | substance | The steep side of an ocean trench. |
 | `tropical-rainforest` | climate | terrain | a biome class |
 | `tropical-seasonal-forest` | climate | terrain | a biome class |
+| `tuber` | climate | substance | a staple crop |
 | `tubeworm-thicket` | climate | substance | Vent fauna crowded around hot water. |
 | `tundra` | climate | terrain | a biome class |
 | `twig-blight-kind` | species | living | a twig blight |
@@ -319,7 +323,9 @@
 | `urchin-barren` | climate | substance | Seabed grazed bare of kelp. |
 | `valley` | terrain | terrain | low ground between heights |
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
+| `vine` | climate | substance | a staple crop |
 | `water` | language | substance | the drinkable liquid |
+| `wheat` | climate | substance | a staple crop |
 | `white-dragon-kind` | species | living | a white dragon |
 | `wind` | language | substance | moving air |
 | `wind-scour` | climate | substance | Ground swept bare by wind. |

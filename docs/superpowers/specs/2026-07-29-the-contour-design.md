@@ -1,14 +1,14 @@
 # The Contour — position as the second contest axis
 
 **Campaign:** The Contour · **Date:** 2026-07-29 · **Status:** spec, pre-plan
-**Governs:** [decision 0086](../../decisions/0086-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+**Governs:** [decision 0089](../../decisions/0089-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
 clause 1 · **Successor to:** *The Tumult*, *The Tithe*
 
 ---
 
 ## 1. The charge
 
-Decision 0086 records that peoples-diversity is a terminal value and that the
+Decision 0089 records that peoples-diversity is a terminal value and that the
 only sanctioned mechanism for it is **multi-axis contest**. It also records
 that the history bake is **out of compliance**: every contest in Hornvale's
 deep history resolves on one scalar.
@@ -57,10 +57,10 @@ that makes it more than a modifier:
 1. **It is uncorrelated with strength by construction.** Defensibility is a
    fact about terrain; strength is population times tech. A second axis that
    correlates with the first is not a second axis.
-2. **It is indifferent to who holds the cell**, which is what 0086 clause 1
+2. **It is indifferent to who holds the cell**, which is what 0089 clause 1
    requires. It is not a term keyed on weakness; it is a term keyed on
    ground, and that the weak benefit is a byproduct.
-3. **It is a cost-of-dominance term**, which is 0086 clause 2's sanctioned
+3. **It is a cost-of-dominance term**, which is 0089 clause 2's sanctioned
    direction. If defensible ground is also *poor* ground, then the strong
    expand onto rich exposed cells and become takeable, while marginal
    defensible ground shelters whoever happens to be on it. That is the
@@ -89,7 +89,7 @@ defensibility(cell, graph)
 `tanh` is available libm-backed as `hornvale_kernel::math::tanh` (decision
 0041). Three properties are load-bearing:
 
-- **It is an asymptote, not a clamp** — 0086 clause 3. No cell ever sits
+- **It is an asymptote, not a clamp** — 0089 clause 3. No cell ever sits
   exactly at `DEF_FLOOR`; the most exposed plain in the world retains a
   nonzero defence, and the most isolated valley never becomes untakeable.
   A hard `clamp()` here would foreclose exactly the tails the sigmoid wager
@@ -168,7 +168,7 @@ Four metrics. **M2 is the headline**; M1 is inherited and explicitly demoted.
   variable the sigmoid wager is about.
 - **M3 — peoples-diversity at bake end.** Count of peoples with a live
   community, and the effective diversity (the same reading `coexist.rs` uses
-  in space, computed here in time). This is the 0086 compliance metric.
+  in space, computed here in time). This is the 0089 compliance metric.
 - **M4 — the defensibility/value correlation.** Rank correlation between
   `defensibility` and `eff_capacity` over habitable cells. A check on §2.2's
   frontier hypothesis, not on the campaign's.
@@ -200,7 +200,7 @@ matching the two prior campaigns exactly so the numbers are comparable.
 If M3 does not move and M2 does not move, the conclusion on the record is:
 **a second contest axis, uncorrelated with the first and entering at the
 decision point, is not sufficient to hold diversity open in this world.** That
-is a real finding about 0086 clause 1's chosen mechanism, and it would send the
+is a real finding about 0089 clause 1's chosen mechanism, and it would send the
 sequence back to design rather than forward to The Appraisal. It is not a
 reason to add a third mechanism inside this campaign.
 

@@ -1524,10 +1524,22 @@ mod tests {
             .count();
         assert!(flagships <= 1);
         if let Some(f) = scene.features.iter().find(|f| f.kind == "flagship") {
+            // Identity is POSITION, not name. Since the drawn stem was
+            // retired a settlement name is a translatable description of its
+            // site, and many places legitimately share one — at seed 42 nine
+            // settlements are called "Ka", on four different continents. What
+            // this test defends is that the flagship is not EMITTED twice,
+            // once under each `kind`, and two emissions of one place
+            // necessarily share its coordinates. Keying on name made this
+            // pass only while the flagship's own name happened to be unique.
             assert_eq!(
-                scene.features.iter().filter(|g| g.name == f.name).count(),
+                scene
+                    .features
+                    .iter()
+                    .filter(|g| g.latitude == f.latitude && g.longitude == f.longitude)
+                    .count(),
                 1,
-                "flagship duplicated as a settlement"
+                "flagship duplicated as a settlement at its own coordinates"
             );
         }
     }

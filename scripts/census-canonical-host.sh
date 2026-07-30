@@ -32,8 +32,15 @@
 CANONICAL_CENSUS_HOST="$(cat "$(dirname "${BASH_SOURCE[0]}")/census-canonical-host.txt")"
 
 # Exit 0 on the canonical box; otherwise print why and exit 1.
+#
+# Optional $1 is the JOB KIND, for the refusal text only: omitted (or
+# "census") keeps the census wording verbatim; "heavy" explains the heavy
+# tier's own reason for being host-locked and suggests heavy-run.sh instead of
+# census-run.sh. The HOST RULE is identical either way — only the prose that
+# tells the reader what to do next differs (The Siding).
 require_canonical_census_host() {
-    local here here_lc want_lc
+    local here here_lc want_lc job
+    job="${1:-census}"
     here="$(hostname -s 2>/dev/null || hostname)"
     # `tr`, not ${var,,}: bash 3.2 ships on macOS and lacks case expansion,
     # and this guard has to behave predictably on the machine it exists to
@@ -43,6 +50,26 @@ require_canonical_census_host() {
 
     if [ "$here_lc" = "$want_lc" ]; then
         return 0
+    fi
+
+    if [ "$job" = "heavy" ]; then
+        cat >&2 <<EOF
+heavy: REFUSING to run on '$here' ($(uname -s)).
+
+The heavy tier may only run on '$CANONICAL_CENSUS_HOST' (The Siding; decisions
+0063/0079). It is an AUTHORING path, not just an expensive one: three of its
+tests write committed artifacts (the-history, the-sounding, occupancy.csv), and
+census_fixtures_match_a_probe_of_live_seeds compares a LIVE probe against
+census fixtures authored on that box. The boxes are not byte-identical:
+~0.1% of discrete-count metrics differ by one unit, decided upstream of
+quantize-at-emit, so a run here would commit values that silently disagree
+with the canonical ones and then drift-check green forever.
+
+Trigger the run on the canonical box instead — push your branch first, then:
+
+  make heavy-remote REF=<full-sha>
+EOF
+        return 1
     fi
 
     cat >&2 <<EOF

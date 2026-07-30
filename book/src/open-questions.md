@@ -28,6 +28,38 @@ artifact has no external anchor — a rendered page, say — drift-checking it
 buys stability and nothing else. The Named's defect sat in a drift-checked
 artifact, in plain English, for eight days of green runs.
 
+A second sharpening, and a different failure than the first (The Siding,
+2026-07-29): **a check is worth only the configurations it actually runs in.**
+The Named's lesson was that a drift check has no anchor; this one is that a
+drift check can have an anchor and still never fire, because the command that
+*regenerates* an artifact and the command that *verifies* it are never invoked
+together. The census sat stale for 139 commits — wrong in three missing
+columns and twenty-one drifted metrics — while every gate ran green, because
+`make gate` `#[ignore]`s the tier that rebuilds it and `make rebaseline` never
+touches it. The Sounding's wall-clock timings sat inside the drift-checked
+tree for the mirror-image reason: nothing that rewrites them is ever followed
+by the diff. Both artifacts were anchored and both were unobserved. The same
+campaign wrote two checks into its own spec that could not have failed — a
+zero-diff over a tree containing nanosecond timings, and a claim-status probe
+that answered "no" from the wrong machine — and caught both only by running
+them. So the gradient has a floor beneath checkability: a claim is only as
+checkable as the *pairing* of its generator with its verifier, and an unpaired
+check scores as unchecked no matter how good its anchor.
+
+The successor campaign (The Timekeeper, 2026-07-30) built the instrument that
+was supposed to close that gap and produced eight more instances of the same
+shape *from its own plan text*, four of them inside the machine built to
+detect them — including a duration alarm that compared each run against itself
+and so could never fire. The count is now sixteen across the two campaigns, so
+the floor needs stating as a practice rather than an observation: **the only
+thing that reliably distinguishes a check that fires from one that does not is
+making it fail on command.** A mutation step — corrupt the input, require the
+red — found the never-firing alarm; five further findings came from a final
+review that ran the system instead of reading it. Reviewing a check against
+its specification cannot catch a specification that disagrees with itself, and
+one of these did: the contention guard was wired backwards against a rationale
+written three lines above it, and passed review as faithful to the plan.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -945,7 +977,7 @@ about a distribution the Laboratory can compute over seeds rather than about a
 scaling exponent that needs 1.5 decades of support to be well-posed at all.
 
 It also carries a structural requirement the previous framing never surfaced,
-recorded as [decision 0086](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0086-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+recorded as [decision 0089](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0089-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
 clause 3: rare extremes need **asymptotes, not clamps**. Hornvale's saturating
 bounds are presently clamps — population against capacity, `tech_weight` against
 3.0, `coexist.rs`'s viability `FLOOR` — and the probability of exceeding a clamp
@@ -959,7 +991,7 @@ claim that per-world conditions vary widely enough to reach either tail is
 one thing it does now assert with the same confidence as the two falsifications
 above it is the diagnosis: **this world's history evaluates every people on a
 single scalar axis, and on one axis weakness is absolute.** That is checkable in
-forty lines of source, it is the standing charge decision 0086 opens, and it is
+forty lines of source, it is the standing charge decision 0089 opens, and it is
 why the third ask is being spent on a second axis rather than on a deeper graph.
 
 One further note the campaign earns a place for, because it bears on how much

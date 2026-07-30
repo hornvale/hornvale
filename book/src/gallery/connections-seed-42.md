@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Goodoogogootoodadoo
-======================================
+The connections of Gootoogotoodaoka
+===================================
 
-A natural route runs to Gotoogoodoogo and Goa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+A natural route runs to Gotoodaoka and Daoka, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Goodoogogootoodadoo sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+Gootoogotoodaoka sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -30,13 +30,13 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Nenageboge
-=============================
+The connections of Nenatoa
+==========================
 
-Nenageboge is linked by sea-lane to Goodoogogootoo, cell 28374, and Geoge -- a current-borne crossing, not a road.
-A natural route runs to Geoboegetoa, Geoge, Toa, and Goodoogogaabo, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Nenatoa is linked by sea-lane to Dodoadoogododa, cell 28374, and Geoge -- a current-borne crossing, not a road.
+A natural route runs to Gebogebo, Geoge, Geoboge, and Goodoogodotoa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Nenageboge's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+Nenatoa's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum

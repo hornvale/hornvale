@@ -1,4 +1,4 @@
-# 0086. Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap
+# 0089. Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap
 
 **Status:** Accepted (2026-07-29) · **Decider:** Nathan · **Relates:**
 [0064](0064-potency-is-challenge-rating-over-thirty.md),

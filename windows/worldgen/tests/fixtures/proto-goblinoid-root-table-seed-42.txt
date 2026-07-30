@@ -2,6 +2,7 @@ abyssal: Pea /pea/
 abyssal-plain: Kone /kone/
 alpine: No /no/
 bait-ball: Nao /nao/
+barley: Qeo /qeo/
 bathypelagic: Taoda /taoda/
 black-dragon-kind: Neona /neona/
 blood: Kae /kae/
@@ -86,6 +87,7 @@ marine-snow: Qaena /qaena/
 marsh: Nene /nene/
 melt-pond: Ka /ka/
 mesopelagic: Te /te/
+millet: Noke /noke/
 moon: Na /na/
 mossy-deadfall: Nodea /nodea/
 mountain: Nepoo /nepoo/
@@ -118,6 +120,7 @@ reef-shark-kind: Go /go/
 reg: Nae /nae/
 rest: Neanao /neanao/
 rhinoceros-kind: Genae /genae/
+rice: Toanoo /toanoo/
 river: Qao /qao/
 rust-monster-kind: Qeonae /qeonae/
 sargassum-drift: Qopoe /qopoe/
@@ -156,6 +159,7 @@ trench-floor: Qeta /qeta/
 trench-wall: Naepo /naepo/
 tropical-rainforest: Nenae /nenae/
 tropical-seasonal-forest: Tateo /tateo/
+tuber: Qa /qa/
 tubeworm-thicket: Qaanee /qaanee/
 tundra: To /to/
 twig-blight-kind: Gaa /gaa/
@@ -166,7 +170,9 @@ upwelling: Goa /goa/
 urchin-barren: No /no/
 valley: Na /na/
 vent-plume: Keotoe /keotoe/
+vine: Keo /keo/
 water: Peke /peke/
+wheat: Nade /nade/
 white-dragon-kind: Donee /donee/
 wind: Kaopao /kaopao/
 wind-scour: Ka /ka/

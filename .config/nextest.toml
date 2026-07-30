@@ -1,0 +1,22 @@
+# .config/nextest.toml — the profile surface, unused until The Timekeeper.
+#
+# `default` is deliberately left at nextest's own defaults: `make gate` must
+# behave exactly as it did before this campaign.
+#
+# `slow-timeout.period` MARKS a test slow; it does not kill it.
+# `terminate-after` is deliberately absent (The Timekeeper spec, N4):
+# observation and enforcement are separate knobs, and conflating them means a
+# contention blip destroys a run instead of reporting one.
+
+[profile.default]
+
+[profile.ci]
+# Report a test that crosses this, but never terminate it.
+slow-timeout = { period = "60s" }
+# Full output for anything that fails, so the persisted log is self-contained.
+failure-output = "immediate-final"
+# Load-bearing: the duration alarm needs a time for EVERY test, and a
+# fail-fast run cancels the rest. The Siding lost a whole heavy-tier run to
+# exactly this — 28 tests cancelled after one failure, with no durations for
+# any of them.
+fail-fast = false

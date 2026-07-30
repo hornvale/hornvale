@@ -279,7 +279,7 @@ Create `windows/worldgen/tests/defensibility_field.rs`:
 ```rust
 //! The defensibility field's three load-bearing properties (spec §2.3):
 //! strictly monotone decreasing in approach ease, ASYMPTOTIC rather than
-//! clamped (decision 0086 clause 3), and a pure function of the graph.
+//! clamped (decision 0089 clause 3), and a pure function of the graph.
 
 use hornvale_kernel::CellId;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
@@ -307,7 +307,7 @@ fn defensibility_falls_strictly_as_approach_gets_easier() {
 
 #[test]
 fn defensibility_is_an_asymptote_not_a_clamp() {
-    // Decision 0086 clause 3: the probability of exceeding a clamp is exactly
+    // Decision 0089 clause 3: the probability of exceeding a clamp is exactly
     // zero at any input, which forecloses the rare tails the sigmoid wager
     // needs. No input may reach either bound exactly.
     let wide_open = cell_with_ease(1.0e6);
@@ -341,7 +341,7 @@ In `history_bake.rs`, beside the other bake constants (~line 72–136):
 ```rust
 /// AUTHORED prior: the least defensible ground the world admits — the value
 /// `defensibility` approaches, and never reaches, as approach ease grows
-/// without bound. An ASYMPTOTE, not a clamp: decision 0086 clause 3 records
+/// without bound. An ASYMPTOTE, not a clamp: decision 0089 clause 3 records
 /// that a clamp has exactly zero probability of being exceeded at any input,
 /// which forecloses the rare tails the sigmoid wager needs.
 /// type-audit: bare-ok(ratio: DEF_FLOOR)
@@ -368,7 +368,7 @@ And the function, beside `approach_ease`:
 /// graph — no seed, no time, no bake state, so it consumes no draw and cannot
 /// move stream consumption order.
 ///
-/// The second contest axis (decision 0086 clause 1). It is indifferent to who
+/// The second contest axis (decision 0089 clause 1). It is indifferent to who
 /// holds the cell, which is what makes it a legal mechanism rather than an
 /// authored handicap: it is a term keyed on ground, and that the weak benefit
 /// from defensible ground is a byproduct.
@@ -401,7 +401,7 @@ git add windows/worldgen/
 git commit -m "feat(the-contour): defensibility as an asymptotic field
 
 A tanh of approach ease, bounded by (DEF_FLOOR, DEF_CEIL) asymptotically
-rather than clamped — decision 0086 clause 3. Pure in the graph, so no draw
+rather than clamped — decision 0089 clause 3. Pure in the graph, so no draw
 moves. Not yet wired to anything. Task 3."
 ```
 
@@ -460,7 +460,7 @@ Expected: FAIL — `metric peoples-alive-at-bake-end is not registered`
 Metric {
     name: "peoples-alive-at-bake-end",
     doc: "M3: how many distinct peoples still hold a live community when the \
-          bake ends — the decision-0086 compliance reading",
+          bake ends — the decision-0089 compliance reading",
     summary: SummaryKind::Numeric { bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0] },
     extract: Extractor::Full(|v: &FullView| {
         let mut peoples = std::collections::BTreeSet::new();
