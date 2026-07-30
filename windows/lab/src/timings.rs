@@ -19,11 +19,16 @@ pub struct TestDuration {
 /// Only `{"type":"test"}` records carrying an `exec_time` are kept; `suite`
 /// lines and `started` events are ignored. A stream with no test records is an
 /// ERROR, not an empty result: the format is experimental (spec A2), and a
-/// silent empty parse would leave the alarm green forever.
+/// silent empty parse would leave the alarm green forever. A record whose
+/// `exec_time` is negative, `NaN`, or infinite is also an ERROR (mirroring
+/// `parse_baseline`): a `NaN` `current` duration compares false against every
+/// threshold, so that test would silently never alarm, and a `NaN` folded into
+/// `suite_shift`'s sum poisons the WHOLE suite total to `NaN` — masking every
+/// other regression in the run, not just the one bad record.
 /// type-audit: bare-ok(prose: json_lines), bare-ok(prose: return)
 pub fn parse_run(json_lines: &str) -> Result<Vec<TestDuration>, String> {
     let mut out = Vec::new();
-    for line in json_lines.lines() {
+    for (n, line) in json_lines.lines().enumerate() {
         let line = line.trim();
         if line.is_empty() || !line.starts_with('{') {
             continue;
@@ -40,6 +45,13 @@ pub fn parse_run(json_lines: &str) -> Result<Vec<TestDuration>, String> {
         ) else {
             continue; // `started` events carry no exec_time
         };
+        if !secs.is_finite() || secs < 0.0 {
+            return Err(format!(
+                "line {}: test '{id}' has exec_time {secs}, which is not a \
+                 finite, non-negative duration",
+                n + 1
+            ));
+        }
         out.push(TestDuration {
             id: id.to_string(),
             seconds: secs,
@@ -162,10 +174,32 @@ fn lookup(rows: &[TestDuration], id: &str) -> Option<f64> {
         .map(|i| rows[i].seconds)
 }
 
+/// Whether `rows` is sorted by `id` — the precondition `lookup`'s
+/// `binary_search_by` silently relies on. An unsorted slice makes
+/// `binary_search_by` return "not found" for present ids at random, and
+/// "not found" reads as "new test, never alarm" — so an unsorted baseline
+/// would quietly disable the alarm instead of failing loudly. Checked with
+/// `debug_assert!` at the call sites rather than returning a `Result`,
+/// because both `parse_run` and `parse_baseline` already sort their output;
+/// this exists to catch a hand-built slice in a test or a future caller, not
+/// a real production path.
+fn is_sorted_by_id(rows: &[TestDuration]) -> bool {
+    rows.windows(2).all(|w| w[0].id <= w[1].id)
+}
+
 /// Tests that crossed BOTH the absolute floor and the multiple. A test absent
 /// from the baseline is new and never alarms.
+///
+/// PRECONDITION: `baseline` must be sorted by `id` (as `parse_run` and
+/// `parse_baseline` both return it). See `is_sorted_by_id`'s doc for why a
+/// violation is silent rather than loud.
 /// type-audit: bare-ok(diagnostic-value: current), bare-ok(diagnostic-value: baseline)
 pub fn per_test_shifts(current: &[TestDuration], baseline: &[TestDuration]) -> Vec<Shift> {
+    debug_assert!(
+        is_sorted_by_id(baseline),
+        "per_test_shifts: baseline must be sorted by id, or binary_search_by \
+         silently drops present ids from the lookup"
+    );
     let mut out = Vec::new();
     for c in current {
         let Some(b) = lookup(baseline, &c.id) else {
@@ -183,16 +217,45 @@ pub fn per_test_shifts(current: &[TestDuration], baseline: &[TestDuration]) -> V
     out
 }
 
-/// The aggregate alarm. Load-bearing and easy to omit: a suite can grow by
-/// half without any single test doubling, which is the 234s -> 934s shape the
-/// per-test alarm cannot see. An empty baseline is a first run: record only.
+/// Total measured seconds across `rows` — the number a human wants beside an
+/// alarm when deciding whether growth is legitimate (e.g. alongside
+/// `suite_shift`'s intersection-only totals, which deliberately exclude
+/// added or removed tests).
+/// type-audit: bare-ok(diagnostic-value: return)
+pub fn total_seconds(rows: &[TestDuration]) -> f64 {
+    rows.iter().map(|r| r.seconds).sum()
+}
+
+/// The aggregate alarm, summed over the INTERSECTION of `current` and
+/// `baseline` by id — not the full totals of each side. Summing full totals
+/// would trip the alarm on pure test-count growth (this repo adds tests
+/// constantly; an alarm that fires on normal development gets tuned out and
+/// ignored) and would let a real regression hide behind removed tests
+/// (fewer rows can shrink the `current` total even while the surviving tests
+/// got slower). The intersection isolates the one question this alarm
+/// exists to answer: did the tests present on both sides get slower. An
+/// empty baseline is a first run: record only.
+///
+/// PRECONDITION: `baseline` must be sorted by `id`. See `is_sorted_by_id`'s
+/// doc for why a violation is silent rather than loud.
 /// type-audit: bare-ok(diagnostic-value: current), bare-ok(diagnostic-value: baseline)
 pub fn suite_shift(current: &[TestDuration], baseline: &[TestDuration]) -> Option<Shift> {
     if baseline.is_empty() {
         return None;
     }
-    let now: f64 = current.iter().map(|r| r.seconds).sum();
-    let was: f64 = baseline.iter().map(|r| r.seconds).sum();
+    debug_assert!(
+        is_sorted_by_id(baseline),
+        "suite_shift: baseline must be sorted by id, or binary_search_by \
+         silently drops present ids from the intersection"
+    );
+    let mut now = 0.0;
+    let mut was = 0.0;
+    for c in current {
+        if let Some(b) = lookup(baseline, &c.id) {
+            now += c.seconds;
+            was += b;
+        }
+    }
     if was > 0.0 && now > was * (1.0 + SUITE_TOLERANCE) {
         return Some(Shift {
             id: "<whole suite>".to_string(),
@@ -372,5 +435,103 @@ mod tests {
             suite_shift(&[d("a", 99.0)], &[]).is_none(),
             "first run records only"
         );
+    }
+
+    // --- Fix round 1 -------------------------------------------------------
+
+    #[test]
+    fn a_correctly_sorted_multi_entry_baseline_still_alarms() {
+        // Every other per-test-shifts test uses a single-entry baseline, which
+        // can't distinguish "lookup works" from "lookup always succeeds
+        // trivially." This pins that binary_search_by finds the right row
+        // among several when the baseline precondition (sorted by id) holds.
+        let baseline = vec![d("a", 6.0), d("b", 6.0), d("c", 6.0)];
+        let current = vec![d("a", 1.0), d("b", 20.0), d("c", 1.0)];
+        let shifts = per_test_shifts(&current, &baseline);
+        assert_eq!(shifts.len(), 1, "got {shifts:?}");
+        assert_eq!(shifts[0].id, "b");
+    }
+
+    #[test]
+    fn parse_run_rejects_a_negative_exec_time() {
+        let stream = r#"{"type":"test","event":"ok","name":"a","exec_time":-1.5}"#;
+        let err = parse_run(stream).unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("finite, non-negative"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_run_silently_drops_an_out_of_range_exec_time_rather_than_reporting_it() {
+        // Empirically verified: serde_json's own number parser rejects any
+        // literal that overflows f64 ("number out of range") BEFORE our code
+        // ever sees a `Value`, so `1e400` can never reach this module's
+        // finiteness check via valid JSON text — it falls into the existing
+        // "not our business, might be interleaved output" skip, same as any
+        // other malformed line. This pins that reality: the bad line is
+        // dropped, not fatal, and a well-formed sibling still parses. The
+        // finiteness check on `secs` is retained anyway as defense against a
+        // future field that COMPUTES rather than parses a value into `secs`.
+        let stream = "{\"type\":\"test\",\"event\":\"ok\",\"name\":\"a\",\"exec_time\":1e400}\n\
+                       {\"type\":\"test\",\"event\":\"ok\",\"name\":\"b\",\"exec_time\":1.0}\n";
+        let rows = parse_run(stream).expect("the overflowing line is dropped, not fatal");
+        assert_eq!(rows.len(), 1, "only the well-formed record survives");
+        assert_eq!(rows[0].id, "b");
+    }
+
+    #[test]
+    fn parse_run_silently_drops_a_bare_nan_or_infinity_token() {
+        // JSON (RFC 8259) has no literal spelling for NaN or Infinity, so a
+        // stream emitting the bare word (as some non-conformant loggers do)
+        // fails serde_json's parse outright and is skipped by the existing
+        // malformed-line fallback — it never reaches this module's
+        // finiteness check either. Confirmed empirically alongside the
+        // out-of-range case above.
+        let stream = "{\"type\":\"test\",\"event\":\"ok\",\"name\":\"a\",\"exec_time\":NaN}\n\
+                       {\"type\":\"test\",\"event\":\"ok\",\"name\":\"b\",\"exec_time\":1.0}\n";
+        let rows = parse_run(stream).expect("the malformed line is dropped, not fatal");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].id, "b");
+    }
+
+    #[test]
+    fn adding_new_tests_does_not_alarm_the_suite() {
+        // Pure test-count growth (this repo adds tests constantly) must not
+        // trip the alarm: an alarm that fires on ordinary development gets
+        // tuned out and stops meaning anything.
+        let base: Vec<_> = (0..100).map(|i| d(&format!("t{i:03}"), 1.0)).collect();
+        let mut now = base.clone();
+        now.extend((100..150).map(|i| d(&format!("t{i:03}"), 0.01)));
+        assert!(
+            suite_shift(&now, &base).is_none(),
+            "50 new fast tests must not move the intersection total"
+        );
+    }
+
+    #[test]
+    fn removing_tests_does_not_mask_a_regression_in_the_survivors() {
+        // Full-totals math would compare the unchanged 100.0 baseline total
+        // against a current total of only 100.0 (50 tests at 2.0s each) and
+        // see 0% growth -- masking that the 50 surviving tests DOUBLED.
+        // Intersection math compares only the 50 ids present on both sides.
+        let base: Vec<_> = (0..100).map(|i| d(&format!("t{i:03}"), 1.0)).collect();
+        let now: Vec<_> = (0..50).map(|i| d(&format!("t{i:03}"), 2.0)).collect();
+        let s = suite_shift(&now, &base).expect("the intersection alarms");
+        assert_eq!(s.id, "<whole suite>");
+        assert_eq!(
+            s.baseline, 50.0,
+            "intersection baseline sums only the 50 surviving ids, not all 100"
+        );
+        assert_eq!(s.current, 100.0);
+    }
+
+    #[test]
+    fn total_seconds_of_an_empty_slice_is_zero() {
+        assert_eq!(total_seconds(&[]), 0.0);
+    }
+
+    #[test]
+    fn total_seconds_sums_every_row() {
+        let rows = vec![d("a", 1.5), d("b", 2.5)];
+        assert_eq!(total_seconds(&rows), 4.0);
     }
 }
