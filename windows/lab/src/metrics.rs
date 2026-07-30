@@ -17,7 +17,7 @@ use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
     accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
     commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
-    observed_phenomena_as_in_from, rock_class_name,
+    observed_phenomena_as_in_from, occupation_records, rock_class_name,
     settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
     soil_order_name, terrain_of, vestiges_field,
 };
@@ -3277,6 +3277,57 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(chorus_sky_calibration_metric),
         },
+        // --- The Contour (Task 4): the measurement instrument, built ahead
+        // of the mechanism (spec 2.2/decision 0089) so Task 5's baseline is
+        // honest. M2/M3 read `occupation_records` — the same decoder
+        // `windows/almanac` and The Vestige already share — filtered to
+        // still-alive occupations at bake end. M4
+        // (defensibility-capacity-rank-corr) is deliberately NOT registered
+        // here: `defensibility` and the per-era `eff_capacity` a cell needs
+        // are private to `history_bake.rs`'s internal `Bake` state (not
+        // reachable off `FullView`, and the `#[doc(hidden)]`
+        // `defensibility_for_test` shim is test-only by name and doc, not a
+        // production seam). See task-4-report.md for the proposed accessor.
+        Metric {
+            name: "peoples-alive-at-bake-end",
+            doc: "M3: how many distinct peoples still hold a live community when the \
+                  bake ends — the decision-0089 compliance reading",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let mut peoples = std::collections::BTreeSet::new();
+                for occ in occupation_records(v.world())
+                    .into_iter()
+                    .filter(|o| o.is_alive())
+                {
+                    peoples.insert(occ.people);
+                }
+                MetricValue::Number(peoples.len() as f64)
+            }),
+        },
+        Metric {
+            name: "largest-holding-share",
+            doc: "M2: the largest single community's population as a share of all live \
+                  population at bake end — the entity-size reading the criticality \
+                  campaigns never took",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.3, 0.5, 0.7],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let pops: Vec<f64> = occupation_records(v.world())
+                    .into_iter()
+                    .filter(|o| o.is_alive())
+                    .map(|o| f64::from(o.peak_population))
+                    .collect();
+                let total: f64 = pops.iter().sum();
+                if total <= 0.0 {
+                    return MetricValue::Absent;
+                }
+                let max = pops.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                MetricValue::Number(max / total)
+            }),
+        },
     ]
 }
 
@@ -5998,8 +6049,12 @@ mod tests {
         // forgotten-fraction, dominant-hazard, mean-warning-legibility),
         // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
         // per-species, beside the name-length-{species} pair they are read
-        // against — and the world-level name-transparency).
-        assert_eq!(registry().len(), 172);
+        // against — and the world-level name-transparency), +2 for The
+        // Contour (Task 4: peoples-alive-at-bake-end, largest-holding-share;
+        // defensibility-capacity-rank-corr is NOT counted here — it needs a
+        // pub accessor for defensibility/eff_capacity that Task 4 proposed
+        // but did not add, per the brief's interface-decision boundary).
+        assert_eq!(registry().len(), 174);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -7723,5 +7778,57 @@ mod tests {
             chorus_sky_calibration_metric_over(&one_voice),
             MetricValue::Absent
         );
+    }
+
+    // --- The Contour (Task 4): the measurement instrument. ---
+
+    /// M2/M3 are registered, read the full stack, and carry a doc string.
+    /// M4 (`defensibility-capacity-rank-corr`) is deliberately absent — see
+    /// the registry comment above the two `Metric` entries.
+    #[test]
+    fn the_contour_metrics_are_registered_and_full_rung() {
+        let reg = registry();
+        for name in ["peoples-alive-at-bake-end", "largest-holding-share"] {
+            let m = reg
+                .iter()
+                .find(|m| m.name == name)
+                .unwrap_or_else(|| panic!("metric {name} is not registered"));
+            assert_eq!(
+                m.rung(),
+                BuildDepth::Full,
+                "{name} must read the full stack"
+            );
+            assert!(!m.doc.is_empty(), "{name} needs a doc");
+        }
+        assert!(
+            !reg.iter()
+                .any(|m| m.name == "defensibility-capacity-rank-corr"),
+            "M4 needs a pub defensibility/eff_capacity accessor Task 4 did not add; \
+             remove this assertion once that accessor lands and the metric is registered"
+        );
+    }
+
+    /// Seed 42 places a live roster at bake end, so M2/M3 both extract real
+    /// numbers, not `Absent`: at least one people alive, and the largest
+    /// community's share strictly between 0 (something must hold population)
+    /// and 1 (a lone community would be the whole world, which seed 42's
+    /// four-people roster does not produce).
+    #[test]
+    fn the_contour_metrics_extract_sane_values_for_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        match extract_from(&built, "peoples-alive-at-bake-end") {
+            MetricValue::Number(n) => assert!(n >= 1.0, "expected at least one live people"),
+            other => panic!("peoples-alive-at-bake-end: {other:?}"),
+        }
+        match extract_from(&built, "largest-holding-share") {
+            MetricValue::Number(share) => {
+                assert!(
+                    share > 0.0 && share <= 1.0,
+                    "share must be in (0, 1]: {share}"
+                );
+            }
+            other => panic!("largest-holding-share: {other:?}"),
+        }
     }
 }
