@@ -62,6 +62,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
+  - [Detail below the floor — erosion as a readout of the material buffer](#detail-below-the-floor--erosion-as-a-readout-of-the-material-buffer)
   - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
   - [Intellectual lineage](#intellectual-lineage)
@@ -2703,6 +2704,141 @@ Both are about cashing dividends already banked, not proposing new systems.
 
 ---
 
+## Detail below the floor — erosion as a readout of the material buffer
+
+*(High confidence that the gap is real and the inputs already exist; medium on
+the axis→parameter mapping; the honesty question at the end is a judgement
+call, not a technical one. Prompted by Rune Skovbo Johansen's erosion filter —
+see [Intellectual lineage](#intellectual-lineage) — read against the shipped
+carve.)*
+
+**The deep zoom buys smoothness, not detail.** The Region built a regional
+tile query that samples the continuous fields at arbitrary on-tile density,
+and The Massing taught the client to ask for those tiles as the camera
+descends. The pipe is finished; what travels through it is barycentric
+interpolation between geosphere cells. The canonical cell is roughly 110 km
+across and the client's deepest level puts vertices about a metre and a half
+apart, so at the far end of the descent the vertex spacing is finer than the
+data spacing by a factor of some seventy thousand in each direction — every
+one of those vertices an interpolation of the same three corner values.
+Zooming in makes the surface smoother and no more informative. That is the gap: not a missing mechanism, a missing *payload*.
+
+**Erosion can be a filter instead of a simulation.** The shipped carve is
+globally coupled by necessity — stream-power incision needs a flow-accumulation
+field, which needs every land cell sorted by elevation and every downhill path
+traced to the sea or to an interior minimum. Nothing about that can be
+evaluated at a point, which is exactly why it runs once, at genesis, on the
+canonical grid. The alternative family evaluates *only* at a point: align a
+stripe pattern to the local gradient, rotate it about per-cell pivots, blend
+across cell boundaries, and stack octaves so each one's gullies branch from
+the last. Dendritic appearance falls out of self-similar gradient alignment
+rather than out of water. No neighbours, no accumulation, no state — so it is
+trivially chunkable and belongs in a fragment shader.
+
+These are not rivals. One answers *where does the water go and what does it
+carry*; the other answers *what should this look like at ten metres*. The
+first is a claim about the world and must be measured; the second is a claim
+about a picture and must only be looked at. The scale ladder wants both, at
+their own scales, with the boundary between them stated.
+
+**The filter's two worst limitations are the two things our fields already
+fix.** This is what makes the pairing more than a borrowed shader. A pointwise
+filter has no accumulation, so it cannot know which slopes carry water: the
+published technique derives its erosion mask from local altitude and says
+plainly that this is not robust — a valley may stand higher than a peak — and
+that gullies consequently stop halfway down a mountainside. Hornvale has the
+real flow network, and the regional tile *already ships it*: a
+flow-accumulation layer per node, appended under the schema-stability
+contract. Drive the coarsest octave's strength and fade from that and the
+largest gullies lock onto channels the sim actually computed, leaving the
+filter to invent only *below* the cell floor.
+
+The second limitation is parameter hand-tuning, which the technique names as
+its own principal cost: gully weight, rounding, detail and lacunarity
+interact, and the author tunes them by eye. That cost exists because the
+technique has no material model. Hornvale's does. The Ground's material
+buffer carries a continuous per-cell property vector — silica, grain,
+induration, carbonate, metamorphic grade, porosity, regolith depth — and the
+carve already projects two of those axes onto a calibrated resistivity, in
+which carbonate *raises* erodibility because limestone dissolves. Every
+parameter sourced from an axis is one fewer knob and one more place the
+world's own geology shows through. Induration is ridge rounding: hard rock
+holds an edge, soft rock rounds it. Grain is the frequency distribution:
+coarse plutonic ground weathers to blocky joint-controlled forms, fine clastic
+ground to dense rills. Porosity is gully density, because infiltration is
+runoff that never happened. Regolith depth is a fade toward smooth, which is
+also the honest way to draw a floodplain — do not carve gullies into alluvium.
+
+**Map the axes, not the rock classes.** The nineteen-variant rock taxonomy is
+a *projection* of the buffer, not the primitive, and it is categorical:
+sampled nearest-cell, it would step discontinuously at every cell boundary and
+put visible seams on a 110 km lattice. The underlying axes interpolate the way
+elevation does, so parameters derived from them are smooth by construction.
+The projection is for naming rock; the vector is for driving a filter.
+
+**The prerequisite, and the free dividend.** Drainage crosses the scene
+boundary today; no material axis does — nothing in the tile documents carries
+induration, porosity or grain. That single addition is the whole producer-side
+cost, and it is the cheapest kind: the buffer is a stored per-cell map already
+held by the scene context, so exposing it is serialization and no derivation
+at all, and the regional schema is additive-or-versioned by contract with
+three appended layers as precedent. Two design notes travel with it. The
+deepest tiles carry tens of thousands of nodes, so it is likely better to ship
+the derived resistivity plus two or three axes than the whole vector — and
+shipping the resistivity has the further virtue that the client and the carve
+then agree on how rock resists by construction, instead of the client
+re-deriving it and drifting. And once any material layer crosses the boundary,
+the client gets a lithology lens for almost nothing, since a lens only changes
+colour and the appearance projection already exists. That dividend is what
+makes the prerequisite worth landing first and separately: it earns its keep
+even if the filter disappoints.
+
+**The honesty question, which The Massing already answered in principle.**
+The Massing's finding was that a smooth globe invents a gradient between data
+points that the simulation never computed, and that a voxel globe — one block
+per datum, the cliff between them drawn as real geometry — is the honest
+alternative. A convincing erosion filter is a far more elaborate invention
+than a smooth slope, so the objection has to be met rather than waved at. It
+is met by observing what that campaign actually settled: Smooth was *kept*,
+byte for byte, once Voxel existed beside it. The discipline is not *never
+invent*; it is **invent only in a named, switchable style, with an honest
+style always available** — which makes an eroded style a fifth entry on an
+existing axis rather than a new architectural argument. The client is outside
+determinism by ratified boundary, and identity is computed on the canonical
+grid, so nothing here can move a measurement. That is both the safety and the
+ceiling.
+
+Material-driven parameters also change the *character* of the invention. The
+detail stops being plausible and becomes constrained: a granite craton and a
+limestone shelf would read differently at ten metres, and the difference would
+be traceable to committed fields. The information content stays cell-scale —
+this is not fidelity, and it must never be sold as such — but the
+*arrangement* of the detail becomes evidence-bearing, which is a stronger
+claim than a smooth slope ever had.
+
+**The real cost is the instrument.** The Massing built Voxel so the resolution
+floor would be visible, and closed by leaving a question open: now that the
+globe shows where its own knowledge runs out, we can see whether the
+*simulation's* terrain resolution is the next thing worth deepening. A
+convincing filter does not remove that instrument, but it removes the
+pressure, because an impoverished deep zoom stops looking impoverished. That
+is a sequencing trade and it should be accepted in writing rather than
+discovered later.
+
+**What it does not model.** Sand is not in the model. Basalt, limestone,
+sandstone and alluvium are all realized classes, but aeolian transport, loess
+and dune fields are banked separately (MAP-46) and were explicitly outside the
+carve's mandate. Dune-like texture could be *styled* over arid, porous,
+weakly-indurated ground; no field asserts that dunes are there, and a spec
+should not promise otherwise.
+
+**Sequencing.** The material scene layer first, on its own merits, with the
+lithology lens as its visible payoff. The filter second, as a render style,
+with Voxel left as the honest neighbour and the drainage layer — not altitude
+— driving its coarsest octave.
+
+---
+
 ## The observer has no place — the position-blind sky
 
 *(observation-path fidelity; the spatial sibling of SEQ-4, raw but
@@ -2961,6 +3097,9 @@ gap); Dan Sperber, Pascal Boyer, and Olivier Morin (cultural attraction and
 minimally-counterintuitive content as a stability bias); Patrick Gunkel,
 the ideonomy monographs, via Grace Kind's synthesis essays at gracekind.net
 (ideation as a closed catalog of structural operations — operators,
-organons, dimensions — over captured ideas).
+organons, dimensions — over captured ideas); Rune Skovbo Johansen, "Fast and
+Gorgeous Erosion Filter" (2026) (gradient-aligned procedural erosion as a
+pointwise filter rather than a simulation — the technique the material-buffer
+readout above is argued against).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
