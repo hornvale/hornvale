@@ -233,8 +233,9 @@ fn river_exposure_tracks_real_proximity() {
 /// places bugbear and kobold). Re-measuring all three concepts against
 /// the new roster: `hill` is now 0/5 Root, 5/5 Gap — nobody's settlement
 /// sits at a strict local elevation maximum any more (see the dedicated
-/// `hill_is_a_gap_for_every_placed_people_at_seed_42` below, the same
-/// degenerate-but-real shape `valley` already had). `marsh` is now 5/5
+/// `hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_
+/// roots_it` below, which records the shape as it stands after The Wearing's
+/// close merge moved the population again — 1/5 Root, 4/5 Gap). `marsh` is now 5/5
 /// Root, 0/5 Gap — the opposite drift, now saturated like `river`/`ford`
 /// (see `marsh_is_a_root_for_every_placed_people_at_seed_42` below).
 /// `spring` alone still genuinely discriminates: 1/5 Root (kobold), 4/5
@@ -285,28 +286,69 @@ fn spring_exposure_differs_across_the_placed_peoples() {
 /// only as the record of what was measured when this test was written.** The
 /// Wearing's close merge absorbed main's history bake, which re-decides
 /// settlement placement; at seed 42 the bugbear flagship now sits on a strict
-/// local elevation maximum and roots `hill` (`Daodo`). So the claim "a `Gap`
-/// for EVERY placed people" is false as it stands, and the honest reading is
-/// that the gate is fine — the population moved out from under a measurement.
+/// local elevation maximum and roots `hill`. So the claim "a `Gap` for EVERY
+/// placed people" is false as it stands, and the honest reading is that the
+/// gate is fine — the population moved out from under a measurement.
 ///
-/// Ignored rather than re-pinned, because repairing it is a judgement and not
-/// a number: either the claim is restated for the peoples that still gap
-/// (leaving bugbear as a named exception), or the test moves to a seed where
-/// the original shape still holds. `valley_is_a_gap_...` and `marsh_is_a_root_
-/// ...` both still pass, so only `hill` moved and there is no systemic gate
-/// failure to chase. See `.superpowers/sdd/followups.md` F11.
+/// # F11 discharge (2026-07-30): restated, and why that is the better repair
+///
+/// F11 left this as an explicit judgement with two options — restate the
+/// claim leaving bugbear a named exception, or move to a seed where the
+/// original shape still holds. **Restated**, and the test is renamed to say
+/// what it now checks, because the exception is not noise to be routed around:
+/// a people whose flagship sits on a strict local elevation maximum is exactly
+/// what the elevation-maximum gate is FOR, so seed 42 stopped being a
+/// four-way negative witness and became a positive-and-negative one. Fleeing
+/// to another seed would have thrown that away and, worse, would have quietly
+/// re-established a claim ("every placed people gaps `hill`") that is an
+/// artifact of which worlds we happen to look at rather than anything the
+/// gate guarantees.
+///
+/// So the partition is asserted EXACTLY, in both directions and by name.
+/// Measured on the merged tree: bugbear roots `hill` as `Dootoa`; gnoll,
+/// goblin, hobgoblin and kobold all gap it. That is a strictly stronger
+/// assertion than the one it replaces — the old form could only fail by a
+/// people gaining a root, this one also fails if bugbear ever loses it, if
+/// the roster changes, or if the roman surface of that root drifts.
+///
+/// (The `Daodo` recorded in F11 was measured on a different tree and is not
+/// what this seed produces here; the surface is `Dootoa`, read off the merged
+/// tree and pinned below. Noting it rather than silently correcting it,
+/// because an unsourced surface form in a followup is the same defect class
+/// this campaign is named for.)
+///
+/// `valley_is_a_gap_...` and `marsh_is_a_root_...` both still pass, so only
+/// `hill` moved and there is no systemic gate failure to chase.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this live seed pin moved \
-            when main's placement changed. Re-derive per .superpowers/sdd/followups.md"]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
+fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_it() {
     let w = world();
+    // The exact partition, by name — not a count, and not "at least one of
+    // each". A count would survive the roster changing under it; naming both
+    // sides means any movement at all lands in a failure message that says
+    // which people moved and which way.
+    let mut gapped: Vec<&str> = Vec::new();
+    let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
         let lex = lexicon_of(&w, species).expect("lexicon");
         match lex.entry("hill") {
-            Some(LexEntry::Gap { .. }) => {}
-            other => panic!("{species}: expected 'hill' to be a Gap at seed 42, got {other:?}"),
+            Some(LexEntry::Gap { .. }) => gapped.push(species),
+            Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
+            other => panic!("{species}: unexpected 'hill' entry at seed 42: {other:?}"),
         }
     }
+    gapped.sort_unstable();
+    rooted.sort_unstable();
+    assert_eq!(
+        gapped,
+        vec!["gnoll", "goblin", "hobgoblin", "kobold"],
+        "the set of peoples gapping 'hill' at seed 42 moved"
+    );
+    assert_eq!(
+        rooted,
+        vec![("bugbear", "Dootoa".to_string())],
+        "at seed 42 exactly one people roots 'hill' — bugbear, whose flagship \
+         sits on a strict local elevation maximum"
+    );
 }
 
 /// The honest counterpart to the test above: at seed 42, under the

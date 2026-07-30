@@ -17,6 +17,47 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+# The heavy tier claims the box (The Siding; decision 0081's seam rule). It
+# shares ONE claim with the census: both saturate the machine, and the binding
+# constraint is the machine, not the directory — there is one canonical box.
+#
+# The claim lives HERE rather than only in scripts/heavy-run.sh because a
+# wrapper cannot guard a direct `make gate-full`, which is exactly the hole
+# 0081 was written to close for the census.
+#
+# Two deliberate escapes:
+#   - No flock (macOS ships none): proceed unserialised with a note. Campaigns
+#     run on the Mac and the heavy tier runs on the canonical box, so an
+#     unserialised gate-full on a dev machine is the discouraged path, not the
+#     contended one. Failing here would break `make gate-full` on the Mac.
+#   - An ANCESTOR already holds it (HV_CENSUS_LOCK_HELD names a live pid):
+#     flock is per open-file-description, so a child re-flocking the same path
+#     on a fresh fd would DEADLOCK against its own parent.
+LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
+held_by="${HV_CENSUS_LOCK_HELD:-}"
+if ! command -v flock >/dev/null 2>&1; then
+    echo "gate-full-heavy: no flock on this host ($(uname -s)) — running unserialised." >&2
+elif [ -n "$held_by" ] && kill -0 "$held_by" 2>/dev/null; then
+    echo "gate-full-heavy: box already claimed by ancestor pid $held_by — proceeding" >&2
+else
+    exec 9>"$LOCK"
+    timeout_s="${HV_HEAVY_WAIT_TIMEOUT:-2700}"
+    echo "gate-full-heavy: waiting for the box claim ($LOCK; up to ${timeout_s}s) …" >&2
+    wait_began=$SECONDS
+    if ! flock -w "$timeout_s" 9; then
+        # Bounded, so a wedged holder fails loudly instead of hanging forever.
+        # Report WHO, not just that we gave up (decision 0081).
+        echo "gate-full-heavy: TIMED OUT after ${timeout_s}s waiting for the box." >&2
+        echo "gate-full-heavy: $(cargo run --quiet --release -p hornvale -- lab claim-status 2>/dev/null || echo 'holder unknown')" >&2
+        exit 75
+    fi
+    waited=$((SECONDS - wait_began))
+    if [ "$waited" -gt 0 ]; then
+        echo "gate-full-heavy: box claimed after ${waited}s queued" >&2
+    fi
+    export HV_CENSUS_LOCK_HELD=$$
+fi
+
 # The heavy #[ignore] tag sits directly above its `fn`; grab the fn names.
 names="$(grep -rEA1 '#\[ignore = "heavy:' --include='*.rs' . \
     | grep -oE 'fn [a-z0-9_]+' | sed 's/^fn //' | sort -u)"

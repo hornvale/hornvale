@@ -981,10 +981,25 @@ impl<'a> Namer<'a> {
     /// skipped entirely for a one-candidate site), and the retirement of
     /// the per-salt 2-3 syllable **drawn settlement stem** the `/v2` epoch
     /// appended to every settlement name. All three landed inside the same
-    /// campaign and `/v3` has never been in a released world — the census
+    /// campaign, and at the time that decision was taken `/v3` had never been
+    /// in a released world — the census
     /// and every committed fixture are regenerated once, at the campaign's
     /// close — so they share one epoch rather than minting `/v4` and `/v5`
-    /// for save formats no save ever held. That stem existed as a collision
+    /// for save formats no save ever held.
+    ///
+    /// **That window is closed. `/v3` is frozen and the next consumption
+    /// change here owes `/v4`.** The Wearing merged at `0b65be20`, so a world
+    /// saved off main now carries `language/<species>/name/settlement: v3` in
+    /// its `derived_under` stamp — the mechanical test in decision 0089
+    /// (`docs/decisions/`), which is the durable home of the freeze rule this
+    /// paragraph previously stated only half of. The half it stated was the
+    /// *application* ("`/v3` has never been in a released world"); a reader
+    /// arriving here later and finding no statement of the *expiry* could
+    /// reasonably have concluded `/v3` was still rideable, which is exactly
+    /// the corrupting move the permanent-contract discipline exists to
+    /// prevent.
+    ///
+    /// That stem existed as a collision
     /// fix; decision 0024 ratified that uniqueness is a reference-time
     /// property and that no future work fixes the collision rate by adding
     /// entropy, "which lengthens names without addressing the structural

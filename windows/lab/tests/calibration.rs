@@ -54,6 +54,55 @@
 //! perfect-attribution invariant never fired. One movement runs against
 //! intuition and is recorded, not explained: the roster nearly doubles while
 //! the mean name-collision rate FALLS (see the pin comment there).
+//!
+//! ## F11 discharge — the `stale-census:` ignores are removed (2026-07-30)
+//!
+//! The Wearing closed with 23 rows in this file `#[ignore]`d under a
+//! `stale-census:` token: at its close the committed `rows.csv` predated the
+//! campaign's naming metrics, so every row here failed at LOAD, before
+//! asserting anything. That census staleness was paid off separately —
+//! `9855048d`, then the post-Watershed regen at `4cd19ff9` — and the goldens
+//! have been current since. **The markers were not removed with it.**
+//!
+//! Worth stating plainly, because the failure is structural rather than
+//! anybody's oversight: *an ignore-token debt marker does not know when its
+//! debt is discharged by someone else.*
+//! `cli/tests/heavy_tier.rs` holds the reason strings to a canonical spelling
+//! so the debt stays greppable, and that guard did its job perfectly — but it
+//! checks that the reason is *canonical*, never that the reason is still
+//! *true*. Nothing in the tree could notice that a regen by another campaign
+//! had made 23 of these deferrals obsolete, so they sat here reading as
+//! current fact while the thing they described had already been fixed. The
+//! grep found them; only a human reading the census history could tell they
+//! were spent.
+//!
+//! Re-derived against the committed `rows.csv` at `4cd19ff9`. **16 of the 23
+//! rows in this file passed with no change at all** — their claims and their
+//! recorded values both survived every epoch that landed in between. Six were
+//! re-pinned to measured values (see each pin site). One did NOT pass and is
+//! not re-pinned: see `lexicon_is_exposure_sound_for_both_species`, whose
+//! claim is blocked by a stale second opinion in the metric, not by a stale
+//! census.
+//!
+//! | re-pinned row | before | after |
+//! |---|---:|---:|
+//! | goblin epithet-honorific true / absent | 764 / 234 | 766 / 233 |
+//! | kobold epithet-honorific false / absent | 762 / 238 | 760 / 240 |
+//! | detector-blind goblin seeds | {386, 976} | {400} |
+//! | zero / nonzero collision worlds | 43 / 727 | 1 / 769 |
+//! | mean name-collision-rate | 0.1269 | 0.5688 |
+//! | goblin name-length rows / mean | 767 / 13.6653 | 767 / 9.1408 |
+//! | kobold name-length rows / mean | 760 / 15.5489 | 760 / 7.6739 |
+//! | goblin name-syllables rows / mean | 766 / 2.8535 | 767 / 2.7249 |
+//! | kobold name-syllables rows / mean | 762 / 2.2784 | 760 / 2.2505 |
+//! | mean name-transparency | 0.8267 | 0.8160 |
+//! | null-control name-length SMD | -0.0657 | +0.0051 |
+//!
+//! Every figure above is read off the committed `rows.csv`, cross-checked in
+//! DuckDB against the same file (`tools/census/queries/calibrate/golden-pins.sql`
+//! re-computes them independently and `make census-check` fails on any
+//! disagreement). None is carried forward from a prior regen and none is a
+//! bound widened to fit.
 use hornvale_culture::{BiomeClass, subsistence};
 use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
@@ -155,15 +204,7 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The invariant is PHYSICAL: a tidally-locked world offers no
     // rising-and-setting body, so no people's pantheon head can read cyclic.
@@ -261,15 +302,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn band_count_matches_the_known_function_of_rotation() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -305,15 +338,7 @@ fn band_count_matches_the_known_function_of_rotation() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn flagship_subsistence_matches_biome_and_coastal_columns() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -349,15 +374,7 @@ fn flagship_subsistence_matches_biome_and_coastal_columns() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn pantheon_verticality_matches_stratification() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -379,15 +396,7 @@ fn pantheon_verticality_matches_stratification() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn head_deity_is_eternal_exactly_when_tidally_locked() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -409,15 +418,7 @@ fn head_deity_is_eternal_exactly_when_tidally_locked() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn goblin_flagship_coastal_split_is_pinned() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -500,15 +501,7 @@ fn goblin_flagship_coastal_split_is_pinned() {
     assert_eq!(inland, 211, "inland flagship count drifted");
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn kobold_structures_never_enslave_and_top_out_with_elders() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -536,15 +529,7 @@ fn kobold_structures_never_enslave_and_top_out_with_elders() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
     // Preregistered (spec §9.2): slave ⇔ Rank ∧ surplus > 0.6 ∧ population >
     // 300, checked on goblin rows (Rank) and kobold rows (¬Rank) from
@@ -594,15 +579,7 @@ fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
 // in `tests/disposition_calibration.rs`. Evidence:
 // `.superpowers/sdd/coastal-inversion-investigation.md`.
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -705,15 +682,7 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn blind_attribution_beats_chance_decisively() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -837,15 +806,7 @@ fn blind_attribution_beats_chance_decisively() {
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn phonotactic_validity_is_true_for_every_generated_name() {
     // Preregistered (ADR 0016, spec §9.2): the instrument must reproduce its
     // own grammar exactly. Every generated name — settlement, deity,
@@ -891,17 +852,35 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 /// reading false still fails, and so does either of these two turning true
 /// — the list is pinned by equality, not by count, so it cannot silently
 /// absorb a third world.
-const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 2] = [386, 976];
+///
+/// F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`).
+/// The population is **{400}**, not {386, 976} — and the two old members did
+/// not merely move, they turned TRUE. Every belief of seeds 386 and 976 now
+/// detects its affix unaided; the front divergence that hid them has closed
+/// (the committed form and the honorific-free reference have landed back on
+/// the same rung of the wear/repair ladder at both seeds). The count is
+/// therefore one blind world in a thousand, down from two.
+///
+/// Seed 400 was chased before it was written here, exactly as the failure
+/// message below demands. Goblin belief 6, gloss `star`+`light`: the world
+/// commits `Ffapwbob`, and the honorific-free reference re-derives as
+/// `Wboabboob` — a two-morpheme compound where the committed form carries
+/// only one. So the reference holds material the committed word does not, no
+/// offset aligns, and `prepended_material` reports `None`. This is the SAME
+/// front-divergence limit Task 11d diagnosed at 386 and 976, at a new seed:
+/// the detector under-detects, never over-detects.
+///
+/// The independent identification of the dropped morpheme, which is what
+/// makes this a diagnosis rather than a restatement of the symptom: this
+/// world's own surface for `light` ALONE — re-derived through the same namer,
+/// the same belief's name seed, the same honorific-free morphology and the
+/// same lexicon, with only the concept list reduced — is `Wboab`. Measure the
+/// committed `Ffapwbob` against `Wboab` and the affix comes straight back as
+/// `ffap`. The affix is right there; the second morpheme's presence in the
+/// reference is the entire reason it could not be seen.
+const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 1] = [400];
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
     // basis draws honorific-prefixed epithets (spec §7's morph_options
@@ -983,27 +962,27 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
          detector-blind worlds — a new false is an UNDIAGNOSED world and must be chased, \
          not added to the list"
     );
+    // F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`):
+    // goblin 764/2/234 -> 766/1/233, kobold 762/238 -> 760/240. The claim is
+    // unchanged and unweakened — the detector still reads true on 766 of the
+    // 767 goblin worlds that hold a pantheon, and false on every one of the
+    // 760 kobold worlds that do. The splits move because the epochs that
+    // landed between the two measurements reseat settlements, so a handful of
+    // worlds gain or lose a flagship pantheon; the DIRECTION this row exists
+    // to guard is untouched.
     assert_eq!(
         (g_true, g_absent),
-        (764, 234),
+        (766, 233),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (762, 238),
+        (760, 240),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn name_gloss_true_is_100_percent_row_by_row() {
     // Preregistered (spec §9.3, Study 011 H1): every committed settlement
     // name-gloss fact composes truthfully from that SAME settlement's own
@@ -1039,40 +1018,34 @@ fn name_gloss_true_is_100_percent_row_by_row() {
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
+// F11 discharge, 2026-07-30. This was ONE row,
+// `lexicon_is_regular_and_exposure_sound_for_both_species`, asserting two
+// independent halves of Study 011 H2. It is split, because at the discharge
+// exactly one half went red and a single row cannot report that: keeping them
+// joined would have meant ignoring a regularity claim that passes on all 1000
+// worlds in order to defer a soundness claim that fails on 767 of them. F11's
+// own rule — a row that still passes must not be ignored — is what forces the
+// split, and the halves never depended on each other: `lexicon-regular-*`
+// reads the derivation replay, `exposure-sound-*` reads the exposure
+// classification, and Task 11c already observed that a repair to one left the
+// other untouched.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
-fn lexicon_is_regular_and_exposure_sound_for_both_species() {
-    // Preregistered (spec §9.1/§9.2, Study 011 H2): every Root's recorded
-    // derivation replays exactly through evolve, and exposure
-    // classification is sound (no Root minted for a concept an
-    // INDEPENDENT re-derivation classifies Unknown, every Gap reasoned).
-    // Row-by-row, both species; Absent is a legitimate skip (no Root / no
-    // lexicon entries this world).
+fn lexicon_is_regular_for_both_species() {
+    // Preregistered (spec §9.1, Study 011 H2, first half): every Root's
+    // recorded derivation replays exactly through evolve. Row-by-row, both
+    // species; Absent is a legitimate skip (no Root / no lexicon entries this
+    // world).
     //
-    // Green again as of the second regen (46a148a2, Task 11d) with NO
-    // change to this test. The 748-false reading the first regen produced
-    // was the stale second opinion Task 11a diagnosed and Task 11c
-    // repaired: `independently_steeped_concepts` had never learned Task 4's
-    // seven toponymic `Steeped` rules. Both `exposure-sound-goblin` and
-    // `exposure-sound-kobold` now read 1000 true / 0 false / 0 absent, and
-    // `lexicon-regular-{goblin,kobold,family}` were 1000 true across both
-    // regens — untouched by the repair, as they should be. This is the
-    // shape a correct repair leaves behind: the invariant is honoured, not
-    // re-pinned, because there was never anything wrong with the worlds.
+    // Neogrammarian regularity is mechanical — `evolve` is a pure per-segment
+    // function — so this is a structural invariant, not a calibration, and it
+    // has been 1000/1000 true at every regen since it was written, through the
+    // Task 11c repair and through every epoch that has landed since. Verified
+    // green at the F11 discharge (2026-07-30, `rows.csv` at `4cd19ff9`):
+    // `lexicon-regular-{goblin,kobold}` read 0 false, 0 absent.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for species in ["goblin", "kobold"] {
-        let (reg_i, sound_i) = (
-            idx(&format!("lexicon-regular-{species}")),
-            idx(&format!("exposure-sound-{species}")),
-        );
+        let reg_i = idx(&format!("lexicon-regular-{species}"));
         for row in &result.rows {
             match row.values[reg_i] {
                 MetricValue::Flag(v) => {
@@ -1084,6 +1057,74 @@ fn lexicon_is_regular_and_exposure_sound_for_both_species() {
                     row.seed
                 ),
             }
+        }
+    }
+}
+
+/// Preregistered (spec §9.2, Study 011 H2, second half): exposure
+/// classification is sound — no `Root` is minted for a concept an INDEPENDENT
+/// re-derivation classifies outside `Steeped`, and every committed `Gap`
+/// carries a reason. Row-by-row, both species.
+///
+/// # Why this is ignored, and why it is NOT a stale census
+///
+/// This is the one row of the 38 F11 deferred that did not come back green,
+/// and it fails for a reason that has nothing to do with the census being
+/// stale — the census is current, and it is the census that reports the
+/// problem. Against the committed `rows.csv` at `4cd19ff9`,
+/// `exposure-sound-goblin` reads **767 false / 233 true** and
+/// `exposure-sound-kobold` **759 false / 241 true**. The correlation is exact
+/// and is the whole diagnosis: the flag is true on precisely the worlds where
+/// that species is UNPLACED and has nothing to check, and false on every
+/// single world where it actually holds a lexicon.
+///
+/// The worlds are fine. The SECOND OPINION is stale. `exposure_sound` asks
+/// whether any `Root` stands at a concept `independently_steeped_concepts`
+/// (windows/lab/src/metrics.rs) does not steep, and that function is a
+/// deliberate duplicate of `hornvale_worldgen::exposure_of`'s Steeped rules —
+/// duplicated on purpose, because a check that called the code it is checking
+/// would assert nothing. The cost of that design is that every new Steeped
+/// rule in worldgen must be taught to the duplicate, and **The Watershed's
+/// staple rule was not**. Tallied over seeds 0..40, the rooted-but-unsteeped
+/// concepts are exactly six, and they are exactly The Watershed's staples:
+/// `barley`, `millet`, `rice`, `tuber`, `vine`, `wheat`. Nothing else appears.
+///
+/// This is the THIRD occurrence of one defect. Task 4 added seven toponymic
+/// Steeped rules and the duplicate did not learn them (Task 11a diagnosed,
+/// Task 11c repaired, 252/1000 false). The Watershed added the staple rules
+/// and the duplicate did not learn them either (767/1000 false). The pattern
+/// is not carelessness, it is the architecture: `exposure_of` and
+/// `independently_steeped_concepts` are two hand-maintained copies of one
+/// rule set with nothing structural holding them in step, so they drift apart
+/// every time a campaign touches the original. Repairing this occurrence
+/// without addressing that will buy a third repair and a fourth divergence.
+///
+/// # Why the F11 pass does not repair it
+///
+/// Deliberately out of scope, and the reason is worth stating so the next
+/// reader does not mistake it for oversight. Teaching the duplicate The
+/// Watershed's staple rules would flip `exposure-sound-*` back to 1000 true —
+/// which changes two committed CENSUS COLUMNS, which makes the committed
+/// `rows.csv` stale, which owes a full census regeneration. F11's discharge
+/// was scoped to re-deriving pins from the census that is already committed;
+/// pairing that with a metric change that invalidates the same census would
+/// have put the two in a loop. The repair, its regen, and the question of what
+/// keeps the two copies in step are a campaign, not a followup.
+///
+/// The gate itself is sound and that was checked rather than assumed:
+/// `windows/worldgen/tests/exposure.rs` is 19/19 green, including
+/// `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap` and
+/// `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`. No
+/// world is misclassifying anything. Only the lab's copy of the rulebook is
+/// out of date.
+#[test]
+#[ignore = "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not learned The Watershed's staple Steeped rules, so exposure-sound reads false on every world where a species is placed. The census is current; the metric is not. Repair owes a regen — see the doc comment"]
+fn lexicon_is_exposure_sound_for_both_species() {
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for species in ["goblin", "kobold"] {
+        let sound_i = idx(&format!("exposure-sound-{species}"));
+        for row in &result.rows {
             match row.values[sound_i] {
                 MetricValue::Flag(v) => assert!(
                     v,
@@ -1100,15 +1141,7 @@ fn lexicon_is_regular_and_exposure_sound_for_both_species() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn goblin_hue_depth_exceeds_kobold_hue_depth() {
     // Preregistered (spec §9.4, Study 011 H3): the shipped roster's
     // night-vision values predict goblin hue-depth strictly exceeds kobold
@@ -1138,15 +1171,7 @@ fn goblin_hue_depth_exceeds_kobold_hue_depth() {
     assert!(checked > 0, "no world carried both species' hue-depth");
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn name_collision_rate_is_measured_and_pinned() {
     // Preregistered (spec §9.2/§9.5, Study 011 H4): names are pure per-
     // (seed, species, kind, salt) draws with no re-draw, so uniqueness is
@@ -1276,8 +1301,32 @@ fn name_collision_rate_is_measured_and_pinned() {
     // unmoved at 230.
     // The Toponym (name-gloss epoch): redrawn names change which worlds
     // collide; the absent set is unmoved at 230.
-    assert_eq!(zero, 43, "zero-collision world count drifted");
-    assert_eq!(nonzero, 727, "nonzero-collision world count drifted");
+    //
+    // F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`):
+    // 43 -> 1 zero-collision, 727 -> 769 nonzero; the absent set is unmoved at
+    // 230 for the fourth regen running. The mean rate rises sharply with it
+    // (0.1269 -> 0.5688, below).
+    //
+    // **THIS RISE IS SANCTIONED. DO NOT "FIX" IT.** Decision 0024 settled the
+    // question this number keeps reopening: name uniqueness is a REFERENCE-TIME
+    // property — a listener disambiguates two same-named places by context,
+    // the way real toponymy does — and it is expressly NOT to be bought with
+    // entropy at generation time. Every previous attempt to push this rate
+    // down did so by widening the draw (a longer stem, more syllables), and
+    // decision 0024 is the ruling that the trade is not ours to make. The
+    // honest rate is pinned here exactly as Study 007/008 pin an honest rate
+    // that misses its own floor. A future reader who finds 0.57 alarming
+    // should read 0024 before touching a single template weight.
+    //
+    // Two forces put the rate here, and neither is a defect. The name space
+    // NARROWED: mean name length fell 13.67 -> 9.14 (goblin) and 15.55 ->
+    // 7.67 (kobold) as the campaigns in between moved naming toward short,
+    // site-derived compounds — shorter names, fewer distinct ones, more
+    // reuse. And the roster of things to name kept GROWING, so each world
+    // draws more names from the same narrowed space. Both movements are
+    // recorded at their own pin sites; this row records their product.
+    assert_eq!(zero, 1, "zero-collision world count drifted");
+    assert_eq!(nonzero, 769, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1330,20 +1379,17 @@ fn name_collision_rate_is_measured_and_pinned() {
         // (six more worlds now show SOME collision).
         // The Toponym (name-gloss epoch): 0.138_343_210_536_363_64 ->
         // 0.126_857_511_090_779.
-        (mean - 0.126_857_511_090_779).abs() < 1e-6,
+        // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
+        // 0.126_857_511_090_779 -> 0.568_773_210_602_597_8. The largest single
+        // movement this row has ever recorded, and it is sanctioned — see the
+        // decision-0024 note above the zero/nonzero pins, which a reader who
+        // arrived here from a red assertion has probably not read yet.
+        (mean - 0.568_773_210_602_597_8).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn name_length_distributions_are_measured_and_pinned() {
     // Preregistered (spec §9.2, Study 011's H4 companion): mean generated-
     // name length, per species, pinned over the 500-seed drift study as a
@@ -1487,7 +1533,14 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 13.686_009_046_023_463.
         // The Toponym (name-gloss epoch; lefford regen, 0063): variants enter
         // settlement name glosses, so every name in every world is redrawn.
-        ("goblin", 767u32, 13.66529745723599),
+        // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): the
+        // present count holds at 767, the mean falls 13.665_297_457_235_99 ->
+        // 9.140_832_142_242_502. A 4.5-character drop is the largest this row
+        // has recorded, and the direction is the one spec §8 criterion 1 asks
+        // for — names got shorter as naming moved onto short site-derived
+        // compounds. Recorded as measured; the row is a drift witness, not a
+        // bound, so nothing here is loosened to admit it.
+        ("goblin", 767u32, 9.140832142242502),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1519,7 +1572,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 14.573_312_491_578_953 — kobold moves far more than goblin again,
         // and in the same direction: the bigger surviving roster seats
         // flagships on materially different sites.
-        ("kobold", 760u32, 15.548879020789471),
+        // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): present
+        // holds at 760, mean 15.548_879_020_789_471 -> 7.673_908_980_657_894.
+        // Kobold moves nearly twice as far as goblin, as it has at every regen
+        // since The Tumult — its flagships reseat onto materially different
+        // sites, so its site-derived compounds are drawn from a different part
+        // of its lexicon.
+        ("kobold", 760u32, 7.673908980657894),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1554,15 +1613,7 @@ fn name_length_distributions_are_measured_and_pinned() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn name_syllable_distributions_are_measured_and_pinned() {
     // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
     // companion to `name_length_distributions_are_measured_and_pinned`, over
@@ -1597,8 +1648,24 @@ fn name_syllable_distributions_are_measured_and_pinned() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for (species, expected_present, expected_mean) in [
-        ("goblin", 766u32, 2.8535480079634477),
-        ("kobold", 762u32, 2.2784107906824143),
+        // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): goblin
+        // 766 -> 767 present, mean 2.853_548_007_963_447_7 ->
+        // 2.724_948_034_028_684; kobold 762 -> 760 present, mean
+        // 2.278_410_790_682_414_3 -> 2.250_537_518_552_632.
+        //
+        // The present counts now agree with `name_length_distributions_are_
+        // measured_and_pinned`'s (767 / 760), which they had NOT since The
+        // Toponym: that campaign re-pinned the name-length counts and left the
+        // syllable counts at The Wearing's, so the two rows disagreed by one
+        // world about which seeds have names at all. The row's own
+        // `name-syllables`/`name-length` agreement assertion is what makes the
+        // disagreement impossible to keep, and it is now honoured.
+        //
+        // The claim this row carries — spec §8 criterion 2, mean syllable
+        // count in the 2-3 range — HOLDS at both species and is not what the
+        // re-pin touched.
+        ("goblin", 767u32, 2.724948034028684),
+        ("kobold", 760u32, 2.250537518552632),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1644,15 +1711,7 @@ fn name_syllable_distributions_are_measured_and_pinned() {
     }
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn name_transparency_is_measured_and_pinned() {
     // NEW ROW — The Wearing (2026-07-28; lefford regen f32d6ce2, 0063). The
     // share of a world's settlement names whose surface still contains the
@@ -1709,14 +1768,23 @@ fn name_transparency_is_measured_and_pinned() {
     assert_eq!(absent, 230, "name-transparency absent-row count drifted");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.8267291343896103).abs() < 1e-9,
+        // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
+        // 0.826_729_134_389_610_3 -> 0.816_024_344_246_753_3, present/absent
+        // unmoved at 770/230.
+        (mean - 0.8160243442467533).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
     // could be produced by every world reading 0.827, which would be the same
     // uniformity defect in a new costume. Pinned exactly.
     assert!(
-        (min - 0.24705882).abs() < 1e-8,
+        // F11 discharge re-pin (2026-07-30): the floor drops
+        // 0.247_058_82 -> 0.153_846_15 while the ceiling stays pegged at 1.0,
+        // so the spread WIDENS even as the mean edges down — which is the
+        // reading this row exists to preserve. A mean of 0.816 with a floor of
+        // 0.154 and a ceiling of 1.0 is a real distribution over worlds, not
+        // the uniformity defect in a new costume.
+        (min - 0.15384615).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -1726,18 +1794,6 @@ fn name_transparency_is_measured_and_pinned() {
 }
 
 #[test]
-// Newly stale at the 2026-07-29 merge, not before: this row reads the
-// MEETING census, whose metric list DID grow with this campaign's naming
-// metrics (`name-syllables-*`, `name-transparency`) even though the
-// null-control study's did not — which is why F11 originally recorded it as
-// still passing. The merge took main's `rows.csv` (the only census whose
-// evidence is committed), so the study loader now rejects the header and the
-// row cannot execute at all. Not a weakened assertion; an unrunnable one.
-// The reason string below is the first canonical variant verbatim —
-// `cli/tests/heavy_tier.rs::stale_census_reason_strings_are_canonical` holds
-// it so the debt stays greppable — and this comment carries what is specific
-// to these three.
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn null_control_blind_attribution_is_at_chance() {
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -1827,18 +1883,6 @@ fn null_control_blind_attribution_is_at_chance() {
 }
 
 #[test]
-// Newly stale at the 2026-07-29 merge, not before: this row reads the
-// MEETING census, whose metric list DID grow with this campaign's naming
-// metrics (`name-syllables-*`, `name-transparency`) even though the
-// null-control study's did not — which is why F11 originally recorded it as
-// still passing. The merge took main's `rows.csv` (the only census whose
-// evidence is committed), so the study loader now rejects the header and the
-// row cannot execute at all. Not a weakened assertion; an unrunnable one.
-// The reason string below is the first canonical variant verbatim —
-// `cli/tests/heavy_tier.rs::stale_census_reason_strings_are_canonical` holds
-// it so the debt stays greppable — and this comment carries what is specific
-// to these three.
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn null_control_distributions_are_within_the_sampling_bound() {
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -1926,18 +1970,6 @@ fn null_control_distributions_are_within_the_sampling_bound() {
 }
 
 #[test]
-// Newly stale at the 2026-07-29 merge, not before: this row reads the
-// MEETING census, whose metric list DID grow with this campaign's naming
-// metrics (`name-syllables-*`, `name-transparency`) even though the
-// null-control study's did not — which is why F11 originally recorded it as
-// still passing. The merge took main's `rows.csv` (the only census whose
-// evidence is committed), so the study loader now rejects the header and the
-// row cannot execute at all. Not a weakened assertion; an unrunnable one.
-// The reason string below is the first canonical variant verbatim —
-// `cli/tests/heavy_tier.rs::stale_census_reason_strings_are_canonical` holds
-// it so the debt stays greppable — and this comment carries what is specific
-// to these three.
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn null_control_name_length_smd_is_pinned() {
     // Re-measured on the merged code (was -0.118235 at the Tongues-era
     // measurement, -0.045751 at Study 011's first, pre-fix measurement,
@@ -2048,7 +2080,19 @@ fn null_control_name_length_smd_is_pinned() {
         // settlement name glosses, so both solo builds are renamed alike and
         // the residual gap moves — -0.064_965_927_887_856_32 ->
         // -0.065_714_087_428_851_79; still well inside the ±0.2 bound.
-        (namelen - -0.065_714_087_428_851_79).abs() < 1e-9,
+        // F11 discharge re-pin (2026-07-30, `census-of-the-meeting` rows.csv
+        // at `4cd19ff9`): -0.065_714_087_428_851_79 -> +0.005_126_221_321_487_987.
+        // The SIGN flips, which is worth a sentence rather than a shrug: this
+        // is a standardized mean difference between a people and its
+        // deliberately-identical twin, so the null hypothesis it exists to
+        // witness is that the value is INDISTINGUISHABLE FROM ZERO. Moving
+        // from -0.066 to +0.005 moves it an order of magnitude CLOSER to zero,
+        // not further; the sign of a quantity this small is noise about which
+        // of two identical populations happened to draw marginally longer
+        // names. Still ~39x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound` asserts,
+        // which is the assertion that would actually catch a broken control.
+        (namelen - 0.005_126_221_321_487_987).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
@@ -2151,15 +2195,7 @@ fn nums(r: &RunResult, pin_set: &str, col: usize) -> Vec<f64> {
         .collect()
 }
 
-// This row is IGNORED, not re-pinned, and not weakened (The Wearing, task
-// 11e). It reconstructs the committed census fixture, and that fixture no
-// longer matches the study schema: the campaign added naming metrics, so
-// the loader rejects the header and the row cannot execute at all. What it
-// asserts is unchanged and is stated below; whether its recorded VALUES
-// also moved is not known and must be read off a fresh census, not guessed
-// here. Discharge with the regen in .superpowers/sdd/followups.md.
 #[test]
-#[ignore = "stale-census: The Wearing deferred its census regen; this row reads a census predating the campaign's metrics. Re-derive per .superpowers/sdd/followups.md"]
 fn obliquity_range_is_wider_on_moonless_worlds() {
     // A moonless world keeps the full drawn obliquity wobble; any moon's
     // tidal stabilization damps it (SKY-21, generate_forcing's `damping =

@@ -96,7 +96,9 @@
 --     this name valid" needs the phonotactic machinery itself, not just the
 --     fixture.
 --     (epithet_honorific_is_true_for_goblin_and_false_for_kobold and
---     lexicon_is_regular_and_exposure_sound_for_both_species stood in this
+--     lexicon_is_regular_and_exposure_sound_for_both_species — since the F11
+--     discharge split into lexicon_is_regular_for_both_species and
+--     lexicon_is_exposure_sound_for_both_species — stood in this
 --     list until 2026-07-28 on the stated ground that they "hold 100%/0% by
 --     construction". That ground was FALSE, and this file's silence is how
 --     it stayed false: the epithet column read 452 false and both
@@ -181,36 +183,29 @@ WITH agg AS (
     avg("name-length-goblin") AS goblin_len_mean,
     count(*) FILTER (WHERE "name-length-kobold" IS NOT NULL) AS kobold_len_present,
     avg("name-length-kobold") AS kobold_len_mean,
-    -- stale-census: The Wearing deferred its census regen, so the eight
-    -- aggregates below are COMMENTED OUT rather than deleted. SQL has no
-    -- #[ignore]; this block is the file's equivalent, and it carries the same
-    -- token the Rust rows do so `git grep stale-census:` finds it with them.
-    --
-    -- Two reasons they cannot run. First, the columns do not exist: the census
-    -- committed at the close merge is main's, and `name-syllables-{goblin,
-    -- kobold}` and `name-transparency` are metrics THIS campaign added, so
-    -- DuckDB fails to bind them and `make census-check` dies on the whole
-    -- file. Second, their assertions are already gone — the pin rows in
-    -- `checks` that consumed these aliases sat in conflict hunks resolved to
-    -- main's side, which leaves the aggregates computing values nothing reads.
-    --
-    -- Kept verbatim because they are the queries the deferred pass needs: at
-    -- the regen, uncomment these, re-add the matching `checks` rows, and pin
-    -- them to the fresh census. The transparency min and max belong alongside
-    -- the mean when they come back — the SPREAD is the finding, and a mean
-    -- with every world reading it would be the same uniformity defect the
-    -- campaign removed, wearing a different number.
-    --
+    -- RESTORED at the F11 discharge, 2026-07-30. These eight aggregates were
+    -- commented out at The Wearing's close because the columns did not exist
+    -- in the census committed at that merge — DuckDB failed to bind them and
+    -- took the whole pin file down with it. The columns exist now (the regen
+    -- landed separately, at 9855048d and then 4cd19ff9), so they bind, and
+    -- their matching `checks` rows are restored in the same commit. That
+    -- pairing is not optional: an aggregate nothing reads computes a value
+    -- nobody checks, which is how they came to be deleted from `checks` in
+    -- the first place.
     -- name_syllable_distributions_are_measured_and_pinned (The Wearing, new)
-    -- count(*) FILTER (WHERE "name-syllables-goblin" IS NOT NULL) AS goblin_syl_present,
-    -- avg("name-syllables-goblin") AS goblin_syl_mean,
-    -- count(*) FILTER (WHERE "name-syllables-kobold" IS NOT NULL) AS kobold_syl_present,
-    -- avg("name-syllables-kobold") AS kobold_syl_mean,
-    -- name_transparency_is_measured_and_pinned (The Wearing, new)
-    -- count(*) FILTER (WHERE "name-transparency" IS NOT NULL) AS transparency_present,
-    -- avg("name-transparency") AS transparency_mean,
-    -- min("name-transparency") AS transparency_min,
-    -- max("name-transparency") AS transparency_max,
+    count(*) FILTER (WHERE "name-syllables-goblin" IS NOT NULL) AS goblin_syl_present,
+    avg("name-syllables-goblin") AS goblin_syl_mean,
+    count(*) FILTER (WHERE "name-syllables-kobold" IS NOT NULL) AS kobold_syl_present,
+    avg("name-syllables-kobold") AS kobold_syl_mean,
+    -- name_transparency_is_measured_and_pinned (The Wearing, new). The min and
+    -- max are pinned ALONGSIDE the mean, exactly as the deferred note asked:
+    -- the SPREAD is the finding. A mean of 0.816 with every world reading
+    -- 0.816 would be the same uniformity defect the campaign removed, wearing
+    -- a different number, and only the min/max can tell the two apart.
+    count(*) FILTER (WHERE "name-transparency" IS NOT NULL) AS transparency_present,
+    avg("name-transparency") AS transparency_mean,
+    min("name-transparency") AS transparency_min,
+    max("name-transparency") AS transparency_max,
     -- goblin_hue_depth_exceeds_kobold_hue_depth (a structural constant, so
     -- its mean over present rows equals the per-row pinned value exactly)
     avg("hue-depth-goblin") FILTER (
@@ -234,11 +229,14 @@ WITH agg AS (
     count(*) FILTER (WHERE "epithet-honorific-kobold" = false) AS epithet_kobold_false,
     count(*) FILTER (WHERE "epithet-honorific-kobold" = true) AS epithet_kobold_true,
     count(*) FILTER (WHERE "epithet-honorific-kobold" IS NULL) AS epithet_kobold_absent,
-    -- lexicon_is_regular_and_exposure_sound_for_both_species (The Wearing
-    -- Task 11d, newly translated for the same reason). The FALSE counts are
-    -- pinned at 0 alongside the true counts deliberately: the first regen
-    -- read 748 false on both species for eleven days with nothing in this
-    -- file able to notice.
+    -- lexicon_is_exposure_sound_for_both_species (The Wearing Task 11d,
+    -- newly translated for the same reason; the Rust row was split in two at
+    -- the F11 discharge and this is the half that owns the soundness claim).
+    -- The false counts are pinned alongside the true counts deliberately: the
+    -- first regen read 748 false on both species for eleven days with nothing
+    -- in this file able to notice — and the F11 discharge found them false
+    -- again, from a different cause, which is exactly the recurrence this
+    -- pin exists to make loud. See the note on the check rows below.
     count(*) FILTER (WHERE "exposure-sound-goblin" = true) AS exposure_goblin_true,
     count(*) FILTER (WHERE "exposure-sound-goblin" = false) AS exposure_goblin_false,
     count(*) FILTER (WHERE "exposure-sound-kobold" = true) AS exposure_kobold_true,
@@ -399,15 +397,19 @@ checks AS (
   -- The Tumult (predation) re-pin, 0063: 48 -> 43.
   -- The Tithe (tribute) re-pin, 0063: 39 -> 33.
   -- The Toponym (name-gloss epoch), 0063: 33 -> 43.
+  -- F11 discharge re-pin, 2026-07-30 (rows.csv at 4cd19ff9): 43 -> 1. See the
+  -- decision-0024 note at calibration.rs::name_collision_rate_is_measured_and_
+  -- pinned: this rise is SANCTIONED and is not to be bought back with entropy.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 43.0, collision_zero = 43 FROM agg
+         CAST(collision_zero AS DOUBLE), 1.0, collision_zero = 1 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
   -- The Tithe (tribute) re-pin, 0063: 731 -> 737.
   -- The Toponym (name-gloss epoch), 0063: 737 -> 727.
+  -- F11 discharge re-pin, 2026-07-30: 727 -> 769; the absent set is unmoved.
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 727.0, collision_nonzero = 727 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 769.0, collision_nonzero = 769 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
@@ -421,8 +423,13 @@ checks AS (
   -- The Tithe (tribute) re-pin, 0063: 0.185_804_141_557_143 ->
   -- 0.126_857_511_090_779 — the roster nearly doubles yet the rate FALLS,
   -- recorded as measured, not explained (see the header note).
+  -- F11 discharge re-pin, 2026-07-30: 0.126_857_511_090_779 ->
+  -- 0.568_773_210_602_597_8. Two forces, neither a defect: the name space
+  -- narrowed (mean name length fell sharply, below) while the roster of things
+  -- to name kept growing. Sanctioned by decision 0024 — read it before
+  -- treating this as something to fix.
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.126_857_511_090_779, abs(collision_mean - 0.126_857_511_090_779) < 1e-6 FROM agg
+         collision_mean, 0.568_773_210_602_597_8, abs(collision_mean - 0.568_773_210_602_597_8) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -435,8 +442,10 @@ checks AS (
   -- 13.397_077_864_229_757.
   -- The Tithe (tribute) re-pin, 0063: 13.397_077_864_229_757 ->
   -- 13.665_297_457_235_99.
+  -- F11 discharge re-pin, 2026-07-30: 13.665_297_457_235_99 ->
+  -- 9.140_832_142_242_502. The present count holds at 767.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 13.665_297_457_235_99, abs(goblin_len_mean - 13.665_297_457_235_99) < 1e-6 FROM agg
+         goblin_len_mean, 9.140_832_142_242_502, abs(goblin_len_mean - 9.140_832_142_242_502) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -450,8 +459,10 @@ checks AS (
   -- reseating that inverts the coastal-rate ordering).
   -- The Tithe (tribute) re-pin, 0063: 13.211_758_902_624_661 ->
   -- 15.548_879_020_789_471 (kobold again moves far more than goblin).
+  -- F11 discharge re-pin, 2026-07-30: 15.548_879_020_789_471 ->
+  -- 7.673_908_980_657_894. Kobold moves nearly twice as far as goblin again.
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 15.548_879_020_789_471, abs(kobold_len_mean - 15.548_879_020_789_471) < 1e-6 FROM agg
+         kobold_len_mean, 7.673_908_980_657_894, abs(kobold_len_mean - 7.673_908_980_657_894) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -462,68 +473,133 @@ checks AS (
   SELECT '"the-census" fixture row count (calibration.rs — implicit in several present+absent==1000 row-count assertions)',
          CAST(row_count AS DOUBLE), 1000.0, row_count = 1000 FROM agg
   UNION ALL
-  -- stale-census: The Wearing deferred its census regen, so the eight
-  -- epithet-honorific pin rows below are COMMENTED OUT rather than re-pinned.
-  -- SQL has no #[ignore]; this is the file's equivalent, carrying the token
-  -- the Rust rows carry so one grep finds the whole debt.
+  -- RESTORED at the F11 discharge, 2026-07-30, re-derived through DuckDB
+  -- against the committed rows.csv (4cd19ff9) and landed in the SAME commit as
+  -- their Rust counterpart's re-pin. That pairing is the whole point of this
+  -- tripwire: if the SQL and calibration.rs are re-pinned in separate commits,
+  -- the one thing `make census-check` exists to catch — the two disagreeing —
+  -- is exactly what slips through the gap.
   --
-  -- These literals (764/2/234 goblin, 762/0/238 kobold, false seeds 386 and
-  -- 976) were measured against the campaign's SECOND census, which the close
-  -- merge superseded with main's. Against main's census they read 767/0/233
-  -- and 760/0/240, and the two named detector-blind seeds do not exist at all
-  -- -- the false count is 0, so the min/max seed pins have nothing to
-  -- identify. Their Rust counterpart,
-  -- calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold,
-  -- is #[ignore]d for the same reason, and the two must come back together.
+  -- The Wearing deferred these with literals (764/2/234 goblin, 762/0/238
+  -- kobold, false seeds 386 and 976) measured against a census its close merge
+  -- superseded, and explicitly declined to re-pin them to main's numbers on
+  -- the grounds that a different wrong answer is not the answer. That call was
+  -- right and is now discharged the way it asked to be: from the census that
+  -- IS committed, not from either prior set.
   --
-  -- Deliberately NOT re-pinned to main's numbers. Main's census does not know
-  -- about this campaign's naming changes either, so 767/0/233 is not the
-  -- answer -- it is a different wrong answer. The pins are re-derived from a
-  -- fresh census or not at all.
+  -- The measured population turned over completely. Goblin reads 766 true / 1
+  -- false / 233 absent; kobold 760 false / 0 true / 240 absent. Seeds 386 and
+  -- 976 are no longer detector-blind at all — every belief of both worlds now
+  -- detects its affix unaided — and the sole remaining false is seed 400,
+  -- chased to a named cause before it was written down (see
+  -- calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS for the derivation).
   --
-  -- The `agg` aliases these consumed are left computing: they bind against
-  -- columns that DO exist, and the deferred pass needs them to re-pin.
-  -- -- The Wearing Task 11d re-pin, 0063 (second regen 46a148a2, after the two
-  -- -- metric repairs in 3e9d2ad5): 314 -> 764 true, 452 -> 2 false.
-  -- SELECT 'goblin epithet-honorific true count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-  -- CAST(epithet_goblin_true AS DOUBLE), 764.0, epithet_goblin_true = 764 FROM agg
-  -- UNION ALL
-  -- SELECT 'goblin epithet-honorific false count — the two diagnosed detector-blind worlds (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-  -- CAST(epithet_goblin_false AS DOUBLE), 2.0, epithet_goblin_false = 2 FROM agg
-  -- UNION ALL
-  -- SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-  -- CAST(epithet_goblin_absent AS DOUBLE), 234.0, epithet_goblin_absent = 234 FROM agg
-  -- UNION ALL
-  -- SELECT 'goblin epithet-honorific lowest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
-  -- CAST(epithet_goblin_false_lo AS DOUBLE), 386.0, epithet_goblin_false_lo = 386 FROM agg
-  -- UNION ALL
-  -- SELECT 'goblin epithet-honorific highest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
-  -- CAST(epithet_goblin_false_hi AS DOUBLE), 976.0, epithet_goblin_false_hi = 976 FROM agg
-  -- UNION ALL
-  -- -- Unmoved by the repair, as it must be: the repair changed how a PRESENT
-  -- -- affix is detected, and kobold (Knowledge status basis) has none.
-  -- SELECT 'kobold epithet-honorific false count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-  -- CAST(epithet_kobold_false AS DOUBLE), 762.0, epithet_kobold_false = 762 FROM agg
-  -- UNION ALL
-  -- SELECT 'kobold epithet-honorific TRUE count — structurally impossible for a non-Rank people (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-  -- CAST(epithet_kobold_true AS DOUBLE), 0.0, epithet_kobold_true = 0 FROM agg
-  -- UNION ALL
-  -- SELECT 'kobold epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
-  -- CAST(epithet_kobold_absent AS DOUBLE), 238.0, epithet_kobold_absent = 238 FROM agg
-  -- UNION ALL
+  -- With the false COUNT pinned at 1, min and max necessarily agree, and both
+  -- are pinned anyway: the pair identifies the set exactly, so a different
+  -- world cannot pass by arithmetic, and if the count ever rises the two pins
+  -- diverge and say so.
+  SELECT 'goblin epithet-honorific true count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_goblin_true AS DOUBLE), 766.0, epithet_goblin_true = 766 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific false count — the diagnosed detector-blind world (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_goblin_false AS DOUBLE), 1.0, epithet_goblin_false = 1 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_goblin_absent AS DOUBLE), 233.0, epithet_goblin_absent = 233 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific lowest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
+         CAST(epithet_goblin_false_lo AS DOUBLE), 400.0, epithet_goblin_false_lo = 400 FROM agg
+  UNION ALL
+  SELECT 'goblin epithet-honorific highest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
+         CAST(epithet_goblin_false_hi AS DOUBLE), 400.0, epithet_goblin_false_hi = 400 FROM agg
+  UNION ALL
+  -- Unmoved in KIND by anything since Task 11d, as it must be: the detector
+  -- reads a PRESENT affix, and kobold (Knowledge status basis) has none. Only
+  -- the counts move, with the worlds that hold a flagship pantheon at all.
+  SELECT 'kobold epithet-honorific false count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_kobold_false AS DOUBLE), 760.0, epithet_kobold_false = 760 FROM agg
+  UNION ALL
+  SELECT 'kobold epithet-honorific TRUE count — structurally impossible for a non-Rank people (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_kobold_true AS DOUBLE), 0.0, epithet_kobold_true = 0 FROM agg
+  UNION ALL
+  SELECT 'kobold epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
+         CAST(epithet_kobold_absent AS DOUBLE), 240.0, epithet_kobold_absent = 240 FROM agg
+  UNION ALL
+  -- The eight naming aggregates restored at the top of `agg` need their
+  -- assertions here, or they compute values nothing reads. Re-derived through
+  -- DuckDB against the committed rows.csv, matching
+  -- calibration.rs::name_syllable_distributions_are_measured_and_pinned and
+  -- ::name_transparency_is_measured_and_pinned exactly.
+  SELECT 'goblin name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         CAST(goblin_syl_present AS DOUBLE), 767.0, goblin_syl_present = 767 FROM agg
+  UNION ALL
+  -- Spec §8 criterion 2 asks for a mean syllable count in the 2-3 range; both
+  -- species read inside it, which is the claim the Rust row carries.
+  SELECT 'mean goblin name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         goblin_syl_mean, 2.724_948_034_028_684, abs(goblin_syl_mean - 2.724_948_034_028_684) < 1e-6 FROM agg
+  UNION ALL
+  SELECT 'kobold name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         CAST(kobold_syl_present AS DOUBLE), 760.0, kobold_syl_present = 760 FROM agg
+  UNION ALL
+  SELECT 'mean kobold name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
+         kobold_syl_mean, 2.250_537_518_552_632, abs(kobold_syl_mean - 2.250_537_518_552_632) < 1e-6 FROM agg
+  UNION ALL
+  SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
+         CAST(transparency_present AS DOUBLE), 770.0, transparency_present = 770 FROM agg
+  UNION ALL
+  SELECT 'mean name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
+         transparency_mean, 0.816_024_344_246_753_3, abs(transparency_mean - 0.816_024_344_246_753_3) < 1e-6 FROM agg
+  UNION ALL
+  -- The min and max are the SPREAD pins the deferred note asked for. A floor
+  -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
+  -- a distribution over worlds rather than a constant every world reads.
+  SELECT 'min name-transparency — the spread floor (calibration.rs::name_transparency_is_measured_and_pinned)',
+         transparency_min, 0.153_846_15, abs(transparency_min - 0.153_846_15) < 1e-6 FROM agg
+  UNION ALL
+  SELECT 'max name-transparency — the spread ceiling (calibration.rs::name_transparency_is_measured_and_pinned)',
+         transparency_max, 1.0, abs(transparency_max - 1.0) < 1e-6 FROM agg
+  UNION ALL
   -- The Wearing Task 11d re-pin, 0063: 252 -> 1000 true, 748 -> 0 false on
   -- both species, the stale second opinion repaired.
-  SELECT 'goblin exposure-sound true count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
-         CAST(exposure_goblin_true AS DOUBLE), 1000.0, exposure_goblin_true = 1000 FROM agg
+  --
+  -- F11 discharge, 2026-07-30. The stale second opinion is BACK, from a new
+  -- direction, and these four pins are re-pinned to what it actually reads
+  -- rather than to what it ought to read. Goblin 1000 -> 233 true, 0 -> 767
+  -- false; kobold 1000 -> 241 true, 0 -> 759 false.
+  --
+  -- Read them as a DEFECT WITNESS, not as a calibration of the worlds. The
+  -- correlation is exact and is the diagnosis: exposure-sound is true on
+  -- precisely the worlds where that species is UNPLACED and there is nothing
+  -- to check, and false on every world where it holds a lexicon. The cause is
+  -- named and narrow — windows/lab/src/metrics.rs::independently_steeped_
+  -- concepts is a hand-maintained duplicate of hornvale_worldgen::exposure_of's
+  -- Steeped rules, and it has not learned The Watershed's staple rules, so the
+  -- six staple concepts (barley, millet, rice, tuber, vine, wheat) back Roots
+  -- the duplicate does not steep. Nothing else appears in the tally.
+  --
+  -- This is the THIRD time the two copies have drifted apart (Task 4's
+  -- toponymic rules were the first, repaired in Task 11c; this is the second
+  -- rule set to be missed). Repairing it changes these two census columns and
+  -- therefore owes a full regeneration, which is a campaign and not a
+  -- followup, so the value is recorded rather than the row deleted — a pinned
+  -- wrong number that says why it is wrong outlives a deleted one.
+  --
+  -- The Rust counterpart is calibration.rs::lexicon_is_exposure_sound_for_
+  -- both_species, which is #[ignore]d under a `stale-second-opinion:` token
+  -- (cli/tests/heavy_tier.rs). When the duplicate is repaired and the census
+  -- regenerated, these four go back to 1000/0 and that row comes back with
+  -- them.
+  SELECT 'goblin exposure-sound true count — DEFECT WITNESS, see note (calibration.rs::lexicon_is_exposure_sound_for_both_species)',
+         CAST(exposure_goblin_true AS DOUBLE), 233.0, exposure_goblin_true = 233 FROM agg
   UNION ALL
-  SELECT 'goblin exposure-sound false count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
-         CAST(exposure_goblin_false AS DOUBLE), 0.0, exposure_goblin_false = 0 FROM agg
+  SELECT 'goblin exposure-sound false count — DEFECT WITNESS, see note (calibration.rs::lexicon_is_exposure_sound_for_both_species)',
+         CAST(exposure_goblin_false AS DOUBLE), 767.0, exposure_goblin_false = 767 FROM agg
   UNION ALL
-  SELECT 'kobold exposure-sound true count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
-         CAST(exposure_kobold_true AS DOUBLE), 1000.0, exposure_kobold_true = 1000 FROM agg
+  SELECT 'kobold exposure-sound true count — DEFECT WITNESS, see note (calibration.rs::lexicon_is_exposure_sound_for_both_species)',
+         CAST(exposure_kobold_true AS DOUBLE), 241.0, exposure_kobold_true = 241 FROM agg
   UNION ALL
-  SELECT 'kobold exposure-sound false count (calibration.rs::lexicon_is_regular_and_exposure_sound_for_both_species)',
-         CAST(exposure_kobold_false AS DOUBLE), 0.0, exposure_kobold_false = 0 FROM agg
+  SELECT 'kobold exposure-sound false count — DEFECT WITNESS, see note (calibration.rs::lexicon_is_exposure_sound_for_both_species)',
+         CAST(exposure_kobold_false AS DOUBLE), 759.0, exposure_kobold_false = 759 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 325 -> 324.
   -- The Tumult (predation) re-pin, 0063: 324 -> 323.
@@ -564,9 +640,16 @@ checks AS (
   -- the rows.csv committed here; this branch's own (0.026_557_760_190_573_92)
   -- was measured against a census the merge replaced. Both predate the
   -- merged physics — F11's single regen re-measures.
+  -- F11 discharge re-pin, 2026-07-30: -0.065_714_087_428_851_79 ->
+  -- +0.005_126_221_321_487_99. The sign flip is not a regression: this is a
+  -- standardized mean difference against a deliberately-identical twin, so
+  -- closer to zero is BETTER, and 0.005 is an order of magnitude closer than
+  -- -0.066 was. (DuckDB's summation lands one ULP from the Rust row's
+  -- 0.005_126_221_321_487_987; the 1e-6 tolerance is what makes the two
+  -- independent computations comparable at all, and is unchanged.)
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.065_714_087_428_851_79,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.065_714_087_428_851_79) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), 0.005_126_221_321_487_99,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - 0.005_126_221_321_487_99) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

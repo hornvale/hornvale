@@ -142,8 +142,21 @@ exactly, both species.** Every one of 10,000 present worlds reads
 true across the four columns, zero exceptions.** No Root entry was ever
 minted for a concept an independent, from-the-ledger re-derivation of
 exposure classified outside `Steeped`, and every committed Gap carried a
-non-empty reason. The 500-seed calibration
-(`lexicon_is_regular_and_exposure_sound_for_both_species`) reconfirms this.
+non-empty reason. The 500-seed calibration reconfirmed this at the time, as
+`lexicon_is_regular_and_exposure_sound_for_both_species`.
+
+> **Since superseded in part.** That calibration row was split at the F11
+> discharge (2026-07-30). Its regularity half survives unchanged as
+> `lexicon_is_regular_for_both_species` and still reads 1000/1000 true on both
+> species. Its soundness half, `lexicon_is_exposure_sound_for_both_species`, is
+> currently held open: `exposure-sound-{goblin,kobold}` read 767 and 759 false
+> over the committed census, on precisely the worlds where each species is
+> placed. **This is an instrument defect, not a finding about the worlds** —
+> the lab's deliberately-duplicated second opinion has not learned The
+> Watershed's staple `Steeped` rules, so six staple concepts back Roots it does
+> not steep. The worldgen exposure gate itself is fully green. The H2 result
+> above stands as measured; what has lapsed is the checker, and its repair owes
+> a census regeneration.
 
 **H3: pack-depth ordering, at 10k — confirmed exactly.** `hue-depth-goblin`
 reads **4** in all 10,000 present worlds; `hue-depth-kobold` reads **2** in
@@ -361,7 +374,18 @@ is once again what 0024 said it was — a calibration witness of how
 concentrated meaningful toponymy is, not a defect with a target.
 
 *A note on provenance.* The figures in this coda were measured on a census
-regenerated during that campaign; the census goldens committed alongside this
-page are still the pre-campaign ones, and the naming rows of the calibration
-battery are held open pending a deferred regeneration. That debt is greppable
-in the tree as `stale-census:`.
+regenerated during that campaign. **That deferred regeneration has since been
+run** (the goldens committed alongside this page are current as of `4cd19ff9`)
+and the calibration battery's naming rows were re-derived against it at the
+F11 discharge, 2026-07-30 — so the `stale-census:` token this paragraph used
+to point at no longer exists in the tree.
+
+Re-deriving them moved the collision figures further in the direction this
+coda describes, not back: over the current census the mean name-collision rate
+reads **0.5688**, with only one of a thousand worlds drawing no duplicate name
+at all. Decision 0024 governs, and its reading is unchanged by the larger
+number — uniqueness is a reference-time property, and the rate is a witness of
+how concentrated meaningful toponymy is rather than a defect with a target. Two
+measured movements account for it: mean generated-name length fell sharply over
+the intervening epochs (goblin 13.67 → 9.14, kobold 15.55 → 7.67), narrowing
+the space names are drawn from, while the roster of things to name grew.

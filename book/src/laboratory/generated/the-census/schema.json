@@ -996,6 +996,52 @@
     },
     {
       "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "doc": "Mean syllable count of every generated name (settlement, deity, epithet) attributed to goblins in this world, counted as maximal vowel runs in the committed surface (an orthographic proxy — see the metric's own doc comment for its measured error bound); the reading The Wearing's claim needs, since character length cannot tell shorter words from the same words spelled tighter. Target 2-3; Absent if goblins produced no names",
+      "kind": "numeric",
+      "name": "name-syllables-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "doc": "Mean syllable count of every generated name attributed to kobolds in this world (see name-syllables-goblin); Absent if kobolds produced no names",
+      "kind": "numeric",
+      "name": "name-syllables-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Share of this world's committed settlement names whose surface still contains, verbatim, the modern citation form of EVERY concept its own committed name-gloss names — read from the ledger and the lexicon, never from the naming code. The target is explicitly NOT 1.0 (The Wearing, spec §8): transparency was 100% by construction before this campaign, and that uniformity is the defect — most real toponyms are opaque to their own speakers. A distribution, pinned as a drift witness, never bounded. Absent if no settlement carries a non-empty gloss",
+      "kind": "numeric",
+      "name": "name-transparency",
+      "rung": "full"
+    },
+    {
+      "buckets": [
         0.0,
         0.01,
         0.02,
@@ -1082,7 +1128,7 @@
       "rung": "full"
     },
     {
-      "doc": "Whether every committed settlement name-gloss fact in this world is a truthful composition of that SAME settlement's own re-derived site concepts (biome + presiding phenomenon), independently re-derived here rather than read back from worldgen's own composition; Absent if no settlement in this world carries a gloss",
+      "doc": "Whether every committed settlement name-gloss fact in this world is a truthful composition of that SAME settlement's own re-derived site concepts — up to twelve: the nine toponymic terrain concepts its own cell offers (hydrography, elevation extrema, landmass size, wetness), The Toponym's characteristic climate variant, the biome, and the presiding sky phenomenon. The Wearing's Task 5 widened this vector past the original biome + presiding pair, and the close merge with The Toponym added the variant. Rather than restate the vector, this metric re-derives it by calling worldgen's own settlement_site_concepts, so there is no hand-maintained parallel definition to go stale — only this sentence, which has now gone stale twice; Absent if no settlement in this world carries a gloss",
       "kind": "flag",
       "name": "name-gloss-true",
       "rung": "full"
@@ -1981,7 +2027,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x2ccbaf884a378fac"
+    "fnv1a64": "0xf32f9357a4358a39"
   },
   "schema_version": 1,
   "study": {

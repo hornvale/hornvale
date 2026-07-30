@@ -145,7 +145,7 @@ pub fn render_report(
 
     let mut md = String::from("# The Sounding — feasibility frontier\n\n");
     md.push_str(
-        "Measured on ONE machine; timings are wall-clock and machine-dependent (the sample biographies below are byte-deterministic). Budgets are lines, not gates.\n\n",
+        "Measured on ONE machine; timings are wall-clock and machine-dependent (the sample biographies below are byte-deterministic). Budgets are lines, not gates.\n\nBecause of that, this page and its `rows.csv` are **excluded from the artifact drift check** (decision 0087): the nanosecond columns and the exponents fitted from them move between any two runs, so a byte-identity check on them could never pass. `sample-biographies.txt` stays strictly checked. Read the exponents and the scan-vs-index ratio as the result; read the absolute nanoseconds as a record of one run on one box.\n\n",
     );
 
     // Workload census — the transparency surface: the measured phenomena
