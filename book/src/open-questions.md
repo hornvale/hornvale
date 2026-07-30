@@ -465,6 +465,20 @@ than the claim: the cheapest sufficient check turned out to be a comparison of
 *binaries* rather than of outputs, which nobody had tried and which the
 campaign's own frozen prediction said would not work.
 
+That instrument then needed a correction of its own, and the correction
+belongs on this ledger as much as the entry does. Two builds of one commit in
+two directories hashed identically on the canonical box, and the campaign
+generalized from that single host to a property of the toolchain. Repeating
+the comparison on the second machine produced two *different* binaries, each
+carrying the absolute path it was built in — a path written in deliberately by
+ordinary code asking where its own source tree is, not by debug information as
+first supposed. So the oracle is real but conditional: it holds when both
+machines build at the same absolute path, which an image supplies for free and
+an ad-hoc checkout does not. The entry's shape is therefore the ledger's rule
+turned on the ledger's own author — a claim verified on one apparatus is a
+fact about that apparatus, and the campaign that had just finished saying so
+in prose went on to forget it in a decision record within the hour.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing

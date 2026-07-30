@@ -128,3 +128,57 @@ Nothing here changes the standing caveat that IEEE-754 `floor` is exactly
 representable, so the hypothesis requires a non-conforming libm and remains
 the best-localized story rather than a likely one. The 2026-07-19 observation
 still stands as an observation whose cause is unknown.
+
+## Amendment 2 (2026-07-30, after merge) — the oracle needs a condition
+
+**The three measurements are unchanged.** L0's zero diff, L1's identical
+hashes on lefford, and L2's identical probe CSVs were all real and their
+evidence is retained. What this amendment corrects is the **generalization**
+built on L1.
+
+The ruling says "a candidate host can be qualified by building there and
+comparing one SHA-256." **That is false as stated**, and the ruling's stated
+reason for it is also wrong.
+
+Measured on the Mac, 2026-07-30, running L1's exact procedure — two clean
+`--release` builds of one commit in two worktrees:
+
+```
+  5bae5217…  /tmp/pyx-mech/target/release/hornvale
+  2b8a4f65…  /tmp/pyx-mech2/target/release/hornvale     <-- DIFFERENT
+```
+
+Each binary embeds its own build directory (`/private/tmp/pyx-mech2/cli`),
+with `debug = false` and no debug information anywhere. So the ruling's
+explanation — that the absence of `[profile.release]` leaves no debuginfo and
+"therefore no absolute paths in the binary" — **is not the mechanism.** The
+paths arrive by a different route entirely: two *production* call sites expand
+`env!("CARGO_MANIFEST_DIR")` at compile time,
+`cli/src/main.rs:1150` (`ci-record`) and `windows/lab/src/blackbox.rs:23`
+(failure recording). Debug information never enters into it.
+
+Why lefford's two builds contained no such string, and hashed identically, is
+**not known**. The result is solid — two files, zero differing bytes, and
+neither containing its own worktree name — but the platform difference is
+unexplained and is deliberately not guessed at here. This decision has already
+been wrong twice by reasoning where it should have measured.
+
+**The corrected claim.** Binary identity is a valid cross-host oracle **only
+when both hosts build at the same absolute path.** That condition was met by
+neither of the two comparisons that motivated the claim, and it is not
+optional: a differing build path is sufficient on its own to make two
+otherwise-identical builds disagree.
+
+The condition is not onerous — it is what a container gives for free, since
+the image fixes the build directory on every host. So the oracle survives, and
+the velaryon campaign is where it becomes usable rather than merely plausible.
+Qualification is: build at the *same* path in the *same* image on both hosts,
+then compare one hash.
+
+**Consequence for the guard this decision implied.** A test asserting that
+`[profile.release]` stays debuginfo-free was written, and withdrawn before
+commit: it would have guarded a property that is not load-bearing while
+sitting green as the real one broke. The load-bearing property is that
+production code embeds no *new* absolute build paths, which is greppable —
+see `cli/tests/build_path_embedding.rs` and its frozen list of the two
+existing sites.

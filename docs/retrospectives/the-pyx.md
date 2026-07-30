@@ -43,11 +43,30 @@ unremarkable confirmation rather than as a discovery. **Preregistration is
 what converted "the hashes matched" into "the cheap oracle is available and
 we assumed it wasn't."**
 
-The same result carries a conditional nobody chose deliberately: it holds only
-because the workspace declares no `[profile.release]` and cargo's default
-omits debug info. `[profile.profiling]` sets `debug = true` and is not
-directory-reproducible. A property this useful, resting on an unstated
-default, is worth a test — see followups.
+**And then the campaign drew the wrong conclusion from its own good result —
+after a day spent warning about exactly this.** The explanation reached for
+was "release carries no debuginfo, so no source paths." It was written into
+decision 0090, into a chronicle, and into a guard test, and it is false.
+Running L1's procedure on the *second* host produced **two different binaries**
+(`5bae5217…` vs `2b8a4f65…`), each embedding its own build directory, with
+`debug = false` throughout. The paths come from two production
+`env!("CARGO_MANIFEST_DIR")` expansions (`cli/src/main.rs:1150`,
+`windows/lab/src/blackbox.rs:23`) and have nothing to do with debug
+information.
+
+The corrected claim is narrower and carries a condition: binary identity is an
+oracle **only when both hosts build at the same absolute path** — which a
+container gives for free, so the oracle survives and campaign two is where it
+becomes usable. Decision 0090 carries amendment 2. Why lefford's two builds
+contained no such string is **still unexplained** and is deliberately not
+guessed at.
+
+**The generalization was the defect, not the measurement.** L1 ran on one host
+and the conclusion was written as though it were a property of the toolchain.
+Every measurement in this campaign stands; the sentence built on top of one of
+them did not. **A single-host result is a fact about that host until a second
+host says otherwise** — which is the campaign's own thesis, applied one level
+up and missed on the first pass.
 
 ## Three claims were drafted confidently and were wrong
 
@@ -138,7 +157,7 @@ after edits, not care at edit time.
 |---|---|---|---|
 | 1 | Migrate 0079's guard from hostname to **toolchain fingerprint** | A hostname cannot catch lefford drifting from itself — the exact failure L0 was built to detect. L0+L1 together are what a fingerprint would assert | TOOL-cross-host-assay |
 | 2 | Add `--out` to `hornvale lab run` | A probe should not have to write 175 files into the goldens tree and then delete them; the untracked directory is invisible to `git diff --exit-code` | TOOL-cross-host-assay |
-| 3 | Test that release builds stay debuginfo-free | Decision 0090's cheap oracle silently depends on it; adding `debug` to `[profile.release]` would revoke it with nothing noticing | TOOL-cross-host-assay |
+| 3 | ~~Test that release builds stay debuginfo-free~~ → **SHIPPED as a guard on the real property**: `cli/tests/build_path_embedding.rs` freezes the two production `env!("CARGO_MANIFEST_DIR")` sites | The debuginfo framing was wrong (see above) and a test built on it would have sat green while the oracle broke. What actually bounds the oracle is how many places embed an absolute build path | done |
 | 4 | Diagnose `census-run.sh status` vs the lock | `status` reported idle during a live run; `make ci`'s contention suppressor asks the same question | TOOL-cross-host-assay |
 | 5 | Campaign two — velaryon recruitment | Gated on this campaign's green result; now starts with a binary-hash comparison, not a census | spec §6 |
 | 6 | Test the §2 codegen hypothesis **in campaign two**, not against the Mac | The rebuild-and-re-probe as originally scoped could not have settled it: `target-cpu=x86-64-v2` is `cfg(target_arch = "x86_64")`-scoped, so the Mac arm never carried it and aarch64 floors in hardware (`frintm`) regardless — removing the flag moves one arm and not the other, and never reproduces 0063's two-x86_64-Linux-boxes configuration. Needs two x86_64 Linux hosts with **different glibc**, both unflagged; velaryon in a container is that instrument, and pins glibc deliberately | spec §7 (corrected) |

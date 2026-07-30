@@ -108,22 +108,42 @@ directories should therefore differ in a way that says nothing about
 correctness — a confirmed nuisance, closing off binary hashing as a useful
 tool and leaving the expensive output comparison as the only real instrument.
 
-Instead the hashes matched, and the reason is a default nobody had chosen
-deliberately. The workspace declares no release profile of its own, so cargo's
-default applies, and that default builds release binaries without debug
-information — and a binary with no debug information carries no source paths
-to differ over.
+Instead the hashes matched, and the campaign drew the wrong lesson from it —
+twice over, in the space of an evening, and in exactly the way it had spent
+all day warning against.
 
-The consequence is larger than the layer it came from. Qualifying a new
-machine no longer requires generating a single world: build the binary there,
-compare one hash, and only if it matches spend a census confirming it. An
-assay that was budgeted in tens of minutes costs seconds.
+The first reading was that release builds carry no debug information, and that
+a binary without debug information carries no source paths to differ over. The
+consequence looked large: qualifying a new machine would no longer require
+generating a single world, only a build and a hash comparison, turning an
+assay budgeted in tens of minutes into one that costs seconds.
 
-It comes with a condition, and the condition is now load-bearing. The property
-holds exactly while release builds carry no debug information. The workspace's
-*profiling* profile does enable it, and is correspondingly not reproducible
-across directories. Anyone who adds debug information to the release profile
-would silently revoke the guarantee, and nothing at present would notice.
+Running the same two-build comparison on the second machine dissolved it. Two
+builds of one commit, in two directories, produced **two different binaries** —
+and each contained the absolute path of the directory it was built in, with no
+debug information anywhere near it. The paths do not arrive through debug
+information at all. They are written in deliberately: two ordinary pieces of
+the program ask, at compile time, where the source tree is, so they can find
+the workspace root at runtime. That answer is a string, and the string ships.
+
+So the useful property is real but narrower than the first reading, and it
+carries a condition that reading had hidden: **binary identity is an oracle
+only when both machines build at the same absolute path.** Neither comparison
+that suggested the idea had met that condition — one met it by an accident
+still not understood, and the other did not meet it and duly failed.
+
+The condition turns out to cost nothing where it will be used. An image fixes
+its build directory on every machine that runs it, so a container satisfies
+the requirement by construction, and the assay becomes: same image, same path,
+one hash. What had looked like a free discovery became a reason to build the
+thing it was going to be used on.
+
+The guard the first reading implied was written and then deleted before it was
+committed. It would have asserted that release builds carry no debug
+information — a true statement about the workspace, guarding a property that
+was not the one holding the oracle up, and it would have stayed green while
+the real one broke. What replaced it counts the places where the program asks
+for its own source directory, and freezes that number at two.
 
 ## What was and was not established
 
