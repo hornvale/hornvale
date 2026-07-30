@@ -119,7 +119,75 @@ recurrence*.
 
 ## 3. The repairs
 
-### 3.1 F5 — give porosity the two terms it lacks
+### 3.1 F5 — the threshold is on the wrong rock's scale
+
+> **SUPERSEDED 2026-07-30, after measurement.** The subsection below this box
+> proposed adding a granular term to `porosity`. That repair is **abandoned**:
+> it cannot work, and it was aimed at the wrong defect. Both the diagnosis
+> in §2.1 and the repair here were reasoned rather than measured, and the
+> measurement overturned them. Kept in place, not deleted, because the
+> campaign's subject is precisely claims that were never checked.
+>
+> **What the measurement showed** (8 seeds, continental land cells):
+>
+> ```
+> non-carbonate : n=4666  min=0.0250  p50=0.1000  p75=0.2500  p95=0.3250  max=0.3250
+> carbonate     : n=1095  min=0.3500  p50=0.4250  p75=0.5750  max=0.6500
+> ```
+>
+> 1. **Clastic porosity maxes at exactly 0.325.** The `porosity > 0.5` gate is
+>    not marginally out of reach — it is **54% above the entire clastic range**.
+>    No coefficient on a grain term closes that: the analytic ceiling is
+>    `0.325 + 0.423·k_g`, so reaching 0.5 needs `k_g ≥ 0.414`, which would make
+>    the added term the model's second-largest.
+> 2. **The two classes do not overlap.** `[0.025, 0.325]` and `[0.35, 0.65]`.
+>    Porosity *perfectly separates* carbonate from clastic, so it is not an
+>    independent axis at all — it is carbonate plus a small within-class spread.
+>    `Karst`'s `porosity > 0.4` is therefore nearly redundant with its own
+>    `carbonate > 0.5`.
+> 3. **`0.5` sits between the carbonate class's p50 and p75** — that is, *inside
+>    the Karst region*. Every cell it selects satisfies `carbonate > 0.5 &&
+>    porosity > 0.4` and is caught by the branch above. **The threshold lives
+>    entirely inside the branch that pre-empts it.** That is the whole defect.
+>
+> **§2.1's framing was also wrong.** It said the surviving window
+> `carbonate ∈ (0.4, 0.5]` was "non-empty in the abstract, empty in a thousand
+> worlds." `carbonate_at` returns **only `0.7` or `0.05`** — it is binary. The
+> window is empty *by construction*; `Spring`/`Aquifer` are **analytically**
+> unreachable, not merely empirically.
+
+**The repair.** `0.5` is a **carbonate-scale threshold applied to clastic
+rock**. A sandstone at 0.325 is at the top of its class; a limestone at 0.325
+does not exist. The fix is per-family thresholds, each named for the rock family
+it is calibrated against, and it changes **no formula**:
+
+```rust
+if carbonate > 0.5 && porosity > KARST_MIN_POROSITY   { Karst }     // 0.4, carbonate scale — unchanged
+if porosity < AQUITARD_MAX_POROSITY                   { Aquitard }  // 0.15 — unchanged, and reachable
+if porosity > CLASTIC_AQUIFER_MIN_POROSITY            { Spring/Aquifer } // ~0.30, CLASTIC scale — was 0.5
+```
+
+`CLASTIC_AQUIFER_MIN_POROSITY` is pinned to the measured p75/p95 boundary of the
+clastic distribution, not to a round number, and its doc comment carries the
+distribution it was set against — which is the documentation that stops this
+recurring.
+
+**Blast radius collapses against the superseded plan.** `MaterialBuffer` is
+untouched, so `cave_proneness` does not drift, `classify_rock`'s
+Sandstone/Shale gate does not move, and the four other `MaterialBuffer`
+consumers are unaffected. Only one branch of `hydrogeology` moves. It also
+removes the collision risk with `the-pigment` flagged in §5 ③, which was
+premised on this campaign changing a `MaterialBuffer` field derivation.
+
+**`Aquitard` was checked and is fine.** Clastic p50 is 0.10, so roughly half of
+clastic cells sit under 0.15. A carbonate cell in `[0.35, 0.40]` falls past
+Karst and lands on `Runoff`. No second dead branch here — and Task 6's witness
+guard proves all five variants rather than taking that on trust.
+
+Once `Spring` is reachable, `is_spring_cell` drops the Karst proxy and reads
+`Hydro::Spring`, and the `spring ⊆ river` disclosure is retired.
+
+### 3.1-superseded — give porosity the two terms it lacks
 
 Add a granular contribution and a cementation penalty, so a porous non-carbonate
 rock can exist:

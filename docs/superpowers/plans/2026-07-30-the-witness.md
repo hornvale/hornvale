@@ -510,7 +510,30 @@ Mutation-verified — removing a staple reds it."
 
 ---
 
-### Task 4: F5 — sweep for the porosity coefficient
+### Task 4: F5 — **CLOSED as BLOCKED, then superseded** (2026-07-30)
+
+The sweep ran and returned **BLOCKED**, correctly: no `k_g` in `[0.10, 0.30]`
+makes the branch reachable, and the analytic ceiling `0.325 + 0.423·k_g` puts
+the requirement at `k_g ≥ 0.414`, outside the range this plan specified. **The
+range was authored by this plan without deriving the feasible region first** —
+the same error as the `staple_pack()` snippet, one task earlier.
+
+An ideonomy pass (dimension-identification + tree-finding, procedure organon)
+then overturned the whole repair. The measurement it demanded:
+
+```
+non-carbonate : n=4666  min=0.0250  p50=0.1000  p75=0.2500  p95=0.3250  max=0.3250
+carbonate     : n=1095  min=0.3500  p50=0.4250  p75=0.5750  max=0.6500
+```
+
+`porosity > 0.5` is a **carbonate-scale threshold applied to clastic rock**, and
+it sits *inside the Karst region* that pre-empts it. See the superseded box at
+spec §3.1. **No porosity-formula change is made.** Task 5 is rewritten below.
+
+**Do not execute this task.** It is retained as the record of a measured
+reversal.
+
+### Task 4-superseded: sweep for the porosity coefficient
 
 **Measurement task. No committed behaviour change.** `k_g` is calibrated here,
 not chosen in the spec, because terrain's constants "were chosen from data sweeps
@@ -569,11 +592,30 @@ the chosen value and criterion to `.superpowers/sdd/baseline-report.md`.
 
 ---
 
-### Task 5: F5 — give porosity its missing terms and retire the Karst proxy
+### Task 5: F5 — put the threshold on the clastic scale and retire the Karst proxy
+
+**Rewritten 2026-07-30.** Owner-approved. **`porosity`'s formula is NOT
+touched** — `MaterialBuffer` is untouched, so `cave_proneness`,
+`classify_rock`, and the other consumers do not move.
+
+**Step 3 becomes:** replace the bare `0.5` in `hydrogeology` with a named
+`CLASTIC_AQUIFER_MIN_POROSITY`, and name the existing `0.4` and `0.15`
+`KARST_MIN_POROSITY` and `AQUITARD_MAX_POROSITY` in the same edit. Each doc
+comment states **the rock family it is calibrated for and the measured
+distribution it was set against** — that documentation is the repair's durable
+half, because the defect was a carbonate-scale constant silently governing
+clastic rock.
+
+Pin `CLASTIC_AQUIFER_MIN_POROSITY` to the measured p75/p95 boundary of the
+clastic class, not to a round number. Clastic porosity is quantised in steps of
+~0.075 (`0.025, 0.100, 0.175, 0.250, 0.325`), so state in the comment **which
+band the constant selects**, and confirm by measurement rather than assertion.
+
+**Step 4 (the hand-built unit tests) is unchanged and still required.**
 
 **Files:**
-- Modify: `domains/terrain/src/lithology.rs` (`porosity` at ~line 445; the
-  `hydrogeology` unit tests at ~lines 930–957)
+- Modify: `domains/terrain/src/lithology.rs` (`hydrogeology` ~lines 288–312 and
+  its unit tests at ~lines 930–957) — **not** `porosity` at line 445
 - Modify: `windows/worldgen/src/lib.rs` (`is_spring_cell`, ~line 3894)
 - Modify: `windows/lab/src/metrics.rs` (`lab_is_spring_cell`, ~line 4747)
 
