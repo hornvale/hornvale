@@ -153,6 +153,7 @@ mod tests {
             temperature_c: None,
             moisture: None,
             elevation_m: None,
+            color: None,
             marks: vec![],
         }
     }
