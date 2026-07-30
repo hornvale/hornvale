@@ -443,17 +443,46 @@ fn git_reference() -> String {
     }
 }
 
-/// One line describing the current claim, for `census-run.sh status`.
-/// type-audit: bare-ok(prose: return)
-pub fn status_line() -> String {
+/// Which kind of heavy job a claim `label` denotes. The claim is shared by
+/// censuses and the heavy tier (The Siding); announcing a heavy run as a
+/// census is exactly the misreport decision 0081 exists to prevent.
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: return)
+fn job_kind(label: &str) -> &'static str {
+    if label.starts_with("census") {
+        "census"
+    } else {
+        "heavy"
+    }
+}
+
+/// The live holder of this machine's claim, if any — the typed answer that
+/// [`status_line`] renders as prose. Callers that must *decide* something
+/// (whether to enforce a timing budget, say) need the fields, not the
+/// sentence: parsing prose back into data is how a measurement acquires a
+/// second, disagreeing model of its own format.
+pub fn current_holder() -> Option<ClaimInfo> {
     let path = std::path::PathBuf::from(
         std::env::var("HV_CENSUS_CLAIM_PATH").unwrap_or_else(|_| CLAIM_PATH.to_string()),
     );
-    match live_holder_at(&path) {
-        None => "no census running".to_string(),
+    live_holder_at(&path)
+}
+
+/// One line describing the current claim, for `census-run.sh status` and
+/// `heavy-run.sh status`.
+/// type-audit: bare-ok(prose: return)
+pub fn status_line() -> String {
+    match current_holder() {
+        None => "no heavy run in progress".to_string(),
         Some(h) => format!(
-            "census running: pid {} ({}@{}) since {}, writing {}, running {} @ {}",
-            h.pid, h.user, h.host, h.started, h.goldens, h.label, h.reference
+            "{} running: pid {} ({}@{}) since {}, writing {}, running {} @ {}",
+            job_kind(&h.label),
+            h.pid,
+            h.user,
+            h.host,
+            h.started,
+            h.goldens,
+            h.label,
+            h.reference
         ),
     }
 }
@@ -461,6 +490,26 @@ pub fn status_line() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn current_holder_is_none_when_no_claim_file_exists() {
+        let dir = std::env::temp_dir().join(format!("hv-tk-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let missing = dir.join("absent.claim");
+        // SAFETY-of-intent: this test owns the env var for its own process.
+        unsafe { std::env::set_var("HV_CENSUS_CLAIM_PATH", &missing) };
+        assert!(current_holder().is_none());
+        unsafe { std::env::remove_var("HV_CENSUS_CLAIM_PATH") };
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn the_status_line_names_the_job_kind_from_the_label() {
+        assert_eq!(job_kind("census-run"), "census");
+        assert_eq!(job_kind("census-goldens"), "census");
+        assert_eq!(job_kind("heavy"), "heavy");
+        assert_eq!(job_kind("gate-full-heavy"), "heavy");
+    }
 
     #[test]
     fn the_cost_threshold_draws_the_line_at_200_builds() {

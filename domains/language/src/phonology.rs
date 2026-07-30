@@ -588,7 +588,7 @@ fn draw_nuclei(stream: &mut Stream) -> Vec<usize> {
 /// left to ride here, and **the next change to what this function consumes owes
 /// `phonotactics/v2`** — the reasoning above is the record of why *this*
 /// change did not, not a standing licence for the next one. The freeze rule
-/// itself is decision 0086 (`docs/decisions/`), which is where a reader should
+/// itself is decision 0089 (`docs/decisions/`), which is where a reader should
 /// go before riding any epoch.
 fn draw_phonotactics(
     stream: &mut Stream,

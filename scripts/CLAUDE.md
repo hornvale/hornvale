@@ -40,8 +40,28 @@ knobs:
 ## The gate ladder
 
 - `gate-fast.sh` — scopes fmt/clippy/test to changed crates (iteration only).
+  Takes no claim: short jobs never queue behind long ones (decision 0081).
 - `gate-full-heavy.sh` — the cost-tagged `heavy:` `#[ignore]`d tier that the
-  commit gate defers (see `cli/tests/heavy_tier.rs`).
+  commit gate defers (see `cli/tests/heavy_tier.rs`). **Takes the shared box
+  claim** (decision 0086) — here, at the seam, rather than only in the wrapper,
+  because a wrapper cannot guard a direct `make gate-full`. Where there is no
+  `flock` (macOS ships none) it proceeds unserialised with a note rather than
+  failing.
+- **`heavy-run.sh`** — run the heavy tier on THIS box under the shared claim,
+  the same way `census-run.sh` runs a census. `HV_HEAVY_REF=<sha>` runs a
+  pushed ref in a scratch worktree; `status` asks who holds the box and is
+  legal from any machine — but it reads the claim in the **local** `/tmp`, so
+  from the Mac it always says "no". Use **`make heavy-status`** to ask the
+  canonical box instead; that is almost always the question you mean. Carries the canonical-host guard, because the tier
+  **authors committed artifacts**: `the-history` (`cli/tests/history_battery.rs`),
+  `the-sounding` (`windows/chronicle/tests/sounding_sweep.rs`), and
+  `occupancy.csv` (`windows/worldgen/tests/occupancy_readout.rs`) — plus
+  `census_fixtures_match_a_probe_of_live_seeds`, which compares a live probe
+  against lefford-authored fixtures. Review and commit those artifacts **on
+  the canonical box**. Dispatch from the Mac with `make heavy-remote REF=<sha>`.
+- `test-heavy-lock.sh` — proves the claim EXCLUDES (second acquirer refused
+  while held; a normal exit and a `-9` both release), not merely that a lock
+  file exists. Skips where there is no `flock`.
 - `preflight-merge.sh` — GO/NO-GO before integrating a campaign branch;
   peeks at main's checkout and warns if another session is mid-landing.
 - `doctor.sh` — the repo self-map (`make doctor`); good orientation for a

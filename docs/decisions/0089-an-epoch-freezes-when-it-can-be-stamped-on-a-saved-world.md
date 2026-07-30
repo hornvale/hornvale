@@ -1,4 +1,4 @@
-# 0086. An epoch freezes when a world saved from `main` can carry it
+# 0089. An epoch freezes when a world saved from `main` can carry it
 
 **Status:** Accepted (2026-07-29) · **Decider:** Nathan · **Refines:**
 [0006](0006-seed-labels-are-permanent-contracts.md),

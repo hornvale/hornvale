@@ -3,6 +3,7 @@
 
 pub mod biome;
 pub mod circulation;
+pub mod crops;
 pub mod currents;
 pub mod diurnal;
 pub mod facets;
@@ -19,6 +20,7 @@ pub mod weather;
 
 pub use biome::{Biome, SeafloorFeature};
 pub use circulation::{RotationRegime, band_count_for, prevailing_wind};
+pub use crops::{Crop, crop_at};
 pub use currents::{ocean_current, ocean_current_field};
 pub use diurnal::{diurnal_amplitude, diurnal_anomaly, diurnal_waveform};
 pub use facets::{Access, BiomeExpr, Formation, Medium, Realm, Stratum};
@@ -193,6 +195,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 doc: "a biome class".to_string(),
             },
             lexeme: Correspondent::Absent(Void::Gap("no language pack names biome classes yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    // The staples (The Watershed). A crop is a climate fact — a band of
+    // temperature and moisture on arable ground — so it registers here
+    // beside the biome that shares those inputs. Whether a people has the
+    // WORD is a separate question exposure answers, not this registry.
+    for crop in crops::Crop::catalog() {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: crop.concept_name().to_string(),
+                domain: "climate".to_string(),
+                kind: ConceptKind::Substance,
+                doc: "a staple crop".to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names crops yet")),
             percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",

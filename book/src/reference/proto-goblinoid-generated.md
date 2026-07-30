@@ -39,6 +39,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `abyssal-plain` | The flat floor of the deep ocean. | *Nenaa | /nenaa/ |
 | `alpine` | a biome class | *Peo | /peo/ |
 | `bait-ball` | A dense turning mass of fish. | *Naago | /naago/ |
+| `barley` | a staple crop | *Nona | /nona/ |
 | `bathypelagic` | a biome class | *Nea | /nea/ |
 | `black-dragon-kind` | a black dragon | *Pope | /pope/ |
 | `blood` | the circulating fluid of a body | *No | /no/ |
@@ -123,6 +124,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `marsh` | soft wet ground | *Qaneo | /qaneo/ |
 | `melt-pond` | A pool of meltwater on sea ice. | *Kaane | /kaane/ |
 | `mesopelagic` | a biome class | *Nana | /nana/ |
+| `millet` | a staple crop | *Kooneo | /kooneo/ |
 | `moon` | a moon | *Tapea | /tapea/ |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | *Gaapo | /gaapo/ |
 | `mountain` | high ground | *Toe | /toe/ |
@@ -155,6 +157,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `reg` | A desert floor of wind-swept gravel. | *Neono | /neono/ |
 | `rest` | to stop and recover strength | *Kaeno | /kaeno/ |
 | `rhinoceros-kind` | a rhinoceros | *Qateo | /qateo/ |
+| `rice` | a staple crop | *Naoka | /naoka/ |
 | `river` | fresh water running across land | *Gootoe | /gootoe/ |
 | `rust-monster-kind` | a rust monster | *Koa | /koa/ |
 | `sargassum-drift` | A drifting raft of floating weed. | *Needa | /needa/ |
@@ -193,6 +196,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `trench-wall` | The steep side of an ocean trench. | *Qoono | /qoono/ |
 | `tropical-rainforest` | a biome class | *Noa | /noa/ |
 | `tropical-seasonal-forest` | a biome class | *Getoe | /getoe/ |
+| `tuber` | a staple crop | *Noona | /noona/ |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | *Gaa | /gaa/ |
 | `tundra` | a biome class | *Keka | /keka/ |
 | `twig-blight-kind` | a twig blight | *Qaaqee | /qaaqee/ |
@@ -203,7 +207,9 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `urchin-barren` | Seabed grazed bare of kelp. | *Gee | /gee/ |
 | `valley` | low ground between heights | *Konoa | /konoa/ |
 | `vent-plume` | Shimmering hot water rising from a vent. | *Naote | /naote/ |
+| `vine` | a staple crop | *Teona | /teona/ |
 | `water` | the drinkable liquid | *Doege | /doege/ |
+| `wheat` | a staple crop | *Netea | /netea/ |
 | `white-dragon-kind` | a white dragon | *Qo | /qo/ |
 | `wind` | moving air | *Neqoo | /neqoo/ |
 | `wind-scour` | Ground swept bare by wind. | *Poa | /poa/ |

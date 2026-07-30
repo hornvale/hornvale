@@ -90,6 +90,7 @@ usage:
   hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
   hornvale lab claim-status                is a heavy run holding the box? (0081)
+  hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
 ";
@@ -139,6 +140,7 @@ fn main() -> ExitCode {
         Some("book") => cmd_book(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
+        Some("ci-record") => cmd_ci_record(),
         Some("help") | None => {
             print!("{}", usage());
             Ok(())
@@ -996,8 +998,10 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some("claim-status") => {
-            // Answers "is a census running right now?" without ps | grep
-            // (decision 0081). `scripts/census-run.sh status` wraps this.
+            // Answers "is a heavy run holding the box right now?" without
+            // ps | grep (decision 0081). `scripts/census-run.sh status` and
+            // `scripts/heavy-run.sh status` both wrap this; the line names
+            // which KIND of job holds it (The Siding).
             println!("{}", hornvale_lab::census_claim::status_line());
             Ok(())
         }
@@ -1102,6 +1106,88 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
 
 fn cmd_lab_list_metrics() -> Result<(), String> {
     print!("{}", hornvale_lab::render_metric_list());
+    Ok(())
+}
+
+/// Record this run's per-test durations as the host's baseline (The
+/// Timekeeper). Reads what `make ci` just wrote; writes the rolling baseline
+/// that `cli/tests/timings_alarm.rs` compares against.
+///
+/// Refuses on a CONTENDED box: `hornvale_lab::census_claim::current_holder()`
+/// naming a live holder means some other heavy job (a census, the heavy
+/// tier) is running here right now, so this run's durations are inflated
+/// (measured: a 5.2x swing under contention) and unfit to become the new
+/// baseline. Recording anyway is a one-way ratchet — once a contended
+/// baseline lands, every future alarm compares against the inflated numbers
+/// and can never fire again, silently. Refusing loudly (a non-zero exit) is
+/// chosen over a quiet no-op: `ci-record` run by hand or from a script should
+/// not look like it succeeded when it wrote nothing.
+///
+/// The write itself is: fold every sub-`BASELINE_FLOOR_SECS` test into the
+/// `<below-floor>` aggregate row (`fold_below_floor`), then read whatever
+/// baseline is already on disk and keep each row's OLD value unless this
+/// run's measurement moved it by more than `BASELINE_DEADBAND`
+/// (`apply_hysteresis`) — the two changes that took a 2405-of-2578-row
+/// rewrite on ordinary machine jitter down to single digits. All the
+/// decisions live in `windows/lab/src/timings.rs`; this function is just the
+/// read-fold-hysteresis-write plumbing.
+fn cmd_ci_record() -> Result<(), String> {
+    use hornvale_lab::census_claim::current_holder;
+    use hornvale_lab::timings::{
+        BASELINE_FLOOR_SECS, apply_hysteresis, baseline_path, fold_below_floor, parse_baseline,
+        parse_run, render_baseline,
+    };
+
+    if let Some(holder) = current_holder() {
+        return Err(format!(
+            "ci-record: refusing to record — {} (pid {}) holds this box, so \
+             this run's durations are contended and would poison the \
+             baseline. Re-run `make ci` once the box is quiet.",
+            holder.label, holder.pid
+        ));
+    }
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("cli/ has a parent")?
+        .to_path_buf();
+    let run = root.join("target/nextest/ci/run.json");
+    let text = std::fs::read_to_string(&run)
+        .map_err(|e| format!("ci-record: no run at {} ({e})", run.display()))?;
+    let rows = parse_run(&text).map_err(|e| format!("ci-record: {e}"))?;
+    let folded = fold_below_floor(&rows, BASELINE_FLOOR_SECS);
+
+    let out = |cmd: &str, args: &[&str]| -> String {
+        std::process::Command::new(cmd)
+            .args(args)
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "unknown".to_string())
+    };
+    let sha = out("git", &["rev-parse", "--short", "HEAD"]);
+    let host = out("hostname", &["-s"]);
+
+    let path = baseline_path(&root, &host);
+    let previous = match std::fs::read_to_string(&path) {
+        Ok(t) => parse_baseline(&t).map_err(|e| format!("ci-record: reading old baseline: {e}"))?,
+        Err(_) => Vec::new(),
+    };
+    let to_write = apply_hysteresis(&folded, &previous);
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("ci-record: {e}"))?;
+    }
+    std::fs::write(&path, render_baseline(&to_write, &sha))
+        .map_err(|e| format!("ci-record: writing {}: {e}", path.display()))?;
+    println!(
+        "ci-record: {} durations ({} rows after folding below {}s) -> {}",
+        rows.len(),
+        to_write.len(),
+        BASELINE_FLOOR_SECS,
+        path.display()
+    );
     Ok(())
 }
 

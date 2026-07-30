@@ -990,7 +990,7 @@ impl<'a> Namer<'a> {
     /// **That window is closed. `/v3` is frozen and the next consumption
     /// change here owes `/v4`.** The Wearing merged at `0b65be20`, so a world
     /// saved off main now carries `language/<species>/name/settlement: v3` in
-    /// its `derived_under` stamp — the mechanical test in decision 0086
+    /// its `derived_under` stamp — the mechanical test in decision 0089
     /// (`docs/decisions/`), which is the durable home of the freeze rule this
     /// paragraph previously stated only half of. The half it stated was the
     /// *application* ("`/v3` has never been in a released world"); a reader

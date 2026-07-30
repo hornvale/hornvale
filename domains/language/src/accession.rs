@@ -325,6 +325,11 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "coast", "ford", "great", "high", "hill", "island", "lake", "little", "low", "marsh",
         "new", "north", "old", "over", "river", "south", "spring", "under", "valley",
     ],
+    // Epoch 5 — The Watershed: the staples. What grows here is a fact about a
+    // place that does NOT follow from where the place is, which is why these
+    // six move the descriptor space where nineteen site descriptors could not
+    // (LANG-9's recorded limit).
+    &["barley", "millet", "rice", "tuber", "vine", "wheat"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or
