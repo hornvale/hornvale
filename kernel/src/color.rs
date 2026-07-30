@@ -239,6 +239,178 @@ impl Mixture {
     }
 }
 
+/// One number per observer channel — the collapse of an entire arriving
+/// spectrum down to what an eye actually transmits.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Signal(Vec<f64>);
+
+impl Signal {
+    /// The raw per-channel responses.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn get(&self) -> &[f64] {
+        &self.0
+    }
+
+    /// Squared Euclidean distance in signal space. Squared rather than
+    /// rooted because every caller only ranks distances, and `sqrt` would
+    /// be a monotone transform that buys nothing.
+    ///
+    /// Signals of differing length compare as [`f64::INFINITY`] — they come
+    /// from different observers and are not comparable at all.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn distance_to(&self, other: &Signal) -> f64 {
+        if self.0.len() != other.0.len() {
+            return f64::INFINITY;
+        }
+        let mut sum = 0.0;
+        for (a, b) in self.0.iter().zip(&other.0) {
+            let d = a - b;
+            sum += d * d;
+        }
+        sum
+    }
+}
+
+/// An eye: one sensitivity curve per channel. Humans have three photopic
+/// channels plus rods; other creatures have other counts, which is the
+/// whole reason the channel set is a `Vec` and not an array.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Observer {
+    channels: Vec<Spectrum>,
+    /// Whether this observer's signal has a real (non-false-colour) sRGB
+    /// image. True only for [`standard_observer`].
+    srgb_native: bool,
+}
+
+impl Observer {
+    /// Validating constructor: at least one channel.
+    ///
+    /// An observer built this way is **not** sRGB-native: [`to_srgb`]
+    /// returns `None`, because a signal from an arbitrary channel set has
+    /// no truthful three-channel image and any mapping would be a
+    /// false-colour choice the caller must declare (RENDER-9).
+    ///
+    /// [`to_srgb`]: Observer::to_srgb
+    pub fn new(channels: Vec<Spectrum>) -> Result<Self, UnitError> {
+        if channels.is_empty() {
+            return Err(UnitError {
+                unit: "observer",
+                value: 0.0,
+                reason: "an observer needs at least one channel",
+            });
+        }
+        Ok(Self {
+            channels,
+            srgb_native: false,
+        })
+    }
+
+    /// How many channels this observer has.
+    /// type-audit: bare-ok(count: return)
+    pub fn channels(&self) -> usize {
+        self.channels.len()
+    }
+
+    /// The three-way product: `signal[c] = Σ_b r[b] · i[b] · s[c][b]`.
+    ///
+    /// Multiplication and addition only, over fixed-size arrays in a fixed
+    /// order — IEEE 754 requires both to be exact, so this is bit-identical
+    /// on every platform without routing through [`crate::math`]. The
+    /// accumulate is a plain `+=` (an unfused `fadd`), never `mul_add`, for
+    /// the reason given on [`Mixture::integrate`].
+    pub fn sense(&self, reflectance: &Reflectance, illuminant: &Illuminant) -> Signal {
+        let r = reflectance.get();
+        let i = illuminant.get();
+        let mut out = Vec::with_capacity(self.channels.len());
+        for channel in &self.channels {
+            let s = channel.get();
+            let mut sum = 0.0;
+            for ((r_b, i_b), s_b) in r.iter().zip(i.iter()).zip(s.iter()) {
+                sum += r_b * i_b * s_b;
+            }
+            out.push(sum);
+        }
+        Signal(out)
+    }
+
+    /// Project a signal to display bytes, or `None` when this observer has
+    /// no truthful sRGB image.
+    ///
+    /// Only [`standard_observer`] is sRGB-native. For anything else the
+    /// answer is `None` on purpose: the caller must choose and *caption* a
+    /// false-colour mapping rather than have one invented here, because the
+    /// caption — not the picture — carries the honesty (RENDER-9).
+    /// type-audit: bare-ok(artifact: return)
+    pub fn to_srgb(&self, signal: &Signal) -> Option<[u8; 3]> {
+        if !self.srgb_native || signal.get().len() != 4 {
+            return None;
+        }
+        // Channel order is [short, medium, long, scotopic]; the scotopic
+        // channel carries no hue and is not projected. The photopic
+        // channels are normalized by the response a unit-reflectance
+        // surface under a unit illuminant would produce, so a white surface
+        // under flat light lands at white rather than at an arbitrary
+        // scale.
+        let s = signal.get();
+        let mut out = [0u8; 3];
+        // Long → red, medium → green, short → blue.
+        for (slot, (raw, norm)) in
+            out.iter_mut()
+                .zip([(s[2], LONG_NORM), (s[1], MEDIUM_NORM), (s[0], SHORT_NORM)])
+        {
+            let linear = (raw / norm).clamp(0.0, 1.0);
+            *slot = encode_srgb_byte(linear);
+        }
+        Some(out)
+    }
+}
+
+/// Normalizing constants: the response each photopic channel gives to a
+/// unit-reflectance surface under a unit illuminant. Derived from
+/// [`standard_observer`]'s own curves, so the two cannot drift apart —
+/// `standard_observer_channels_sum_to_the_declared_norms` proves it.
+/// type-audit: bare-ok(ratio)
+const SHORT_NORM: f64 = 1.98;
+/// See [`SHORT_NORM`].
+/// type-audit: bare-ok(ratio)
+const MEDIUM_NORM: f64 = 3.51;
+/// See [`SHORT_NORM`].
+/// type-audit: bare-ok(ratio)
+const LONG_NORM: f64 = 3.95;
+
+/// Encode a linear `[0, 1]` intensity as an sRGB byte.
+///
+/// This is the one transcendental in the colour path, and it sits at the
+/// emit boundary rather than in the hot loop. It routes through
+/// [`crate::math::powf`] like every other transcendental in the workspace
+/// (decision 0041).
+/// type-audit: bare-ok(artifact: return)
+fn encode_srgb_byte(linear: f64) -> u8 {
+    let encoded = if linear <= 0.003_130_8 {
+        12.92 * linear
+    } else {
+        1.055 * crate::math::powf(linear, 1.0 / 2.4) - 0.055
+    };
+    (encoded.clamp(0.0, 1.0) * 255.0).round() as u8
+}
+
+/// The human-calibrated observer: three photopic channels (short, medium,
+/// long) plus one scotopic rod-like channel used at low light.
+///
+/// The curves are coarse samples of human cone and rod sensitivity on the
+/// band grid. They are approximations and say so — the campaign's claims
+/// rest on *differences between observers*, not on colorimetric accuracy.
+pub fn standard_observer() -> Observer {
+    let short = Spectrum([0.00, 0.25, 1.00, 0.62, 0.10, 0.01, 0.00, 0.00, 0.00, 0.00]);
+    let medium = Spectrum([0.00, 0.01, 0.10, 0.45, 0.90, 1.00, 0.72, 0.28, 0.05, 0.00]);
+    let long = Spectrum([0.00, 0.01, 0.06, 0.25, 0.60, 0.92, 1.00, 0.75, 0.30, 0.06]);
+    let scotopic = Spectrum([0.00, 0.15, 0.55, 0.95, 1.00, 0.68, 0.25, 0.05, 0.00, 0.00]);
+    Observer {
+        channels: vec![short, medium, long, scotopic],
+        srgb_native: true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -383,6 +555,141 @@ mod tests {
         assert_eq!(m.components()[1].get()[0], 0.75);
         // Weights come back as passed, unnormalized.
         assert_eq!(m.weights(), &[1.0, 3.0]);
+    }
+
+    /// A flat unit illuminant — every band equal. Used wherever a test
+    /// wants reflectance differences and no illuminant differences.
+    fn flat_light() -> Illuminant {
+        Illuminant::new([1.0; BANDS]).unwrap()
+    }
+
+    #[test]
+    fn the_standard_observer_has_four_channels() {
+        // Three photopic plus one scotopic (rod-like) channel.
+        assert_eq!(standard_observer().channels(), 4);
+    }
+
+    #[test]
+    fn a_brighter_surface_produces_a_larger_signal_in_every_channel() {
+        let obs = standard_observer();
+        let dim = obs.sense(&Reflectance::new([0.2; BANDS]).unwrap(), &flat_light());
+        let bright = obs.sense(&Reflectance::new([0.8; BANDS]).unwrap(), &flat_light());
+        for c in 0..obs.channels() {
+            assert!(
+                bright.get()[c] > dim.get()[c],
+                "channel {c}: {} was not brighter than {}",
+                bright.get()[c],
+                dim.get()[c]
+            );
+        }
+    }
+
+    #[test]
+    fn naming_works_at_a_channel_count_below_the_standard() {
+        // A synthetic two-channel dichromat: one short-biased channel, one
+        // long-biased. Proves the pipeline is not hardcoded to four.
+        let short = Spectrum::new([1.0, 1.0, 1.0, 0.5, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0]).unwrap();
+        let long = Spectrum::new([0.0, 0.0, 0.0, 0.0, 0.2, 0.5, 1.0, 1.0, 1.0, 1.0]).unwrap();
+        let obs = Observer::new(vec![short, long]).unwrap();
+        assert_eq!(obs.channels(), 2);
+
+        let bluish =
+            Reflectance::new([0.8, 0.8, 0.8, 0.6, 0.2, 0.05, 0.05, 0.05, 0.05, 0.05]).unwrap();
+        let s = obs.sense(&bluish, &flat_light());
+        assert_eq!(s.get().len(), 2);
+        assert!(
+            s.get()[0] > s.get()[1],
+            "a short-biased surface must excite the short channel more"
+        );
+    }
+
+    #[test]
+    fn naming_works_at_a_channel_count_above_the_standard() {
+        // A synthetic five-channel observer, each channel a single band.
+        // Counts either side of the standard's four mean neither of these
+        // two tests can pass by accidentally exercising the standard path.
+        let mut channels = Vec::new();
+        for b in 0..5 {
+            let mut curve = [0.0; BANDS];
+            curve[b] = 1.0;
+            channels.push(Spectrum::new(curve).unwrap());
+        }
+        let obs = Observer::new(channels).unwrap();
+        assert_eq!(obs.channels(), 5);
+        let s = obs.sense(&Reflectance::new([0.5; BANDS]).unwrap(), &flat_light());
+        assert_eq!(s.get().len(), 5);
+    }
+
+    #[test]
+    fn an_observer_rejects_an_empty_channel_set() {
+        assert!(Observer::new(vec![]).is_err());
+    }
+
+    #[test]
+    fn sensing_is_bit_identical_across_repeated_calls() {
+        let obs = standard_observer();
+        let r = Reflectance::new([0.37; BANDS]).unwrap();
+        let a = obs.sense(&r, &flat_light());
+        let b = obs.sense(&r, &flat_light());
+        assert_eq!(a.get(), b.get());
+    }
+
+    #[test]
+    fn signal_distance_is_zero_for_identical_signals_and_positive_otherwise() {
+        let obs = standard_observer();
+        let a = obs.sense(&Reflectance::new([0.3; BANDS]).unwrap(), &flat_light());
+        let b = obs.sense(&Reflectance::new([0.7; BANDS]).unwrap(), &flat_light());
+        assert_eq!(a.distance_to(&a), 0.0);
+        assert!(a.distance_to(&b) > 0.0);
+    }
+
+    #[test]
+    fn the_standard_observer_projects_to_srgb_but_a_synthetic_one_does_not() {
+        let obs = standard_observer();
+        let s = obs.sense(&Reflectance::new([0.5; BANDS]).unwrap(), &flat_light());
+        assert!(
+            obs.to_srgb(&s).is_some(),
+            "the standard observer has a real mapping"
+        );
+
+        // A five-channel signal has no truthful sRGB image. Any mapping
+        // would be a false-colour decision, and RENDER-9 requires that be
+        // declared by the caller rather than invented here.
+        let mut channels = Vec::new();
+        for b in 0..5 {
+            let mut curve = [0.0; BANDS];
+            curve[b] = 1.0;
+            channels.push(Spectrum::new(curve).unwrap());
+        }
+        let alien = Observer::new(channels).unwrap();
+        let alien_signal = alien.sense(&Reflectance::new([0.5; BANDS]).unwrap(), &flat_light());
+        assert!(alien.to_srgb(&alien_signal).is_none());
+    }
+
+    #[test]
+    fn a_white_surface_under_flat_light_projects_near_white() {
+        let obs = standard_observer();
+        let s = obs.sense(&Reflectance::new([1.0; BANDS]).unwrap(), &flat_light());
+        let [r, g, b] = obs.to_srgb(&s).unwrap();
+        for channel in [r, g, b] {
+            assert!(channel > 200, "expected a bright neutral, got {r},{g},{b}");
+        }
+    }
+
+    #[test]
+    fn standard_observer_channels_sum_to_the_declared_norms() {
+        let obs = standard_observer();
+        let sums: Vec<f64> = obs
+            .channels
+            .iter()
+            .map(|c| c.get().iter().sum::<f64>())
+            .collect();
+        // Rounded to two places: the constants are the normalizers used by
+        // to_srgb, and a curve edit that does not update them would make a
+        // white surface stop projecting to white.
+        assert_eq!((sums[0] * 100.0).round() / 100.0, SHORT_NORM);
+        assert_eq!((sums[1] * 100.0).round() / 100.0, MEDIUM_NORM);
+        assert_eq!((sums[2] * 100.0).round() / 100.0, LONG_NORM);
     }
 
     #[test]

@@ -31,7 +31,10 @@ pub mod units;
 pub mod world;
 
 pub use astar::{SearchSpace, astar};
-pub use color::{BAND_CENTERS_NM, BANDS, Illuminant, Mixture, Reflectance, Spectrum};
+pub use color::{
+    BAND_CENTERS_NM, BANDS, Illuminant, Mixture, Observer, Reflectance, Signal, Spectrum,
+    standard_observer,
+};
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
