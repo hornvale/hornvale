@@ -82,6 +82,29 @@ fn durations_have_not_regressed() {
         }
     };
 
+    // A truncated or shape-changed nextest stream can yield only a handful of
+    // records and still parse cleanly (`parse_run` only errors on TOTAL
+    // emptiness) — `per_test_shifts` then finds little to compare, and
+    // `suite_shift`'s intersection shrinks on BOTH sides, so a 5-row run.json
+    // against a 2548-row baseline stays under tolerance and reports green.
+    // Worse, that 5-row run would then get recorded as the new baseline,
+    // permanently hiding the shrinkage. A first run (no baseline yet) must
+    // still pass, so this only fires once a baseline exists to compare
+    // against.
+    if !baseline.is_empty() {
+        assert!(
+            current.len() >= baseline.len() / 2,
+            "timekeeper: this run recorded only {} test(s) against a {}-test \
+             baseline on {} — that looks like a truncated or shape-changed \
+             nextest stream, not a clean suite run. Refusing to treat a \
+             partial run as green; inspect {} before re-running `make ci`.",
+            current.len(),
+            baseline.len(),
+            host(),
+            run_json().display()
+        );
+    }
+
     let per_test = per_test_shifts(&current, &baseline);
     let suite = suite_shift(&current, &baseline);
 
