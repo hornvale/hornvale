@@ -2549,7 +2549,28 @@ Read each hit and update anything the campaign falsified. Memory
 check gates only the generated half — so grep the printf paragraphs in
 `scripts/regenerate-artifacts.sh` too.
 
-- [ ] **Step 6: The full gate**
+- [ ] **Step 6: Regenerate the type-audit report**
+
+**This is known-stale and owed — do not skip it.** Every task in this
+campaign adds `pub`-boundary items, and `docs/audits/type-audit-report.md`
+drifts on each one. Measured after Task 3: `bare-ok(count)` 337→341,
+`bare-ok(constructor-edge)` 49→56, `bare-ok(ratio)` 489→496, and five other
+rows.
+
+The trap is that **`make gate` runs the type-audit `check`, not the
+`report`** — so this drift is invisible to every gate the campaign has run
+and only surfaces in the artifact drift check. One regen here covers the
+whole campaign:
+
+```bash
+cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+make rebaseline
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+```
+
+Expected: the report changes (commit it); everything else empty.
+
+- [ ] **Step 7: The full gate**
 
 ```bash
 make gate
@@ -2560,7 +2581,7 @@ so the scoped gates are not sufficient — memory
 `full-gate-before-pushing-boundary-changes`. Confirm no other session is
 gating first.
 
-- [ ] **Step 7: Re-record the duration baseline**
+- [ ] **Step 8: Re-record the duration baseline**
 
 This campaign adds roughly forty tests, so the whole-suite duration moves.
 Decision 0088's rule is that a deliberate regression is re-recorded **in the
@@ -2595,7 +2616,7 @@ distrust a red alarm from a busy machine.
 
 Commit the moved baseline together with the campaign's final state.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 cargo fmt
