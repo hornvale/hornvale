@@ -147,13 +147,15 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 15] = [
+const EXPECTED_UNTOKENISED: [&str; 18] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "TODO: re-enable once the number settles",
     "compiles the workspace in release; CI runs it with -- --ignored",
     "failing — investigate later",
     "flaky after the refactor",
+    "measurement: builds eight full worlds; run explicitly with --ignored",
+    "measurement: builds one full world; run explicitly with --ignored",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
     "probe: measurement only, run explicitly",
     "readout: chronicle evidence, run manually with --nocapture",
@@ -161,6 +163,7 @@ const EXPECTED_UNTOKENISED: [&str; 15] = [
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",
+    "search: re-derives the wear fixture's seed; run explicitly with --ignored",
     "superseded by decision 0016; kept for one release",
     "timekeeper: reads the run.json `make ci` writes; not a standalone test",
 ];
