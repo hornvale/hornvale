@@ -1,6 +1,8 @@
 //! Recorded durations for the repo's own test suite (The Timekeeper).
 
 use serde_json::Value;
+use std::fmt::Write as _;
+use std::path::{Path, PathBuf};
 
 /// One test's measured wall time from a nextest run.
 /// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: seconds)
@@ -55,6 +57,65 @@ pub fn parse_run(json_lines: &str) -> Result<Vec<TestDuration>, String> {
     Ok(out)
 }
 
+/// Where this machine's baseline lives. One file PER HOST: the Mac and the
+/// canonical box differ by roughly 4x, so a shared baseline would alarm on
+/// every cross-machine run.
+/// type-audit: bare-ok(identifier-text: host)
+pub fn baseline_path(repo_root: &Path, host: &str) -> PathBuf {
+    repo_root
+        .join("docs/timings")
+        .join(format!("test-baseline-{host}.tsv"))
+}
+
+/// Render a baseline: sorted, tab-separated, one row per test.
+///
+/// The file holds only the PRESENT; git holds the history, which is what makes
+/// `git log -p` the archaeology tool (spec N1). Appending every run instead
+/// would grow without bound.
+/// type-audit: bare-ok(identifier-text: sha), bare-ok(prose: return)
+pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
+    let mut sorted = rows.to_vec();
+    sorted.sort_by(|a, b| a.id.cmp(&b.id));
+    let mut s = String::from(
+        "# Hornvale test-duration baseline (The Timekeeper). One row per test:\n\
+         # <test-id>\\t<seconds>\\t<sha-recorded-at>. Rewritten by `make ci`;\n\
+         # history lives in git, so `git log -p` on this file is the record.\n",
+    );
+    for r in &sorted {
+        let _ = writeln!(s, "{}\t{}\t{}", r.id, r.seconds, sha);
+    }
+    s
+}
+
+/// Parse a baseline back. Comment lines (`#`) and blanks are skipped; a
+/// malformed data row is an error rather than a skipped line, so a corrupted
+/// baseline cannot quietly disable the alarm.
+/// type-audit: bare-ok(prose: text), bare-ok(prose: return)
+pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
+    let mut out = Vec::new();
+    for (n, line) in text.lines().enumerate() {
+        if line.trim().is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut parts = line.split('\t');
+        let (Some(id), Some(secs)) = (parts.next(), parts.next()) else {
+            return Err(format!(
+                "baseline line {}: expected <id>\\t<seconds>\\t<sha>",
+                n + 1
+            ));
+        };
+        let seconds: f64 = secs
+            .parse()
+            .map_err(|_| format!("baseline line {}: '{secs}' is not a number", n + 1))?;
+        out.push(TestDuration {
+            id: id.to_string(),
+            seconds,
+        });
+    }
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,5 +144,35 @@ mod tests {
         // alarm permanently, invisibly green (spec A2).
         let err = parse_run(r#"{"type":"suite","event":"ok"}"#).unwrap_err();
         assert!(err.contains("no test records"), "got: {err}");
+    }
+
+    #[test]
+    fn a_baseline_round_trips() {
+        let rows = vec![
+            TestDuration {
+                id: "b::two".into(),
+                seconds: 2.5,
+            },
+            TestDuration {
+                id: "a::one".into(),
+                seconds: 0.125,
+            },
+        ];
+        let text = render_baseline(&rows, "deadbeef");
+        assert!(text.starts_with("# "), "carries a header comment");
+        let back = parse_baseline(&text).expect("parses");
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[0].id, "a::one", "rendered sorted by id");
+        assert_eq!(back[0].seconds, 0.125);
+        assert_eq!(back[1].id, "b::two");
+    }
+
+    #[test]
+    fn the_baseline_path_is_per_host() {
+        let p = baseline_path(std::path::Path::new("/repo"), "lefford");
+        assert_eq!(
+            p,
+            std::path::Path::new("/repo/docs/timings/test-baseline-lefford.tsv")
+        );
     }
 }
