@@ -57,6 +57,19 @@ derived at the emit boundary, so no epoch is owed.
   whole-suite duration.** That is a regression the baseline must absorb
   *deliberately*: 0088's rule is to re-record in the same commit that caused
   the shift. Task 10 does this.
+- **Two clippy lints bite every band loop, found in Task 1.** Writing
+  `for b in 0..BANDS { out[b] = out[b] + x }` fails `-D warnings` twice:
+  `needless_range_loop` and `assign_op_pattern`. Use
+  `for (accumulated, band) in out.iter_mut().zip(other) { *accumulated += … }`.
+  Tasks 2 and 4 both contain band loops of exactly that shape. **`+=` on
+  `f64` is a plain unfused `fadd` and is the sanctioned accumulate** — never
+  "fix" it toward `mul_add`.
+- **Never `assert_eq!` a computed float against a tidy decimal.** Task 1's
+  plan text asserted `0.5` for `0.25*0.2 + 0.75*0.6`, which is real-number
+  arithmetic; in binary the answer is one ULP lower, and the *only* way to
+  reach `0.5` is the forbidden fused `mul_add`. Use dyadic inputs (quarters,
+  eighths) when stating a law, so the computation is exact and `assert_eq!`
+  witnesses bit-exactness rather than approximate agreement.
 - **`make gate` is ~15 min, not the ~4 min decision 0040 budgeted** (934.5 s
   measured on a quiet Mac, 2026-07-29). Iterate with the per-crate commands
   each task gives; the full gate belongs at the end, not in the loop.
@@ -166,20 +179,52 @@ mod tests {
 
     #[test]
     fn area_mixing_is_the_weighted_arithmetic_mean() {
+        // Dyadic inputs, so the whole computation is EXACT in binary and
+        // assert_eq! states the law without depending on rounding.
+        // Do NOT use tidy decimals like 0.2/0.6 here: they are inexact in
+        // binary, and the only arithmetic that reaches the tidy answer is a
+        // fused mul_add — which this campaign forbids. See the sibling test
+        // below, which uses exactly those values on purpose.
+        let a = Reflectance::new([0.25; BANDS]).unwrap();
+        let b = Reflectance::new([0.75; BANDS]).unwrap();
+        let mixed = Mixture::new(vec![a, b], vec![0.25, 0.75]).unwrap().integrate();
+        // 0.25*0.25 + 0.75*0.75 = 0.0625 + 0.5625 = 0.625, exactly.
+        assert_eq!(mixed.get()[0], 0.625);
+    }
+
+    #[test]
+    fn area_mixing_does_not_fuse_its_multiply_and_add() {
+        // The guard for the workspace rule that `a * b + c` and
+        // `a.mul_add(b, c)` are never mixed. These inputs DISTINGUISH the
+        // two: unfused rounds twice and lands one ULP below 0.5; fused
+        // rounds once and reaches 0.5. The literal is a fingerprint of the
+        // unfused implementation — a failure reading `right: 0.5` means
+        // someone introduced a mul_add.
         let a = Reflectance::new([0.2; BANDS]).unwrap();
         let b = Reflectance::new([0.6; BANDS]).unwrap();
         let mixed = Mixture::new(vec![a, b], vec![0.25, 0.75]).unwrap().integrate();
-        // 0.25*0.2 + 0.75*0.6 = 0.05 + 0.45 = 0.5
-        assert_eq!(mixed.get()[0], 0.5);
+        assert_eq!(mixed.get()[0], 0.499_999_999_999_999_94);
     }
 
     #[test]
     fn a_mixture_normalizes_its_weights() {
-        let a = Reflectance::new([0.2; BANDS]).unwrap();
-        let b = Reflectance::new([0.6; BANDS]).unwrap();
+        // Dyadic again; 1/4 and 3/4 are exact, so normalization introduces
+        // no rounding either.
+        let a = Reflectance::new([0.25; BANDS]).unwrap();
+        let b = Reflectance::new([0.75; BANDS]).unwrap();
         // Weights 1 and 3 are the same mixture as 0.25 and 0.75.
         let mixed = Mixture::new(vec![a, b], vec![1.0, 3.0]).unwrap().integrate();
-        assert_eq!(mixed.get()[0], 0.5);
+        assert_eq!(mixed.get()[0], 0.625);
+    }
+
+    #[test]
+    fn a_mixture_keeps_its_components_reachable() {
+        let a = Reflectance::new([0.25; BANDS]).unwrap();
+        let b = Reflectance::new([0.75; BANDS]).unwrap();
+        let m = Mixture::new(vec![a, b], vec![1.0, 3.0]).unwrap();
+        assert_eq!(m.components().len(), 2);
+        assert_eq!(m.components()[0].get()[0], 0.25);
+        assert_eq!(m.weights(), &[1.0, 3.0]);
     }
 
     #[test]
@@ -414,8 +459,13 @@ impl Mixture {
         let mut out = [0.0f64; BANDS];
         for (component, weight) in self.components.iter().zip(&self.weights) {
             let share = weight / total;
-            for b in 0..BANDS {
-                out[b] = out[b] + component.get()[b] * share;
+            // `iter_mut().zip()`, NOT `for b in 0..BANDS { out[b] = out[b] + … }`
+            // — that shape fails `clippy -D warnings` twice over
+            // (`needless_range_loop` and `assign_op_pattern`). `+=` on f64 is
+            // a plain unfused `fadd` and is the sanctioned accumulate; do not
+            // "fix" it toward `mul_add`.
+            for (accumulated, band) in out.iter_mut().zip(component.get()) {
+                *accumulated += band * share;
             }
         }
         // Normalized weights sum to 1 and every component band is within
