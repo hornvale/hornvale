@@ -91,20 +91,70 @@ Two profiles. `default` preserves today's behaviour exactly. `ci` adds
 `libtest-json-plus` output, full failure capture, and `slow-timeout.period`
 for marking. No `terminate-after` (N4).
 
-### 3b. The ledger — a rolling baseline, one row per test
+### 3b. The ledger — a rolling baseline, one row per test (above a floor)
 
 ```
 docs/timings/test-baseline-<host>.tsv
-  test-id <tab> exec_time_s <tab> recorded-at-sha
+  # header: recorded-at-sha (once, not per row)
+  test-id <tab> exec_time_s
+  <below-floor> <tab> summed_exec_time_s <tab> folded_count
 ```
 
-Rewritten in place each `make ci`; ~2548 rows. Small in the tree, and
-**`git log -p` on it is the archaeology** (N1). Appending every run would give
-richer statistics and grow without bound; git already holds history, so the
-file holds only the present.
+Rewritten in place each `make ci`. Small in the tree, and **`git log -p` on
+it is the archaeology** (N1). Appending every run would give richer
+statistics and grow without bound; git already holds history, so the file
+holds only the present.
 
 One file **per host**, keyed on `hostname -s`. The Mac and Lefford differ by
 roughly 4×; a shared baseline would alarm on every cross-machine run.
+
+> Amended post-merge, with measurement: `git log -p`-as-archaeology (N1)
+> only works if a row that did not meaningfully move does not appear as a
+> diff line. It didn't. Measured on this box across two consecutive quiet
+> `make ci` runs, before either fix below existed:
+>
+> ```
+>                        n     median jitter   p90     p99
+> all tests            2573      16.9%       60.7%   162.1%
+> >=1s                  536       3.8%        9.3%    22.1%
+> >=5s (alarm-eligible) 239       2.9%        7.0%    11.7%
+> suite total: 9182.4s -> 9313.3s (+1.4%)
+> ```
+>
+> **2405 of 2578 rows changed on ordinary machine jitter**, none of it ever
+> able to cross the per-test alarm's 5s floor. Two changes, in the SAME
+> spirit as the sha-in-header-not-per-row fix that first made this file
+> reviewable at all:
+>
+> - **A duration floor (`BASELINE_FLOOR_SECS = 1.0`).** Only tests
+>   measuring >= 1.0s get their own stored row; everything below folds into
+>   one aggregate row under the reserved id `<below-floor>` (chosen because
+>   no real nextest id — always `crate::binary$module::name` — can collide
+>   with it), carrying BOTH the summed seconds and the count of tests
+>   folded in. The count is not cosmetic: a change in it (a test crossing
+>   the floor) is itself information, so it is stored and read back rather
+>   than discarded. 1.0s sits safely below `PER_TEST_FLOOR_SECS` (5s), so no
+>   row that could ever be per-test-alarm-eligible loses its individual
+>   entry, and the folded tests are collectively only 0.8% of total suite
+>   runtime, so the whole-suite total stays accurate.
+> - **Hysteresis (`BASELINE_DEADBAND = 0.20`).** `ci-record` reads the
+>   existing baseline before writing the new one; for a test present in
+>   both, it keeps the OLD stored value unless the new measurement differs
+>   by more than 20%. The stored value therefore becomes "the last
+>   significantly-different measurement", not "the last measurement" —
+>   deliberate: it stops the baseline ratcheting upward on noise, so
+>   genuine slow creep accumulates against a fixed reference instead of
+>   being continuously re-absorbed. 20% sits comfortably above the >= 1.0s
+>   tests' measured jitter (median 3.8%, p90 9.3%) and far below
+>   `PER_TEST_MULTIPLE`'s 2x (100%), so it can never mask a per-test alarm.
+>
+> Modelled against the same two runs, floor + hysteresis together yield **6
+> changed rows instead of 2405**, with zero changes among the >= 5s
+> alarm-eligible tests. CHOSEN from this measurement, not derived — same
+> status as N3 assigns `PER_TEST_MULTIPLE`/`SUITE_TOLERANCE` (spec A1); the
+> pure functions (`fold_below_floor`, `apply_hysteresis`) live in
+> `windows/lab/src/timings.rs`, unit-tested directly rather than only
+> exercised through `ci-record`.
 
 ### 3c. Two alarms, not one
 

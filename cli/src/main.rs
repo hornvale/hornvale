@@ -1122,9 +1122,21 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// and can never fire again, silently. Refusing loudly (a non-zero exit) is
 /// chosen over a quiet no-op: `ci-record` run by hand or from a script should
 /// not look like it succeeded when it wrote nothing.
+///
+/// The write itself is: fold every sub-`BASELINE_FLOOR_SECS` test into the
+/// `<below-floor>` aggregate row (`fold_below_floor`), then read whatever
+/// baseline is already on disk and keep each row's OLD value unless this
+/// run's measurement moved it by more than `BASELINE_DEADBAND`
+/// (`apply_hysteresis`) — the two changes that took a 2405-of-2578-row
+/// rewrite on ordinary machine jitter down to single digits. All the
+/// decisions live in `windows/lab/src/timings.rs`; this function is just the
+/// read-fold-hysteresis-write plumbing.
 fn cmd_ci_record() -> Result<(), String> {
     use hornvale_lab::census_claim::current_holder;
-    use hornvale_lab::timings::{baseline_path, parse_run, render_baseline};
+    use hornvale_lab::timings::{
+        BASELINE_FLOOR_SECS, apply_hysteresis, baseline_path, fold_below_floor, parse_baseline,
+        parse_run, render_baseline,
+    };
 
     if let Some(holder) = current_holder() {
         return Err(format!(
@@ -1143,6 +1155,7 @@ fn cmd_ci_record() -> Result<(), String> {
     let text = std::fs::read_to_string(&run)
         .map_err(|e| format!("ci-record: no run at {} ({e})", run.display()))?;
     let rows = parse_run(&text).map_err(|e| format!("ci-record: {e}"))?;
+    let folded = fold_below_floor(&rows, BASELINE_FLOOR_SECS);
 
     let out = |cmd: &str, args: &[&str]| -> String {
         std::process::Command::new(cmd)
@@ -1158,12 +1171,23 @@ fn cmd_ci_record() -> Result<(), String> {
     let host = out("hostname", &["-s"]);
 
     let path = baseline_path(&root, &host);
+    let previous = match std::fs::read_to_string(&path) {
+        Ok(t) => parse_baseline(&t).map_err(|e| format!("ci-record: reading old baseline: {e}"))?,
+        Err(_) => Vec::new(),
+    };
+    let to_write = apply_hysteresis(&folded, &previous);
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("ci-record: {e}"))?;
     }
-    std::fs::write(&path, render_baseline(&rows, &sha))
+    std::fs::write(&path, render_baseline(&to_write, &sha))
         .map_err(|e| format!("ci-record: writing {}: {e}", path.display()))?;
-    println!("ci-record: {} durations -> {}", rows.len(), path.display());
+    println!(
+        "ci-record: {} durations ({} rows after folding below {}s) -> {}",
+        rows.len(),
+        to_write.len(),
+        BASELINE_FLOOR_SECS,
+        path.display()
+    );
     Ok(())
 }
 

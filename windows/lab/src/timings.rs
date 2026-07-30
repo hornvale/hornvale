@@ -4,14 +4,24 @@ use serde_json::Value;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-/// One test's measured wall time from a nextest run.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: seconds)
+/// One test's measured wall time from a nextest run, or (for the reserved
+/// [`BELOW_FLOOR_ID`] row) the folded sum of every test that measured below
+/// [`BASELINE_FLOOR_SECS`] on that run.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: seconds), bare-ok(count: folded_count)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestDuration {
     /// Fully-qualified nextest test id, e.g. `hornvale-kernel::lib$mod::name`.
+    /// [`BELOW_FLOOR_ID`] for the aggregate row.
     pub id: String,
-    /// Wall seconds the test took, as nextest reported it.
+    /// Wall seconds the test took, as nextest reported it. For the
+    /// aggregate row this is the SUM over every folded test.
     pub seconds: f64,
+    /// `None` for an ordinary per-test row (always exactly one test).
+    /// `Some(n)` only on the aggregate row: how many tests were folded into
+    /// it this run. A change in `n` run to run is itself information (a
+    /// test crossed the floor), so it is carried alongside the summed
+    /// seconds rather than discarded.
+    pub folded_count: Option<u32>,
 }
 
 /// Parse a `libtest-json-plus` stream into per-test durations, sorted by id.
@@ -55,6 +65,7 @@ pub fn parse_run(json_lines: &str) -> Result<Vec<TestDuration>, String> {
         out.push(TestDuration {
             id: id.to_string(),
             seconds: secs,
+            folded_count: None,
         });
     }
     if out.is_empty() {
@@ -79,6 +90,63 @@ pub fn baseline_path(repo_root: &Path, host: &str) -> PathBuf {
         .join(format!("test-baseline-{host}.tsv"))
 }
 
+/// Below this, a test is folded into the aggregate [`BELOW_FLOOR_ID`] row
+/// instead of getting its own stored line.
+///
+/// Measured on this box across two consecutive quiet `make ci` runs, before
+/// this floor existed: of 2573 tests, the whole-suite median jitter was
+/// 16.9% (p90 60.7%, p99 162.1%) — noise, not signal, since none of it can
+/// ever cross `PER_TEST_MULTIPLE`'s 2x. Restricted to tests >= 1.0s the
+/// median jitter fell to 3.8% (p90 9.3%), and among the >= 5s
+/// `PER_TEST_FLOOR_SECS` alarm-eligible tests it fell to 2.9% (p90 7.0%,
+/// p99 11.7%) — real machine variance, not the reason the file was
+/// unreviewable. The tests below 1.0s are 2037 of 2573 rows (the entire
+/// source of the file's churn) but only 0.8% of total suite runtime, so
+/// folding them costs the alarm nothing: `PER_TEST_FLOOR_SECS` (5s) is
+/// already five times this floor, so no individually-stored row is lost
+/// from per-test alarm eligibility. CHOSEN from this measurement, not
+/// derived — same status as `PER_TEST_MULTIPLE`/`SUITE_TOLERANCE` (spec A1).
+/// type-audit: bare-ok(diagnostic-value)
+pub const BASELINE_FLOOR_SECS: f64 = 1.0;
+
+/// Reserved test id for the folded aggregate row. Cannot collide with a real
+/// nextest id, which always look like `crate::binary$module::name` (a `::`
+/// and a `$`, neither of which this string contains).
+/// type-audit: bare-ok(identifier-text)
+pub const BELOW_FLOOR_ID: &str = "<below-floor>";
+
+/// Fold every row under [`BASELINE_FLOOR_SECS`] into one [`BELOW_FLOOR_ID`]
+/// row carrying the summed seconds and the count folded in; rows at or above
+/// the floor pass through unchanged. Applied to BOTH the measurement being
+/// written to the baseline and (symmetrically) the current run being
+/// compared against it, so the two shapes always match by id — an
+/// unfolded `current` against a folded `baseline` would silently drop every
+/// sub-floor test from `suite_shift`'s intersection instead of rolling it
+/// into the aggregate.
+/// type-audit: bare-ok(diagnostic-value: floor)
+pub fn fold_below_floor(rows: &[TestDuration], floor: f64) -> Vec<TestDuration> {
+    let mut kept = Vec::new();
+    let mut folded_seconds = 0.0;
+    let mut folded_count: u32 = 0;
+    for r in rows {
+        if r.seconds >= floor {
+            kept.push(r.clone());
+        } else {
+            folded_seconds += r.seconds;
+            folded_count += 1;
+        }
+    }
+    if folded_count > 0 {
+        kept.push(TestDuration {
+            id: BELOW_FLOOR_ID.to_string(),
+            seconds: folded_seconds,
+            folded_count: Some(folded_count),
+        });
+    }
+    kept.sort_by(|a, b| a.id.cmp(&b.id));
+    kept
+}
+
 /// Render a baseline: sorted, tab-separated, one row per test.
 ///
 /// The file holds only the PRESENT; git holds the history, which is what makes
@@ -92,7 +160,12 @@ pub fn baseline_path(repo_root: &Path, host: &str) -> PathBuf {
 /// full nanosecond precision, which never repeats bit-for-bit run to run.
 /// The sha now lives once, in the header; durations are rounded to
 /// milliseconds (3 decimal places) — below that, `PER_TEST_FLOOR_SECS`
-/// (5s) means the noise is irrelevant to the alarm anyway.
+/// (5s) means the noise is irrelevant to the alarm anyway. A third source of
+/// churn — ~2037 of 2573 rows moving on ordinary machine jitter, none of it
+/// ever alarm-eligible — is handled upstream of this function: callers pass
+/// already-folded ([`fold_below_floor`]) and already-hysteresis-applied
+/// ([`apply_hysteresis`]) rows, so this function only ever sees what should
+/// actually be written.
 /// type-audit: bare-ok(identifier-text: sha), bare-ok(prose: return)
 pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
     let mut sorted = rows.to_vec();
@@ -102,11 +175,20 @@ pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
         s,
         "# Hornvale test-duration baseline (The Timekeeper). Recorded at {sha}.\n\
          # One row per test: <test-id>\\t<seconds, millisecond precision>.\n\
+         # The reserved id {BELOW_FLOOR_ID} carries a THIRD field instead:\n\
+         # {BELOW_FLOOR_ID}\\t<summed seconds>\\t<count of tests folded in>.\n\
          # Rewritten by `make ci`; history lives in git, so `git log -p` on\n\
          # this file is the record."
     );
     for r in &sorted {
-        let _ = writeln!(s, "{}\t{:.3}", r.id, r.seconds);
+        match r.folded_count {
+            Some(n) => {
+                let _ = writeln!(s, "{}\t{:.3}\t{}", r.id, r.seconds, n);
+            }
+            None => {
+                let _ = writeln!(s, "{}\t{:.3}", r.id, r.seconds);
+            }
+        }
     }
     s
 }
@@ -115,10 +197,12 @@ pub fn render_baseline(rows: &[TestDuration], sha: &str) -> String {
 /// malformed data row is an error rather than a skipped line, so a corrupted
 /// baseline cannot quietly disable the alarm. "Malformed" covers: not
 /// exactly two tab-separated fields (a third means a tab leaked into the
-/// id, and silently keeping it would corrupt the mapping), a non-numeric
-/// duration, and a duration that is negative, `NaN`, or infinite — any of
-/// which would compare false against a threshold downstream and silently
-/// defeat the regression alarm for that row.
+/// id, and silently keeping it would corrupt the mapping) UNLESS the id is
+/// the reserved [`BELOW_FLOOR_ID`], which carries exactly three fields (see
+/// `render_baseline`); a non-numeric duration or count; and a duration that
+/// is negative, `NaN`, or infinite — any of which would compare false
+/// against a threshold downstream and silently defeat the regression alarm
+/// for that row.
 /// type-audit: bare-ok(prose: text), bare-ok(prose: return)
 pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
     let mut out = Vec::new();
@@ -127,12 +211,28 @@ pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
             continue;
         }
         let fields: Vec<&str> = line.split('\t').collect();
-        let [id, secs] = fields[..] else {
-            return Err(format!(
-                "baseline line {}: expected <id>\\t<seconds>, got {} field(s)",
-                n + 1,
-                fields.len()
-            ));
+        let (id, secs, folded_count) = match fields[..] {
+            [id, secs] => (id, secs, None),
+            [id, secs, count] if id == BELOW_FLOOR_ID => {
+                let count: u32 = count.parse().map_err(|_| {
+                    format!("baseline line {}: '{count}' is not a valid count", n + 1)
+                })?;
+                if count == 0 {
+                    return Err(format!(
+                        "baseline line {}: {BELOW_FLOOR_ID} carries a folded count of 0, which \
+                         means it should not have been written at all",
+                        n + 1
+                    ));
+                }
+                (id, secs, Some(count))
+            }
+            _ => {
+                return Err(format!(
+                    "baseline line {}: expected <id>\\t<seconds>, got {} field(s)",
+                    n + 1,
+                    fields.len()
+                ));
+            }
         };
         let seconds: f64 = secs
             .parse()
@@ -146,6 +246,7 @@ pub fn parse_baseline(text: &str) -> Result<Vec<TestDuration>, String> {
         out.push(TestDuration {
             id: id.to_string(),
             seconds,
+            folded_count,
         });
     }
     out.sort_by(|a, b| a.id.cmp(&b.id));
@@ -168,6 +269,18 @@ pub const PER_TEST_MULTIPLE: f64 = 2.0;
 /// type-audit: bare-ok(ratio)
 pub const SUITE_TOLERANCE: f64 = 0.25;
 
+/// A stored duration is kept unchanged unless the new measurement differs
+/// from it by more than this fraction — see [`apply_hysteresis`]. Measured
+/// (see [`BASELINE_FLOOR_SECS`]'s doc): among the >= 1.0s tests this floor
+/// alone leaves individually stored, median run-to-run jitter was 3.8%
+/// (p90 9.3%), so 20% sits comfortably above ordinary noise and far below
+/// `PER_TEST_MULTIPLE`'s 2x (100%) — it can never mask a per-test alarm.
+/// Modelled against two real consecutive runs: floor + this deadband
+/// together left 6 changed rows, vs 2405 with neither. CHOSEN from this
+/// measurement, not derived (spec A1).
+/// type-audit: bare-ok(ratio)
+pub const BASELINE_DEADBAND: f64 = 0.20;
+
 /// One duration that moved beyond tolerance.
 /// type-audit: bare-ok(identifier-text: id), bare-ok(diagnostic-value: baseline), bare-ok(diagnostic-value: current)
 #[derive(Debug, Clone, PartialEq)]
@@ -178,6 +291,15 @@ pub struct Shift {
     pub baseline: f64,
     /// What this run measured, in seconds.
     pub current: f64,
+}
+
+impl Shift {
+    /// Seconds gained (positive) or lost (negative) versus the baseline —
+    /// the ranking key `top_contributors` sorts by.
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn delta_seconds(&self) -> f64 {
+        self.current - self.baseline
+    }
 }
 
 fn lookup(rows: &[TestDuration], id: &str) -> Option<f64> {
@@ -200,7 +322,12 @@ fn is_sorted_by_id(rows: &[TestDuration]) -> bool {
 }
 
 /// Tests that crossed BOTH the absolute floor and the multiple. A test absent
-/// from the baseline is new and never alarms.
+/// from the baseline is new and never alarms. The reserved [`BELOW_FLOOR_ID`]
+/// aggregate row is skipped here even if it happens to cross the threshold —
+/// it is not a specific test, so it cannot be the "something specific went
+/// pathological" this alarm exists to name; accumulated growth among the
+/// folded tests is `suite_shift`/`top_contributors`'s story to tell, not
+/// this one's.
 ///
 /// PRECONDITION: `baseline` must be sorted by `id` (as `parse_run` and
 /// `parse_baseline` both return it). See `is_sorted_by_id`'s doc for why a
@@ -214,6 +341,9 @@ pub fn per_test_shifts(current: &[TestDuration], baseline: &[TestDuration]) -> V
     );
     let mut out = Vec::new();
     for c in current {
+        if c.id == BELOW_FLOOR_ID {
+            continue;
+        }
         let Some(b) = lookup(baseline, &c.id) else {
             continue;
         };
@@ -278,6 +408,88 @@ pub fn suite_shift(current: &[TestDuration], baseline: &[TestDuration]) -> Optio
     None
 }
 
+/// For each test in `current`, keep the OLD stored value from `previous`
+/// unless the new measurement differs from it by more than
+/// [`BASELINE_DEADBAND`]; otherwise take the new measurement. A test absent
+/// from `previous` (new) always takes its current measurement — there is no
+/// old value to hold onto. A test absent from `current` (removed since the
+/// last record) is simply not emitted; the caller drops it by construction.
+///
+/// The stored value therefore becomes "the last significantly-different
+/// measurement", not "the last measurement" — deliberate: it stops the
+/// baseline ratcheting upward on noise, so genuine slow creep accumulates
+/// against a FIXED reference instead of being continuously re-absorbed by a
+/// baseline that moves every run. The deadband (20%) is far below the
+/// per-test alarm's multiple (2x, i.e. 100%), so it can never mask an alarm
+/// — a shift big enough to alarm is always far outside the deadband too.
+///
+/// `folded_count` is never smoothed: it always reflects `current`'s own
+/// count, because a change in it is itself information (spec, §3b) that
+/// hysteresis on `seconds` must not hide.
+///
+/// PRECONDITION: `previous` must be sorted by `id`. See `is_sorted_by_id`'s
+/// doc for why a violation is silent rather than loud.
+/// type-audit: bare-ok(diagnostic-value: current), bare-ok(diagnostic-value: previous)
+pub fn apply_hysteresis(current: &[TestDuration], previous: &[TestDuration]) -> Vec<TestDuration> {
+    debug_assert!(
+        is_sorted_by_id(previous),
+        "apply_hysteresis: previous must be sorted by id, or binary_search_by \
+         silently drops present ids from the lookup"
+    );
+    let mut out: Vec<TestDuration> = current
+        .iter()
+        .map(|c| {
+            let seconds = match lookup(previous, &c.id) {
+                Some(p) if p > 0.0 && ((c.seconds - p).abs() / p) <= BASELINE_DEADBAND => p,
+                _ => c.seconds,
+            };
+            TestDuration {
+                id: c.id.clone(),
+                seconds,
+                folded_count: c.folded_count,
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out
+}
+
+/// The `n` tests present in BOTH `current` and `baseline` (same
+/// intersection discipline as `suite_shift`) with the largest ABSOLUTE
+/// seconds gained, largest first — the profile list for the whole-suite
+/// alarm message. Unlike `per_test_shifts`, the reserved [`BELOW_FLOOR_ID`]
+/// row is eligible here: "the fast tests collectively grew" is exactly the
+/// kind of accumulated-feature story this ranking exists to surface, not a
+/// pathological single test.
+///
+/// PRECONDITION: `baseline` must be sorted by `id`. See `is_sorted_by_id`'s
+/// doc for why a violation is silent rather than loud.
+/// type-audit: bare-ok(count: n)
+pub fn top_contributors(
+    current: &[TestDuration],
+    baseline: &[TestDuration],
+    n: usize,
+) -> Vec<Shift> {
+    debug_assert!(
+        is_sorted_by_id(baseline),
+        "top_contributors: baseline must be sorted by id, or binary_search_by \
+         silently drops present ids from the intersection"
+    );
+    let mut shifts: Vec<Shift> = current
+        .iter()
+        .filter_map(|c| {
+            lookup(baseline, &c.id).map(|b| Shift {
+                id: c.id.clone(),
+                baseline: b,
+                current: c.seconds,
+            })
+        })
+        .collect();
+    shifts.sort_by(|a, b| b.delta_seconds().total_cmp(&a.delta_seconds()));
+    shifts.truncate(n);
+    shifts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -314,10 +526,12 @@ mod tests {
             TestDuration {
                 id: "b::two".into(),
                 seconds: 2.5,
+                folded_count: None,
             },
             TestDuration {
                 id: "a::one".into(),
                 seconds: 0.125,
+                folded_count: None,
             },
         ];
         let text = render_baseline(&rows, "deadbeef");
@@ -337,6 +551,7 @@ mod tests {
         let rows = vec![TestDuration {
             id: "a::one".into(),
             seconds: 0.125,
+            folded_count: None,
         }];
         let text = render_baseline(&rows, "deadbeef");
         assert_eq!(
@@ -365,6 +580,7 @@ mod tests {
         let rows = vec![TestDuration {
             id: "a::one".into(),
             seconds: 0.010_709_583,
+            folded_count: None,
         }];
         let text = render_baseline(&rows, "deadbeef");
         assert!(
@@ -428,6 +644,7 @@ mod tests {
         TestDuration {
             id: id.into(),
             seconds: s,
+            folded_count: None,
         }
     }
 
@@ -589,5 +806,283 @@ mod tests {
     fn total_seconds_sums_every_row() {
         let rows = vec![d("a", 1.5), d("b", 2.5)];
         assert_eq!(total_seconds(&rows), 4.0);
+    }
+
+    // --- fold_below_floor ---------------------------------------------------
+
+    #[test]
+    fn fold_below_floor_keeps_rows_at_or_above_the_floor_unchanged() {
+        let rows = vec![d("a", 1.0), d("b", 5.0)];
+        let folded = fold_below_floor(&rows, 1.0);
+        assert_eq!(folded, vec![d("a", 1.0), d("b", 5.0)], "nothing to fold");
+    }
+
+    #[test]
+    fn fold_below_floor_sums_rows_under_the_floor_into_one_aggregate_row() {
+        let rows = vec![d("a", 0.1), d("b", 0.2), d("c", 5.0)];
+        let folded = fold_below_floor(&rows, 1.0);
+        assert_eq!(folded.len(), 2, "the two sub-floor rows collapse to one");
+        let agg = folded
+            .iter()
+            .find(|r| r.id == BELOW_FLOOR_ID)
+            .expect("aggregate row present");
+        assert!(
+            (agg.seconds - 0.3).abs() < 1e-9,
+            "summed seconds, got {}",
+            agg.seconds
+        );
+        assert_eq!(agg.folded_count, Some(2));
+        assert!(
+            folded.iter().any(|r| r.id == "c" && r.seconds == 5.0),
+            "the floor-or-above row is untouched"
+        );
+    }
+
+    #[test]
+    fn fold_below_floor_emits_no_aggregate_row_when_nothing_is_under_the_floor() {
+        let rows = vec![d("a", 1.0), d("b", 2.0)];
+        let folded = fold_below_floor(&rows, 1.0);
+        assert!(
+            !folded.iter().any(|r| r.id == BELOW_FLOOR_ID),
+            "no sub-floor tests -> no aggregate row, got {folded:?}"
+        );
+    }
+
+    #[test]
+    fn fold_below_floor_of_an_empty_slice_is_empty() {
+        assert_eq!(fold_below_floor(&[], 1.0), Vec::new());
+    }
+
+    // --- the aggregate row's three-field baseline shape ---------------------
+
+    #[test]
+    fn a_baseline_with_the_aggregate_row_round_trips() {
+        let rows = vec![
+            d("a::one", 1.5),
+            TestDuration {
+                id: BELOW_FLOOR_ID.to_string(),
+                seconds: 0.437,
+                folded_count: Some(2037),
+            },
+        ];
+        let text = render_baseline(&rows, "deadbeef");
+        let back = parse_baseline(&text).expect("parses");
+        let agg = back
+            .iter()
+            .find(|r| r.id == BELOW_FLOOR_ID)
+            .expect("aggregate row survives the round trip");
+        assert_eq!(agg.seconds, 0.437);
+        assert_eq!(agg.folded_count, Some(2037), "the count round-trips too");
+    }
+
+    #[test]
+    fn render_baseline_emits_three_fields_for_the_aggregate_row_and_two_for_the_rest() {
+        let rows = vec![
+            d("a::one", 1.5),
+            TestDuration {
+                id: BELOW_FLOOR_ID.to_string(),
+                seconds: 0.437,
+                folded_count: Some(3),
+            },
+        ];
+        let text = render_baseline(&rows, "deadbeef");
+        let mut data_lines = text.lines().filter(|l| !l.starts_with('#'));
+        let agg_line = data_lines
+            .clone()
+            .find(|l| l.starts_with(BELOW_FLOOR_ID))
+            .expect("aggregate row present");
+        assert_eq!(agg_line.split('\t').count(), 3, "got: {agg_line}");
+        let ordinary_line = data_lines
+            .find(|l| !l.starts_with(BELOW_FLOOR_ID))
+            .expect("row");
+        assert_eq!(ordinary_line.split('\t').count(), 2, "got: {ordinary_line}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_three_fields_on_an_ordinary_id() {
+        // Only the reserved BELOW_FLOOR_ID id may carry a third field; on any
+        // other id a third field means a tab leaked into the id (Finding 5's
+        // failure mode), and silently keeping it would corrupt the mapping.
+        let err = parse_baseline("a::one\t1.5\t3\n").unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("3 field"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_a_non_numeric_folded_count() {
+        let err = parse_baseline(&format!("{BELOW_FLOOR_ID}\t0.5\tabc\n")).unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("not a valid count"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_baseline_rejects_a_zero_folded_count() {
+        // A row that folded zero tests should never have been written at
+        // all (fold_below_floor only emits the aggregate row when count > 0)
+        // — a stored 0 is corruption, not a valid empty aggregate.
+        let err = parse_baseline(&format!("{BELOW_FLOOR_ID}\t0.0\t0\n")).unwrap_err();
+        assert!(err.contains("line 1"), "got: {err}");
+        assert!(err.contains("folded count of 0"), "got: {err}");
+    }
+
+    // --- apply_hysteresis -----------------------------------------------------
+
+    #[test]
+    fn apply_hysteresis_keeps_the_old_value_within_the_deadband() {
+        // 6.0 -> 6.5 is an 8.3% move, under the 20% deadband: keep 6.0.
+        let current = vec![d("a", 6.5)];
+        let previous = vec![d("a", 6.0)];
+        let result = apply_hysteresis(&current, &previous);
+        assert_eq!(result, vec![d("a", 6.0)], "stays at the old value");
+    }
+
+    #[test]
+    fn apply_hysteresis_takes_the_new_value_outside_the_deadband() {
+        // 6.0 -> 8.0 is a 33% move, over the 20% deadband: take 8.0.
+        let current = vec![d("a", 8.0)];
+        let previous = vec![d("a", 6.0)];
+        let result = apply_hysteresis(&current, &previous);
+        assert_eq!(result, vec![d("a", 8.0)], "moves to the new value");
+    }
+
+    #[test]
+    fn apply_hysteresis_takes_the_new_value_for_a_test_with_no_previous_entry() {
+        let current = vec![d("brand-new", 42.0)];
+        let result = apply_hysteresis(&current, &[]);
+        assert_eq!(result, vec![d("brand-new", 42.0)], "nothing to hold onto");
+    }
+
+    #[test]
+    fn apply_hysteresis_drops_a_test_absent_from_current() {
+        let current = vec![d("a", 1.0)];
+        let previous = vec![d("a", 1.0), d("removed", 9.0)];
+        let result = apply_hysteresis(&current, &previous);
+        assert_eq!(
+            result,
+            vec![d("a", 1.0)],
+            "the removed test is not carried forward"
+        );
+    }
+
+    #[test]
+    fn apply_hysteresis_never_smooths_folded_count() {
+        // Even when `seconds` stays at its old value (within the deadband),
+        // `folded_count` always reflects the CURRENT run: a change in count
+        // is itself information the deadband must not hide.
+        let current = vec![TestDuration {
+            id: BELOW_FLOOR_ID.to_string(),
+            seconds: 0.44,
+            folded_count: Some(2040),
+        }];
+        let previous = vec![TestDuration {
+            id: BELOW_FLOOR_ID.to_string(),
+            seconds: 0.43,
+            folded_count: Some(2037),
+        }];
+        let result = apply_hysteresis(&current, &previous);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].seconds, 0.43, "seconds held by the deadband");
+        assert_eq!(
+            result[0].folded_count,
+            Some(2040),
+            "count always tracks the current run"
+        );
+    }
+
+    #[test]
+    fn apply_hysteresis_zero_previous_value_falls_back_to_current() {
+        // Division by a zero previous value must not panic or produce NaN.
+        let current = vec![d("a", 0.5)];
+        let previous = vec![d("a", 0.0)];
+        let result = apply_hysteresis(&current, &previous);
+        assert_eq!(result, vec![d("a", 0.5)]);
+    }
+
+    // --- top_contributors -----------------------------------------------------
+
+    #[test]
+    fn top_contributors_ranks_by_absolute_seconds_gained_descending() {
+        let baseline = vec![d("a", 10.0), d("b", 10.0), d("c", 10.0)];
+        // a gained 1s, b gained 5s, c gained 3s.
+        let current = vec![d("a", 11.0), d("b", 15.0), d("c", 13.0)];
+        let top = top_contributors(&current, &baseline, 10);
+        assert_eq!(
+            top.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),
+            vec!["b", "c", "a"],
+            "got {top:?}"
+        );
+    }
+
+    #[test]
+    fn top_contributors_truncates_to_n() {
+        let baseline: Vec<_> = (0..5).map(|i| d(&format!("t{i}"), 1.0)).collect();
+        let current: Vec<_> = (0..5)
+            .map(|i| d(&format!("t{i}"), 1.0 + i as f64))
+            .collect();
+        let top = top_contributors(&current, &baseline, 2);
+        assert_eq!(top.len(), 2, "truncated to n, got {top:?}");
+    }
+
+    #[test]
+    fn top_contributors_excludes_ids_absent_from_baseline() {
+        let baseline = vec![d("a", 10.0)];
+        let current = vec![d("a", 11.0), d("brand-new", 99.0)];
+        let top = top_contributors(&current, &baseline, 10);
+        assert_eq!(top.len(), 1);
+        assert_eq!(
+            top[0].id, "a",
+            "the new test has no baseline to compare against"
+        );
+    }
+
+    #[test]
+    fn top_contributors_includes_the_below_floor_aggregate_row() {
+        // BELOW_FLOOR_ID ("<below-floor>") sorts before ordinary ids
+        // ('<' < any lowercase letter), so it comes first once sorted — the
+        // precondition `lookup`'s binary_search_by relies on.
+        let baseline = vec![
+            TestDuration {
+                id: BELOW_FLOOR_ID.to_string(),
+                seconds: 5.0,
+                folded_count: Some(2000),
+            },
+            d("a", 10.0),
+        ];
+        let current = vec![
+            TestDuration {
+                id: BELOW_FLOOR_ID.to_string(),
+                seconds: 20.0,
+                folded_count: Some(2000),
+            },
+            d("a", 10.5),
+        ];
+        let top = top_contributors(&current, &baseline, 1);
+        assert_eq!(
+            top[0].id, BELOW_FLOOR_ID,
+            "the aggregate's 15s gain dwarfs a's 0.5s, and it must be eligible to rank"
+        );
+    }
+
+    // --- per_test_shifts and the aggregate row ---------------------------------
+
+    #[test]
+    fn per_test_shifts_never_alarms_on_the_below_floor_aggregate_row() {
+        // A pathological sum across thousands of folded tests could easily
+        // cross 5s and 2x, but the aggregate is not a specific test — that
+        // story belongs to suite_shift/top_contributors, not this alarm.
+        let baseline = vec![TestDuration {
+            id: BELOW_FLOOR_ID.to_string(),
+            seconds: 3.0,
+            folded_count: Some(2000),
+        }];
+        let current = vec![TestDuration {
+            id: BELOW_FLOOR_ID.to_string(),
+            seconds: 30.0,
+            folded_count: Some(2000),
+        }];
+        assert!(
+            per_test_shifts(&current, &baseline).is_empty(),
+            "the aggregate row must never itself trigger the per-test alarm"
+        );
     }
 }

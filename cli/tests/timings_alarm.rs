@@ -6,9 +6,15 @@
 
 use hornvale_lab::census_claim::{ClaimInfo, current_holder};
 use hornvale_lab::timings::{
-    baseline_path, parse_baseline, parse_run, per_test_shifts, suite_shift, total_seconds,
+    BASELINE_FLOOR_SECS, baseline_path, fold_below_floor, parse_baseline, parse_run,
+    per_test_shifts, suite_shift, top_contributors, total_seconds,
 };
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
+
+/// How many of the whole-suite alarm's top contributors to name — enough to
+/// point at where to profile without dumping the whole intersection.
+const TOP_CONTRIBUTORS_SHOWN: usize = 10;
 
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -69,6 +75,12 @@ fn durations_have_not_regressed() {
         )
     });
     let current = parse_run(&json).expect("parse the nextest run");
+    // Fold to the SAME shape the baseline is stored in (`ci-record` folds
+    // before writing) — otherwise every sub-floor test id in `current` finds
+    // no match in a baseline that only carries the `<below-floor>`
+    // aggregate for that range, and silently drops out of `suite_shift`'s
+    // intersection instead of contributing through the aggregate row.
+    let current_folded = fold_below_floor(&current, BASELINE_FLOOR_SECS);
 
     let path = baseline_path(&repo_root(), &host());
     let baseline = match std::fs::read_to_string(&path) {
@@ -91,22 +103,33 @@ fn durations_have_not_regressed() {
     // permanently hiding the shrinkage. A first run (no baseline yet) must
     // still pass, so this only fires once a baseline exists to compare
     // against.
+    //
+    // `baseline.len()` alone understates the original test count now that
+    // sub-floor tests fold into one `<below-floor>` row — reconstruct the
+    // real total from each row's `folded_count` (1 for an ordinary row) so
+    // this check keeps comparing like against like rather than silently
+    // weakening once the floor shrank `baseline.len()` from ~2578 to ~540.
+    let baseline_total_tests: usize = baseline
+        .iter()
+        .map(|r| r.folded_count.map(|n| n as usize).unwrap_or(1))
+        .sum();
     if !baseline.is_empty() {
         assert!(
-            current.len() >= baseline.len() / 2,
+            current.len() >= baseline_total_tests / 2,
             "timekeeper: this run recorded only {} test(s) against a {}-test \
-             baseline on {} — that looks like a truncated or shape-changed \
-             nextest stream, not a clean suite run. Refusing to treat a \
-             partial run as green; inspect {} before re-running `make ci`.",
+             baseline (folded-row count reconstructed) on {} — that looks like \
+             a truncated or shape-changed nextest stream, not a clean suite \
+             run. Refusing to treat a partial run as green; inspect {} before \
+             re-running `make ci`.",
             current.len(),
-            baseline.len(),
+            baseline_total_tests,
             host(),
             run_json().display()
         );
     }
 
-    let per_test = per_test_shifts(&current, &baseline);
-    let suite = suite_shift(&current, &baseline);
+    let per_test = per_test_shifts(&current_folded, &baseline);
+    let suite = suite_shift(&current_folded, &baseline);
 
     let claim = current_holder();
     if !enforcement_is_appropriate(&claim) {
@@ -122,10 +145,15 @@ fn durations_have_not_regressed() {
         return;
     }
 
+    // The two alarms mean different things, so they say so: a per-test shift
+    // names a SPECIFIC test that went pathological; a suite shift is usually
+    // accumulated feature growth, so it names the ranked profile list
+    // instead of pretending one test is at fault.
     let mut problems = Vec::new();
     for s in &per_test {
         problems.push(format!(
-            "  {} took {:.3}s against a {:.3}s baseline ({:.1}x)",
+            "  PER-TEST: {} took {:.3}s against a {:.3}s baseline ({:.1}x) — something \
+             specific went pathological in this test; investigate it directly.",
             s.id,
             s.current,
             s.baseline,
@@ -138,15 +166,36 @@ fn durations_have_not_regressed() {
         // full slices is reported alongside so a human can tell "the shared
         // tests got slower" apart from "we added tests" — the intersection
         // total alone cannot distinguish those two stories.
-        problems.push(format!(
-            "  <whole suite> (shared tests only) took {:.1}s against a {:.1}s baseline (+{:.0}%)\n\
-             \x20   full totals for context: {:.1}s current vs {:.1}s baseline",
+        let mut msg = format!(
+            "  WHOLE-SUITE: (shared tests only) took {:.1}s against a {:.1}s baseline (+{:.0}%)\n\
+             \x20   full totals for context: {:.1}s current vs {:.1}s baseline\n\
+             \x20   this is usually accumulated feature growth, not one pathological test —\n\
+             \x20   top {} contributor(s) by absolute seconds gained (profile these first):",
             s.current,
             s.baseline,
             (s.current / s.baseline - 1.0) * 100.0,
-            total_seconds(&current),
+            total_seconds(&current_folded),
             total_seconds(&baseline),
-        ));
+            TOP_CONTRIBUTORS_SHOWN,
+        );
+        for c in top_contributors(&current_folded, &baseline, TOP_CONTRIBUTORS_SHOWN) {
+            let _ = write!(
+                msg,
+                "\n    {}: {:.3}s -> {:.3}s ({:+.3}s)",
+                c.id,
+                c.baseline,
+                c.current,
+                c.delta_seconds()
+            );
+        }
+        msg.push_str(
+            "\n   we expect many things to grow in duration as complexity is added — the \
+             right response is usually NOT \"why did we change an O(n) algorithm to \
+             O(n^m)?\" but \"we added features; profile the list above and optimize where \
+             it matters.\" Re-recording the baseline here is deliberate: do it in the SAME \
+             commit that caused the growth.",
+        );
+        problems.push(msg);
     }
     assert!(
         problems.is_empty(),
