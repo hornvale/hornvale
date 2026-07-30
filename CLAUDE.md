@@ -408,5 +408,5 @@ prediction after unblinding without saying so in the chronicle.
 
 **The tooling/process backlog is `WORKFLOW_IMPROVEMENTS_PLAN.md`** (TOOL-*
 and PROC-* registry rows, staged). Per-campaign process lessons land in
-`docs/retrospectives/`; settled choices land in `docs/decisions/` (88
+`docs/retrospectives/`; settled choices land in `docs/decisions/` (90
 records, append-only — grep before relitigating).
