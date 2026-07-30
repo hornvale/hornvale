@@ -667,6 +667,43 @@ mod tests {
     }
 
     #[test]
+    fn a_four_channel_synthetic_observer_still_has_no_srgb_image() {
+        // Isolates the `srgb_native` half of `to_srgb`'s guard. Its sibling
+        // test uses a FIVE-channel observer, so the `len() != 4` check
+        // answers there and the flag is never exercised — the assertion
+        // passes by the wrong path, and stays green even if every observer
+        // is marked sRGB-native. (Verified by mutation: flipping
+        // `Observer::new`'s `srgb_native` to `true` reddens this test and
+        // nothing else.)
+        //
+        // Four channels is not a contrived count. It is exactly what
+        // campaign 2 will build — a deuteranope is the standard observer
+        // with a shifted medium channel, same shape, same arity. If the
+        // flag ever stopped being checked, that observer would silently
+        // borrow the human normalizers and render confidently wrong
+        // colours, which is the RENDER-9 failure this guard exists to
+        // prevent.
+        let mut channels = Vec::new();
+        for b in 0..4 {
+            let mut curve = [0.0; BANDS];
+            curve[b] = 1.0;
+            channels.push(Spectrum::new(curve).unwrap());
+        }
+        let synthetic = Observer::new(channels).unwrap();
+        assert_eq!(
+            synthetic.channels(),
+            4,
+            "the arity must match the standard's"
+        );
+        let signal = synthetic.sense(&Reflectance::new([0.5; BANDS]).unwrap(), &flat_light());
+        assert_eq!(signal.get().len(), 4, "so len() cannot be what refuses it");
+        assert!(
+            synthetic.to_srgb(&signal).is_none(),
+            "a non-standard observer must have no sRGB image regardless of arity"
+        );
+    }
+
+    #[test]
     fn a_white_surface_under_flat_light_projects_near_white() {
         let obs = standard_observer();
         let s = obs.sense(&Reflectance::new([1.0; BANDS]).unwrap(), &flat_light());
