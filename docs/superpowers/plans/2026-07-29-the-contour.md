@@ -329,7 +329,7 @@ the plan. Task 2."
 **Interfaces:**
 - Produces: one frozen number, `DEF_SCALE`, written into `history_bake.rs` in Task 3.
 
-- [ ] **Step 1: Extend the harness with the cost-exponent series**
+- [x] **Step 1: Extend the harness with the cost-exponent series**
 
 Over the same 30 seeds, same era, same habitable cells, collect one value per
 **traversable edge** (not per cell): `-ln(conductance)`, deduplicating parallel
@@ -337,11 +337,70 @@ edges to the same `to` by taking the maximum conductance first, exactly as the
 mechanism will. Report the five quantiles plus min/mean/max, and report them
 **split by `EdgeKind`** as well as pooled.
 
-- [ ] **Step 2: Run it**
+**Implemented** as one value per ordered `(from, to)` pair with a traversable
+edge, both `from` and `to` restricted to the same habitable-cell population
+every prior run (2/2b/2c) used — matching how the mechanism is actually
+invoked (raids and resettlement both originate from and land on settled
+ground), deduplicated to the MAXIMUM parallel conductance first via
+`best_conductance_with_kind`, mirroring the amended `defensibility`'s own
+`best` computation in `history_bake.rs` exactly. Used
+`hornvale_kernel::math::ln`/`tanh` throughout (never `f64::ln`/`f64::tanh`),
+including for the `atanh` identity in Step 3 below (decision 0041).
+
+- [x] **Step 2: Run it**
 
 Run: `cargo test -p hornvale-worldgen --test approach_ease_calibration -- --ignored --nocapture`
 
-- [ ] **Step 3: Compute and record `DEF_SCALE`**
+Full cost_exponent output (pooled and split by `EdgeKind`):
+
+```
+cost_exponent_all n = 756510
+cost_exponent_all q0.05 = 4.363099
+cost_exponent_all q0.25 = 5.640132
+cost_exponent_all q0.50 = 6.256709
+cost_exponent_all q0.75 = 6.598509
+cost_exponent_all q0.95 = 6.975881
+cost_exponent_all min = -0.000000
+cost_exponent_all mean = 5.919244
+cost_exponent_all max = 8.470102
+
+cost_exponent_adjacency n = 718404
+cost_exponent_adjacency q0.05 = 4.871373
+cost_exponent_adjacency q0.25 = 5.731722
+cost_exponent_adjacency q0.50 = 6.295266
+cost_exponent_adjacency q0.75 = 6.612713
+cost_exponent_adjacency q0.95 = 6.985179
+cost_exponent_adjacency min = 3.068053
+cost_exponent_adjacency mean = 6.137051
+cost_exponent_adjacency max = 8.470102
+
+cost_exponent_water_route n = 28730
+cost_exponent_water_route q0.05 = -0.000000
+cost_exponent_water_route q0.25 = 0.000000
+cost_exponent_water_route q0.50 = 0.085073
+cost_exponent_water_route q0.75 = 0.553922
+cost_exponent_water_route q0.95 = 1.790276
+cost_exponent_water_route min = -0.000000
+cost_exponent_water_route mean = 0.447921
+cost_exponent_water_route max = 6.463058
+
+cost_exponent_land_route n = 9376
+cost_exponent_land_route q0.05 = 5.236442
+cost_exponent_land_route q0.25 = 5.817111
+cost_exponent_land_route q0.50 = 6.111467
+cost_exponent_land_route q0.75 = 6.276643
+cost_exponent_land_route q0.95 = 6.376727
+cost_exponent_land_route min = 3.912023
+cost_exponent_land_route mean = 5.995846
+cost_exponent_land_route max = 6.395262
+```
+
+(The `sum`/`max_conductance`/`edge_count`/per-kind-max/cross-tab series from
+Tasks 2a-2c reproduced byte-identical on this run, on the post-absorption
+tree at `b58b025c` — confirms both the harness's determinism and that the
+51-commit merge and amendment 1 did not perturb it.)
+
+- [x] **Step 3: Compute and record `DEF_SCALE`**
 
 `DEF_SCALE = median(cost_exponent) / atanh((1.0 - DEF_MIN) / (DEF_MAX - DEF_MIN))`
 
@@ -351,7 +410,20 @@ defensibility exactly 1.0, so the median world is unchanged and only the
 extremes of the terrain move. Write the measured median, the divisor, and the
 resulting `DEF_SCALE` into this step as a permanent record.
 
-- [ ] **Step 4: Check the fallback trigger (spec §4.4)**
+**Measured and computed** (printed by the harness itself, using
+`hornvale_kernel::math::ln` for the `atanh` identity `atanh(x) = 0.5 *
+ln((1+x)/(1-x))` — not `f64::ln`):
+
+```
+median(cost_exponent) = 6.256709   (cost_exponent_all's q0.50, pooled over all EdgeKinds)
+x = (1.0 - 0.75) / (1.40 - 0.75) = 0.3846153846
+atanh(x) = 0.5 * ln((1+x)/(1-x)) = 0.4054651081
+DEF_SCALE = 6.256709 / 0.4054651081 = 15.430944
+```
+
+**`DEF_SCALE = 15.430944`.**
+
+- [x] **Step 4: Check the fallback trigger (spec §4.4)**
 
 Compute the defensibility the chosen `DEF_SCALE` yields at the land
 population's q0.05 and q0.95 (`Adjacency`-supplied approaches only). If that
@@ -362,6 +434,32 @@ normalize `cost_exponent` within the approach's `EdgeKind` before the `tanh`.
 Record the computed range and which branch obtains. **Taking the fallback is
 executing the spec, not amending it** — it was specified with its trigger
 before this measurement ran. Report the number either way.
+
+**Computed** (using `DEF_MIN = 0.75`, `DEF_MAX = 1.40`, `DEF_SCALE = 15.430944`,
+and `hornvale_kernel::math::tanh` — the same libm-backed fn the production
+formula uses):
+
+```
+adjacency cost_exponent q0.05 = 4.871373 -> defensibility = 0.948642
+adjacency cost_exponent q0.95 = 6.985179 -> defensibility = 1.025661
+spread = 1.025661 - 0.948642 = 0.077019
+```
+
+**`0.077019 < 0.10` — the fallback trigger obtains.** Spec §4.4's
+pre-specified fallback applies: `cost_exponent` must be normalized within the
+approach's `EdgeKind` before the `tanh`. A single `DEF_SCALE` calibrated to
+put the pooled median at defensibility 1.0 grades the land-only 87% of the
+world across a span of only ~0.077 — under a tenth of the `[0.75, 1.40)`
+range — which is not enough discrimination to be a meaningful second contest
+axis for the large majority of habitable cells that are never water-connected.
+This is not a surprise given §2.3a's own numbers (land `cost_exponent` "roughly
+3.1 to 6.9", closely matching this run's adjacency q0.05=4.87/q0.95=6.99/
+min=3.068/max=8.47): the land population's spread in *cost_exponent* is real,
+but it sits almost entirely in the flat, saturated part of `tanh` once the
+scale is set by a pooled median that a small, near-`0`-cost-exponent
+water-connected minority pulls down. Per spec, **taking the fallback is
+executing the spec, not amending it**; implementing it is Task 3's job, not
+this measurement task's.
 
 - [ ] **Step 5: Commit**
 
