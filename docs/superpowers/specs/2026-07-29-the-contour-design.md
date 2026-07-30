@@ -76,53 +76,112 @@ rather than explained away.
 
 ### 2.3 The form
 
-Approach ease for a cell is the aggregate conductance of the routes that reach
-it. Defensibility is a **saturating, strictly monotone** function of that:
+> **Amendment 1 (2026-07-30), taken pre-readout.** This section originally
+> specified defensibility as a saturating function of a cell's *aggregate*
+> approach ease. The calibration measured that aggregate before any behaviour
+> was written — which is the only reason this was caught — and found it is not
+> one distribution at all. See §2.3a for what was measured and why the form
+> changed. No behavioural readout existed at the time of this amendment, so
+> nothing was being chased.
+
+Defensibility is a property of **the approach**, not of the cell. A raid
+arrives along one route, and what shelters the defender is the resistance of
+*that* route.
 
 ```
-approach_ease(cell, graph) = Σ over traversable edges e into `cell` of e.conductance
+best_edge(from, to, graph)
+    = the MAXIMUM-conductance edge from `from` to `to`
+      (parallel edges exist; an attacker takes the easiest one)
 
-defensibility(cell, graph)
-  = DEF_FLOOR + (DEF_CEIL - DEF_FLOOR) * (1 - tanh(approach_ease / DEF_SCALE))
+cost_exponent(edge) = -ln(edge.conductance)
+    # conductance ∈ (0, 1], so this is 0 for a free route and grows without
+    # bound as the route gets dearer. It is log(traversal cost).
+
+defensibility(from, to, graph)
+    = DEF_MIN + (DEF_MAX - DEF_MIN) * tanh(cost_exponent(best_edge) / DEF_SCALE)
 ```
 
-`tanh` is available libm-backed as `hornvale_kernel::math::tanh` (decision
-0041). Three properties are load-bearing:
+`tanh` and `ln` are available libm-backed in `hornvale_kernel::math` (decision
+0041). Four properties are load-bearing:
 
-- **It is an asymptote, not a clamp** — 0089 clause 3. No cell ever sits
-  exactly at `DEF_FLOOR`; the most exposed plain in the world retains a
-  nonzero defence, and the most isolated valley never becomes untakeable.
-  A hard `clamp()` here would foreclose exactly the tails the sigmoid wager
-  needs and is forbidden.
-- **It is strictly monotone**, so the ordering of cells by defensibility is
-  total and deterministic, with no plateau to tie-break inside.
-- **It is a pure function of `(cell, graph)`** — no time, no seed, no state.
-  It is therefore recomputable, cacheable per era, and trivially testable.
+- **It is bounded in `[DEF_MIN, DEF_MAX)`.** `DEF_MIN` *is* attained, by a
+  free route (`conductance == 1.0`, which the calibration measured as real).
+  That is correct and intended: a cell reached by an unobstructed sea lane is
+  the most exposed ground there is, and the model should say so rather than
+  reserve an unreachable ideal.
+- **It is strictly monotone** in cost, so the ordering of approaches is total
+  and deterministic with no plateau to tie-break inside.
+- **It is a pure function of `(from, to, graph)`** — no time, no seed, no bake
+  state. Recomputable, cacheable per era, trivially testable.
+- **Parallel edges resolve by maximum conductance**, which is both the right
+  principle (an attacker uses the best road available) and the fix for a
+  measured defect: 6.7% of cells carry duplicate `to` values — an `Adjacency`
+  and a `LandRoute` to the same neighbour — which an aggregate double-counts
+  and a max does not.
 
-`DEF_FLOOR`, `DEF_CEIL` and `DEF_SCALE` are **authored constants, chosen
-before any measurement and frozen** (see §4.4). Initial values are set so that
-the median cell's defensibility is ≈ 1.0 — i.e. the median world is unchanged
-and only the extremes of the terrain move — and this is calibrated by a
-one-off measurement of the `approach_ease` distribution over seeds 1..=30
-*before* any behavioural constant is written.
+`DEF_MIN` and `DEF_MAX` are authored priors. `DEF_SCALE` is **calibrated from
+the measured distribution of `cost_exponent` over traversable edges, before
+any behavioural constant is written**, and frozen thereafter (§4.4).
+
+**A correction to this spec's earlier reasoning.** The original §2.3 required
+defensibility to be a strict asymptote at both ends, citing decision 0089
+clause 3. That over-applied the clause. Clause 3 governs the **distribution of
+world outcomes** — a world with no goblins, a world under one government must
+be reachable and rare — and says nothing about whether an intermediate derived
+field may attain its own bounds. A defensibility floor reached by a free sea
+lane forecloses no world outcome. The property test asserts monotonicity and
+inclusive bounds, not strict interiority.
+
+### 2.3a What the calibration measured, and why the form changed
+
+Three runs, 30 seeds, 142,595 habitable cells, recorded in the plan's Task 2:
+
+```
+                 q0.05     q0.50     q0.95     max       present
+adjacency_max    0.000977  0.002099  0.008511  0.046512  99.7% of cells
+water_route_max  0.000000  0.000000  0.998020  1.000000  12.8% of cells
+land_route_max   0.000000  0.000000  0.000000  0.020000   1.9% of cells
+
+high (>=0.5, n=14702) : 100.00% WaterRoute,  0.00% Adjacency
+low  (<=0.01, n=119797):  98.81% Adjacency,  0.03% WaterRoute
+```
+
+`adjacency_max`'s **global** maximum is 0.046512 — an order of magnitude below
+the high population's threshold. The two regimes are **disjoint, with an empty
+gap between 0.047 and 0.5** across every measured cell. Approach ease is
+therefore not one skewed distribution but two: ~87% of cells reachable only
+overland at conductance ~0.001–0.008, and ~13% water-connected at up to 1.0.
+
+Any single saturating transform over the aggregate must flatten one regime or
+the other. Reading the approach's own conductance instead removes the problem
+rather than finessing it, and it is what the military geography says: a coastal
+cell is defensible against land and wide open to sea, and those two facts are
+not averageable. This is the resolution of §8's open question 1, which the
+measurement promoted from an optional refinement to the main question.
 
 ### 2.4 Where it enters
 
-Exactly one call site changes:
+Exactly two call sites change, and both already hold the edge they need.
 
 ```rust
-// history_bake.rs, maybe_raid's candidate walk
-if raider_str <= t_str * self.defensibility(era, n) * RAID_MARGIN {
-    continue;                       // dominance, now position-aware
+// history_bake.rs, maybe_raid's candidate walk (~:2544)
+if raider_str <= t_str * self.defensibility(raider_site, n) * RAID_MARGIN {
+    continue;                       // dominance, now approach-aware
 }
 ```
 
 The same term enters `Bake::best_home`'s held-land test
-(`history_bake.rs:1127`, `strength <= hs * RAID_MARGIN`) so that a homeless
-roller faces the same geography a seated raider does. **Those two are the only
-sites.** Defensibility deliberately does *not* enter `strength`, `pressure_of`,
-`eff_capacity`, or tribute assessment — the same discipline *The Tithe* applied
-when it kept `stores` out of `pressure_of` and out of population.
+(`history_bake.rs:1127`) so that a homeless roller faces the same geography a
+seated raider does — there the `from` cell is the ring-walk's origin.
+**Those two are the only sites.** Defensibility deliberately does *not* enter
+`strength`, `pressure_of`, `eff_capacity`, or tribute assessment — the same
+discipline *The Tithe* applied when it kept `stores` out of `pressure_of`.
+
+**What this costs.** Defensibility is no longer a per-cell field, so it is not
+directly renderable as a map layer. A per-cell *view* — the minimum
+defensibility over a cell's approaches, i.e. its weakest point, which is the
+quantity Ammann's envelope model cares about — remains derivable for the
+almanac and for M4, but it is a view over the mechanism, not the mechanism.
 
 ## 3. Contour as a derived classification
 
@@ -206,12 +265,29 @@ reason to add a third mechanism inside this campaign.
 
 ### 4.4 The constants discipline
 
-`DEF_FLOOR`, `DEF_CEIL` and `DEF_SCALE` are set once, from the pre-measurement
-of the `approach_ease` distribution described in §2.3, **before any of M1–M4 is
+`DEF_MIN`, `DEF_MAX` and `DEF_SCALE` are set once, from the pre-measurement of
+the `cost_exponent` distribution described in §2.3, **before any of M1–M4 is
 computed**, and are not touched afterwards. If a readout is disappointing, the
 constants do not move; the finding is reported. Any deviation from this is an
 amendment and is disclosed in the chronicle with its count, as *The Tithe*'s
 was.
+
+**Standing amendment count: 1** (§2.3's form change), taken **pre-readout** —
+no behavioural measurement existed at the time, so nothing was being chased.
+The distinction that matters to a reader is not how many amendments a campaign
+made but whether any of them followed a number somebody disliked; this one
+followed a number nobody had yet asked for.
+
+**One decision rule is fixed here in advance**, because the calibration has
+already shown it may be needed. `cost_exponent` over land approaches spans
+roughly 3.1 to 6.9 (conductance 0.047 down to 0.001) while free water routes
+sit near 0. If, at a `DEF_SCALE` chosen to put the median approach at
+defensibility 1.0, the land population's defensibility range turns out to span
+**less than 0.10**, then a single scale cannot grade the 87% of the world that
+is land-only, and the fallback is to normalize `cost_exponent` **within the
+approach's `EdgeKind`** before the `tanh`. That fallback is specified now,
+with its trigger, so that taking it later is executing this spec rather than
+amending it. Which branch obtains is a measurement, not a preference.
 
 ## 5. Determinism and save format
 
@@ -239,15 +315,20 @@ was.
 
 ## 6. Testing
 
-- **Unit** — `defensibility` is a pure function: monotonicity, asymptotic
-  bounds (no input reaches `DEF_FLOOR` or `DEF_CEIL` exactly), and determinism
-  across recomputation.
-- **Property** — a cell's defensibility ordering is stable under graph
-  rebuild; the same era's graph yields the same field.
+- **Unit** — `defensibility` is a pure function: strict monotonicity in cost,
+  inclusive bounds in `[DEF_MIN, DEF_MAX)` with `DEF_MIN` attained at
+  `conductance == 1.0`, and determinism across recomputation.
+- **Parallel-edge resolution** — a fixture where two edges join the same pair
+  with different conductances, asserting the *maximum* is used. This is the
+  test that pins the duplicate-edge fix, and it must be mutation-verified
+  against a `min` and against a `sum` implementation, since 6.7% of real cells
+  carry such duplicates and an aggregate would silently double-count them.
+- **Property** — approach ordering is stable under graph rebuild; the same
+  era's graph yields the same values.
 - **Behavioural** — a fixture where two identical communities differ only in
-  their cell's approach structure, and only the exposed one is raided. This is
-  the test that would fail if the term were wired to the attacker's side by
-  mistake.
+  the conductance of the route reaching them, and only the cheaply-reached one
+  is raided. This is the test that would fail if the term were wired to the
+  attacker's side by mistake, or read the wrong end of the edge.
 - **Mutation check** — per the standing lesson that tests asserting nothing
   ship green: each behavioural test is verified to fail when `defensibility`
   is stubbed to return a constant.
@@ -276,12 +357,17 @@ smuggled in because it is adjacent:
 
 ## 8. Open questions carried into planning
 
-1. Whether `approach_ease` should weight `EdgeKind` — a `WaterRoute` may
-   deserve different treatment from a `LandRoute`, since a coastal cell is
-   defensible against land and exposed to sea. Deferred to the plan; the
-   simple unweighted sum is the default and must be beaten by an argument.
+1. ~~Whether `approach_ease` should weight `EdgeKind`.~~ **RESOLVED by
+   measurement (2026-07-30), and it was not the optional refinement this list
+   took it for — it was the main question.** The aggregate is two disjoint
+   regimes split exactly on `WaterRoute` versus `Adjacency` (§2.3a), so the
+   mechanism now reads the approach's own conductance and the weighting
+   question dissolves. Recorded here rather than deleted, because a question
+   this list mis-ranked as minor is worth leaving visible.
 2. Whether defensibility should be per-era or computed once. It is written
    per-era above because the graph is per-era; the cost is unmeasured.
+   Note that the amendment makes this cheaper, not dearer: a per-approach
+   lookup reads one edge and needs no per-cell field built or cached at all.
 3. Whether §3's contour classification lands in `domains/species` or in a
    window. It is a derived view, which argues for a window, but it is read by
    the bake's own narration, which argues for the domain.

@@ -4,7 +4,16 @@
 
 **Goal:** Give Hornvale's deep-history conflict a second contest axis — a cell's defensibility — and measure whether it holds peoples-diversity open.
 
-**Architecture:** One pure function of `(cell, ConnectionGraph)` becomes a multiplier on the *holder's* side of the two dominance tests in `windows/worldgen/src/history_bake.rs`. No new seeded draw, no new authored data, no new crate. A separate derived classification names each people's contour for legibility. The measurement instrument is built and the baseline captured **before** the behaviour changes.
+**Architecture:** One pure function of `(ConnectionGraph, from, to)` becomes a multiplier on the *holder's* side of the two dominance tests in `windows/worldgen/src/history_bake.rs`. No new seeded draw, no new authored data, no new crate. A separate derived classification names each people's contour for legibility. The measurement instrument is built and the baseline captured **before** the behaviour changes.
+
+> **Spec amendment 1 (2026-07-30), pre-readout.** Tasks 2/2b/2c measured the
+> per-cell aggregate and found it is *two disjoint regimes* split on
+> `WaterRoute` vs `Adjacency` — an empty gap between conductance 0.047 and
+> 0.5 across 142,595 cells — which no single transform can grade. The
+> mechanism therefore reads **the approach's own conductance**, not a per-cell
+> aggregate. Task 2d recalibrates against the quantity the amended mechanism
+> actually reads. See spec §2.3/§2.3a. No behavioural readout existed when
+> this was taken, so nothing was being chased.
 
 **Tech Stack:** Rust 2024, `hornvale-worldgen` (composition root), `hornvale-topology` (the connection graph), `hornvale-lab` (the measurement instrument), `hornvale_kernel::math::tanh` (libm-backed).
 
@@ -25,8 +34,9 @@
 
 | File | Responsibility |
 |---|---|
-| `windows/worldgen/src/history_bake.rs` | `approach_ease`, `defensibility`, the two call sites, their unit + behavioural tests |
-| `windows/worldgen/tests/defensibility_field.rs` | Property tests for the field (monotonicity, asymptotes, determinism) |
+| `windows/worldgen/src/history_bake.rs` | `approach_ease` (calibration-only), `defensibility`, the two call sites, their unit + behavioural tests |
+| `windows/worldgen/tests/approach_ease_calibration.rs` | The calibration harness: the aggregate series (Tasks 2/2b/2c) and the cost-exponent series (Task 2d) |
+| `windows/worldgen/tests/defensibility_field.rs` | Property tests for the field (monotonicity, inclusive bounds, parallel-edge max, determinism) |
 | `windows/lab/src/metrics.rs` | M2/M3/M4 extractors |
 | `windows/lab/studies/the-contour.study.json` | The preregistered study |
 | `domains/species/src/contour.rs` | Contour as a derived `is-a` classification |
@@ -305,69 +315,152 @@ the plan. Task 2."
 
 ---
 
-### Task 3: `defensibility` — the asymptotic field
+### Task 2d: Calibrate `DEF_SCALE` from the cost-exponent distribution
+
+> Added 2026-07-30 by spec amendment 1. Tasks 2/2b/2c measured the *aggregate*
+> and, in doing so, showed the aggregate was the wrong quantity. This measures
+> the quantity the amended mechanism actually reads. Same discipline, same
+> ordering: **before any behavioural constant is written.**
+
+**Files:**
+- Modify: `windows/worldgen/tests/approach_ease_calibration.rs`
+- Modify: `docs/superpowers/plans/2026-07-29-the-contour.md` (record the result here)
+
+**Interfaces:**
+- Produces: one frozen number, `DEF_SCALE`, written into `history_bake.rs` in Task 3.
+
+- [ ] **Step 1: Extend the harness with the cost-exponent series**
+
+Over the same 30 seeds, same era, same habitable cells, collect one value per
+**traversable edge** (not per cell): `-ln(conductance)`, deduplicating parallel
+edges to the same `to` by taking the maximum conductance first, exactly as the
+mechanism will. Report the five quantiles plus min/mean/max, and report them
+**split by `EdgeKind`** as well as pooled.
+
+- [ ] **Step 2: Run it**
+
+Run: `cargo test -p hornvale-worldgen --test approach_ease_calibration -- --ignored --nocapture`
+
+- [ ] **Step 3: Compute and record `DEF_SCALE`**
+
+`DEF_SCALE = median(cost_exponent) / atanh((1.0 - DEF_MIN) / (DEF_MAX - DEF_MIN))`
+
+With `DEF_MIN = 0.75` and `DEF_MAX = 1.40` the divisor is `atanh(0.3846…) =
+0.40546…`. This is the value that places the **median traversable approach** at
+defensibility exactly 1.0, so the median world is unchanged and only the
+extremes of the terrain move. Write the measured median, the divisor, and the
+resulting `DEF_SCALE` into this step as a permanent record.
+
+- [ ] **Step 4: Check the fallback trigger (spec §4.4)**
+
+Compute the defensibility the chosen `DEF_SCALE` yields at the land
+population's q0.05 and q0.95 (`Adjacency`-supplied approaches only). If that
+range spans **less than 0.10**, the single-scale form cannot grade the 87% of
+the world that is land-only, and spec §4.4's pre-specified fallback applies:
+normalize `cost_exponent` within the approach's `EdgeKind` before the `tanh`.
+
+Record the computed range and which branch obtains. **Taking the fallback is
+executing the spec, not amending it** — it was specified with its trigger
+before this measurement ran. Report the number either way.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cargo fmt
+git add windows/worldgen/tests/approach_ease_calibration.rs docs/superpowers/plans/2026-07-29-the-contour.md
+git commit -m "test(the-contour): calibrate DEF_SCALE from the cost-exponent distribution
+
+The quantity the amended mechanism reads, measured before any behavioural
+constant exists. Records which branch of spec 4.4's pre-specified fallback
+trigger obtains. Task 2d."
+```
+
+---
+
+### Task 3: `defensibility` — the per-approach field
+
+> **Amended 2026-07-30 (spec amendment 1, pre-readout).** Task 2's calibration
+> found approach ease is two disjoint regimes split on `WaterRoute` vs
+> `Adjacency`, not one distribution — so defensibility now reads **the
+> approach's own conductance**, not a per-cell aggregate. See spec §2.3/§2.3a.
+> `approach_ease` from Task 1 is retained: it is what the calibration measures
+> and what Task 2's record is written against, but **nothing in the shipped
+> mechanism calls it**, so its `#[allow(dead_code)]` stays.
 
 **Files:**
 - Modify: `windows/worldgen/src/history_bake.rs`
 - Test: `windows/worldgen/tests/defensibility_field.rs` (create)
 
 **Interfaces:**
-- Consumes: `approach_ease` (Task 1), the constants frozen in Task 2.
-- Produces: `fn defensibility(graph: &ConnectionGraph, cell: CellId) -> f64`, returning a value strictly inside `(DEF_FLOOR, DEF_CEIL)`. Task 6 consumes it.
+- Consumes: `hornvale_topology::{ConnectionGraph, Edge}`, `hornvale_kernel::math::{ln, tanh}`, the constant frozen in Task 2d.
+- Produces: `fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64`. Task 6 consumes it with the exact argument order `(graph, from, to)` — `from` is the ATTACKER, `to` is the HOLDER. Getting these backwards is the defect the behavioural test exists to catch.
 
 - [ ] **Step 1: Write the failing property tests**
 
 Create `windows/worldgen/tests/defensibility_field.rs`:
 
 ```rust
-//! The defensibility field's three load-bearing properties (spec §2.3):
-//! strictly monotone decreasing in approach ease, ASYMPTOTIC rather than
-//! clamped (decision 0089 clause 3), and a pure function of the graph.
+//! The per-approach defensibility field (spec §2.3): strictly monotone in
+//! route cost, bounded in `[DEF_MIN, DEF_MAX)` with `DEF_MIN` ATTAINED at a
+//! free route, parallel edges resolved by MAXIMUM conductance, and a pure
+//! function of the graph.
 
 use hornvale_kernel::CellId;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use hornvale_worldgen::defensibility_for_test as defensibility;
 
-fn cell_with_ease(ease: f64) -> ConnectionGraph {
+fn link(conductances: &[(EdgeKind, f64)]) -> ConnectionGraph {
     let mut g = ConnectionGraph::new(2);
-    g.add_edge(
-        CellId(0),
-        Edge { to: CellId(1), kind: EdgeKind::LandRoute, conductance: ease },
-    );
+    for &(kind, c) in conductances {
+        g.add_edge(CellId(0), Edge { to: CellId(1), kind, conductance: c });
+    }
     g
 }
 
 #[test]
-fn defensibility_falls_strictly_as_approach_gets_easier() {
-    let mut prev = f64::INFINITY;
-    for step in 0..40 {
-        let g = cell_with_ease(step as f64 * 0.25);
-        let d = defensibility(&g, CellId(0));
-        assert!(d < prev, "must be strictly decreasing at step {step}");
+fn defensibility_rises_strictly_as_the_route_gets_dearer() {
+    let mut prev = f64::NEG_INFINITY;
+    for step in 1..40 {
+        let c = 1.0 / (step as f64);
+        let d = defensibility(&link(&[(EdgeKind::Adjacency, c)]), CellId(0), CellId(1));
+        assert!(d > prev, "must rise strictly as conductance falls, at step {step}");
         prev = d;
     }
 }
 
 #[test]
-fn defensibility_is_an_asymptote_not_a_clamp() {
-    // Decision 0089 clause 3: the probability of exceeding a clamp is exactly
-    // zero at any input, which forecloses the rare tails the sigmoid wager
-    // needs. No input may reach either bound exactly.
-    let wide_open = cell_with_ease(1.0e6);
-    let d_min = defensibility(&wide_open, CellId(0));
-    assert!(d_min > 0.75, "never reaches DEF_FLOOR: got {d_min}");
+fn a_free_route_attains_the_floor_and_nothing_reaches_the_ceiling() {
+    // conductance == 1.0 is real (the calibration measured it) and SHOULD sit
+    // exactly at DEF_MIN: an unobstructed sea lane is the most exposed ground
+    // there is. Spec §2.3 corrects an earlier over-reading of decision 0089
+    // clause 3, which governs world OUTCOMES, not intermediate fields.
+    let free = defensibility(&link(&[(EdgeKind::WaterRoute, 1.0)]), CellId(0), CellId(1));
+    assert!((free - 0.75).abs() < 1e-12, "a free route sits at DEF_MIN: got {free}");
 
-    let isolated = ConnectionGraph::new(2);
-    let d_max = defensibility(&isolated, CellId(0));
-    assert!(d_max < 1.40, "never reaches DEF_CEIL: got {d_max}");
+    let dear = defensibility(&link(&[(EdgeKind::Adjacency, 1.0e-9)]), CellId(0), CellId(1));
+    assert!(dear < 1.40, "nothing reaches DEF_MAX: got {dear}");
+}
+
+#[test]
+fn parallel_edges_resolve_by_maximum_conductance() {
+    // 6.7% of real cells carry an Adjacency AND a LandRoute to the same
+    // neighbour (Task 2b). An attacker uses the EASIEST road, so the max wins.
+    // A `min` would over-defend and a `sum` would double-count.
+    let both = link(&[(EdgeKind::Adjacency, 0.001), (EdgeKind::LandRoute, 0.02)]);
+    let only_easy = link(&[(EdgeKind::LandRoute, 0.02)]);
+    assert_eq!(
+        defensibility(&both, CellId(0), CellId(1)),
+        defensibility(&only_easy, CellId(0), CellId(1)),
+        "the easiest parallel route must decide"
+    );
 }
 
 #[test]
 fn defensibility_is_deterministic_across_recomputation() {
-    let g = cell_with_ease(1.75);
-    let first = defensibility(&g, CellId(0));
+    let g = link(&[(EdgeKind::Adjacency, 0.0031)]);
+    let first = defensibility(&g, CellId(0), CellId(1));
     for _ in 0..8 {
-        assert_eq!(defensibility(&g, CellId(0)), first);
+        assert_eq!(defensibility(&g, CellId(0), CellId(1)), first);
     }
 }
 ```
@@ -377,75 +470,100 @@ fn defensibility_is_deterministic_across_recomputation() {
 Run: `cargo test -p hornvale-worldgen --test defensibility_field`
 Expected: FAIL — `defensibility_for_test` not found in `hornvale_worldgen`
 
-- [ ] **Step 3: Implement, substituting Task 2's measured `DEF_SCALE`**
+- [ ] **Step 3: Implement, substituting Task 2d's measured `DEF_SCALE`**
 
-In `history_bake.rs`, beside the other bake constants (~line 72–136):
+In `history_bake.rs`, beside the other bake constants:
 
 ```rust
-/// AUTHORED prior: the least defensible ground the world admits — the value
-/// `defensibility` approaches, and never reaches, as approach ease grows
-/// without bound. An ASYMPTOTE, not a clamp: decision 0089 clause 3 records
-/// that a clamp has exactly zero probability of being exceeded at any input,
-/// which forecloses the rare tails the sigmoid wager needs.
-/// type-audit: bare-ok(ratio: DEF_FLOOR)
-const DEF_FLOOR: f64 = 0.75;
-/// AUTHORED prior: the most defensible ground the world admits, approached
-/// as approach ease falls to zero. Never reached, for the same reason.
-/// type-audit: bare-ok(ratio: DEF_CEIL)
-const DEF_CEIL: f64 = 1.40;
-/// CALIBRATED (Task 2): the median `approach_ease` over habitable cells,
-/// pooled over seeds 1..=30, so the MEDIAN cell's defensibility sits near
-/// 1.0 and only the extremes of the terrain move the outcome. Chosen from the
-/// geography before any behavioural readout existed, and frozen thereafter
-/// (spec §4.4). A save-format constant from here on.
+/// AUTHORED prior: the defensibility of a free route — the value a wholly
+/// unobstructed approach yields. ATTAINED, not approached: a cell reached by
+/// an open sea lane is the most exposed ground there is (spec §2.3).
+/// type-audit: bare-ok(ratio: DEF_MIN)
+const DEF_MIN: f64 = 0.75;
+/// AUTHORED prior: the defensibility an infinitely dear approach tends to.
+/// Approached and never reached, since `tanh` is asymptotic.
+/// type-audit: bare-ok(ratio: DEF_MAX)
+const DEF_MAX: f64 = 1.40;
+/// CALIBRATED (Task 2d): scales `-ln(conductance)` so the MEDIAN traversable
+/// approach sits at defensibility 1.0. Measured over seeds 1..=30 before any
+/// behavioural readout existed, and frozen thereafter (spec §4.4). A
+/// save-format constant from here on.
 /// type-audit: bare-ok(ratio: DEF_SCALE)
-const DEF_SCALE: f64 = 0.0; // <- REPLACE with Task 2's measured q0.50
+const DEF_SCALE: f64 = 0.0; // <- REPLACE with Task 2d's measured value
 ```
 
 And the function, beside `approach_ease`:
 
 ```rust
-/// How hard `cell` is to come at, as a multiplier on its HOLDER's side of the
-/// dominance test. Strictly decreasing in [`approach_ease`], bounded by
-/// `(DEF_FLOOR, DEF_CEIL)` asymptotically, and a pure function of the per-era
-/// graph — no seed, no time, no bake state, so it consumes no draw and cannot
-/// move stream consumption order.
+/// How well `to` is defended against an approach from `from`: a strictly
+/// monotone, saturating function of the log traversal cost of the cheapest
+/// route between them. A multiplier on the HOLDER's side of the dominance
+/// test — the second contest axis (decision 0089 clause 1).
 ///
-/// The second contest axis (decision 0089 clause 1). It is indifferent to who
-/// holds the cell, which is what makes it a legal mechanism rather than an
-/// authored handicap: it is a term keyed on ground, and that the weak benefit
-/// from defensible ground is a byproduct.
-fn defensibility(graph: &ConnectionGraph, cell: CellId) -> f64 {
-    let eased = hornvale_kernel::math::tanh(approach_ease(graph, cell) / DEF_SCALE);
-    DEF_FLOOR + (DEF_CEIL - DEF_FLOOR) * (1.0 - eased)
+/// Reads the approach rather than the cell because the calibration found
+/// approach ease is two disjoint regimes — water-connected and land-only —
+/// which no single transform over an aggregate can grade (spec §2.3a). A raid
+/// arrives along one route, and what shelters the defender is the resistance
+/// of that route.
+///
+/// Parallel edges resolve by MAXIMUM conductance: an attacker takes the
+/// easiest road, which is also why this cannot double-count the 6.7% of cells
+/// carrying duplicate `to` values.
+///
+/// Pure in `(graph, from, to)` — no seed, no time, no bake state — so it
+/// consumes no draw and cannot move stream consumption order. Returns
+/// `DEF_MAX` for a nonexistent or wholly impassable link, which no caller
+/// reaches: both call sites walk edges that exist.
+fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    let best = graph
+        .edges(from)
+        .iter()
+        .filter(|e| e.to == to && e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .fold(0.0_f64, f64::max);
+    if best <= 0.0 {
+        return DEF_MAX;
+    }
+    let cost_exponent = -hornvale_kernel::math::ln(best);
+    DEF_MIN + (DEF_MAX - DEF_MIN) * hornvale_kernel::math::tanh(cost_exponent / DEF_SCALE)
 }
 
 /// Test-only re-export of [`defensibility`] so the property battery in
 /// `tests/defensibility_field.rs` can reach it without making the field part
 /// of this crate's real public surface.
 #[doc(hidden)]
-pub fn defensibility_for_test(graph: &ConnectionGraph, cell: CellId) -> f64 {
-    defensibility(graph, cell)
+pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    defensibility(graph, from, to)
 }
 ```
 
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `cargo test -p hornvale-worldgen --test defensibility_field`
-Expected: PASS, 3 tests
+Expected: PASS, 4 tests
 
-- [ ] **Step 5: fmt, clippy, type-audit, commit**
+- [ ] **Step 5: Mutation-verify the parallel-edge test**
+
+Temporarily change the `fold(0.0_f64, f64::max)` to a `sum()`, re-run, and
+confirm `parallel_edges_resolve_by_maximum_conductance` FAILS. Then change it
+to a `min` over the filtered set and confirm it FAILS again. Revert. If either
+mutant passes, the test asserts nothing and must be rewritten before
+proceeding — this is the test that pins the double-counting fix.
+
+- [ ] **Step 6: fmt, clippy, type-audit, commit**
 
 ```bash
 cargo fmt
 cargo clippy -p hornvale-worldgen --all-targets -- -D warnings
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
 git add windows/worldgen/
-git commit -m "feat(the-contour): defensibility as an asymptotic field
+git commit -m "feat(the-contour): defensibility as a per-approach field
 
-A tanh of approach ease, bounded by (DEF_FLOOR, DEF_CEIL) asymptotically
-rather than clamped — decision 0089 clause 3. Pure in the graph, so no draw
-moves. Not yet wired to anything. Task 3."
+Reads the approach's own conductance, not a per-cell aggregate: the
+calibration found approach ease is two disjoint regimes (water-connected
+vs land-only) that no single transform can grade. Parallel edges resolve
+by max, which fixes the measured 6.7% duplicate-edge double-count by
+construction. Spec amendment 1, pre-readout. Task 3."
 ```
 
 ---
@@ -629,39 +747,44 @@ In `history_bake.rs`'s test module:
 
 ```rust
 #[test]
-fn an_exposed_holder_is_raided_and_a_sheltered_one_is_not() {
-    // Two holders identical in every respect except the approach structure of
-    // their cell. Only the exposed one may be taken. This is the test that
-    // fails if the term is wired to the ATTACKER's side by mistake.
+fn a_cheaply_reached_holder_is_raided_and_a_dearly_reached_one_is_not() {
+    // Two holders identical in every respect except the CONDUCTANCE of the
+    // route reaching them from the raider. Only the cheaply-reached one may
+    // be taken. Two defects this catches: the term wired to the ATTACKER's
+    // side, and `from`/`to` transposed (the graph is mirrored, so a
+    // transposition compiles and mostly works — it fails exactly when the
+    // two cells' parallel-edge sets differ).
     let mut bake = /* fixture: raider + two holders, equal population and tech */
         unimplemented!("build via the existing test fixture helpers in this module");
     let _ = &mut bake;
-    todo!("assert the exposed holder is raided and the sheltered one is skipped");
+    todo!("assert the cheaply-reached holder is raided and the dear one is skipped");
 }
 ```
 
-Replace the `unimplemented!`/`todo!` using the fixture helpers already in that module — `stores_raise_strength_but_never_pressure` (~line 3337) shows the established shape.
+Replace the `unimplemented!`/`todo!` using the fixture helpers already in that module — `stores_raise_strength_but_never_pressure` (~line 3337) shows the established shape. The fixture must give the two holders' approach edges **different conductances**, since that is now the only thing the mechanism reads.
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `cargo test -p hornvale-worldgen an_exposed_holder`
+Run: `cargo test -p hornvale-worldgen a_cheaply_reached_holder`
 Expected: FAIL — both holders are raided, because defensibility is not yet read.
 
 - [ ] **Step 3: Change the two call sites**
 
-`maybe_raid`, line 2544:
+Note the argument order: **`from` is the attacker's cell, `to` is the holder's.**
+
+`maybe_raid`, line 2544 — the raider sits at `raider_site` and the candidate is `n`:
 
 ```rust
-            if raider_str <= t_str * defensibility(self.cur(), n) * RAID_MARGIN {
-                continue; // dominance: only a fight it can win, on this ground
+            if raider_str <= t_str * defensibility(self.cur(), raider_site, n) * RAID_MARGIN {
+                continue; // dominance: only a fight it can win, by this road
             }
 ```
 
-`best_home`, line 1127:
+`best_home`, line 1127 — the approach comes from the ring-walk's origin `from`:
 
 ```rust
                         if !may_take_held_land
-                            || strength <= hs * defensibility(self.cur(), n) * RAID_MARGIN
+                            || strength <= hs * defensibility(self.cur(), from, n) * RAID_MARGIN
                         {
                             continue; // not a fight this people can win here, or survive winning
                         }
@@ -671,15 +794,15 @@ Expected: FAIL — both holders are raided, because defensibility is not yet rea
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `cargo test -p hornvale-worldgen an_exposed_holder`
+Run: `cargo test -p hornvale-worldgen a_cheaply_reached_holder`
 Expected: PASS
 
 - [ ] **Step 5: Mutation-verify the test**
 
-Temporarily change `defensibility` to `fn defensibility(_g: &ConnectionGraph, _c: CellId) -> f64 { 1.0 }` and re-run.
+Temporarily change `defensibility` to `fn defensibility(_g: &ConnectionGraph, _f: CellId, _t: CellId) -> f64 { 1.0 }` and re-run. Then, separately, TRANSPOSE the two call sites' arguments (`defensibility(self.cur(), n, raider_site)`) and re-run again — the graph is mirrored, so a transposition compiles and mostly agrees, and a test that cannot see it is not pinning the direction.
 
-Run: `cargo test -p hornvale-worldgen an_exposed_holder`
-Expected: **FAIL.** If it passes, the test asserts nothing and must be rewritten before proceeding. Revert the stub afterwards.
+Run: `cargo test -p hornvale-worldgen a_cheaply_reached_holder`
+Expected: **FAIL on both mutants.** If it passes, the test asserts nothing and must be rewritten before proceeding. Revert the stub afterwards.
 
 - [ ] **Step 6: Confirm no draw moved**
 
