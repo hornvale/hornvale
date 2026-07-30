@@ -127,3 +127,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0085](0085-derived-geometry-reads-the-durable-signal.md) | Derived geometry reads the durable signal, not the living one | Accepted |
 | [0086](0086-the-heavy-tier-runs-on-the-canonical-box.md) | The heavy tier runs on the canonical box; campaigns run on the Mac | Accepted |
 | [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md) | A benchmark's timings are a record, not a golden | Accepted |
+| [0088](0088-the-suite-watches-its-own-clock.md) | The suite watches its own clock — a failing test, not a dashboard | Accepted |

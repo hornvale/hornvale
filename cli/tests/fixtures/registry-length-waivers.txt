@@ -160,7 +160,6 @@ TOOL-census-correctness-batteries
 TOOL-concept-ownership-vs-reference
 TOOL-persistence-class-tag
 TOOL-preflight-merge
-TOOL-suite-timing-ledger
 UNI-1
 UNI-10
 UNI-12

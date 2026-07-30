@@ -15,6 +15,7 @@ pub mod schema;
 pub mod study;
 pub mod summary;
 pub mod synthetic;
+pub mod timings;
 
 pub use blackbox::record_failure;
 pub use census_guard::{CENSUS_GOLDENS_DIR, current_hostname, require_canonical_host_for};

@@ -115,9 +115,12 @@ developer's next local test run. The full census fixtures themselves are
 refreshed once per campaign — locally (`scripts/census-run.sh`), just
 before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
 cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
-(decision 0063). The everyday commit gate still skips censuses to stay under
-five minutes; the pre-merge refresh is what keeps the committed rows current
-with `main`.
+(decision 0063). The everyday commit gate still skips censuses to stay
+tractable; the pre-merge refresh is what keeps the committed rows current
+with `main`. How tractable is now measured rather than assumed — [The
+Timekeeper](../chronicle/the-timekeeper.md) found the gate running at
+934.5 s against decision 0040's budget of 234 s, and gave the suite a
+per-test baseline and an alarm so the next such drift announces itself.
 
 That last sentence is a *convention*, and it has failed. [The
 Siding](../chronicle/the-siding.md) found the census stale for **139

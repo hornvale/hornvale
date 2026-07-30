@@ -27,6 +27,28 @@ speed the suite by memoizing world construction across tests. The levers that
 *do* exist: build to the shallowest sufficient `BuildDepth` (see
 `windows/worldgen/CLAUDE.md`), and the world-gen speedups in the kernel.
 
+## `timings.rs` measures the BUILD, not the world (decision 0088)
+
+The Laboratory is the measurement window, so the suite's own clock lives here:
+`timings.rs` parses nextest's `libtest-json-plus` durations, folds/hysteresizes
+the committed per-host baseline, and computes both alarms. `cli/` is bin-only,
+so its tests cannot host shared code — that is why this module is in `lab` and
+not next to `cli/tests/timings_alarm.rs`, which is only the failing-test
+surface. Two consequences when editing it:
+
+- **The wall-clock ban does not reach it, and the tags say so.** Durations are
+  tagged `bare-ok(diagnostic-value)` — measurements *of* the implementation,
+  never of the world. Do not copy that class into anything a world can see. A
+  `pub fn` here returning `String` or `Result<_, String>` needs
+  `bare-ok(prose: return)`; four consecutive tasks forgot it during execution,
+  so assume the tag rather than the vigilance.
+- **The pure functions are the contract.** `fold_below_floor`,
+  `apply_hysteresis`, `suite_shift`, `per_test_shifts` and the enforcement
+  polarity are unit-tested directly, not only through `make ci`. The contention
+  gate was shipped *inverted* once and passed spec-compliance review; the fix
+  was to make its polarity a pure function with a test that fails on
+  re-inversion. Keep new decisions in that shape.
+
 ## Censuses regenerate locally now, ~7 min (decision 0063, supersedes 0046)
 
 - The everyday gate still stays fast by skipping censuses: `regenerate-

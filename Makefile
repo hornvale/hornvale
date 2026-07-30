@@ -22,7 +22,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -31,7 +31,7 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit ## Cheap half of the gate (fmt-check + clippy + type-audit)
 
-gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~4 min)
+gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
 	@bash scripts/census-advisory.sh || true
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
@@ -40,6 +40,76 @@ gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`ma
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
 	@bash scripts/gate-full-heavy.sh
 	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
+
+# The CI entry point. A WRAPPER: every decision it makes lives in Rust
+# (windows/lab/src/timings.rs, cli/tests/timings_alarm.rs). Raw output is
+# persisted before anything summarises it, so a surprise never costs a re-run.
+# ORDER IS LOAD-BEARING: the alarm must compare this run against the baseline
+# still sitting on disk from the LAST recorded run, so it runs BEFORE
+# ci-record overwrites that file — recording first would make every run
+# compare against itself and the alarm could never fire.
+#
+# The libtest-json-plus stream must survive a failing nextest run — the
+# alarm and ci-record still need to read it, and a red run's durations
+# belong on disk for archaeology — so this recipe cannot simply abort the
+# moment nextest exits nonzero. The whole recipe is one shell script (note
+# the backslash continuations) with no `set -e`, so a mid-script nonzero
+# exit does not by itself stop anything; the FIX is that nextest's status is
+# now CAPTURED immediately (`nextest_status=$$?`) instead of being discarded
+# by an `|| true` on that line — discarding it entirely was the original
+# bug: `make ci` reported success on a fully failing suite because nothing
+# downstream ever re-checked pass/fail. The alarm and ci-record still run in
+# the same order as before, and the captured status is re-raised at the very
+# end, after the summary prints, so a red suite now fails `make ci` while
+# still leaving every artifact on disk for inspection.
+#
+# A RED RUN NEVER BECOMES THE BASELINE. `ci-record` is guarded on both
+# statuses, because the un-guarded version was a one-way ratchet: the alarm
+# fired on two tests at 2x, and `ci-record` — running unconditionally on the
+# next line — immediately wrote those inflated durations back as the new
+# reference. The alarm erased its own evidence, and the following run would
+# have compared against the regression and seen nothing. Caught by running
+# `make ci` for real (2026-07-30) and noticing the alarmed values sitting in
+# the baseline afterwards. This is the same ratchet the final review found in
+# the CONTENTION path; the fix there guarded `cmd_ci_record` against a live
+# claim and did not guard this path. Re-recording a regression stays a
+# deliberate act: fix it, or re-record in the commit that caused it.
+#
+# `ci` is a thin timing wrapper around `ci-run`; the body lives there so
+# scripts/timed.sh can measure the WALL TIME a human actually waits through —
+# suite, alarm and record together — and append it to docs/timings.md beside
+# the `rebaseline` and `census` rows. This campaign exists because that ledger
+# carried ZERO rows for `make gate`, so the gate's creep from 234s to 934s was
+# unobservable; shipping a per-test recorder that did not record its own wall
+# time would have repeated the same omission one level up. `make timings
+# LABEL=ci` reads it back. timed.sh passes the wrapped command's exit status
+# through, so a red suite still fails `make ci`.
+ci: ## Run the suite under the ci profile, alarm on a shift, then record this run's baseline
+	@bash scripts/timed.sh ci -- make --no-print-directory ci-run
+
+ci-run:
+	@mkdir -p target/nextest/ci docs/timings
+	@NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1 cargo nextest run --workspace \
+	    --profile ci --message-format libtest-json-plus \
+	    > target/nextest/ci/run.json 2> target/nextest/ci/run.log; \
+	nextest_status=$$?; \
+	cargo test -q -p hornvale --test timings_alarm -- --ignored --nocapture; \
+	alarm_status=$$?; \
+	if [ $$nextest_status -eq 0 ] && [ $$alarm_status -eq 0 ]; then \
+	    cargo run --quiet -p hornvale -- ci-record; \
+	else \
+	    echo "make ci: NOT recording a baseline — the run was red, so these durations are not a reference" >&2; \
+	fi; \
+	echo ""; \
+	echo "== make ci: detail written to =="; \
+	echo "  target/nextest/ci/run.json   structured per-test durations"; \
+	echo "  target/nextest/ci/run.log    human output, including failures"; \
+	echo "  docs/timings/test-baseline-$$(hostname -s).tsv   recorded baseline"; \
+	if [ $$nextest_status -ne 0 ]; then \
+	    echo "make ci: FAILED — the nextest run itself was red (exit $$nextest_status); see target/nextest/ci/run.log" >&2; \
+	    exit $$nextest_status; \
+	fi; \
+	exit $$alarm_status
 
 # The claim lives in the canonical box's OWN /tmp, so a local `heavy-run.sh
 # status` answers "is a heavy run holding THIS machine?" — from the Mac that is
