@@ -4849,6 +4849,44 @@ fn independently_steeped_concepts(
         }
     }
 
+    // Steeped: the STAPLE of every settled cell whose subsistence is
+    // Farming (The Watershed). Re-derived independently of `exposure_of`,
+    // which is the point of this function: worldgen reads
+    // `hornvale_culture::subsistence(biome_class(biome_at(cell)), coastal)`
+    // and gates on `Subsistence::Farming`; this reading calls the same
+    // public climate/culture functions (never `exposure_of` itself, and
+    // `hornvale_worldgen::biome_class` is a domain-agnostic biome→culture
+    // classifier already used elsewhere in this file, not an exposure
+    // predicate) to reach the same verdict. A crop known only through
+    // herding, fishing, or foraging is an experiential gap, not a
+    // perceptual one, and is deliberately never inserted here — the six
+    // staples (`hornvale_climate::Crop::catalog()`) are F13's third
+    // recurrence: `exposure-sound-{goblin,kobold}` read false on 767/759 of
+    // 1000 worlds because this loop did not exist.
+    for &cell in &settled {
+        let expr = v.climate().biome_expr_at(cell);
+        let Some(crop) = hornvale_climate::crop_at(
+            expr.formation,
+            v.climate().mean_temperature_at(cell),
+            v.climate().moisture_at(cell),
+        ) else {
+            continue;
+        };
+        let coastal = v
+            .terrain()
+            .geosphere()
+            .neighbors(cell)
+            .iter()
+            .any(|&n| v.terrain().is_ocean(n));
+        let subsistence = hornvale_culture::subsistence(
+            hornvale_worldgen::biome_class(v.climate().biome_at(cell)),
+            coastal,
+        );
+        if subsistence == hornvale_culture::Subsistence::Farming {
+            steeped.insert(crop.concept_name().to_string());
+        }
+    }
+
     let own_kind = format!("{species}-kind");
     if v.world().registry.concept(&own_kind).is_some() {
         steeped.insert(own_kind);
@@ -7806,5 +7844,37 @@ mod tests {
             chorus_sky_calibration_metric_over(&one_voice),
             MetricValue::Absent
         );
+    }
+
+    /// The Watershed's six staples (`hornvale_climate::Crop::catalog()`,
+    /// gated `Steeped` in `exposure_of` only where a settled cell's
+    /// subsistence is `Farming`) reach `Steeped` through the crop gate that
+    /// `independently_steeped_concepts` never learned — F13, the third
+    /// recurrence of the duplicate going stale. Named individually so ADDING
+    /// a staple that the lab does not know about reds this test rather than
+    /// slipping past it.
+    ///
+    /// Seed 5's bugbear is the witness: diagnosed by sweeping seeds 0..20
+    /// and every placed people for which staple concepts actually reach a
+    /// `Root` in the committed lexicon (which only happens when `exposure_of`
+    /// classified them `Steeped`), seed 5's bugbear is the only (seed,
+    /// species) pair in that sweep whose settlements span all six crop
+    /// bands at once. No single seed need witness all six for the campaign's
+    /// claim to hold — this test only needs one that does, so the assertion
+    /// is not vacuous.
+    const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
+
+    #[test]
+    fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
+        let steeped =
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
+        for staple in STAPLE_CONCEPTS {
+            assert!(
+                steeped.contains(staple),
+                "the lab's independent reading does not steep {staple}, which \
+                 worldgen does — the duplicate is stale again"
+            );
+        }
     }
 }
