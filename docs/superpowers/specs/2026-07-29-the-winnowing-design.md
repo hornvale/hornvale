@@ -2,12 +2,39 @@
 
 **Campaign:** The Winnowing
 **Date:** 2026-07-29
-**Status:** spec, awaiting G3 review
+**Status:** **COMPLETE — shipped and merged 2026-07-29.** All three tasks
+shipped. The byte reduction came in **better than predicted**: 53.7% rather
+than §1.1's 52.2%, because the spec's transcription of the Orrery's read-list
+was wrong in the campaign's favour — the client reads **eight** per-tile
+layers, not ten (see §1 note below). Chronicle:
+`book/src/chronicle/the-winnowing.md`. Retrospective:
+`docs/retrospectives/the-winnowing.md`. **No decisions were minted** and no
+epoch was declared — the default document is byte-identical, so nothing in
+the derivation moved (0084's test). Spec approved at G3.
 
 The tiles document carries nineteen per-tile layers to a client that reads
 ten. Let the caller say which it wants.
 
 ## 1. The problem
+
+> **Amendment note (2026-07-29, at close).** The estimates in this section,
+> in §1.1, and in §5 are the spec's pre-implementation figures and are left as
+> written. Two of them were superseded by measurement:
+>
+> - The Orrery reads **eight** per-tile layers, not ten. §1.1's list of
+>   never-read layers omits `water`, and the spec's read-list wrongly counted
+>   `features` (document metadata, always emitted, never selectable). Eleven
+>   layers go unread, not nine or ten.
+> - The unread share is therefore **53.7%**, not 52.2%, and the measured
+>   serialize reduction is **55.9%** against §5's proportional prediction of
+>   ~52%. §5's ~553 ms baseline did not reproduce; the campaign measured
+>   1021.3 ms along the same path and recorded the ~1.8× discrepancy rather
+>   than replacing the figure.
+>
+> The measured result — full composition table, residual-zero independence
+> check, and the parse proxy — is in
+> `book/src/chronicle/the-winnowing.md`. Read that for numbers; read this
+> section for the reasoning that motivated the campaign.
 
 `scene/tiles/v1` at width 512 is **17,728,743 bytes**. Measured composition
 of the seed-42 document, by field:
@@ -37,10 +64,10 @@ features                  31,203    0.2%       329     94.8
 
 Nineteen parallel arrays of 131,072 elements are **99.8%** of the document.
 
-### 1.1 Nine of them are never read
+### 1.1 Ten of them are never read
 
 The Orrery's `parseTiles` (`orrery src/sim/scene.ts:484`) extracts fields by
-name. Nine per-tile arrays are not referenced anywhere in its `src/`:
+name. These per-tile arrays are not referenced anywhere in its `src/`:
 
 `t_diurnal_amp_c`, `drainage`, `snow_fraction`, `precip_mm_yr`,
 `precip_regime`, `cloud_fraction`, `cloud_type`, `weather_propensity`,
@@ -87,7 +114,7 @@ That property is what keeps the golden story from exploding combinatorially
 - **No reduction in `width`.** That is a fidelity cut and a client-side
   choice; it is not on this campaign's table.
 - **No skipping of the sampling work.** The projection lives at the
-  serialization boundary only (§3.2). Skipping the *build* of unrequested
+  serialization boundary only (§3, Item 2). Skipping the *build* of unrequested
   layers is a larger, more invasive change; measure first, and only if §5's
   numbers justify it.
 - **No client-side (Orrery repo) work.** The catalog gains the capability;
@@ -186,7 +213,7 @@ For the Orrery's ten-field set, dropping 9,252,311 bytes:
 | document | 17.73 MB | ~8.48 MB (−52%) |
 | serialize | ~553 ms | ~265 ms (if proportional to bytes) |
 | `JSON.parse` proxy | ~150 ms | ~72 ms (same assumption) |
-| `tiles_scene` build | ~600 ms | unchanged — §3.2 |
+| `tiles_scene` build | ~600 ms | unchanged — §3, Item 2 |
 
 **Both time figures assume cost is proportional to bytes, which is an
 assumption and not a measurement.** Serialization of a float array is
@@ -203,7 +230,7 @@ two campaigns' wins — which is the honest framing, not a disappointment.
 1. **This is the first campaign to make the wire contract parameterized.**
    Every scene document so far has been one fixed shape. A caller-chosen
    projection means "the tiles document" is now a family. §1.3's independence
-   property and §3.4's per-field pins are what keep that honest, but it is a
+   property and §3 Item 4's per-field pins are what keep that honest, but it is a
    genuine change in the character of the producer/consumer contract and
    deserves your eye rather than mine.
 2. **Nine fields risk becoming untested on the wire.** If the Orrery adopts a

@@ -15,6 +15,9 @@ second serializer, and it is what keeps the testing story from exploding into
 
 ## The measurement
 
+The projection section of `cargo run --release -p hornvale-scene --example
+profile_scene -- 8`, verbatim:
+
 ```text
   -- The Winnowing: projection at width 512 --
   metadata only (no layers)         32333 B
@@ -40,10 +43,10 @@ second serializer, and it is what keeps the testing story from exploding into
     drainage                 529579 B    3.0%  UNREAD
     sum + metadata         17729304 B  (residual against the full document: 0 B)
 
-  full document           17729304 B   serialize 1011.9 / 1029.1 / 1037.9 ms
-  Orrery's 8 layers        8211649 B   serialize  442.9 /  453.7 /  453.9 ms
+  full document           17729304 B   serialize 1011.9 / 1029.1 / 1037.9 ms  (median 1029.1)
+  Orrery's 8 layers        8211649 B   serialize 442.9 / 453.7 / 453.9 ms  (median 453.7)
   bytes    46.3% of full (-53.7%)   serialize 44.1% of full (-55.9%)
-  proportionality: time/byte ratio = 0.952
+  proportionality: time/byte ratio = 0.952 (1.000 = serialize fell exactly with bytes)
 ```
 
 **9,517,655 bytes, 53.7% of the document, are layers the client never looks
@@ -112,11 +115,16 @@ structural reason — array-building dominates and metadata does not shrink.
 ### An unexplained baseline, named rather than smoothed over
 
 The specification quoted a serialize baseline of ~553 ms, traceable to [The
-Sextant](./the-sextant.md)'s spec (567.0 ms for a 17,313 KB document). This
-campaign measured 1029.1 ms for a document of the same size, on a quiet box,
-with an unchanged serialization path — `git log` shows nothing touching
-`kernel/src/quantize.rs` or the scene crate's emit path between the two beyond
-this campaign's own byte-identical work. The Cistern's committed chronicle
+Sextant](./the-sextant.md)'s spec (567.0 ms for a 17,313 KB document). The
+comparable number from this campaign's run is the profiler's `hw_scene_tiles
+json` line — **1021.3 ms** — which is serde's derive on the full document,
+literally the same path and the same line The Sextant and The Cistern
+measured. (The projection harness's 1029.1 ms above goes through the new
+manual serializer and corroborates it within 0.8%, but it is not the
+unchanged path, so it is not the number to compare.) So: the same document
+size, on a quiet box, along an unchanged serialization path — `git log` shows
+nothing touching `kernel/src/quantize.rs` or the scene crate's emit path
+between the two beyond this campaign's own byte-identical work. The Cistern's committed chronicle
 records 1053.6 and 1062.9 ms for the same line. Two of three independent
 measurements agree, and The Sextant's is the outlier.
 
@@ -134,8 +142,14 @@ rather than a silently ignored bit. `scene_json_selected(&scene, &fields)`
 beside the existing `scene_json`, and `hw_scene_tiles_selected(width, len)` in
 the wasm catalog, reading a JSON array of names from the input buffer.
 `hw_scene_tiles(width)` is unchanged; a caller that says nothing gets exactly
-today's document. The catalog grew 15,617 bytes (+1.68%), leaving 104,687
-bytes of headroom under the 1 MiB gate.
+today's document. The catalog grew 15,617 bytes (+1.68%) — a before-and-after
+of the same build, which is the only way that delta means anything. The
+absolute size moved for an unrelated reason: rebuilt at the end, the catalog
+is **986,525 bytes**, leaving **62,051 bytes (5.9%)** of headroom under the
+1 MiB gate. Most of that consumption is not this campaign's. The margin is
+nonetheless narrower than the delta alone suggests, and the next
+catalog-growing change should measure the size rather than subtract from a
+remembered one.
 
 `scene_json` deliberately keeps using serde's derive while the projection goes
 through a hand-written `Serialize` on a private wrapper. That is the whole

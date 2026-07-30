@@ -266,7 +266,7 @@ pub struct WaterfallPoint {
 /// The per-tile layers a caller wants in a `scene/tiles/v1` document.
 ///
 /// The document's nineteen per-tile arrays are 99.8% of its bytes, and a
-/// given client typically reads a subset — the Orrery reads ten. This is
+/// given client typically reads a subset — the Orrery reads eight. This is
 /// `BuildDepth`'s "only as deep as the question asks" at the emit boundary:
 /// the sim still computes every layer, the caller chooses what crosses the
 /// wire (decision 0022).
@@ -2427,6 +2427,104 @@ mod tests {
                 full.contains(fragment),
                 "field {name} serializes differently alone than in the full document"
             );
+        }
+    }
+
+    /// The documented promise — "an unknown name is a hard error, never a
+    /// silently dropped layer" (spec §3 item 1, and the schema chapter's
+    /// projection section) — asserted at the Rust level.
+    ///
+    /// This exists because it did not. The whole-branch review mutated
+    /// `only()`'s `None =>` arm to skip an unknown name instead of returning
+    /// `UnknownTileField`, and every Rust guard in the workspace stayed green:
+    /// the two projection tests above only ever pass names drawn from
+    /// `ALL_NAMES`, and the goldens pin documents built from valid selections.
+    /// Only the wasm drive script caught it, and `make world-check` is in
+    /// neither `make gate` nor `make gate-full`. A promise about rejection
+    /// cannot be tested by a suite that only ever supplies acceptable input.
+    ///
+    /// Both constructors are covered, because `parse_json` is the form a
+    /// client actually reaches across the WASM boundary.
+    #[test]
+    fn an_unknown_layer_name_is_rejected_not_dropped() {
+        // `TileFields` has no `PartialEq` (and does not need one), so assert on
+        // the error rather than on the whole Result.
+        fn assert_unknown(got: Result<TileFields, SceneError>, offender: &str, what: &str) {
+            match got {
+                Err(SceneError::UnknownTileField(name)) => {
+                    assert_eq!(name, offender, "{what}: the refusal named the wrong layer")
+                }
+                Err(other) => panic!("{what}: expected UnknownTileField, got {other:?}"),
+                Ok(_) => panic!("{what}: the unknown name was accepted, not refused"),
+            }
+        }
+
+        // A near-miss is the realistic failure: the wire name is `elevation_m`.
+        assert_unknown(
+            TileFields::only(&["elevation"]),
+            "elevation",
+            "only() with a near-miss name",
+        );
+        // An unknown name among valid ones must reject the whole request
+        // rather than quietly projecting the valid remainder.
+        assert_unknown(
+            TileFields::only(&["elevation_m", "not_a_layer", "ocean"]),
+            "not_a_layer",
+            "only() with an unknown name among valid ones",
+        );
+        // The same promise across the wasm boundary's wire form.
+        assert_unknown(
+            TileFields::parse_json("[\"elevation_m\",\"not_a_layer\"]"),
+            "not_a_layer",
+            "parse_json() with an unknown name among valid ones",
+        );
+        // Not vacuous: the valid forms of both constructors still succeed, and
+        // agree about what was selected.
+        let by_name = TileFields::only(&["elevation_m", "ocean"]).expect("both names are layers");
+        let by_json =
+            TileFields::parse_json("[\"elevation_m\",\"ocean\"]").expect("valid wire request");
+        for name in TileFields::ALL_NAMES {
+            let want = *name == "elevation_m" || *name == "ocean";
+            assert_eq!(
+                by_name.contains(name),
+                want,
+                "only(): wrong state for {name}"
+            );
+            assert_eq!(
+                by_json.contains(name),
+                want,
+                "parse_json(): wrong state for {name}"
+            );
+        }
+    }
+
+    /// A request that is not a JSON array of strings is refused with the
+    /// parser's reason, not silently treated as an empty selection — which
+    /// would hand the caller a metadata-only document for a typo.
+    #[test]
+    fn a_malformed_layer_request_is_rejected() {
+        for bad in [
+            "",                     // empty input
+            "[\"elevation_m\"",     // truncated array
+            "{\"fields\":[]}",      // an object, not an array
+            "[\"elevation_m\", 7]", // a non-string element
+            "\"elevation_m\"",      // a bare string, not an array
+        ] {
+            match TileFields::parse_json(bad) {
+                Err(SceneError::MalformedTileFields(msg)) => {
+                    assert!(
+                        !msg.is_empty(),
+                        "the refusal of {bad:?} carried no parser reason"
+                    );
+                }
+                other => panic!("parse_json({bad:?}) should be MalformedTileFields, got {other:?}"),
+            }
+        }
+        // The empty ARRAY is legal and distinct from malformed input: it means
+        // "metadata only" (schema chapter, projection section).
+        let none = TileFields::parse_json("[]").expect("the empty selection is valid");
+        for name in TileFields::ALL_NAMES {
+            assert!(!none.contains(name), "the empty selection selected {name}");
         }
     }
 }

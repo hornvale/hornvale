@@ -283,8 +283,9 @@ anything else is refused with a description of which bound it violates.
 
 Since [The Winnowing](../chronicle/the-winnowing.md), a caller may name the
 per-tile layers it wants. At width 512 the nineteen parallel arrays are 99.8%
-of the document's 17,729,304 bytes, and a client typically reads a handful of
-them.
+of the document's roughly 17.7 million bytes, and a client typically reads a
+handful of them. (The exact total drifts with any change to the layers or
+their values; the chronicle records it as of the campaign's measurement.)
 
 ```rust,ignore
 let fields = TileFields::only(&["elevation_m", "ocean", "biome"])?;
@@ -296,7 +297,7 @@ The wasm catalog exposes the same choice as
 input buffer. `hw_scene_tiles(width)` is unchanged and still emits everything,
 so a caller that says nothing gets exactly what it always got.
 
-Three properties make this safe to rely on, and they are what the schema
+Four properties make this safe to rely on, and they are what the schema
 promises about projection:
 
 - **Only per-tile arrays are selectable.** Document metadata — `schema`,
