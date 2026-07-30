@@ -291,13 +291,13 @@ pub fn hydrogeology(buf: &MaterialBuffer, drainage: f64, ocean: bool) -> Hydro {
     if ocean {
         return Hydro::Aquitard;
     }
-    if buf.carbonate > 0.5 && buf.porosity > 0.4 {
+    if buf.carbonate > 0.5 && buf.porosity > KARST_MIN_POROSITY {
         return Hydro::Karst;
     }
-    if buf.porosity < 0.15 {
+    if buf.porosity < AQUITARD_MAX_POROSITY {
         return Hydro::Aquitard;
     }
-    if buf.porosity > 0.5 {
+    if buf.porosity > CLASTIC_AQUIFER_MIN_POROSITY {
         return if drainage > SPRING_DRAINAGE_THRESHOLD {
             Hydro::Spring
         } else {
@@ -307,8 +307,55 @@ pub fn hydrogeology(buf: &MaterialBuffer, drainage: f64, ocean: bool) -> Hydro {
     Hydro::Runoff
 }
 
+/// Porosity above which carbonate rock (`carbonate > 0.5`) reads as `Karst`
+/// rather than falling through to the branches below — the CARBONATE scale.
+/// Measured against 8 seeds of continental land cells (The Witness, F5): the
+/// carbonate class runs `n=1095 min=0.350 p50=0.425 p75=0.575 max=0.650`, so
+/// `0.4` sits just above the class floor and inside its normal range — most
+/// carbonate cells clear it. Unchanged by F5; this constant only gained a
+/// name and its calibration record.
+const KARST_MIN_POROSITY: f64 = 0.4;
+
+/// Porosity below which any rock (carbonate or clastic) reads as
+/// impermeable `Aquitard`. Measured against the same 8-seed sweep: the
+/// clastic (non-carbonate) class runs `n=4666 min=0.025 p50=0.100
+/// p75=0.250 p95=0.325 max=0.325`, quantised in ~0.075 steps (0.025, 0.100,
+/// 0.175, 0.250, 0.325) — `0.15` falls between the two lowest bands, so it
+/// selects roughly the bottom fifth to two-fifths of clastic cells
+/// (`0.025`, and about half of `0.100`) as `Aquitard`. Unchanged by F5.
+const AQUITARD_MAX_POROSITY: f64 = 0.15;
+
+/// Porosity above which non-carbonate (clastic) rock reads as `Spring`/
+/// `Aquifer` — the CLASTIC scale, distinct from [`KARST_MIN_POROSITY`]'s
+/// carbonate scale. **Was `0.5`**: a carbonate-scale threshold silently
+/// applied to clastic rock. Against the measured clastic distribution above
+/// (`max = 0.325`), `0.5` was 54% above the entire clastic range and sat
+/// *inside* the carbonate class's own `[p50, p75] = [0.425, 0.575]` window —
+/// every cell it could select already satisfied `carbonate > 0.5 &&
+/// porosity > KARST_MIN_POROSITY` above, so this branch was analytically
+/// unreachable on all 1000 census seeds (The Witness, F5; `aquifer-fraction`
+/// took exactly one distinct value, 0, across the committed census).
+/// Pinned to the measured **p75** of the clastic distribution (`0.25`):
+/// with the ~0.075 quantisation above, `porosity > 0.25` selects exactly
+/// the top band (`0.325`, the class's p95/max value) — the loosest,
+/// least-cemented, least-metamorphosed clastic cells, sandstone's
+/// archetypal-aquifer end of the range. Confirmed by measurement, not
+/// asserted: [`hydrogeology`]'s companion world-derived test
+/// (`a_real_world_produces_a_porous_non_carbonate_cell`) fails at `0.5` and
+/// passes at this value.
+const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.25;
+
 /// Drainage above which a porous cell expresses as a flowing `Spring` rather
 /// than a still `Aquifer`. Shares scale with `cave_proneness`'s wetting term.
+/// Unchanged by F5 (The Witness). Measured follow-up, not addressed here:
+/// at the production `GLOBE_LEVEL` (6), a 40-seed sweep of default-pin
+/// worlds never saw land-cell drainage clear this value even once (max
+/// observed: 297) — `Spring` is analytically reachable post-F5 but was not
+/// empirically witnessed at production resolution in that sweep, only at
+/// the next mesh level up. Left as an open finding, not retuned here: this
+/// constant is out of F5's scope, and nudging it would be exactly the
+/// "relax a threshold to manufacture a witness" move the campaign's own
+/// measurement discipline exists to forbid.
 const SPRING_DRAINAGE_THRESHOLD: f64 = 500.0;
 
 /// Void-proneness (caves/sinkholes), `[0,1]` (spec §3, negation "solid → void").
@@ -928,6 +975,14 @@ mod tests {
 
     #[test]
     fn hydrogeology_reads_porosity_and_carbonate() {
+        // NOTE: this buffer is hand-built and synthetic — it does not
+        // certify that the real derivation can reach these branches (that
+        // was F5's defect: the branches below were unreachable from
+        // `assemble_material` for a thousand census seeds even though these
+        // pure-function tests were green). See
+        // `a_real_world_produces_a_porous_non_carbonate_cell` for the
+        // world-derived check, and `hydro_witness.rs` (Task 6) for the
+        // cross-seed reachability guard.
         // High carbonate + porosity -> karst; cave-proneness high.
         let mut b = flat_buffer();
         b.carbonate = 0.8;
@@ -948,12 +1003,41 @@ mod tests {
 
     #[test]
     fn high_porosity_with_flow_and_low_carbonate_reads_as_spring() {
+        // NOTE: this buffer is hand-built and synthetic — it does not
+        // certify reachability from the real derivation. See
+        // `a_real_world_produces_a_porous_non_carbonate_cell` for the
+        // world-derived check, and `hydro_witness.rs` (Task 6) for the
+        // cross-seed reachability guard.
         // Porous, non-carbonate (so not Karst), with drainage above the
         // spring threshold -> Spring rather than the still-water Aquifer.
         let mut b = flat_buffer();
         b.porosity = 0.7;
         b.carbonate = 0.05;
         assert_eq!(hydrogeology(&b, 600.0, false), Hydro::Spring);
+    }
+
+    #[test]
+    fn a_real_world_produces_a_porous_non_carbonate_cell() {
+        // The defect this closes: `hydrogeology_reads_porosity_and_carbonate`
+        // and `high_porosity_with_flow_and_low_carbonate_reads_as_spring`
+        // both pass today on hand-built `MaterialBuffer`s the real
+        // derivation cannot emit — `porosity` was gated at a carbonate-scale
+        // `0.5`, but the derivation's clastic (non-carbonate) porosity maxes
+        // at 0.325 (measured: The Witness, F5), so no land cell on any seed
+        // could ever clear it. Asserted here against a buffer the pipeline
+        // actually derives, never one hand-constructed.
+        let geo = Geosphere::new(6);
+        let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
+        let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
+        let found = geo.cells().filter(|&c| !terrain.is_ocean(c)).any(|c| {
+            let h = terrain.hydro_at(c);
+            h == Hydro::Aquifer || h == Hydro::Spring
+        });
+        assert!(
+            found,
+            "no land cell on seed 0 reads Aquifer or Spring — the branch is \
+             still unreachable from the real derivation"
+        );
     }
 
     #[test]

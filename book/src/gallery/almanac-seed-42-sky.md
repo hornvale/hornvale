@@ -96,7 +96,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Daokadadoo** — tropical-rainforest
 - **Raaxo (10.4°S, 111.1°W)** — tropical-rainforest
 - **Qadoo** — tropical-seasonal-forest
-- **Ngzoafnsof (17.8°N, 0.0°E)** — temperate-forest
+- **Ngzoafnsof** — temperate-forest
 - **Naokabeodoebe** — tropical-seasonal-forest
 - **Netea (3.8°S, 103.4°W)** — temperate-forest
 - **Xaxo (17.5°N, 16.1°E)** — temperate-forest
@@ -110,7 +110,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Xaxo (19.7°N, 18.2°E)** — temperate-forest
 - **Dooka (14.3°N, 102.2°W)** — tropical-rainforest
 - **Rorororora** — temperate-rainforest
-- **Rooro (10.4°S, 112.2°W)** — temperate-forest
+- **Rooro** — temperate-forest
 - **Goa** — tropical-seasonal-forest
 - **Gshofnshav (19.5°N, 1.0°W)** — temperate-forest
 - **Goodoogo** — tropical-rainforest
@@ -124,16 +124,16 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Toado (15.8°N, 12.9°E)** — temperate-forest
 - **Gzavmzho** — tropical-rainforest
 - **Daoka (0.0°N, 87.0°E)** — tropical-seasonal-forest
-- **Qzhaovgzhovngzofnsof (21.1°N, 5.1°W)** — temperate-forest
+- **Qzhaovgzhoavngzoafnsof (21.1°N, 5.1°W)** — temperate-forest
 - **Rororororro (19.1°N, 17.2°E)** — temperate-forest
 - **Gootoogoogoo** — temperate-forest
 - **Bododa (15.3°N, 105.0°W)** — temperate-forest
 - **Rorrarro (14.7°N, 12.9°E)** — tropical-rainforest
 - **Xaora (7.6°S, 111.2°W)** — temperate-forest
 - **Nenagabo** — temperate-forest
-- **Pzofdzhaxgshofnshav** — temperate-forest
+- **Nsaafnsovpsoxngshaf** — temperate-forest
 - **Nshaavnsa** — tropical-seasonal-forest
-- **Gootoogoodoogo** — temperate-forest
+- **Dotoadoda (18.0°N, 15.1°E)** — temperate-forest
 - **Dotoa (18.6°N, 16.2°E)** — temperate-forest
 - **Toa** — temperate-rainforest
 - **Goodoogo (15.7°N, 3.0°E)** — temperate-forest
@@ -149,11 +149,11 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Raaxo (9.4°S, 116.6°W)** — tropical-rainforest
 - **Xaxo (10.4°S, 114.2°W)** — temperate-forest
 - **Dodoodotoa (14.4°N, 8.9°E)** — temperate-forest
-- **Gootoo (10.5°N, 108.0°W)** — temperate-forest
+- **Tooda (10.5°N, 108.0°W)** — temperate-forest
 - **Nena (6.7°S, 106.3°W)** — temperate-forest
 - **Dadoo** — tropical-rainforest
 - **Roaxoxaxoxoxa** — temperate-forest
-- **Xaxo (7.6°S, 110.1°W)** — temperate-forest
+- **Xaora (7.6°S, 110.1°W)** — temperate-forest
 - **Dotoa (1.0°N, 86.4°E)** — temperate-forest
 - **Gotoodaoka** — tropical-seasonal-forest
 - **Dookadodaka** — tropical-rainforest
@@ -161,27 +161,27 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Xoxo (8.5°S, 111.9°W)** — temperate-forest
 - **Goodoogodaoka** — tropical-seasonal-forest
 - **Neteanena** — temperate-forest
-- **Raarro (18.4°N, 14.1°E)** — temperate-forest
+- **Xaxo (18.4°N, 14.1°E)** — temperate-forest
 - **Doagoodoogo** — tropical-rainforest
 - **Goodoogo (0.0°N, 85.0°E)** — tropical-seasonal-forest
 - **Gootoododa** — temperate-forest
-- **Gootoo (11.5°N, 107.6°W)** — temperate-forest
+- **Toado (11.5°N, 107.6°W)** — temperate-forest
 - **Goado** — tropical-rainforest
 - **Raaxo** — tropical-seasonal-forest
 - **Doda (0.0°N, 90.0°E)** — temperate-forest
 - **Xoxa (21.8°N, 18.4°E)** — temperate-forest
 - **Dodootooda** — temperate-forest
-- **Qzhaovgzhovnsafnsov** — temperate-forest
+- **Qzhaovgzhoavnsaafnsoov** — temperate-forest
 - **Daoka (14.2°N, 6.9°E)** — tropical-seasonal-forest
 - **Dadoodaokagoodoogo** — tropical-seasonal-forest
 - **Xoxo (7.6°S, 109.1°W)** — temperate-forest
 - **Nzho** — tropical-seasonal-forest
 - **Daokagotoo (0.0°N, 82.1°E)** — tropical-seasonal-forest
 - **Googoo (13.4°N, 109.0°W)** — temperate-forest
-- **Xoxa (5.7°S, 108.8°W)** — temperate-forest
+- **Roarra (5.7°S, 108.8°W)** — temperate-forest
 - **Xaora** — tropical-seasonal-forest
 - **Xaora (5.7°S, 109.8°W)** — temperate-forest
-- **Rooro (4.7°S, 109.2°W)** — temperate-forest
+- **Xaora (4.7°S, 109.2°W)** — temperate-forest
 - **Nshaavnsa (7.3°S, 130.3°W)** — tropical-rainforest
 - **Dotoagoodoogo (14.6°N, 10.9°E)** — temperate-forest
 - **Gzof** — shrubland
@@ -189,10 +189,10 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Xoxo (20.2°N, 17.3°E)** — temperate-forest
 - **Daokagotoo (7.7°N, 99.8°W)** — tropical-seasonal-forest
 - **Toado (7.7°N, 98.8°W)** — temperate-forest
-- **Geogebo** — temperate-forest
+- **Toateona** — temperate-forest
 - **Netea (5.7°S, 107.8°W)** — temperate-forest
 - **Daoka (0.0°N, 91.0°E)** — tropical-rainforest
-- **Geogeetoa** — temperate-forest
+- **Teonagootoe** — temperate-forest
 - **Nshaavnsansa** — temperate-rainforest
 - **Dodododa** — temperate-forest
 - **Dotoa (1.0°N, 85.4°E)** — temperate-forest
@@ -204,8 +204,8 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Nena (4.7°S, 108.1°W)** — temperate-forest
 - **Daoka (13.4°N, 102.6°W)** — tropical-rainforest
 - **Dzoov** — temperate-forest
-- **Xaxo (1.9°S, 110.2°W)** — temperate-forest
-- **Qzhaovgzhovgshovngzhav** — temperate-forest
+- **Roarra (1.9°S, 110.2°W)** — temperate-forest
+- **Qzhaovgzhoavgshoovngzhaov** — temperate-forest
 - **Goodoogo (11.5°N, 102.3°W)** — temperate-forest
 - **Psof** — temperate-forest
 - **Nena (3.8°S, 108.5°W)** — temperate-forest
@@ -214,7 +214,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Rororororro (15.9°N, 14.9°E)** — temperate-forest
 - **Dshoxngsoxpsav** — tropical-rainforest
 - **Psaavnshavnsa** — tropical-rainforest
-- **Ngzoafnsof (5.2°S, 129.0°W)** — temperate-forest
+- **Psoaxngshaf** — temperate-forest
 - **Dodabo (7.6°N, 100.8°W)** — temperate-forest
 - **Bo (12.4°N, 103.0°W)** — temperate-forest
 - **Xoxo (17.8°N, 13.1°E)** — temperate-forest
@@ -231,7 +231,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Xaora (27.1°N, 18.5°E)** — temperate-rainforest
 - **Rooro** — temperate-rainforest
 - **Rara (24.4°N, 19.7°E)** — temperate-forest
-- **Dzoovqzhavgzhovgshovngzhav** — temperate-forest
+- **Dzoovqzhaovgzhoavgshoovngzhaov** — temperate-forest
 - **Raarra** — taiga
 - **Xoxo (23.4°N, 19.6°E)** — temperate-forest
 - **Nsaodzov** — temperate-rainforest
@@ -240,19 +240,19 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Dodo (2.9°N, 85.2°E)** — temperate-forest
 - **Doda (17.2°N, 107.4°W)** — temperate-forest
 - **Goodoogo (1.0°N, 82.5°E)** — temperate-forest
-- **Nsaafnsovdzhaf** — temperate-forest
+- **Gshofnshavqzhaovgzhoav (5.0°S, 127.0°W)** — temperate-forest
 - **Xaxoxorro** — temperate-forest
 - **Doda (13.4°N, 105.8°W)** — temperate-forest
 - **Goodoogo (9.5°N, 101.0°W)** — tropical-seasonal-forest
 - **Goodoogo (1.0°N, 81.5°E)** — temperate-forest
 - **Nshaavnsagshofnshavdzoov** — temperate-forest
-- **Raarro (6.6°S, 110.5°W)** — temperate-forest
+- **Roarra (6.6°S, 110.5°W)** — temperate-forest
 - **Rorrarro (6.6°S, 109.5°W)** — temperate-forest
 - **Goodoogodooka** — tropical-rainforest
 - **Raxarro (5.7°S, 111.8°W)** — temperate-forest
 - **Raxarro (4.7°S, 112.2°W)** — temperate-forest
-- **Googoodogao** — temperate-forest
-- **Gootootooda** — temperate-forest
+- **Googoogaabo** — temperate-forest
+- **Toodadodo** — temperate-forest
 - **Nsaafnsov (6.9°S, 126.5°W)** — temperate-forest
 - **Dotoa (6.7°N, 100.2°W)** — temperate-forest
 - **Dotoa (0.0°N, 84.1°E)** — temperate-forest
@@ -260,22 +260,22 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Goa** — tropical-rainforest
 - **Doadaoka** — tropical-rainforest
 - **Neteageoboege** — temperate-rainforest
-- **Rora (5.7°S, 110.8°W)** — temperate-forest
+- **Xaxo (5.7°S, 110.8°W)** — temperate-forest
 - **Rooxarora** — tropical-seasonal-forest
 - **Dookadaoka** — tropical-seasonal-forest
 - **Raxarro (3.8°S, 112.5°W)** — temperate-forest
-- **Roaxo (4.7°S, 111.2°W)** — temperate-forest
+- **Raxarro (4.7°S, 111.2°W)** — temperate-forest
 - **Xaoraraxarro** — temperate-forest
-- **Roaxo (3.8°S, 111.5°W)** — temperate-forest
+- **Xaxo (3.8°S, 111.5°W)** — temperate-forest
 - **Xaxo (6.6°S, 111.5°W)** — temperate-forest
 - **Raxarro (6.6°S, 112.5°W)** — temperate-forest
 - **Goodoogodotoa (6.7°N, 99.2°W)** — temperate-forest
-- **Roarra (2.8°S, 111.8°W)** — temperate-forest
+- **Xaxo (2.8°S, 111.8°W)** — temperate-forest
 - **Raxarroxoxo** — temperate-forest
 - **Toa** — tropical-seasonal-forest
-- **Roarra (7.6°S, 116.2°W)** — temperate-forest
-- **Roaxo (6.6°S, 115.5°W)** — temperate-forest
-- **Raxarro (5.7°S, 114.9°W)** — temperate-forest
+- **Rara (7.6°S, 116.2°W)** — temperate-forest
+- **Xaora (6.6°S, 115.5°W)** — temperate-forest
+- **Roarra (5.7°S, 114.9°W)** — temperate-forest
 - **Gotoogootoo** — tropical-seasonal-forest
 - **Ngsoafngshavqzhaovgzhoavgshofnshav** — temperate-forest
 - **Gshofnshavnsaafnsoovgzhofgshoof** — temperate-forest
@@ -287,15 +287,15 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Rara (16.8°N, 13.0°E)** — temperate-forest
 - **Ngsoafngshavnshavnsa (21.0°N, 8.1°W)** — temperate-forest
 - **Gshofnshavqzhaovgzhoavnshaavnsa** — temperate-forest
-- **Gshofnshavqzhaovgzhoav** — temperate-forest
-- **Dogao** — temperate-forest
+- **Gshofnshavqzhaovgzhoav (6.4°S, 132.2°W)** — temperate-forest
+- **Bo (12.4°N, 109.3°W)** — temperate-forest
 - **Dotoa (13.4°N, 110.0°W)** — temperate-forest
 - **Nena (8.5°S, 115.9°W)** — temperate-forest
 - **Goodoogo (21.8°N, 107.6°W)** — temperate-forest
 - **Neneo (22.7°N, 108.4°W)** — temperate-forest
 - **Geoboge (7.6°S, 117.2°W)** — temperate-forest
 - **Tooda (5.7°N, 100.6°W)** — temperate-forest
-- **Gaabogootoododa** — temperate-forest
+- **Gaabogootoogoogoo** — temperate-forest
 - **Rororororroxara** — temperate-forest
 - **Dodoododatooda** — temperate-forest
 - **Dodatoadoo** — temperate-forest
@@ -309,12 +309,12 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Geoboge (19.0°N, 106.6°W)** — temperate-forest
 - **Neneo (19.9°N, 107.3°W)** — temperate-forest
 - **Rororororroxararaxo** — tropical-seasonal-forest
-- **Raarro (1.9°S, 112.1°W)** — temperate-forest
+- **Raxarro (1.9°S, 112.1°W)** — temperate-forest
 - **Dodo (10.5°N, 101.7°W)** — temperate-forest
 - **Xaora (7.6°S, 114.2°W)** — temperate-forest
 - **Xaora (8.5°S, 113.9°W)** — temperate-forest
-- **Qzhaovgzhov (5.8°S, 129.8°W)** — temperate-forest
-- **Qzhaovgzhovngzofnsof (6.4°S, 130.6°W)** — temperate-forest
+- **Qzhaovgzhoav (5.8°S, 129.8°W)** — temperate-forest
+- **Qzhaovgzhoavngzoafnsof (6.4°S, 130.6°W)** — temperate-forest
 - **Toa** — temperate-forest
 - **Raxarro (6.6°S, 114.5°W)** — temperate-forest
 - **Gshoovngzhav** — temperate-forest
@@ -352,11 +352,11 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Dotoagoodoogo (15.0°N, 4.9°E)** — temperate-forest
 - **Bo (7.6°S, 115.2°W)** — temperate-forest
 - **Rorarara** — temperate-forest
-- **Raarro (6.7°S, 108.4°W)** — temperate-forest
+- **Rora (6.7°S, 108.4°W)** — temperate-forest
 - **Xoxo (6.7°S, 107.4°W)** — temperate-forest
 - **Dodadotoa (14.4°N, 107.5°W)** — temperate-forest
-- **Qzhaovgzhov (20.7°N, 6.1°W)** — temperate-forest
-- **Gshoovngzhavqzhavgzhovngzofnsof** — temperate-forest
+- **Qzhaovgzhoav (20.7°N, 6.1°W)** — temperate-forest
+- **Gshoovngzhavgzhovngzofnsof** — temperate-forest
 - **Dotoa (14.3°N, 108.6°W)** — temperate-forest
 - **Doda (15.3°N, 109.3°W)** — temperate-forest
 - **Gzhofgshof** — temperate-forest
@@ -368,12 +368,12 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Dotoa (5.7°N, 99.6°W)** — temperate-forest
 - **Xoxo (1.9°S, 111.2°W)** — temperate-forest
 - **Dotoa (13.4°N, 106.8°W)** — temperate-forest
-- **Qzhaovgzhovngzofnsof (6.0°S, 126.7°W)** — temperate-forest
+- **Qzhaovgzhoavngzoafnsof (6.0°S, 126.7°W)** — temperate-forest
 - **Netea (8.5°S, 112.9°W)** — temperate-forest
 - **Toado (12.4°N, 107.2°W)** — temperate-forest
 - **Gzaxpsofdsho** — taiga
 - **Nsaafnsovnshavnsa** — temperate-forest
-- **Ngsoafngshavqzhavgzhov** — temperate-forest
+- **Ngsoafngshavqzhaovgzhoav** — temperate-forest
 - **Gshofnshavgshoovngzhaov (5.2°S, 132.2°W)** — temperate-forest
 - **Psoaxngshafgzhofgshofnshavnsa** — temperate-forest
 - **Nshaavnsansafnsov** — temperate-forest
@@ -386,7 +386,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Dodadodo** — temperate-forest
 - **Doda (15.6°N, 10.9°E)** — temperate-forest
 - **Xoxa (7.6°S, 113.2°W)** — temperate-forest
-- **Qzhaovgzhovdzov** — temperate-forest
+- **Qzhaovgzhoavdzoov** — temperate-forest
 - **Dodoodotoa (14.4°N, 105.4°W)** — temperate-forest
 - **Doda (13.4°N, 104.7°W)** — temperate-forest
 - **Dodagoodoogo (15.0°N, 9.9°E)** — temperate-forest

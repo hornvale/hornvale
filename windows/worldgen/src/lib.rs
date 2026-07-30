@@ -3879,21 +3879,29 @@ fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
         && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a karst conduit with enough drainage to surface as
-/// flow rather than sit as a dry cave or sinkhole: `hydro_at` is `Karst`
-/// and `drainage_at` clears `RIVER_MIN_DRAINAGE` — "where an aquifer meets
-/// the surface with flow" read through the reachable half of the
-/// lithology model (`Hydro::Spring` is structurally unreachable on every
-/// seed; see `.superpowers/sdd/followups.md` F5). Disclosure: `classify`
-/// (`water.rs`) routes any non-sink land cell at this drainage to `River`
-/// regardless of lithology, so a Karst cell that clears the floor is almost
-/// always ALSO a `River` cell (measured at seed 42: 137 Karst cells clear
-/// it, 132 of those are `WaterKind::River`) — `spring` is `river`
-/// partitioned by rock type, not an independent signal. The single
-/// definition of "is this cell a spring," shared the same way.
+/// Whether `cell` reads directly as `Hydro::Spring` — "where an aquifer
+/// meets the surface with flow." Previously a Karst proxy (`hydro_at ==
+/// Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because `Hydro::Spring`
+/// was analytically unreachable: `hydrogeology`'s aquifer gate was a
+/// carbonate-scale `porosity > 0.5` applied to clastic rock, whose porosity
+/// never exceeds 0.325, so the branch was preempted by Karst on every one
+/// of the thousand census seeds (The Witness, F5). `hydrogeology` now gates
+/// on a clastic-scale threshold, so `Spring` is reachable, and `spring` is
+/// the independent signal it was always meant to be rather than `river`
+/// partitioned by rock type — the disclosure that documented that overlap
+/// no longer applies.
+///
+/// Measured follow-up: reachable is not the same as common. At the
+/// production `GLOBE_LEVEL` (6), a 40-seed sweep never saw drainage clear
+/// `SPRING_DRAINAGE_THRESHOLD` (500.0) on a porosity-eligible cell — max
+/// drainage measured was 297. `Spring` was witnessed at the next mesh
+/// resolution up (level 7: 1 cell on 5 of 8 sampled seeds), so the fix is
+/// real, but at production resolution `Spring` may still read as vanishingly
+/// rare or absent on any given seed; this is left as a separate open
+/// question, not addressed by this repair. The single definition of "is
+/// this cell a spring," shared the same way.
 fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
-    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
-        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring
 }
 
 /// Whether `cell` sits on a real small landmass: a bounded flood-fill of
@@ -4280,10 +4288,8 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped: spring, a karst conduit with enough drainage to surface as
-    // flow. NOT `Hydro::Spring` (Task 4 review, Critical 1: structurally
-    // unreachable — see `.superpowers/sdd/followups.md` F5). Gate logic
-    // and the `spring ⊆ river` disclosure: [`is_spring_cell`].
+    // Steeped: spring, `Hydro::Spring` directly — reachable since The
+    // Witness's F5 repair. Gate logic: [`is_spring_cell`].
     for &cell in settled {
         if is_spring_cell(terrain, cell) {
             classes.insert("spring".to_string(), ExposureClass::Steeped);

@@ -4740,13 +4740,18 @@ fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId)
         && terrain.drainage_at(cell) >= LAB_MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a karst conduit carrying enough flow to surface: karst
-/// lithology at or above the river drainage floor. (`Hydro::Spring` is
-/// structurally unreachable on every seed, so the reachable half of the
-/// lithology model is what both readings gate on.)
+/// Whether `cell` reads directly as `Hydro::Spring`. Previously a Karst
+/// proxy (`hydro_at == Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because
+/// `Hydro::Spring` was analytically unreachable — `hydrogeology`'s aquifer
+/// gate was a carbonate-scale threshold applied to clastic rock, whose
+/// porosity never reached it, so the branch sat entirely inside the region
+/// Karst already claimed (The Witness, F5). `hydrogeology` now gates the
+/// clastic case on its own scale, so `Spring` is reachable and this reads
+/// the real variant — independently restated here rather than calling
+/// `worldgen`'s `is_spring_cell` (the lab does not depend on worldgen's
+/// window-local predicates).
 fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    terrain.hydro_at(cell) == Hydro::Karst
-        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+    terrain.hydro_at(cell) == Hydro::Spring
 }
 
 /// Whether the contiguous non-ocean landmass under `cell` stays within

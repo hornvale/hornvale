@@ -337,7 +337,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): bugbear has no exposure to 'snowfield' |
 | `south` | the compass point opposite north | Qaodoo | /qaodoo/ | Qaeneo | Qaeneo → no change → Qaodoo |
 | `spirit` | a lesser or unseen supernatural presence | Baa | /baa/ | Paa | Paa → no change → Baa |
-| `spring` | where water rises from the ground | Dogao | /dogao/ | Negao | Negao → no change → Dogao |
+| `spring` | where water rises from the ground | — | — | — | gap (experiential): bugbear has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): bugbear has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): bugbear has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Doo | /doo/ | Noe | Noe → no change → Doo |
@@ -524,7 +524,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gnoll has no exposure to 'snowfield' |
 | `south` | the compass point opposite north | Nshax | /nʃax/ | Nshax | Nshax → no change → Nshax |
 | `spirit` | a lesser or unseen supernatural presence | Ngsoavngsho | /ŋsoavŋʃo/ | Ngsoavngsho | Ngsoavngsho → no change → Ngsoavngsho |
-| `spring` | where water rises from the ground | Dzhaaf | /dʒaaf/ | Dzhaaf | Dzhaaf → no change → Dzhaaf |
+| `spring` | where water rises from the ground | — | — | — | gap (experiential): gnoll has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): gnoll has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): gnoll has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Gzo | /gzo/ | Gzo | Gzo → no change → Gzo |
@@ -898,7 +898,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hobgoblin has no exposure to 'snowfield' |
 | `south` | the compass point opposite north | Qaeneo | /qaeneo/ | Qaeneo | Qaeneo → no change → Qaeneo |
 | `spirit` | a lesser or unseen supernatural presence | Baa | /baa/ | Paa | Paa → lenition → Baa |
-| `spring` | where water rises from the ground | Negao | /negao/ | Negao | Negao → no change → Negao |
+| `spring` | where water rises from the ground | — | — | — | gap (experiential): hobgoblin has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): hobgoblin has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): hobgoblin has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Noe | /noe/ | Noe | Noe → no change → Noe |
@@ -1085,7 +1085,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): kobold has no exposure to 'snowfield' |
 | `south` | the compass point opposite north | Rooraaxaa | /rooraaxaa/ | Rooraaxaa | Rooraaxaa → no change → Rooraaxaa |
 | `spirit` | a lesser or unseen supernatural presence | Rorraa | /rorraa/ | Rrorraa | Rrorraa → clustersimplify → Rorraa |
-| `spring` | where water rises from the ground | Raarroa | /raarroa/ | Rraarroa | Rraarroa → clustersimplify → Raarroa |
+| `spring` | where water rises from the ground | — | — | — | gap (experiential): kobold has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): kobold has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): kobold has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Roxoo | /roxoo/ | Roxoo | Roxoo → no change → Roxoo |

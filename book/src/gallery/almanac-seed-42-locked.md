@@ -61,7 +61,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Pzofdzhaxnshavnsa** — tropical-seasonal-forest
 - **Beobee** — tropical-seasonal-forest
 - **Nane (37.3°S, 68.7°E)** — tropical-seasonal-forest
-- **Neteanena** — temperate-forest
+- **Nenatoa** — temperate-forest
 - **Geoge** — tropical-seasonal-forest
 - **Geoge (27.0°S, 77.1°W)** — temperate-forest
 - **Naoga** — tropical-seasonal-forest

@@ -22,16 +22,16 @@ Notable: the Great Delta, salt flats.
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
 Some 13% of the surface is habitable — land with water and a tolerable season.
 
-- **Daoka (20.2°N, 162.7°E)** — tropical-seasonal-forest
-- **Koodo** — tropical-seasonal-forest
-- **Daoka (18.4°N, 14.1°E)** — tropical-seasonal-forest
+- **Gootoo** — tropical-seasonal-forest
+- **Googoo** — tropical-seasonal-forest
+- **Gotoo (18.4°N, 14.1°E)** — tropical-seasonal-forest
 - **Toa** — tropical-rainforest
-- **Boa (22.8°S, 47.8°W)** — tropical-seasonal-forest
-- **Nookabetoe (14.3°N, 110.7°W)** — tropical-seasonal-forest
+- **Bootoe** — tropical-seasonal-forest
+- **Betoebootoe** — tropical-seasonal-forest
 - **Getoe (29.3°N, 100.4°E)** — tropical-seasonal-forest
 - **Gootoegetoenoneaboege** — tropical-seasonal-forest
-- **Roora (14.3°N, 111.8°W)** — tropical-seasonal-forest
-- **Roarro (24.8°S, 48.3°W)** — tropical-seasonal-forest
+- **Roarro (14.3°N, 111.8°W)** — tropical-seasonal-forest
+- **Xorro (24.8°S, 48.3°W)** — tropical-seasonal-forest
 - **Ngshoafngzafgshoovngzhaov** — tropical-seasonal-forest
 - **Betoe (15.3°N, 110.3°W)** — tropical-seasonal-forest
 - **Geoboge (29.0°S, 47.9°E)** — tropical-seasonal-forest
@@ -45,18 +45,18 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Toabeodoebe** — tropical-seasonal-forest
 - **Toa (26.8°N, 180.0°E)** — tropical-seasonal-forest
 - **Nanetane** — tropical-seasonal-forest
-- **Nzho (9.5°N, 110.5°W)** — tropical-seasonal-forest
+- **Psafqsax (9.5°N, 110.5°W)** — tropical-seasonal-forest
 - **Naneo (27.1°S, 48.7°E)** — tropical-seasonal-forest
 - **Toa (25.8°N, 180.0°E)** — tropical-seasonal-forest
-- **Bootoeboa** — tropical-seasonal-forest
-- **Naneo (29.4°N, 99.1°E)** — tropical-seasonal-forest
+- **Kooneotoa (11.4°N, 109.7°W)** — tropical-seasonal-forest
+- **Geoboge (29.4°N, 99.1°E)** — tropical-seasonal-forest
 - **Nooka (25.5°N, 179.0°W)** — tropical-rainforest
 - **Betoekooneo (10.5°N, 109.0°W)** — tropical-seasonal-forest
 - **Xorroxaxororororora** — temperate-forest
 - **Kooneotoa (11.5°N, 108.7°W)** — tropical-seasonal-forest
-- **Dzhaaf** — tropical-seasonal-forest
-- **Naoka (11.5°N, 107.6°W)** — tropical-seasonal-forest
-- **Nzhopsoaxngshaaf** — tropical-seasonal-forest
+- **Pzofdzhax** — tropical-seasonal-forest
+- **Beobee** — tropical-seasonal-forest
+- **Psafqsaxpzhofmshof (8.5°N, 110.8°W)** — tropical-seasonal-forest
 - **Koone (11.4°N, 111.8°W)** — tropical-seasonal-forest
 - **Toa (12.4°N, 111.4°W)** — tropical-seasonal-forest
 - **Teonatoa (28.1°N, 134.6°W)** — temperate-forest
@@ -66,7 +66,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Nooga (28.2°N, 101.0°E)** — tropical-rainforest
 - **Roarro (16.2°N, 112.1°W)** — tropical-seasonal-forest
 - **Roarro (16.1°N, 113.2°W)** — tropical-seasonal-forest
-- **Netea** — temperate-forest
+- **Nena (29.5°N, 97.8°E)** — temperate-forest
 - **Getoe (28.4°N, 98.4°E)** — tropical-seasonal-forest
 - **Boataneobetoe** — tropical-seasonal-forest
 - **Nzho (28.7°N, 17.2°E)** — tropical-seasonal-forest
@@ -79,9 +79,9 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Toadotoa** — temperate-forest
 - **Rorororora (24.6°N, 116.5°W)** — temperate-forest
 - **Rooro** — temperate-forest
-- **Nzho (10.5°N, 108.0°W)** — tropical-seasonal-forest
+- **Psafqsax (10.5°N, 108.0°W)** — tropical-seasonal-forest
 - **Dodo** — temperate-forest
-- **Naoka (14.3°N, 109.6°W)** — tropical-seasonal-forest
+- **Boa (14.3°N, 109.6°W)** — tropical-seasonal-forest
 - **Gshoovngzhavgzaf** — savanna
 - **Boa (15.3°N, 109.3°W)** — tropical-seasonal-forest
 - **Bootoebeodoebe** — tropical-seasonal-forest
@@ -126,14 +126,14 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Dodatoa (29.6°N, 95.3°E)** — temperate-forest
 - **Ngshoafngzaf (11.5°N, 106.5°W)** — tropical-seasonal-forest
 - **Betoe (15.2°N, 114.6°W)** — tropical-seasonal-forest
-- **Pzofdzhaxpzhofmshof** — tropical-seasonal-forest
+- **Psoaxngshafpsav** — tropical-seasonal-forest
 - **Gootoe** — temperate-forest
 - **Nookabetoe (18.1°N, 109.2°W)** — tropical-seasonal-forest
 - **Naoga** — tropical-seasonal-forest
-- **Toagetoe (29.0°S, 51.4°E)** — tropical-seasonal-forest
+- **Toagetoe** — tropical-seasonal-forest
 - **Dodadotoatoa** — temperate-forest
 - **Ngshoafngzafnzho (24.7°N, 16.7°E)** — tropical-seasonal-forest
-- **Pzofdzhaxngshoafngzaf** — tropical-seasonal-forest
+- **Dshoxngsoxnzho** — tropical-seasonal-forest
 - **Ngshoafngzafnshaavnsa** — tropical-seasonal-forest
 - **Ngshoafngzaf (12.3°N, 115.6°W)** — tropical-seasonal-forest
 - **Betoe (11.3°N, 116.0°W)** — tropical-seasonal-forest
@@ -147,7 +147,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Nena (27.0°N, 140.3°W)** — temperate-forest
 - **Psaavpzhofmshof** — tropical-rainforest
 - **Daokagotoo** — tropical-seasonal-forest
-- **Nzhopsaavnshaavnsa** — tropical-seasonal-forest
+- **Nshaavnsangshoafngzafnsovmzhoav** — tropical-seasonal-forest
 - **Dodatoa (28.6°N, 95.9°E)** — temperate-forest
 - **Raxarro (26.3°N, 120.3°W)** — temperate-forest
 - **Dadoo** — tropical-seasonal-forest
@@ -156,12 +156,12 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Neega** — savanna
 - **Toagoa** — tropical-seasonal-forest
 - **Qaneo** — savanna
-- **Gootoe** — tropical-seasonal-forest
+- **Gooneo** — tropical-seasonal-forest
 - **Xoxaxaxoraxarro** — temperate-forest
 - **Xoxa (23.4°N, 121.3°W)** — temperate-forest
 - **Rorrarro (22.8°N, 120.4°W)** — temperate-forest
 - **Gooneo** — savanna
-- **Negao** — temperate-forest
+- **Toa (26.8°N, 138.1°W)** — temperate-forest
 - **Toa (28.6°N, 139.1°W)** — temperate-forest
 - **Rorororora (22.1°N, 119.6°W)** — temperate-forest
 - **Ngshoafngzafpsafqsaax** — tropical-seasonal-forest
@@ -186,7 +186,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Nzho (8.6°N, 106.6°W)** — tropical-seasonal-forest
 - **Neneoteona** — temperate-forest
 - **Ngshoafngzafnzho (27.3°N, 15.6°E)** — tropical-seasonal-forest
-- **Ngshoafngzafpsaavpsoaxngshaaf** — tropical-seasonal-forest
+- **Psaavpzofdzhaxdshoxngsox** — tropical-seasonal-forest
 - **Beo (28.6°N, 129.8°W)** — alpine
 - **Geoboegenoogatoa** — tropical-rainforest
 - **Geoboge (27.8°S, 54.5°E)** — tropical-seasonal-forest
@@ -216,11 +216,11 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Nena (25.8°N, 134.9°W)** — temperate-forest
 - **Toa (21.2°N, 162.6°E)** — tropical-seasonal-forest
 - **Qadoo** — tropical-seasonal-forest
-- **Gotootoa** — tropical-seasonal-forest
+- **Gotootoa (20.5°N, 165.7°E)** — tropical-seasonal-forest
 - **Daoka (20.0°N, 164.7°E)** — tropical-seasonal-forest
 - **Goa of the bugbears** — tropical-seasonal-forest
 - **Gotoo (19.3°N, 160.8°E)** — tropical-seasonal-forest
-- **Getoe (24.1°N, 139.4°W)** — tropical-seasonal-forest
+- **Toa (24.1°N, 139.4°W)** — tropical-seasonal-forest
 - **Xaxoxorro** — temperate-forest
 - **Daoka (26.4°N, 98.4°E)** — tropical-seasonal-forest
 - **Doda** — temperate-forest
@@ -230,8 +230,8 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Xorro (15.3°N, 111.4°W)** — tropical-seasonal-forest
 - **Naokabetoe** — tropical-seasonal-forest
 - **Xaxo (26.6°N, 119.1°W)** — temperate-forest
-- **Geogegone** — tropical-seasonal-forest
-- **Toagetoe (25.2°N, 139.4°W)** — tropical-seasonal-forest
+- **Naneogetoe** — tropical-seasonal-forest
+- **Toageogee** — tropical-seasonal-forest
 - **Gooneogeoboege** — savanna
 - **Toa (30.9°S, 32.9°E)** — savanna
 - **Nzhonshaavnsa** — tropical-seasonal-forest
@@ -254,7 +254,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Pzhofmshofngzaf (23.7°N, 16.6°E)** — tropical-seasonal-forest
 - **Nzhodshoxngsoxngshoafngzaf** — tropical-seasonal-forest
 - **Daoka (20.3°N, 160.7°E)** — tropical-seasonal-forest
-- **Gooneogootoegeogee** — savanna
+- **Gooneogeogeegootoe** — savanna
 - **Dzadshoxnzhof** — savanna
 - **Ngshoafngzafdshoxngsox (6.6°N, 110.5°W)** — tropical-seasonal-forest
 - **Rarro** — alpine
@@ -281,7 +281,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Naneo (27.1°S, 52.1°E)** — tropical-seasonal-forest
 - **Rora** — temperate-forest
 - **Ngshoafngzafdsonsof** — alpine
-- **Psafqsax** — tropical-seasonal-forest
+- **Psafqsax (5.7°N, 112.8°W)** — tropical-seasonal-forest
 - **Nzhopsafqsaax** — tropical-seasonal-forest
 - **Ngshoafngzafnzho (5.7°N, 109.8°W)** — tropical-seasonal-forest
 - **Getoenaoga** — tropical-seasonal-forest
@@ -320,7 +320,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Ngshoafngzaf (8.6°N, 107.7°W)** — tropical-seasonal-forest
 - **Nzhongshoafngzaf** — tropical-seasonal-forest
 - **Koone (16.0°N, 115.3°W)** — tropical-seasonal-forest
-- **Psafqsaxpzhofmshof** — tropical-seasonal-forest
+- **Psafqsaxpzhofmshof (7.6°N, 107.0°W)** — tropical-seasonal-forest
 - **Betoenooka** — tropical-seasonal-forest
 - **Ngshoafngzaf (8.6°N, 108.7°W)** — tropical-seasonal-forest
 - **Teonatoa** — temperate-grassland
@@ -351,7 +351,7 @@ Some 13% of the surface is habitable — land with water and a tolerable season.
 - **Nzhopsaav (8.6°N, 104.5°W)** — tropical-seasonal-forest
 - **Psaav (8.6°N, 103.5°W)** — tropical-seasonal-forest
 - **Gzhofgshofngzafnshavnsa** — temperate-grassland
-- **Gootoodogao** — tropical-seasonal-forest
+- **Gotootoa (20.4°N, 96.9°E)** — tropical-seasonal-forest
 - **Ngshoafngzaf** — savanna
 - **Ngshoafngzaf** — temperate-grassland
 - **Beo (30.8°N, 132.9°W)** — alpine
@@ -401,15 +401,15 @@ The residue's dominant hazard is structural collapse — 1510 layers so afflicte
 ## The People
 
 The land holds 334 settlement(s).
-The chief bugbear settlement, Daoka, holds 88 souls amid tropical-seasonal-forest.
+The chief bugbear settlement, Gootoo, holds 88 souls amid tropical-seasonal-forest.
 The chief gnoll settlement, Ngshoafngzafgshoovngzhaov, holds 102 souls amid tropical-seasonal-forest.
 The chief goblin settlement, Toa, holds 82 souls amid tropical-rainforest.
 The chief hobgoblin settlement, Getoe, holds 102 souls amid tropical-seasonal-forest.
-The chief kobold settlement, Roora, holds 79 souls amid tropical-seasonal-forest.
+The chief kobold settlement, Roarro, holds 79 souls amid tropical-seasonal-forest.
 
-The bugbear lair of **Daoka**, population 88.
+The bugbear lair of **Gootoo**, population 88.
 
-Daoka lives by farming.
+Gootoo lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
@@ -431,15 +431,15 @@ Getoe lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
-The kobold warren of **Roora**, population 79.
+The kobold warren of **Roarro**, population 79.
 
-Roora lives by farming.
+Roarro lives by farming.
 Its roles, lowest to highest: digger, keeper, elders.
 The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
 ## The Gods
 
-In the lair of **Daoka**, an organized priesthood tends its own pantheon:
+In the lair of **Gootoo**, an organized priesthood tends its own pantheon:
 
 > Toatoakoa the Kvotoakoa is: Toatoakoa the Kvotoakoa is always watching. That's how it's always been. That's how it's always been. Toatoakoa is a great one among the gods.
 >
@@ -479,7 +479,7 @@ In the legion of **Getoe**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *heat*
 
-In the warren of **Roora**, an organized priesthood tends its own pantheon:
+In the warren of **Roarro**, an organized priesthood tends its own pantheon:
 
 > Raaxo Raaxo is: Raaxo Raaxo is always watching. That's how it's always been. That's how it's always been. Raaxo is a great one among the gods.
 >
