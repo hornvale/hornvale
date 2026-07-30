@@ -279,6 +279,7 @@
 - [The Wearing](./chronicle/the-wearing.md)
 - [The Cistern](./chronicle/the-cistern.md)
 - [The Toponym](./chronicle/the-toponym.md)
+- [The Siding](./chronicle/the-siding.md)
 
 # Appendix: The Frontier
 

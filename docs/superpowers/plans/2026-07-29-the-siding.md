@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Closed 2026-07-29.** Tasks 1–5 done; **Task 6 skipped — A2 measured CLEAN**, so a host guard would have protected nothing; Task 7 partial (A3 unmeasurable until four calibration pins are resolved; worktree migration deferred with reasons). See `docs/retrospectives/the-siding.md`.
+
 **Goal:** Make lefford a heavy-tier-only box whose long jobs serialize on one
 first-come-first-served claim, and move campaign worktrees and the commit gate
 to the Mac.

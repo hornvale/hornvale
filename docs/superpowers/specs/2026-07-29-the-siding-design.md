@@ -1,6 +1,6 @@
 # The Siding — Design
 
-**Status:** drafted, awaiting G3 · **Date:** 2026-07-29 ·
+**Status:** approved at G3, executed and closed 2026-07-29 (Task 6 skipped by measurement; A3 deferred) · **Date:** 2026-07-29 ·
 **Campaign:** The Siding
 
 Placement, not mechanism. This campaign decides *which machine runs which

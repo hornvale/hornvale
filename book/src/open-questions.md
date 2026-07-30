@@ -28,6 +28,24 @@ artifact has no external anchor — a rendered page, say — drift-checking it
 buys stability and nothing else. The Named's defect sat in a drift-checked
 artifact, in plain English, for eight days of green runs.
 
+A second sharpening, and a different failure than the first (The Siding,
+2026-07-29): **a check is worth only the configurations it actually runs in.**
+The Named's lesson was that a drift check has no anchor; this one is that a
+drift check can have an anchor and still never fire, because the command that
+*regenerates* an artifact and the command that *verifies* it are never invoked
+together. The census sat stale for 139 commits — wrong in three missing
+columns and twenty-one drifted metrics — while every gate ran green, because
+`make gate` `#[ignore]`s the tier that rebuilds it and `make rebaseline` never
+touches it. The Sounding's wall-clock timings sat inside the drift-checked
+tree for the mirror-image reason: nothing that rewrites them is ever followed
+by the diff. Both artifacts were anchored and both were unobserved. The same
+campaign wrote two checks into its own spec that could not have failed — a
+zero-diff over a tree containing nanosecond timings, and a claim-status probe
+that answered "no" from the wrong machine — and caught both only by running
+them. So the gradient has a floor beneath checkability: a claim is only as
+checkable as the *pairing* of its generator with its verifier, and an unpaired
+check scores as unchecked no matter how good its anchor.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

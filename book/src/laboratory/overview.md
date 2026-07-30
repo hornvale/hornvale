@@ -73,9 +73,13 @@ shared seed range, and its calibrations assert that the twin is
 structurally indistinguishable from the goblin: at chance on blind
 attribution, within the sampling bound on every distribution. It backs
 [Study 009, the Census of the Meeting](./study-009.md), the Year-2
-capstone. Both live studies are regenerated locally in ~7 minutes at the
+capstone. Both live studies are regenerated locally at the
 pre-merge close (`scripts/census-run.sh`, [decision
-0063](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0063-census-regen-is-local-again.md), superseding the AWS-only 0046; serialized against other heavy runs by [decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md)), then drift-checked and CI-probed on every build.
+0063](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0063-census-regen-is-local-again.md), superseding the AWS-only 0046; serialized against other heavy runs by [decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md), which [decision 0086](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0086-the-heavy-tier-runs-on-the-canonical-box.md) extends to the heavy tier), then drift-checked and CI-probed on every build.
+A full run measured **828s wall** on the canonical box (2026-07-29,
+`cpu_ratio` 15.49) — roughly half of it a single-core preamble before the
+census phase begins, since `regenerate-artifacts.sh` invokes the binary 37
+times in sequence and only the census phase parallelises.
 
 Everything else the census family has produced is frozen, not deleted.
 `branches-family` (1,000 seeds, the goblinoid-phylogeny battery —
@@ -108,12 +112,21 @@ deepened its cost grew to minutes, so it now runs in the heavy tier
 (`make gate-full`) rather than in the commit gate: a worldgen change that
 moves a census surfaces there and in CI's regenerate-and-diff, not on the
 developer's next local test run. The full census fixtures themselves are
-refreshed once per campaign — locally, in ~7 minutes (`scripts/census-run.sh`), just
+refreshed once per campaign — locally (`scripts/census-run.sh`), just
 before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
 cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
 (decision 0063). The everyday commit gate still skips censuses to stay under
-five minutes; the pre-merge refresh keeps the committed rows current with
-`main` rather than lagging.
+five minutes; the pre-merge refresh is what keeps the committed rows current
+with `main`.
+
+That last sentence is a *convention*, and it has failed. [The
+Siding](../chronicle/the-siding.md) found the census stale for **139
+commits** — three columns missing and twenty-one drifted — because The
+Wearing deferred its regen in a merge message at close and nothing consumed
+that sentence. The staleness check above would have caught it, and did: it had
+been failing on `main` the whole time, unseen, because the heavy tier is
+`#[ignore]`d out of the commit gate. Two mechanisms both pointed at the
+problem and neither was in a configuration where anyone would see it.
 
 When a census *does* move, the reviewable surface is `make lab-diff
 STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which
