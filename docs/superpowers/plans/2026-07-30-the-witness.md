@@ -223,6 +223,76 @@ commit, that is correct — say so and move on rather than forcing a commit.**
 
 ---
 
+### Task 1b: Build the funnel instrument H1 has no baseline without
+
+**Added 2026-07-30 after Task 1 returned.** Task 1 Step 4 anticipated this and
+it happened: **LANG-11's 14/650 is not reproducible.** The chronicle says the
+funnel was measured "across four sampled worlds" and **never records which four
+seeds**, and no committed test or study reproduces it. A preregistered
+prediction whose readout cannot be recomputed is a test that asserts nothing, so
+H1 is unevaluable until this task exists.
+
+Task 1 also replaced the register's four-seed severity anecdote with a rate over
+**1000 wear cascades** (200 seeds × the five placed peoples), and the register's
+figures do not survive it:
+
+```
+wear    (1-2 rules): contains=249  leads=184  entire-cascade=98   inert-slots=244
+settled (2-4 rules): contains=423  leads=170  entire-cascade=0    inert-slots=340
+```
+
+The register's "8 of 20 / leads 7 / entire 3" (40% / 35% / 15%) reads high
+against 24.9% / 18.4% / 9.8%; the measured rates sit within a point of the
+uniform-draw prediction (23.6% / 16.7% / 8.3%), so the register's numbers are a
+small-sample excursion, not a different mechanism. **The severity claim is
+therefore softer than the register states — and the real headline is one the
+register never computed: 584 of the 672 tonogenesis rules drawn across both
+cascade types (≈87%) sit before any merger and are the identity. In the wear
+regime alone it is 244 of 249 — ≈98%.** That, not the entire-cascade count, is
+the lever's true size.
+
+**Files:**
+- Create: `windows/lab/tests/wear_funnel.rs`
+
+- [ ] **Step 1: Write the instrument as a test with EXPLICIT seeds**
+
+Report every rung of the chronicle's funnel — morphemes in settlement names,
+those clearing the frequency floor, those the drawn wear cascade alters, those
+the survival guard rejects, and those carrying surviving wear — over a **named,
+committed seed list** (`const FUNNEL_SEEDS: [u64; 4] = [0, 1, 2, 3];`, with a
+doc comment saying the seed list is the instrument's identity and changing it
+invalidates every comparison against it).
+
+Assert only a **loose floor** (the funnel is non-empty and monotonically
+narrowing). This is an instrument, not a calibration — a tight assertion here
+would be a golden that freezes whatever the pipeline currently does, which is
+the drift-checks-freeze-bugs failure.
+
+- [ ] **Step 2: Run it and record the pre-repair funnel**
+
+Run: `cargo nextest run -p hornvale-lab --test wear_funnel -- --nocapture 2>&1 | tee /tmp/hv-witness-t1b.txt`
+
+Record every rung in `.superpowers/sdd/baseline-report.md` as **H1's baseline**,
+replacing the unreproducible 14/650. State plainly that the new baseline is not
+comparable to 14/650, because the seeds differ and The Wearing's are unknown.
+
+- [ ] **Step 3: Commit**
+
+```bash
+cargo fmt && cargo clippy -p hornvale-lab --all-targets -- -D warnings
+git add windows/lab/tests/wear_funnel.rs
+git commit -m "test(lab): the wear funnel becomes reproducible
+
+The Wearing published a 940/611/53/40/14 funnel measured across four sampled
+worlds and never recorded which four. Nothing on main reproduces it, so H1
+had no baseline to be evaluated against. Seeds are now named in source and
+are the instrument's identity."
+```
+
+**Task 9 reads this instrument, not the chronicle's number.**
+
+---
+
 ### Task 2: F13 — teach the lab duplicate what it never learned
 
 **Files:**
