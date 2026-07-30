@@ -113,6 +113,14 @@ roughly 4×; a shared baseline would alarm on every cross-machine run.
 **Whole-suite:** fail when the run's total exceeds its own recorded total by
 more than 25%.
 
+> Changed during execution, with the owner's approval: the whole-suite alarm
+> compares the INTERSECTION of test ids present on both sides, not each
+> side's raw total. Raw totals would trip on pure test-count growth (this
+> repo adds tests constantly) and could hide a real regression in the
+> survivors behind removed tests (fewer rows can shrink the current total
+> even while the surviving tests got slower). See `suite_shift` in
+> `windows/lab/src/timings.rs`.
+
 The second is load-bearing and easy to omit. The gate's 234 s → 934.5 s creep
 was almost certainly *not* any single test doubling — it is 2548 tests each
 growing a little, plus new tests arriving. **A per-test alarm cannot see death
@@ -124,12 +132,23 @@ baseline with no test (removed — prune), and a host with no baseline file
 
 ### 3d. The alarm must not fire on contention
 
-Enforce only when the run holds the box claim
-(`hornvale_lab::census_claim`); otherwise record and stay quiet. Today's
-evidence: `scene_api_cost`'s genesis step read **19,722 ms contended** and
-**3,818 ms quiet**, a 5.2× swing that would false-alarm every per-test budget
-in the suite. This degrades gracefully without the queue (campaign D) — it
-simply records more and enforces less.
+Enforce by default; suppress only when
+`hornvale_lab::census_claim::current_holder()` shows a LIVE holder on this
+box — evidence that some other heavy job (a census, the heavy tier) is
+running right now and timings are contended. Today's evidence:
+`scene_api_cost`'s genesis step read **19,722 ms contended** and **3,818 ms
+quiet**, a 5.2× swing that would false-alarm every per-test budget in the
+suite. This degrades gracefully without the queue (campaign D) — it simply
+suppresses more and enforces less while the box is busy.
+
+> Changed during execution, with the owner's approval: the polarity above is
+> inverted from the original draft, which read "enforce only when the run
+> HOLDS the box claim." `make ci` never acquires the claim itself, so that
+> reading meant an ordinary quiet machine — the overwhelmingly common case —
+> would never enforce. The claim's presence, not its absence, is the signal
+> that timings are untrustworthy: enforce by default, suppress on evidence
+> of contention. See commit `38b28474` and `cli/tests/timings_alarm.rs`'s
+> `enforcement_is_appropriate`.
 
 ### 3e. `make ci`
 
@@ -150,7 +169,10 @@ of this campaign.
   suite alarm goes red. Asserting an alarm exists is not asserting it alarms.
 - The alarm **stays quiet** on a clean re-run.
 - A new test (absent from baseline) does not fail the run.
-- A run without the box claim records but does not enforce.
+- A run with a live box claim (evidence of contention) records but does not
+  enforce; an ordinary run with no claim enforces. (Changed during
+  execution alongside §3d — see the note there: the original bullet had this
+  backwards.)
 - The raw-output test fails when the output file is deleted.
 - `make ci` is green on a quiet Mac, and its summary names every file it
   wrote.

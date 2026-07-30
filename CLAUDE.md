@@ -77,17 +77,19 @@ make doctor        # the repo self-map — run this first in a fresh session
 #                     # suite's cost moved over time; a red run leaves it
 #                     # untouched, and re-recording a regression is deliberate
 #                     # (re-record in the same commit that caused it).
-#                     # ENFORCEMENT NEEDS A HELD BOX CLAIM: the alarm only
-#                     # asserts when `hornvale_lab::census_claim::current_holder()`
-#                     # names THIS host (HV_CENSUS_CLAIM_PATH or the default
-#                     # /tmp/hv-census.claim) — nothing in `make ci` acquires
-#                     # that claim itself, so on an ordinary machine with no
-#                     # concurrent heavy run it always records and never
-#                     # enforces. Verified both branches by hand: a claim file
-#                     # naming this host makes a divided-by-ten baseline alarm
-#                     # (RED); a claim path pointed at a nonexistent file makes
-#                     # the same divided baseline record-only (GREEN, with a
-#                     # stderr line naming the suppressed shift count).
+#                     # ENFORCES BY DEFAULT; SUPPRESSES ONLY ON CONTENTION: the
+#                     # alarm asserts unless `hornvale_lab::census_claim::current_holder()`
+#                     # (HV_CENSUS_CLAIM_PATH or the default /tmp/hv-census.claim)
+#                     # reports a LIVE holder — `make ci` acquires no claim
+#                     # itself, so a claim present can only mean some OTHER
+#                     # heavy job (a census, the heavy tier) is running here
+#                     # right now and timings are contended and meaningless.
+#                     # On an ordinary quiet machine there is no claim, so it
+#                     # always enforces. `ci-record` carries the matching
+#                     # guard: it refuses to write the baseline at all when the
+#                     # box is contended, so a contended run can neither false-
+#                     # alarm nor poison the baseline it would compare against
+#                     # next time.
 #   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 # nextest is a dev tool, not a workspace dependency (decision 0040); install
