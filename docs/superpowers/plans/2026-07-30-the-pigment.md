@@ -1778,11 +1778,16 @@ fn test_astronomy_seed() -> hornvale_kernel::Seed {
 }
 ```
 
-**Before running:** confirm `hornvale_astronomy::streams::ROOT` is public
-(`grep -n "ROOT" domains/astronomy/src/streams.rs`). If it is crate-private,
-add a small `pub fn astronomy_seed(world_seed: Seed) -> Seed` to the
-astronomy crate rather than widening a stream constant — stream labels are
-a save-format contract and their visibility should not be loosened casually.
+**Verified, so nothing to check here:** `hornvale_astronomy::streams::ROOT`
+is public — `windows/worldgen/src/lib.rs:12` already imports it as
+`streams::ROOT as ASTRONOMY_STREAM_ROOT`, and uses it at `lib.rs:6804` as
+`world.seed.derive(ASTRONOMY_STREAM_ROOT)`. That derivation is the one a
+world's star is actually built from, so the test helper above matches
+production rather than inventing a parallel seeding path.
+
+(The constant is emitted by the `stream_labels!` macro, which is why
+`grep "pub const ROOT"` finds nothing in `domains/astronomy/src/streams.rs`
+— the declaration is at `streams.rs:11`, inside the macro invocation.)
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
