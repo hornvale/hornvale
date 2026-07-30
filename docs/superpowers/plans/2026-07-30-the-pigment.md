@@ -48,6 +48,21 @@ derived at the emit boundary, so no epoch is owed.
 - **Committed artifacts must not move.** `book/src/gallery/generated/surrounds-seed-42/*.txt`
   and `book/src/gallery/scene-surrounds-seed-42.json` are drift-checked;
   Task 8 and Task 9 both assert they are byte-identical.
+- **The suite watches its own clock** (decision 0088, landed in The
+  Timekeeper on 2026-07-30 — absorbed into this branch at `391d9430`).
+  `make ci` runs the workspace under the `ci` nextest profile, alarms on a
+  per-test or whole-suite duration shift against
+  `docs/timings/test-baseline-<host>.tsv`, then rewrites that baseline. **This
+  campaign adds roughly forty tests across five crates, so it will move the
+  whole-suite duration.** That is a regression the baseline must absorb
+  *deliberately*: 0088's rule is to re-record in the same commit that caused
+  the shift. Task 10 does this.
+- **`make gate` is ~15 min, not the ~4 min decision 0040 budgeted** (934.5 s
+  measured on a quiet Mac, 2026-07-29). Iterate with the per-crate commands
+  each task gives; the full gate belongs at the end, not in the loop.
+- **Stagger gates.** A single `make ci` already reports `cpu_ratio` 8.25–8.50
+  on ten cores, so two concurrent gates cost about thirty minutes each and
+  both look hung. Check that no other session is gating before starting one.
 
 ## File Structure
 
@@ -2485,15 +2500,51 @@ check gates only the generated half — so grep the printf paragraphs in
 make gate
 ```
 
-Expected: PASS. This is a pub-boundary change across five crates, so the
-scoped gates are not sufficient — memory
-`full-gate-before-pushing-boundary-changes`.
+Expected: PASS, ~15 min. This is a pub-boundary change across five crates,
+so the scoped gates are not sufficient — memory
+`full-gate-before-pushing-boundary-changes`. Confirm no other session is
+gating first.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Re-record the duration baseline**
+
+This campaign adds roughly forty tests, so the whole-suite duration moves.
+Decision 0088's rule is that a deliberate regression is re-recorded **in the
+same commit that caused it** — so this runs here, at the close, not earlier.
+
+```bash
+make ci
+```
+
+Two outcomes, and they are handled differently:
+
+- **The alarm fires on the whole-suite duration.** Expected. `make ci`
+  re-records only when the alarm passed, so a fired alarm leaves the
+  baseline untouched. Read the reported delta, confirm it is consistent
+  with the tests this campaign added (roughly forty cheap unit tests plus
+  two world-building integration tests — the world builds are the expensive
+  part), then re-record deliberately:
+
+  ```bash
+  cargo run --quiet -p hornvale -- ci-record
+  ```
+
+- **The alarm fires on a *per-test* duration for a test this campaign did
+  not touch.** That is not this campaign's regression to absorb. Do not
+  re-record it away. Report it.
+
+**Do not run this on a contended box.** The guard only asks whether a census
+claim is held, so parallel agent sessions are invisible to it and it will
+happily enforce against meaningless timings — it did exactly that at
+loadavg 42–63 during The Timekeeper's own runs. Check `uptime` first and
+distrust a red alarm from a busy machine.
+
+Commit the moved baseline together with the campaign's final state.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 cargo fmt
-git add book/ docs/retrospectives/ docs/audits/
+git add book/ docs/retrospectives/ docs/audits/ docs/timings/
 git commit -m "docs(the-pigment): chronicle, registry rows, retrospective
 
 Records both preregistered claims with their measured values, and the six
@@ -2512,6 +2563,11 @@ real, and sky colour is a computed quantity rather than a word."
 - [ ] `make gate` green.
 - [ ] `make rebaseline` produces an empty diff across `book/src/gallery/`,
       `book/src/reference/`, `book/src/laboratory/`, `docs/audits/`.
+- [ ] `make ci` run on a quiet box, and the duration baseline re-recorded
+      deliberately in the same commit as the tests that moved it (0088).
+- [ ] `.superpowers/sdd/decision-ledger.md` promoted into the retrospective
+      **before** the worktree is torn down — the scratch directory is
+      git-ignored and dies with the worktree.
 - [ ] Both preregistered claims measured, with their values in the
       chronicle — **a null is a finding, not a failure**.
 - [ ] A reviewer has broken each claim test deliberately and confirmed it
