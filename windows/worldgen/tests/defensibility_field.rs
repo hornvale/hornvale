@@ -6,6 +6,7 @@
 use hornvale_kernel::CellId;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use hornvale_worldgen::defensibility_for_test as defensibility;
+use hornvale_worldgen::weakest_point_defensibility;
 
 fn link(conductances: &[(EdgeKind, f64)]) -> ConnectionGraph {
     let mut g = ConnectionGraph::new(2);
@@ -95,4 +96,98 @@ fn defensibility_is_deterministic_across_recomputation() {
     for _ in 0..8 {
         assert_eq!(defensibility(&g, CellId(0), CellId(1)), first);
     }
+}
+
+// --- The Contour (Task 4, round 2): the per-cell weakest-point view. ---
+
+#[test]
+fn weakest_point_defensibility_is_the_minimum_over_distinct_approaches() {
+    // A 3-node star: cell 0 approaches hub 2 by an easy water lane (low
+    // defensibility), cell 1 approaches the SAME hub by a dear, near-
+    // impassable adjacency (high defensibility). The weakest point is the
+    // EASY approach — the minimum, not the maximum or a blend of the two.
+    let mut g = ConnectionGraph::new(3);
+    g.add_edge(
+        CellId(0),
+        Edge {
+            to: CellId(2),
+            kind: EdgeKind::WaterRoute,
+            conductance: 1.0,
+        },
+    );
+    g.add_edge(
+        CellId(1),
+        Edge {
+            to: CellId(2),
+            kind: EdgeKind::Adjacency,
+            conductance: 1.0e-9,
+        },
+    );
+
+    let via_0 = defensibility(&g, CellId(0), CellId(2));
+    let via_1 = defensibility(&g, CellId(1), CellId(2));
+    assert!(
+        via_0 < via_1,
+        "test setup: approach 0 must be easier (less defensible) than approach 1"
+    );
+
+    let weakest = weakest_point_defensibility(&g, CellId(2));
+    assert_eq!(
+        weakest, via_0,
+        "the weakest point is the MINIMUM (easiest) approach, not the dear one"
+    );
+}
+
+#[test]
+fn weakest_point_defensibility_ignores_a_parallel_easier_route_between_the_same_pair() {
+    // Two neighbours, 0 and 1, both reach hub 2. Neighbour 0 additionally
+    // carries a second, easier PARALLEL route to 2 (mirroring the 6.7% of
+    // real cells with an Adjacency+LandRoute pair). `defensibility` already
+    // resolves that parallel pair by MAXIMUM conductance (the easier of the
+    // two roads to 0 wins); this view must then take the MINIMUM across the
+    // two DISTINCT neighbours 0 and 1, not re-apply a minimum inside the
+    // parallel pair too.
+    let mut g = ConnectionGraph::new(3);
+    g.add_edge(
+        CellId(0),
+        Edge {
+            to: CellId(2),
+            kind: EdgeKind::Adjacency,
+            conductance: 1.0e-9,
+        },
+    );
+    g.add_edge(
+        CellId(0),
+        Edge {
+            to: CellId(2),
+            kind: EdgeKind::WaterRoute,
+            conductance: 1.0,
+        },
+    );
+    g.add_edge(
+        CellId(1),
+        Edge {
+            to: CellId(2),
+            kind: EdgeKind::Adjacency,
+            conductance: 0.5,
+        },
+    );
+
+    let via_0 = defensibility(&g, CellId(0), CellId(2));
+    let via_1 = defensibility(&g, CellId(1), CellId(2));
+    assert_eq!(weakest_point_defensibility(&g, CellId(2)), via_0.min(via_1));
+}
+
+#[test]
+fn weakest_point_defensibility_is_def_max_with_no_traversable_approach() {
+    // An isolated cell (no edges at all) reads exactly as maximally defended
+    // as `defensibility` itself reads a nonexistent link — the same ceiling,
+    // read without hard-coding its value here.
+    let isolated = ConnectionGraph::new(1);
+    let no_edge_at_all = link(&[]);
+    assert_eq!(
+        weakest_point_defensibility(&isolated, CellId(0)),
+        defensibility(&no_edge_at_all, CellId(0), CellId(1)),
+        "an unreachable cell must read as maximally (vacuously) defended"
+    );
 }

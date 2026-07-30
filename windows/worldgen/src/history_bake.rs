@@ -153,6 +153,49 @@ pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId)
     defensibility(graph, from, to)
 }
 
+/// The per-cell VIEW over [`defensibility`] (spec §2.4): the MINIMUM of
+/// `defensibility(graph, from, cell)` over every `from` with a traversable
+/// approach into `cell` — its weakest point, the quantity Ammann's envelope
+/// model cares about. A place is only as defensible as its worst way in,
+/// which is the same principle the mechanism itself applies from the other
+/// end: `defensibility` resolves PARALLEL edges between the same pair of
+/// cells by MAXIMUM conductance (an attacker always takes the easiest of
+/// several roads to the SAME neighbour); this view takes the MINIMUM across
+/// DISTINCT neighbours (a defender cannot choose which of several different
+/// approaches an attacker picks). Two ends of one principle.
+///
+/// This is a view over the mechanism, not the mechanism: nothing in the bake
+/// reads it (raiding still resolves per-edge, per spec §2.3a's finding that
+/// no single aggregate grades both the water-connected and land-only
+/// regimes), and it draws no seed and consumes no stream — pure in
+/// `(graph, cell)`. Built for the almanac and for M4
+/// (`defensibility-capacity-rank-corr`), per spec §2.4.
+///
+/// `DEF_MAX` — the same ceiling `defensibility` itself returns for a
+/// nonexistent or wholly impassable link — for a cell with NO traversable
+/// approach at all: an unreachable cell cannot be attacked, so it reads as
+/// maximally (vacuously) defended rather than undefined.
+///
+/// Reads `cell`'s own edge list rather than scanning every node in the graph
+/// for one pointing in: `ConnectionGraph::add_edge` mirrors every edge onto
+/// both endpoints with the SAME conductance (its own doc comment), so this
+/// graph is genuinely undirected, and `defensibility(graph, from, cell)` —
+/// which internally reads `graph.edges(from)` — always agrees with the
+/// matching entry already sitting in `graph.edges(cell)`. No reverse-
+/// adjacency index is needed to enumerate "every `from` with an edge into
+/// `cell`"; `traversable_neighbors(graph, cell)` already is that set.
+/// type-audit: bare-ok(ratio: return)
+pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    let approaches = traversable_neighbors(graph, cell);
+    if approaches.is_empty() {
+        return DEF_MAX;
+    }
+    approaches
+        .into_iter()
+        .map(|from| defensibility(graph, from, cell))
+        .fold(f64::INFINITY, f64::min)
+}
+
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;

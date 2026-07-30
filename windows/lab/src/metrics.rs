@@ -3281,13 +3281,34 @@ pub fn registry() -> Vec<Metric> {
         // of the mechanism (spec 2.2/decision 0089) so Task 5's baseline is
         // honest. M2/M3 read `occupation_records` — the same decoder
         // `windows/almanac` and The Vestige already share — filtered to
-        // still-alive occupations at bake end. M4
-        // (defensibility-capacity-rank-corr) is deliberately NOT registered
-        // here: `defensibility` and the per-era `eff_capacity` a cell needs
-        // are private to `history_bake.rs`'s internal `Bake` state (not
-        // reachable off `FullView`, and the `#[doc(hidden)]`
-        // `defensibility_for_test` shim is test-only by name and doc, not a
-        // production seam). See task-4-report.md for the proposed accessor.
+        // still-alive occupations at bake end.
+        //
+        // M2's `peak_population` caveat: `OccupationRecord::peak_population`
+        // is each occupation's historical HIGH-WATER MARK
+        // (`Bake::touch` only ever raises it — `history_bake.rs`), not a
+        // bake-end census. There is no end-state population accessor in the
+        // data model today: the live per-epoch figure
+        // (`Bake::Community::population`) is bake-internal state that
+        // `history_bake::bake` discards when it returns `History` (only
+        // `records` — carrying `peak_population` — survives). So M2 reads
+        // "largest peak share among communities alive at bake end," not a
+        // literal simultaneous snapshot; see task-4-report.md round 2 for
+        // the finding and the proposed accessor if a true end-state figure
+        // is ever needed.
+        //
+        // M4 (defensibility-capacity-rank-corr) is round 2's addition to
+        // this comment: the per-cell defensibility half is now a real,
+        // named accessor (`hornvale_worldgen::weakest_point_defensibility`,
+        // spec §2.4's minimum-over-approaches view), but the metric is
+        // STILL not registered — the effective-capacity half needs the
+        // bake's final-era `(ConnectionGraph, CellMap<f64> capacity)` pair,
+        // which `bake_history_from` computes and discards on every build
+        // path (`windows/worldgen/src/lib.rs`); `FullView` has no field for
+        // it, and reconstructing it from `v.terrain()`/`v.climate()` alone
+        // is only correct on a constant-sky world — a world with real
+        // orbital forcing can have the bake's final era differ from the
+        // present-day reconstruction (`bake_eras`'s deep-time integration is
+        // itself private). See task-4-report.md for the proposed accessor.
         Metric {
             name: "peoples-alive-at-bake-end",
             doc: "M3: how many distinct peoples still hold a live community when the \
@@ -3308,8 +3329,11 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "largest-holding-share",
-            doc: "M2: the largest single community's population as a share of all live \
-                  population at bake end — the entity-size reading the criticality \
+            doc: "M2: the largest live community's PEAK population as a share of the \
+                  summed peak population of every community alive at bake end \
+                  (peak_population is each occupation's historical high-water mark, not \
+                  a true bake-end census — no end-state population accessor exists \
+                  today; see task-4-report.md) — the entity-size reading the criticality \
                   campaigns never took",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.3, 0.5, 0.7],
@@ -6051,9 +6075,11 @@ mod tests {
         // per-species, beside the name-length-{species} pair they are read
         // against — and the world-level name-transparency), +2 for The
         // Contour (Task 4: peoples-alive-at-bake-end, largest-holding-share;
-        // defensibility-capacity-rank-corr is NOT counted here — it needs a
-        // pub accessor for defensibility/eff_capacity that Task 4 proposed
-        // but did not add, per the brief's interface-decision boundary).
+        // defensibility-capacity-rank-corr is STILL not counted here after
+        // round 2 — `weakest_point_defensibility` landed in
+        // hornvale-worldgen, but the metric also needs the bake's
+        // effective-capacity-at-the-final-era, which is a second, separate
+        // accessor Task 4 proposed but did not add).
         assert_eq!(registry().len(), 174);
     }
 
@@ -7785,6 +7811,14 @@ mod tests {
     /// M2/M3 are registered, read the full stack, and carry a doc string.
     /// M4 (`defensibility-capacity-rank-corr`) is deliberately absent — see
     /// the registry comment above the two `Metric` entries.
+    ///
+    /// Round 2: `hornvale_worldgen::weakest_point_defensibility` (spec
+    /// §2.4's minimum-over-approaches view) now exists, so the
+    /// defensibility half of M4 is no longer blocked — only the
+    /// effective-capacity-at-the-final-era half is. Once THAT plumbing
+    /// lands too and M4 is registered, this assertion (and its `for` loop
+    /// above) should just absorb `defensibility-capacity-rank-corr` as a
+    /// third name rather than staying a standalone negative check.
     #[test]
     fn the_contour_metrics_are_registered_and_full_rung() {
         let reg = registry();
@@ -7803,8 +7837,10 @@ mod tests {
         assert!(
             !reg.iter()
                 .any(|m| m.name == "defensibility-capacity-rank-corr"),
-            "M4 needs a pub defensibility/eff_capacity accessor Task 4 did not add; \
-             remove this assertion once that accessor lands and the metric is registered"
+            "M4 needs a pub effective-capacity-at-the-final-era accessor Task 4 did not \
+             add (the defensibility half now exists as \
+             weakest_point_defensibility); remove this assertion once that second \
+             accessor lands and the metric is registered"
         );
     }
 
