@@ -88,6 +88,71 @@ fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
         .sum()
 }
 
+/// AUTHORED prior: the defensibility a wholly unobstructed approach tends to.
+/// Approached, never attained — `tanh` is asymptotic in both directions.
+/// Symmetric with `DEF_MAX` about 1.0, which is what lets the centred form
+/// put the median approach at exactly 1.0 (spec §2.3).
+/// type-audit: bare-ok(ratio: DEF_MIN)
+const DEF_MIN: f64 = 0.75;
+/// AUTHORED prior: the defensibility an infinitely dear approach tends to.
+/// type-audit: bare-ok(ratio: DEF_MAX)
+const DEF_MAX: f64 = 1.25;
+/// CALIBRATED (Task 2d): the pooled median `cost_exponent` over 756,510
+/// ordered pairs across seeds 1..=30, measured before any behavioural readout
+/// existed and frozen thereafter (spec §4.4). Centring here is what makes the
+/// MEDIAN approach in the world map to exactly 1.0. A save-format constant.
+/// type-audit: bare-ok(ratio: DEF_CENTER)
+const DEF_CENTER: f64 = 6.256709;
+/// AUTHORED: how many log-cost units the transition spans. A SHAPE parameter,
+/// not a scale of the quantity — the quantity's scale is `DEF_CENTER` — so
+/// this is authored at 1.0 rather than fitted. At this value the land
+/// population grades across 0.376, five times spec §4.4's trigger threshold.
+/// type-audit: bare-ok(ratio: DEF_SCALE)
+const DEF_SCALE: f64 = 1.0;
+
+/// How well `to` is defended against an approach from `from`: a strictly
+/// monotone, saturating function of the log traversal cost of the cheapest
+/// route between them. A multiplier on the HOLDER's side of the dominance
+/// test — the second contest axis (decision 0089 clause 1).
+///
+/// Reads the approach rather than the cell because the calibration found
+/// approach ease is two disjoint regimes — water-connected and land-only —
+/// which no single transform over an aggregate can grade (spec §2.3a). A raid
+/// arrives along one route, and what shelters the defender is the resistance
+/// of that route.
+///
+/// Parallel edges resolve by MAXIMUM conductance: an attacker takes the
+/// easiest road, which is also why this cannot double-count the 6.7% of cells
+/// carrying duplicate `to` values.
+///
+/// Pure in `(graph, from, to)` — no seed, no time, no bake state — so it
+/// consumes no draw and cannot move stream consumption order. Returns
+/// `DEF_MAX` for a nonexistent or wholly impassable link, which no caller
+/// reaches: both call sites walk edges that exist.
+fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    let best = graph
+        .edges(from)
+        .iter()
+        .filter(|e| e.to == to && e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .fold(0.0_f64, f64::max);
+    if best <= 0.0 {
+        return DEF_MAX;
+    }
+    let cost_exponent = -hornvale_kernel::math::ln(best);
+    let shaped = hornvale_kernel::math::tanh((cost_exponent - DEF_CENTER) / DEF_SCALE);
+    DEF_MIN + (DEF_MAX - DEF_MIN) * (shaped + 1.0) / 2.0
+}
+
+/// Test-only re-export of [`defensibility`] so the property battery in
+/// `tests/defensibility_field.rs` can reach it without making the field part
+/// of this crate's real public surface.
+/// type-audit: bare-ok(ratio: return)
+#[doc(hidden)]
+pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    defensibility(graph, from, to)
+}
+
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;
