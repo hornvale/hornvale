@@ -1677,7 +1677,25 @@ so a term added to one and not the other cannot fail silently."
 
 ---
 
-### Task 7: Naming — and the campaign's two falsifiable claims
+### Task 7: Naming — and the campaign's falsifiable claims
+
+**Preregistration note (added after Task 4, before this task's code
+exists).** The campaign shipped its spec with two claims. Task 4's
+measurement of `at_elevation` added a third, and the reason it was added
+matters more than the claim: between 85° and 2° the illuminant does not
+only redden, it *dims about eightfold*. Naming compares in signal space, so
+a dimmed sample drifts toward the dark exemplar for reasons unrelated to
+hue — which means the original claim 2 is satisfiable by "everything is
+dark at dusk." True, real, and not what this campaign is about.
+
+Claim 2b isolates the interesting half by renormalizing both illuminants to
+equal peak radiance. It is preregistered *here*, before `name_color` is
+written, which is the whole point of decision 0016 — a claim frozen after
+seeing the result it describes is not a claim.
+
+**A null on 2b is a finding and ships as the headline.** Several campaigns
+in this repo have done exactly that. Do not retune an exemplar or a
+scattering constant to rescue it.
 
 **Files:**
 - Create: `windows/worldgen/src/color_naming.rs`
@@ -1707,7 +1725,7 @@ Create `windows/worldgen/tests/color_naming.rs`:
 //! that cannot fail is a decoration, not a finding.
 
 use hornvale_astronomy::illuminant::{at_elevation, daylight};
-use hornvale_kernel::color::{Reflectance, standard_observer};
+use hornvale_kernel::color::{Illuminant, Reflectance, standard_observer};
 use hornvale_language::PackDepths;
 use hornvale_worldgen::color_naming::name_color;
 
@@ -1764,6 +1782,69 @@ fn the_same_outcrop_is_named_differently_at_noon_and_at_dusk() {
     assert_ne!(
         noon, dusk,
         "the outcrop was '{noon}' at both noon and dusk — the illuminant did nothing"
+    );
+}
+
+/// CLAIM 2b — the *hue* name moves too, not merely the lightness.
+///
+/// **Why this claim exists, and why it is preregistered here rather than
+/// discovered later.** Task 4 measured what `at_elevation` actually does
+/// between 85° and 2°: it does not only redden, it *dims*, and it dims
+/// hard — total sensed signal on a grey surface falls about eightfold, and
+/// per-band survival spans six orders of magnitude. Naming compares in
+/// signal space, so a dimmed sample drifts toward the dark exemplar for a
+/// reason that has nothing to do with hue.
+///
+/// Claim 2 above is therefore satisfiable by a trivial mechanism —
+/// "everything is dark at dusk" — which is true, and real, and not what
+/// the campaign is about. This claim isolates the interesting half: with
+/// the illuminant renormalized so noon and dusk deliver the same peak
+/// radiance, does the *shape* change alone still move the name?
+///
+/// **A null here is a publishable finding, not a failure.** If the hue
+/// name does not move once lightness is controlled, then Hornvale's
+/// colour-vs-time story is a lightness story, and the chronicle should say
+/// exactly that rather than dressing it up. Do not retune an exemplar or a
+/// scattering constant to rescue it — record the measured distances and
+/// report the null. (Spec risk 3; decision 0016.)
+#[test]
+fn the_hue_name_moves_even_with_lightness_controlled() {
+    let star = hornvale_astronomy::star::generate_star(test_astronomy_seed());
+    let base = daylight(&star);
+    let eye = standard_observer();
+    let speaker = PackDepths { hue: 5, luminance: 3 };
+
+    // Renormalize each illuminant to peak 1.0, so the two differ in
+    // spectral SHAPE only and carry identical peak radiance.
+    let peak_normalized = |light: &Illuminant| -> Illuminant {
+        let mut bands = *light.get();
+        let peak = bands.iter().copied().fold(0.0f64, f64::max);
+        assert!(peak > 0.0, "an illuminant with no peak cannot be normalized");
+        for b in bands.iter_mut() {
+            *b /= peak;
+        }
+        Illuminant::new(bands).expect("rescaling a valid illuminant leaves it valid")
+    };
+
+    let noon = name_color(
+        &ochre(),
+        &peak_normalized(&at_elevation(&base, 85.0)),
+        &eye,
+        &speaker,
+    );
+    let dusk = name_color(
+        &ochre(),
+        &peak_normalized(&at_elevation(&base, 2.0)),
+        &eye,
+        &speaker,
+    );
+
+    assert_ne!(
+        noon, dusk,
+        "with lightness controlled the outcrop was '{noon}' at both times — \
+         the colour-vs-time result is a LIGHTNESS result only. That is a \
+         finding: record the measured signal distances in the chronicle and \
+         re-word the campaign's claim. Do not retune anything to rescue it."
     );
 }
 
