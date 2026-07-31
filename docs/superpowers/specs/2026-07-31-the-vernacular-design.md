@@ -279,12 +279,39 @@ The "before" column was taken by temporarily reinstating the pre-Stage-2
 `contains("star")` / else-`sun` ladder) in `windows/worldgen/src/lib.rs`
 alongside the same reword, regenerating seed 42, counting, then reverting both
 edits and confirming a clean tree — the same technique this campaign's Task 3
-and Task 4 reviewers used to prove their own guards. `deity-name` and
-`deity-epithet` land exactly on the frozen `9 of 48` / `7 of 48`, confirming
-the mechanism is the same one §1 measured; the `77` vs `73` total differs only
-because The Watershed's merge added facts the reword also touches
-(`name-gloss`, `deity-name-ipa`, `deity-epithet-ipa` — none of which existed
-when `73` was measured), not because the leak itself changed shape.
+and Task 4 reviewers used to prove their own guards.
+
+**The real evidence for "same mechanism": `deity-name` and `deity-epithet`
+are identical, not merely close.** Both land exactly on the frozen `9 of 48`
+and `7 of 48` — that identity, not the predicate mix, is what confirms the
+`77`-count run and the `73`-count run are the same leak.
+
+**Correction, checked against the commit that wrote `73`.** An earlier draft
+of this readout attributed the `77` vs `73` gap to The Watershed's merge
+*adding* the predicates `name-gloss`, `deity-name-ipa`, and
+`deity-epithet-ipa`. That claim was checked against commit `6e473b10` — the
+commit that wrote `73` into this spec, confirmed an ancestor of the merge —
+by rerunning the identical reword there, and it is false: all six predicate
+types were already present and already contributing to the `73`:
+
+| predicate | at `6e473b10` (73 total) | at `f61060e9` (77 total) |
+|---|---|---|
+| `name` | 16 | 18 |
+| `name-gloss` | 25 | 27 |
+| `deity-name` | 9 | 9 |
+| `deity-name-ipa` | 9 | 9 |
+| `deity-epithet` | 7 | 7 |
+| `deity-epithet-ipa` | 7 | 7 |
+
+The true delta is four facts across two predicates that already existed —
+`name` +2 and `name-gloss` +2 — meaning two additional entities started
+picking up the same corrupted gloss between the two measurements, not two new
+predicate *types* appearing. (`git log -S` dates all six predicates'
+introductions to 2026-07-08 through 2026-07-27, weeks before The Watershed
+closed, consistent with the table above.) This paragraph is the governing
+explanation; commit `15d92c5b`'s message states the earlier, superseded
+"added predicates" account and should be read in light of this correction,
+not as an independent claim.
 
 **The prediction holds.** After Stage 2, the same reword moves zero facts: the
 referent is the only thing `phenomenon_concept` reads, so a synonym that
