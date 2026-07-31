@@ -8,9 +8,11 @@
 //!
 //! The SOC-1 gate's negative arm is a synthetic-society unit test plus a
 //! single live smoke, not a seed hunt (decision 0093, "seed-hunting is not
-//! a test mechanism"): a hand-built world supplies deterministic,
-//! zero-build coverage of `doctrine_from`'s folk-gates-to-None behavior,
-//! while one real generated seed is checked directly for liveness.
+//! a test mechanism"): a hand-built world (zero WORLD builds — one small,
+//! pinned, gate-inert terrain sculpt for call-site parity, see
+//! `synthetic_flagship`) supplies deterministic coverage of
+//! `doctrine_from`'s folk-gates-to-None behavior, while one real generated
+//! seed is checked directly for liveness.
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_kernel::{EntityId, Fact, Value};
@@ -41,14 +43,20 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 /// Predicates are registered through the world's own registry exactly as
 /// genesis does (each domain's `register_concepts`), and every fact commits
 /// through the normal `Ledger::commit` path, so contradiction-checking is
-/// exercised the same as a generated world's. No sky, no terrain sculpt, no
-/// generation of any kind — zero builds, deterministic by construction.
+/// exercised the same as a generated world's. No sky, no world build of any
+/// kind — zero WORLD builds, deterministic by construction. It also commits
+/// a `terrain-pin` fact pinning `globe-level` to its legal minimum (4, vs
+/// the crate default 6): the caller still runs `terrain_of`/`climate_from`
+/// for call-site parity with production `doctrine_from` callers (see the
+/// test below), and this pin shrinks that one inert sculpt rather than
+/// eliminating it — `doctrine_from`'s gate never reads the result either way.
 fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World, EntityId) {
     let mut w = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
     hornvale_settlement::register_concepts(&mut w.registry)
         .expect("settlement predicates register");
     hornvale_species::register_concepts(&mut w.registry).expect("species predicates register");
     hornvale_religion::register_concepts(&mut w.registry).expect("religion predicates register");
+    hornvale_terrain::register_concepts(&mut w.registry).expect("terrain predicates register");
 
     let provenance = || "synthetic negative arm (decision 0093)".to_string();
     let settlement = w.ledger.mint_entity();
@@ -65,6 +73,23 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
             &w.registry,
         )
         .expect("commit is-settlement");
+    // Pin the geosphere to its legal minimum: `terrain_of` (called by the
+    // test below for call-site parity) scans for this fact and shrinks the
+    // inert sculpt it performs — `doctrine_from`'s gate never reads the
+    // result, so only the sculpt's own cost is at stake.
+    w.ledger
+        .commit(
+            Fact {
+                subject: settlement,
+                predicate: hornvale_terrain::facts::TERRAIN_PIN.to_string(),
+                object: Value::Text("globe-level=4".to_string()),
+                place: None,
+                day: Some(0.0),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit terrain-pin");
     w.ledger
         .commit(
             Fact {
@@ -130,11 +155,13 @@ fn synthetic_folk_flagship_gates_doctrine_to_none() {
     // badly) — it hand-builds one directly (a synthetic question, answered
     // exactly). `doctrine_from`'s gate (`chorus.rs`) reads only
     // `flagship_of` + `cult_form_held_by` and returns `None` the moment
-    // `cult_form != "organized"`, BEFORE it ever touches terrain/climate —
-    // so a synthetic world needs no generation at all, and terrain/climate
-    // are inert for this arm (still derived once, matching every other call
-    // site's shape, so this test would also catch a gate reordering that
-    // started reading them first).
+    // `cult_form != "organized"`, BEFORE it ever touches terrain/climate — so
+    // this arm needs no world BUILD at all (zero WORLD builds). It still
+    // derives `terrain`/`climate` once, purely for call-site shape parity
+    // with production `doctrine_from` callers (every other test in this
+    // file passes the same two arguments); the derived values are inert
+    // here — a pinned-down `globe-level` (see `synthetic_flagship`) keeps
+    // that one sculpt cheap rather than eliminating it.
     let (w, settlement) = synthetic_flagship("goblin", "folk");
     let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
     let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
@@ -201,7 +228,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // Negative arm (decision 0093, "seed-hunting is not a test mechanism"):
     // the 1..=60-seed hunt for a folk flagship is gone. The synthetic test
     // `synthetic_folk_flagship_gates_doctrine_to_none` above now supplies
-    // deterministic, zero-build coverage of the gate's None branch by
+    // deterministic, zero-WORLD-build coverage of the gate's None branch by
     // construction rather than by search. What remains here is a single
     // live folk smoke — one real generated seed, checked directly, to prove
     // a genuinely-generated folk flagship (not just a hand-built one) gates
