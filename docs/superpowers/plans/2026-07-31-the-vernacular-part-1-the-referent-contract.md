@@ -199,7 +199,7 @@ already present in `book/src/reference/concept-registry-generated.md`:
 | `domains/astronomy/src/provider.rs:1551` | celestial-body | `Referent::of("sun")` |
 | `domains/astronomy/src/provider.rs:1558` | celestial-body | `Referent::of("sun")` |
 | `domains/astronomy/src/provider.rs:1597` | eclipse | `Referent::qualified("eclipse", &["sun"])` |
-| `domains/astronomy/src/provider.rs:1610` | celestial-body | `Referent::qualified("moon", &[size_concept(angular)])` |
+| `domains/astronomy/src/provider.rs:1610` | celestial-body | `Referent::qualified("moon", size_concept(angular))` |
 | `domains/astronomy/src/provider.rs:1634` | eclipse | `Referent::qualified("eclipse", &["moon"])` |
 | `domains/astronomy/src/provider.rs:1692` | eclipse | `Referent::qualified("eclipse", &["sun"])` |
 | `domains/astronomy/src/provider.rs:1702` | eclipse | `Referent::qualified("eclipse", &["moon"])` |
