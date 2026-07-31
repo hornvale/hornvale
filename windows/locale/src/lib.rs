@@ -456,7 +456,7 @@ impl LocaleContext {
     /// Corner-blend an externally-supplied per-cell `field` (over the canonical
     /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
     /// `hazards_at` use, generalized so a caller can sample a field this context
-    /// does not itself hold. The Quarry injects `worldgen::predator_pressure`
+    /// does not itself hold. The Quarry injects `worldgen::predator_pressure_from`
     /// (the carnivore-pressure field) and reads it here per room. Full precision
     /// (a compute-path read, not quantized). `None` for a room the canonical grid
     /// does not cover.

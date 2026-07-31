@@ -5316,8 +5316,8 @@ fn build_to(
     // occupation still alive at `now` becomes an `is-settlement` (with its
     // `population`/`cell-id`), a dead one an `is-ruin`. The retired
     // `coexist::pack`/`condense_stack` placer is gone from genesis; the same
-    // niche-differentiated stack still lives in `demography_report` for the
-    // Lab's coexistence-stack readout, which this rewire leaves untouched.
+    // niche-differentiated stack still lives in `demography_report_from` for
+    // the Lab's coexistence-stack readout, which this rewire leaves untouched.
     //
     // The Tumult (T3): the bake-input assembly (carrying capacity, river
     // proximity, the paleoclimate eras + per-era connection graphs, and the
@@ -10924,7 +10924,7 @@ mod tests {
     /// peopled-only SETTLEMENT stack `species_pin_isolation` etc. probe)
     /// show the menagerie breaking the goblinoid "oatmeal"? Packs the whole
     /// roster through the exact `niche_per_species_k` -> `coexist::pack`
-    /// pipeline settlement genesis and `demography_report` share (same
+    /// pipeline settlement genesis and `demography_report_from` share (same
     /// frozen `BETA`/`FLOOR`), then reads the per-cell DOMINANT species —
     /// the greatest realized individual density, tie-broken to the lowest
     /// species id (`report.stack.density` is already tag-ascending, so

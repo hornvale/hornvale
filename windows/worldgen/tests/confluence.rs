@@ -386,7 +386,7 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // (`windows/worldgen/src/lib.rs` — "the retired `coexist::pack`/
     // `condense_stack` placer is gone from genesis"). The peopled roster's
     // `ANIMAL_PREY` weights are therefore not an input to settlement
-    // placement at all; the per-axis supply fields feed `demography_report`
+    // placement at all; the per-axis supply fields feed `demography_report_from`
     // and the Lab's coexistence readout instead. A future author should not
     // expect a supply-axis change to show up here.
     //

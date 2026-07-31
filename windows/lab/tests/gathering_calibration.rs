@@ -269,7 +269,7 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// stage). Comparing committed population against the OLD flat Σ K would
 /// measure the invariant against a capacity the population was never
 /// realized from. Σ K is now recomputed via
-/// `hornvale_worldgen::demography_report` — the pure, deterministic
+/// `hornvale_worldgen::demography_report_from` — the pure, deterministic
 /// accessor that mirrors genesis's own `niche_per_species_k` → `coexist::
 /// pack` → `stack_condense::condense_stack` pipeline byte-for-byte at the
 /// frozen `BETA`/`FLOOR` constants — summing `per_species_k` over every
@@ -305,7 +305,7 @@ fn rank_size_slope_is_observed_not_tuned() {
 ///    settlements 150 → 203 (×1.35) and the summed peaks 11446 → 14513
 ///    (×1.27) purely from more records existing, with no single settlement
 ///    fattening past its own capacity.
-/// 2. The previous ceiling's Σ K was `demography_report`'s niche-
+/// 2. The previous ceiling's Σ K was `demography_report_from`'s niche-
 ///    differentiated `per_species_k` — a *proxy* for the capacity the bake's
 ///    own collapse-pressure formula is actually defined on, already flagged
 ///    as such in this comment's prior revision. Restricting that proxy to

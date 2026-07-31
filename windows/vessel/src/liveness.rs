@@ -265,7 +265,7 @@ pub struct Hazards {
     /// COLD — how far below.
     pub cold: f64,
     /// PREDATOR — the ambient density of carnivores (The Quarry, the first
-    /// BIOTIC hazard: `worldgen::predator_pressure`, injected into
+    /// BIOTIC hazard: `worldgen::predator_pressure_from`, injected into
     /// `LocaleTerrain`). `0` where no predators range.
     pub predator: f64,
 }
@@ -480,13 +480,13 @@ pub trait Terrain {
 
     /// The cell's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
     /// prey-base biomass a HUNTER can eat there, the anti-symmetric dual of the
-    /// predator hazard (`worldgen::prey_pressure`). A creature's `food_value`
-    /// dots this against its `ANIMAL_PREY` diet weight, so a carnivore is drawn
-    /// up the prey gradient. The DEFAULT is `0.0` (a prey-empty cell) — so
-    /// planted/synthetic test terrains have no prey field and a carnivore reads
-    /// only the ordinary productivity unless a scenario plants prey; a live
-    /// `LocaleTerrain` OVERRIDES it with the injected `prey_pressure` field. A
-    /// slow field, so it takes no `day`.
+    /// predator hazard (`worldgen::prey_pressure_from`). A creature's
+    /// `food_value` dots this against its `ANIMAL_PREY` diet weight, so a
+    /// carnivore is drawn up the prey gradient. The DEFAULT is `0.0` (a
+    /// prey-empty cell) — so planted/synthetic test terrains have no prey
+    /// field and a carnivore reads only the ordinary productivity unless a
+    /// scenario plants prey; a live `LocaleTerrain` OVERRIDES it with the
+    /// injected prey-pressure field. A slow field, so it takes no `day`.
     /// type-audit: bare-ok(ratio: return)
     fn prey_value(&self, _room: &RoomAddr) -> f64 {
         0.0
@@ -586,13 +586,13 @@ pub struct LocaleTerrain<'a> {
     /// `None` falls back to the fractional-day sun.
     calendar: Option<&'a hornvale_astronomy::Calendar>,
     /// The world's predator-pressure field (The Quarry — `worldgen::
-    /// predator_pressure`), injected here (a domain/window can't reach up to
-    /// demography); `None` → no PREDATOR hazard (throwaway reads / no field).
+    /// predator_pressure_from`), injected here (a domain/window can't reach up
+    /// to demography); `None` → no PREDATOR hazard (throwaway reads / no field).
     predator: Option<&'a hornvale_kernel::CellMap<f64>>,
-    /// The world's prey-pressure field (The Teeth — `worldgen::prey_pressure`),
-    /// the dual of `predator`, injected the same way; `None` → no prey draw
-    /// (throwaway reads / no field), so a carnivore reads only ordinary
-    /// productivity.
+    /// The world's prey-pressure field (The Teeth — `worldgen::
+    /// prey_pressure_from`), the dual of `predator`, injected the same way;
+    /// `None` → no prey draw (throwaway reads / no field), so a carnivore
+    /// reads only ordinary productivity.
     prey: Option<&'a hornvale_kernel::CellMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
     /// `built_rooms`), injected the same way (a domain/window can't reach up
@@ -2228,7 +2228,7 @@ const HUNGER: DriveParams = DriveParams {
 const EAT_THRESHOLD: f64 = 0.15;
 
 /// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
-/// strongly a carnivore is drawn up the `prey_pressure` gradient, per unit of
+/// strongly a carnivore is drawn up the prey-pressure gradient, per unit of
 /// `ANIMAL_PREY` diet weight. The prey term is ADDITIVE (it only raises
 /// `food_value`), so a creature that already eats where it stands keeps doing so
 /// — the current settled peoples are byte-identical regardless of this value
@@ -3373,7 +3373,7 @@ pub fn affect_of_memo_occupied(
 
 /// The per-tick ALARM field (The Alarm) — fear-contagion as a derived,
 /// order-independent field over the frozen population, the vessel's dynamic
-/// sibling of `worldgen::predator_pressure`. For each creature that is
+/// sibling of `worldgen::predator_pressure_from`. For each creature that is
 /// **primary-afraid** (its own Danger drive is active — `affect_of` reads
 /// `object == Some(Danger)` with `arousal ≥ DANGER_ACT`), it stamps the
 /// emitter's felt-threat magnitude onto its cell and each `neighbors()` cell
@@ -6958,7 +6958,7 @@ mod tests {
     fn derive_wild_npcs_mint_beast_agents_with_defaulted_psyche() {
         // THE WILDING: the wild roster is minted from the world's beast
         // concentrations, NOT its peoples. A beast is, by construction, a
-        // species whose `social_form` is not `Settled` (`wild_concentrations`'s
+        // species whose `social_form` is not `Settled` (`wild_concentrations_from`'s
         // `is_mobile_beast`). On today's seed-42 roster every such wild kind
         // also carries no `psyche_registry` entry, so every wild NPC takes the
         // DEFAULT psyche dials — steady boldness, mid latency/horizon — while
