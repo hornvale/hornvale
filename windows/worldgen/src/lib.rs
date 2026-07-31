@@ -3497,6 +3497,15 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
     }
 }
 
+/// The concept a phenomenon glosses to — the public face of the private
+/// [`phenomenon_concept`], exported so the reword-invariance battery in
+/// `cli/tests/prose_is_not_a_contract.rs` can assert the gloss is a function
+/// of the referent alone.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn gloss_concept_of(phenomenon: &Phenomenon) -> Option<&'static str> {
+    phenomenon_concept(phenomenon)
+}
+
 /// The quality concept a belief's [`hornvale_religion::Sentiment`] glosses
 /// to, for glossed deity/epithet naming (Task 9): `Eternal` (always
 /// watched, never absent) reads as `light`; `Cyclic` (departs and returns)
