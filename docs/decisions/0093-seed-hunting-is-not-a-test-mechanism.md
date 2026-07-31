@@ -40,13 +40,15 @@ a hand-built world whose flagship's committed cult-form is 'folk' instead of
 relying on this sweep."* Stage 3 implements exactly that: a hand-built
 synthetic world with a `"folk"` cult-form fact committed for its flagship
 (zero builds, deterministic negative-arm coverage), plus the live positive
-arm kept at seed 1 (both gate arms) and one live folk smoke at seed 56 (the
-known folk flagship, documented as epoch-sensitive). The 60-seed hunt is
-deleted.
+arm kept at seed 1 (both gate arms) and one live folk smoke at seed 57 (the
+known folk flagship, documented as epoch-sensitive; seed 56 at ratification —
+drifted all-organized under The Wearing before merge — re-found at
+57/bugbear by the bounded scan this record prescribes, which is the
+mechanism working). The 60-seed hunt is deleted.
 
 This is a **test-breadth reduction**, flagged for Nathan at G3 and ratified
 under this principle: the sweep's property coverage ("doctrine iff
-organized," measured across seeds) narrows to {seed 1, seed 56, synthetic}.
+organized," measured across seeds) narrows to {seed 1, seed 57, synthetic}.
 The wide sweep existed only to *find* a folk instance by brute force; the
 synthetic world now supplies that instance by construction, at the cost of
 no longer also incidentally sampling how often folk-vs-organized occurs

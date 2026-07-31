@@ -112,11 +112,14 @@ Implement exactly what the test's own panic message prescribes: a
 synthetic-society unit test driving `doctrine_from` against a hand-built
 world whose flagship's committed cult-form is `"folk"` (deterministic
 negative-arm coverage, zero builds), plus keep the live positive arm
-(seed 1, both gate arms) and ONE live folk smoke (seed 56, the known folk
-flagship, documented as epoch-sensitive). The 60-seed hunt goes. This is
-a test-breadth reduction and is flagged for Nathan at G3: the sweep's
-property coverage (doctrine iff organized, across seeds) narrows to
-{seed 1, seed 56, synthetic}; the wide sweep existed to *find* a folk
+(seed 1, both gate arms) and ONE live folk smoke (seed 57, the known folk
+flagship, documented as epoch-sensitive; seed 56 at ratification — drifted
+all-organized under The Wearing before merge — re-found at 57/bugbear by the
+bounded scan this record prescribes, which is the mechanism working). The
+60-seed hunt goes. This is a test-breadth reduction and is flagged for
+Nathan at G3: the sweep's property coverage (doctrine iff organized, across
+seeds) narrows to {seed 1, seed 57, synthetic}; the wide sweep existed to
+*find* a folk
 instance, which the synthetic world now supplies by construction.
 
 ### Explicitly accepted (closes a Shuttle followup)
