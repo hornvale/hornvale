@@ -1,14 +1,14 @@
 # The Contour — position as the second contest axis
 
 **Campaign:** The Contour · **Date:** 2026-07-29 · **Status:** spec, pre-plan
-**Governs:** [decision 0089](../../decisions/0089-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+**Governs:** [decision 0091](../../decisions/0091-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
 clause 1 · **Successor to:** *The Tumult*, *The Tithe*
 
 ---
 
 ## 1. The charge
 
-Decision 0089 records that peoples-diversity is a terminal value and that the
+Decision 0091 records that peoples-diversity is a terminal value and that the
 only sanctioned mechanism for it is **multi-axis contest**. It also records
 that the history bake is **out of compliance**: every contest in Hornvale's
 deep history resolves on one scalar.
@@ -57,10 +57,10 @@ that makes it more than a modifier:
 1. **It is uncorrelated with strength by construction.** Defensibility is a
    fact about terrain; strength is population times tech. A second axis that
    correlates with the first is not a second axis.
-2. **It is indifferent to who holds the cell**, which is what 0089 clause 1
+2. **It is indifferent to who holds the cell**, which is what 0091 clause 1
    requires. It is not a term keyed on weakness; it is a term keyed on
    ground, and that the weak benefit is a byproduct.
-3. **It is a cost-of-dominance term**, which is 0089 clause 2's sanctioned
+3. **It is a cost-of-dominance term**, which is 0091 clause 2's sanctioned
    direction. If defensible ground is also *poor* ground, then the strong
    expand onto rich exposed cells and become takeable, while marginal
    defensible ground shelters whoever happens to be on it. That is the
@@ -149,7 +149,7 @@ adjacency max  -> 1.2441    approached, never attained
 ```
 
 **A correction to this spec's earlier reasoning.** The original §2.3 required
-defensibility to be a strict asymptote at both ends, citing decision 0089
+defensibility to be a strict asymptote at both ends, citing decision 0091
 clause 3. That over-applied the clause. Clause 3 governs the **distribution of
 world outcomes** — a world with no goblins, a world under one government must
 be reachable and rare — and says nothing about whether an intermediate derived
@@ -270,7 +270,7 @@ Four metrics. **M2 is the headline**; M1 is inherited and explicitly demoted.
 
 - **M3 — peoples-diversity at bake end.** Count of peoples with a live
   community, and the effective diversity (the same reading `coexist.rs` uses
-  in space, computed here in time). This is the 0089 compliance metric.
+  in space, computed here in time). This is the 0091 compliance metric.
   Unaffected by amendment 3: liveness is a record flag, not a population read.
 - **M4 — the defensibility/value correlation.** Rank correlation between a
   cell's **weakest-point** defensibility (§2.4 — the minimum over its
@@ -318,7 +318,7 @@ matching the two prior campaigns exactly so the numbers are comparable.
 If M3 does not move and M2 does not move, the conclusion on the record is:
 **a second contest axis, uncorrelated with the first and entering at the
 decision point, is not sufficient to hold diversity open in this world.** That
-is a real finding about 0089 clause 1's chosen mechanism, and it would send the
+is a real finding about 0091 clause 1's chosen mechanism, and it would send the
 sequence back to design rather than forward to The Appraisal. It is not a
 reason to add a third mechanism inside this campaign.
 

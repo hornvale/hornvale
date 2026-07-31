@@ -1,4 +1,4 @@
-# 0090. Assert the robust half in the gate; measure the fragile half in the census
+# 0092. Assert the robust half in the gate; measure the fragile half in the census
 
 **Status:** Accepted (2026-07-30) · **Decider:** Nathan · **Relates:**
 [0016](0016-preregistered-measurement.md),

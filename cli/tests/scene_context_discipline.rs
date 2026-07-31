@@ -54,6 +54,10 @@ const TERRAIN_EXPORTS: &[(&str, &str)] = &[
         "pub extern \"C\" fn hw_scene_tiles(width: u32) -> i32 {",
     ),
     (
+        "hw_scene_tiles_selected",
+        "pub extern \"C\" fn hw_scene_tiles_selected(width: u32, len: usize) -> i32 {",
+    ),
+    (
         "hw_scene_tiles_region",
         "pub extern \"C\" fn hw_scene_tiles_region(",
     ),

@@ -171,7 +171,9 @@ second — the one line in the profiler that is *identical* in both columns
 (1053.6 against 1062.9 milliseconds). Building that document got 2.4× cheaper
 (1448.1 down to 600.3 milliseconds); emitting it did not move at all, and is
 now the larger half of its cost. The redundancy problem is closed and the volume problem is
-next.
+next — and it was next: [The Winnowing](./the-winnowing.md) took it up
+immediately, and found that a client asking only for the layers it reads pays
+46.3% of the bytes and 44.1% of that serialization second.
 
 The structural guard The Sextant specified and could not write is now written,
 in two layers that check different things: a source scan asserting that every

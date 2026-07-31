@@ -621,7 +621,7 @@ And the function, beside `approach_ease`:
 /// How well `to` is defended against an approach from `from`: a strictly
 /// monotone, saturating function of the log traversal cost of the cheapest
 /// route between them. A multiplier on the HOLDER's side of the dominance
-/// test — the second contest axis (decision 0089 clause 1).
+/// test — the second contest axis (decision 0091 clause 1).
 ///
 /// Reads the approach rather than the cell because the calibration found
 /// approach ease is two disjoint regimes — water-connected and land-only —
@@ -745,7 +745,7 @@ Expected: FAIL — `metric peoples-alive-at-bake-end is not registered`
 Metric {
     name: "peoples-alive-at-bake-end",
     doc: "M3: how many distinct peoples still hold a live community when the \
-          bake ends — the decision-0089 compliance reading",
+          bake ends — the decision-0091 compliance reading",
     summary: SummaryKind::Numeric { bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0] },
     extract: Extractor::Full(|v: &FullView| {
         let mut peoples = std::collections::BTreeSet::new();

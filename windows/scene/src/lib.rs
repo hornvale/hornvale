@@ -34,7 +34,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0), bare-ok(identifier-text: UnknownTileField.0), bare-ok(prose: MalformedTileFields.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -65,6 +65,12 @@ pub enum SceneError {
     /// carried. Mirrors `LocaleError::Unaddressable` — fail fast rather
     /// than mint a meaningless `room: 0`.
     SurroundsUnaddressable(String),
+    /// Tile-field selection: a requested layer name is not one of
+    /// [`TileFields::ALL_NAMES`]. Carries the offending name.
+    UnknownTileField(String),
+    /// Tile-field selection: the request was not a JSON array of strings.
+    /// Carries the parser's message.
+    MalformedTileFields(String),
 }
 
 impl std::fmt::Display for SceneError {
@@ -98,6 +104,15 @@ impl std::fmt::Display for SceneError {
             SceneError::SurroundsUnaddressable(e) => {
                 write!(f, "surrounds neighbourhood cell is unaddressable: {e}")
             }
+            SceneError::UnknownTileField(name) => write!(
+                f,
+                "unknown tile field {name:?}; valid fields are {}",
+                TileFields::ALL_NAMES.join(", ")
+            ),
+            SceneError::MalformedTileFields(e) => write!(
+                f,
+                "tile fields must be a JSON array of strings, e.g. [\"elevation_m\",\"ocean\"]: {e}"
+            ),
         }
     }
 }
@@ -246,6 +261,99 @@ pub struct WaterfallPoint {
     /// Longitude, degrees.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub longitude: f64,
+}
+
+/// The per-tile layers a caller wants in a `scene/tiles/v1` document.
+///
+/// The document's nineteen per-tile arrays are 99.8% of its bytes, and a
+/// given client typically reads a subset — the Orrery reads eight. This is
+/// `BuildDepth`'s "only as deep as the question asks" at the emit boundary:
+/// the sim still computes every layer, the caller chooses what crosses the
+/// wire (decision 0022).
+///
+/// Field names are the wire's own names. An unknown name is an error, never
+/// a silently-dropped layer.
+#[derive(Debug, Clone)]
+pub struct TileFields {
+    /// One flag per name in [`TileFields::ALL_NAMES`], same order.
+    selected: Vec<bool>,
+}
+
+impl TileFields {
+    /// The nineteen per-tile array names, in [`TilesScene`]'s declaration
+    /// order. Document metadata (`schema`, the legends, `features`, …) is
+    /// never selectable: it is always emitted.
+    ///
+    /// The tag below is currently unenforced: `tools/type-audit` walks
+    /// module-level `Item::Const` only (`extract.rs:64`) and never descends
+    /// into an `impl` block's associated consts, so the audit cannot see
+    /// this surface. The tag is written anyway so the annotation is honest
+    /// if the tool ever grows that case — a tool gap worth a followup, not
+    /// a reason to leave a pub-boundary primitive unannotated.
+    /// type-audit: bare-ok(identifier-text: ALL_NAMES)
+    pub const ALL_NAMES: &'static [&'static str] = &[
+        "elevation_m",
+        "ocean",
+        "biome",
+        "plate",
+        "unrest",
+        "t_mean_c",
+        "t_swing_c",
+        "t_diurnal_amp_c",
+        "current_east",
+        "current_north",
+        "moisture",
+        "precip_mm_yr",
+        "snow_fraction",
+        "precip_regime",
+        "cloud_fraction",
+        "weather_propensity",
+        "cloud_type",
+        "water",
+        "drainage",
+    ];
+
+    /// Every layer — the default document.
+    pub fn all() -> TileFields {
+        TileFields {
+            selected: vec![true; Self::ALL_NAMES.len()],
+        }
+    }
+
+    /// Exactly the named layers. An unknown name is an error naming the
+    /// offender, never a silently-dropped layer.
+    /// type-audit: bare-ok(identifier-text: names)
+    pub fn only(names: &[&str]) -> Result<TileFields, SceneError> {
+        let mut selected = vec![false; Self::ALL_NAMES.len()];
+        for name in names {
+            match Self::ALL_NAMES.iter().position(|n| n == name) {
+                Some(i) => selected[i] = true,
+                None => return Err(SceneError::UnknownTileField((*name).to_string())),
+            }
+        }
+        Ok(TileFields { selected })
+    }
+
+    /// Whether `name` is a selected per-tile layer. A name that is not a
+    /// per-tile layer at all is not selected (metadata is emitted
+    /// unconditionally and never consults this).
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(flag: return)
+    pub fn contains(&self, name: &str) -> bool {
+        match Self::ALL_NAMES.iter().position(|n| *n == name) {
+            Some(i) => self.selected[i],
+            None => false,
+        }
+    }
+
+    /// Parse a JSON array of layer names, e.g. `["elevation_m","ocean"]` —
+    /// the wire form a client passes across the WASM boundary.
+    /// type-audit: bare-ok(artifact: json)
+    pub fn parse_json(json: &str) -> Result<TileFields, SceneError> {
+        let names: Vec<String> = serde_json::from_str(json)
+            .map_err(|e| SceneError::MalformedTileFields(e.to_string()))?;
+        let refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+        TileFields::only(&refs)
+    }
 }
 
 /// Dot product a · b.
@@ -606,6 +714,104 @@ pub(crate) fn place_latlon(world: &World, id: hornvale_kernel::EntityId) -> Opti
 /// type-audit: bare-ok(artifact: return)
 pub fn scene_json(scene: &TilesScene) -> String {
     serde_json::to_string(scene).expect("a TilesScene always serializes")
+}
+
+/// Serializes a `Vec<f64>` through the kernel's quantizer, so a projected
+/// document's floats are byte-identical to the derive's. Wrapping is what
+/// lets a `serialize_with` function be reached from a manual `Serialize`
+/// impl, where serde's field attribute is unavailable.
+struct QVec<'a>(&'a [f64]);
+
+impl serde::Serialize for QVec<'_> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        hornvale_kernel::quantize::quantize_serde::vec_f64_field(self.0, s)
+    }
+}
+
+/// The scalar counterpart of [`QVec`].
+struct QF64(f64);
+
+impl serde::Serialize for QF64 {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        hornvale_kernel::quantize::quantize_serde::f64_field(&self.0, s)
+    }
+}
+
+/// A [`TilesScene`] viewed through a [`TileFields`] selection: the same
+/// document with the unrequested per-tile arrays absent.
+///
+/// The `Serialize` impl is deliberately **manual** while [`scene_json`] keeps
+/// the derive. Two independent paths is the point: `the_full_projection_
+/// equals_the_derive` compares them, and a shared implementation would make
+/// that test compare a thing to itself.
+struct Projected<'a> {
+    /// The document being projected.
+    scene: &'a TilesScene,
+    /// The per-tile layers to emit.
+    fields: &'a TileFields,
+}
+
+impl serde::Serialize for Projected<'_> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let scene = self.scene;
+        let fields = self.fields;
+        let mut m = s.serialize_map(None)?;
+        // Keys are emitted in `TilesScene`'s declaration order — the JSON key
+        // order is contract (spec §2). Metadata is unconditional; a per-tile
+        // layer appears only when selected.
+        macro_rules! layer {
+            ($name:literal, $value:expr) => {
+                if fields.contains($name) {
+                    m.serialize_entry($name, &$value)?;
+                }
+            };
+        }
+        m.serialize_entry("schema", &scene.schema)?;
+        m.serialize_entry("seed", &scene.seed)?;
+        m.serialize_entry("width", &scene.width)?;
+        m.serialize_entry("height", &scene.height)?;
+        m.serialize_entry("sea_level_m", &QF64(scene.sea_level_m))?;
+        layer!("elevation_m", QVec(&scene.elevation_m));
+        layer!("ocean", scene.ocean);
+        layer!("biome", scene.biome);
+        m.serialize_entry("biome_legend", &scene.biome_legend)?;
+        layer!("plate", scene.plate);
+        layer!("unrest", QVec(&scene.unrest));
+        m.serialize_entry("features", &scene.features)?;
+        layer!("t_mean_c", QVec(&scene.t_mean_c));
+        layer!("t_swing_c", QVec(&scene.t_swing_c));
+        layer!("t_diurnal_amp_c", QVec(&scene.t_diurnal_amp_c));
+        layer!("current_east", QVec(&scene.current_east));
+        layer!("current_north", QVec(&scene.current_north));
+        m.serialize_entry("season_period_days", &QF64(scene.season_period_days))?;
+        // Matches the derive's `skip_serializing_if = "Option::is_none"`:
+        // omitted entirely on tidally locked worlds, never emitted as null.
+        if let Some(bands) = scene.circulation_bands {
+            m.serialize_entry("circulation_bands", &bands)?;
+        }
+        layer!("moisture", QVec(&scene.moisture));
+        m.serialize_entry("locked", &scene.locked)?;
+        layer!("precip_mm_yr", QVec(&scene.precip_mm_yr));
+        layer!("snow_fraction", QVec(&scene.snow_fraction));
+        layer!("precip_regime", scene.precip_regime);
+        layer!("cloud_fraction", QVec(&scene.cloud_fraction));
+        layer!("weather_propensity", QVec(&scene.weather_propensity));
+        layer!("cloud_type", scene.cloud_type);
+        layer!("water", scene.water);
+        m.serialize_entry("water_legend", &scene.water_legend)?;
+        layer!("drainage", QVec(&scene.drainage));
+        m.serialize_entry("waterfalls", &scene.waterfalls)?;
+        m.end()
+    }
+}
+
+/// Serialize a tiles document carrying only `fields`' per-tile layers.
+/// Document metadata is always present. A field that IS emitted is
+/// byte-identical to [`scene_json`]'s output for it.
+/// type-audit: bare-ok(artifact: return)
+pub fn scene_json_selected(scene: &TilesScene, fields: &TileFields) -> String {
+    serde_json::to_string(&Projected { scene, fields }).expect("a TilesScene always serializes")
 }
 
 /// The schema identifier for the system (orrery) scene kind.
@@ -2106,6 +2312,219 @@ mod tests {
                 via_world, via_ctx,
                 "temperature_grid_region diverged at day={day}"
             );
+        }
+    }
+
+    /// The exact `"name":<value>` substring a document carries for `name`.
+    ///
+    /// Locates `"name":` and returns through the end of the value that
+    /// follows: the matching `]` for an array (bracket depth, with string
+    /// literals and their escapes skipped so a `"]"` inside a legend entry
+    /// cannot close the run early), or the scalar run up to the next `,`/`}`.
+    fn field_fragment<'a>(doc: &'a str, name: &str) -> &'a str {
+        let key = format!("\"{name}\":");
+        let start = doc
+            .find(&key)
+            .unwrap_or_else(|| panic!("field {name} is absent from the document"));
+        let value_at = start + key.len();
+        let bytes = doc.as_bytes();
+        let mut i = value_at;
+        if bytes[i] == b'[' {
+            let mut depth = 0usize;
+            let mut in_string = false;
+            while i < bytes.len() {
+                let c = bytes[i];
+                if in_string {
+                    match c {
+                        b'\\' => i += 1,
+                        b'"' => in_string = false,
+                        _ => {}
+                    }
+                } else {
+                    match c {
+                        b'"' => in_string = true,
+                        b'[' => depth += 1,
+                        b']' => {
+                            depth -= 1;
+                            if depth == 0 {
+                                return &doc[start..=i];
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                i += 1;
+            }
+            panic!("field {name}'s array is unterminated");
+        }
+        while i < bytes.len() && bytes[i] != b',' && bytes[i] != b'}' {
+            i += 1;
+        }
+        &doc[start..i]
+    }
+
+    /// Assert two scene documents are byte-identical, reporting the FIRST
+    /// divergence with context rather than dumping both strings.
+    ///
+    /// A bare `assert_eq!` on these is unusable: at width 64 it prints 20,014
+    /// truncated characters and the reader still cannot see which field
+    /// broke; at the Orrery's width 512 it would be 35 MB. Since a failure
+    /// here always means one field moved, the byte index plus a window either
+    /// side names that field immediately — the preceding `"key":` is visible
+    /// in the left context.
+    fn assert_same_document(expected: &str, actual: &str, what: &str) {
+        if expected == actual {
+            return;
+        }
+        let (e, a) = (expected.as_bytes(), actual.as_bytes());
+        let at = (0..e.len().min(a.len()))
+            .find(|&i| e[i] != a[i])
+            .unwrap_or(e.len().min(a.len()));
+        // Byte windows rendered lossily: a divergence can land mid-codepoint
+        // (biome and settlement names are UTF-8), and a panicking slice would
+        // replace the diagnostic with a worse one.
+        let window = |s: &[u8]| {
+            let lo = at.saturating_sub(80);
+            let hi = (at + 80).min(s.len());
+            String::from_utf8_lossy(&s[lo..hi]).into_owned()
+        };
+        panic!(
+            "{what}: documents diverge at byte {at} \
+             (expected {} bytes, actual {} bytes)\n  expected: ...{}...\n  actual:   ...{}...",
+            e.len(),
+            a.len(),
+            window(e),
+            window(a),
+        );
+    }
+
+    /// The drift guard: the projected serializer at `all()` must reproduce the
+    /// derive byte for byte. If someone adds a field to `TilesScene` and forgets
+    /// the manual impl, this reds immediately.
+    #[test]
+    fn the_full_projection_equals_the_derive() {
+        let world = mooned_world();
+        let scene = tiles_scene(&world, 64).expect("tiles");
+        assert_same_document(
+            &scene_json(&scene),
+            &scene_json_selected(&scene, &TileFields::all()),
+            "the all() projection diverged from the derive",
+        );
+    }
+
+    /// The design's load-bearing property: a field's bytes do not depend on
+    /// which other fields were requested. Assert it for every layer, so the
+    /// golden story is nineteen assertions instead of 2^19 documents.
+    #[test]
+    fn each_field_serializes_independently_of_the_others() {
+        let world = mooned_world();
+        let scene = tiles_scene(&world, 64).expect("tiles");
+        let full = scene_json(&scene);
+        for name in TileFields::ALL_NAMES {
+            let one = scene_json_selected(&scene, &TileFields::only(&[name]).expect("known field"));
+            let fragment = field_fragment(&one, name);
+            assert!(
+                full.contains(fragment),
+                "field {name} serializes differently alone than in the full document"
+            );
+        }
+    }
+
+    /// The documented promise — "an unknown name is a hard error, never a
+    /// silently dropped layer" (spec §3 item 1, and the schema chapter's
+    /// projection section) — asserted at the Rust level.
+    ///
+    /// This exists because it did not. The whole-branch review mutated
+    /// `only()`'s `None =>` arm to skip an unknown name instead of returning
+    /// `UnknownTileField`, and every Rust guard in the workspace stayed green:
+    /// the two projection tests above only ever pass names drawn from
+    /// `ALL_NAMES`, and the goldens pin documents built from valid selections.
+    /// Only the wasm drive script caught it, and `make world-check` is in
+    /// neither `make gate` nor `make gate-full`. A promise about rejection
+    /// cannot be tested by a suite that only ever supplies acceptable input.
+    ///
+    /// Both constructors are covered, because `parse_json` is the form a
+    /// client actually reaches across the WASM boundary.
+    #[test]
+    fn an_unknown_layer_name_is_rejected_not_dropped() {
+        // `TileFields` has no `PartialEq` (and does not need one), so assert on
+        // the error rather than on the whole Result.
+        fn assert_unknown(got: Result<TileFields, SceneError>, offender: &str, what: &str) {
+            match got {
+                Err(SceneError::UnknownTileField(name)) => {
+                    assert_eq!(name, offender, "{what}: the refusal named the wrong layer")
+                }
+                Err(other) => panic!("{what}: expected UnknownTileField, got {other:?}"),
+                Ok(_) => panic!("{what}: the unknown name was accepted, not refused"),
+            }
+        }
+
+        // A near-miss is the realistic failure: the wire name is `elevation_m`.
+        assert_unknown(
+            TileFields::only(&["elevation"]),
+            "elevation",
+            "only() with a near-miss name",
+        );
+        // An unknown name among valid ones must reject the whole request
+        // rather than quietly projecting the valid remainder.
+        assert_unknown(
+            TileFields::only(&["elevation_m", "not_a_layer", "ocean"]),
+            "not_a_layer",
+            "only() with an unknown name among valid ones",
+        );
+        // The same promise across the wasm boundary's wire form.
+        assert_unknown(
+            TileFields::parse_json("[\"elevation_m\",\"not_a_layer\"]"),
+            "not_a_layer",
+            "parse_json() with an unknown name among valid ones",
+        );
+        // Not vacuous: the valid forms of both constructors still succeed, and
+        // agree about what was selected.
+        let by_name = TileFields::only(&["elevation_m", "ocean"]).expect("both names are layers");
+        let by_json =
+            TileFields::parse_json("[\"elevation_m\",\"ocean\"]").expect("valid wire request");
+        for name in TileFields::ALL_NAMES {
+            let want = *name == "elevation_m" || *name == "ocean";
+            assert_eq!(
+                by_name.contains(name),
+                want,
+                "only(): wrong state for {name}"
+            );
+            assert_eq!(
+                by_json.contains(name),
+                want,
+                "parse_json(): wrong state for {name}"
+            );
+        }
+    }
+
+    /// A request that is not a JSON array of strings is refused with the
+    /// parser's reason, not silently treated as an empty selection — which
+    /// would hand the caller a metadata-only document for a typo.
+    #[test]
+    fn a_malformed_layer_request_is_rejected() {
+        for bad in [
+            "",                     // empty input
+            "[\"elevation_m\"",     // truncated array
+            "{\"fields\":[]}",      // an object, not an array
+            "[\"elevation_m\", 7]", // a non-string element
+            "\"elevation_m\"",      // a bare string, not an array
+        ] {
+            match TileFields::parse_json(bad) {
+                Err(SceneError::MalformedTileFields(msg)) => {
+                    assert!(
+                        !msg.is_empty(),
+                        "the refusal of {bad:?} carried no parser reason"
+                    );
+                }
+                other => panic!("parse_json({bad:?}) should be MalformedTileFields, got {other:?}"),
+            }
+        }
+        // The empty ARRAY is legal and distinct from malformed input: it means
+        // "metadata only" (schema chapter, projection section).
+        let none = TileFields::parse_json("[]").expect("the empty selection is valid");
+        for name in TileFields::ALL_NAMES {
+            assert!(!none.contains(name), "the empty selection selected {name}");
         }
     }
 }

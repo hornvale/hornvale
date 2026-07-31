@@ -128,5 +128,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0086](0086-the-heavy-tier-runs-on-the-canonical-box.md) | The heavy tier runs on the canonical box; campaigns run on the Mac | Accepted |
 | [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md) | A benchmark's timings are a record, not a golden | Accepted |
 | [0088](0088-the-suite-watches-its-own-clock.md) | The suite watches its own clock — a failing test, not a dashboard | Accepted |
-| [0089](0089-diversity-is-terminal-and-rubberbanding-is-multi-axis.md) | Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap | Accepted |
-| [0090](0090-assert-the-robust-half-measure-the-fragile-half.md) | Assert the robust half in the gate; measure the fragile half in the census | Accepted |
+| [0089](0089-an-epoch-freezes-when-it-can-be-stamped-on-a-saved-world.md) | An epoch freezes when a world saved from `main` can carry it (refines 0006) | Accepted |
+| [0090](0090-the-canonical-host-is-audited-not-assumed.md) | The canonical host is audited, not assumed | Accepted |
+| [0091](0091-diversity-is-terminal-and-rubberbanding-is-multi-axis.md) | Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap | Accepted |
+| [0092](0092-assert-the-robust-half-measure-the-fragile-half.md) | Assert the robust half in the gate; measure the fragile half in the census | Accepted |
