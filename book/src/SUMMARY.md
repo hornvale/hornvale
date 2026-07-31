@@ -284,6 +284,7 @@
 - [The Timekeeper](./chronicle/the-timekeeper.md)
 - [The Pyx](./chronicle/the-pyx.md)
 - [The Twin](./chronicle/the-twin.md)
+- [The Shuttle](./chronicle/the-shuttle.md)
 
 # Appendix: The Frontier
 

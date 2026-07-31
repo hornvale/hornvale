@@ -1,5 +1,12 @@
 # The Shuttle Implementation Plan
 
+> **COMPLETE (2026-07-31).** All tasks executed (Task 6b added under ledger
+> #7; Task 4 grew `parse_context_from` from Task 3's review). Measured:
+> tongue 147→9.5 s, coherence 279→23 s, stitch 162→64 s, health
+> 91.6→81.2 s; byte-identity proven by cross-binary cmp at every stage.
+> See the chronicle and retrospective for the two falsified predictions
+> and the one recorded spec deviation.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stop the chorus/diachronic readouts from re-sculpting the terrain on

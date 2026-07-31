@@ -2,7 +2,13 @@
 
 **Campaign:** the-shuttle
 **Date:** 2026-07-30
-**Status:** Draft — awaiting G3 review
+**Status:** Complete — executed 2026-07-30/31; chronicle
+`book/src/chronicle/the-shuttle.md`, retrospective
+`docs/retrospectives/the-shuttle.md`. §2's assemble-once-per-entry sentence
+was NOT implemented (recorded deviation — see the retrospective); §4's
+coherence target was met via the ledgered test-caller migration (ledger #7),
+and two predictions falsified honestly (doctrine battery is
+world-building-bound; Stage 2's flat share was mostly irreducible).
 **Thesis:** The gate's slowest tests spend 60–93 % of their cycles re-running
 full terrain generation, because the chorus/diachronic readouts derive
 everything from a bare `&World` and re-sculpt the globe on every call. The
