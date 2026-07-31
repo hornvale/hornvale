@@ -83,23 +83,84 @@ pub fn cell_share(
 
     let floor_pow = powf(floor, beta);
 
-    // Precompute K_j^β for every present species once; every species' own
-    // denominator reads from this same table rather than recomputing powf
-    // per (s, j) pair.
-    let powered: BTreeMap<u32, f64> = present
+    // Precompute K_j^β for every present species once, in the same
+    // sorted-id order as `present` (a `Vec` indexed by position rather than
+    // `cell_share_indexed`'s caller, `pack`, keying a `BTreeMap` by id —
+    // position order IS sorted-id order here since `present` was just
+    // sorted above).
+    let powered: Vec<f64> = present.iter().map(|(_, k)| powf(*k, beta)).collect();
+
+    // This wrapper's single call is the only consumer of `overlap`, so the
+    // dense matrix and its index map are built over exactly `present` (no
+    // roster to reuse across cells the way `pack` has) — same values
+    // `overlap.get(&(id_s, id_j)).unwrap_or(0.0)` would read, just
+    // materialized once instead of per (s, j) pair below.
+    let idx_of: BTreeMap<u32, usize> = present
         .iter()
-        .map(|(id, k)| (*id, powf(*k, beta)))
+        .enumerate()
+        .map(|(i, (id, _))| (*id, i))
+        .collect();
+    let overlap_dense: Vec<Vec<f64>> = present
+        .iter()
+        .map(|(id_i, _)| {
+            present
+                .iter()
+                .map(|(id_j, _)| overlap.get(&(*id_i, *id_j)).copied().unwrap_or(0.0))
+                .collect()
+        })
         .collect();
 
+    cell_share_indexed(
+        capacity,
+        &present,
+        &powered,
+        &overlap_dense,
+        &idx_of,
+        floor,
+        floor_pow,
+    )
+}
+
+/// The dense-index engine behind [`cell_share`]: identical arithmetic, same
+/// summation order, over pre-materialized structures instead of `BTreeMap`
+/// lookups per `(s, j)` pair.
+///
+/// `present` is the same sorted `(species_id, K_s)` slice `cell_share`
+/// documents. `powered[i]` is `K_i^β` for `present[i]` (position order is
+/// sorted-id order). `overlap_dense`/`idx_of` are a dense materialization of
+/// the `overlap` matrix: `idx_of` maps a species id to its row/column index
+/// into `overlap_dense`, which may be sized over a larger roster than
+/// `present` alone (`pack` builds one dense matrix per call, reused across
+/// every cell's `present` subset). `floor` and `floor_pow` (`floor^β`) are
+/// the two distinct pre-derived quantities `cell_share` itself computes:
+/// `floor_pow` is the denominator's additive floor term, `floor` is the
+/// separate absence threshold the resulting share is compared against —
+/// passing `floor_pow` for both would silently change which shares are
+/// zeroed, so both are required here.
+///
+/// type-audit: bare-ok(count: capacity), bare-ok(index: present), bare-ok(count: present), bare-ok(ratio: powered), bare-ok(index: overlap_dense), bare-ok(ratio: overlap_dense), bare-ok(index: idx_of), bare-ok(count: floor), bare-ok(count: floor_pow), bare-ok(count: return)
+#[allow(clippy::too_many_arguments)]
+fn cell_share_indexed(
+    capacity: f64,
+    present: &[(u32, f64)],
+    powered: &[f64],
+    overlap_dense: &[Vec<f64>],
+    idx_of: &BTreeMap<u32, usize>,
+    floor: f64,
+    floor_pow: f64,
+) -> BTreeMap<u32, f64> {
     let mut result = BTreeMap::new();
-    for (id_s, _k_s) in present.iter() {
-        let numerator = capacity * powered[id_s];
+    for (i, (id_s, _k_s)) in present.iter().enumerate() {
+        let numerator = capacity * powered[i];
+        let row = idx_of[id_s];
 
         let weighted_sum: f64 = present
             .iter()
-            .map(|(id_j, _)| {
-                let weight = overlap.get(&(*id_s, *id_j)).copied().unwrap_or(0.0);
-                weight * powered[id_j]
+            .enumerate()
+            .map(|(j, (id_j, _))| {
+                let col = idx_of[id_j];
+                let weight = overlap_dense[row][col];
+                weight * powered[j]
             })
             .sum();
 
@@ -381,6 +442,35 @@ pub fn pack(
     let carnivore_frac = carnivore_fraction(species);
     let masses: BTreeMap<u32, Mass> = species.iter().map(|(id, mass, _)| (*id, *mass)).collect();
 
+    // Dense-index `overlap` once per `pack` call, over the full sorted
+    // species roster: the species set (and every pairwise overlap weight)
+    // is cell-invariant, so the per-cell loop below no longer pays a
+    // `BTreeMap` lookup per (s, j) pair for every one of `geo.cells()`.
+    // `idx_of` maps a species id to its roster position (row/column index
+    // into `overlap_dense`); a cell's `present` is always a subset of this
+    // same roster (see the `debug_assert!` above), so every id it produces
+    // resolves here. `floor_pow` is likewise cell-invariant — `cell_share`
+    // would recompute the same `floor^β` value on every call — so it too is
+    // hoisted out of the loop; both hoists change nothing about *when* the
+    // per-cell `weighted_sum` folds are computed or in what order, only how
+    // many times the roster-level inputs feeding them are (re)computed.
+    let roster_ids: Vec<u32> = species.iter().map(|(id, _, _)| *id).collect();
+    let idx_of: BTreeMap<u32, usize> = roster_ids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| (*id, i))
+        .collect();
+    let overlap_dense: Vec<Vec<f64>> = roster_ids
+        .iter()
+        .map(|id_i| {
+            roster_ids
+                .iter()
+                .map(|id_j| overlap.get(&(*id_i, *id_j)).copied().unwrap_or(0.0))
+                .collect()
+        })
+        .collect();
+    let floor_pow = powf(floor, beta);
+
     // Per-cell density maps and capacities, indexed by CellId in the same
     // ascending order `Geosphere::cells()` and `CellMap::from_fn` both use,
     // so the later per-species `CellMap` rebuild reads them back correctly.
@@ -396,7 +486,22 @@ pub fn pack(
         present.sort_by_key(|(id, _)| *id);
 
         let capacity: f64 = present.iter().map(|(_, k)| *k).sum();
-        let shares = cell_share(capacity, &present, &overlap, beta, floor);
+
+        // Same `powf` calls, same sorted-id order, `cell_share`'s own
+        // precompute would perform — materialized here as a position-Vec
+        // the indexed path reads directly instead of re-deriving inside a
+        // wrapper call.
+        let powered: Vec<f64> = present.iter().map(|(_, k)| powf(*k, beta)).collect();
+
+        let shares = cell_share_indexed(
+            capacity,
+            &present,
+            &powered,
+            &overlap_dense,
+            &idx_of,
+            floor,
+            floor_pow,
+        );
 
         let mut density: BTreeMap<u32, f64> = shares
             .into_iter()
