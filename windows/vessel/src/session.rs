@@ -197,6 +197,20 @@ pub struct Session<'w> {
     registry: ConceptRegistry,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
+    /// The world's terrain, sculpted once at `start` (The Shuttle), so every
+    /// book-reading verb (`write`, `consult`) shares one sculpt instead of
+    /// re-sculpting the globe per call; `None` on a world whose committed
+    /// terrain pins fail to parse. Threaded into the worldgen/book `_from`
+    /// readout family (`reckoning_at_from`, `esoteric_lines_from`,
+    /// `hornvale_book::parse_context_from`) whenever both this and
+    /// [`Session::climate`] are present; the unthreaded (`_of`/bare) form is
+    /// the fallback on a `None`, matching what those calls already did
+    /// before this campaign.
+    terrain: Option<hornvale_terrain::GeneratedTerrain>,
+    /// The world's climate, sculpted once at `start` from [`Session::terrain`]
+    /// (The Shuttle); `None` exactly when `terrain` is `None` or the climate
+    /// fit itself fails. See `terrain`'s doc for what shares it.
+    climate: Option<hornvale_climate::GeneratedClimate>,
     /// The world's calendar, built once at `start`, so the NPC wake cycle reads
     /// the real sun (The Slumber Tier-1); `None` on a world with no sky.
     calendar: Option<hornvale_astronomy::Calendar>,
@@ -297,6 +311,18 @@ impl<'w> Session<'w> {
         opts: &PossessOpts,
     ) -> Result<(Session<'w>, String), VesselError> {
         let ctx = LocaleContext::build(world).map_err(VesselError::Locale)?;
+        // Sculpt the globe once (The Shuttle): every book-reading verb
+        // (`write`, `consult`) threads this pair through the worldgen/book
+        // `_from` readout family instead of re-sculpting terrain+climate on
+        // every turn. `None` on a world whose committed terrain pins fail to
+        // parse — the same failure `LocaleContext::build` above would already
+        // have surfaced, so in practice this always succeeds once `ctx` does;
+        // still built defensively rather than `.expect`ed, matching the
+        // `calendar`/`predator`/`prey` `Option` posture below.
+        let terrain = hornvale_worldgen::terrain_of(world).ok();
+        let climate = terrain
+            .as_ref()
+            .and_then(|t| hornvale_worldgen::climate_from(world, t).ok());
         let agent = mint_flagship(world, &ctx)?;
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
@@ -382,6 +408,8 @@ impl<'w> Session<'w> {
             ledger,
             registry,
             npcs,
+            terrain,
+            climate,
             calendar,
             predator,
             prey,
@@ -2058,7 +2086,10 @@ impl<'w> Session<'w> {
         if line.is_empty() {
             return "Write what? Speak a line of Common.".to_string();
         }
-        let ctx = hornvale_book::parse_context(self.world);
+        let ctx = match (self.terrain.as_ref(), self.climate.as_ref()) {
+            (Some(t), Some(c)) => hornvale_book::parse_context_from(self.world, t, c),
+            _ => hornvale_book::parse_context(self.world),
+        };
         match absorb_common(&mut self.knowledge, line, &ctx) {
             Ok(_) => "Written in the margin.".to_string(),
             Err(e) => format!("That doesn't parse as Common: {e}"),
@@ -2073,16 +2104,28 @@ impl<'w> Session<'w> {
     /// (`hornvale_book::esoteric_lines`) — or the closed fallback line when
     /// nothing has unlocked yet. Reads only: the session's owned `ledger`
     /// and `knowledge` are both untouched (the purity law, spec §4.3);
-    /// this method takes `&self`, not `&mut self`.
+    /// this method takes `&self`, not `&mut self`. Threaded (The Shuttle):
+    /// calls the `_from` twin of each with `self.terrain`/`self.climate`
+    /// when both are `Some`, so a session's repeated `consult`/`write`
+    /// calls share one sculpt instead of re-sculpting the globe every turn;
+    /// falls back to the re-sculpting bare form on the `None` a failed
+    /// build at `start` would leave.
     fn consult(&self) -> String {
         let day = self.day.day.trunc() as u64;
         let mut lines = vec![format!("The Reckoning, at day {day}.")];
         let at = hornvale_astronomy::StdDays::new(self.day.day)
             .expect("a session's day is always finite and non-negative");
-        let epoch = hornvale_book::reckoning_at(self.world, at);
+        let epoch = match (self.terrain.as_ref(), self.climate.as_ref()) {
+            (Some(t), Some(c)) => hornvale_book::reckoning_at_from(self.world, at, t, c),
+            _ => hornvale_book::reckoning_at(self.world, at),
+        };
         lines.extend(epoch.lines);
         lines.extend(epoch.margin);
-        let initiated = hornvale_book::esoteric_lines(self.world, &reader_set(&self.knowledge));
+        let reader = reader_set(&self.knowledge);
+        let initiated = match (self.terrain.as_ref(), self.climate.as_ref()) {
+            (Some(t), Some(c)) => hornvale_book::esoteric_lines_from(self.world, &reader, t, c),
+            _ => hornvale_book::esoteric_lines(self.world, &reader),
+        };
         if initiated.is_empty() {
             lines.push(CONSULT_FALLBACK.to_string());
         } else {

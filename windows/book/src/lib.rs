@@ -2040,7 +2040,34 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 /// `is-a` object, so a chorus emic line naming it would otherwise parse as
 /// `UnknownComplement`. The closed set stays derived from the world:
 /// walking `accounts_of(world)` rather than hardcoding the carving text.
+/// Sculpts once (`terrain_of` + `climate_from`) and delegates to
+/// [`parse_context_from`] — the vessel session's `write` verb (The
+/// Shuttle) threads an already-built terrain/climate instead of paying for
+/// this sculpt on every turn.
 pub fn parse_context(world: &World) -> ParseContext {
+    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
+        return ParseContext {
+            complements: BTreeSet::new(),
+        };
+    };
+    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else {
+        return ParseContext {
+            complements: BTreeSet::new(),
+        };
+    };
+    parse_context_from(world, &terrain, &climate)
+}
+
+/// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate
+/// (`hornvale_worldgen::accounts_from` instead of `accounts_of`) instead of
+/// re-sculpting the globe. On a sculpt failure, [`parse_context`] mirrors
+/// `hornvale_worldgen::accounts_of`'s own posture on the same failure — an
+/// empty complement set, never a panic.
+pub fn parse_context_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> ParseContext {
     let mut complements = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
         if let Value::Text(kind) = &fact.object {
@@ -2052,7 +2079,7 @@ pub fn parse_context(world: &World) -> ParseContext {
             complements.insert(species_label(kind));
         }
     }
-    for voice in hornvale_worldgen::accounts_of(world) {
+    for voice in hornvale_worldgen::accounts_from(world, terrain, climate) {
         for entry in &voice.account.entries {
             if let Disposition::Substituted { theirs, .. } = effective(&entry.disposition) {
                 complements.insert(theirs.clone());
