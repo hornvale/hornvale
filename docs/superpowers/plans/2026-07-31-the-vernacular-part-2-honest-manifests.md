@@ -12,13 +12,21 @@ anything — and enforce the claim so it is a constraint rather than a comment.
 
 **Architecture:** `domains/astronomy`'s `register_concepts` gains nine
 `Manifest`s whose lexeme edge is `Absent(Void::Unnamed)`: three for the star's
-own class and six for the neighbour classes. Nothing reads them yet — the
-`star-class` fact still carries prose, and changing that is part 3, which moves
-committed facts and needs an epoch measurement. This plan moves **zero** facts.
-Its second half is the part that matters: a test proving no `Unnamed` concept
-can be lexicalized, because `build_lexicon` draws its universe from the
-exposures map rather than the registry, so the declaration does not enforce
-itself.
+own class and six for the neighbour classes. The `star-class` fact still
+carries prose, and changing that is part 3, which moves committed facts and
+needs an epoch measurement.
+
+**Corrected after Task 1 shipped.** An earlier draft claimed the declaration
+was merely *inert* — that nothing would read it. That was wrong, and wrong in
+the campaign's own characteristic way: the exposures map is keyed on
+`world.registry.concepts()` (`windows/worldgen/src/lib.rs:3986`), so every
+registered concept enters the language's universe and `build_lexicon` reserves
+a proto-root for all of it, `Steeped`/`KnowsOf`/`Unknown` alike. Registering a
+concept as unnameable therefore *minted a proto-goblinoid word for "yellow
+dwarf"* and recorded every daughter as having forgotten it. So Task 2 exists:
+`GapReason` gains a third provenance and the unnameable stop reserving roots.
+Task 1 moves no facts; **Task 2 is expected to move them**, and measures rather
+than assumes.
 
 **Tech Stack:** Rust edition 2024, `serde` only (decision 0004). No new
 dependencies. `make gate` as the commit gate.
@@ -34,10 +42,27 @@ dependencies. `make gate` as the commit gate.
 - Layering: `kernel/` → `domains/*` → `windows/*` → `cli/`. A domain depends on
   `hornvale-kernel` and nothing else — so astronomy may not import the language
   crate; the enforcement test in Task 2 lives where both are visible.
-- **This plan must move zero committed facts.** The gate is a seed-42 `diff`
-  against `$BASELINE` =
-  `.superpowers/sdd/2026-07-31-the-vernacular-part-1-the-referent-contract/baseline-seed-42.json`,
-  re-verified valid after the last main absorption.
+- **This plan must move zero committed facts.** **The gate is "no fact moved",
+  NOT "the world JSON is identical"** — an earlier draft said the latter and it
+  is wrong: `World` serializes the concept registry, so registering a concept
+  necessarily changes the world file while moving no fact. Compare fact lists
+  directly against `$BASELINE` =
+  `.superpowers/sdd/2026-07-31-the-vernacular-part-1-the-referent-contract/baseline-seed-42.json`:
+
+  ```python
+  import json
+  def facts(p):
+      w = json.load(open(p))
+      def walk(o):
+          if isinstance(o, dict):
+              yield o
+              for v in o.values(): yield from walk(v)
+          elif isinstance(o, list):
+              for v in o: yield from walk(v)
+      return [json.dumps(d, sort_keys=True) for d in walk(w) if isinstance(d.get('predicate'), str)]
+  a, b = facts(BASELINE), facts(NEW)
+  assert a == b, "a fact moved"
+  ```
 - **Commit any drifted committed artifact in the same commit.** Registering
   concepts drifts `book/src/reference/concept-registry-generated.md` and
   `book/src/reference/concept-manifest-generated.md`; the type-audit report
@@ -235,7 +260,148 @@ Nothing reads them yet — seed 42 is byte-identical."
 
 ---
 
-### Task 2: Enforce the claim
+### Task 2: `GapReason::Unnameable`, and no proto-root for the unnameable
+
+**Files:**
+- Modify: `domains/language/src/lexicon.rs:49-56` (the `GapReason` enum) and
+  its `Display` impl at `:58`
+- Modify: `domains/language/src/lexicon.rs` (`build_lexicon`, the family-level
+  proto-root assignment around `:277-290`)
+- Modify: `windows/worldgen/src/lib.rs` (`exposure_of_impl` / whatever classifies
+  a concept `Unknown`, around `:4333`) — it must be able to say *why*
+- Test: `domains/language/src/lexicon.rs` (inline `mod tests`)
+
+**Interfaces:**
+- Consumes: the nine `Void::Unnamed` concepts from Task 1.
+- Produces: `GapReason::Unnameable(String)`, rendering as
+  `gap (unnameable): <text>`; and the invariant that a concept gapped as
+  `Unnameable` receives **no proto-root**.
+
+**Why this task exists — found in Task 1, not predicted by the plan.** Every
+registered concept enters the exposures map (`windows/worldgen/src/lib.rs:3986`:
+*"the map's keys are always exactly `world.registry.concepts()`'s names"*), and
+`build_lexicon` assigns "a distinct proto-root to every concept in the universe
+at the family level… Steeped/KnowsOf/Unknown alike." So Task 1's registration
+produced this, in a committed fixture:
+
+```
+proto-goblinoid root table:  yellow-dwarf: Nogae /nogae/
+daughter lexicons:           yellow-dwarf: gap (experiential): goblin has no exposure
+```
+
+The reconstructed ancestor spoke of the main sequence and every daughter forgot
+it. `Void::Unnamed` is not merely inert — the machinery downstream actively
+contradicts it. **Nathan chose this fix** over omitting such concepts from the
+language's universe entirely, because the lexicon dump should be *able to say*
+that the world holds things no one can name; going silent hides the campaign's
+own finding exactly where a reader would look for it.
+
+- [ ] **Step 1: Write the failing test**
+
+Add to `domains/language/src/lexicon.rs`'s inline `mod tests`:
+
+```rust
+/// A gap whose provenance is "no one here can name this" renders as its own
+/// kind, distinct from a gap of lived experience. `gap (experiential)` says
+/// the culture never met the referent; `gap (unnameable)` says the referent
+/// is beyond anyone's vocabulary here, which is a different claim.
+#[test]
+fn an_unnameable_gap_renders_as_its_own_provenance() {
+    let reason = GapReason::Unnameable(
+        "no culture here has encountered the main sequence".to_string(),
+    );
+    assert_eq!(
+        reason.to_string(),
+        "gap (unnameable): no culture here has encountered the main sequence"
+    );
+}
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `cargo test -p hornvale-language --lib an_unnameable_gap_renders`
+Expected: FAIL — `no variant named Unnameable`.
+
+- [ ] **Step 3: Add the variant**
+
+In `domains/language/src/lexicon.rs`, extend `GapReason`:
+
+```rust
+    /// A gap rooted in the world rather than the culture — the referent is
+    /// real and objective, and no culture here has the concept to name it at
+    /// all (the registry records this as
+    /// `Correspondent::Absent(Void::Unnamed(..))`). Distinct from
+    /// [`GapReason::Experiential`], which says a particular culture never met
+    /// a referent others do name.
+    Unnameable(String),
+```
+
+and add the matching `Display` arm rendering `gap (unnameable): <text>`.
+
+The enum is small and closed on purpose — the doc on `Void` calls adding a
+reason "a reviewed vocabulary change". This is that change, and the review is
+Nathan's, already given.
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `cargo test -p hornvale-language --lib an_unnameable_gap_renders`
+Expected: PASS.
+
+- [ ] **Step 5: Skip proto-root assignment for unnameable concepts**
+
+Two edits, and the ordering constraint matters more than either:
+
+- `windows/worldgen/src/lib.rs` must classify a concept whose manifest lexeme
+  is `Correspondent::Absent(Void::Unnamed(text))` as `Unknown` with
+  `GapReason::Unnameable(text)`, not `Experiential`.
+- `build_lexicon` must **not** reserve a proto-root for such a concept.
+
+**Determinism warning — read before editing.** The proto-root pass reserves a
+distinct form per concept over an ordered universe, so *removing* concepts from
+that pass shifts every subsequent assignment and re-mints words across the whole
+lexicon. That is a save-format-class change. It is expected here and it is why
+this task is separated from Task 1 — but it means the committed name fixtures
+and possibly committed settlement names will move. Measure it (step 7) rather
+than assuming either way, and if committed *facts* move, **stop and report**:
+that is a finding about how far the proto-root ordering reaches, and it decides
+whether this task owes an epoch.
+
+- [ ] **Step 6: Run the gate**
+
+Run: `make gate 2>&1 | tee /tmp/hv-vern2-t2.log`
+Expected: PASS, with fixture re-pins. Expect
+`windows/worldgen/tests/fixtures/proto-goblinoid-root-table-seed-42.txt` and
+`.../solitary-tongue-peoples-lexicons-seed-42.txt` to change — the nine should
+vanish from the root table and read `gap (unnameable)` in the lexicons.
+
+- [ ] **Step 7: Measure what moved**
+
+Use the fact-list comparison from Global Constraints against `$BASELINE`.
+Report the count of moved facts, and `deity-name` / `settlement` names among
+them. **Do not adjust anything to make it zero** — this task is allowed to move
+facts; it is not allowed to move them silently.
+
+- [ ] **Step 8: Commit**
+
+```bash
+cargo fmt
+git add -A
+git commit -m "feat(language): a gap can be unnameable, and the unnameable get no root
+
+Task 1 registered nine concepts as Void::Unnamed and the language machinery
+promptly gave proto-goblinoid a word for 'yellow dwarf' — every registered
+concept enters the exposures map, and build_lexicon reserves a proto-root for
+the whole universe. The reconstructed ancestor spoke of the main sequence and
+every daughter forgot it.
+
+GapReason gains a third provenance so the lexicon can say WHY: not 'this
+culture never met it' but 'no one here can name it at all'. Concepts gapped
+that way no longer reserve a proto-root."
+```
+
+---
+
+### Task 3: Enforce the claim
 
 **Files:**
 - Create: `cli/tests/the_unnameable.rs`
@@ -323,9 +489,14 @@ fn no_unnameable_concept_is_ever_lexicalized() {
         else {
             continue;
         };
-        for (concept, _entry) in lexicon.entries() {
+        for (concept, entry) in lexicon.entries() {
+            let named = matches!(
+                entry,
+                hornvale_language::LexEntry::Root { .. }
+                    | hornvale_language::LexEntry::Compound { .. }
+            );
             assert!(
-                !forbidden.iter().any(|f| f == concept),
+                !(named && forbidden.iter().any(|f| f == concept)),
                 "{species} minted a word for {concept:?}, which is registered \
                  Unnamed — the declaration must bind, not decorate"
             );
@@ -390,7 +561,7 @@ the project's whole life until now) and that no species' lexicon reaches it."
 
 ---
 
-### Task 3: The first reading of the unnameable fraction
+### Task 4: The first reading of the unnameable fraction
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-31-the-vernacular-design.md` (the
