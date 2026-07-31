@@ -102,6 +102,31 @@ where a disagreement would have been **diagnosable**.
 The container is an instrument, not a deployment. Nothing about how Hornvale
 builds or ships changed.
 
+## Two process misses, both mine, both found at the close
+
+**The G3 package described a decision ledger that did not exist.** It said
+"Ledger is on the branch at `.superpowers/sdd/`" and digested three entries.
+The *decisions* were real and are in the spec's §3 (D1-D6) — which is the
+durable record, and a better home than scratch that dies with a worktree — but
+no ledger file was ever written. A `/tmp` placeholder was created and never
+filled. The autopilot overlay requires the ledger to exist *before* a gate
+passes, precisely so the G3 digest is a summary of something rather than a
+recollection; here the digest was the only artifact. Nothing was lost, and the
+claim was still false at the moment it was reviewed.
+
+**The campaign ran on a branch in the main checkout, not in a worktree.**
+CLAUDE.md's convention is `.claude/worktrees/<campaign>/`. It worked because
+nothing else was using the main checkout, but it means every command in this
+session's transcript ran against the shared tree — the exact arrangement that
+made an earlier stray edit land in main during The Pyx. The convention is
+cheap; skipping it bought nothing.
+
+The common thread with the rest of this retrospective: **the failures were in
+the reporting layer, not the work.** Half A and half B are sound, the evidence
+is retained, and three separate things I *said* about the process — a missing
+kubectl, a ledger, a toolchain version — were wrong in ways only checking
+caught.
+
 ## Follow-ups
 
 | # | Item | Why | Where |
