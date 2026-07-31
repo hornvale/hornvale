@@ -2760,10 +2760,6 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
 
 #[cfg(test)]
 mod tests {
-    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
-    // points directly to build its own world state, once per test — the
-    // sanctioned test-fixture posture the weir's spec carves out.
-    #![allow(clippy::disallowed_methods)]
     //! ## The rebase onto The Toponym's cohort ordering — the rename map
     //!
     //! The nineteen toponymic concepts sort at epoch 4 rather than in
@@ -2808,6 +2804,11 @@ mod tests {
     //! nothing and the assertion saw an empty vec — which reads as "the
     //! esoteric law stopped working" rather than "the planet was renamed".
     //! Fix the key, never the behaviour.
+    //!
+    //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    //! points directly to build its own world state, once per test — the
+    //! sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
 
     fn constant(seed: u64) -> World {

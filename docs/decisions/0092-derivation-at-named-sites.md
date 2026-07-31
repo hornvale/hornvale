@@ -44,17 +44,33 @@ derivation-embedding `_of` wrappers and threaded the shared fit through
 `Session::start`), the three entries above fire on 292 call sites workspace-
 wide with `--all-targets`. Every one resolved to one of two outcomes:
 
-1. **The composition root's own build path.** `hornvale-worldgen` (crate
-   `windows/worldgen`) is the library where all domains meet and the only
-   place providers are constructed (Constitution §2.6) — every pub fn inside
-   it that derives is itself a named construction site, not a caller of one.
-   `mod` brings `vestige.rs`/`render.rs`/`graph_derive.rs`/`alchemy.rs`/
-   `history_emit.rs` into the same crate as `lib.rs`, so **one crate-level
-   `#![allow(clippy::disallowed_methods)]`** at the top of `lib.rs` covers
-   the composition root's entire internal build path — the same bucketing
-   this record uses below for `WorldComponents::assemble`. External crates
-   get no such allow: the lint still catches a NEW embedded derivation added
-   outside worldgen, which is the actual target of the rule.
+1. **The composition root's own build path — but NOT a crate-level allow.**
+   `hornvale-worldgen` (crate `windows/worldgen`) is the library where all
+   domains meet and the only place providers are constructed (Constitution
+   §2.6) — every pub fn inside it that derives is itself a named
+   construction site, not a caller of one. A first pass placed one
+   crate-level `#![allow(clippy::disallowed_methods)]` at the top of
+   `lib.rs` to cover all ~30 of these production sites at once; **review
+   caught that `disallowed-methods` is a single lint with one on/off switch
+   per scope**, so that allow also silenced the 24 platform-libm bans
+   (decision 0041) across the crate's ~11k-line `lib.rs` and its five
+   sibling modules (`vestige.rs`/`render.rs`/`graph_derive.rs`/`alchemy.rs`/
+   `history_emit.rs`) — a constitutional determinism guard, disabled as an
+   unintended side effect of a convenience-bucketing choice for a *different*
+   lint entry. Fixed before merge: the crate-level allow is gone, and each of
+   the ~31 production construction sites inside worldgen (the `_of` survivor
+   bodies — `climate_of`, `paleoclimate_of`, `world_name_in`, `sky_report`,
+   the almanac/history/graph accessors — plus `build_to`/`history_for`, the
+   internal build path itself) carries its own function-scoped
+   `#[allow(clippy::disallowed_methods)]`, the same granularity
+   `kernel/src/math.rs`'s own libm-comparison test already uses. Three
+   `#[cfg(test)] mod tests` blocks inside worldgen (`lib.rs`, `alchemy.rs`,
+   `vestige.rs`) get a module-scoped allow instead, matching the test-fixture
+   posture below. **Verified empirically, not assumed:** a scratch fn calling
+   `f64::sin()` outside any allow, added temporarily to `lib.rs`, failed
+   `cargo clippy -p hornvale-worldgen --lib -- -D warnings` citing "platform
+   libm diverges; use `hornvale_kernel::math::sin`" — proof the libm ban is
+   live again in every worldgen scope this decision's allows don't name.
 2. **A named construction site outside worldgen**, each carrying its own
    scoped `#[allow]` with a one-line justification: `Session::start`
    (vessel, the motivating fix — one sculpt, one fit, threaded to every
@@ -122,8 +138,31 @@ never rose to the level (a sculpt, a fit) that motivated one.
   -rn "disallowed_methods" --include=*.rs` finds every one, and a future
   audit of "is this still the right list" reads the greps, not a
   hand-maintained registry that can drift from what actually compiles.
-- The composition-root crate-level allow is a known, accepted blind spot:
-  clippy cannot catch a NEW triple-fit reintroduced *inside*
-  `hornvale-worldgen` itself (the exact shape of the original sin). Review
-  remains the backstop there, same as it always was for that crate's own
-  internal derivation choices.
+- **`disallowed-methods` is one lint, not one-per-entry**: any scope-level
+  `#[allow(clippy::disallowed_methods)]` — crate, module, or file — silences
+  every configured entry in that scope, not just the one the comment names.
+  Production sites therefore carry **function-scoped** allows precisely so
+  the platform-libm ban (decision 0041) stays live everywhere in worldgen's
+  ~11k-line `lib.rs` and its sibling modules that this decision's allows
+  don't explicitly name — proven, not assumed, by the `f64::sin()` scratch
+  check above. **Test fixtures are the one place this decision accepts the
+  same collateral it fixed in production**: the 18 test-file, 1 example, and
+  7 `mod tests` blanket allows (the file-top or module-scoped ones this
+  decision authorizes for test posture) each also suppress the libm ban for
+  their scope, not only the three `disallowed-methods` entries this record
+  adds. That trade is accepted here — test fixtures build worlds through the
+  normal generator, which already routes every transcendental through
+  `hornvale_kernel::math`, so a test file has no occasion to hand-write
+  `.sin()`/`.cos()`/etc. in the first place, and per-site alternatives for
+  dozens of call sites per file would be pure noise. It is not free,
+  though: a test file that starts calling a raw `f64` transcendental inside
+  one of these blanket-allowed scopes would now compile silently. Review is
+  the backstop there, the same way it always was for worldgen's own
+  construction sites before this decision existed.
+- Beyond the libm interaction: clippy still cannot catch a NEW derivation
+  chain reintroduced *inside* one of these allowed scopes that merely calls
+  `terrain_of`/`climate_from`/`demography_report_from` again (the exact
+  shape of the original sin) — the lint fires on the CALL, not on a count of
+  how many times a scope calls it. Function-scoping the production sites
+  narrows this blind spot to the one function each allow names, rather than
+  the whole crate; it does not close it.

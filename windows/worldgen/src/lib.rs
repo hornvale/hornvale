@@ -4,16 +4,6 @@
 //! almanac's context. Domains stay ignorant of each other; this module is
 //! where the application composes them (Constitution §2.6).
 #![warn(missing_docs)]
-// The weir (decision 0092): `terrain_of`/`climate_from`/`demography_report_from`
-// are the sculpt/fit derivation entry points the lint bans workspace-wide.
-// This crate IS the composition root (Constitution §2.6) — every pub fn here
-// that derives is itself a named construction site, and `mod` brings
-// vestige.rs/render.rs/graph_derive.rs/alchemy.rs/history_emit.rs into this
-// same crate, so one crate-level allow covers all of them (the bucketing the
-// spec used for `WorldComponents::assemble`, applied here at the same
-// granularity). External crates get no such allow — the lint still catches a
-// NEW embedded derivation added outside this crate.
-#![allow(clippy::disallowed_methods)]
 
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
@@ -1241,6 +1231,9 @@ pub fn predator_pressure_from(
 /// consumed: this is the hook (spec §9.2) — wiring it into the vessel's
 /// hazard axis is a deferred follow-on.
 /// type-audit: bare-ok(ratio: return)
+// Named construction site (decision 0092): reconstructs terrain for its own
+// readout.
+#[allow(clippy::disallowed_methods)]
 pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let terrain = terrain_of(world)?;
     let field = vestiges_field(world, &terrain);
@@ -1463,6 +1456,9 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
 /// and the sky, map their outputs into climate's kernel-only inputs, and
 /// derive temperature/moisture/biome/habitability. The single construction
 /// site for `GeneratedClimate` (the `terrain_of`/`sky_of` pattern).
+// Named construction site (decision 0092): a sanctioned `_of` survivor —
+// sculpts terrain once, then fits climate over it.
+#[allow(clippy::disallowed_methods)]
 pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
     let terrain = terrain_of(world)?;
     climate_from(world, &terrain)
@@ -1809,6 +1805,9 @@ fn glacial_maximum_habitable(
 /// steps, re-run climate at ~25 coarse eras, and extract the strata. The
 /// single construction site for `PaleoRecord` and the sole definer of the
 /// era-tick order (a save-format contract).
+// Named construction site (decision 0092): sculpts terrain once for its own
+// paleoclimate readout.
+#[allow(clippy::disallowed_methods)]
 pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
     let terrain = terrain_of(world)?;
     paleoclimate_from(world, &terrain)
@@ -2131,6 +2130,9 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// locked worlds have no rotation-scale day/night cycle (`temperature_at`'s
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts/fits once for its own
+// readout lines.
+#[allow(clippy::disallowed_methods)]
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
@@ -2251,6 +2253,9 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// for worlds with no such site (landless, or a coast whose current
 /// happens to cancel to zero).
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts/fits once for its own
+// readout lines.
+#[allow(clippy::disallowed_methods)]
 pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
@@ -2316,6 +2321,9 @@ fn regime_word(regime: PrecipRegime) -> &'static str {
 /// moisture field and a `Uniform`-biased regime — `precip_regime`'s
 /// `band == 0` default).
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts/fits once for its own
+// readout lines.
+#[allow(clippy::disallowed_methods)]
 pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
@@ -2410,6 +2418,9 @@ pub fn sky_phrase(
 /// open ocean), on the almanac's reference day (0.0). Level 0 — a pure
 /// observation.
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts/fits once for its own
+// readout lines.
+#[allow(clippy::disallowed_methods)]
 pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
@@ -2461,6 +2472,9 @@ fn weather_line_for(
 /// The deep-time headline lines for the almanac; empty when the world has no
 /// glacial past.
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts once for its own
+// deep-time readout.
+#[allow(clippy::disallowed_methods)]
 pub fn deep_time_lines(world: &World) -> Result<Vec<String>, BuildError> {
     deep_time_lines_from(world, &terrain_of(world)?)
 }
@@ -2491,6 +2505,9 @@ fn deep_time_lines_from(
 /// are sparse walk-scale landmarks, so "any" is the bar, not a share
 /// (mirrors The Ground's `ground_lines` notable-emission pattern).
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts once for its own land
+// readout.
+#[allow(clippy::disallowed_methods)]
 pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     Ok(land_lines_from(&terrain_of(world)?))
 }
@@ -2608,6 +2625,9 @@ const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 /// existing terrain/climate fields: no new draws. Empty for a landless
 /// world.
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts/fits once for its own
+// readout lines.
+#[allow(clippy::disallowed_methods)]
 pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
@@ -2942,6 +2962,9 @@ pub fn vestige_lines_from(
 /// pure projection over `TectonicGlobe.water_kind`: no new draws. Empty for
 /// a landless world.
 /// type-audit: bare-ok(prose: return)
+// Named construction site (decision 0092): sculpts once for its own water
+// readout.
+#[allow(clippy::disallowed_methods)]
 pub fn water_lines(world: &World) -> Result<Vec<String>, BuildError> {
     Ok(water_lines_from(&terrain_of(world)?))
 }
@@ -3151,6 +3174,9 @@ pub fn occlusion(
 /// cell's weather becomes a lens, so the phenomena paths cannot drift apart.
 /// The identity lens for a position-blind observation: nowhere in particular
 /// has no weather.
+// Named construction site (decision 0092): reconstructs terrain for its own
+// occlusion readout.
+#[allow(clippy::disallowed_methods)]
 fn occlusion_lens_at(
     world: &World,
     climate: &GeneratedClimate,
@@ -5111,6 +5137,10 @@ fn bake_history_from(
 /// so its output is byte-identical to the settlement stage's own bake, which
 /// routes through the same function over its already-built (not re-derived)
 /// terrain/climate.
+// Named construction site (decision 0092): builds the world itself
+// (`build_to`), reconstructing terrain/climate only when the build's own
+// depth didn't already sculpt them.
+#[allow(clippy::disallowed_methods)]
 pub fn history_for(
     seed: Seed,
     pins: &SkyPins,
@@ -5147,6 +5177,10 @@ pub fn history_for(
 /// stages — every statement's order and borrows are otherwise unchanged, so
 /// the Full path is identical to the pre-depth pipeline.
 #[allow(clippy::too_many_arguments)]
+// Named construction site (decision 0092): worldgen's own build path —
+// the whole point of this fn is to derive terrain/climate for the world it
+// is building.
+#[allow(clippy::disallowed_methods)]
 fn build_to(
     seed: Seed,
     pins: &SkyPins,
@@ -6389,6 +6423,9 @@ pub fn world_name(world: &World) -> Option<String> {
 /// `dominant_people_in`), so the planet genesis stage can use the SAME
 /// injected `wc` it already built rather than re-assembling components.
 /// type-audit: bare-ok(identifier-text)
+// Named construction site (decision 0092): sculpts/fits once for callers
+// that have not already built terrain/climate.
+#[allow(clippy::disallowed_methods)]
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
     let terrain = terrain_of(world).ok()?;
     let climate = climate_from(world, &terrain).ok()?;
@@ -6496,6 +6533,9 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// turns the rendered `description` into `Vantage.sky`, so a possessed
 /// agent's sky and the almanac's placed-observer lines describe the same
 /// point on the globe.
+// Named construction site (decision 0092): sculpts/fits once for the
+// almanac/vessel sky readout.
+#[allow(clippy::disallowed_methods)]
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
@@ -7108,6 +7148,9 @@ fn land_list_labels(world: &World) -> Vec<String> {
 
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
+// Named construction site (decision 0092): The Single Sculpt — one
+// terrain/climate build threaded into every accessor below.
+#[allow(clippy::disallowed_methods)]
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     // Speech (the settlement noun) and the life-history line's biosphere both
     // sourced from the canonical component set (ECS c3): every entity is a
@@ -7238,6 +7281,10 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 }
 
 #[cfg(test)]
+// Test fixture (decision 0092): calls the sculpt/fit derivation entry
+// points directly to build its own world state, once per test — the
+// sanctioned test-fixture posture the weir's spec carves out.
+#[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
 
