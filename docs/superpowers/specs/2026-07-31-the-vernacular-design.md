@@ -259,6 +259,37 @@ A falsified prediction is a finding, not a failure. If the after-count is
 non-zero, that is a real result about a channel we did not know existed, and
 it ships as the headline rather than being tuned away.
 
+**Readout (measured on `campaign/the-vernacular`, commit `f61060e9`).** The
+frozen `73` above was measured before this branch absorbed The Watershed,
+which itself moved committed facts, so it is not comparable to anything
+measured after the merge. Both columns below were therefore retaken as a
+*paired* measurement on the current tree, in the same session, using the same
+reword (`domains/astronomy/src/provider.rs`'s `"a {} moon"` →
+`"a {} lunar disc"`) against `.superpowers/sdd/2026-07-31-the-vernacular-part-1-the-referent-contract/baseline-seed-42.json`
+(seed 42, 26309 facts):
+
+| | before (old dispatch, reinstated) | after (Stage 2, as shipped) |
+|---|---|---|
+| committed facts moved by a null reword (seed 42) | **77** (measured) | **0** (measured) |
+| of which `deity-name` | **9 of 48** | **0** |
+| of which `deity-epithet` | **7 of 48** | **0** |
+
+The "before" column was taken by temporarily reinstating the pre-Stage-2
+`phenomenon_concept` (the `description.contains("moon")` /
+`contains("star")` / else-`sun` ladder) in `windows/worldgen/src/lib.rs`
+alongside the same reword, regenerating seed 42, counting, then reverting both
+edits and confirming a clean tree — the same technique this campaign's Task 3
+and Task 4 reviewers used to prove their own guards. `deity-name` and
+`deity-epithet` land exactly on the frozen `9 of 48` / `7 of 48`, confirming
+the mechanism is the same one §1 measured; the `77` vs `73` total differs only
+because The Watershed's merge added facts the reword also touches
+(`name-gloss`, `deity-name-ipa`, `deity-epithet-ipa` — none of which existed
+when `73` was measured), not because the leak itself changed shape.
+
+**The prediction holds.** After Stage 2, the same reword moves zero facts: the
+referent is the only thing `phenomenon_concept` reads, so a synonym that
+"names nothing" is, correctly, invisible to it.
+
 ## 8. Risks
 
 1. **The lab metric loses its independence.** `name-gloss-true` is a
