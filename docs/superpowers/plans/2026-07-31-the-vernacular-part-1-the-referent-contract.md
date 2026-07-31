@@ -247,9 +247,15 @@ The remaining sites are test fixtures and doc examples (all verified by
 - `windows/lab/src/metrics.rs:6135` — the closure
   `|kind: &str, description: &str|` inside
   `presiding_concepts_are_phenomenon_concepts_codomain`. Add a `concept: &str`
-  parameter; its six cases take `sun`, `star`, `sun`, `day`, `star`, `wind` in
-  the order they appear. **These six are what keep the codomain test honest
-  after Task 2** — get them right.
+  parameter; its six cases take **`moon`, `star`, `sun`, `day`, `star`,
+  `wind`** in the order they appear. **These six are what keep the codomain
+  test honest after Task 2** — get them right, and derive each one from what
+  the old substring logic returned for that case's *description*, not from the
+  order the cases happen to sit in. (Case 1's description is `"the moon rides
+  high"`, so it is `moon`. An earlier draft of this plan said `sun` here; the
+  error was inert while `phenomenon_concept` still read descriptions and only
+  surfaced in Task 2, where it failed `assert_eq!(produced, listed)` because
+  the produced set no longer contained `moon`.)
 - `windows/almanac/src/lib.rs:568` — one site, inside a render fixture:
   `Referent::of("sun")`.
 - `kernel/tests/determinism.rs:14` and `kernel/examples/first_light.rs:66` —
