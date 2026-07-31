@@ -4680,6 +4680,63 @@ pub fn deity_site_concepts(
     concepts
 }
 
+/// The `*-kind` concept of the people who held `cell` before `current` — the
+/// deepest occupation layer at a settlement's site that belongs to someone
+/// else, resolved to a registered concept via
+/// [`hornvale_species::kind_concept`].
+///
+/// The Watershed, Item 5. Real toponymy is full of the people who were here
+/// first, and this world knows: history bakes an occupation layer per site, so
+/// a goblin steading raised on a gnoll ruin can be named for the gnolls, and
+/// `hornvale history --site` reads out the stratigraphy behind the name.
+///
+/// EARLIEST wins, not deepest-by-count: `OCC_FOUNDED` is the founding day, and
+/// the people who were here first are what a predecessor name means. Ties
+/// cannot occur — two occupations of one cell founded on the identical day
+/// would be the same layer.
+///
+/// Returns `None` when the cell has no foreign occupation, exactly as a
+/// settlement away from water carries no hydrology concept. A people whose
+/// kind concept is unregistered also yields `None` rather than an invented
+/// one — `kind_concept` reads the registry's own roster.
+fn predecessor_people(
+    world: &World,
+    cell: hornvale_kernel::CellId,
+    current: &str,
+) -> Option<&'static str> {
+    let mut earliest: Option<(f64, String)> = None;
+    for f in world.ledger.iter() {
+        if f.predicate != hornvale_history::OCC_SITE {
+            continue;
+        }
+        let hornvale_kernel::Value::Number(n) = &f.object else {
+            continue;
+        };
+        if (*n as u32) != cell.0 {
+            continue;
+        }
+        let Some(people) = world
+            .ledger
+            .text_of(f.subject, hornvale_history::OCC_PEOPLE)
+        else {
+            continue;
+        };
+        if people == current {
+            continue;
+        }
+        let Some(hornvale_kernel::Value::Number(founded)) = world
+            .ledger
+            .value_of(f.subject, hornvale_history::OCC_FOUNDED)
+        else {
+            continue;
+        };
+        if earliest.as_ref().is_none_or(|(d, _)| *founded < *d) {
+            earliest = Some((*founded, people.to_string()));
+        }
+    }
+    hornvale_species::kind_concept(&earliest?.1)
+}
+
 /// The concepts a settlement's own site offers its namer, most specific
 /// first — the order is a CONTRACT: `glossed_name` picks 1-3 concepts by
 /// index from this vector (however many its drawn
@@ -4762,9 +4819,11 @@ pub fn deity_site_concepts(
 /// Biome and the presiding sky phenomenon close the whole vector: every
 /// settlement has one of each, so they are the least discriminating facts a
 /// cell carries.
-/// type-audit: bare-ok(identifier-text: presiding), bare-ok(identifier-text: return)
+/// type-audit: bare-ok(identifier-text: presiding), bare-ok(identifier-text: species), bare-ok(identifier-text: return)
 pub fn settlement_site_concepts(
+    world: &World,
     seed: &Seed,
+    species: &str,
     cell: hornvale_kernel::CellId,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
@@ -4829,6 +4888,12 @@ pub fn settlement_site_concepts(
         )
         .map(|c| c.concept_name()),
     );
+    // Who held this ground before (The Watershed, Item 5), beside the staple
+    // and before the biome it sits on: both answer "what is true of this
+    // place" more specifically than the biome does. Offered unconditionally
+    // for the same reason the staple is — `holds_word` decides, so a people
+    // with no word for the gnolls simply does not name its home for them.
+    concepts.extend(predecessor_people(world, cell, species));
     concepts.push(climate.biome_at(cell).concept_name());
     concepts.extend(presiding);
     concepts
@@ -5620,7 +5685,7 @@ fn build_to(
         // exists, but observation never reads it) — see `observed_phenomena_from`.
         let seen = observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
-        let concepts = settlement_site_concepts(&world.seed, s.cell, &terrain, &climate, presiding);
+        let concepts = settlement_site_concepts(&world, &world.seed, name, s.cell, &terrain, &climate, presiding);
         // Which concepts this name will actually be built from — exactly
         // what its gloss will name, reported without rendering anything.
         // `glossed_name` replays the same picks off the same stream (wear
@@ -10268,7 +10333,15 @@ mod tests {
             let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
                 .expect("observation succeeds for a placed species");
             let presiding = seen.first().and_then(phenomenon_concept);
-            let site = settlement_site_concepts(&world.seed, cell, &terrain, &climate, presiding);
+            let site = settlement_site_concepts(
+                &world,
+                &world.seed,
+                &species,
+                cell,
+                &terrain,
+                &climate,
+                presiding,
+            );
             let mut remainder = gloss.to_string();
             for concept in &site {
                 remainder = remainder.replacen(concept, "", 1);
@@ -10333,7 +10406,9 @@ mod tests {
                 .expect("observation succeeds for a placed species");
             let presiding = seen.first().and_then(phenomenon_concept);
             vectors.push(settlement_site_concepts(
+                &world,
                 &world.seed,
+                &species,
                 cell,
                 &terrain,
                 &climate,
@@ -10405,7 +10480,15 @@ mod tests {
                 continue;
             };
             let presiding = seen.first().and_then(phenomenon_concept);
-            let site = settlement_site_concepts(&world.seed, cell, &terrain, &climate, presiding);
+            let site = settlement_site_concepts(
+                &world,
+                &world.seed,
+                &species,
+                cell,
+                &terrain,
+                &climate,
+                presiding,
+            );
             let biome = climate.biome_at(cell).concept_name();
 
             // The trailing pair, in order: presiding last when it exists,

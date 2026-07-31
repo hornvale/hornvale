@@ -2,6 +2,48 @@
 
 **Campaign:** The Watershed
 **Date:** 2026-07-29
+**Status:** CLOSED, PARTLY FALSIFIED (2026-07-31). This spec never passed G3,
+and the campaign shipped without it passing — deliberately. Measuring §5 before
+building it falsified the arithmetic, and three further sections were found
+anchored to code that does not exist on main. What shipped is Item 0 (sonority),
+Item 5 (predecessor peoples), and an instrument repair; Items 1–4 are specified,
+measured, and NOT built. Read
+[the chronicle](../../../book/src/chronicle/the-watershed.md) first; this
+document is kept as written for the record, with the corrections listed
+immediately below, and is NOT a plan for the successor campaign.
+
+**Corrections, none of them applied to the body:**
+
+- **§5's primary claim is false.** Items 2–4 cannot reach below 15% collisions.
+  The measured floor, assuming perfectly injective naming on the full
+  `(gloss, landmass, river)` tuple, is **44.8%** over an 8-seed battery. The
+  binding constraint is settlement CLUSTERING, not descriptor vocabulary:
+  seed 42's 14 named landmasses and 123 named rivers are occupied by only
+  **5** and **13**.
+- **§5's multipliers are wrong.** ×1.40 / ×1.99 were simulated over a corpus
+  from a branch that never merged. Measured on main at seed 42: **×1.29 /
+  ×1.63**. The stated *reason* for the risk was also wrong — river identity is
+  ~84% orthogonal to the gloss, as hoped.
+- **§1.3's arity cliff is a single-seed artifact.** Visible at seed 42, absent
+  over 8 seeds, where each added concept buys a flat ~20pp. Item 1's direction
+  survives; its "the payoff is at three" threshold does not.
+- **§3 Items 2–3 anchor on `sitefact`**, a module that exists only on the
+  unmerged `the-shibboleth` branch — the same half §8 deliberately discarded.
+  Main's equivalents are `is_river_cell`, `is_ford_cell`,
+  `carve::WATERFALL_MIN_DRAINAGE`, `ISLAND_CELL_CAP`, `landmass_size_capped`.
+- **§4's epoch premise is void** (no parked branch to land inside), and no
+  `ROOT_EPOCH` bump was owed: per `784c2cb6`, the label documents a change to
+  the *assignment algorithm*, and sonority changes the phonology that algorithm
+  draws from.
+- **§7 flag 3 is withdrawn, not decided.** `river/name/v1` and
+  `landmass/name/v1` are phantom labels under decision 0083 — same algorithm,
+  different subject. Borrowing owes a label instead; it is a different
+  derivation.
+- **§7 flag 2 is decided:** borrowing ships, selecting the Steeped people with
+  the most settlements on the river. It buys realism, not the criterion.
+
+Original header follows.
+
 **Status:** DRAFT — awaiting G3 review. **The reconciliation of §8 is DONE
 and merged** (`ccf370bc`, 2026-07-29): staples and three defect fixes landed
 on main, taking collisions 65.1% → 59.8% as a purely additive epoch. Sonority

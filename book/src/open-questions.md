@@ -767,6 +767,27 @@ its honest size.
    instrument only scores a bet if something reads it. This one existed,
    drift-checked green, and measured a failure nobody was told about.
 
+   **The Watershed sharpened that caution into its harder form (2026-07-31).**
+   There, the instrument was read constantly — and was *wrong*.
+   `exposure-sound` reported false on roughly three quarters of all worlds
+   because the Laboratory's deliberately hand-maintained duplicate of the
+   exposure rules had not learned a rule an earlier commit added. The worlds
+   were correct throughout. It was the second such lapse in eleven days, and
+   the campaign least able to notice was the one whose central mechanism the
+   metric measures. So the caution generalizes: *an instrument scores a bet
+   only if something reads it AND the instrument is itself current*, and
+   nothing in this repo reddens when a deliberate duplicate falls behind.
+
+   That campaign also moved the self-scorable half in both directions at once.
+   Sonority sequencing made pronounceability a property held **by
+   construction** rather than measured after the fact — reverse-sonority
+   onsets no language uses are no longer drawable, at zero entropy cost, since
+   ordering a template consumes the same draws as picking one. But the
+   transparency witness *fell* over 1000 worlds (0.816 → 0.793) while rising
+   at the reference seed, which is the distribution witness earning its keep:
+   a single-world reading would have recorded the opposite. Neither movement
+   touches the taste half, which is unchanged.
+
 2. **Emergent economics that don't degenerate.** The mermaid-bone-farm
    problem: static value tables meeting exploitable production collapse into
    absurdity, and most game economies are faked precisely because real ones

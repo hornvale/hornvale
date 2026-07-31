@@ -210,7 +210,7 @@ fn no_deity_bearing_schema_ever_fires_agentless() {
 fn moons_explained_only_where_kept() {
     // Seed 2: kobold keeps the moons (moon-count Kept), goblin loses them
     // (BeyondCapability). Measured: kobold's moon-count fires Agentive,
-    // bound to the SLOWEST cyclic belief ("Nggoo", period 1174.61, the
+    // bound to the SLOWEST cyclic belief ("Kngoo", period 1174.61, the
     // pantheon's longest — manner Slow); goblin's stays plain Lost, never
     // Explained.
     //
@@ -232,6 +232,11 @@ fn moons_explained_only_where_kept() {
     // which reseeds every proto-root: "Tsaasngkoo" -> "Nggoo". Same story —
     // `underlying` (Kept), `schema` (Agentive), `lexeme` ("strides") and
     // `manner` (Slow) compare byte-identical; only `agent` moved.
+    //
+    // And once more at The Watershed's sonority merge (Item 0): "Nggoo" ->
+    // "Kngoo". `Ngg-` is the nasal-nasal onset the SSP work names in its own
+    // commit message as the defect it exists to remove; `Kng-` rises toward
+    // the nucleus. Only `agent` moved.
     let w = generated(2);
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -256,7 +261,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Nggoo".to_string()),
+            agent: Some("Kngoo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

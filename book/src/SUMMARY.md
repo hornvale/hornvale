@@ -286,6 +286,7 @@
 - [The Twin](./chronicle/the-twin.md)
 - [The Shuttle](./chronicle/the-shuttle.md)
 - [The Weir](./chronicle/the-weir.md)
+- [The Watershed](./chronicle/the-watershed.md)
 
 # Appendix: The Frontier
 
