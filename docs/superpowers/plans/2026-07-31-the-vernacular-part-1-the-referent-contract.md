@@ -26,8 +26,25 @@ answered for) and never its *derivation* (what the answer is). So the kind gate
 becomes one `GLOSSING_KINDS` list read by both sides, worldgen keeps its closed
 codomain match, and the lab's second opinion is **re-grounded on the concept
 registry and the lexicon** — a source of truth the gloss path never consults —
-rather than copying worldgen's match arms. This resolves what the spec's §8
-risk 1 left open.
+rather than copying worldgen's match arms.
+
+**Correction (final fix wave, whole-branch review).** This paragraph
+originally claimed the above resolves the spec's §8 risk 1. It does not, and
+the self-review below already said so ("not solved here, by design") — this
+paragraph disagreed with it and was the wrong one. `GLOSSING_KINDS` is shared
+and the two `phenomenon_concept` derivations stay separate in code, but the
+independent second opinion this task adds, `referent_is_nameable`, is
+`#[allow(dead_code)]` and reached only by
+`every_rostered_referent_is_nameable`, a unit test; the metric that actually
+appears in the census, `name-gloss-true`, still takes its presiding concept
+from the same `referent` field worldgen glossed from. The two sides cannot
+disagree *in the instrument*. What this task DOES establish, which makes risk
+1 less alarming than it read at spec time: before this campaign the two
+`phenomenon_concept` copies were verbatim-identical prose ladders over the
+same field, so they could not disagree then either — the branch makes a
+pre-existing coupling explicit rather than removing an independence that ever
+existed. Risk 1 was overstated at spec time; see the spec's §8 risk 1 for the
+recorded outcome.
 
 **Tech Stack:** Rust edition 2024, `serde` only (decision 0004). No new
 dependencies. `cargo nextest` for tests, `make gate` as the commit gate.

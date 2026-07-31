@@ -179,9 +179,11 @@ called out as a design risk in §8.
 at all 19 producer sites; leave `description` in place and untouched. No
 consumer changes. Nothing moves. Establishes the contract without risk.
 
-**Stage 2 — flip the consumers.** `phenomenon_concept` (both copies), the
-dedup key, and the `contains(...)` predicates in tests read `referent`.
-`description` becomes write-only from the sim's point of view. **This is the
+**Stage 2 — flip the consumers.** `phenomenon_concept` (both copies) and the
+`contains(...)` predicates in tests read `referent`. (There is no phenomenon
+dedup key in production to flip — an earlier draft of this section claimed
+one; see §4's correction and the follow-up register.) `description` becomes
+write-only from the sim's point of view. **This is the
 stage where committed facts may move** — measured, not assumed (§6).
 
 **Stage 3 — derive the rendering.** Replace the hand-written description
@@ -319,12 +321,26 @@ referent is the only thing `phenomenon_concept` reads, so a synonym that
 
 ## 8. Risks
 
-1. **The lab metric loses its independence.** `name-gloss-true` is a
-   cross-check today only because the two `phenomenon_concept` copies are
-   written separately. Once both read one field they cannot disagree. The
-   metric must be re-grounded — most likely by checking the referent against
-   the concept registry rather than against worldgen's mapping. Unresolved;
-   flagged for the plan.
+1. **The lab metric loses its independence — outcome (recorded at close, the
+   final fix wave).** `name-gloss-true` is a cross-check today only because
+   the two `phenomenon_concept` copies are written separately; once both read
+   one field they cannot disagree. **This risk was overstated at spec time.**
+   Before this campaign the two copies were already verbatim-identical prose
+   ladders (the same `contains("moon")`/`contains("star")`/else-`sun` match
+   over the same field), so they could not disagree *before* this campaign
+   either — the branch makes a pre-existing coupling explicit, it does not
+   remove an independence that ever existed. The plan
+   (`2026-07-31-the-vernacular-part-1-the-referent-contract.md`) did add a
+   real second opinion, `referent_is_nameable`
+   (`windows/lab/src/metrics.rs`), which checks the referent against the
+   concept registry and the culture's lexicon — a source of truth the gloss
+   path never consults. **Still owed:** that function is
+   `#[allow(dead_code)]` and reached only by one unit test
+   (`every_rostered_referent_is_nameable`); the metric that actually appears
+   in the census, `name-gloss-true`, still takes its presiding concept from
+   the same `referent` field worldgen glossed from, so the two sides cannot
+   disagree *in the instrument*. Wiring that independent derivation into
+   `name-gloss-true` itself — not only into a test beside it — remains open.
 2. **Branch C has no owner.** Spatial and frame vocabulary (`region_word`,
    compass letters, "the equator's road") needs a frame abstraction that does
    not exist. If it proves large, Stage 3 drops branch C and the campaign
@@ -377,3 +393,37 @@ Full ledger: `.superpowers/sdd/decision-ledger.md` (6 entries).
 - `windows/lab/src/metrics.rs:4247` cites "the independent copy in
   `cli/tests/words_identity.rs`" — **that file does not exist**. There are two
   copies, not three. Doc drift from an earlier campaign; sweep it.
+- **`name-gloss-true` still owes an independent check** (§8 risk 1's recorded
+  outcome, above, promoted here from the campaign's followup register so it
+  survives the worktree). `referent_is_nameable`
+  (`windows/lab/src/metrics.rs`) is a real second opinion — it asks the
+  concept registry and the culture's lexicon, which the gloss path never
+  reads — but it is `#[allow(dead_code)]` and reached only by
+  `every_rostered_referent_is_nameable`, a unit test. The census metric,
+  `name-gloss-true`, still takes its presiding concept from the same
+  `referent` field worldgen glossed from, so the two sides cannot disagree in
+  the instrument that actually publishes. Getting the independent derivation
+  into the metric itself is the substance still owed; do not let this close
+  as "we wrote `referent_is_nameable`".
+- **A second prose-as-identity read, unconvertible today, and a stronger
+  sibling found on review** (promoted from the followup register).
+  `domains/astronomy/src/provider.rs:1093` is a TEST ORACLE — it sits inside
+  `#[cfg(test)] mod tests` (that module spans lines 17–1164; the first
+  production fn after it is `size_word` at `:1317`), so it moves no world
+  state, though it still matters: it does
+  `.find(|p| p.kind == WANDERING_STAR && p.description.contains(inner_class_word))`,
+  prose deciding *which wanderer* a phenomenon is, and if the wanderer
+  renderer ever stops emitting the class word, `inner_phenomenon` becomes
+  `None` and the assertion passes vacuously rather than failing loudly. It
+  cannot convert yet: every wanderer shares one referent
+  (`Referent::of("star")`, after the final fix wave dropped the mistyped
+  `move` qualifier), so the referent cannot yet tell inner from outer — Stage
+  3 owes it that resolution. **Stronger, and in production, not test:**
+  `provider.rs:1226` and `:1238` (`daylight_words`/`twilight_words`) branch on
+  `class_name.contains("(K)")` / `("(F)")`, where `class_name` is prose minted
+  at `domains/astronomy/src/star.rs:65-73` and *also* rendered into the sun's
+  own description (`provider.rs:1565`). Reword `star.rs`'s class-name
+  strings and every K- and F-class world silently falls through to the G
+  branch — no error, just wrong daylight and twilight text — even though the
+  semantic input (`star.mass`) is sitting right there unused. Stage 3 must
+  delete this substring dispatch, not merely lexicalize its output.

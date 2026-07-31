@@ -3316,7 +3316,8 @@ fn observed_phenomena_at(
 /// `place`'s own committed vantage — its latitude/longitude fact culls the
 /// sky by hemisphere (SEQ-5). This is the per-entity observation glossed
 /// naming is truthful to (spec §9.3: a gloss composes THAT entity's own
-/// site facts), public so the keystone (`cli/tests/words_identity.rs`) and
+/// site facts), public so this crate's own keystone
+/// (`a_settlement_name_gloss_is_truthful_to_its_own_site_facts`, below) and
 /// the lab's `name-gloss-true` metric can re-derive it independently
 /// without importing worldgen's naming internals.
 /// type-audit: bare-ok(identifier-text: species)
@@ -7430,10 +7431,14 @@ mod tests {
         assert_eq!(phenomenon_concept(&eclipse), None);
     }
 
-    /// Two phenomena that render identically but mean different things must not
-    /// collapse into one another in the dedup pass.
+    /// `Referent`'s derived `Eq`/`Ord` discriminate on `concept`: two
+    /// referents that render identical prose but name different concepts do
+    /// not compare equal. There is no phenomenon dedup pass in production
+    /// today (an earlier version of this doc claimed otherwise — see the
+    /// followup register and spec §4's correction) — this pins the property
+    /// any future dedup-by-`Referent` would need, not an existing pass.
     #[test]
-    fn dedup_separates_referents_that_share_a_rendering() {
+    fn referent_ord_discriminates_on_concept() {
         let same_prose = |concept: &str| hornvale_kernel::Phenomenon {
             kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
             referent: hornvale_kernel::Referent::of(concept),
@@ -7446,7 +7451,11 @@ mod tests {
         for p in [same_prose("sun"), same_prose("moon")] {
             seen.insert(p.referent.clone());
         }
-        assert_eq!(seen.len(), 2, "sun and moon must not dedup together");
+        assert_eq!(
+            seen.len(),
+            2,
+            "sun and moon referents must not compare equal"
+        );
     }
 
     /// Decision 0024's remedy on the almanac's Land list — the section that

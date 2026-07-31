@@ -4462,17 +4462,23 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
     MetricValue::Flag(all_true)
 }
 
-/// The exact codomain of [`phenomenon_concept`] — every concept a presiding
-/// phenomenon can contribute to a settlement's site vector, and therefore to
-/// its gloss. Named as a set here because [`name_transparency`] has to READ a
-/// committed gloss back into the concepts it names, and the presiding slot is
-/// the one site concept that cannot be re-derived from terrain and climate
-/// alone (it needs the settlement's own culled sky — `SEQ-5`, the expensive
-/// half of `settlement_site_concepts` above). Taking the whole codomain as
-/// the candidate set instead costs the parse nothing: it is a superset of the
-/// one concept that actually fired, and the segmentation stays unique anyway
-/// (see [`gloss_parses`]). `presiding_concepts_are_phenomenon_concepts_
-/// codomain` pins the two together.
+/// A SUPERSET of [`phenomenon_concept`]'s codomain — every concept a
+/// presiding phenomenon can contribute to a settlement's site vector, and
+/// therefore to its gloss. Not exact: since decision 0094 opened
+/// `phenomenon_concept` to read a phenomenon's own `referent.concept`
+/// verbatim for any rostered kind, its codomain is open (any registered
+/// concept a producer chooses to name), so this list is an upper bound rather
+/// than a codomain pinned exactly to it. Named as a set here because
+/// [`name_transparency`] has to READ a committed gloss back into the concepts
+/// it names, and the presiding slot is the one site concept that cannot be
+/// re-derived from terrain and climate alone (it needs the settlement's own
+/// culled sky — `SEQ-5`, the expensive half of `settlement_site_concepts`
+/// above). Taking the whole list as the candidate set instead costs the parse
+/// nothing: it is a superset of the one concept that actually fired, and the
+/// segmentation stays unique anyway (see [`gloss_parses`]).
+/// `presiding_concepts_cover_seed_42s_rostered_concepts` checks this list
+/// against a real generated world's rostered concepts, rather than pinning
+/// exact codomain equality against hand-written fixtures.
 /// type-audit: bare-ok(identifier-text)
 const PRESIDING_CONCEPTS: &[&str] = &["day", "moon", "star", "sun", "wind"];
 
@@ -6219,58 +6225,38 @@ mod tests {
         assert!(gloss_parses("hill-marsh", &vocab).is_empty());
     }
 
-    /// `PRESIDING_CONCEPTS` must be exactly `phenomenon_concept`'s codomain.
-    /// If a later campaign teaches a new phenomenon kind to gloss, this reds
-    /// rather than letting `name-transparency` silently fail to parse the
+    /// `PRESIDING_CONCEPTS` covers every concept a REAL seed-42 world's
+    /// rostered phenomena actually gloss to — checked against
+    /// `hornvale_worldgen::observed_phenomena` on a built world, not against
+    /// hand-written fixtures. A hand-typed fixture's `concept` field is
+    /// whatever the test author wrote, so it can only be changed by editing
+    /// the fixture, never by a production change — that shape was found to
+    /// make this test tautological (final fix wave, campaign close review).
+    /// Deriving the cases from a live world instead means a later campaign
+    /// that teaches a new phenomenon kind to gloss, or points an existing
+    /// kind's referent at an unlisted concept, actually reds this test rather
+    /// than leaving `name-transparency` to silently fail to parse the
     /// glosses that carry it.
     #[test]
-    fn presiding_concepts_are_phenomenon_concepts_codomain() {
-        let phenomenon =
-            |kind: &str, concept: &str, description: &str| hornvale_kernel::Phenomenon {
-                kind: kind.to_string(),
-                referent: hornvale_kernel::Referent::of(concept),
-                description: description.to_string(),
-                period_days: None,
-                salience: 1.0,
-                venue: hornvale_kernel::Venue::DaySky,
-            };
-        let cases = [
-            phenomenon(
-                hornvale_astronomy::CELESTIAL_BODY,
-                "moon",
-                "the moon rides high",
-            ),
-            phenomenon(
-                hornvale_astronomy::CELESTIAL_BODY,
-                "star",
-                "a wandering star",
-            ),
-            phenomenon(
-                hornvale_astronomy::CELESTIAL_BODY,
-                "sun",
-                "the disc at noon",
-            ),
-            phenomenon(
-                hornvale_astronomy::SEASONAL_CYCLE,
-                "day",
-                "the turning year",
-            ),
-            phenomenon(hornvale_astronomy::NIGHT_STAR, "star", "a fixed star"),
-            phenomenon(hornvale_climate::AMBIENT, "wind", "the prevailing wind"),
-        ];
-        let mut produced: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
-        for p in &cases {
-            let concept = phenomenon_concept(p).expect("each of these kinds glosses");
-            assert!(
-                PRESIDING_CONCEPTS.contains(&concept),
-                "{concept} is a presiding gloss concept but is missing from PRESIDING_CONCEPTS"
-            );
-            produced.insert(concept);
+    fn presiding_concepts_cover_seed_42s_rostered_concepts() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let phenomena =
+            hornvale_worldgen::observed_phenomena(view.world(), 0.0).expect("phenomena");
+        let mut checked = false;
+        for p in &phenomena {
+            if let Some(concept) = phenomenon_concept(p) {
+                checked = true;
+                assert!(
+                    PRESIDING_CONCEPTS.contains(&concept),
+                    "{concept} is a live presiding gloss concept (phenomenon kind {:?}) but is \
+                     missing from PRESIDING_CONCEPTS",
+                    p.kind
+                );
+            }
         }
-        let listed: std::collections::BTreeSet<&str> = PRESIDING_CONCEPTS.iter().copied().collect();
-        assert_eq!(
-            produced, listed,
-            "PRESIDING_CONCEPTS lists exactly what phenomenon_concept can return"
+        assert!(
+            checked,
+            "seed 42 should carry at least one rostered (glossing) phenomenon"
         );
     }
 

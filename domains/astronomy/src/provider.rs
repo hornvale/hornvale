@@ -1921,7 +1921,7 @@ impl PhenomenaSource for GeneratedSky {
 
                     out.push(Phenomenon {
                         kind: WANDERING_STAR.to_string(),
-                        referent: Referent::qualified("star", &["move"]),
+                        referent: Referent::of("star"),
                         description: format!("A {class_word} wanderer: {text}."),
                         period_days: Some(round2(wanderer.synodic_period.get())),
                         salience: 0.65,
