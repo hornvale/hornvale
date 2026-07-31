@@ -126,11 +126,20 @@ alone holds ~227 non-comment prose literals, most of them branch E).
 ## 4. The mechanism
 
 **Split the field; do not structure it.** `Phenomenon.description: String`
-is one slot serving four distinct roles — display sentence, semantic
-discriminator, test assertion key, and dedup key
-(`windows/worldgen/src/lib.rs:7512` does `seen.insert(r.description)`).
-Replacing it with a richer struct keeps one field doing four jobs, which is
-the actual defect. Instead:
+is one slot serving three distinct roles — display sentence, semantic
+discriminator, and test assertion key. Replacing it with a richer struct
+keeps one field doing three jobs, which is the actual defect. Instead:
+
+> **Correction (Task 4, 2026-07-31).** This paragraph originally claimed a
+> fourth role, "dedup key", citing `seen.insert(r.description)` in
+> `windows/worldgen/src/lib.rs`. That call is real but it dedups a
+> **`SkyReport`**, not a `Phenomenon`, inside
+> `two_places_can_have_different_skies_on_the_same_day` — a test whose whole
+> point is that different places render *different prose*. It is a legitimate
+> assertion about a rendering, and belongs to the category §4 says to leave
+> alone. The count was wrong; the argument is not. The discriminator role is
+> the load-bearing one, and it is the one measured at 73 facts in §1.
+> `SkyReport.description` remains a stage-3 leak site (§2).
 
 - **`referent`** — a registered concept id, plus the typed arguments the
   rendering needs (a count, a magnitude, a period). Machine-facing. **The only
