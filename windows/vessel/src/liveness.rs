@@ -14010,4 +14010,162 @@ mod tests {
             "switching back to home_a costs a search too"
         );
     }
+
+    // --- Stage 3b (the-waymark, Task 5): the shared reverse field,
+    // equivalence-gated. `ReverseField`/`build_reverse_field` are TEST-ONLY
+    // scaffolding — see the property test immediately below for why this
+    // never left the test module (the property the campaign spec licenses
+    // as a legitimate failure mode).
+
+    /// A single reverse Dijkstra rooted at `home`, mirroring `astar`'s own
+    /// frontier discipline by hand (the same `(f, g, state)` `BTreeSet`
+    /// order, `heuristic() == 0` — Dijkstra mode, matching [`NavSpace`] —
+    /// and the same first-strict-improvement-wins relaxation `astar` itself
+    /// uses) rather than through `SearchSpace` (there is no goal state to
+    /// hand it — the point is reaching everything within budget). Valid
+    /// ONLY for empty-avoid queries: [`move_cost`] with an empty set is `1`
+    /// uniformly, so every edge is symmetric and a room's distance FROM
+    /// `home` equals its distance TO `home`.
+    struct ReverseField {
+        /// Every room reached within the build budget: `(distance-to-home,
+        /// next-hop-toward-home)`. `home` itself maps to `(0, None)`.
+        nodes: std::collections::BTreeMap<RoomAddr, (usize, Option<RoomAddr>)>,
+    }
+
+    impl ReverseField {
+        /// `(distance, first_step)` for `room`, matching [`HomeNavFeature`]'s
+        /// own shape — both `None` if `room` was not reached within budget
+        /// (mirrors `plan_to_room`'s budget-exhaustion `None`); `first_step`
+        /// is `None` exactly at `home` itself (mirrors the empty-plan case).
+        fn feature(&self, room: &RoomAddr) -> HomeNavFeature {
+            match self.nodes.get(room) {
+                None => HomeNavFeature {
+                    distance: None,
+                    first_step: None,
+                },
+                Some((dist, parent)) => HomeNavFeature {
+                    distance: Some(*dist),
+                    first_step: parent.clone().map(Action::MoveTo),
+                },
+            }
+        }
+    }
+
+    /// Build a [`ReverseField`] rooted at `home`, expanding up to `budget`
+    /// nodes — a full single-source search with no goal test.
+    fn build_reverse_field(home: &RoomAddr, budget: usize) -> ReverseField {
+        use std::collections::{BTreeMap, BTreeSet};
+        let mut frontier: BTreeSet<(u64, u64, RoomAddr)> = BTreeSet::new();
+        let mut best_g: BTreeMap<RoomAddr, u64> = BTreeMap::new();
+        let mut came_from: BTreeMap<RoomAddr, RoomAddr> = BTreeMap::new();
+
+        frontier.insert((0, 0, home.clone()));
+        best_g.insert(home.clone(), 0);
+
+        let mut expansions = 0usize;
+        while let Some(&(_f, g, ref state)) = frontier.iter().next() {
+            let (f, g, state) = (_f, g, state.clone());
+            frontier.remove(&(f, g, state.clone()));
+            if best_g.get(&state).is_some_and(|&bg| bg < g) {
+                continue;
+            }
+            expansions += 1;
+            if expansions > budget {
+                break;
+            }
+            for n in state.neighbors() {
+                let ng = g + 1; // move_cost is 1 uniformly — empty-avoid only
+                if best_g.get(&n).is_none_or(|&bg| ng < bg) {
+                    best_g.insert(n.clone(), ng);
+                    came_from.insert(n.clone(), state.clone());
+                    frontier.insert((ng, ng, n));
+                }
+            }
+        }
+
+        let nodes = best_g
+            .into_iter()
+            .map(|(room, dist)| {
+                let parent = came_from.get(&room).cloned();
+                (room, (dist as usize, parent))
+            })
+            .collect();
+        ReverseField { nodes }
+    }
+
+    /// **THE PROPERTY TEST — decides Task 5's whole outcome.** For every
+    /// empty-avoid room the field reaches within budget, does
+    /// `field.feature(room)` match what a genuinely independent forward
+    /// search (`plan_to_room`, exactly what `home_nav` calls today) returns,
+    /// byte-for-byte in both `distance` and `first_step`? If yes for every
+    /// room, Stage 3b's field is a safe drop-in for `home_nav`'s empty-avoid
+    /// path. If not, the campaign spec licenses shipping this test
+    /// `#[ignore]`d as documentation of the failure mode, field disabled.
+    ///
+    /// **Result (the-waymark, Task 5): the property FAILS.** 52 of 346
+    /// reached rooms (~15%) — a substantial fraction, not a rare edge case —
+    /// disagree with forward search in `first_step`. `distance` never
+    /// mismatches for any of the 52 (confirmed separately) — expected,
+    /// since distance is symmetric for empty-avoid (uniform edge cost) and
+    /// root-independent; only the CHOICE OF PATH among equal-length
+    /// alternatives is root-dependent. This is real, not a bug in the
+    /// field: `home`-rooted and `s`-rooted BTreeSet relaxation break ties
+    /// independently (see `ReverseField`'s own doc for the induction
+    /// argument, and this task's report for a concrete diverging pair).
+    /// Field ships disabled; the per-entity `HomeNavCache` (Task 4) remains
+    /// the sole nav-answering path. Left `#[ignore]`d rather than deleted,
+    /// per the spec's own licensed exit, so a future attempt at a smarter
+    /// tie-break rule has a ready-made falsifier.
+    #[ignore = "documents a DISPROVEN hypothesis (the-waymark, Task 5): the \
+                field/forward tie-break equivalence fails for ~15% of rooms \
+                (52/346, seed-independent mesh property); field ships \
+                disabled, HomeNavCache (Task 4) carries alone; kept as a \
+                falsifier for any future field construction attempt"]
+    #[test]
+    fn reverse_field_matches_forward_search_for_every_empty_avoid_room() {
+        let home = raddr(1.0);
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        // A modest budget: large enough to reach several hundred rooms
+        // (well past the health population's actual walking radius) while
+        // keeping the O(field_size) forward re-searches below it fast.
+        let budget = 300;
+        let field = build_reverse_field(&home, budget);
+        assert!(
+            field.nodes.len() > 50,
+            "sanity: the field must reach a nontrivial neighborhood, got {}",
+            field.nodes.len()
+        );
+
+        let mut mismatches: Vec<(RoomAddr, HomeNavFeature, HomeNavFeature)> = Vec::new();
+        for room in field.nodes.keys() {
+            if *room == home {
+                continue;
+            }
+            let field_feature = field.feature(room);
+            let forward_plan = plan_to_room(room, &home, PLAN_BUDGET, &avoid);
+            let forward_feature = HomeNavFeature {
+                distance: forward_plan.as_ref().map(|p| p.len()),
+                first_step: forward_plan.and_then(|p| p.into_iter().next()),
+            };
+            if field_feature != forward_feature {
+                mismatches.push((room.clone(), field_feature, forward_feature));
+            }
+        }
+
+        assert!(
+            mismatches.is_empty(),
+            "the field/forward equivalence FAILED for {} of {} rooms (showing \
+             up to 5): {:#?}\n\
+             This is the tie-break-root-dependence failure mode the campaign \
+             spec names as a legitimate exit: astar's smallest-RoomAddr \
+             relaxation winner is root-relative (see ReverseField's own \
+             doc), so a field rooted at `home` need not agree with a forward \
+             search rooted at each individual query room whenever a room has \
+             two structurally different equal-length predecessor branches \
+             (any 4-cycle in the triangulated mesh).",
+            mismatches.len(),
+            field.nodes.len(),
+            &mismatches[..mismatches.len().min(5)]
+        );
+    }
 }
