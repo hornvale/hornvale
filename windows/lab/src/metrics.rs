@@ -1688,7 +1688,7 @@ pub fn registry() -> Vec<Metric> {
                    of the demography report's `byproducts.strife` field — already the \
                    per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species \
                    dominates a cell, →N when N species share it evenly). Recomputed via \
-                   `hornvale_worldgen::demography_report`, which reconstructs the IDENTICAL \
+                   `hornvale_worldgen::demography_report_from`, which reconstructs the IDENTICAL \
                    report the settlement-genesis path builds internally (the shared-assembly \
                    refactor of task A16a), so this measures the stack the world actually \
                    ships, not a parallel one. Absent if the report fails to build or the \
@@ -1733,7 +1733,7 @@ pub fn registry() -> Vec<Metric> {
                    every settlement has the identical species mix (the pre-Niche \
                    'oatmeal' — one flat blend worldwide); > 0 when composition varies \
                    across space (species dominant in different strongholds). Recomputed \
-                   via `hornvale_worldgen::demography_report` (the niche-differentiated \
+                   via `hornvale_worldgen::demography_report_from` (the niche-differentiated \
                    coexistence shadow). Absent if the report fails to build or the world \
                    has fewer than 2 settlements",
             summary: SummaryKind::Numeric {
