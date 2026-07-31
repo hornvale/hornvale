@@ -11,6 +11,16 @@ cell lookup recomputed per field read per room. A waymark is the marker
 that makes the next traversal cheap: memoize the geometry at the scope its
 inputs actually change, and stop replanning what nobody moved.
 
+**The scaling stake (Nathan, G3):** today's numbers are for TEN creatures
+— `HEALTH_NPCS = 6` + `HEALTH_WILD = 4` over 40 ticks costs 60–90 s,
+i.e. **~400+ full budget-1000 searches and ~150–200 ms of navigation
+re-derivation per creature-tick**. The tests are affordable only because
+the population is ten. Any future that populates a settlement with real
+walkers inherits this cost multiplied. The campaign's bar is therefore not
+"the tests get faster" but "**the marginal cost of a stationary,
+unchanged-belief creature approaches zero**" — sim scalability is the
+goal; test time is the readout.
+
 ## 1. Evidence (measured 2026-07-31 on lefford; FP + DWARF profiles, code map)
 
 Post-Weir baseline: suite 7 696.5 s; the sim batteries dominate — lab
@@ -92,22 +102,37 @@ Independent of Stages 2–3; lands first.
   constraint: **no `RefCell`/global; `&mut` threading like
   `PrimaryAfraidMemo`.**
 
-### Stage 3 — the plan memo (the dominant waste)
+### Stage 3 — the plan cache (the dominant waste, now with a scaling bar)
 
 First, a plan-time verification: is the loneliness/home-step feature
 consumed on every `decide_step`, or only when the Social drive is live?
-If it is conditionally consumed, **laziness beats memoization** (compute
-only when read — the negation arm of the G1 pass); if unconditionally,
-memoize. Either way the mechanism is the same shape:
-per-tick scope riding the existing memo threading (extend or sibling
-`PrimaryAfraidMemo`), keyed `(entity, pos)` — per-tick scope sidesteps
-avoid-set invalidation *iff* the believed-hazard set is stable within a
-tick, which the plan must verify from the belief-update path before
-choosing the key; if it can change within a tick, the avoid set enters
-the key or the memo narrows to per-pop-run. **The stale-plan hazard is
-the campaign's one real correctness risk and gets its own adversarial
-test:** a scenario where the avoid set changes and the plan must change
-with it (the liveness-fixture adversarial-reading lesson).
+If conditionally consumed, laziness composes with the cache below (compute
+only when read, cache what was computed).
+
+**The mechanism (revised under the G3 scaling directive — supersedes G1's
+per-tick-scope choice, ledger #4):** a **cross-tick, per-entity plan
+cache** — the cached home-plan result lives with the NPC's sim state and
+is invalidated by exactly two events, both of which have identifiable
+write points: (a) the entity's `pos` changed (a Step resolution), and
+(b) the entity's believed-hazard set mutated (the belief-update path
+bumps a per-entity **avoid-epoch counter**; the cache key stores the
+epoch it was computed at). A stationary creature with unchanged beliefs
+therefore pays **zero searches** on every tick after its first — the
+scaling property Nathan set as the bar — while per-tick scope would have
+left one search per creature per tick standing.
+
+Determinism: the cache changes when a search runs, never what it returns;
+the epoch counter is deterministic (bumped at the same committed
+belief-update points in every run). **The stale-plan hazard is the
+campaign's one real correctness risk and gets two deterministic tests:**
+(1) the adversarial invalidation scenario — the avoid set changes and the
+plan must change with it (red-run-proven against a deliberately
+non-invalidating cache); (2) a **search-count assertion** — a synthetic
+scenario instruments the search counter and asserts a stationary,
+unchanged-belief creature triggers zero recomputations after warm-up, and
+a moved creature triggers exactly one. Search counts are deterministic
+integers, so these pin the scaling property itself, not a wall-clock
+proxy.
 
 ### Stage 4 — re-profile gate
 
@@ -154,6 +179,15 @@ staged references first, as both prior campaigns.
    the two synthetic band tests (~100 s each) → **< 70 s**.
 3. **Suite total:** ≥ 15 % below 7 696.5 s on quiet-lefford `make ci`,
    ledgered (Stage 1 contributes ~5 %; the memos carry the rest).
+3b. **The scaling criterion (deterministic, not wall-clock):** the
+   search-count pins hold — zero recomputations for a stationary,
+   unchanged-belief creature after warm-up; exactly one on movement or
+   belief change. Plus one measured scaling probe in the readout: a
+   synthetic scenario at N=10 vs N=30 mostly-stationary creatures, with
+   per-creature-tick nav cost reported for both (the marginal-cost claim,
+   measured once, recorded in the chronicle — not a pass/fail gate, since
+   wall-clock scaling is load-sensitive; the deterministic search counts
+   are the gate).
 4. **Byte-identity:** §3's evidence set, all IDENTICAL; the memo pin tests
    green; the adversarial invalidation test red-run-proven (it must fail
    against a deliberately stale plan).
