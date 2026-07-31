@@ -227,6 +227,34 @@ Register the missing concepts from §2. `region_word` and `describe`
 (`figures.rs`) are **branch C** and are conditional on §8 risk 2 — if the
 frame abstraction proves large they stay, and the campaign ships A/B/D.
 
+*Scope added after part 1 shipped — five findings the G3 draft did not have:*
+
+1. **Delete the `star-class` and `neighbor-class` text facts** (§2's addendum).
+   This is the one item in the campaign that **moves committed facts**, so it
+   carries its own before/after measurement and its own epoch question under
+   decision 0084. Do not fold it into a commit that claims nothing moved.
+2. **Delete the substring dispatch, not merely its output.**
+   `daylight_words`/`twilight_words` branch on
+   `class_name.contains("(K)")`. Lexicalizing the returned prose while leaving
+   the dispatch standing would leave the trap fully armed — reword `star.rs`
+   and every K and F world silently falls to the G branch. Derive from
+   `star.mass`, which is committed and sitting unused.
+3. **Instance disambiguation is a rendering concern, not a type change.**
+   `Referent` does **not** gain an instance field (ledger #12, converged over
+   two ideonomy passes). Two moons in one size class are distinguished by
+   reading a quantity they already carry (`period_days`) and rendering an
+   ordinal or comparative through `numeracy.rs`, gated by the listener's
+   counting rung — so a culture at the subitizing floor says "the other moon"
+   where one with full counting says "the second". Register ordinal concepts
+   when the first renderer needs them; none exist today.
+4. **Make the phenomena vector's order an explicit contract.** It is stable
+   and deterministic today but nowhere stated, and any positional
+   disambiguation rests on it.
+5. **`SkyReport.description` and `bodies`** (`domains/astronomy/src/lib.rs:451`)
+   are in scope here — part 1 left them untouched, and
+   `windows/worldgen/src/lib.rs:6585` still post-processes a finished
+   rendering, which `register.rs`'s own header forbids.
+
 **Stage 4 — the prose audit lint.** A standalone tool outside the workspace,
 mirroring `tools/type-audit/` (decisions 0027/0028): default-deny, every
 world-facing string literal must either resolve to a registered concept or
