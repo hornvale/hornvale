@@ -59,6 +59,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Emotion as appraisal — the affective readout of the gap](#emotion-as-appraisal--the-affective-readout-of-the-gap)
   - [The derived-view architecture — the game layer as readouts over one ledger](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
   - [Narrative delivery — which piece next, when content is derived](#narrative-delivery--which-piece-next-when-content-is-derived)
+  - [Knowability — whether a derived world can be known from inside it](#knowability--whether-a-derived-world-can-be-known-from-inside-it)
   - [The self-reflective ledger — the capability schema as a derived view](#the-self-reflective-ledger--the-capability-schema-as-a-derived-view)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
@@ -2740,6 +2741,218 @@ been pointed at. Coverage, dominance (which phenomenon kind heads every world's
 ranking), and pacing distributions are lab metrics, not features; under the
 governing principle that ambition is bounded by verification surface, they are
 the rung that makes the rest of this section admissible.
+
+---
+
+## Knowability — whether a derived world can be known from inside it
+
+*(Provoked by Justin Alexander's node-based scenario design, a tabletop prep
+discipline for situations — arriving from the opposite direction to the delivery
+survey above. That one asks in what order content arrives; this one asks whether
+it can be reached at all. Eight ideonomic passes; high confidence in the
+reformulation and in the inventory of what is already built, medium in the
+mechanisms it implies, one framing overturned in the first pass. Nothing built —
+but substantially more is already present than this section's own first draft
+assumed, and that correction is recorded here rather than quietly fixed.)*
+
+**The famous rule does not transfer, and the reason is the finding.** Alexander's
+Three Clue Rule — never let a conclusion the scenario *requires* rest on fewer
+than three clues — is explicit about its precondition: it applies to conclusions
+the scenario requires. A simulation requires nothing. There is no room the plot
+needs the player to reach, so there is no derailment to insure against, and the
+rule's protective purpose evaporates on contact. What survives is not the rule
+but its instrument. The GM's revelation list stops measuring *will the adventure
+survive* and starts measuring something a generated world has never been asked:
+**how much of this world is knowable at all.**
+
+**Lifted, the rule is percolation.** Strip the vocabulary and it reads: an agent
+must reach a target vertex in a graph whose edges are independently and
+probabilistically perceptible, and the designer adds edge-disjoint redundancy so
+the target stays reachable under stochastic edge loss. Three clues at roughly
+even odds of being noticed yields roughly seven-eighths reachability, which is
+the whole arithmetic of the rule, intuited rather than derived. Alexander's
+insistence that clues be *independent* is edge-disjointness, and Menger's theorem
+— the number of edge-disjoint paths equals the min cut — is its formal statement.
+
+**Surveying supplies a better justification than the rule's author does.** In
+geodesy, three is not a redundancy count; three is the first count that detects
+inconsistency **without an external reference**. Two measurements that agree tell
+you nothing about their error; three that agree bound it. So the rule is really
+about *closure* — the knower being able to tell that they have it right — and
+closure is trivially satisfied under a determinism guarantee, because nothing in
+the ledger is wrong. Unless traces can lie. Once forgery, rumour and error exist,
+triangulation-for-closure becomes the entire activity, and the shape of play is
+not *find three clues* but **find the inconsistency**. Read that way, the
+position-blind sky is this world's benchmark network: the small, permanently
+re-checkable, over-determined reference set from which everything else is fixed.
+
+**Negating the rule's most basic property gives the reformulation.** Nodes are
+discrete — keyed locations, hand-inventoried. Negate discreteness and what
+remains is a gradient of legibility over space, which is to say a **field**: a
+scalar function over the world giving, at each point, how much of the world's
+truth is determinable from there. Fields are already the kernel's third trace
+primitive, beside facts and phenomena. A knowability field is therefore
+derivable, byte-identical, renderable by the same machinery that writes an
+elevation map, and censusable at the scale the Laboratory already runs. The
+speculative-sounding half of this section lands on machinery that exists for
+unrelated reasons.
+
+**Traversal is symmetric; deduction is not.** Alexander notes almost in passing
+that dungeon geography is reversible while the geography of a mystery is often
+one-way. That aside is the precise statement of the whole idea. Two structures
+are superimposed on every world here and have never been related to each other:
+an undirected room mesh you walk, and a directed acyclic derivation graph you
+reason along. **The knowability field is the projection of the derivation graph
+onto the mesh.**
+
+**Independence is computable, and that supplies MAP-2 with a reason.** Three
+claims held on one doctrine's authority are one claim, not three — independence
+is not about being separate observations but about not sharing an upstream cause.
+The operational form is exact: two traces are independent iff their derivation
+ancestries are disjoint, which is `explain` run twice and intersected. Human
+intelligence practice has a name for the failure this prevents — **circular
+reporting**, where two apparently independent sources both trace to one origin
+and confidence is inflated accordingly — and it is the failure the Three Clue
+Rule blindly guards against. MAP-2 has asked for provenance-tagged knowledge
+since the beginning without saying what it would be *for*; this is what it is
+for, and the answer is a single field recording *how* an entry was learned rather
+than a second ledger.
+
+**Robustness is a product, not a count, and every factor is already modelled.**
+A trace's contribution is its multiplicity times its survival probability times
+its legibility times its recurrence. Survival is the `Durability` ladder —
+perishable, durable, eternal. Legibility is already a float on committed data and
+already a census metric, in the warning a hazard carries. Recurrence is the
+period a phenomenon may declare, which corrects Alexander outright: he has no
+notion of a recurring clue, and a periodic trace approaches certainty given
+enough time, so multiplicity must be reckoned per unit time rather than per
+visit. One eternal inscription beats three perishable potsherds, and clinical
+medicine's *pathognomonic sign* — the single finding that alone settles a
+diagnosis — is the limiting case that shows a count was never the quantity.
+
+**Crossing two shipped enumerations saturates a grid whose gaps are
+predictions.** Durability against grammatical evidentiality — witnessed, taught,
+inferred — gives nine cells, all of which name a recognisable kind of knowledge:
+the eyewitness memory, the potsherd you dug up yourself, the doctrine about the
+ruins, scripture cut in stone, ordinary archaeology, inference from the sky. The
+top row is the interesting one, where the trace has rotted but the belief remains
+and nothing can correct it: doctrine outliving its evidence is *how myth works*,
+and inference from evidence since vanished is permanently unverifiable. Two
+falsifiable consequences follow. A world's mythology should concentrate in the
+perishable row, which is measurable and is what makes the forgotten fraction
+matter. And a knower can only ever *verify* in the durable and eternal rows — so
+the grid partitions the experience, deduction below and faith above. Intelligence
+practice again converges independently: the Admiralty code grades source
+reliability and claim credibility on two deliberately separate axes, which argues
+this is the right factorisation rather than a convenient one.
+
+**The observer model is not missing. This is the correction.** The delivery
+section above closes on the asymmetry that every creature has an epistemic model
+and the player has none; that reads the unbuilt threshold-belief of UNI-16 rather
+than the code. The vessel maintains a knowledge store that accumulates as it
+walks, behind a projection trait whose tier-0 implementation deliberately ignores
+the perception vector it is handed — the provider-tier seam, waiting for a
+perception-modulated tier. Its entries carry **two different contracts on
+purpose**: projected entries are checked to be a subset of ground truth, while
+heard entries are exempt, because telling can transfer a false belief and *heard
+is not true* is the epistemic point. Spatial fog is built. Creature belief is
+built too, and built the right way — as a pure fold over committed history
+intersected with frightening truth, a derived view rather than a second store.
+What is absent is narrower and cheaper than a subsystem: provenance on an entry,
+any contradiction check at all, and forgetting.
+
+**Knowledge here is monotone, and the consequences are not small.** Absorption
+only ever extends. The world forgets — durability, the forgotten fraction, the
+cultural-memory economy — and the knower never does. Three things follow. A
+knower who saw a perishable trace early holds knowledge nothing in the world can
+corroborate any longer, and so **becomes the last witness**: the grid's top row
+reached from the other side, already available in the built system. Information
+gain therefore decreases monotonically, which predicts a pacing curve — the walk
+dulls, deterministically, and that is measurable. And because extension is
+last-write-wins, belief revision *already happens* with no record that it
+happened. Worth naming beside it: the world's fact ledger is
+contradiction-checked against the concept registry, and the knowledge store is
+not checked at all. Two epistemic stores, one contract.
+
+**A selection policy over this substrate is nearly free, and its objective wants
+two discounts.** Gain is a set difference against what is already known. Multiply
+it by legibility, the chance of noticing at all, and by urgency, the chance of
+the trace being gone before the next opportunity — and urgency is the term that
+makes a walk feel alive, because it says *show me the perishable thing first*,
+derived rather than authored. Information gain is submodular, so a cheap
+deterministic greedy ranker is provably within a factor of `1 - 1/e` of optimal
+rather than merely convenient. The feedback loop this creates — delivery writes
+knowledge, knowledge conditions selection — is legal for a reason already written
+down: the store is per-session rather than ledger state, so it lives in a lens.
+
+**Negating the objective is as productive as choosing it.** Selecting the
+*lowest* gain is confirmation, ritual, the pleasure of recognition — and the
+lectionary rotation of the section above is low-gain by design, which means a
+pure gain-maximiser would be exhausting and alienating and a **recognition
+floor** is a real requirement rather than a concession. Computing gain over a
+*joint* distribution rather than marginals yields the sharper case: learning
+nothing new but connecting two things already known. **The deduction moment is a
+gain event with no new facts in it** — which is the erasure-coding insight
+arriving from the far side. Three redundant clues are a rate-one-third repetition
+code, the worst code at that redundancy; traces that each partially determine a
+fact and jointly settle it cost the same and pay in deduction instead of
+repetition.
+
+**Curiosity is the third homeostat.** The trophic engine is a creature
+approaching what it values and the threat engine is the same machine with the
+sign turned over; information-seeking sits on the same motivational ladder as a
+drive, and takes the same form — a niche vector dotted with a field, where the
+field is the knowability field. That the player-facing ranker and an NPC's
+curiosity turn out to be one mechanism is the pattern those two engines already
+established, which is the strongest structural argument in this section.
+
+**And Alexander's vaguest concept becomes a computed quantity.** He tells the
+designer to make each location a *center of gravity* strong enough to draw
+players in, without saying what gravity is made of. Active learning supplies both
+the ranker's formal name — uncertainty sampling, acquisition by expected
+information gain — and its documented pathology: maximising gain alone selects
+outliers and near-duplicates. The standard correction is a representativeness
+term, informative *and* central. Gravity is **centrality in the derivation
+graph**: rank by gain times centrality, and the thing to walk toward is the fact
+that explains the most other facts. A caution travels with it, from the same
+clinical direction as the pathognomonic sign: an authored mystery has one
+culprit, so parsimony is the right inference prior, while a simulated world
+genuinely has many independent causes at once. Occam is wrong here and Hickam is
+right, and a deduction layer that assumes a single explanation will mislead
+systematically.
+
+**This is the state space the six delivery policies were missing.** Selection
+gains an objective that is not salience — rank by what is newly knowable, whose
+gain decays on repetition, which dissolves the starvation problem the section
+above needed a fixed cycle to solve. Ordering gains a hard constraint it did not
+have: topological order over the derivation graph, never delivering a conclusion
+before its premises are knowable, which is what makes a mystery legible rather
+than merely withheld. Repetition gains a trigger that sidesteps the unverifiable
+step, repeating on re-encounter of the trace rather than on suspected
+non-uptake. And refusal gains the vocabulary the rendering cluster lacks: *not
+knowable from here* is an honest report with a reason, and the reason is a field
+value. Knowability is not a seventh policy. It is the substrate the other six are
+defined over.
+
+**Two channels have no vocabulary anywhere yet.** Suppression — a trace actively
+removed rather than merely decayed — sits beside survival and legibility as a
+third way for knowledge to fail, and the cultural-memory economy is its natural
+home. And a tongue whose evidential category is ungrammaticalised **cannot mark
+whether a claim was witnessed or taught**, which makes trace provenance
+linguistically invisible in that world: a per-world, already-shipped variable
+that changes how deducible its own history is.
+
+**What makes any of this admissible is that the first rung is already
+instrumentable.** The observability study needs no new domain machinery at all:
+seeded walkers exist, the knowledge store accumulates, and the subset check
+already compares it against ground truth. Coverage of knowable truth per step,
+the distribution of route multiplicity, and where mythology concentrates on the
+durability axis are lab metrics rather than features. The ordering follows from
+one clean distinction: the knowability field is **discovered** — a property the
+world has whether or not anyone computes it, hence a readout, drift-checkable and
+constitutionally free — while gain-ranked delivery is **invented**, a policy
+choice that lives in a lens and must be versioned like any authored thing.
+Measure first; design second.
 
 ---
 
