@@ -342,7 +342,7 @@ impl LocaleContext {
     pub fn describe_at(
         &self,
         addr: &RoomAddr,
-        _at: WorldTime,
+        at: WorldTime,
         stratum: Option<Stratum>,
     ) -> Result<Locale, LocaleError> {
         // Fail fast on an unaddressable room (e.g. `path.len() > MAX_DEPTH`)
@@ -356,6 +356,51 @@ impl LocaleContext {
         let weights = addr
             .corner_weights(geo, &self.index)
             .ok_or(LocaleError::AboveGrid)?;
+        let _ = at; // v1: time-independent (see the doc above)
+        self.describe_with_weights(addr, stratum, id, weights)
+    }
+
+    /// [`Self::describe_at`], consulting/filling a caller-owned
+    /// [`hornvale_kernel::RoomMeshMemo`] for the room's [`corner_weights`]
+    /// read instead of recomputing it (the-waymark, Task 3) — the same
+    /// `corner_weights` result [`Self::temperature_at_memo`],
+    /// [`Self::productivity_at_memo`], [`Self::blend_at_memo`], and
+    /// [`Self::hazards_at_memo`] would each independently recompute for the
+    /// SAME room in one read scope (e.g. `windows/vessel`'s per-tick drive
+    /// stack), a caller that shares one memo across all five collapses that
+    /// back down to one scan. Byte-identical to `describe_at` by
+    /// construction (`corner_weights_memo` is pinned bit-equal to
+    /// `corner_weights`). `describe_at`'s own signature is untouched; this is
+    /// an additive sibling.
+    pub fn describe_at_memo(
+        &self,
+        addr: &RoomAddr,
+        at: WorldTime,
+        stratum: Option<Stratum>,
+        memo: &mut hornvale_kernel::RoomMeshMemo,
+    ) -> Result<Locale, LocaleError> {
+        let id = addr
+            .pack()
+            .map_err(|e| LocaleError::Unaddressable(format!("{e:?}")))?
+            .0;
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights_memo(geo, &self.index, memo)
+            .ok_or(LocaleError::AboveGrid)?;
+        let _ = at; // v1: time-independent (see `describe_at`'s doc)
+        self.describe_with_weights(addr, stratum, id, weights)
+    }
+
+    /// The shared tail of [`Self::describe_at`]/[`Self::describe_at_memo`]:
+    /// everything past resolving `id` and `weights`, so the two callers can
+    /// never drift apart in how a `Locale` is built from them.
+    fn describe_with_weights(
+        &self,
+        addr: &RoomAddr,
+        stratum: Option<Stratum>,
+        id: u64,
+        weights: [(CellId, u64); 3],
+    ) -> Result<Locale, LocaleError> {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
 
         // Categorical biome: max weight, tie-break lowest CellId. Inherited,
@@ -453,6 +498,28 @@ impl LocaleContext {
         Some(sum / denom as f64)
     }
 
+    /// [`Self::temperature_at`], consulting/filling a caller-owned
+    /// [`hornvale_kernel::RoomMeshMemo`] instead of recomputing
+    /// `corner_weights` (the-waymark, Task 3) — see [`Self::describe_at_memo`]
+    /// for the shared-memo read-scope rationale. Byte-identical to
+    /// `temperature_at` by construction.
+    /// type-audit: pending(wave-2: return)
+    pub fn temperature_at_memo(
+        &self,
+        addr: &RoomAddr,
+        at: WorldTime,
+        memo: &mut hornvale_kernel::RoomMeshMemo,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights_memo(geo, &self.index, memo)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let sum: f64 = weights
+            .iter()
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day).get())
+            .sum();
+        Some(sum / denom as f64)
+    }
+
     /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
     /// net-primary-productivity proxy over the climate, the food-value field
     /// the drive layer's hunger drive reads (The Provender). Blends the three
@@ -481,6 +548,29 @@ impl LocaleContext {
         Some(miami_npp(temp, moisture))
     }
 
+    /// [`Self::productivity_at`], consulting/filling a caller-owned
+    /// [`hornvale_kernel::RoomMeshMemo`] instead of recomputing
+    /// `corner_weights` (the-waymark, Task 3) — see [`Self::describe_at_memo`]
+    /// for the shared-memo read-scope rationale. Byte-identical to
+    /// `productivity_at` by construction.
+    /// type-audit: pending(wave-2: return)
+    pub fn productivity_at_memo(
+        &self,
+        addr: &RoomAddr,
+        memo: &mut hornvale_kernel::RoomMeshMemo,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights_memo(geo, &self.index, memo)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
+            let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
+            sum / denom as f64
+        };
+        let temp = blend(&|c| self.climate.mean_temperature_at(c).get());
+        let moisture = blend(&|c| self.climate.moisture_at(c));
+        Some(miami_npp(temp, moisture))
+    }
+
     /// Corner-blend an externally-supplied per-cell `field` (over the canonical
     /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
     /// `hazards_at` use, generalized so a caller can sample a field this context
@@ -492,6 +582,25 @@ impl LocaleContext {
     pub fn blend_at(&self, addr: &RoomAddr, field: &hornvale_kernel::CellMap<f64>) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
+        Some(sum / denom as f64)
+    }
+
+    /// [`Self::blend_at`], consulting/filling a caller-owned
+    /// [`hornvale_kernel::RoomMeshMemo`] instead of recomputing
+    /// `corner_weights` (the-waymark, Task 3) — see [`Self::describe_at_memo`]
+    /// for the shared-memo read-scope rationale. Byte-identical to
+    /// `blend_at` by construction.
+    /// type-audit: bare-ok(ratio: field), bare-ok(ratio: return)
+    pub fn blend_at_memo(
+        &self,
+        addr: &RoomAddr,
+        field: &hornvale_kernel::CellMap<f64>,
+        memo: &mut hornvale_kernel::RoomMeshMemo,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights_memo(geo, &self.index, memo)?;
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
         Some(sum / denom as f64)
@@ -513,6 +622,46 @@ impl LocaleContext {
     pub fn hazards_at(&self, addr: &RoomAddr) -> Option<(f64, f64, f64)> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
+        // The dominant corner cell (max weight, tie-break lowest CellId) — the
+        // same pick `describe` uses for the categorical biome/regime.
+        let mut best = weights[0];
+        for &cand in &weights[1..] {
+            if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
+                best = cand;
+            }
+        }
+        // The uncanny: a placed exotic site's strangeness, normalized to [0,1].
+        let uncanny = self
+            .budget
+            .regime_at(best.0)
+            .map(|n| n.strangeness() / crate::regime::STRANGENESS_CEILING)
+            .unwrap_or(0.0);
+        // Graded heat/cold: 0 within the safe band, rising to 1 at the lethal
+        // extreme.
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let temp: f64 = weights
+            .iter()
+            .map(|&(c, w)| w as f64 * self.climate.mean_temperature_at(c).get())
+            .sum::<f64>()
+            / denom as f64;
+        let heat = ((temp - HOT_DANGER_C) / (LETHAL_HEAT_C - HOT_DANGER_C)).clamp(0.0, 1.0);
+        let cold = ((COLD_DANGER_C - temp) / (COLD_DANGER_C - LETHAL_COLD_C)).clamp(0.0, 1.0);
+        Some((uncanny.clamp(0.0, 1.0), heat, cold))
+    }
+
+    /// [`Self::hazards_at`], consulting/filling a caller-owned
+    /// [`hornvale_kernel::RoomMeshMemo`] instead of recomputing
+    /// `corner_weights` (the-waymark, Task 3) — see [`Self::describe_at_memo`]
+    /// for the shared-memo read-scope rationale. Byte-identical to
+    /// `hazards_at` by construction.
+    /// type-audit: pending(wave-2: return)
+    pub fn hazards_at_memo(
+        &self,
+        addr: &RoomAddr,
+        memo: &mut hornvale_kernel::RoomMeshMemo,
+    ) -> Option<(f64, f64, f64)> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights_memo(geo, &self.index, memo)?;
         // The dominant corner cell (max weight, tie-break lowest CellId) — the
         // same pick `describe` uses for the categorical biome/regime.
         let mut best = weights[0];
@@ -1003,5 +1152,83 @@ mod tests {
         assert_eq!(compass(270.0), Compass::W);
         assert_eq!(compass(45.0), Compass::Ne);
         assert_eq!(compass(359.9), Compass::N);
+    }
+
+    /// A small walk-visited neighborhood: `start` plus every room reachable
+    /// within `hops` edge-steps (BFS over `RoomAddr::neighbors`, the same
+    /// mesh a real possession walk traverses) — the-waymark Task 3's
+    /// "rooms a real walk visits" fixture, sized for a fast unit test rather
+    /// than a full possession transcript.
+    fn walk_visited(start: &RoomAddr, hops: u32) -> Vec<RoomAddr> {
+        let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut frontier = vec![start.clone()];
+        seen.insert(start.clone());
+        for _ in 0..hops {
+            let mut next = Vec::new();
+            for r in &frontier {
+                for n in r.neighbors() {
+                    if seen.insert(n.clone()) {
+                        next.push(n);
+                    }
+                }
+            }
+            frontier = next;
+        }
+        seen.into_iter().collect()
+    }
+
+    #[test]
+    fn the_five_memo_readers_bit_equal_their_recomputing_siblings() {
+        // Over every room a small walk visits, each `_memo` reader must
+        // return EXACTLY what its non-memo sibling returns — proven by
+        // literal equality (floats here are corner-blended f64s, not raw
+        // transcendentals, so `assert_eq!` on the `Option`/tuple is the
+        // right-strength check: same bits in, same arithmetic, same bits
+        // out). One memo shared across all five readers and every room,
+        // exactly the "one memo per read scope" the campaign's geometry-memo
+        // stage calls for.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let start = RoomAddr {
+            face: 4,
+            path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
+        };
+        let rooms = walk_visited(&start, 3);
+        assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
+        let at = WorldTime { day: 12.5 };
+        let mut memo = hornvale_kernel::RoomMeshMemo::new();
+        let zero_field = hornvale_kernel::CellMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
+        for addr in &rooms {
+            let expected_describe = ctx.describe_at(addr, at, None);
+            let got_describe = ctx.describe_at_memo(addr, at, None, &mut memo);
+            assert_eq!(
+                expected_describe.is_ok(),
+                got_describe.is_ok(),
+                "describe_at_memo Ok/Err mismatch at {addr:?}"
+            );
+            if let (Ok(exp), Ok(got)) = (expected_describe, got_describe) {
+                assert_eq!(
+                    serde_json::to_string(&exp).unwrap(),
+                    serde_json::to_string(&got).unwrap(),
+                    "describe_at_memo mismatch at {addr:?}"
+                );
+            }
+
+            let expected_temp = ctx.temperature_at(addr, at);
+            let got_temp = ctx.temperature_at_memo(addr, at, &mut memo);
+            assert_eq!(got_temp, expected_temp, "temperature_at_memo at {addr:?}");
+
+            let expected_prod = ctx.productivity_at(addr);
+            let got_prod = ctx.productivity_at_memo(addr, &mut memo);
+            assert_eq!(got_prod, expected_prod, "productivity_at_memo at {addr:?}");
+
+            let expected_blend = ctx.blend_at(addr, &zero_field);
+            let got_blend = ctx.blend_at_memo(addr, &zero_field, &mut memo);
+            assert_eq!(got_blend, expected_blend, "blend_at_memo at {addr:?}");
+
+            let expected_hazards = ctx.hazards_at(addr);
+            let got_hazards = ctx.hazards_at_memo(addr, &mut memo);
+            assert_eq!(got_hazards, expected_hazards, "hazards_at_memo at {addr:?}");
+        }
     }
 }

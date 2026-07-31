@@ -12,7 +12,8 @@ use crate::interior::{
 };
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
-    ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
+    ResourceVector, RoomAddr, RoomId, RoomMeshMemo, SearchSpace, TickSystem, Value, World,
+    WorldTime, astar,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
@@ -3752,6 +3753,13 @@ fn hold_step(
 /// from it is assembled, and catch-up's own replayed steps must see that
 /// update too or a creature that wades through water mid-catch-up would
 /// forget it.
+///
+/// `mesh_memo` (the-waymark, Task 3) is the caller-owned [`RoomMeshMemo`] this
+/// step's own [`lowest_unvisited_neighbor_memo`] read shares — one memo per
+/// [`DriveMovements::step_with_occupancy`] call (the `PrimaryAfraidMemo`
+/// per-tick scope), so a neighbourhood already visited by an earlier
+/// creature, or an earlier tick-iteration of THIS creature's walk, is not
+/// recomputed.
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: f64,
@@ -3771,6 +3779,7 @@ fn decide_step(
     budget: usize,
     frozen: &Ledger,
     out: &[Fact],
+    mesh_memo: &mut RoomMeshMemo,
 ) -> (Resolution, f64) {
     // Standing in water forms/updates belief (nearest-to-home wins) — the
     // live walk's own first step of every iteration.
@@ -3810,7 +3819,7 @@ fn decide_step(
         npc.metabolic_class,
         &HUNGER,
     );
-    let explore_step = lowest_unvisited_neighbor(pos, visited, terrain);
+    let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
     let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
     let view = Perceived {
         position: pos.clone(),
@@ -3916,12 +3925,15 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
 /// crossover test needs to sit at. The cap's role in the loop is a property
 /// of its STRUCTURE, not of `CATCH_UP_STEP_CAP`'s particular value.
 ///
-/// Commits nothing: every argument other than `occupancy`/`believed`/`mode`
-/// is a shared reference or a plain value, `decide_step` only ever reads
-/// `frozen`, and neither this function nor anything it calls ever touches a
-/// `Ledger` mutably or pushes a `Fact` anywhere — there is no `out: &mut
-/// Vec<Fact>` in this call graph at all for catch-up to write into even by
-/// accident.
+/// Commits nothing: every argument other than `occupancy`/`believed`/`mode`/
+/// `mesh_memo` is a shared reference or a plain value, `decide_step` only
+/// ever reads `frozen`, and neither this function nor anything it calls ever
+/// touches a `Ledger` mutably or pushes a `Fact` anywhere — there is no
+/// `out: &mut Vec<Fact>` in this call graph at all for catch-up to write into
+/// even by accident. `mesh_memo` (the-waymark, Task 3) is a pure-function
+/// cache (see [`RoomMeshMemo`]'s own doc) threaded through to
+/// [`decide_step`]'s own `lowest_unvisited_neighbor_memo` read — mutating it
+/// changes nothing this function's callers can observe except speed.
 #[allow(clippy::too_many_arguments)]
 fn catch_up(
     entry_day: f64,
@@ -3942,6 +3954,7 @@ fn catch_up(
     out: &[Fact],
     cap: usize,
     day_length_std: Option<f64>,
+    mesh_memo: &mut RoomMeshMemo,
 ) -> Mode {
     let mut day = entry_day;
     let mut steps = 0usize;
@@ -3983,6 +3996,7 @@ fn catch_up(
             budget,
             frozen,
             out,
+            mesh_memo,
         );
         mode = resolution.mode;
         match resolution.intent {
@@ -4083,6 +4097,14 @@ impl<'a> DriveMovements<'a> {
         // `PrimaryAfraidMemo`). Byte-identical: a cache of a pure function over a
         // fixed ledger.
         let mut afraid_memo = PrimaryAfraidMemo::new();
+        // One geometry memo for the whole step (the-waymark, Task 3): every
+        // creature's `catch_up` and `advance_one`/`decide_step` calls below
+        // share it, so a room's `neighbors()` (read by
+        // `lowest_unvisited_neighbor_memo`) is computed once no matter how
+        // many creatures or how many pops of this tick's shared clock visit
+        // it. Byte-identical: a cache of a pure function of the room address
+        // alone (see `RoomMeshMemo`'s own doc).
+        let mut mesh_memo = RoomMeshMemo::new();
         // THE ALARM: build the per-tick alarm field ONCE, from the frozen
         // population, before advancing any creature — it is fixed across the whole
         // interval (the next-tick wave). Built alarm-free (via `affect_of`), so
@@ -4200,6 +4222,7 @@ impl<'a> DriveMovements<'a> {
                 &out,
                 CATCH_UP_STEP_CAP,
                 self.day_length_std,
+                &mut mesh_memo,
             );
 
             queue.insert((from_ticks, npc.entity));
@@ -4212,7 +4235,16 @@ impl<'a> DriveMovements<'a> {
             };
             let npc = npc.clone();
             let memory = memory.clone();
-            if !self.advance_one(frozen, &npc, st, &mut occupancy, &alarm, &memory, &mut out) {
+            if !self.advance_one(
+                frozen,
+                &npc,
+                st,
+                &mut occupancy,
+                &alarm,
+                &memory,
+                &mut out,
+                &mut mesh_memo,
+            ) {
                 // This creature's walk is over — past `to`, out of `MAX_STEPS`,
                 // or halted by an arm's own stop condition. It is not requeued.
                 continue;
@@ -4369,6 +4401,12 @@ impl<'a> DriveMovements<'a> {
     /// population-wide state, keyed by `EntityId`, so it cannot live in the
     /// per-creature `WalkState` the way the other nine pieces do — the same
     /// reason `decide_step` and `catch_up` carry the allow below.
+    ///
+    /// `mesh_memo` (the-waymark, Task 3) is likewise population-wide, tick-
+    /// scoped state: [`step_with_occupancy`](Self::step_with_occupancy) builds
+    /// ONE [`RoomMeshMemo`] and threads it through every creature's every
+    /// `advance_one`/`decide_step`, so the same neighbourhood recurring across
+    /// creatures or across this walk's own repeated pops is not recomputed.
     #[allow(clippy::too_many_arguments)]
     fn advance_one(
         &self,
@@ -4379,6 +4417,7 @@ impl<'a> DriveMovements<'a> {
         alarm: &std::collections::BTreeMap<RoomAddr, f64>,
         memory: &HazardMemory,
         out: &mut Vec<Fact>,
+        mesh_memo: &mut RoomMeshMemo,
     ) -> bool {
         if st.day > self.to.day || st.steps >= MAX_STEPS {
             return false;
@@ -4416,6 +4455,7 @@ impl<'a> DriveMovements<'a> {
             PLAN_BUDGET,
             frozen,
             &*out,
+            mesh_memo,
         );
         st.mode = resolution.mode;
         // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
@@ -4596,14 +4636,40 @@ fn nearer_to_home(
 
 /// The lowest-elevation neighbour not yet visited this walk (the directed-
 /// exploration step), or `None` if every neighbour is visited. Terminating: the
-/// visited set only grows.
+/// visited set only grows. A throwaway one-shot [`RoomMeshMemo`] delegate of
+/// [`lowest_unvisited_neighbor_memo`] (the-waymark, Task 3) — this fn's own
+/// single caller ([`affect_of_memo_occupied`]'s stateless, one-room-at-a-time
+/// health-sampler read) has no session-scoped memo of its own to share, so a
+/// fresh one costs nothing extra; byte-identical to the pre-memo behaviour by
+/// construction.
 fn lowest_unvisited_neighbor(
     from: &RoomAddr,
     visited: &std::collections::BTreeSet<RoomAddr>,
     terrain: &dyn Terrain,
 ) -> Option<RoomAddr> {
+    let mut memo = RoomMeshMemo::new();
+    lowest_unvisited_neighbor_memo(from, visited, terrain, &mut memo)
+}
+
+/// [`lowest_unvisited_neighbor`], consulting/filling a caller-owned
+/// [`RoomMeshMemo`] for the `neighbors()` read instead of recomputing the
+/// icosphere lattice/edge-crossing arithmetic every call (the-waymark, Task
+/// 3). The live walk's hot caller: `decide_step` shares ONE memo across every
+/// creature's every tick (`DriveMovements::step_with_occupancy` builds it,
+/// exactly the [`PrimaryAfraidMemo`] per-tick scope), so a room visited by
+/// more than one creature — or revisited across ticks in the SAME
+/// `step_with_occupancy` call by the same creature's own `advance_one` loop —
+/// pays for its three neighbours once. Byte-identical to
+/// `lowest_unvisited_neighbor` by construction (`neighbors_memo` is pinned
+/// bit-equal to `neighbors`).
+fn lowest_unvisited_neighbor_memo(
+    from: &RoomAddr,
+    visited: &std::collections::BTreeSet<RoomAddr>,
+    terrain: &dyn Terrain,
+    memo: &mut RoomMeshMemo,
+) -> Option<RoomAddr> {
     let mut best: Option<(RoomAddr, f64)> = None;
-    for n in from.neighbors() {
+    for n in from.neighbors_memo(memo) {
         if visited.contains(&n) {
             continue;
         }
@@ -12991,6 +13057,7 @@ mod tests {
             PLAN_BUDGET,
             &ledger,
             &[],
+            &mut RoomMeshMemo::new(),
         );
         assert!(
             correct_thirst > 0.0,
@@ -13028,6 +13095,7 @@ mod tests {
             PLAN_BUDGET,
             &ledger,
             &[],
+            &mut RoomMeshMemo::new(),
         );
         assert_eq!(
             buggy_thirst, 0.0,
@@ -13101,6 +13169,7 @@ mod tests {
             &[],
             CATCH_UP_STEP_CAP,
             None,
+            &mut RoomMeshMemo::new(),
         );
         let after = ledger.len();
 
@@ -13306,6 +13375,7 @@ mod tests {
                 &[],
                 CAP,
                 None,
+                &mut RoomMeshMemo::new(),
             );
             occ.at(npc.entity)
         };
