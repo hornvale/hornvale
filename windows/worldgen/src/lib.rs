@@ -1183,7 +1183,7 @@ pub fn predator_pressure_from(
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     report: &hornvale_demography::DemographyReport,
-) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+) -> hornvale_kernel::CellMap<f64> {
     let geo = terrain.geosphere();
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
     // build-local dense index the stack uses), for prey-dominant diets.
@@ -1208,13 +1208,13 @@ pub fn predator_pressure_from(
         carnivore_density.iter().map(|d| *d.get(cell)).sum::<f64>()
     });
     let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
-    Ok(hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
         if max > 0.0 {
             (*raw.get(cell) / max).clamp(0.0, 1.0)
         } else {
             0.0
         }
-    }))
+    })
 }
 
 /// The per-cell VESTIGE-DREAD field (The Vestige) — the ambient dread a cell's
@@ -1263,7 +1263,7 @@ pub fn prey_pressure_from(
     wc: &WorldComponents,
     terrain: &hornvale_terrain::GeneratedTerrain,
     report: &hornvale_demography::DemographyReport,
-) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+) -> hornvale_kernel::CellMap<f64> {
     let geo = terrain.geosphere();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
@@ -1295,13 +1295,13 @@ pub fn prey_pressure_from(
         prey_density.iter().map(|d| *d.get(cell)).sum::<f64>()
     });
     let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
-    Ok(hornvale_kernel::CellMap::from_fn(geo, |cell| {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
         if max > 0.0 {
             (*raw.get(cell) / max).clamp(0.0, 1.0)
         } else {
             0.0
         }
-    }))
+    })
 }
 
 /// The `k` densest WILD concentrations (The Wilding) — the herds and lairs of
@@ -1326,7 +1326,7 @@ pub fn wild_concentrations_from(
     wc: &WorldComponents,
     report: &hornvale_demography::DemographyReport,
     k: usize,
-) -> Result<Vec<(String, [f64; 3])>, BuildError> {
+) -> Vec<(String, [f64; 3])> {
     // The dense-index → species-label map (the same ascending-`KindId` order the
     // stack's `dominant` tag indexes into).
     let labels: Vec<String> = wc
@@ -1390,7 +1390,7 @@ pub fn wild_concentrations_from(
         best.into_iter().map(|(l, (p, a))| (l, p, a)).collect();
     wild.sort_by(|a, b| b.2.total_cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
     wild.truncate(k);
-    Ok(wild.into_iter().map(|(l, p, _)| (l, p)).collect())
+    wild.into_iter().map(|(l, p, _)| (l, p)).collect()
 }
 
 /// [`demography_report_with_beta_from`] pinned to the frozen `BETA`/`FLOOR`
@@ -7591,8 +7591,8 @@ mod tests {
         )
         .unwrap();
         let (wc, _terrain, report) = wc_terrain_report(&world);
-        let a = wild_concentrations_from(&wc, &report, 5).unwrap();
-        let b = wild_concentrations_from(&wc, &report, 5).unwrap();
+        let a = wild_concentrations_from(&wc, &report, 5);
+        let b = wild_concentrations_from(&wc, &report, 5);
         assert_eq!(a, b, "deterministic");
         assert!(!a.is_empty(), "the wild is populated: {a:?}");
         let biosphere = hornvale_species::biosphere_registry();
@@ -7634,7 +7634,7 @@ mod tests {
         let (wc, _terrain, report) = wc_terrain_report(&world);
         // Ask for far more than the roster holds, so the guard is what excludes
         // a sea creature rather than the `k` cutoff happening to.
-        let wild = wild_concentrations_from(&wc, &report, 100).unwrap();
+        let wild = wild_concentrations_from(&wc, &report, 100);
         for (species, _pos) in &wild {
             let marine = biosphere
                 .get_by_label(species)
@@ -7811,8 +7811,8 @@ mod tests {
         )
         .unwrap();
         let (wc, terrain, report) = wc_terrain_report(&world);
-        let a = predator_pressure_from(&wc, &terrain, &report).unwrap();
-        let b = predator_pressure_from(&wc, &terrain, &report).unwrap();
+        let a = predator_pressure_from(&wc, &terrain, &report);
+        let b = predator_pressure_from(&wc, &terrain, &report);
         let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
         let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
         assert_eq!(va, vb, "two calls produce byte-identical fields");
@@ -7894,8 +7894,8 @@ mod tests {
         )
         .unwrap();
         let (wc, terrain, report) = wc_terrain_report(&world);
-        let a = prey_pressure_from(&wc, &terrain, &report).unwrap();
-        let b = prey_pressure_from(&wc, &terrain, &report).unwrap();
+        let a = prey_pressure_from(&wc, &terrain, &report);
+        let b = prey_pressure_from(&wc, &terrain, &report);
         let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
         let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
         assert_eq!(va, vb, "two calls produce byte-identical fields");
@@ -7914,7 +7914,6 @@ mod tests {
         // The prey field is not the predator field: at least some cells differ
         // (the two populations do not perfectly coincide).
         let pred: Vec<f64> = predator_pressure_from(&wc, &terrain, &report)
-            .unwrap()
             .iter()
             .map(|(_, v)| *v)
             .collect();

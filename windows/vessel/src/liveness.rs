@@ -5378,7 +5378,7 @@ mod tests {
         let climate = hornvale_worldgen::climate_from(world, &terrain).unwrap();
         let report =
             hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate).unwrap();
-        hornvale_worldgen::wild_concentrations_from(&wc, &report, k).unwrap_or_default()
+        hornvale_worldgen::wild_concentrations_from(&wc, &report, k)
     }
 
     /// A thin positional adapter over [`arbitrate`] for the tests (The
