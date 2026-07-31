@@ -156,6 +156,72 @@ alone holds ~227 non-comment prose literals, most of them branch E).
   first:", markdown headers, "The land holds {} settlement(s)." Addressed to
   the reader *out of world*. **Stays English. Out of scope.**
 
+### 3.1 The three registers — what the branch taxonomy above was missing
+
+The A–E taxonomy sorts *text*. It cannot express the thing that actually
+governs, which Nathan named while reading the `star-class` finding: **there are
+objective facts that must be representable and that no creature in this world
+could think, let alone say.** A star has a spectral class whether or not
+anyone has invented spectroscopy. Humans have no words for things we have not
+yet encountered, and the sim must be able to hold those things anyway.
+
+There are three registers, not two:
+
+```
+REGISTER            HOLDS                          OWNER        STATE
+------------------  -----------------------------  -----------  ----------------
+ground truth        what obtains, observers or no  the domains  well-served
+epistemic access    what is perceived / cognized   account.rs   well-served
+expressive access   what can be said, and by whom  the lexicon  BYPASSED
+```
+
+**The kernel already models all three, and the vocabulary has never been
+used.** `kernel/src/manifest.rs` gives every concept three correspondence
+edges — lexeme, percept, cognition — each `Present(payload)` or
+`Absent(Void)`, where `Void` is a closed set of reasons:
+
+```
+things the sim represents
+├── ground truth (obtains regardless of observers)
+│   ├── perceivable in principle
+│   │   ├── cognized by someone
+│   │   │   ├── lexicalized   -> a word exists
+│   │   │   └── not           -> Void::Unnamed        <- 0 uses in any domain
+│   │   └── not cognized      -> Void::Uncognized     <- 18 uses
+│   └── not perceivable       -> Void::Imperceptible  <- 0 uses in any domain
+└── authorial scaffolding (branch E above)
+```
+
+`Void::Unnamed` and `Void::Imperceptible` are constructed **nowhere** in the
+workspace. The only references are one architecture-test fixture and
+`cli/src/concepts.rs`, which *tallies* them — the registry report has an
+Unnamed column and an Imperceptible column and both have always read zero.
+The slot for "objectively real, and nameless here" was built, shipped with a
+report that counts it, and never filled.
+
+**`Void::Gap` is a category error inside that closed enum.** Three variants
+state facts about *the world*; `Gap` — "a deliberate hole in coverage, expected
+to be filled later" — states a fact about *our codebase*. With 23 `Gap` uses
+against zero `Unnamed`, the project has been recording "we have not got to it"
+where the truth was sometimes "no one there can name this." That conflation is
+why the distinction was never drawn: the honest answer was always available and
+the convenient one always adjacent.
+
+**Unnamed does not mean unspeakable.** A concept with no lexeme must be
+*circumlocuted*, not refused — sign-language communities fingerspell or
+describe where no sign exists, and `packs.rs`'s compound recipes (`sea` = "many
+water") are already that mechanism here. A culture with no word for spectral
+class can still say *the star that burns amber*. A renderer meeting `Unnamed`
+falls back to description; it does not fail closed.
+
+**The leak has two signs, and only one has been chased.** Expression appearing
+where content belongs is this campaign's subject. The opposite — *content
+appearing where expression belongs* — ships at scale:
+`book/src/gallery/almanac-seed-42-locked.md` shows a reader
+`**Nane** — tropical-seasonal-forest` **159 times**. Raw registry keys, in
+prose, to a human. One missing translation step, two directions, neither
+guarded.
+
 ## 4. The mechanism
 
 **Split the field; do not structure it.** `Phenomenon.description: String`
@@ -229,10 +295,30 @@ frame abstraction proves large they stay, and the campaign ships A/B/D.
 
 *Scope added after part 1 shipped — five findings the G3 draft did not have:*
 
-1. **Delete the `star-class` and `neighbor-class` text facts** (§2's addendum).
-   This is the one item in the campaign that **moves committed facts**, so it
-   carries its own before/after measurement and its own epoch question under
-   decision 0084. Do not fold it into a commit that claims nothing moved.
+1. **`star-class` is not deleted — it becomes the first honest use of
+   `Void::Unnamed`** (§3.1). Deletion was the plan until the entanglement was
+   traced: `class_name` is a published `scene/neighbors/v1` field consumed by
+   the external Orrery client (a **cross-repo contract**, additive-or-versioned
+   only), one of exactly three text-valued `Taxonomic` predicates in The Chorus
+   — `chorus.rs:1288`, where `pathological_params()` depends on that trio
+   colliding to drive `recoverability` to 0.0 — and a census metric with a
+   committed golden and an SVG.
+
+   Instead: register spectral class as a **concept** whose lexeme correspondent
+   is `Absent(Void::Unnamed(...))`, and change the fact's *value* from prose to
+   that concept id. The ledger keeps holding objective truth; the registry
+   states in code that no creature here can name it; the scene keeps
+   `class_name` as a derived presentation field, because rendering for an
+   out-of-world viewer is what scenes are for (decision 0022); The Chorus keeps
+   its predicate and gains a principled reason for it — `recoverability → 0`
+   stops being a pathological fixture and becomes the *normal* case for an
+   objective fact. No schema break, no cross-repo coordination.
+
+   Changing the value still **moves committed facts**, so it carries its own
+   before/after measurement and its own epoch question under decision 0084. Do
+   not fold it into a commit that claims nothing moved. Sequence by
+   reversibility: declaring manifests is free and reversible, so it lands
+   first; changing values is neither, so it lands second.
 2. **Delete the substring dispatch, not merely its output.**
    `daylight_words`/`twilight_words` branch on
    `class_name.contains("(K)")`. Lexicalizing the returned prose while leaving
@@ -255,12 +341,35 @@ frame abstraction proves large they stay, and the campaign ships A/B/D.
    `windows/worldgen/src/lib.rs:6585` still post-processes a finished
    rendering, which `register.rs`'s own header forbids.
 
-**Stage 4 — the prose audit lint.** A standalone tool outside the workspace,
-mirroring `tools/type-audit/` (decisions 0027/0028): default-deny, every
-world-facing string literal must either resolve to a registered concept or
-carry an explicit `prose-audit: branch-e(<reason>)` exemption tag. This is
-the deliverable that keeps the leak closed; without it the 227 literals
-regrow. Runs in `make gate` beside the type audit.
+**Stage 3.5 — the unnameable fraction.** Once §3.1's manifests are honest, the
+registry report's always-zero `Unnamed` / `Imperceptible` columns become data:
+*how much of this world is beyond its inhabitants.* That is a measurement the
+Laboratory does not have and that the sim exists to be able to make. It also
+gives The Chorus a principled input rather than a hand-built pathological
+fixture. Cheap once stage 3 lands, and it is the campaign's most interesting
+readout — a null result here (every registered concept nameable) would itself
+say something.
+
+**Stage 4 — the prose audit lint, in BOTH directions.** §3.1 establishes the
+leak has two signs and the campaign has chased one. The lint is therefore two
+default-deny rules, not one: **no prose in the content register**, and **no
+concept ids in the expression register** — the second currently violated 159
+times in a single committed almanac. Note for whoever builds it: enforcement by
+*convention* has already been tried in this codebase and failed —
+`register.rs`'s header forbids precisely what `worldgen:6585` does. A lint is
+stronger. A `ConceptId` newtype distinct from a rendered `String` would be
+self-maintaining and is the better long-run answer; it is a larger change than
+this campaign, and is banked rather than scheduled.
+
+Its shape is unchanged from the G3 draft: a standalone tool outside the
+workspace, mirroring `tools/type-audit/` (decisions 0027/0028), default-deny,
+where every world-facing string literal must either resolve to a registered
+concept or carry an explicit `prose-audit: branch-e(<reason>)` exemption tag.
+This is the deliverable that keeps the leak closed; without it the 227 literals
+regrow. Runs in `make gate` beside the type audit. The second direction needs
+its own exemption token — a registry key legitimately appears in machine-facing
+output (scene JSON, CSV, the concept dumps themselves), so the rule is "no
+concept id in *prose*", not "no concept id in any string".
 
 **Stage 5 — the book and the close.** Chronicle entry, freshness sweep,
 re-score any Confidence Gradient bet this moves (decision 0030),
