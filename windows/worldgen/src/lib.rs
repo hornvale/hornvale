@@ -90,11 +90,12 @@ pub mod streams;
 pub mod traversal;
 pub mod vestige;
 pub use chorus::{
-    ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
-    accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
-    day_schema_of, doctrine_beta_of, doctrine_of, doctrine_params_of, doctrines_of,
-    folk_verifiable, ladder_of, noun_class_of, observability_table, observations_of,
-    pathological_params, schema_prior, sky_capability, tongue_morphology_of,
+    ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,
+    account_params_of, accounts_from, accounts_of, beta_of, chorus_ground, crisis_of,
+    cyclic_beliefs_from, cyclic_beliefs_of, day_schema_from, day_schema_of, doctrine_beta_of,
+    doctrine_from, doctrine_of, doctrine_params_of, doctrines_from, doctrines_of, folk_verifiable,
+    ladder_from, ladder_of, noun_class_from, noun_class_of, observability_table, observations_from,
+    observations_of, pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
 pub use graph_derive::{
