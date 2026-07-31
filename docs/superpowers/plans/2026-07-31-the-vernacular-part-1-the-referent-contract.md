@@ -46,6 +46,15 @@ dependencies. `cargo nextest` for tests, `make gate` as the commit gate.
   committed artifact and part of the drift check.
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the
   most common review finding.
+- **Two Bash guards this repo enforces, found the hard way in Task 1:** the raw
+  whole-workspace nextest invocation is blocked — use `make gate`, a strict
+  superset — and bare `git stash` / `git stash pop` are blocked; use
+  `git stash push -u -m <tag>`, `git stash apply <sha>`, `git stash drop`, and
+  never `pop`. For byte-identity checks, prefer the pre-snapshotted
+  `$BASELINE` file over any stash dance.
+- **Two test runs in one Bash call are blocked too.** The suite's cost is test
+  *runtime*, not compilation, so asking it two questions costs it twice.
+  Capture once and grep the file.
 - **This plan must move zero committed facts.** Any task that moves one has
   found a bug in that task, not a result.
 - Layering is constitutional: `kernel/` → `domains/*` → `windows/*` → `cli/`.
@@ -259,9 +268,14 @@ Run:
 
 ```bash
 cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-vern-t1-world.json
-git stash && cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-vern-base-world.json && git stash pop
-diff /tmp/hv-vern-base-world.json /tmp/hv-vern-t1-world.json && echo "IDENTICAL"
+diff "$BASELINE" /tmp/hv-vern-t1-world.json && echo "IDENTICAL"
 ```
+
+where `$BASELINE` is
+`.superpowers/sdd/2026-07-31-the-vernacular-part-1-the-referent-contract/baseline-seed-42.json`
+— a seed-42 world the controller snapshotted at the task boundary. Do **not**
+try to build a baseline with a stash dance: bare `git stash` / `git stash pop`
+are blocked by this repo's Bash guards.
 
 Expected: `IDENTICAL`. Adding an unread field cannot move a fact; if it does,
 something reads `Phenomenon` by structural serialization and that is a finding
@@ -537,7 +551,7 @@ were given referents in Task 1 step 5 and its expected codomain
 
 ```bash
 cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-vern-t2-world.json
-diff /tmp/hv-vern-base-world.json /tmp/hv-vern-t2-world.json && echo "IDENTICAL"
+diff "$BASELINE" /tmp/hv-vern-t2-world.json && echo "IDENTICAL"
 ```
 
 Expected: `IDENTICAL`. This is the spec's §7 prediction for the refactor half.
@@ -846,7 +860,7 @@ Expected: PASS. Then confirm the byte-identity gate again:
 
 ```bash
 cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-vern-t4-world.json
-diff /tmp/hv-vern-base-world.json /tmp/hv-vern-t4-world.json && echo "IDENTICAL"
+diff "$BASELINE" /tmp/hv-vern-t4-world.json && echo "IDENTICAL"
 ```
 
 Expected: `IDENTICAL`. The dedup change is the one place in this plan where
