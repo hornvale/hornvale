@@ -540,11 +540,12 @@ impl<'w> Session<'w> {
         // prefilled `corner_weights` cache above, just not from a warm
         // `neighbors` cache of its own.
         let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
-        // A throwaway `HomeNavCache` (the-waymark, Task 4), same reasoning as
-        // `mesh_memo` above: `&self` cannot reach a session-lived one, but it
-        // is still shared across every colocated NPC THIS call reads, so two
-        // co-located creatures asking about the same room don't each cost a
-        // fresh search.
+        // A throwaway `HomeNavCache` (the-waymark, Task 4 fix round): `&self`
+        // cannot reach a session-lived one, same as `mesh_memo` above. Unlike
+        // `mesh_memo`, this buys no in-call sharing either — the cache is
+        // keyed by `EntityId`, so distinct colocated NPCs never share an
+        // entry regardless of scope; it is exactly as cheap as the
+        // pre-Task-4 unconditional search, never cheaper, for this call.
         let mut home_nav_cache = HomeNavCache::new();
         let present = self
             .colocated_npcs()

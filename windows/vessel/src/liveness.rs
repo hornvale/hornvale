@@ -2869,9 +2869,16 @@ struct HomeNavState {
     /// The avoid set as of the most recent `home_nav` call, compared against
     /// on the NEXT call to detect a belief change.
     last_avoid: std::collections::BTreeSet<RoomAddr>,
-    /// `(pos, avoid_epoch, feature)` as of the last real search for this
-    /// entity — `None` before its first `home_nav` call.
-    cached: Option<(RoomAddr, u64, HomeNavFeature)>,
+    /// `(pos, home, budget, avoid_epoch, feature)` as of the last real search
+    /// for this entity — `None` before its first `home_nav` call. `home`/
+    /// `budget` are part of the key (Task 4 fix round, key hardening): they
+    /// determine the answer exactly as much as `pos`/`avoid` do, and today's
+    /// one production call site per consumer passes a stable `(npc.home,
+    /// PLAN_BUDGET)` pair — but nothing enforces that structurally, so a
+    /// future caller asking about a DIFFERENT home or budget for the same
+    /// entity must miss the cache, not silently read a stale answer computed
+    /// for a different question.
+    cached: Option<(RoomAddr, RoomAddr, usize, u64, HomeNavFeature)>,
 }
 
 /// `home_nav`'s cross-tick, per-entity backing (the-waymark, Task 4 — the
@@ -2902,15 +2909,16 @@ struct HomeNavState {
 /// the Social drive, the plan's only consumer, is never pushed onto an
 /// ametabolic creature's `drives` vec — "lazy AND cached" per the campaign
 /// spec's Stage 3 clause).
-/// type-audit: bare-ok(count: searches)
 #[derive(Default)]
 pub struct HomeNavCache {
     /// Per-entity state (avoid-epoch bookkeeping and the cached feature).
     entries: std::collections::BTreeMap<EntityId, HomeNavState>,
     /// How many real `plan_to_room` searches `home_nav` has run, ever — the
     /// scaling property's own deterministic witness (the search-count pins),
-    /// never a wall-clock proxy. Test-visible; no drive ever reads it.
-    pub searches: u64,
+    /// never a wall-clock proxy. `pub(crate)` (Task 4 fix round, rider d):
+    /// test-visible within this crate only — no drive, and no OTHER crate,
+    /// ever reads it.
+    pub(crate) searches: u64,
 }
 
 impl HomeNavCache {
@@ -2921,10 +2929,12 @@ impl HomeNavCache {
 
     /// `home_nav(entity) → (distance, first_step)`: the seam [`decide_step`]
     /// (and [`affect_of_memo_occupied`]) read instead of ever calling
-    /// `plan_to_room` directly. A cache hit — `pos` unchanged and `avoid`
-    /// unchanged since the last call for this entity — costs one `BTreeMap`
-    /// lookup and a `BTreeSet` equality check, never a search; a miss runs
-    /// the real search (costing exactly what every caller always paid) and
+    /// `plan_to_room` directly. A cache hit — `pos`, `home`, and `budget` all
+    /// unchanged, and `avoid` unchanged since the last call for this entity —
+    /// costs one `BTreeMap` lookup and a handful of cheap equality checks,
+    /// never a search; a miss (including one caused solely by a different
+    /// `home`/`budget` — the key-hardening rider, Task 4 fix round) runs the
+    /// real search (costing exactly what every caller always paid) and
     /// counts it in `searches`.
     fn home_nav(
         &mut self,
@@ -2947,8 +2957,10 @@ impl HomeNavCache {
             state.last_avoid = avoid.clone();
         }
         let epoch = state.avoid_epoch;
-        if let Some((cached_pos, cached_epoch, feature)) = &state.cached
+        if let Some((cached_pos, cached_home, cached_budget, cached_epoch, feature)) = &state.cached
             && cached_pos == pos
+            && cached_home == home
+            && *cached_budget == budget
             && *cached_epoch == epoch
         {
             return feature.clone();
@@ -2959,7 +2971,7 @@ impl HomeNavCache {
             distance: plan.as_ref().map(|p| p.len()),
             first_step: plan.and_then(|p| p.into_iter().next()),
         };
-        state.cached = Some((pos.clone(), epoch, feature.clone()));
+        state.cached = Some((pos.clone(), home.clone(), budget, epoch, feature.clone()));
         feature
     }
 }
@@ -2973,6 +2985,13 @@ impl HomeNavCache {
 /// the max-utility action IS its [`affordance`](Drive::affordance) and the
 /// grab/weigh latency is irrelevant. A fresh `Idle` mode per call keeps it
 /// stateless, as before. `arbitrate` is the multi-drive live path.
+///
+/// Stage-0 carries no creature identity at all (no `Npc`/`EntityId`
+/// parameter), so `arbitrate`'s `home_nav` seam (the-waymark, Task 4 fix
+/// round) is given a throwaway, single-call [`HomeNavCache`] and a fixed
+/// placeholder entity — this function is already documented stateless
+/// ("a fresh `Idle` mode per call"), so a cache that cannot outlive the call
+/// costs nothing beyond what this seam always paid.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
@@ -2985,7 +3004,18 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
         helpless: false,
         awake: true,
     };
-    arbitrate(view, home, &drives, &disposition, Mode::Idle, budget).intent
+    let mut home_nav_cache = HomeNavCache::new();
+    arbitrate(
+        view,
+        home,
+        &drives,
+        &disposition,
+        Mode::Idle,
+        budget,
+        EntityId::new(1).expect("1 is a valid nonzero entity id"),
+        &mut home_nav_cache,
+    )
+    .intent
 }
 
 /// How a creature is disposed to decide right now — the psychology dials that
@@ -3038,7 +3068,19 @@ pub struct Disposition {
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
+/// `entity`/`home_nav_cache` (the-waymark, Task 4 fix round): the no-active-
+/// drive fallback below reads the SAME `(pos, home, avoid, budget)` home-plan
+/// [`HomeNavCache::home_nav`] already caches for the `Social` drive — an
+/// AMETABOLIC creature (empty `drives`, so this branch is its ONLY path,
+/// every tick) never builds a `Social` at all, so without this it paid a
+/// full, uncached `plan_to_room` search here regardless of Task 4's cache.
+/// Sharing the cache is safe by construction (a hit requires an exact
+/// `(pos, avoid, epoch)` match): a non-ametabolic creature that also happens
+/// to have no active drive this tick just re-reads the entry its own
+/// `Social` construction already warmed.
+///
 /// type-audit: bare-ok(count: budget)
+#[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
@@ -3046,6 +3088,8 @@ pub fn arbitrate(
     disposition: &Disposition,
     incoming: Mode,
     budget: usize,
+    entity: EntityId,
+    home_nav_cache: &mut HomeNavCache,
 ) -> Resolution {
     let Disposition {
         latency,
@@ -3130,10 +3174,15 @@ pub fn arbitrate(
             object: None,
         };
         if view.position != *home {
-            let step = plan_to_room(&view.position, home, budget, &view.believed_hazard)
-                .and_then(|pl| pl.into_iter().next());
+            let feature = home_nav_cache.home_nav(
+                entity,
+                &view.position,
+                home,
+                &view.believed_hazard,
+                budget,
+            );
             return Resolution {
-                intent: step.map(Intent::Do).unwrap_or(Intent::Hold),
+                intent: feature.first_step.map(Intent::Do).unwrap_or(Intent::Hold),
                 mode: Mode::Homing,
                 affect,
             };
@@ -3591,6 +3640,8 @@ pub fn affect_of_memo_occupied(
         &disposition,
         Mode::Idle,
         PLAN_BUDGET,
+        npc.entity,
+        home_nav_cache,
     )
     .affect
 }
@@ -4127,7 +4178,16 @@ fn decide_step(
         helpless,
         awake: is_awake(npc.activity, terrain, pos, WorldTime { day }),
     };
-    let resolution = arbitrate(&view, &npc.home, &drives, &disposition, mode, budget);
+    let resolution = arbitrate(
+        &view,
+        &npc.home,
+        &drives,
+        &disposition,
+        mode,
+        budget,
+        npc.entity,
+        home_nav_cache,
+    );
     (resolution, drive)
 }
 
@@ -5731,6 +5791,13 @@ mod tests {
     /// per-argument values without each rebuilding the struct. Production
     /// callers (`decide`/`affect_of`/the tick) construct `Disposition` directly;
     /// only the tests, which vary these values case by case, go through this.
+    ///
+    /// Builds its own throwaway [`HomeNavCache`] and a fixed placeholder
+    /// entity (the-waymark, Task 4 fix round): none of the ~20 call sites
+    /// this adapts vary a creature identity, so a per-call cache costs
+    /// nothing beyond what `arbitrate`'s `home_nav` seam always paid before
+    /// Task 4, and none of them need cross-call cache reuse to make their
+    /// point.
     #[allow(clippy::too_many_arguments)]
     fn arb(
         view: &Perceived,
@@ -5743,6 +5810,7 @@ mod tests {
         incoming: Mode,
         budget: usize,
     ) -> Resolution {
+        let mut home_nav_cache = HomeNavCache::new();
         arbitrate(
             view,
             home,
@@ -5755,6 +5823,8 @@ mod tests {
             },
             incoming,
             budget,
+            EntityId::new(1).expect("1 is a valid nonzero entity id"),
+            &mut home_nav_cache,
         )
     }
 
@@ -13885,6 +13955,59 @@ mod tests {
             after.first_step,
             Some(Action::MoveTo(via.clone())),
             "the new plan must not still route through the now-avoided cell"
+        );
+    }
+
+    #[test]
+    fn home_nav_cache_is_keyed_by_home_and_budget_not_only_pos_and_avoid() {
+        // KEY HARDENING (the-waymark, Task 4 fix round, review item 2):
+        // `home` and `budget` determine the answer exactly as much as
+        // `pos`/`avoid` do. Before this fix the cached tuple omitted both, so
+        // a second call for a DIFFERENT home (same pos/avoid/epoch) would
+        // have silently returned the FIRST home's stale `first_step` — a
+        // cache hit on the wrong question. Two distinct one-hop-away
+        // destinations from the same `pos`, so their correct first steps
+        // provably differ.
+        let start = raddr(1.0);
+        let home_a = start.neighbors()[0].clone();
+        let home_b = start.neighbors()[1].clone();
+        assert_ne!(home_a, home_b, "sanity: two distinct neighbor destinations");
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let e = npc_id(1);
+
+        let feature_a = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET);
+        assert_eq!(
+            feature_a.first_step,
+            Some(Action::MoveTo(home_a.clone())),
+            "sanity: home_a is one hop away, straight there"
+        );
+        assert_eq!(cache.searches, 1, "warm-up search for home_a");
+
+        let feature_b = cache.home_nav(e, &start, &home_b, &avoid, PLAN_BUDGET);
+        assert_eq!(
+            feature_b.first_step,
+            Some(Action::MoveTo(home_b.clone())),
+            "a DIFFERENT home must yield ITS OWN correct first_step, not \
+             home_a's stale one — the key-hardening bug this test pins"
+        );
+        assert_eq!(
+            cache.searches, 2,
+            "a home change (pos/avoid/epoch all unchanged) must still cost \
+             a real search, not a silent hit on the wrong destination"
+        );
+
+        // Asking about home_a again costs a search too (the cache holds one
+        // entry per ENTITY, not one per (entity, home) pair) — but it must
+        // still reproduce home_a's own correct feature, never home_b's.
+        let feature_a_again = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET);
+        assert_eq!(
+            feature_a_again, feature_a,
+            "re-asking about home_a must reproduce its own correct feature"
+        );
+        assert_eq!(
+            cache.searches, 3,
+            "switching back to home_a costs a search too"
         );
     }
 }
