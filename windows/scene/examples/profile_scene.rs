@@ -48,6 +48,32 @@ const TILES_WIDTH: u32 = 512;
 /// shallowest quadtree level that requests a region patch.
 const REGION_LEVEL: u32 = 3;
 
+/// The per-tile layers the Orrery's `parseTiles` actually extracts (orrery
+/// `src/sim/scene.ts:521-532`), verified against that function rather than
+/// against any spec's transcription of it: `numberArray`/`booleanArray` are
+/// called for exactly these eight names.
+///
+/// Two corrections to the campaign spec's §1.1, both found by reading the
+/// source: `features` is document metadata (always emitted, never selectable),
+/// and `water` is not read anywhere in the Orrery's `src/` — so the client's
+/// read set is **eight** per-tile arrays, not ten, and **eleven** layers go
+/// unread rather than nine.
+const ORRERY_FIELDS: &[&str] = &[
+    "elevation_m",
+    "ocean",
+    "biome",
+    "plate",
+    "unrest",
+    "t_mean_c",
+    "t_swing_c",
+    "moisture",
+];
+
+/// How many times each serialization is timed. Serialization is
+/// allocation-heavy and the first pass warms the allocator, so one sample is
+/// not a measurement; the report prints every run and the median.
+const SERIALIZE_RUNS: usize = 3;
+
 /// Milliseconds elapsed since `t`.
 #[allow(clippy::disallowed_types)] // benchmark harness: diagnostic timing only
 fn ms(t: Instant) -> f64 {
@@ -276,6 +302,112 @@ fn report(pass: &Pass, tiles: usize, genesis_ms: f64) {
     );
 }
 
+/// Time `scene_json_selected` over `fields` [`SERIALIZE_RUNS`] times, returning
+/// the document's size and every run's milliseconds (ascending).
+#[allow(clippy::disallowed_types)] // benchmark harness
+fn timed_serialize(
+    scene: &hornvale_scene::TilesScene,
+    fields: &hornvale_scene::TileFields,
+) -> (usize, Vec<f64>) {
+    let mut bytes = 0usize;
+    let mut runs = Vec::with_capacity(SERIALIZE_RUNS);
+    for _ in 0..SERIALIZE_RUNS {
+        let t = Instant::now();
+        let json = hornvale_scene::scene_json_selected(scene, fields);
+        let elapsed = ms(t);
+        bytes = json.len();
+        runs.push(elapsed);
+    }
+    runs.sort_by(f64::total_cmp);
+    (bytes, runs)
+}
+
+/// The median of an ascending, non-empty slice.
+fn median(sorted: &[f64]) -> f64 {
+    let n = sorted.len();
+    if n % 2 == 1 {
+        sorted[n / 2]
+    } else {
+        (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+    }
+}
+
+/// Every run, as `a / b / c`.
+fn runs_text(runs: &[f64]) -> String {
+    runs.iter()
+        .map(|r| format!("{r:.1}"))
+        .collect::<Vec<_>>()
+        .join(" / ")
+}
+
+/// The Winnowing: what a projected document costs against the full one.
+///
+/// Also prints the measured per-field composition. Each layer's contribution is
+/// `len(that layer alone) - len(metadata only)`, which is the layer's bytes in
+/// *any* document containing it — that is the independence property §1.3 rests
+/// on, and the printed residual (composition sum + metadata against the full
+/// document) is a direct check of it at width 512 rather than an assumption.
+fn projection_report(scene: &hornvale_scene::TilesScene) {
+    let all = hornvale_scene::TileFields::all();
+    let orrery = hornvale_scene::TileFields::only(ORRERY_FIELDS).expect("Orrery field names exist");
+    let none = hornvale_scene::TileFields::only(&[]).expect("the empty selection is valid");
+
+    let (full_bytes, full_runs) = timed_serialize(scene, &all);
+    let (proj_bytes, proj_runs) = timed_serialize(scene, &orrery);
+    let meta_bytes = hornvale_scene::scene_json_selected(scene, &none).len();
+
+    println!("  -- The Winnowing: projection at width {TILES_WIDTH} --");
+    println!("  metadata only (no layers)  {meta_bytes:>12} B");
+    println!("  composition, one layer at a time (bytes in any document carrying it):");
+    let mut sum = 0usize;
+    for name in hornvale_scene::TileFields::ALL_NAMES {
+        let one = hornvale_scene::TileFields::only(&[name]).expect("ALL_NAMES is selectable");
+        let contribution = hornvale_scene::scene_json_selected(scene, &one).len() - meta_bytes;
+        sum += contribution;
+        let read = if ORRERY_FIELDS.contains(name) {
+            "read"
+        } else {
+            "UNREAD"
+        };
+        println!(
+            "    {name:<20} {contribution:>10} B  {:>5.1}%  {read}",
+            100.0 * contribution as f64 / full_bytes as f64
+        );
+    }
+    let residual = full_bytes as i64 - (sum + meta_bytes) as i64;
+    println!(
+        "    {:<20} {:>10} B  (residual against the full document: {residual} B)",
+        "sum + metadata",
+        sum + meta_bytes
+    );
+
+    println!();
+    println!(
+        "  full document       {full_bytes:>12} B   serialize {} ms  (median {:.1})",
+        runs_text(&full_runs),
+        median(&full_runs)
+    );
+    println!(
+        "  Orrery's {} layers   {proj_bytes:>12} B   serialize {} ms  (median {:.1})",
+        ORRERY_FIELDS.len(),
+        runs_text(&proj_runs),
+        median(&proj_runs)
+    );
+    let byte_ratio = proj_bytes as f64 / full_bytes as f64;
+    let time_ratio = median(&proj_runs) / median(&full_runs);
+    println!(
+        "  bytes    {:.1}% of full ({:+.1}%)   serialize {:.1}% of full ({:+.1}%)",
+        100.0 * byte_ratio,
+        100.0 * (byte_ratio - 1.0),
+        100.0 * time_ratio,
+        100.0 * (time_ratio - 1.0)
+    );
+    println!(
+        "  proportionality: time/byte ratio = {:.3} (1.000 = serialize fell exactly with bytes)",
+        time_ratio / byte_ratio
+    );
+}
+
 fn main() {
     let tiles: usize = std::env::args()
         .nth(1)
@@ -300,6 +432,14 @@ fn main() {
     println!();
     println!("  -- SceneContext path: one planet derived per world --");
     report(&after, n, genesis_ms);
+    println!();
+
+    // The projection measurement gets its own freshly built scene so it is not
+    // reading a document either pass left warm.
+    let ctx = hornvale_scene::SceneContext::build(&world).expect("scene context");
+    let tiles_scene =
+        hornvale_scene::tiles_scene_in(&world, &ctx, TILES_WIDTH).expect("tiles scene");
+    projection_report(&tiles_scene);
     println!();
 
     let before_tile = before.per_tile_ms(n);

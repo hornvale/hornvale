@@ -279,6 +279,7 @@
 - [The Wearing](./chronicle/the-wearing.md)
 - [The Cistern](./chronicle/the-cistern.md)
 - [The Toponym](./chronicle/the-toponym.md)
+- [The Winnowing](./chronicle/the-winnowing.md)
 - [The Siding](./chronicle/the-siding.md)
 - [The Timekeeper](./chronicle/the-timekeeper.md)
 - [The Pyx](./chronicle/the-pyx.md)

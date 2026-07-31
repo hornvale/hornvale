@@ -432,7 +432,14 @@ and a single camera move spent roughly fifteen seconds generating the same
 world two dozen times. ([The Cistern](./chronicle/the-cistern.md) closed that
 the following day — the derivation now happens once per world, and a region
 patch measured 11.1× cheaper. The entry stays on the ledger because the
-*failure mode* is what it records, not the defect's lifetime.) The bet is
+*failure mode* is what it records, not the defect's lifetime. [The
+Winnowing](./chronicle/the-winnowing.md) then took the residual The Cistern
+named: the globe document's cost is no longer redundant *derivation* but sheer
+*volume*, and the schema said nothing about that either. A caller may now name
+the per-tile layers it will read — the eight the Orrery's parser actually
+extracts are 46.3% of the bytes — which is the same lesson one turn on. A
+contract about contents says nothing about the cost of producing a document,
+and it says nothing about which parts of one a consumer will use.) The bet is
 untouched — nothing crosses the seam incorrectly,
 and the interface required no change to be measured. What sharpens is the
 same scope lesson The Selvage drew about geometry, transposed to cost: a
