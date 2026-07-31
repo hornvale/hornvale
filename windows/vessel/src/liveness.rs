@@ -3093,6 +3093,13 @@ pub struct Disposition {
 /// straight through to the fallback's own `home_nav_cache.home_nav` call —
 /// the SAME session-lived [`RoomMeshMemo`] `decide_step`'s own
 /// `lowest_unvisited_neighbor_memo` read already shares, not a second one.
+/// This is a SIGNATURE GROWTH (a new trailing parameter) on an already-`pub`
+/// function: `grep -rn "vessel::liveness::arbitrate\|liveness::arbitrate"`
+/// outside this crate turns up nothing, and `cli/tests/architecture.rs`'s
+/// dependency-direction check would catch a downstream break at compile
+/// time regardless (nothing above `windows/vessel` in the layering calls
+/// it) — but no external caller has actually been verified beyond that grep,
+/// so this is noted rather than asserted.
 ///
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]

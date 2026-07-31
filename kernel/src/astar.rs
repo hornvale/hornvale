@@ -14,7 +14,13 @@
 //! substitutable, not a one-impl abstraction. Both take an optional
 //! [`crate::room::RoomMeshMemo`] a memo-aware `SearchSpace` (see
 //! [`SearchSpace::successors_memo`]) can consult instead of recomputing
-//! [`crate::room::RoomAddr::neighbors`] on every expansion.
+//! [`crate::room::RoomAddr::neighbors`] on every expansion — a DELIBERATE,
+//! REVERSIBLE narrowing of "knows nothing of 'time' or 'GOAP'" above: `Solver`
+//! and `successors_memo` are still generic over any `SearchSpace`, but the
+//! memo parameter's TYPE is the one concrete cross-call cache the kernel has
+//! today rather than a generic associated type nothing yet needs. A second
+//! domain wanting a different memo would widen this then, not now (see
+//! `SearchSpace::successors_memo`'s own doc for the full argument).
 use crate::room::RoomMeshMemo;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -177,24 +183,32 @@ pub fn astar<S: SearchSpace>(space: &S, start: S::State, budget: usize) -> Optio
 /// popped, using the identical `(f, g, state)` total order and the
 /// identical first-strict-improvement-wins relaxation rule, so nothing
 /// exploration does AFTER that pop can retroactively change which state was
-/// recorded or how `came_from` reconstructs its path. `astar_field_matches_
-/// astar_solver` below pins this byte-for-byte across every existing
-/// fixture, including the tie-break keystone case.
+/// recorded or how `came_from` reconstructs its path. The
+/// `field_solver_matches_astar_solver_*` tests below (`kernel::astar::
+/// tests`) pin this across the module's existing fixtures — the least-cost
+/// path, the tie-break keystone (repeated 100×), the unreachable-goal and
+/// start-is-goal edge cases, a tight budget (exercising `FieldSolver`'s own
+/// `break`-not-`return` budget accounting), and a nonzero admissible
+/// heuristic (mirroring `a_nonzero_admissible_heuristic_still_finds_the_
+/// optimum`, since a nonzero `h` is exactly what makes the `(f, g, state)`
+/// order diverge from plain `(g, state)` — the ordering assumption the
+/// substitutability claim above actually rests on).
 ///
 /// **This is a DIFFERENT claim than Task 5's own equivalence test.** The
-/// disabled `windows/vessel::liveness` property test compared a field
-/// ROOTED AT A SHARED DESTINATION against MANY independent per-room forward
-/// searches — a cross-query reuse shape this trait's single-`start`-per-call
-/// signature does not express — and found 52/346 rooms disagree in
-/// `first_step` (root-relative tie-breaking; distance always agreed). Here,
-/// `start` is the SAME root a caller would hand `AStarSolver`, so there is
-/// no second root to disagree with, and therefore none of that risk either
-/// — nor, by the same token, its query-amortization win. This solver exists
-/// to give Task 7's bench a second, independently-implemented backend
-/// (`kernel::astar::tests::astar_field_matches_astar_solver` is the
-/// determinism half of that story), not to reproduce the disabled field's
-/// cross-query reuse — home_nav stays on `AStarSolver` alone, per the
-/// equivalence null (see the property test's own doc for the mechanism).
+/// disabled `windows/vessel::liveness` property test
+/// (`reverse_field_matches_forward_search_for_every_empty_avoid_room`)
+/// compared a field ROOTED AT A SHARED DESTINATION against MANY independent
+/// per-room forward searches — a cross-query reuse shape this trait's
+/// single-`start`-per-call signature does not express — and found 52/346
+/// rooms disagree in `first_step` (root-relative tie-breaking; distance
+/// always agreed). Here, `start` is the SAME root a caller would hand
+/// `AStarSolver`, so there is no second root to disagree with, and
+/// therefore none of that risk either — nor, by the same token, its
+/// query-amortization win. This solver exists to give Task 7's bench a
+/// second, independently-implemented backend, not to reproduce the disabled
+/// field's cross-query reuse — home_nav stays on `AStarSolver` alone, per
+/// the equivalence null (see that property test's own doc for the
+/// mechanism).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct FieldSolver;
 
@@ -399,8 +413,11 @@ mod tests {
 
     // --- FieldSolver substitutability (the-waymark, Task 6): proven, not
     // merely asserted — see FieldSolver's own doc for the argument. These
-    // pin it byte-for-byte across every fixture the module already used to
-    // characterize AStarSolver, including the tie-break keystone.
+    // pin it byte-for-byte across the least-cost path, the tie-break
+    // keystone, the unreachable/start-is-goal edges, a tight budget, and a
+    // nonzero admissible heuristic (below) — not an exhaustive fixture
+    // sweep, but the specific cases the module already uses to characterize
+    // AStarSolver's own tie-break and ordering behavior.
 
     #[test]
     fn field_solver_matches_astar_solver_on_the_least_cost_path() {
@@ -490,5 +507,33 @@ mod tests {
             FieldSolver.solve(&g, 0, 1000, None),
             AStarSolver.solve(&g, 0, 1000, None)
         );
+    }
+
+    #[test]
+    fn field_solver_matches_astar_solver_with_nonzero_admissible_heuristic() {
+        // Mirrors `a_nonzero_admissible_heuristic_still_finds_the_optimum`
+        // above — the fixture that actually exercises the ordering
+        // assumption FieldSolver's substitutability claim rests on: with
+        // `h != 0`, the frontier orders by `(f, g, state)` where `f = g + h`
+        // diverges from plain `(g, state)`, so this is the case that would
+        // show FieldSolver's "first goal popped" disagreeing with
+        // AStarSolver's early return if the two ever read that order
+        // differently. Every OTHER test above uses `h: BTreeMap::new()`
+        // (heuristic always 0, Dijkstra-mode) and so cannot exercise this.
+        let mut edges = BTreeMap::new();
+        edges.insert(0u32, vec![('a', 1, 1), ('b', 2, 5)]);
+        edges.insert(1u32, vec![('c', 3, 1)]);
+        edges.insert(2u32, vec![('d', 3, 1)]);
+        let mut h = BTreeMap::new();
+        h.insert(1u32, 1);
+        h.insert(2u32, 1);
+        let g = Graph {
+            edges,
+            goal_node: 3,
+            h,
+        };
+        let astar_answer = AStarSolver.solve(&g, 0, 1000, None);
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), astar_answer);
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), Some(vec!['a', 'c']));
     }
 }
