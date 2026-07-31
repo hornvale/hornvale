@@ -1512,8 +1512,29 @@ pub trait Drive {
     /// or `Drink` at water), else `0.0`. For thermal: the drop in thermal
     /// urgency at the neighbour (`0.0` if it doesn't improve comfort, and `0.0`
     /// for `Drink` — a flow drive has no consume).
+    ///
+    /// `affordance` is `arbitrate`'s caller-owned, per-call lazy cache
+    /// (the-waymark, ledger #9): calling it returns this drive's own
+    /// [`affordance`](Drive::affordance) for the view/budget fixed across
+    /// the whole `arbitrate` call, computed at most ONCE no matter how many
+    /// candidate actions `serviceability` is asked about (`arbitrate`'s
+    /// `grab_utility`/`utility` fold calls this once per candidate, always
+    /// against the same view). An implementation whose formula doesn't need
+    /// its own affordance (thermal/fatigue/danger/social all score a
+    /// candidate directly) simply never calls it, so it costs those drives
+    /// nothing — the closure is a THUNK, not an eager value: laziness is
+    /// decided per-drive, by whether this body calls it at all, never by the
+    /// caller. `Drive` stays `&self`-only and holds no cache of its own; the
+    /// constraint this satisfies (no interior mutability inside a drive) is
+    /// ledger #9's ruling on Task 6b's earlier `RefCell`-per-drive design.
     /// type-audit: bare-ok(ratio: return), bare-ok(count: budget)
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64;
+    fn serviceability(
+        &self,
+        action: &Action,
+        view: &Perceived,
+        budget: usize,
+        affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64;
 
     /// Whether this drive is pursued WHILE ASLEEP — the off-phase (The Slumber,
     /// spec §3). The default is `false`: thirst and thermal are wake-gated (a
@@ -1641,119 +1662,15 @@ pub struct Resolution {
     pub affect: Affect,
 }
 
-/// A single-slot, key-validated memo for a drive's [`Drive::affordance`] —
-/// the shape both [`Thirst`] and [`Hunger`] need (the-waymark, Task 6b,
-/// ledger #8). Within one [`arbitrate`] call, `serviceability` is invoked
-/// once per candidate action across (at least) the `grab_utility`/`utility`
-/// fold, always against the SAME `view`/`budget` — the fold's candidates
-/// never change what the drive's OWN affordance is, only which candidate the
-/// caller compares it to. Naively, `Thirst::affordance`/`Hunger::affordance`
-/// re-derive that identical answer (an uncached `plan_to_water` search, or a
-/// `forage_step` neighbour scan) once per candidate: measured at ~41 real
-/// `plan_to_water` searches/tick on the health battery (Task 6, ledger #8),
-/// almost all of them this same-view repetition.
-///
-/// Caching the LAST `(key, result)` pair collapses that to one real search
-/// per view. The key is validated on every read: a key that differs from
-/// last time (a genuinely different view — e.g. a test that deliberately
-/// reuses one drive instance across several scenarios, as
-/// `affect_reads_each_circumplex_region` does) simply misses and recomputes,
-/// so the memo can only ever SAVE a search, never answer a stale one. This
-/// is the "once per `arbitrate` call" half of the hoist (its sibling is
-/// [`Social`]'s `home_step`, precomputed once at construction, Task 4) — no
-/// `Drive`-trait signature change, no altered semantics for any caller.
-#[derive(Debug)]
-struct AffordanceMemo<K> {
-    /// The last `(key, answer)` computed, if any.
-    slot: std::cell::RefCell<Option<(K, Option<Action>)>>,
-}
-
-impl<K> Default for AffordanceMemo<K> {
-    // Hand-rolled rather than `#[derive(Default)]`: the derive would add a
-    // spurious `K: Default` bound (neither `ThirstKey` nor `RoomAddr`, the
-    // two keys in use, implements it) even though an empty slot never needs
-    // one.
-    fn default() -> Self {
-        Self {
-            slot: std::cell::RefCell::new(None),
-        }
-    }
-}
-
-impl<K: PartialEq> AffordanceMemo<K> {
-    /// The cached answer for `key`, computing (and caching) it via `compute`
-    /// on a miss — including the first read, when the slot is empty.
-    fn get(&self, key: K, compute: impl FnOnce() -> Option<Action>) -> Option<Action> {
-        if let Some((k, v)) = self.slot.borrow().as_ref()
-            && *k == key
-        {
-            return v.clone();
-        }
-        let value = compute();
-        *self.slot.borrow_mut() = Some((key, value.clone()));
-        value
-    }
-}
-
-/// The fields [`Thirst::affordance`] actually reads from a [`Perceived`]
-/// view, plus the routing `budget` — the [`AffordanceMemo`] key. Two calls
-/// with an identical key are guaranteed to answer identically (`affordance`
-/// is a pure function of exactly these), so caching on it can never be wrong.
-#[derive(Clone, Debug, PartialEq)]
-struct ThirstKey {
-    /// The creature's current room.
-    position: RoomAddr,
-    /// The believed-water branch `affordance` takes.
-    believed_water: Option<RoomAddr>,
-    /// The route-avoid set the A*/explore search reads.
-    believed_hazard: std::collections::BTreeSet<RoomAddr>,
-    /// The exploration step the ignorant branch reads.
-    explore_step: Option<RoomAddr>,
-    /// The search budget.
-    budget: usize,
-}
-
-impl ThirstKey {
-    /// The key for `view`/`budget` — every field [`Thirst::affordance`]
-    /// reads, so an unchanged key guarantees an unchanged answer.
-    fn of(view: &Perceived, budget: usize) -> Self {
-        Self {
-            position: view.position.clone(),
-            believed_water: view.believed_water.clone(),
-            believed_hazard: view.believed_hazard.clone(),
-            explore_step: view.explore_step.clone(),
-            budget,
-        }
-    }
-}
-
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
 /// `drive_at` fold surfaced on the view; `affordance` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
 /// the same `DriveParams`/`SUSTENANCE` the fold uses.
 /// type-audit: bare-ok(return)
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Thirst {
     /// The homeostatic parameters (rise/act) governing this drive.
     pub params: DriveParams,
-    /// The-waymark, Task 6b (ledger #8): [`AffordanceMemo`] over one
-    /// `arbitrate` call's fixed view/budget — see that type's own doc for
-    /// why this can only ever save a search, never answer a stale one.
-    memo: AffordanceMemo<ThirstKey>,
-}
-
-impl Thirst {
-    /// A fresh thirst drive over `params`, with an empty memo — the
-    /// constructor every call site uses (`decide_step` and its stateless
-    /// siblings build a new `Thirst` per call, never carrying one tick to
-    /// tick), so the memo always starts cold, exactly as a bare struct
-    /// literal would have.
-    pub fn new(params: DriveParams) -> Self {
-        Self {
-            params,
-            memo: AffordanceMemo::default(),
-        }
-    }
 }
 
 impl Drive for Thirst {
@@ -1769,15 +1686,14 @@ impl Drive for Thirst {
         self.params.rise * horizon * ANTICIPATION_HORIZON_DAYS
     }
     fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
-        self.memo
-            .get(ThirstKey::of(view, budget), || match &view.believed_water {
-                // Knows water: the first step of the A* plan toward it (None when
-                // that known water is unreachable within budget).
-                Some(w) => plan_to_water(&view.position, w, budget, &view.believed_hazard)
-                    .and_then(|pl| pl.into_iter().next()),
-                // Ignorant: the exploration step (None when nowhere new to look).
-                None => view.explore_step.clone().map(Action::MoveTo),
-            })
+        match &view.believed_water {
+            // Knows water: the first step of the A* plan toward it (None when
+            // that known water is unreachable within budget).
+            Some(w) => plan_to_water(&view.position, w, budget, &view.believed_hazard)
+                .and_then(|pl| pl.into_iter().next()),
+            // Ignorant: the exploration step (None when nowhere new to look).
+            None => view.explore_step.clone().map(Action::MoveTo),
+        }
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Thirst
@@ -1786,12 +1702,22 @@ impl Drive for Thirst {
         // Survival: thirst can reach full urgency (nothing beats dying of it).
         1.0
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // A stock drive serves exactly the ONE step its affordance would take
         // (the A*/explore first move, or `Drink` at water) — an indicator, so
         // the single-drive `argmax` is precisely `affordance` and the thirst-
-        // only decision is byte-identical to Stage 0.
-        match self.affordance(view, budget) {
+        // only decision is byte-identical to Stage 0. `affordance` is
+        // `arbitrate`'s caller-owned, per-call lazy cache (the-waymark,
+        // ledger #9) — this drive is exactly the reason it exists (this call
+        // is repeated once per candidate action, always against the same
+        // view/budget), but the drive itself holds no cache of its own.
+        match affordance() {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
@@ -2068,10 +1994,18 @@ impl<'a> Drive for Thermal<'a> {
     fn urgency_ceiling(&self) -> f64 {
         THERMAL_CEIL
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        view: &Perceived,
+        budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // A flow drive is served by PRESENCE in a kinder cell: the reduction in
         // thermal urgency at the destination (0 if the step doesn't improve
-        // comfort). No consume — `Drink` serves it not at all.
+        // comfort). No consume — `Drink` serves it not at all. Scores each
+        // candidate DIRECTLY (never via `affordance`), so the ledger #9 cache
+        // costs this drive nothing — `_affordance` is never called.
         match action {
             Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
             // THE THRESHOLD'S CROSSING: the within-room twin of the `MoveTo`
@@ -2327,8 +2261,15 @@ impl Drive for Fatigue {
     fn urgency_ceiling(&self) -> f64 {
         FATIGUE_CEIL
     }
-    fn serviceability(&self, action: &Action, _view: &Perceived, _budget: usize) -> f64 {
-        // Served by resting in place; nothing else eases fatigue.
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
+        // Served by resting in place; nothing else eases fatigue. Never
+        // calls `_affordance` (ledger #9's cache costs this drive nothing).
         match action {
             Action::Rest => 1.0,
             _ => 0.0,
@@ -2500,35 +2441,9 @@ pub struct Hunger<'a> {
     pub terrain: &'a dyn Terrain,
     /// The day the food is sensed at (for the sun-fed autotroph seam's light).
     pub day: WorldTime,
-    /// The-waymark, Task 6b (ledger #8): [`AffordanceMemo`] over one
-    /// `arbitrate` call's fixed view — `affordance` ignores `budget`
-    /// entirely (see its own doc), so the key is just the position. Mirrors
-    /// [`Thirst`]'s memo; see [`AffordanceMemo`]'s own doc for why this can
-    /// only ever save a search, never answer a stale one.
-    memo: AffordanceMemo<RoomAddr>,
 }
 
 impl<'a> Hunger<'a> {
-    /// A fresh hunger drive, with an empty memo — the constructor every call
-    /// site uses (mirrors [`Thirst::new`]: `decide_step` and its stateless
-    /// siblings build a new `Hunger` per call, never carrying one tick to
-    /// tick).
-    /// type-audit: bare-ok(ratio: urgency)
-    pub fn new(
-        urgency: f64,
-        niche: ResourceVector,
-        terrain: &'a dyn Terrain,
-        day: WorldTime,
-    ) -> Self {
-        Self {
-            urgency,
-            niche,
-            terrain,
-            day,
-            memo: AffordanceMemo::default(),
-        }
-    }
-
     /// The food-value at `room` for this creature's niche — the drive's own
     /// perception of a cell.
     fn food_value_at(&self, room: &RoomAddr) -> f64 {
@@ -2552,13 +2467,11 @@ impl<'a> Drive for Hunger<'a> {
         // Eat in place where the cell is rich enough; else forage toward a
         // richer neighbour (None when boxed in / everywhere barren → the
         // creature holds, reading distress if hungry).
-        self.memo.get(view.position.clone(), || {
-            if self.food_value_at(&view.position) >= EAT_THRESHOLD {
-                Some(Action::Eat)
-            } else {
-                forage_step(&view.position, &self.niche, self.terrain, self.day).map(Action::MoveTo)
-            }
-        })
+        if self.food_value_at(&view.position) >= EAT_THRESHOLD {
+            Some(Action::Eat)
+        } else {
+            forage_step(&view.position, &self.niche, self.terrain, self.day).map(Action::MoveTo)
+        }
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Hunger
@@ -2567,11 +2480,18 @@ impl<'a> Drive for Hunger<'a> {
         // Survival: starving reaches full urgency (like thirst).
         1.0
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // A stock drive serves exactly the ONE step its affordance would take
         // (Eat here, or the forage step) — an indicator, so the single-drive
-        // argmax is precisely `affordance` (mirrors thirst).
-        match self.affordance(view, budget) {
+        // argmax is precisely `affordance` (mirrors thirst). `affordance` is
+        // `arbitrate`'s caller-owned, per-call lazy cache (ledger #9).
+        match affordance() {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
@@ -2819,7 +2739,13 @@ impl<'a> Drive for Danger<'a> {
         // Survival: a lethal hazard reaches full urgency (like thirst/hunger).
         1.0
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, _budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        view: &Perceived,
+        _budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // SIGNED (unclamped, unlike thermal): the DROP in the creature's own felt
         // threat at the neighbour it would step to — positive toward safety,
         // NEGATIVE into worse danger, so a move that serves another drive but
@@ -2827,7 +2753,8 @@ impl<'a> Drive for Danger<'a> {
         // No consume — Drink/Rest/Eat do not ease fear.
         // The gradient is over FELT threat (terrain PLUS remembered dread, The
         // Shudder), so a creature standing on now-safe ground it only REMEMBERS
-        // as frightening is served by stepping off it.
+        // as frightening is served by stepping off it. Never calls
+        // `_affordance` (ledger #9's cache costs this drive nothing).
         match action {
             Action::MoveTo(n) => self.felt_threat_at(&view.position) - self.felt_threat_at(n),
             // Fine movement is not yet wired into any drive's plan (The
@@ -2963,8 +2890,16 @@ impl Drive for Social {
     fn urgency_ceiling(&self) -> f64 {
         SOCIAL_CEIL
     }
-    fn serviceability(&self, action: &Action, _view: &Perceived, _budget: usize) -> f64 {
-        // Served by the ONE step toward home (an indicator, like thirst/fatigue).
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
+        // Served by the ONE step toward home (an indicator, like thirst/fatigue)
+        // — already precomputed at construction (Task 4), so this never calls
+        // `_affordance` either (ledger #9's cache costs this drive nothing).
         match &self.home_step {
             Some(a) if a == action => 1.0,
             _ => 0.0,
@@ -3135,7 +3070,7 @@ impl HomeNavCache {
 /// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
-    let thirst = Thirst::new(*p);
+    let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
     // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
     // not helpless, awake — exactly the literals the byte-identical seam passed.
@@ -3234,6 +3169,71 @@ pub struct Disposition {
 /// it) — but no external caller has actually been verified beyond that grep,
 /// so this is noted rather than asserted.
 ///
+/// `arbitrate`'s own caller-owned, per-call lazy affordance cache (the-
+/// waymark, ledger #9 — the caller-owned reshape of Task 6b's `RefCell`-per-
+/// drive design, which the review ruled crossed the Constitution's no-
+/// interior-mutability constraint). `cache[i]` holds drive `i`'s own
+/// [`Drive::affordance`] answer for THIS `arbitrate` call's `view`/`budget`
+/// once it has been asked for at least once, `None` until then.
+///
+/// The laziness is exact and per-drive, not per-call: `serviceability`
+/// receives the affordance as a THUNK (`&mut dyn FnMut() -> Option<Action>`)
+/// rather than an already-resolved value, so a drive whose own formula never
+/// needs its affordance (thermal/fatigue/danger/social all score a candidate
+/// directly — see each one's own `serviceability` doc) simply never calls
+/// the thunk, and `cache[i]` is never populated for it — no drive pays for a
+/// search it doesn't ask for, exactly as before this cache existed. A drive
+/// that DOES call it (thirst, hunger) pays for the real search (an uncached
+/// `plan_to_water`/`forage_step`) at most ONCE per `arbitrate` call, no
+/// matter how many times `grab_utility`/`utility` ask about it across every
+/// candidate action — this is the actual saving (ledger #8's measured ~41
+/// real `plan_to_water` searches/tick collapsing toward ~1/creature-tick).
+///
+/// No key is stored or compared: `view`/`budget` are the same bound
+/// variables for every call within one `arbitrate` invocation (never
+/// re-derived), so positional identity (`cache[i]`, filled once, read
+/// thereafter) is already a complete and correct key — there is no way for
+/// a stale answer to reach a different view from inside this function.
+/// `#[cfg(debug_assertions)]` still recomputes and asserts equality on every
+/// cache HIT (free in release) as a standing regression guard: if a future
+/// change to `Thirst::affordance`/`Hunger::affordance` ever made the answer
+/// depend on something that varies WITHIN one `arbitrate` call (breaking the
+/// candidate-invariance this cache assumes), that assumption would fail
+/// loudly in every debug test run rather than silently going stale.
+fn cached_serviceability(
+    drives: &[&dyn Drive],
+    view: &Perceived,
+    budget: usize,
+    cache: &mut [Option<Option<Action>>],
+    i: usize,
+    action: &Action,
+) -> f64 {
+    let slot = &mut cache[i];
+    let mut affordance = || -> Option<Action> {
+        match slot {
+            Some(cached) => {
+                #[cfg(debug_assertions)]
+                {
+                    let fresh = drives[i].affordance(view, budget);
+                    debug_assert_eq!(
+                        *cached, fresh,
+                        "cached_serviceability: a cache hit for drive {i} disagreed with a \
+                         fresh Drive::affordance recompute on the same view/budget — the \
+                         candidate-invariance this cache assumes (ledger #9) has gone stale"
+                    );
+                }
+                cached.clone()
+            }
+            None => {
+                let value = drives[i].affordance(view, budget);
+                *slot = Some(value.clone());
+                value
+            }
+        }
+    };
+    drives[i].serviceability(action, view, budget, &mut affordance)
+}
+
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
@@ -3375,12 +3375,17 @@ pub fn arbitrate(
         candidates.extend(d.candidate_actions(view, budget));
     }
 
+    // `arbitrate`'s own per-call lazy affordance cache (ledger #9) — see
+    // `cached_serviceability`'s own doc. One slot per drive, all empty until
+    // (if ever) a drive's `serviceability` asks for its own affordance.
+    let mut affordance_cache: Vec<Option<Option<Action>>> = vec![None; drives.len()];
+
     // A drive's best single-drive (grab-style) utility over the candidates —
     // the score the commitment switch compares incumbent vs challenger on.
-    let grab_utility = |i: usize| -> f64 {
+    let grab_utility = |cache: &mut Vec<Option<Option<Action>>>, i: usize| -> f64 {
         candidates
             .iter()
-            .map(|a| capped(i) * drives[i].serviceability(a, view, budget))
+            .map(|a| capped(i) * cached_serviceability(drives, view, budget, cache, i, a))
             .fold(0.0_f64, f64::max)
     };
 
@@ -3389,7 +3394,7 @@ pub fn arbitrate(
     let loudest = (0..drives.len())
         .filter(|&i| active[i])
         .fold(None::<(usize, f64)>, |best, i| {
-            let u = grab_utility(i);
+            let u = grab_utility(&mut affordance_cache, i);
             match best {
                 Some((_, bu)) if u.total_cmp(&bu).is_le() => best,
                 _ => Some((i, u)),
@@ -3409,8 +3414,8 @@ pub fn arbitrate(
         {
             let inc = drives.iter().position(|d| d.kind() == k).unwrap();
             if loudest != inc
-                && grab_utility(loudest)
-                    .total_cmp(&(grab_utility(inc) + SWITCH_MARGIN))
+                && grab_utility(&mut affordance_cache, loudest)
+                    .total_cmp(&(grab_utility(&mut affordance_cache, inc) + SWITCH_MARGIN))
                     .is_gt()
             {
                 loudest
@@ -3424,7 +3429,7 @@ pub fn arbitrate(
 
     // Weight each active drive: the pursued drive at 1, every other active
     // drive at `latency` (grab 0 ↔ weigh 1). Then utility = weighted sum.
-    let utility = |a: &Action| -> f64 {
+    let utility = |cache: &mut Vec<Option<Option<Action>>>, a: &Action| -> f64 {
         (0..drives.len())
             .filter(|&i| active[i])
             .map(|i| {
@@ -3433,16 +3438,16 @@ pub fn arbitrate(
                 } else {
                     latency
                 };
-                weight * capped(i) * drives[i].serviceability(a, view, budget)
+                weight * capped(i) * cached_serviceability(drives, view, budget, cache, i, a)
             })
             .sum()
     };
 
     // The max-utility action, earliest-on-ties (ascending RoomAddr, Drink last).
     let mut best_i = 0usize;
-    let mut best_u = utility(&candidates[0]);
+    let mut best_u = utility(&mut affordance_cache, &candidates[0]);
     for (i, a) in candidates.iter().enumerate().skip(1) {
-        let u = utility(a);
+        let u = utility(&mut affordance_cache, a);
         if u.total_cmp(&best_u).is_gt() {
             best_u = u;
             best_i = i;
@@ -3681,7 +3686,7 @@ pub fn affect_of_memo_occupied(
         believed_hazard: memory.shunned.clone(),
         explore_step,
     };
-    let thirst = Thirst::new(SUSTENANCE);
+    let thirst = Thirst { params: SUSTENANCE };
     // THE THRESHOLD's arming: the room `view.position` is in, ACTUALLY derives
     // an interior now, owned here so `thermal` below can borrow it — see
     // `landing_interior`'s own doc for why "landing" is the right anchor for
@@ -3708,8 +3713,8 @@ pub fn affect_of_memo_occupied(
     let rest = Fatigue {
         home: npc.home.clone(),
     };
-    let hunger = Hunger::new(
-        hunger_at(
+    let hunger = Hunger {
+        urgency: hunger_at(
             frozen,
             npc.entity,
             &npc.home,
@@ -3717,10 +3722,10 @@ pub fn affect_of_memo_occupied(
             terrain,
             npc.metabolic_class,
         ),
-        npc.niche.clone(),
+        niche: npc.niche.clone(),
         terrain,
         day,
-    );
+    };
     let danger = Danger {
         terrain,
         threat_niche: npc.threat_niche,
@@ -4270,7 +4275,7 @@ fn decide_step(
         believed_hazard: hazard.shunned.clone(),
         explore_step,
     };
-    let thirst = Thirst::new(*params);
+    let thirst = Thirst { params: *params };
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
@@ -4280,12 +4285,12 @@ fn decide_step(
     let rest = Fatigue {
         home: npc.home.clone(),
     };
-    let hunger = Hunger::new(
-        hunger_urgency,
-        npc.niche.clone(),
+    let hunger = Hunger {
+        urgency: hunger_urgency,
+        niche: npc.niche.clone(),
         terrain,
-        WorldTime { day },
-    );
+        day: WorldTime { day },
+    };
     let danger = Danger {
         terrain,
         threat_niche: npc.threat_niche,
@@ -9876,7 +9881,12 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let hunger = Hunger::new(0.9, omnivore_niche(), &t, day);
+        let hunger = Hunger {
+            urgency: 0.9,
+            niche: omnivore_niche(),
+            terrain: &t,
+            day,
+        };
         // Barren cell: forage toward the richer neighbour.
         assert_eq!(
             hunger.affordance(&view_barren, PLAN_BUDGET),
@@ -10022,7 +10032,7 @@ mod tests {
         };
         assert!(here.neighbors().contains(&to), "it steps to a neighbour");
         assert!(
-            danger.serviceability(&Action::MoveTo(to), &view, PLAN_BUDGET) > 0.0,
+            danger.serviceability(&Action::MoveTo(to), &view, PLAN_BUDGET, &mut || None) > 0.0,
             "stepping off the dreaded cell positively serves the drive"
         );
     }
@@ -10116,12 +10126,12 @@ mod tests {
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
         assert!(
-            danger.serviceability(&Action::MoveTo(safer), &view, PLAN_BUDGET) > 0.0,
+            danger.serviceability(&Action::MoveTo(safer), &view, PLAN_BUDGET, &mut || None) > 0.0,
             "a step toward safety is served"
         );
         // Into worse danger: NEGATIVE (0.5 − 0.9) — the unclamped modulation.
         assert!(
-            danger.serviceability(&Action::MoveTo(worse), &view, PLAN_BUDGET) < 0.0,
+            danger.serviceability(&Action::MoveTo(worse), &view, PLAN_BUDGET, &mut || None) < 0.0,
             "a step into worse danger is penalised (signed serviceability)"
         );
     }
@@ -10145,7 +10155,7 @@ mod tests {
             alarm: None,
             dread: None,
         };
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let view = Perceived {
             position: home.clone(),
             drive: 0.9, // very thirsty
@@ -10863,12 +10873,12 @@ mod tests {
             "the affordance is the precomputed step home"
         );
         assert_eq!(
-            social.serviceability(&Action::MoveTo(step), &view, PLAN_BUDGET),
+            social.serviceability(&Action::MoveTo(step), &view, PLAN_BUDGET, &mut || None),
             1.0,
             "the home-step is served"
         );
         assert_eq!(
-            social.serviceability(&Action::Drink, &view, PLAN_BUDGET),
+            social.serviceability(&Action::Drink, &view, PLAN_BUDGET, &mut || None),
             0.0,
             "nothing else eases loneliness"
         );
@@ -10888,7 +10898,7 @@ mod tests {
             loneliness: 0.9,
             home_step: Some(step.clone()),
         };
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let drives: [&dyn Drive; 2] = [&thirst, &social];
         // Thirsty (drive past act) and knows nearby water: thirst wins.
         let thirsty = Perceived {
@@ -11454,7 +11464,7 @@ mod tests {
             (ns[1].clone(), 18.0),
             (ns[2].clone(), 18.0),
         ]);
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11536,6 +11546,69 @@ mod tests {
     }
 
     #[test]
+    fn arbitrates_affordance_cache_matches_a_fresh_recompute() {
+        // Names the mechanism (the-waymark, ledger #9): `arbitrate` computes
+        // each drive's own `Drive::affordance` lazily, at most ONCE per
+        // call, and reuses it across every candidate action
+        // `grab_utility`/`utility` ask about (`cached_serviceability`, in
+        // `arbitrate`'s own body — grep for it). This pins that the cached
+        // answer `arbitrate` actually ACTS on is exactly what a fresh,
+        // standalone `Thirst::affordance` call on the SAME view/budget
+        // produces — the memoized == recomputed bar.
+        //
+        // In this caller-owned shape the "key" is just positional identity:
+        // `view`/`budget` are the same bound variables for the WHOLE
+        // `arbitrate` call, never re-derived, so there is no separate
+        // key-equality branch to exercise from outside `arbitrate` (unlike
+        // Task 6b's `RefCell`-per-drive design, which validated an explicit
+        // key on every read because the memo could outlive one view). This
+        // external check — the resolved `Intent` matches a fresh recompute
+        // — together with the `debug_assert_eq!` twin inside
+        // `cached_serviceability`'s own cache-hit path (recompute-and-assert
+        // under `debug_assertions`; every candidate past the first one in
+        // THIS test's own `arbitrate` call exercises that hit path) is the
+        // WHOLE guard: there is nothing else to pin.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let water = ns[0].clone();
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.95, // parched: thirst is active AND the loudest/pursued drive
+            fatigue: 0.0,
+            believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        // A fresh, standalone recompute on the SAME view/budget `arbitrate`
+        // below is given — the answer the cache must reproduce.
+        let fresh = thirst
+            .affordance(&view, PLAN_BUDGET)
+            .expect("water is known and reachable from home");
+        let drives: [&dyn Drive; 1] = [&thirst];
+        // Six fixed candidates (three neighbours + Drink/Rest/Eat) means
+        // `cached_serviceability` is asked about thirst's affordance six
+        // times over in `grab_utility` alone, and again in `utility` — a
+        // real cache hit, not just a single-shot compute.
+        let resolution = arb(
+            &view,
+            &home,
+            &drives,
+            0.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            resolution.intent,
+            Intent::Do(fresh),
+            "arbitrate must act on exactly what a fresh, standalone affordance recompute gives"
+        );
+    }
+
+    #[test]
     fn arbitrate_in_a_comfortable_cell_is_byte_identical_to_thirst_only_decide() {
         // THE CRUX (thirst-only preserved): where thermal is INACTIVE (a
         // comfortable cell — every reachable cell at the niche optimum, urgency
@@ -11554,7 +11627,7 @@ mod tests {
             (ns[2].clone(), 18.0),
         ]);
         let params = SUSTENANCE;
-        let thirst = Thirst::new(params);
+        let thirst = Thirst { params };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11658,7 +11731,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11713,7 +11786,9 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let thirst = Thirst::new(eager_thirst());
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11796,7 +11871,9 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let eager = Thirst::new(eager_thirst());
+        let eager = Thirst {
+            params: eager_thirst(),
+        };
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
             arb(
@@ -11824,7 +11901,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let survival = Thirst::new(SUSTENANCE);
+        let survival = Thirst { params: SUSTENANCE };
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
             arb(
@@ -11863,7 +11940,7 @@ mod tests {
             day,
             interior: None,
         };
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Thirst BELOW act (0.85) but within a full-foresight lead
         // (rise·1·HORIZON_DAYS = 0.30 → act_eff 0.55): 0.70 sits in [0.55, 0.85).
@@ -11924,7 +12001,7 @@ mod tests {
             day: WorldTime { day: 0.0 },
             interior: None,
         };
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         assert_eq!(thermal.anticipation_lead(0.0), 0.0);
         assert_eq!(
             thermal.anticipation_lead(1.0),
@@ -11980,7 +12057,7 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[1].clone();
         let terrain = PlantedTerrain::fresh_only([water.clone()]);
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12140,7 +12217,7 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[1].clone();
         let terrain = PlantedTerrain::fresh_only([water.clone()]);
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12286,7 +12363,9 @@ mod tests {
             (water.clone(), -20.0),
             (ns[2].clone(), -20.0),
         ]);
-        let thirst = Thirst::new(eager_thirst());
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12398,7 +12477,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12886,12 +12965,14 @@ mod tests {
             interior: Some((&interior, door)),
         };
 
-        let toward_the_fire = drive.serviceability(&Action::MoveWithin(hearth), &view, 64);
+        let toward_the_fire =
+            drive.serviceability(&Action::MoveWithin(hearth), &view, 64, &mut || None);
         assert!(
             toward_the_fire > 0.0,
             "stepping to the strictly-warmer hearth must serve the drive: {toward_the_fire}"
         );
-        let toward_itself = drive.serviceability(&Action::MoveWithin(door), &view, 64);
+        let toward_itself =
+            drive.serviceability(&Action::MoveWithin(door), &view, 64, &mut || None);
         assert_eq!(
             toward_itself, 0.0,
             "a step that changes nothing serves the drive not at all"
@@ -12907,7 +12988,7 @@ mod tests {
             interior: None,
         };
         assert_eq!(
-            no_interior.serviceability(&Action::MoveWithin(hearth), &view, 64),
+            no_interior.serviceability(&Action::MoveWithin(hearth), &view, 64, &mut || None),
             0.0
         );
     }
@@ -12941,7 +13022,7 @@ mod tests {
             (ns[1].clone(), -15.0),
             (ns[2].clone(), -15.0),
         ]);
-        let thirst = Thirst::new(SUSTENANCE);
+        let thirst = Thirst { params: SUSTENANCE };
         let thermal = Thermal {
             niche: cold_niche(),
             terrain: &t,
