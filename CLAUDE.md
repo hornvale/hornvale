@@ -406,7 +406,15 @@ cites a decision number. A falsified prediction is a finding, not a failure — 
 campaigns ship the null as the headline. Don't retune a constant to rescue a
 prediction after unblinding without saying so in the chronicle.
 
-**The tooling/process backlog is `WORKFLOW_IMPROVEMENTS_PLAN.md`** (TOOL-*
-and PROC-* registry rows, staged). Per-campaign process lessons land in
-`docs/retrospectives/`; settled choices land in `docs/decisions/` (90
-records, append-only — grep before relitigating).
+**The tooling/process backlog is the idea registry's `TOOL-*` and `PROC-*`
+rows** — there is no separate plan file. `WORKFLOW_IMPROVEMENTS_PLAN.md` was
+retired once every stage in it read `Complete` and all that remained was a
+backlog list duplicating the registry, a residue already carried in the rows'
+**Where** cells, and one sequencing fact now held by `PROC-ci-topology-block`.
+The duplication was not harmless: reading that stale list is what minted a
+duplicate `TOOL-24`, which then travelled through a spec, a plan, a study JSON
+and a decision (`docs/retrospectives/the-pyx.md`). Treat a `shipped` row's
+**Where** cell as the place a deferred half is recorded. Per-campaign process
+lessons land in `docs/retrospectives/`; settled choices land in
+`docs/decisions/` (append-only — `make doctor` counts them; grep before
+relitigating).
