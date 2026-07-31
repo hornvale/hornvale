@@ -451,6 +451,41 @@ one is invisible to reading — every document is correct — and visible only t
 a fixture shaped like the consumer's session, since redundancy is a property
 of a sequence of calls and cannot appear in any one of them.
 
+[The Pyx](./chronicle/the-pyx.md) adds an eighth entry, and it generalizes the
+ledger's own recurring rule one step further. The Cartographer's lesson was
+that a determinism claim is only as good as the *route* it was checked along.
+The Pyx's is that it is only as good as the **apparatus** it was checked on:
+every check in this repository regenerates on the canonical box and compares
+against a golden authored on the canonical box, so the machine sits on both
+sides of the comparison and cannot be what the comparison detects. In the
+vocabulary metrology uses for exactly this distinction, the project had been
+enforcing *repeatability* and describing it as *reproducibility*. The audit
+that closed the gap found nothing wrong — a full census reproduced on its
+authoring host eleven days later with zero bytes different, two clean builds
+of one commit hashed identically, and a forty-world all-metric probe was
+byte-identical between x86_64/Linux and aarch64/Darwin, including the one
+seed whose count decision 0063 had recorded two
+machines disagreeing on. The bet on deterministic serialization is
+**strengthened, and for the first time by evidence from outside the machine
+that authors the goldens**. What sharpens is the scoring instrument rather
+than the claim: the cheapest sufficient check turned out to be a comparison of
+*binaries* rather than of outputs, which nobody had tried and which the
+campaign's own frozen prediction said would not work.
+
+That instrument then needed a correction of its own, and the correction
+belongs on this ledger as much as the entry does. Two builds of one commit in
+two directories hashed identically on the canonical box, and the campaign
+generalized from that single host to a property of the toolchain. Repeating
+the comparison on the second machine produced two *different* binaries, each
+carrying the absolute path it was built in — a path written in deliberately by
+ordinary code asking where its own source tree is, not by debug information as
+first supposed. So the oracle is real but conditional: it holds when both
+machines build at the same absolute path, which an image supplies for free and
+an ad-hoc checkout does not. The entry's shape is therefore the ledger's rule
+turned on the ledger's own author — a claim verified on one apparatus is a
+fact about that apparatus, and the campaign that had just finished saying so
+in prose went on to forget it in a decision record within the hour.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing

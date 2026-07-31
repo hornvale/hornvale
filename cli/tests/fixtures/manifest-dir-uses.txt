@@ -1,0 +1,15 @@
+# Production (non-test) source files that expand `env!("CARGO_MANIFEST_DIR")`,
+# with the number of uses in each. Frozen by decision 0090, amendment 2.
+#
+# Each such expansion bakes the ABSOLUTE BUILD PATH into the shipped binary at
+# compile time, which is why two builds of one commit in different directories
+# do not hash the same. That in turn is what makes binary identity usable as a
+# cross-host oracle only when both hosts build at the same absolute path.
+#
+# This list may SHRINK freely — removing a use makes the binary more portable.
+# It may not GROW without a deliberate decision: every addition widens the set
+# of paths a build embeds, and none of it is visible in any output.
+#
+# Format: <workspace-relative path> <count>
+cli/src/main.rs 1
+windows/lab/src/blackbox.rs 1

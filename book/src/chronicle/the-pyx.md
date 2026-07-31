@@ -1,0 +1,186 @@
+# The Pyx
+
+Since 1282 the Royal Mint has submitted a random sample of its coins to the
+Trial of the Pyx: an assay, before an independent jury, against a reference
+standard. The trial exists not because mints are dishonest but because a mint
+that never checks its own output against a standard will not notice the day it
+stops matching.
+
+Hornvale has authored its census goldens on one machine since decision 0063,
+and had never assayed them. On 30 July the machine was tried against three
+standards — its own past, a second build of itself, and a different
+architecture. It passed all three.
+
+## The ruling nobody had re-measured
+
+0063 ruled a single canonical platform on the strength of a single
+observation. On 19 July, lefford and an AWS box disagreed by one unit on
+roughly a tenth of a percent of census values — `divergence-magnitude`-class
+discrete counts, the sort settled by a comparison in the compute path, where
+quantization at the emit boundary arrives too late to help. Quantization
+absorbs a last-bit float difference when the number is serialized; it cannot
+un-flip an integer that a `>` has already decided.
+
+The observation was recorded. The *mechanism* never was.
+
+Eight days after that measurement, on 27 July, the workspace raised its x86
+codegen baseline to `x86-64-v2`. The change was made for speed, and the
+commit's own notes explain why it was worth 4.6% of a census: on the default
+baseline LLVM cannot emit the `roundsd` instruction, so every `f64::floor()`
+compiled to a *library call* — a bare `floor` symbol that a profiler charged
+4.62% of the run's own time — and `Fbm::sample`, the innermost primitive of
+all world generation, floors twice per sample. Raising the baseline turned
+those calls into single instructions.
+
+So between the divergence measurement and the present, the hottest
+floating-point path in the project stopped calling into a shared library that
+differs per host and started executing a fixed instruction. Nobody went back
+to look.
+
+## Repeatability is not reproducibility
+
+Underneath sat something larger than one stale measurement.
+
+Metrology distinguishes two things a laboratory can claim. **Repeatability**
+is the same apparatus, the same operator, a short interval apart.
+**Reproducibility** is a *different* apparatus reaching the same value. They
+are not degrees of the same virtue; they are different claims, and the second
+does not follow from the first.
+
+Every determinism guarantee Hornvale enforces is a repeatability guarantee.
+The drift check regenerates on lefford and compares against a golden authored
+on lefford. That is a real and valuable check — it catches a change in the
+code. It is structurally incapable of noticing that the *machine* has moved,
+because the machine is on both sides of the comparison.
+
+Which left the project in the position the SI system occupied until 2019.
+Le Grand K, the platinum-iridium cylinder in Sèvres, *was* the kilogram by
+definition, so it could not be wrong — and yet its official copies drifted
+against it by tens of micrograms over a century, and the only reason anyone
+knew was that the copies existed and were periodically compared. Hornvale had
+the artifact and no copies.
+
+## Three assays
+
+The audit was built cheapest-first, each layer able to make the next
+unnecessary.
+
+The first re-ran the full census on lefford at the exact commit whose goldens
+it had authored eleven days earlier, and diffed. This is the control that had
+never been run, and the only one whose failure would have outranked the
+campaign entirely: had it come back dirty, every drift check in the repository
+would have been comparing against an artifact its own author could no longer
+reproduce.
+
+The second asked a question the project had never asked at all — whether the
+binary is a function of the source. Two clean release builds of the same
+commit, in different directories, hashed.
+
+The third compared platforms: forty worlds, every registered metric, run on
+lefford and on an Apple-silicon Mac. The window was centred on seed 681,
+because 0063 had named it — its `divergence-magnitude-hobgoblin` read 5 on
+lefford and 6 in the AWS golden, and that single integer is the most specific
+surviving trace of the divergence.
+
+## The results
+
+The census reproduced exactly. Not merely the thousand-row table — the whole
+generated tree: 520 charts, both study summaries, the schemas, the gallery
+renders, the type-audit report. Zero bytes different, in fifteen minutes of
+recomputation, eleven days on.
+
+The two binaries were identical: `fb8c368c…` twice, not one byte apart.
+
+The two platforms agreed completely. Both probe tables hash to `ddb999ff…`
+— x86_64 Linux against aarch64 Darwin, forty worlds, every metric, no
+exceptions. And seed 681 reads `divergence-magnitude-hobgoblin = 5` on
+lefford, on the Mac, and in the committed golden. The one value AWS disputed
+is now agreed on by two architectures and two operating systems.
+
+## The prediction that missed
+
+The campaign froze its predictions before running anything, and one of them
+was wrong.
+
+The binary comparison was expected to *fail*, benignly. Rust embeds absolute
+source paths in its output unless told otherwise, and two builds in two
+directories should therefore differ in a way that says nothing about
+correctness — a confirmed nuisance, closing off binary hashing as a useful
+tool and leaving the expensive output comparison as the only real instrument.
+
+Instead the hashes matched, and the campaign drew the wrong lesson from it —
+twice over, in the space of an evening, and in exactly the way it had spent
+all day warning against.
+
+The first reading was that release builds carry no debug information, and that
+a binary without debug information carries no source paths to differ over. The
+consequence looked large: qualifying a new machine would no longer require
+generating a single world, only a build and a hash comparison, turning an
+assay budgeted in tens of minutes into one that costs seconds.
+
+Running the same two-build comparison on the second machine dissolved it. Two
+builds of one commit, in two directories, produced **two different binaries** —
+and each contained the absolute path of the directory it was built in, with no
+debug information anywhere near it. The paths do not arrive through debug
+information at all. They are written in deliberately: two ordinary pieces of
+the program ask, at compile time, where the source tree is, so they can find
+the workspace root at runtime. That answer is a string, and the string ships.
+
+So the useful property is real but narrower than the first reading, and it
+carries a condition that reading had hidden: **binary identity is an oracle
+only when both machines build at the same absolute path.** Neither comparison
+that suggested the idea had met that condition — one met it by an accident
+still not understood, and the other did not meet it and duly failed.
+
+The condition turns out to cost nothing where it will be used. An image fixes
+its build directory on every machine that runs it, so a container satisfies
+the requirement by construction, and the assay becomes: same image, same path,
+one hash. What had looked like a free discovery became a reason to build the
+thing it was going to be used on.
+
+The guard the first reading implied was written and then deleted before it was
+committed. It would have asserted that release builds carry no debug
+information — a true statement about the workspace, guarding a property that
+was not the one holding the oracle up, and it would have stayed green while
+the real one broke. What replaced it counts the places where the program asks
+for its own source directory, and freezes that number at two.
+
+## What was and was not established
+
+The divergence 0063 measured does not reproduce between two current, pinned
+hosts spanning two architectures and two operating systems. That is the
+finding, at exactly that width.
+
+It is not a finding about the Kubernetes node that prompted the audit; that
+machine was never run. It does not license a second authoring host, and the
+enforcement that keeps goldens coming from one box is deliberately untouched.
+What changed is that the single-platform rule now rests on a premise that has
+been re-measured rather than inherited — and the premise has moved beneath it.
+
+Nor was the mechanism found. The codegen story is consistent with every result
+and remains unproven, and the obvious way to settle it turns out not to work.
+Rebuilding without the raised baseline would move only one of the two
+machines: the flag is declared for x86-64 targets alone, and the Mac's
+architecture lowers a floor to a single hardware instruction with or without
+it. The comparison that produces is a library routine against an instruction,
+which is not the arrangement that disagreed in July — two x86-64 Linux boxes,
+each with a library to call. For the same reason the probe that passed never
+touched the suspect path at all: both machines floored in hardware, by
+different instructions, and agreed.
+
+What would test it is two x86-64 Linux hosts carrying *different* system
+libraries, neither given the flag. The project has one such host. A container
+on a second one would pin that library deliberately rather than inherit it,
+which is a better instrument than the machine the original disagreement was
+measured against — and the reason to build it is now a question rather than a
+convenience.
+
+Underneath all of which sits a reason to hold the hypothesis loosely. IEEE-754
+floor is exactly representable, so a conforming library should not have
+diverged in the first place. Either the cause lies elsewhere, or one of those
+two machines was doing something it should not have been. The observation of
+19 July stands as an observation, and its cause is still unknown.
+
+A mint that assays itself and passes has not proven its dies will never wear.
+It has established that today they have not, and that it owns an instrument
+capable of telling it when they do.

@@ -1,0 +1,7 @@
+{
+  "name": "the-pyx-probe",
+  "description": "The Pyx (TOOL-cross-host-assay): a cross-host reproducibility probe, NOT a census. Forty consecutive worlds (seeds 660-699) under default pins, read on every registered metric, so that two hosts can be compared value-for-value. The window is centred on seed 681, whose divergence-magnitude-hobgoblin decision 0063 measured as 5 on the canonical box against 6 in the then-committed AWS golden — the one named, still-live tripwire for the cross-host divergence this campaign assays. Deliberately named outside the census convention (see spec D5) so it can run on any machine; nothing it writes is ever committed.",
+  "seeds": { "from": 660, "count": 40 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all"
+}
