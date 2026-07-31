@@ -13,6 +13,14 @@ for scene profiles. It had **zero rows labelled `gate`**. The instrument was
 built, committed, and never wired to the most-run expensive command in the
 repository.
 
+*(That last gap outlived this campaign. The Timekeeper wired the ledger to
+`make ci` and left `make gate` — the command it had just finished naming —
+still unrecorded, so the creep it identified stayed unmeasurable for another
+day. Closed 2026-07-30: `gate` is now a thin timing wrapper around `gate-run`,
+the same shape `ci` uses. The first four measurements, taken the evening it
+landed, read 1308 s, 1778 s, 2037 s and 3867 s on one machine as concurrent
+sessions accumulated.)*
+
 ## What the campaign built
 
 A `ci` nextest profile emitting `libtest-json-plus`, so every test reports its

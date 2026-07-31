@@ -22,7 +22,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -31,7 +31,17 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit ## Cheap half of the gate (fmt-check + clippy + type-audit)
 
-gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
+
+# The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`
+# and `ci-run` use. Until this split, docs/timings.md carried ZERO rows
+# labelled `gate` (0086's amendment): the ledger built to catch a suite
+# creeping "65s -> 43.5 min" was never wired to the most-run expensive command
+# in the repo, so a 4-minute budget drifting to 15+ was never observable.
+# Read them filtered — `scripts/timed.sh report gate` — because gates are
+# frequent and will dominate the ledger by row count.
+gate-run: fmt-check clippy type-audit test
 	@bash scripts/census-advisory.sh || true
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
