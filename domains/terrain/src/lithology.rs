@@ -271,7 +271,7 @@ pub fn classify_rock(
 }
 
 /// Hydrogeologic behavior (spec §3, round 2 rock×water).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Hydro {
     /// Porous, holds water: wells, oases.
     Aquifer,
@@ -294,6 +294,28 @@ pub enum Hydro {
     Runoff,
     /// Dissolving carbonate: caves, sinkholes.
     Karst,
+}
+
+impl Hydro {
+    /// Every variant, so a witness test (`domains/terrain/tests/
+    /// hydro_witness.rs`, The Witness Task 6) derives its checklist from the
+    /// type rather than from an author re-typing the enum's members by hand.
+    /// `Hydro::Spring`/`Hydro::Aquifer` were unreachable from the real
+    /// derivation on every seed for this model's entire life (F5) and no
+    /// hand-built checklist would have caught that on its own — adding a
+    /// variant here enrolls it in the guard automatically, which is the
+    /// property a hand-maintained list cannot offer. `PartialOrd`/`Ord`
+    /// (declaration order, derived above) exist only so the guard can
+    /// collect witnessed variants into a `BTreeSet` (the project bans
+    /// `HashSet`) — as with `RockClass`, there is no meaningful ranking
+    /// between hydrogeologic classes.
+    pub const ALL: [Hydro; 5] = [
+        Hydro::Aquifer,
+        Hydro::Aquitard,
+        Hydro::Spring,
+        Hydro::Runoff,
+        Hydro::Karst,
+    ];
 }
 
 /// Classify hydrogeology from porosity/carbonate (spec §3). Pointwise matrix
