@@ -1,6 +1,11 @@
 //! LANG-48 property tests: the five standing laws from
 //! `docs/superpowers/specs/2026-07-20-the-consonance-design.md` §4,
 //! measured directly — never narrated.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::StdDays;
 use hornvale_astronomy::resonance::detect_moon_period_ratio;

@@ -275,6 +275,9 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 /// silent-empty posture `hornvale_worldgen::accounts_from` already takes on
 /// the identical failure, rather than panicking on state a normal build
 /// never reaches.
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `render_volume_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn render_volume(world: &World) -> BookVolume {
     let empty = || BookVolume {
         seed: world.seed.0,
@@ -702,6 +705,9 @@ fn reckoning_epochs_from(
 /// committed pins is unreachable, so this panics on it (the same posture
 /// `reckoning_epoch`'s own `observations_from`/`ladder_from` calls already took
 /// before The Shuttle threaded them).
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `reckoning_at_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
     let terrain = hornvale_worldgen::terrain_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable terrain: {e}"));
@@ -1672,6 +1678,9 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 ///
 /// [`RevealedClaim`]: ConflictState::RevealedClaim
 /// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `esoteric_lines_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec<String> {
     let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
         return Vec::new();
@@ -2050,6 +2059,9 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 /// whose terrain pins fail to parse still parses every Common line it
 /// would have accepted before that failure, just without the chorus
 /// vocabulary.
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `parse_context_with_voices`.
+#[allow(clippy::disallowed_methods)]
 pub fn parse_context(world: &World) -> ParseContext {
     let sculpted = hornvale_worldgen::terrain_of(world)
         .ok()
@@ -2748,6 +2760,10 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     //! ## The rebase onto The Toponym's cohort ordering — the rename map
     //!
     //! The nineteen toponymic concepts sort at epoch 4 rather than in

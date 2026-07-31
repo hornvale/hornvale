@@ -151,6 +151,9 @@ pub fn run_simulation(
 
 /// Simulate a real world's derived population and return each creature's affect
 /// trace. `None` if the world has no locale or no settlement to derive from.
+// Named construction site (decision 0092): sculpts/fits exactly ONCE per
+// sweep (The Weir, Stage 2), mirroring `Session::start`.
+#[allow(clippy::disallowed_methods)]
 pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     // ONE derivation block (The Weir, Stage 2): terrain, climate, and the
     // locale context are each derived EXACTLY ONCE here, then threaded into

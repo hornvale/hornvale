@@ -4,6 +4,16 @@
 //! almanac's context. Domains stay ignorant of each other; this module is
 //! where the application composes them (Constitution §2.6).
 #![warn(missing_docs)]
+// The weir (decision 0092): `terrain_of`/`climate_from`/`demography_report_from`
+// are the sculpt/fit derivation entry points the lint bans workspace-wide.
+// This crate IS the composition root (Constitution §2.6) — every pub fn here
+// that derives is itself a named construction site, and `mod` brings
+// vestige.rs/render.rs/graph_derive.rs/alchemy.rs/history_emit.rs into this
+// same crate, so one crate-level allow covers all of them (the bucketing the
+// spec used for `WorldComponents::assemble`, applied here at the same
+// granularity). External crates get no such allow — the lint still catches a
+// NEW embedded derivation added outside this crate.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{

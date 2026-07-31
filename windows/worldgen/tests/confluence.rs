@@ -90,6 +90,11 @@
 //! regression — T3 re-ran this keystone specifically to catch a re-fit that
 //! weakened it past its floor, and 1.7 was chosen as the sweep point that
 //! keeps both the count band and this keystone's margin real.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed, Value};

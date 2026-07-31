@@ -14,6 +14,11 @@
 //! file also exercises at the value level: goblin's folk `sky_capability`
 //! is the measured `0.5` exactly, seeds 1..=5, completely unperturbed by
 //! the doctrine voice's own `+0.25` delta living only in `doctrines_from`).
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, doctrine_from, doctrines_from};
 

@@ -1,6 +1,11 @@
 //! The Explanations (C5 Task 3): derivation, binding, and assembly —
 //! `schema_prior`, `beta_of`, `cyclic_beliefs_from`, and `explain` (called
 //! from `accounts_from`), measured against live seeds and pinned exact.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_language::Disposition;
 use hornvale_language::schemas::{Manner, SchemaId};

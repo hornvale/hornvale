@@ -18,6 +18,9 @@ use std::collections::BTreeMap;
 /// grows). Errors when `world` can't rebuild a species' phonology or
 /// exposure (the same failure modes [`world_builder::lexicon_from`] surfaces).
 /// type-audit: bare-ok(artifact: return)
+// Named construction site (decision 0092): a CLI handler entry point —
+// sculpts/fits once for its own report.
+#[allow(clippy::disallowed_methods)]
 pub fn render_dictionary(world: &World) -> Result<String, String> {
     let terrain = world_builder::terrain_of(world).map_err(|e| e.to_string())?;
     let climate = world_builder::climate_from(world, &terrain).map_err(|e| e.to_string())?;
@@ -281,6 +284,10 @@ fn capitalize(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;

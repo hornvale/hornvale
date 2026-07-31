@@ -29,6 +29,9 @@ commands:
 ";
 
 /// Run the REPL over a world until `quit` or EOF.
+// Named construction site (decision 0092): a CLI handler — each command
+// arm sculpts/fits its own reconstruction to render its answer.
+#[allow(clippy::disallowed_methods)]
 pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::io::Result<()> {
     writeln!(
         output,

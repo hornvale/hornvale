@@ -306,6 +306,9 @@ impl<'w> Session<'w> {
     /// Begin a possession: build the locale context, mint the flagship
     /// agent, absorb the first projection, and return the opening text.
     /// type-audit: bare-ok(prose: return)
+    // Named construction site (decision 0092): the motivating fix — sculpts/
+    // fits exactly ONCE per session (The Weir, Stage 2), threaded below.
+    #[allow(clippy::disallowed_methods)]
     pub fn start(
         world: &'w World,
         opts: &PossessOpts,

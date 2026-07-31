@@ -409,6 +409,9 @@ pub struct SceneContext {
 
 impl SceneContext {
     /// Derive terrain, climate, both nearest-cell indices and the biome map once.
+    // Named construction site (decision 0092): scene's entry wrapper —
+    // sculpts/fits once, shared by every reader built from this context.
+    #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<SceneContext, SceneError> {
         let terrain =
             hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;

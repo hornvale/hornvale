@@ -1,6 +1,11 @@
 //! Param derivation at the composition root (C4 Task 3): `AccountParams`
 //! derived from existing authored/committed state — the `voice_params`
 //! twin — plus the authored observability table and the ground fact list.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 use hornvale_language::{Disposition, LossReason, OrderPolicy, Stance};
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, accounts_from, build_world, chorus_ground, pathological_params,

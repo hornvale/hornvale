@@ -52,6 +52,9 @@ impl WorldView {
     }
 
     /// Build a world view with an explicit species roster (spec §3).
+    // Named construction site (decision 0092): the lab's view-chain
+    // composition root — sculpts/fits once per view build.
+    #[allow(clippy::disallowed_methods)]
     pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
@@ -227,6 +230,10 @@ impl TerrainView {
 
     /// Build the terrain rung, reusing the terrain the world build already
     /// sculpted, and pass the build's climate artifact up to the climate rung.
+    // Named construction site (decision 0092): the view-chain's own
+    // build path — the fallback re-derive only fires when the world build
+    // sculpted nothing at this depth.
+    #[allow(clippy::disallowed_methods)]
     fn build_to_with_climate(
         seed: Seed,
         pins: &SkyPins,
@@ -288,6 +295,10 @@ impl ClimateView {
 
     /// Build the world to `depth` and reconstruct the climate-rung fields
     /// atop the terrain rung built at the same depth.
+    // Named construction site (decision 0092): the view-chain's own
+    // build path — the fallback re-derive only fires on rungs shallower
+    // than Settlements, which build no climate at all.
+    #[allow(clippy::disallowed_methods)]
     fn build_to(
         seed: Seed,
         pins: &SkyPins,
@@ -1686,6 +1697,10 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
             extract: Extractor::Settlement(|v: &SettlementView| {
+                // Named construction site (decision 0092): a metric extractor
+                // deliberately recomputes the fit per read against already-derived
+                // artifacts (documented in the metric's doc string above).
+                #[allow(clippy::disallowed_methods)]
                 let Ok(report) = hornvale_worldgen::demography_report_from(
                     v.world(),
                     v.components(),
@@ -1725,6 +1740,10 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
             extract: Extractor::Settlement(|v: &SettlementView| {
+                // Named construction site (decision 0092): a metric extractor
+                // deliberately recomputes the fit per read against already-derived
+                // artifacts (documented in the metric's doc string above).
+                #[allow(clippy::disallowed_methods)]
                 let Ok(report) = hornvale_worldgen::demography_report_from(
                     v.world(),
                     v.components(),
@@ -5719,6 +5738,10 @@ pub fn render_metric_list() -> String {
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
 
     #[test]

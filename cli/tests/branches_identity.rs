@@ -57,6 +57,11 @@
 //!    (`hornvale_worldgen::demography_report_from`, the pure/deterministic
 //!    accessor mirroring genesis's own pipeline byte-for-byte), since
 //!    composition, unlike dominance, commits no ledger fact of its own.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use std::collections::{BTreeMap, BTreeSet};
 

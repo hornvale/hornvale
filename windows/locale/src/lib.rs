@@ -186,6 +186,9 @@ impl LocaleContext {
     /// delegates to [`Self::build_from`] (the book-entry-point pattern: a
     /// wrapper that derives once, mirroring `windows/book`'s `parse_context`/
     /// `parse_context_from` split).
+    // Named construction site (decision 0092): this entry wrapper sculpts/
+    // fits once, then delegates to `build_from`.
+    #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<LocaleContext, LocaleError> {
         let terrain = terrain_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
         let climate =

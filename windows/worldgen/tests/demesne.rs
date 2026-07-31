@@ -10,6 +10,11 @@
 //! *directions* can peak in different *places* (the rank-restoration
 //! keystone below), and a genuinely mineral- or detritus-driven species can
 //! now track its own supply field spatially (the emergence keystone below).
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed, Value, World};

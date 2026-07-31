@@ -4,6 +4,11 @@
 //! registered concept for a settled species. Also covers The Vigil's other
 //! composition-root perception seam, `observed_phenomena_as`: the malformed-
 //! kind failure for a non-perceiving fauna kind, and the dragon success path.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 use hornvale_language::{ExposureClass, GapReason, LexEntry, PackDepths, color_pack, in_ladder};
 use hornvale_species::{ActivityCycle, DRACONIC_NIGHT_VISION, PerceptionVector};
 use hornvale_worldgen::{

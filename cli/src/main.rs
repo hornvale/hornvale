@@ -528,6 +528,9 @@ const PLATFORM_LOCAL_RENDER_NOTE: &str = "> Rendered view — this raster's exac
 depend on the host math library) and are not cross-platform byte-checked; the \
 page above is deterministic.\n\n";
 
+// Named construction site (decision 0092): a CLI handler — sculpts once
+// to render its own map.
+#[allow(clippy::disallowed_methods)]
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let field = flag_value(args, "--field").unwrap_or("elevation");
     if !matches!(
@@ -613,6 +616,9 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
 /// Render the world's deep-time strata: a markdown page (title, deep-time
 /// lines, ASCII strata map) to stdout and, with `--out`, the PNG to disk. Both
 /// deterministic; CI drift-checks the committed copies.
+// Named construction site (decision 0092): a CLI handler — sculpts once
+// to render its own deep-time page.
+#[allow(clippy::disallowed_methods)]
 fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;

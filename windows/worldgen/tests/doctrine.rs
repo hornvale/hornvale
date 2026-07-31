@@ -1,6 +1,11 @@
 //! The Doctrine (C6 Task 2): the SOC-1 gate, the four preregistered
 //! deltas, and the dial-roster separation — measured against live seeds
 //! and pinned exact.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};

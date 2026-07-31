@@ -7,6 +7,11 @@
 //! target for this campaign's interim per-species condensation (full Zipf
 //! calibration is the later MAP-22 coexistence-stack campaign's job, once
 //! size is measured by mass and composition is real).
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
 use std::sync::LazyLock;

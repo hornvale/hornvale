@@ -8,6 +8,11 @@
 //! apart). Task 2 deleted every `_of` wrapper in this family — there is
 //! nothing left to diverge from — so this file now pins the `_from` behavior
 //! directly: two independent calls over the same inputs must agree.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
