@@ -5,8 +5,15 @@
 //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
 //! points directly to build its own world state, once per test — the
 //! sanctioned test-fixture posture the weir's spec carves out.
+//!
+//! The SOC-1 gate's negative arm is a synthetic-society unit test plus a
+//! single live smoke, not a seed hunt (decision 0093, "seed-hunting is not
+//! a test mechanism"): a hand-built world supplies deterministic,
+//! zero-build coverage of `doctrine_from`'s folk-gates-to-None behavior,
+//! while one real generated seed is checked directly for liveness.
 #![allow(clippy::disallowed_methods)]
 
+use hornvale_kernel::{EntityId, Fact, Value};
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};
 use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_from, doctrines_from};
@@ -24,6 +31,128 @@ fn generated(seed: u64) -> hornvale_kernel::World {
         &SettlementPins::default(),
     )
     .unwrap()
+}
+
+/// A hand-built synthetic world (decision 0093, "seed-hunting is not a test
+/// mechanism"): the minimum committed state for `flagship_of` +
+/// `cult_form_held_by` + `doctrine_from`'s SOC-1 gate to be REAL — one
+/// settlement peopled by `species` (`is-settlement` + `peopled-by`) and one
+/// belief held by that settlement (`is-belief` + `held-by` + `cult-form`).
+/// Predicates are registered through the world's own registry exactly as
+/// genesis does (each domain's `register_concepts`), and every fact commits
+/// through the normal `Ledger::commit` path, so contradiction-checking is
+/// exercised the same as a generated world's. No sky, no terrain sculpt, no
+/// generation of any kind — zero builds, deterministic by construction.
+fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World, EntityId) {
+    let mut w = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
+    hornvale_settlement::register_concepts(&mut w.registry)
+        .expect("settlement predicates register");
+    hornvale_species::register_concepts(&mut w.registry).expect("species predicates register");
+    hornvale_religion::register_concepts(&mut w.registry).expect("religion predicates register");
+
+    let provenance = || "synthetic negative arm (decision 0093)".to_string();
+    let settlement = w.ledger.mint_entity();
+    w.ledger
+        .commit(
+            Fact {
+                subject: settlement,
+                predicate: hornvale_settlement::IS_SETTLEMENT.to_string(),
+                object: Value::Flag(true),
+                place: None,
+                day: Some(0.0),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit is-settlement");
+    w.ledger
+        .commit(
+            Fact {
+                subject: settlement,
+                predicate: hornvale_species::PEOPLED_BY.to_string(),
+                object: Value::Text(species.to_string()),
+                place: None,
+                day: Some(0.0),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit peopled-by");
+
+    let belief = w.ledger.mint_entity();
+    w.ledger
+        .commit(
+            Fact {
+                subject: belief,
+                predicate: hornvale_religion::IS_BELIEF.to_string(),
+                object: Value::Flag(true),
+                place: None,
+                day: Some(0.0),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit is-belief");
+    w.ledger
+        .commit(
+            Fact {
+                subject: belief,
+                predicate: hornvale_religion::HELD_BY.to_string(),
+                object: Value::Entity(settlement),
+                place: None,
+                day: Some(0.0),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit held-by");
+    w.ledger
+        .commit(
+            Fact {
+                subject: belief,
+                predicate: hornvale_religion::CULT_FORM.to_string(),
+                object: Value::Text(cult_form.to_string()),
+                place: None,
+                day: Some(0.0),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit cult-form");
+
+    (w, settlement)
+}
+
+#[test]
+fn synthetic_folk_flagship_gates_doctrine_to_none() {
+    // Decision 0093: the SOC-1 gate's negative arm no longer sweeps seeds
+    // 1..=60 looking for a folk flagship (a census question, answered
+    // badly) — it hand-builds one directly (a synthetic question, answered
+    // exactly). `doctrine_from`'s gate (`chorus.rs`) reads only
+    // `flagship_of` + `cult_form_held_by` and returns `None` the moment
+    // `cult_form != "organized"`, BEFORE it ever touches terrain/climate —
+    // so a synthetic world needs no generation at all, and terrain/climate
+    // are inert for this arm (still derived once, matching every other call
+    // site's shape, so this test would also catch a gate reordering that
+    // started reading them first).
+    let (w, settlement) = synthetic_flagship("goblin", "folk");
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+
+    let flagship = hornvale_worldgen::flagship_of(&w, "goblin").expect("synthetic flagship");
+    assert_eq!(
+        flagship.id, settlement,
+        "flagship_of must find the synthetic settlement"
+    );
+    assert_eq!(
+        hornvale_religion::cult_form_held_by(&w, settlement).as_deref(),
+        Some("folk"),
+        "the synthetic belief's cult-form must read back as folk"
+    );
+    assert!(
+        doctrine_from(&w, "goblin", &terrain, &climate).is_none(),
+        "a folk flagship must gate doctrine_from to None"
+    );
 }
 
 #[test]
@@ -69,49 +198,45 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
         "doctrines_from must cover exactly every organized placed culture"
     );
 
-    // Negative arm: sweep for any species whose flagship's committed
-    // cult-form is "folk" -> doctrine_from must gate to None. If the sweep
-    // finds no such culture at all, PANIC (fail loudly, the C5 F2 lesson)
-    // rather than silently passing a law whose negative arm was never
-    // exercised.
+    // Negative arm (decision 0093, "seed-hunting is not a test mechanism"):
+    // the 1..=60-seed hunt for a folk flagship is gone. The synthetic test
+    // `synthetic_folk_flagship_gates_doctrine_to_none` above now supplies
+    // deterministic, zero-build coverage of the gate's None branch by
+    // construction rather than by search. What remains here is a single
+    // live folk smoke — one real generated seed, checked directly, to prove
+    // a genuinely-generated folk flagship (not just a hand-built one) gates
+    // the same way. This is a liveness check, not a sweep: it does not
+    // search for an instance, it asserts against one known one.
     //
-    // Widened under The Living Community epoch (this merge) from 1..=10 to
-    // 1..=60: the deep-history bake grows flagship communities large enough
-    // that most clear the SOC-1 organized gate, so folk flagships became
-    // rare — the first now appears at seed 56 (goblin). The wider range is
-    // the minimal window that still reaches a real folk flagship and keeps
-    // this negative arm exercised (the property itself — doctrine iff
-    // organized — is unchanged and holds across the whole sweep).
-    // Folk hits are rare in this sweep (per the note above, the first
-    // appears at seed 56), so terrain/climate are derived lazily, only on
-    // an actual hit — deriving them unconditionally for all 60 seeds would
-    // cost MORE sculpts than the original per-hit doctrine_from wrapper ever
-    // paid, defeating the point of this migration. (Measured: the negative
-    // arm's ~172 s is ~159 s of `generated(seed)` world-building alone
-    // across 60 seeds — irreducible by this migration — against ~13 s for
-    // the 11 live folk hits' terrain/climate + doctrine_from calls.)
-    let mut found_folk = false;
-    for seed in 1..=60u64 {
-        let w = generated(seed);
-        for (kind, village) in hornvale_worldgen::placed_peoples(&w) {
-            if hornvale_religion::cult_form_held_by(&w, village.id).as_deref() == Some("folk") {
-                found_folk = true;
-                let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-                let climate =
-                    hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-                assert!(
-                    doctrine_from(&w, kind, &terrain, &climate).is_none(),
-                    "seed {seed}'s {kind} carries a folk flagship — doctrine_from must gate to None"
-                );
-            }
-        }
-    }
+    // FOLK_SMOKE_SEED/KIND are epoch-sensitive (a lexicon or genesis-bake
+    // re-draw can shift which culture at which seed carries a folk
+    // flagship, exactly as it already has once — see below). If this
+    // assertion ever fails on an otherwise-unrelated change, re-find with a
+    // single bounded scan (a handful of seeds around the old constant, NOT
+    // the deleted 1..=60 sweep — decision 0093's "do not widen the sweep
+    // back") and update both constants together.
+    //
+    // Re-found this merge: The Wearing's lexicon re-draw left seed 56 (the
+    // prior constant) with an all-organized roster; a bounded 50..=60 scan
+    // found seed 57's bugbear flagship still folk.
+    const FOLK_SMOKE_SEED: u64 = 57;
+    const FOLK_SMOKE_KIND: &str = "bugbear";
+    let w = generated(FOLK_SMOKE_SEED);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let flagship = hornvale_worldgen::flagship_of(&w, FOLK_SMOKE_KIND).unwrap_or_else(|| {
+        panic!("seed {FOLK_SMOKE_SEED} must place a {FOLK_SMOKE_KIND} flagship")
+    });
+    assert_eq!(
+        hornvale_religion::cult_form_held_by(&w, flagship.id).as_deref(),
+        Some("folk"),
+        "seed {FOLK_SMOKE_SEED}'s {FOLK_SMOKE_KIND} flagship must still carry a folk cult-form \
+         (epoch-sensitive constant — re-find with a bounded scan if this fails)"
+    );
     assert!(
-        found_folk,
-        "SOC-1's negative arm found NO folk-cult-form flagship across seeds 1..=60 — this must \
-         not silently pass. Add a synthetic-society unit test driving doctrine_from directly \
-         against a hand-built world whose flagship's committed cult-form is \"folk\" instead of \
-         relying on this sweep."
+        doctrine_from(&w, FOLK_SMOKE_KIND, &terrain, &climate).is_none(),
+        "seed {FOLK_SMOKE_SEED}'s {FOLK_SMOKE_KIND} carries a folk flagship — doctrine_from must \
+         gate to None"
     );
 }
 
