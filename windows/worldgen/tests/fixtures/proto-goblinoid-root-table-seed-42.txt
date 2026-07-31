@@ -7,6 +7,7 @@ bathypelagic: Taoda /taoda/
 black-dragon-kind: Neona /neona/
 blood: Kae /kae/
 blue: Tenee /tenee/
+blue-giant: Na /na/
 bone: Qeenaa /qeenaa/
 boreal-stand: Poaqe /poaqe/
 brown: No /no/
@@ -103,6 +104,8 @@ old: Qoekeo /qoekeo/
 old-growth: Negoa /negoa/
 one: Nogae /nogae/
 open-blue: Pea /pea/
+orange-dwarf: Te /te/
+orange-giant: Taepee /taepee/
 otyugh-kind: Ne /ne/
 over: Qoa /qoa/
 owlbear-kind: Naa /naa/
@@ -115,6 +118,8 @@ rafted-floe: Noanoo /noanoo/
 rain: Ka /ka/
 red: Nedo /nedo/
 red-dragon-kind: Noo /noo/
+red-dwarf: Napa /napa/
+red-giant: Pee /pee/
 reef-rubble: Nenao /nenao/
 reef-shark-kind: Go /go/
 reg: Nae /nae/
@@ -147,6 +152,7 @@ star: Nee /nee/
 starlit: Geaqa /geaqa/
 stone: Nopoe /nopoe/
 sun: Deonae /deonae/
+sun-like-star: Dao /dao/
 taiga: Tana /tana/
 temperate-forest: Neno /neno/
 temperate-grassland: Nenaa /nenaa/
@@ -174,9 +180,12 @@ vine: Keo /keo/
 water: Peke /peke/
 wheat: Nade /nade/
 white-dragon-kind: Donee /donee/
+white-dwarf: Qeo /qeo/
 wind: Kaopao /kaopao/
 wind-scour: Ka /ka/
 wooded-grassland: Na /na/
 woolly-mammoth-kind: Qedoo /qedoo/
 xorn-kind: Noote /noote/
 yellow: Da /da/
+yellow-dwarf: Nogae /nogae/
+yellow-white-dwarf: Koeno /koeno/

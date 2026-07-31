@@ -17,6 +17,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | Gdood | /gdood/ | Kweed | Kweed → lenition → Gdood |
 | `blood` | the circulating fluid of a body | Doaddoad | /doaddoad/ | Meadmeab | Meadmeab → no change → Doaddoad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): black-dragon has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Doggoog | /doggoog/ | Negngeok | Negngeok → lenition → Doggoog |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): black-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
@@ -113,6 +114,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): black-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Ddood | /ddood/ | Dweep | Dweep → no change → Ddood |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): black-dragon has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): black-dragon has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): black-dragon has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): black-dragon has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Ddog | /ddog/ | Bwek | Bwek → lenition → Ddog |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): black-dragon has no exposure to 'owlbear-kind' |
@@ -125,6 +128,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'rain' |
 | `red` | the color term for red | Dsag | /dsag/ | Psag | Psag → no change → Dsag |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): black-dragon has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): black-dragon has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): black-dragon has no exposure to 'reg' |
@@ -157,6 +162,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Gdagdzhood | /gdagdʒood/ | Kwagdjoeb | Kwagdjoeb → lenition → Gdagdzhood |
 | `stone` | rock | Gshoddood | /gʃoddood/ | Gshepmoop | Gshepmoop → no change → Gshoddood |
 | `sun` | the sun | Gshaod | /gʃaod/ | Gshaed | Gshaed → no change → Gshaod |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): black-dragon has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -184,12 +190,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Doddad | /doddad/ | Mopnab | Mopnab → no change → Doddad |
 | `wheat` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): black-dragon has no exposure to 'white-dwarf' |
 | `wind` | moving air | Gdog | /gdog/ | Kwok | Kwok → lenition → Gdog |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): black-dragon has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): black-dragon has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): black-dragon has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): black-dragon has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): black-dragon has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): black-dragon has no exposure to 'yellow-white-dwarf' |
 
 ## Bugbear
 
@@ -204,6 +213,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): bugbear has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Do | /do/ | No | No → no change → Do |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): bugbear has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Ko | /ko/ | Ke | Ke → no change → Ko |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): bugbear has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
@@ -300,6 +310,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Dodoo | /dodoo/ | Neneo | Neneo → no change → Dodoo |
 | `one` | the cardinal number 1 | Kaa | /kaa/ | Kaa | Kaa → no change → Kaa |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): bugbear has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): bugbear has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): bugbear has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): bugbear has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Datoo | /datoo/ | Datee | Datee → no change → Datoo |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): bugbear has no exposure to 'owlbear-kind' |
@@ -312,6 +324,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'rain' |
 | `red` | the color term for red | Doo | /doo/ | Nee | Nee → no change → Doo |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): bugbear has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): bugbear has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): bugbear has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): bugbear has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): bugbear has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): bugbear has no exposure to 'reg' |
@@ -344,6 +358,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Koo | /koo/ | Kee | Kee → no change → Koo |
 | `stone` | rock | Too | /too/ | Tee | Tee → no change → Too |
 | `sun` | the sun | Toa | /toa/ | Toa | Toa → no change → Toa |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): bugbear has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
 | `temperate-forest` | a biome class | Doda | /doda/ | Nena | Nena → no change → Doda |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -371,12 +386,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Doogo | /doogo/ | Doege | Doege → no change → Doogo |
 | `wheat` | a staple crop | Dotoa | /dotoa/ | Netea | Netea → no change → Dotoa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): bugbear has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): bugbear has no exposure to 'white-dwarf' |
 | `wind` | moving air | Doqoo | /doqoo/ | Neqoo | Neqoo → no change → Doqoo |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): bugbear has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): bugbear has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): bugbear has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): bugbear has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | Qaodo | /qaodo/ | Qaene | Qaene → no change → Qaodo |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): bugbear has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): bugbear has no exposure to 'yellow-white-dwarf' |
 
 ## Gnoll
 
@@ -391,6 +409,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): gnoll has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Zhmaa | /ʒmaa/ | Zhmaa | Zhmaa → no change → Zhmaa |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): gnoll has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Shnoaf | /ʃnoaf/ | Shnoaf | Shnoaf → no change → Shnoaf |
 | `boreal-stand` | A stand of northern conifers. | Gzax | /gzax/ | Gzax | Gzax → no change → Gzax |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
@@ -487,6 +506,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Snaafzmoov | /snaafzmoov/ | Snaafzmoov | Snaafzmoov → no change → Snaafzmoov |
 | `one` | the cardinal number 1 | Psoaznoov | /psoaznoov/ | Psoaznoov | Psoaznoov → no change → Psoaznoov |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): gnoll has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): gnoll has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): gnoll has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): gnoll has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Gshaovzhmoov | /gʃaovʒmoov/ | Gshaovzhmoov | Gshaovzhmoov → no change → Gshaovzhmoov |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): gnoll has no exposure to 'owlbear-kind' |
@@ -499,6 +520,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'rain' |
 | `red` | the color term for red | Zmadzhav | /zmadʒav/ | Zmadzhav | Zmadzhav → no change → Zmadzhav |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): gnoll has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): gnoll has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): gnoll has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): gnoll has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): gnoll has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): gnoll has no exposure to 'reg' |
@@ -531,6 +554,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Qshazmo | /qʃazmo/ | Qshazmo | Qshazmo → no change → Qshazmo |
 | `stone` | rock | Sngoax | /sŋoax/ | Sngoax | Sngoax → no change → Sngoax |
 | `sun` | the sun | Shnoafzhngaf | /ʃnoafʒŋaf/ | Shnoafzhngaf | Shnoafzhngaf → no change → Shnoafzhngaf |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): gnoll has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | Dsho | /dʃo/ | Dsho | Dsho → no change → Dsho |
 | `temperate-forest` | a biome class | Gshofzngav | /gʃofzŋav/ | Gshofzngav | Gshofzngav → no change → Gshofzngav |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -558,12 +582,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Zngaav | /zŋaav/ | Zngaav | Zngaav → no change → Zngaav |
 | `wheat` | a staple crop | Qzhaovgzhoav | /qʒaovgʒoav/ | Qzhaovgzhoav | Qzhaovgzhoav → no change → Qzhaovgzhoav |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): gnoll has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): gnoll has no exposure to 'white-dwarf' |
 | `wind` | moving air | Gzhovsmoaf | /gʒovsmoaf/ | Gzhovsmoaf | Gzhovsmoaf → no change → Gzhovsmoaf |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): gnoll has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): gnoll has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): gnoll has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | Zmoazhnga | /zmoaʒŋa/ | Zmoazhnga | Zmoazhnga → no change → Zmoazhnga |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): gnoll has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): gnoll has no exposure to 'yellow-white-dwarf' |
 
 ## Goblin
 
@@ -578,6 +605,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): goblin has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | No | /no/ | No | No → no change → No |
 | `blue` | the color term for blue | Totoo | /totoo/ | Toqoo | Toqoo → no change → Totoo |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): goblin has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Ke | /ke/ | Ke | Ke → no change → Ke |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): goblin has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
@@ -674,6 +702,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Neneo | /neneo/ | Neneo | Neneo → no change → Neneo |
 | `one` | the cardinal number 1 | Kaa | /kaa/ | Kaa | Kaa → no change → Kaa |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): goblin has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): goblin has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): goblin has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): goblin has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Datee | /datee/ | Datee | Datee → no change → Datee |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): goblin has no exposure to 'owlbear-kind' |
@@ -686,6 +716,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
 | `red` | the color term for red | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): goblin has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): goblin has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): goblin has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): goblin has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): goblin has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): goblin has no exposure to 'reg' |
@@ -718,6 +750,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5 |
 | `stone` | rock | Tee | /tee/ | Tee | Tee → no change → Tee |
 | `sun` | the sun | Toa | /toa/ | Toa | Toa → no change → Toa |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): goblin has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Nena | /nena/ | Nena | Nena → no change → Nena |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -745,12 +778,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Doebe | /doebe/ | Doege | Doege → no change → Doebe |
 | `wheat` | a staple crop | Netea | /netea/ | Netea | Netea → no change → Netea |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): goblin has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): goblin has no exposure to 'white-dwarf' |
 | `wind` | moving air | Netoo | /netoo/ | Neqoo | Neqoo → no change → Netoo |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): goblin has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): goblin has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): goblin has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): goblin has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | Taene | /taene/ | Qaene | Qaene → no change → Taene |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): goblin has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): goblin has no exposure to 'yellow-white-dwarf' |
 
 ## Hobgoblin
 
@@ -765,6 +801,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | No | /no/ | No | No → no change → No |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): hobgoblin has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Ge | /ge/ | Ke | Ke → lenition → Ge |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): hobgoblin has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
@@ -861,6 +898,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Neneo | /neneo/ | Neneo | Neneo → no change → Neneo |
 | `one` | the cardinal number 1 | Gaa | /gaa/ | Kaa | Kaa → lenition → Gaa |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): hobgoblin has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): hobgoblin has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): hobgoblin has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): hobgoblin has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Batee | /batee/ | Datee | Datee → no change → Batee |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): hobgoblin has no exposure to 'owlbear-kind' |
@@ -873,6 +912,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `red` | the color term for red | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): hobgoblin has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): hobgoblin has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): hobgoblin has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): hobgoblin has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): hobgoblin has no exposure to 'reg' |
@@ -905,6 +946,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6 |
 | `stone` | rock | Tee | /tee/ | Tee | Tee → no change → Tee |
 | `sun` | the sun | Toa | /toa/ | Toa | Toa → no change → Toa |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): hobgoblin has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Nena | /nena/ | Nena | Nena → no change → Nena |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -932,12 +974,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Boege | /boege/ | Doege | Doege → no change → Boege |
 | `wheat` | a staple crop | Netea | /netea/ | Netea | Netea → no change → Netea |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): hobgoblin has no exposure to 'white-dwarf' |
 | `wind` | moving air | Neqoo | /neqoo/ | Neqoo | Neqoo → no change → Neqoo |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): hobgoblin has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): hobgoblin has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): hobgoblin has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): hobgoblin has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | Qaene | /qaene/ | Qaene | Qaene → no change → Qaene |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): hobgoblin has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): hobgoblin has no exposure to 'yellow-white-dwarf' |
 
 ## Kobold
 
@@ -952,6 +997,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): kobold has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): kobold has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Xoo | /xoo/ | Xoo | Xoo → no change → Xoo |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): kobold has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
@@ -1048,6 +1094,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | Roaxora | /roaxora/ | Roaxora | Roaxora → no change → Roaxora |
 | `one` | the cardinal number 1 | Xooxoa | /xooxoa/ | Xooxoa | Xooxoa → no change → Xooxoa |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): kobold has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): kobold has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): kobold has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): kobold has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Xooraro | /xooraro/ | Xooraro | Xooraro → no change → Xooraro |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): kobold has no exposure to 'owlbear-kind' |
@@ -1060,6 +1108,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
 | `red` | the color term for red | Rooxoa | /rooxoa/ | Rooxoa | Rooxoa → no change → Rooxoa |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): kobold has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): kobold has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): kobold has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): kobold has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): kobold has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): kobold has no exposure to 'reg' |
@@ -1092,6 +1142,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Raro | /raro/ | Raro | Raro → no change → Raro |
 | `stone` | rock | Xaroo | /xaroo/ | Xaroo | Xaroo → no change → Xaroo |
 | `sun` | the sun | Roaroora | /roaroora/ | Roaroora | Roaroora → no change → Roaroora |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): kobold has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | Xoaxoroo | /xoaxoroo/ | Xoaxoroo | Xoaxoroo → no change → Xoaxoroo |
 | `temperate-forest` | a biome class | Roo | /roo/ | Roo | Roo → no change → Roo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -1119,12 +1170,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Raxa | /raxa/ | Raxa | Raxa → no change → Raxa |
 | `wheat` | a staple crop | Roxoa | /roxoa/ | Roxoa | Roxoa → no change → Roxoa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): kobold has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): kobold has no exposure to 'white-dwarf' |
 | `wind` | moving air | Xaaro | /xaaro/ | Xaaro | Xaaro → no change → Xaaro |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): kobold has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): kobold has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): kobold has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): kobold has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): kobold has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): kobold has no exposure to 'yellow-white-dwarf' |
 
 ## Red-dragon
 
@@ -1139,6 +1193,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Doaddoad | /doaddoad/ | Meadmeab | Meadmeab → no change → Doaddoad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): red-dragon has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Doddook | /doddook/ | Negngeok | Negngeok → no change → Doddook |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): red-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
@@ -1235,6 +1290,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): red-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Djook | /djook/ | Dweep | Dweep → no change → Djook |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): red-dragon has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): red-dragon has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): red-dragon has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): red-dragon has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Djok | /djok/ | Bwek | Bwek → no change → Djok |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): red-dragon has no exposure to 'owlbear-kind' |
@@ -1247,6 +1304,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'rain' |
 | `red` | the color term for red | Ksad | /ksad/ | Psag | Psag → no change → Ksad |
 | `red-dragon-kind` | a red dragon | Djaddoad | /djaddoad/ | Bjabngoag | Bjabngoag → no change → Djaddoad |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): red-dragon has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): red-dragon has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): red-dragon has no exposure to 'reg' |
@@ -1279,6 +1338,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Kjaddjood | /kjaddjood/ | Kwagdjoeb | Kwagdjoeb → no change → Kjaddjood |
 | `stone` | rock | Dshokdook | /dʃokdook/ | Gshepmoop | Gshepmoop → no change → Dshokdook |
 | `sun` | the sun | Dshaod | /dʃaod/ | Gshaed | Gshaed → no change → Dshaod |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): red-dragon has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -1306,12 +1366,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Dokdad | /dokdad/ | Mopnab | Mopnab → no change → Dokdad |
 | `wheat` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'white-dragon-kind' |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): red-dragon has no exposure to 'white-dwarf' |
 | `wind` | moving air | Kjok | /kjok/ | Kwok | Kwok → no change → Kjok |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): red-dragon has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): red-dragon has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): red-dragon has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): red-dragon has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): red-dragon has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): red-dragon has no exposure to 'yellow-white-dwarf' |
 
 ## White-dragon
 
@@ -1326,6 +1389,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Noadnoad | /noadnoad/ | Meadmeab | Meadmeab → no change → Noadnoad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
+| `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (experiential): white-dragon has no exposure to 'blue-giant' |
 | `bone` | the rigid frame of a body | Nodngook | /nodŋook/ | Negngeok | Negngeok → no change → Nodngook |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): white-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
@@ -1422,6 +1486,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): white-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Ddook | /ddook/ | Dweep | Dweep → no change → Ddook |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): white-dragon has no exposure to 'open-blue' |
+| `orange-dwarf` | a cooler, dimmer main-sequence star | — | — | — | gap (experiential): white-dragon has no exposure to 'orange-dwarf' |
+| `orange-giant` | a cooling star swollen off the main sequence | — | — | — | gap (experiential): white-dragon has no exposure to 'orange-giant' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): white-dragon has no exposure to 'otyugh-kind' |
 | `over` | above; atop | Ddok | /ddok/ | Bwek | Bwek → no change → Ddok |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): white-dragon has no exposure to 'owlbear-kind' |
@@ -1434,6 +1500,8 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'rain' |
 | `red` | the color term for red | Ksad | /ksad/ | Psag | Psag → no change → Ksad |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'red-dragon-kind' |
+| `red-dwarf` | the commonest and faintest main-sequence star | — | — | — | gap (experiential): white-dragon has no exposure to 'red-dwarf' |
+| `red-giant` | a cool, vast star late in its life | — | — | — | gap (experiential): white-dragon has no exposure to 'red-giant' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): white-dragon has no exposure to 'reg' |
@@ -1466,6 +1534,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Kdaddzhood | /kdaddʒood/ | Kwagdjoeb | Kwagdjoeb → no change → Kdaddzhood |
 | `stone` | rock | Dshoknook | /dʃoknook/ | Gshepmoop | Gshepmoop → no change → Dshoknook |
 | `sun` | the sun | Dshaod | /dʃaod/ | Gshaed | Gshaed → no change → Dshaod |
+| `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (experiential): white-dragon has no exposure to 'sun-like-star' |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -1493,12 +1562,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `water` | the drinkable liquid | Noknad | /noknad/ | Mopnab | Mopnab → no change → Noknad |
 | `wheat` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | Nookdzhoak | /nookdʒoak/ | Noekdjeak | Noekdjeak → no change → Nookdzhoak |
+| `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (experiential): white-dragon has no exposure to 'white-dwarf' |
 | `wind` | moving air | Kdok | /kdok/ | Kwok | Kwok → no change → Kdok |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): white-dragon has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): white-dragon has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): white-dragon has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): white-dragon has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
+| `yellow-dwarf` | a main-sequence star of the sun's own kind | — | — | — | gap (experiential): white-dragon has no exposure to 'yellow-dwarf' |
+| `yellow-white-dwarf` | a hotter, brighter main-sequence star | — | — | — | gap (experiential): white-dragon has no exposure to 'yellow-white-dwarf' |
 
 ## Cognates
 

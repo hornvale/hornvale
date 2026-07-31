@@ -406,6 +406,57 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             }),
         })?;
     }
+    // The spectral classes (§3.1 of the campaign spec). These are the first
+    // concepts in the workspace to use `Void::Unnamed`, and the distinction it
+    // draws is the point: a star HAS a class whether or not anyone has
+    // invented spectroscopy, so the fact is objective and must be
+    // representable — but no culture here has encountered the main sequence,
+    // so no word realizes it. That is `Unnamed`, not `Gap`: `Gap` says WE have
+    // not got to it, and these are not waiting on us.
+    //
+    // The keys below are machine identifiers, never words. `Unnamed` is
+    // precisely the assertion that no word exists; a renderer meeting one must
+    // circumlocute (the way `packs.rs`'s compound recipes give `sea` as "many
+    // water"), never emit the key.
+    for (name, doc) in [
+        ("orange-dwarf", "a cooler, dimmer main-sequence star"),
+        ("yellow-dwarf", "a main-sequence star of the sun's own kind"),
+        (
+            "yellow-white-dwarf",
+            "a hotter, brighter main-sequence star",
+        ),
+        ("red-dwarf", "the commonest and faintest main-sequence star"),
+        (
+            "sun-like-star",
+            "a distant star resembling this world's own sun",
+        ),
+        ("white-dwarf", "the dense cinder a spent star leaves"),
+        (
+            "orange-giant",
+            "a cooling star swollen off the main sequence",
+        ),
+        ("red-giant", "a cool, vast star late in its life"),
+        ("blue-giant", "a hot, brilliant, short-lived star"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "astronomy".to_string(),
+                kind: ConceptKind::Celestial,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Unnamed(
+                "no culture here has encountered the main sequence",
+            )),
+            percept: Correspondent::Absent(Void::Imperceptible(
+                "a spectral class is inferred from a spectrum, never seen; \
+                 what is seen is the star's colour",
+            )),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
     registry.register_manifest(Manifest {
         concept: ConceptDef {
             name: "night".to_string(),
@@ -531,6 +582,40 @@ mod tests {
                 .unwrap_or_else(|| panic!("missing concept {name}"));
             assert_eq!(c.domain, "astronomy");
             assert_eq!(c.kind, ConceptKind::Celestial);
+        }
+    }
+
+    /// The spectral classes are objectively real and nameless here: a star has a
+    /// class whether or not anyone has invented spectroscopy. `Void::Unnamed` is
+    /// the kernel's word for exactly that, and before this campaign no domain had
+    /// ever used it.
+    #[test]
+    fn spectral_classes_are_registered_as_unnameable() {
+        let mut registry = hornvale_kernel::ConceptRegistry::default();
+        register_concepts(&mut registry).expect("astronomy registers");
+
+        for name in [
+            "orange-dwarf",
+            "yellow-dwarf",
+            "yellow-white-dwarf",
+            "red-dwarf",
+            "sun-like-star",
+            "white-dwarf",
+            "orange-giant",
+            "red-giant",
+            "blue-giant",
+        ] {
+            let manifest = registry
+                .manifest(name)
+                .unwrap_or_else(|| panic!("{name} should be registered"));
+            assert!(
+                matches!(
+                    manifest.lexeme,
+                    hornvale_kernel::Correspondent::Absent(hornvale_kernel::Void::Unnamed(_))
+                ),
+                "{name}'s lexeme must be Absent(Unnamed) — it is real and no one here can name it, \
+                 which is not the same as Gap (a hole in OUR coverage)"
+            );
         }
     }
 }

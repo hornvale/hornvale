@@ -330,6 +330,24 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // six move the descriptor space where nineteen site descriptors could not
     // (LANG-9's recorded limit).
     &["barley", "millet", "rice", "tuber", "vine", "wheat"],
+    // Epoch 6 — The Vernacular, Part 2: the nine spectral classes, each
+    // registered `lexeme: Absent(Void::Unnamed(...))` — a star's class is
+    // real whether or not anyone here has invented spectroscopy, but no
+    // culture has, so no word realizes it. `exposure_from` draws its universe
+    // from the packs, not the registry, so none of these nine ever reaches
+    // `assign_proto_roots`; this cohort exists only to satisfy the parity
+    // check above, not because a proto-root will ever be drawn for them.
+    &[
+        "orange-dwarf",
+        "yellow-dwarf",
+        "yellow-white-dwarf",
+        "red-dwarf",
+        "sun-like-star",
+        "white-dwarf",
+        "orange-giant",
+        "red-giant",
+        "blue-giant",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

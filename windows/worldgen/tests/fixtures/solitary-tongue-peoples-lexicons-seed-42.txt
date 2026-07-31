@@ -10,6 +10,7 @@ bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): goblin has no exposure to 'black-dragon-kind'
 blood: root No /no/
 blue: root Totoo /totoo/
+blue-giant: gap (experiential): goblin has no exposure to 'blue-giant'
 bone: root Ke /ke/
 boreal-stand: gap (experiential): goblin has no exposure to 'boreal-stand'
 brown: gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5
@@ -106,6 +107,8 @@ old: root Tabe /tabe/
 old-growth: root Neneo /neneo/
 one: root Kaa /kaa/
 open-blue: gap (experiential): goblin has no exposure to 'open-blue'
+orange-dwarf: gap (experiential): goblin has no exposure to 'orange-dwarf'
+orange-giant: gap (experiential): goblin has no exposure to 'orange-giant'
 otyugh-kind: gap (experiential): goblin has no exposure to 'otyugh-kind'
 over: root Datee /datee/
 owlbear-kind: gap (experiential): goblin has no exposure to 'owlbear-kind'
@@ -118,6 +121,8 @@ rafted-floe: gap (experiential): goblin has no exposure to 'rafted-floe'
 rain: gap (experiential): goblin has no exposure to 'rain'
 red: root Nee /nee/
 red-dragon-kind: gap (experiential): goblin has no exposure to 'red-dragon-kind'
+red-dwarf: gap (experiential): goblin has no exposure to 'red-dwarf'
+red-giant: gap (experiential): goblin has no exposure to 'red-giant'
 reef-rubble: gap (experiential): goblin has no exposure to 'reef-rubble'
 reef-shark-kind: gap (experiential): goblin has no exposure to 'reef-shark-kind'
 reg: gap (experiential): goblin has no exposure to 'reg'
@@ -150,6 +155,7 @@ star: root Noe /noe/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5
 stone: root Tee /tee/
 sun: root Toa /toa/
+sun-like-star: gap (experiential): goblin has no exposure to 'sun-like-star'
 taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Nena /nena/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
@@ -177,12 +183,15 @@ vine: gap (experiential): goblin has no exposure to 'vine'
 water: root Doebe /doebe/
 wheat: root Netea /netea/
 white-dragon-kind: gap (experiential): goblin has no exposure to 'white-dragon-kind'
+white-dwarf: gap (experiential): goblin has no exposure to 'white-dwarf'
 wind: root Netoo /netoo/
 wind-scour: gap (experiential): goblin has no exposure to 'wind-scour'
 wooded-grassland: gap (experiential): goblin has no exposure to 'wooded-grassland'
 woolly-mammoth-kind: gap (experiential): goblin has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): goblin has no exposure to 'xorn-kind'
 yellow: root Taene /taene/
+yellow-dwarf: gap (experiential): goblin has no exposure to 'yellow-dwarf'
+yellow-white-dwarf: gap (experiential): goblin has no exposure to 'yellow-white-dwarf'
 
 species: hobgoblin
 headedness: HeadLast
@@ -196,6 +205,7 @@ bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): hobgoblin has no exposure to 'black-dragon-kind'
 blood: root No /no/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
+blue-giant: gap (experiential): hobgoblin has no exposure to 'blue-giant'
 bone: root Ge /ge/
 boreal-stand: gap (experiential): hobgoblin has no exposure to 'boreal-stand'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
@@ -292,6 +302,8 @@ old: root Tabe /tabe/
 old-growth: root Neneo /neneo/
 one: root Gaa /gaa/
 open-blue: gap (experiential): hobgoblin has no exposure to 'open-blue'
+orange-dwarf: gap (experiential): hobgoblin has no exposure to 'orange-dwarf'
+orange-giant: gap (experiential): hobgoblin has no exposure to 'orange-giant'
 otyugh-kind: gap (experiential): hobgoblin has no exposure to 'otyugh-kind'
 over: root Batee /batee/
 owlbear-kind: gap (experiential): hobgoblin has no exposure to 'owlbear-kind'
@@ -304,6 +316,8 @@ rafted-floe: gap (experiential): hobgoblin has no exposure to 'rafted-floe'
 rain: gap (experiential): hobgoblin has no exposure to 'rain'
 red: root Nee /nee/
 red-dragon-kind: gap (experiential): hobgoblin has no exposure to 'red-dragon-kind'
+red-dwarf: gap (experiential): hobgoblin has no exposure to 'red-dwarf'
+red-giant: gap (experiential): hobgoblin has no exposure to 'red-giant'
 reef-rubble: gap (experiential): hobgoblin has no exposure to 'reef-rubble'
 reef-shark-kind: gap (experiential): hobgoblin has no exposure to 'reef-shark-kind'
 reg: gap (experiential): hobgoblin has no exposure to 'reg'
@@ -336,6 +350,7 @@ star: root Noe /noe/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6
 stone: root Tee /tee/
 sun: root Toa /toa/
+sun-like-star: gap (experiential): hobgoblin has no exposure to 'sun-like-star'
 taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Nena /nena/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
@@ -363,12 +378,15 @@ vine: root Teona /teona/
 water: root Boege /boege/
 wheat: root Netea /netea/
 white-dragon-kind: gap (experiential): hobgoblin has no exposure to 'white-dragon-kind'
+white-dwarf: gap (experiential): hobgoblin has no exposure to 'white-dwarf'
 wind: root Neqoo /neqoo/
 wind-scour: gap (experiential): hobgoblin has no exposure to 'wind-scour'
 wooded-grassland: gap (experiential): hobgoblin has no exposure to 'wooded-grassland'
 woolly-mammoth-kind: gap (experiential): hobgoblin has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): hobgoblin has no exposure to 'xorn-kind'
 yellow: root Qaene /qaene/
+yellow-dwarf: gap (experiential): hobgoblin has no exposure to 'yellow-dwarf'
+yellow-white-dwarf: gap (experiential): hobgoblin has no exposure to 'yellow-white-dwarf'
 
 species: bugbear
 headedness: HeadLast
@@ -382,6 +400,7 @@ bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): bugbear has no exposure to 'black-dragon-kind'
 blood: root Do /do/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
+blue-giant: gap (experiential): bugbear has no exposure to 'blue-giant'
 bone: root Ko /ko/
 boreal-stand: gap (experiential): bugbear has no exposure to 'boreal-stand'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
@@ -478,6 +497,8 @@ old: root Tabo /tabo/
 old-growth: root Dodoo /dodoo/
 one: root Kaa /kaa/
 open-blue: gap (experiential): bugbear has no exposure to 'open-blue'
+orange-dwarf: gap (experiential): bugbear has no exposure to 'orange-dwarf'
+orange-giant: gap (experiential): bugbear has no exposure to 'orange-giant'
 otyugh-kind: gap (experiential): bugbear has no exposure to 'otyugh-kind'
 over: root Datoo /datoo/
 owlbear-kind: gap (experiential): bugbear has no exposure to 'owlbear-kind'
@@ -490,6 +511,8 @@ rafted-floe: gap (experiential): bugbear has no exposure to 'rafted-floe'
 rain: gap (experiential): bugbear has no exposure to 'rain'
 red: root Doo /doo/
 red-dragon-kind: gap (experiential): bugbear has no exposure to 'red-dragon-kind'
+red-dwarf: gap (experiential): bugbear has no exposure to 'red-dwarf'
+red-giant: gap (experiential): bugbear has no exposure to 'red-giant'
 reef-rubble: gap (experiential): bugbear has no exposure to 'reef-rubble'
 reef-shark-kind: gap (experiential): bugbear has no exposure to 'reef-shark-kind'
 reg: gap (experiential): bugbear has no exposure to 'reg'
@@ -522,6 +545,7 @@ star: root Doo /doo/
 starlit: root Koo /koo/
 stone: root Too /too/
 sun: root Toa /toa/
+sun-like-star: gap (experiential): bugbear has no exposure to 'sun-like-star'
 taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Doda /doda/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
@@ -549,12 +573,15 @@ vine: root Tooda /tooda/
 water: root Doogo /doogo/
 wheat: root Dotoa /dotoa/
 white-dragon-kind: gap (experiential): bugbear has no exposure to 'white-dragon-kind'
+white-dwarf: gap (experiential): bugbear has no exposure to 'white-dwarf'
 wind: root Doqoo /doqoo/
 wind-scour: gap (experiential): bugbear has no exposure to 'wind-scour'
 wooded-grassland: gap (experiential): bugbear has no exposure to 'wooded-grassland'
 woolly-mammoth-kind: gap (experiential): bugbear has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): bugbear has no exposure to 'xorn-kind'
 yellow: root Qaodo /qaodo/
+yellow-dwarf: gap (experiential): bugbear has no exposure to 'yellow-dwarf'
+yellow-white-dwarf: gap (experiential): bugbear has no exposure to 'yellow-white-dwarf'
 
 species: kobold
 headedness: HeadFirst
@@ -568,6 +595,7 @@ bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 black-dragon-kind: gap (experiential): kobold has no exposure to 'black-dragon-kind'
 blood: root Ra /ra/
 blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
+blue-giant: gap (experiential): kobold has no exposure to 'blue-giant'
 bone: root Xoo /xoo/
 boreal-stand: gap (experiential): kobold has no exposure to 'boreal-stand'
 brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
@@ -664,6 +692,8 @@ old: root Raararoo /raararoo/
 old-growth: root Roaxora /roaxora/
 one: root Xooxoa /xooxoa/
 open-blue: gap (experiential): kobold has no exposure to 'open-blue'
+orange-dwarf: gap (experiential): kobold has no exposure to 'orange-dwarf'
+orange-giant: gap (experiential): kobold has no exposure to 'orange-giant'
 otyugh-kind: gap (experiential): kobold has no exposure to 'otyugh-kind'
 over: root Xooraro /xooraro/
 owlbear-kind: gap (experiential): kobold has no exposure to 'owlbear-kind'
@@ -676,6 +706,8 @@ rafted-floe: gap (experiential): kobold has no exposure to 'rafted-floe'
 rain: gap (experiential): kobold has no exposure to 'rain'
 red: root Rooxoa /rooxoa/
 red-dragon-kind: gap (experiential): kobold has no exposure to 'red-dragon-kind'
+red-dwarf: gap (experiential): kobold has no exposure to 'red-dwarf'
+red-giant: gap (experiential): kobold has no exposure to 'red-giant'
 reef-rubble: gap (experiential): kobold has no exposure to 'reef-rubble'
 reef-shark-kind: gap (experiential): kobold has no exposure to 'reef-shark-kind'
 reg: gap (experiential): kobold has no exposure to 'reg'
@@ -708,6 +740,7 @@ star: root Roxoo /roxoo/
 starlit: root Raro /raro/
 stone: root Xaroo /xaroo/
 sun: root Roaroora /roaroora/
+sun-like-star: gap (experiential): kobold has no exposure to 'sun-like-star'
 taiga: root Xoaxoroo /xoaxoroo/
 temperate-forest: root Roo /roo/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
@@ -735,12 +768,15 @@ vine: root Xoorao /xoorao/
 water: root Raxa /raxa/
 wheat: root Roxoa /roxoa/
 white-dragon-kind: gap (experiential): kobold has no exposure to 'white-dragon-kind'
+white-dwarf: gap (experiential): kobold has no exposure to 'white-dwarf'
 wind: root Xaaro /xaaro/
 wind-scour: gap (experiential): kobold has no exposure to 'wind-scour'
 wooded-grassland: gap (experiential): kobold has no exposure to 'wooded-grassland'
 woolly-mammoth-kind: gap (experiential): kobold has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): kobold has no exposure to 'xorn-kind'
 yellow: gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9
+yellow-dwarf: gap (experiential): kobold has no exposure to 'yellow-dwarf'
+yellow-white-dwarf: gap (experiential): kobold has no exposure to 'yellow-white-dwarf'
 
 species: gnoll
 headedness: HeadFirst
@@ -754,6 +790,7 @@ bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 black-dragon-kind: gap (experiential): gnoll has no exposure to 'black-dragon-kind'
 blood: root Zhmaa /ʒmaa/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75
+blue-giant: gap (experiential): gnoll has no exposure to 'blue-giant'
 bone: root Shnoaf /ʃnoaf/
 boreal-stand: root Gzax /gzax/
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75
@@ -850,6 +887,8 @@ old: root Qsaoxshngax /qsaoxʃŋax/
 old-growth: root Snaafzmoov /snaafzmoov/
 one: root Psoaznoov /psoaznoov/
 open-blue: gap (experiential): gnoll has no exposure to 'open-blue'
+orange-dwarf: gap (experiential): gnoll has no exposure to 'orange-dwarf'
+orange-giant: gap (experiential): gnoll has no exposure to 'orange-giant'
 otyugh-kind: gap (experiential): gnoll has no exposure to 'otyugh-kind'
 over: root Gshaovzhmoov /gʃaovʒmoov/
 owlbear-kind: gap (experiential): gnoll has no exposure to 'owlbear-kind'
@@ -862,6 +901,8 @@ rafted-floe: gap (experiential): gnoll has no exposure to 'rafted-floe'
 rain: gap (experiential): gnoll has no exposure to 'rain'
 red: root Zmadzhav /zmadʒav/
 red-dragon-kind: gap (experiential): gnoll has no exposure to 'red-dragon-kind'
+red-dwarf: gap (experiential): gnoll has no exposure to 'red-dwarf'
+red-giant: gap (experiential): gnoll has no exposure to 'red-giant'
 reef-rubble: gap (experiential): gnoll has no exposure to 'reef-rubble'
 reef-shark-kind: gap (experiential): gnoll has no exposure to 'reef-shark-kind'
 reg: gap (experiential): gnoll has no exposure to 'reg'
@@ -894,6 +935,7 @@ star: root Gzo /gzo/
 starlit: root Qshazmo /qʃazmo/
 stone: root Sngoax /sŋoax/
 sun: root Shnoafzhngaf /ʃnoafʒŋaf/
+sun-like-star: gap (experiential): gnoll has no exposure to 'sun-like-star'
 taiga: root Dsho /dʃo/
 temperate-forest: root Gshofzngav /gʃofzŋav/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
@@ -921,10 +963,13 @@ vine: root Gzhofgshoof /gʒofgʃoof/
 water: root Zngaav /zŋaav/
 wheat: root Qzhaovgzhoav /qʒaovgʒoav/
 white-dragon-kind: gap (experiential): gnoll has no exposure to 'white-dragon-kind'
+white-dwarf: gap (experiential): gnoll has no exposure to 'white-dwarf'
 wind: root Gzhovsmoaf /gʒovsmoaf/
 wind-scour: gap (experiential): gnoll has no exposure to 'wind-scour'
 wooded-grassland: gap (experiential): gnoll has no exposure to 'wooded-grassland'
 woolly-mammoth-kind: gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): gnoll has no exposure to 'xorn-kind'
 yellow: root Zmoazhnga /zmoaʒŋa/
+yellow-dwarf: gap (experiential): gnoll has no exposure to 'yellow-dwarf'
+yellow-white-dwarf: gap (experiential): gnoll has no exposure to 'yellow-white-dwarf'
 
