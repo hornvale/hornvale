@@ -1,10 +1,15 @@
 //! The Explanations (C5 Task 3): derivation, binding, and assembly —
-//! `schema_prior`, `beta_of`, `cyclic_beliefs_of`, and `explain` (called
-//! from `accounts_of`), measured against live seeds and pinned exact.
+//! `schema_prior`, `beta_of`, `cyclic_beliefs_from`, and `explain` (called
+//! from `accounts_from`), measured against live seeds and pinned exact.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_language::Disposition;
 use hornvale_language::schemas::{Manner, SchemaId};
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_of, beta_of, cyclic_beliefs_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, beta_of, cyclic_beliefs_from};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -55,7 +60,9 @@ fn the_day_binds_by_period_match_never_identity() {
     // (deity-free). Seed 4 bugbear is the nearest surviving seed whose day
     // still fires the Agentive-bound-by-period case this test exercises.
     let w = generated(4);
-    let voices = accounts_of(&w);
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let voices = accounts_from(&w, &terrain, &climate);
     let hobgoblin = voices
         .iter()
         .find(|v| v.kind == "bugbear")
@@ -72,7 +79,7 @@ fn the_day_binds_by_period_match_never_identity() {
         hornvale_kernel::Value::Number(n) => *n,
         other => panic!("day-length-std must be a Number, got {other:?}"),
     };
-    let cyclic = cyclic_beliefs_of(&w, "bugbear");
+    let cyclic = cyclic_beliefs_from(&w, "bugbear", &climate);
     let matched = cyclic
         .iter()
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
@@ -107,7 +114,9 @@ fn schema_competition_is_real_across_the_roster() {
     let mut schemas: Vec<SchemaId> = Vec::new();
     for seed in 1..=3u64 {
         let w = generated(seed);
-        for voice in accounts_of(&w) {
+        let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+        for voice in accounts_from(&w, &terrain, &climate) {
             let day = voice
                 .account
                 .entries
@@ -130,11 +139,13 @@ fn schema_competition_is_real_across_the_roster() {
 #[test]
 fn explanations_are_deterministic() {
     let w = generated(1);
-    let a = format!("{:?}", accounts_of(&w));
-    let b = format!("{:?}", accounts_of(&w));
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let a = format!("{:?}", accounts_from(&w, &terrain, &climate));
+    let b = format!("{:?}", accounts_from(&w, &terrain, &climate));
     assert_eq!(
         a, b,
-        "accounts_of (post-explain) must be a pure function of the world"
+        "accounts_from (post-explain) must be a pure function of the world"
     );
 }
 
@@ -157,7 +168,9 @@ fn no_deity_bearing_schema_ever_fires_agentless() {
 
     for seed in 1..=10u64 {
         let w = generated(seed);
-        for voice in accounts_of(&w) {
+        let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+        for voice in accounts_from(&w, &terrain, &climate) {
             for entry in &voice.account.entries {
                 let Disposition::Explained { schema, agent, .. } = &entry.disposition else {
                     continue;
@@ -225,7 +238,9 @@ fn moons_explained_only_where_kept() {
     // commit message as the defect it exists to remove; `Kng-` rises toward
     // the nucleus. Only `agent` moved.
     let w = generated(2);
-    let voices = accounts_of(&w);
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let voices = accounts_from(&w, &terrain, &climate);
     let kobold = voices
         .iter()
         .find(|v| v.kind == "kobold")

@@ -285,6 +285,7 @@
 - [The Pyx](./chronicle/the-pyx.md)
 - [The Twin](./chronicle/the-twin.md)
 - [The Shuttle](./chronicle/the-shuttle.md)
+- [The Weir](./chronicle/the-weir.md)
 
 # Appendix: The Frontier
 

@@ -3,7 +3,7 @@
 //! authored observability table (spec §3.2) and the ground fact list, then
 //! run each culture's account through `hornvale_language::account_of`.
 //!
-//! Nothing here is new draws or new save state: [`account_params_of`] reads
+//! Nothing here is new draws or new save state: [`account_params_from`] reads
 //! the already-built [`WorldComponents`] and the already-committed ledger;
 //! [`chorus_ground`] mirrors `windows/book`'s `render_volume` fact
 //! selection exactly (layering forbids importing it — `windows/book`
@@ -12,9 +12,9 @@
 //!
 //! **C5, The Explanations**, extends this file with the causal filter's
 //! derivation, binding, and assembly: [`schema_prior`] and [`beta_of`]
-//! derive the per-culture schema weighting (no draw); [`cyclic_beliefs_of`]
+//! derive the per-culture schema weighting (no draw); [`cyclic_beliefs_from`]
 //! re-derives the period-match join to a culture's own pantheon; `explain`
-//! (private, called from [`accounts_of`] after [`account_of`]) wraps
+//! (private, called from [`accounts_from`] after [`account_of`]) wraps
 //! qualifying account entries in [`hornvale_language::Disposition::Explained`].
 //! The only new seeded draws anywhere in this module are the two render-time
 //! streams `explain` derives (`language/<species>/schema/<domain>/<shape>`,
@@ -215,19 +215,12 @@ pub fn beta_of(society: &SocietyVector) -> f64 {
 /// the last index the longest). Empty when `species` placed no flagship,
 /// holds no beliefs, or its phenomena can't be recomputed — callers read
 /// emptiness as "no sky religion to bind to" (ledger #2).
-/// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
-pub fn cyclic_beliefs_of(world: &World, species: &str) -> Vec<(hornvale_religion::Belief, f64)> {
-    let Ok(climate) = crate::climate_of(world) else {
-        return Vec::new();
-    };
-    cyclic_beliefs_from(world, species, &climate)
-}
-
-/// The threaded twin of [`cyclic_beliefs_of`], reusing an ALREADY-BUILT
-/// climate (down [`crate::observed_phenomena_as_from`]) instead of
-/// re-deriving one. Threaded through [`explain`] so the census's chorus
-/// metric sculpts once per world, not once per placed people. Byte-identical
-/// to `cyclic_beliefs_of` (the passed climate equals `climate_of(world)`, and
+///
+/// Takes an ALREADY-BUILT climate (down
+/// [`crate::observed_phenomena_as_from`]) instead of re-deriving one —
+/// threaded through [`explain`] so the census's chorus metric sculpts once
+/// per world, not once per placed people. Byte-identical to a hypothetical
+/// re-sculpting caller (the passed climate equals `climate_of(world)`, and
 /// this readout draws nothing). Public so callers outside this crate can
 /// thread a build they already hold.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
@@ -385,7 +378,7 @@ fn day_length_std_value(account: &Account) -> Option<f64> {
 /// Ties bind to the first (shortest-period) match in ascending order.
 /// Returns the drawn schema and the matched belief's rank (for
 /// [`manner_of`]) so [`explain_day`] can still compute agent/lexeme/manner
-/// exactly as before. Factored out (C7) so [`day_schema_of`] — the
+/// exactly as before. Factored out (C7) so [`day_schema_from`] — the
 /// readout — resolves the exact SAME stream rather than re-deriving it a
 /// second way; the two readers of this stream can never drift apart.
 #[allow(clippy::too_many_arguments)]
@@ -664,13 +657,13 @@ fn explain_moon_ratio(
 
 /// Explanation assembly (C5): wraps `account`'s day and (where kept)
 /// moons entries in [`Disposition::Explained`] where a schema fires and
-/// binds. Called from [`accounts_of`], after [`account_of`] — never from
+/// binds. Called from [`accounts_from`], after [`account_of`] — never from
 /// the identity/null path ([`identity_params`](hornvale_language::identity_params)
 /// never reaches this function, so the dial's pathological pole stays
 /// exactly as authored).
 ///
 /// **Unbindable guard (ledger #2):** a culture with no cyclic belief in
-/// [`cyclic_beliefs_of`] explains nothing at all — no synthetic agents,
+/// [`cyclic_beliefs_from`] explains nothing at all — no synthetic agents,
 /// ever.
 fn explain(
     world: &World,
@@ -1050,11 +1043,8 @@ fn doctrine_explain_moons(
 /// [`hornvale_religion::Belief::high_god`] — `None` for an unranked
 /// society, which simply leaves delta d's preference inert and falls
 /// through to folk's binding rule every time). Takes ALREADY-BUILT climate
-/// (via [`cyclic_beliefs_from`]) rather than [`cyclic_beliefs_of`] — The
-/// Shuttle found `doctrine_from`'s only caller of this function was still
-/// re-sculpting the globe here despite already holding a `climate`, the
-/// second residual sculpt (after [`crisis_of`]'s) hiding behind a
-/// "byte-identical, threaded" doc claim.
+/// (via [`cyclic_beliefs_from`]) rather than re-deriving one — every caller
+/// of this function already holds a `climate` from its own threaded build.
 fn doctrine_explain(
     world: &World,
     species: &str,
@@ -1121,8 +1111,8 @@ fn doctrine_explain(
 /// truth folk's account reads ([`chorus_ground`]) — the folk ground through
 /// the doctrine stack (delta a-d), never a second draw over new furniture.
 /// A distinct type from [`ChorusVoice`] by construction: the dial-roster
-/// law (ledger #4) requires this type never appear in [`accounts_of`]'s
-/// return type, only in [`doctrines_of`]'s.
+/// law (ledger #4) requires this type never appear in [`accounts_from`]'s
+/// return type, only in [`doctrines_from`]'s.
 /// type-audit: bare-ok(identifier-text: kind)
 #[derive(Debug)]
 pub struct DoctrineVoice {
@@ -1139,19 +1129,12 @@ pub struct DoctrineVoice {
 /// flagship settlement's committed `cult-form` fact is `"organized"` (never
 /// `"folk"`, and never when `species` places no flagship at all). Cult-form
 /// is already committed state (`hornvale_religion::genesis`) — this gate
-/// spends zero new facts, concepts, or draws to ask the question. Sculpts
-/// once and delegates to [`doctrine_from`].
-/// type-audit: bare-ok(identifier-text: species)
-pub fn doctrine_of(world: &World, species: &str) -> Option<DoctrineVoice> {
-    let terrain = crate::terrain_of(world).ok()?;
-    let climate = crate::climate_from(world, &terrain).ok()?;
-    doctrine_from(world, species, &terrain, &climate)
-}
-
-/// [`doctrine_of`], reusing ALREADY-BUILT terrain/climate instead of
-/// re-sculpting the globe. Byte-identical to `doctrine_of` (the passed
-/// terrain/climate equal `terrain_of`/`climate_from(world, &terrain)`, and
-/// this readout draws nothing from the seed).
+/// spends zero new facts, concepts, or draws to ask the question.
+///
+/// Takes ALREADY-BUILT terrain/climate instead of re-sculpting the globe.
+/// Byte-identical regardless of caller (any terrain/climate equal to
+/// `terrain_of`/`climate_from(world, &terrain)` produce the same answer,
+/// and this readout draws nothing from the seed).
 /// type-audit: bare-ok(identifier-text: species)
 pub fn doctrine_from(
     world: &World,
@@ -1180,25 +1163,15 @@ pub fn doctrine_from(
 
 /// Every organized placed people's doctrine voice, in
 /// [`crate::placed_peoples`] order — the SEPARATE collection the dial-
-/// roster law (ledger #4) requires: [`accounts_of`] never gains an entry
+/// roster law (ledger #4) requires: [`accounts_from`] never gains an entry
 /// from this pass, and this pass never feeds the dial's roster. A placed
 /// people whose flagship is `"folk"` (the SOC-1 gate's negative arm) is
-/// simply absent here, same posture as [`accounts_of`]'s own
-/// param-derivation-failure skip. Sculpts once and delegates to
-/// [`doctrines_from`].
-pub fn doctrines_of(world: &World) -> Vec<DoctrineVoice> {
-    let Ok(terrain) = crate::terrain_of(world) else {
-        return Vec::new();
-    };
-    let Ok(climate) = crate::climate_from(world, &terrain) else {
-        return Vec::new();
-    };
-    doctrines_from(world, &terrain, &climate)
-}
-
-/// [`doctrines_of`], reusing ALREADY-BUILT terrain/climate so every placed
-/// people's [`doctrine_from`] shares one sculpt instead of re-sculpting the
-/// globe per people. Byte-identical to `doctrines_of`.
+/// simply absent here, same posture as [`accounts_from`]'s own
+/// param-derivation-failure skip.
+///
+/// Takes ALREADY-BUILT terrain/climate so every placed people's
+/// [`doctrine_from`] shares one sculpt instead of re-sculpting the globe per
+/// people. Byte-identical regardless of caller.
 pub fn doctrines_from(
     world: &World,
     terrain: &hornvale_terrain::GeneratedTerrain,
@@ -1220,7 +1193,7 @@ pub fn doctrines_from(
 /// world's registry/psyche/perception components and the ledger's
 /// committed facts are the only durable state.
 ///
-/// - `holdings`: every concept [`crate::exposure_of`] classes `Steeped` or
+/// - `holdings`: every concept [`crate::exposure_from`] classes `Steeped` or
 ///   `KnowsOf` (a `KnowsOf` compound is still a held word).
 /// - `sky_capability`: [`sky_capability`] over the species' perception
 ///   vector.
@@ -1235,21 +1208,14 @@ pub fn doctrines_from(
 ///   assume them).
 /// - `hold_all: false` always; the real [`observability_table`].
 ///
-/// type-audit: bare-ok(identifier-text: species)
-pub fn account_params_of(world: &World, species: &str) -> Result<AccountParams, BuildError> {
-    let terrain = crate::terrain_of(world)?;
-    let climate = crate::climate_from(world, &terrain)?;
-    account_params_from(world, species, &terrain, &climate)
-}
-
-/// The threaded twin of [`account_params_of`], reusing ALREADY-BUILT
-/// terrain/climate down [`crate::exposure_from`] instead of re-sculpting the
-/// globe. Byte-identical to `account_params_of` (the passed terrain/climate
-/// equal `terrain_of`/`climate_of`, and this readout draws nothing from the
-/// seed); the threaded path [`accounts_from`] feeds every placed people so
-/// the census's chorus metric sculpts once, not per people. Public so
-/// callers outside this crate (the book/vessel render paths) can thread a
-/// build they already hold instead of re-deriving one.
+/// Takes ALREADY-BUILT terrain/climate down [`crate::exposure_from`]
+/// instead of re-sculpting the globe. Byte-identical regardless of caller
+/// (the passed terrain/climate equal `terrain_of`/`climate_from`, and this
+/// readout draws nothing from the seed); the threaded path [`accounts_from`]
+/// feeds every placed people so the census's chorus metric sculpts once,
+/// not per people. Public so callers outside this crate (the book/vessel
+/// render paths) can thread a build they already hold instead of
+/// re-deriving one.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn account_params_from(
     world: &World,
@@ -1435,7 +1401,7 @@ pub fn chorus_ground(world: &World) -> Vec<GroundFact> {
 pub struct ChorusVoice {
     /// The people's kind label (e.g. `"goblin"`).
     pub kind: String,
-    /// The params [`account_params_of`] derived for this kind.
+    /// The params [`account_params_from`] derived for this kind.
     pub params: AccountParams,
     /// The account [`account_of`] produced from those params over
     /// [`chorus_ground`].
@@ -1446,20 +1412,11 @@ pub struct ChorusVoice {
 /// [`crate::placed_peoples`] order. Mirrors `render_volume`'s posture on a
 /// param-derivation failure: skip that kind rather than fail the whole
 /// pass (`else { continue }`).
-pub fn accounts_of(world: &World) -> Vec<ChorusVoice> {
-    let Ok(terrain) = crate::terrain_of(world) else {
-        return Vec::new();
-    };
-    let Ok(climate) = crate::climate_from(world, &terrain) else {
-        return Vec::new();
-    };
-    accounts_from(world, &terrain, &climate)
-}
-
-/// [`accounts_of`], reusing ALREADY-BUILT terrain/climate so every placed
-/// people's [`account_params_from`] shares one sculpt instead of re-sculpting
-/// the globe per people — the census's chorus metric passes a Lab view's
-/// terrain/climate. Byte-identical to `accounts_of`.
+///
+/// Takes ALREADY-BUILT terrain/climate so every placed people's
+/// [`account_params_from`] shares one sculpt instead of re-sculpting the
+/// globe per people — the census's chorus metric passes a Lab view's
+/// terrain/climate. Byte-identical regardless of caller.
 pub fn accounts_from(
     world: &World,
     terrain: &hornvale_terrain::GeneratedTerrain,
@@ -1486,13 +1443,13 @@ pub fn accounts_from(
 // ---------------------------------------------------------------------
 //
 // tongue_morphology_of derives a species' TongueMorphology exactly the way
-// lexicon_of derives its Lexicon (draw the phonology, resolve the family's
+// lexicon_from derives its Lexicon (draw the phonology, resolve the family's
 // proto phonology and this species' own cascade, then hand the whole
 // bundle to domains/language) — nothing here is a new draw beyond what
 // morph_depths/morph_forms themselves perform, and nothing is persisted.
 //
-// day_schema_of resolves the identical stream explain_day resolves (via the
-// shared day_schema_draw core above), and noun_class_of is fully derived
+// day_schema_from resolves the identical stream explain_day resolves (via the
+// shared day_schema_draw core above), and noun_class_from is fully derived
 // from shipped state — the anti-astrology line: depth/position are drawn
 // once (morph_depths); evidential values and animacy are always DERIVED,
 // never judged or drawn fresh a second time.
@@ -1500,9 +1457,9 @@ pub fn accounts_from(
 /// The species' full C7 morphology bundle: the drawn depth vector
 /// (evidential/noun-class/position) plus the family's evidential/class
 /// marker forms, evolved into this species' own phonology via its own
-/// cascade — derived the same way [`crate::lexicon_of`] derives its lexicon
-/// (resolve the family's shared proto phonology, or fall back to this
-/// species' own phonology for a singleton family), nothing persisted.
+/// cascade — derived the same way [`crate::lexicon_from`] derives its
+/// lexicon (resolve the family's shared proto phonology, or fall back to
+/// this species' own phonology for a singleton family), nothing persisted.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn tongue_morphology_of(
     world: &World,
@@ -1525,7 +1482,7 @@ pub fn tongue_morphology_of(
     // ever called over placed_peoples (culture/chorus is placement-gated,
     // and dragons are never placed — see windows/book/src/lib.rs and
     // deep_grammar.rs's callers), so it never actually sees a dragon
-    // today; routed anyway for consistency with lexicon_of's regime and to
+    // today; routed anyway for consistency with lexicon_from's regime and to
     // stay correct if that placement gate ever loosens.
     let cascade = crate::cascade_of(world, name)?;
     let (evidential_depth, noun_class_depth, class_position) =
@@ -1547,20 +1504,13 @@ pub fn tongue_morphology_of(
 /// re-derivation idiom every readout in this module follows. `None` when
 /// the culture is unbindable (ledger #2's guard: no flagship, no pantheon,
 /// no day-matched cyclic belief) or the causal filter simply doesn't fire
-/// (`select_schema` itself draws nothing). Sculpts once and delegates to
-/// [`day_schema_from`].
-/// type-audit: bare-ok(identifier-text: species)
-pub fn day_schema_of(world: &World, species: &str) -> Option<SchemaId> {
-    let terrain = crate::terrain_of(world).ok()?;
-    let climate = crate::climate_from(world, &terrain).ok()?;
-    day_schema_from(world, species, &terrain, &climate)
-}
-
-/// [`day_schema_of`], reusing ALREADY-BUILT terrain/climate instead of
-/// re-sculpting the globe (including down [`cyclic_beliefs_from`], not just
-/// [`account_params_from`]). Byte-identical to `day_schema_of` (the passed
-/// terrain/climate equal `terrain_of`/`climate_from(world, &terrain)`, and
-/// this readout draws nothing new).
+/// (`select_schema` itself draws nothing).
+///
+/// Takes ALREADY-BUILT terrain/climate instead of re-sculpting the globe
+/// (including down [`cyclic_beliefs_from`], not just [`account_params_from`]).
+/// Byte-identical regardless of caller (the passed terrain/climate equal
+/// `terrain_of`/`climate_from(world, &terrain)`, and this readout draws
+/// nothing new).
 /// type-audit: bare-ok(identifier-text: species)
 pub fn day_schema_from(
     world: &World,
@@ -1611,9 +1561,8 @@ const SKY_OVERRIDE: [&str; 4] = ["sun", "moon", "star", "earth"];
 /// every `*-kind` concept (e.g. `"goblin-kind"`) and `"person"` are
 /// [`NounClass::Animate`]; every other concept is [`NounClass::Inanimate`].
 /// Pure string comparison — needs no world, terrain, or climate — so
-/// [`noun_class_of`] and [`noun_class_from`] can both answer it before
-/// paying for a sculpt, and it can never be affected by a `BuildError` on
-/// an unrelated (sky) concept.
+/// [`noun_class_from`] can answer it before paying for a sculpt, and it can
+/// never be affected by a `BuildError` on an unrelated (sky) concept.
 fn noun_class_plain(concept: &str) -> NounClass {
     if concept == "person" || concept.ends_with("-kind") {
         NounClass::Animate
@@ -1625,31 +1574,14 @@ fn noun_class_plain(concept: &str) -> NounClass {
 /// C7's derived noun-class assignment (the animacy coherence law, plan
 /// header): [`noun_class_plain`] for every concept EXCEPT
 /// `"sun"`/`"moon"`/`"star"`/`"earth"` ([`SKY_OVERRIDE`]), which are
-/// `Animate` iff `species`' C5 day-schema draw ([`day_schema_of`]) is
+/// `Animate` iff `species`' C5 day-schema draw ([`day_schema_from`]) is
 /// [`SchemaId::Agentive`]. Zero draws (the anti-astrology line): the sky
-/// override reads a draw `day_schema_of` already made, never rolls a fresh
-/// die. Answers the non-sky-override arm BEFORE sculpting: a plain concept
-/// (`"person"`, any `*-kind`, anything else) never pays for terrain/climate
-/// and can never be misclassified by a `BuildError` on this world; only the
-/// four sky concepts sculpt once and delegate to [`noun_class_from`].
-/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: concept)
-pub fn noun_class_of(world: &World, species: &str, concept: &str) -> NounClass {
-    if !SKY_OVERRIDE.contains(&concept) {
-        return noun_class_plain(concept);
-    }
-    let Ok(terrain) = crate::terrain_of(world) else {
-        return NounClass::Inanimate;
-    };
-    let Ok(climate) = crate::climate_from(world, &terrain) else {
-        return NounClass::Inanimate;
-    };
-    noun_class_from(world, species, concept, &terrain, &climate)
-}
-
-/// [`noun_class_of`], reusing ALREADY-BUILT terrain/climate instead of
-/// re-sculpting the globe (down the sky-override arm's [`day_schema_from`]).
-/// Byte-identical to `noun_class_of`. Computes the sky-override's
-/// `sky_animate` answer lazily (only when `concept` is in
+/// override reads a draw `day_schema_from` already made, never rolls a
+/// fresh die.
+///
+/// Takes ALREADY-BUILT terrain/climate (down the sky-override arm's
+/// [`day_schema_from`]) instead of re-sculpting the globe. Computes the
+/// sky-override's `sky_animate` answer lazily (only when `concept` is in
 /// [`SKY_OVERRIDE`]) and delegates to [`noun_class_with_sky`] — the single
 /// copy of the animacy-coherence branch, shared with callers (The Shuttle's
 /// book window) that already hold `sky_animate` for a whole kind and want
@@ -1670,8 +1602,8 @@ pub fn noun_class_from(
     noun_class_plain(concept)
 }
 
-/// The animacy-coherence branch ([`noun_class_of`]/[`noun_class_from`]'s
-/// doc), taking the sky-override's `sky_animate` answer as an argument
+/// The animacy-coherence branch ([`noun_class_from`]'s doc), taking the
+/// sky-override's `sky_animate` answer as an argument
 /// instead of deriving it — for a caller (e.g. `windows/book`) that already
 /// computed [`day_schema_from`]'s `Some(SchemaId::Agentive)` answer once per
 /// kind and wants to classify many concepts against it without re-running
@@ -1696,7 +1628,7 @@ pub fn noun_class_with_sky(sky_animate: bool, concept: &str) -> NounClass {
 // --- C8, The Diachronic Book: the observation ledger and the knowledge
 // ladder. Everything below is pure derivation over already-committed
 // state (the world's ledger, the reconstructed sky, and the same
-// `AccountParams`/`doctrine_of` machinery C4/C6 already ship) — zero new
+// `AccountParams`/`doctrine_from` machinery C4/C6 already ship) — zero new
 // draws, zero new facts, zero new save-format state. Re-running any
 // function here over the same `(world, species, at)` always reconstructs
 // the identical answer byte-for-byte (LANG-36's derived-never-stored
@@ -1712,7 +1644,7 @@ const LUNAR_WITNESS_THRESHOLD: f64 = 0.6;
 /// Preregistered (plan Global Constraints / spec §3.2): total witnessed
 /// events (any recurrence class) an organized cult needs to climb from
 /// `Counted` to [`LadderRung::Numbered`]. Folk-only cultures (no
-/// `doctrine_of`) never cross this rung regardless of count.
+/// `doctrine_from`) never cross this rung regardless of count.
 const K_COUNT: usize = 3;
 
 /// Preregistered: witnessed events of ONE recurrence class (`(moon
@@ -1721,7 +1653,7 @@ const K_COUNT: usize = 3;
 /// [`LadderRung::Predictive`].
 const K_PREDICT: usize = 8;
 
-/// How far past `at` [`ladder_of`] scans for the taught prediction: one
+/// How far past `at` [`ladder_from`] scans for the taught prediction: one
 /// Metonic-generous window. Chosen so the closed-form scan comfortably
 /// spans several cycles of any witnessed recurrence class without
 /// depending on a particular moon's period. If no matching event falls
@@ -1745,26 +1677,13 @@ const CRISIS_MISS_RUN: usize = 2;
 /// derived, ascending by day (the same order [`hornvale_astronomy::eclipse_events`]
 /// returns). There is no separate "memory" store: the institution's
 /// records ARE this witnessed set, and the folk's qualitative rung reads
-/// the identical set through [`ladder_of`] — it just renders no cardinal.
+/// the identical set through [`ladder_from`] — it just renders no cardinal.
 /// Solar events are witnessed unconditionally; lunar events are
-/// witnessed iff `species`' own [`account_params_of`]`.sky_capability`
-/// meets [`LUNAR_WITNESS_THRESHOLD`]. Sculpts once and delegates to
-/// [`observations_from`].
+/// witnessed iff `species`' own [`account_params_from`]`.sky_capability`
+/// meets [`LUNAR_WITNESS_THRESHOLD`].
 ///
-/// type-audit: bare-ok(identifier-text: species)
-pub fn observations_of(
-    world: &World,
-    species: &str,
-    at: hornvale_astronomy::StdDays,
-) -> Result<Observations, BuildError> {
-    let terrain = crate::terrain_of(world)?;
-    let climate = crate::climate_from(world, &terrain)?;
-    observations_from(world, species, at, &terrain, &climate)
-}
-
-/// [`observations_of`], reusing ALREADY-BUILT terrain/climate instead of
-/// re-sculpting the globe (down [`account_params_from`]). Byte-identical to
-/// `observations_of`.
+/// Takes ALREADY-BUILT terrain/climate instead of re-sculpting the globe
+/// (down [`account_params_from`]). Byte-identical regardless of caller.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn observations_from(
     world: &World,
@@ -1797,7 +1716,7 @@ pub fn observations_from(
 }
 
 /// One culture's witnessed eclipse record by day `at` — pure, derived
-/// (see [`observations_of`]).
+/// (see [`observations_from`]).
 /// type-audit: bare-ok(diagnostic-value: events)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Observations {
@@ -1811,7 +1730,7 @@ pub struct Observations {
 /// no cardinal) → `Numbered` (organized cult only, total witnessed ≥
 /// [`K_COUNT`] — an exact cardinal) → `Predictive` (organized cult, some
 /// recurrence class witnessed ≥ [`K_PREDICT`] times — the next event of
-/// that class is taught, dated). Folk-only cultures (no [`doctrine_of`])
+/// that class is taught, dated). Folk-only cultures (no [`doctrine_from`])
 /// never cross `Counted` — the SOC-1 gate's diachronic consequence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LadderRung {
@@ -1827,7 +1746,7 @@ pub enum LadderRung {
 }
 
 /// The recurrence class [`eclipse_events`](hornvale_astronomy::eclipse_events)
-/// scans and [`ladder_of`] predicts over: a distance-sorted moon index
+/// scans and [`ladder_from`] predicts over: a distance-sorted moon index
 /// paired with which body darkens. `EclipseBody` carries no `Ord`, so
 /// this maps it to a stable discriminant (`Solar` = 0, `Lunar` = 1) for
 /// use as a `BTreeMap` key — no `HashMap` (disallowed workspace-wide).
@@ -1888,9 +1807,9 @@ fn crisis_live(days: &[f64]) -> bool {
 }
 
 /// The most-witnessed recurrence class in an observation set, and its
-/// count -- the same tie-break `ladder_of` has always used (max count,
+/// count -- the same tie-break `ladder_from` has always used (max count,
 /// then the numerically smallest `(moon index, body)` key). `None` for an
-/// empty observation set. Factored out of `ladder_of` so `crisis_of`
+/// empty observation set. Factored out of `ladder_from` so `crisis_from`
 /// (below) shares the identical class-selection logic rather than
 /// re-deriving it.
 fn top_recurrence_class(observations: &Observations) -> Option<((usize, u8), usize)> {
@@ -1906,7 +1825,7 @@ fn top_recurrence_class(observations: &Observations) -> Option<((usize, u8), usi
 
 /// The ascending witnessed days of one recurrence class, filtered from a
 /// culture's full observation set (already day-ascending per
-/// `observations_of`'s own doc, so filtering to one class preserves
+/// `observations_from`'s own doc, so filtering to one class preserves
 /// order).
 fn class_days(observations: &Observations, key: (usize, u8)) -> Vec<f64> {
     observations
@@ -1920,28 +1839,16 @@ fn class_days(observations: &Observations, key: (usize, u8)) -> Vec<f64> {
 /// `species`'s ladder rung by day `at`, plus — at `Predictive` only — the
 /// predicted next event's day of the most-observed recurrence class
 /// (C8 §3.2/§3.3). The organized gate reuses
-/// [`doctrine_of`]`(world, species).is_some()` (SOC-1); a tie among
+/// [`doctrine_from`]`(world, species, ..).is_some()` (SOC-1); a tie among
 /// equally-observed recurrence classes breaks toward the numerically
 /// smallest `(moon index, body)` key — deterministic, no significance
 /// claimed beyond that. The predicted day is the naive model's own
 /// extrapolation (see `naive_predicted_day`), not an omniscient lookup —
-/// it can be, and sometimes is, wrong (see `crisis_of`). Sculpts once and
-/// delegates to [`ladder_from`].
+/// it can be, and sometimes is, wrong (see [`crisis_from`]).
 ///
-/// type-audit: bare-ok(identifier-text: species), bare-ok(diagnostic-value: return)
-pub fn ladder_of(
-    world: &World,
-    species: &str,
-    at: hornvale_astronomy::StdDays,
-) -> Result<(LadderRung, Option<f64>), BuildError> {
-    let terrain = crate::terrain_of(world)?;
-    let climate = crate::climate_from(world, &terrain)?;
-    ladder_from(world, species, at, &terrain, &climate)
-}
-
-/// [`ladder_of`], reusing ALREADY-BUILT terrain/climate instead of
-/// re-sculpting the globe (down [`observations_from`] and
-/// [`doctrine_from`]). Byte-identical to `ladder_of`.
+/// Takes ALREADY-BUILT terrain/climate instead of re-sculpting the globe
+/// (down [`observations_from`] and [`doctrine_from`]). Byte-identical
+/// regardless of caller.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(diagnostic-value: return)
 pub fn ladder_from(
     world: &World,
@@ -1986,30 +1893,17 @@ pub fn ladder_from(
 /// exactly when a live crisis exists, carrying the most recent missed
 /// retrospective check's own predicted and actual days for the Reckoning
 /// margin to quote verbatim. Requires the same organized-cult gate
-/// `ladder_of` itself checks (SOC-1): a folk-only culture never has a
+/// `ladder_from` itself checks (SOC-1): a folk-only culture never has a
 /// crisis to report, since nothing was ever predicted for it to miss.
-/// Sculpts once and delegates to [`crisis_from`].
 ///
-/// type-audit: bare-ok(identifier-text: species)
-pub fn crisis_of(
-    world: &World,
-    species: &str,
-    at: hornvale_astronomy::StdDays,
-) -> Result<Option<PredictionCrisis>, BuildError> {
-    let terrain = crate::terrain_of(world)?;
-    let climate = crate::climate_from(world, &terrain)?;
-    crisis_from(world, species, at, &terrain, &climate)
-}
-
-/// [`crisis_of`], reusing ALREADY-BUILT terrain/climate instead of
-/// re-sculpting the globe (down [`observations_from`] and [`doctrine_from`])
-/// — The Shuttle found this was the one `_of`/`_from` pair the readout
-/// family (Task 2) missed: `windows/book`'s Reckoning section calls this
-/// once per `Predictive`-rung placed culture per epoch, and each
-/// un-threaded call re-sculpted the globe twice (`observations_of` and
-/// `doctrine_of` each sculpt independently), the dominant remaining cost in
-/// `tongue_lines_are_deterministic` even after every other reader in this
-/// module was threaded. Byte-identical to `crisis_of`.
+/// Takes ALREADY-BUILT terrain/climate instead of re-sculpting the globe
+/// (down [`observations_from`] and [`doctrine_from`]) — `windows/book`'s
+/// Reckoning section calls this once per `Predictive`-rung placed culture
+/// per epoch, and an un-threaded call would re-sculpt the globe twice
+/// (`observations_from` and `doctrine_from` each sculpt independently), the
+/// dominant remaining cost in `tongue_lines_are_deterministic` before this
+/// reader was threaded like every other one in this module. Byte-identical
+/// regardless of caller.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn crisis_from(
     world: &World,
@@ -2039,7 +1933,7 @@ pub fn crisis_from(
     }))
 }
 
-/// One culture's live prediction crisis (see [`crisis_of`]): the most
+/// One culture's live prediction crisis (see [`crisis_from`]): the most
 /// recent missed retrospective check's own predicted and actual days, for
 /// the Reckoning margin to quote verbatim.
 /// type-audit: bare-ok(diagnostic-value: last_predicted), bare-ok(diagnostic-value: last_actual)
@@ -2157,14 +2051,15 @@ mod tests {
     /// pantheon at the floor, so the guard's *natural* trigger is a
     /// species with no pantheon at all (a bare `World::new`, no
     /// settlement/religion genesis ever run: `flagship_of` returns `None`,
-    /// so `cyclic_beliefs_of` is empty). This exercises that exact path
+    /// so `cyclic_beliefs_from` is empty). This exercises that exact path
     /// and asserts the day entry stays plain `Lost` — never gains an
     /// `Explained` wrapper — when there is no cyclic belief to bind to.
     #[test]
     fn unbindable_cultures_stay_plain_lost() {
         let world = World::new(Seed(1));
+        let climate = crate::climate_of(&world).unwrap();
         assert!(
-            cyclic_beliefs_of(&world, "goblin").is_empty(),
+            cyclic_beliefs_from(&world, "goblin", &climate).is_empty(),
             "a bare world places no settlement, so there is no flagship to hold a pantheon"
         );
 
@@ -2182,7 +2077,6 @@ mod tests {
             "day-length-std is CrossReferential — always Lost before explain runs"
         );
 
-        let climate = crate::climate_of(&world).unwrap();
         explain(&world, "goblin", &mut account, &params, &climate);
 
         assert_eq!(
@@ -2278,7 +2172,7 @@ mod tests {
         let other = belief(1, "Nggo", false);
         let hg = belief(2, "Vamu", true);
         let day = 10.0;
-        // Ascending-period order (cyclic_beliefs_of's own contract): the
+        // Ascending-period order (cyclic_beliefs_from's own contract): the
         // fallback rule (first period match, ascending) would find `other`
         // at rank 0 — but the high god (rank 1, also period-compatible)
         // must be preferred instead.
@@ -2367,7 +2261,7 @@ mod tests {
 
     /// A minimal [`AccountParams`] built from the real [`observability_table`],
     /// for tests that only need the day-length-std row's gate to behave
-    /// exactly as [`account_params_of`] would derive it.
+    /// exactly as [`account_params_from`] would derive it.
     fn observability_table_params() -> AccountParams {
         AccountParams {
             hold_all: false,
@@ -2459,12 +2353,12 @@ mod tests {
     #[test]
     fn moon_period_ratio_is_explained_with_an_admitted_schema() {
         let world = hornvale_worldgen_test_world(1);
-        let cyclic = cyclic_beliefs_of(&world, "goblin");
+        let climate = crate::climate_of(&world).unwrap();
+        let cyclic = cyclic_beliefs_from(&world, "goblin", &climate);
         assert!(
             !cyclic.is_empty(),
             "seed 1 must place a goblin culture with a real pantheon"
         );
-        let _climate = crate::climate_of(&world).unwrap();
         let flagship = crate::flagship_of(&world, "goblin").expect("goblin must have a flagship");
         let subsistence = hornvale_culture::subsistence_of(&world, flagship.id)
             .as_deref()

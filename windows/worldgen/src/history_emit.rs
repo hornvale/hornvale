@@ -724,6 +724,9 @@ pub fn goblinoid_overlap(world: &World) -> f64 {
 /// world's geosphere (deterministic topology) to walk neighbours, so the value
 /// is cross-platform byte-identical (integer set arithmetic only).
 /// type-audit: bare-ok(ratio: return)
+// Named construction site (decision 0092): reconstructs terrain for its own
+// overlap readout.
+#[allow(clippy::disallowed_methods)]
 pub fn goblinoid_region_overlap(world: &World) -> f64 {
     let terrain = crate::terrain_of(world).expect("a built world's terrain reconstructs");
     let geo = terrain.geosphere();

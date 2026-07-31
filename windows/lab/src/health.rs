@@ -151,10 +151,23 @@ pub fn run_simulation(
 
 /// Simulate a real world's derived population and return each creature's affect
 /// trace. `None` if the world has no locale or no settlement to derive from.
+// Named construction site (decision 0092): sculpts/fits exactly ONCE per
+// sweep (The Weir, Stage 2), mirroring `Session::start`.
+#[allow(clippy::disallowed_methods)]
 pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
-    let Ok(ctx) = LocaleContext::build(world) else {
+    // ONE derivation block (The Weir, Stage 2): terrain, climate, and the
+    // locale context are each derived EXACTLY ONCE here, then threaded into
+    // `LocaleContext::build_from`, the demography fit, and the predator/prey
+    // pressures below — mirrors `Session::start`, so `ctx` no longer
+    // quietly re-sculpts its own copy underneath the sweep's own terrain/
+    // climate derivation.
+    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
         return Vec::new();
     };
+    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else {
+        return Vec::new();
+    };
+    let ctx = LocaleContext::build_from(world, &terrain, &climate);
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();
     // The two session-only predicates the drive tick commits — registered on
@@ -168,23 +181,62 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         None => return Vec::new(),
     };
     let mut npcs = derive_npcs(world, &ctx, &mut ledger, HEALTH_NPCS, home);
+    // The species roster and the demography report — assembled/fit ONCE per
+    // sweep (The Weir, Stage 1b/2) and shared below by the wild-NPC
+    // derivation and the predator/prey fields, instead of each
+    // independently re-running the coexistence-stack fit over the same
+    // `(world, wc, terrain, climate)`. `None` on any failure (the
+    // dependents simply lose their demography-derived axis, same posture as
+    // `calendar`/`predator`/`prey` below).
+    let wc = hornvale_worldgen::WorldComponents::assemble().ok();
+    // Wrapped in `Some` from here on: both derivations above already
+    // succeeded (the early returns), so this `Option` is the same
+    // defensive-field posture `Session::terrain`/`Session::climate` carry,
+    // never a second independent derivation that could fail where this one
+    // didn't.
+    let terrain = Some(terrain);
+    let climate = Some(climate);
+    let report = match (wc.as_ref(), terrain.as_ref(), climate.as_ref()) {
+        (Some(wc), Some(terrain), Some(climate)) => {
+            hornvale_worldgen::demography_report_from(world, wc, terrain, climate).ok()
+        }
+        _ => None,
+    };
     // The Wilding: the world's health includes its fauna — append a few wild
     // beast agents, so a herbivore's live predator-fear is measured too.
+    let concentrations = match (wc.as_ref(), report.as_ref()) {
+        (Some(wc), Some(report)) => {
+            hornvale_worldgen::wild_concentrations_from(wc, report, HEALTH_WILD)
+        }
+        _ => Vec::new(),
+    };
     npcs.extend(hornvale_vessel::liveness::derive_wild_npcs(
         world,
         &ctx,
         &mut ledger,
-        HEALTH_WILD,
+        concentrations,
     ));
     // The world's calendar, so the wake cycle reads the real sun (Tier-1).
     let calendar = hornvale_worldgen::sky_of(world)
         .ok()
         .and_then(|sky| sky.calendar().cloned());
     // The predator-pressure field (The Quarry), so danger senses carnivore
-    // territory. A demography fit — bounded to the ~5 null-control seeds.
-    let predator = hornvale_worldgen::predator_pressure(world).ok();
-    // The prey-pressure field (The Teeth), so a carnivore's hunger senses prey.
-    let prey = hornvale_worldgen::prey_pressure(world).ok();
+    // territory — from the shared `report` above (The Weir, Stage 1b)
+    // rather than its own fit.
+    let predator = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+        (Some(wc), Some(terrain), Some(report)) => Some(hornvale_worldgen::predator_pressure_from(
+            wc, terrain, report,
+        )),
+        _ => None,
+    };
+    // The prey-pressure field (The Teeth), so a carnivore's hunger senses
+    // prey — the dual of the predator field, same shared fit.
+    let prey = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+        (Some(wc), Some(terrain), Some(report)) => {
+            Some(hornvale_worldgen::prey_pressure_from(wc, terrain, report))
+        }
+        _ => None,
+    };
     // The settlement-territory set (The Threshold, task 5b) — this sweep is a
     // real world with real settlements, so it is the other construction site
     // that has a world to read one from (`session.rs`'s live session is the

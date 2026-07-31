@@ -1,13 +1,18 @@
-//! The Shuttle's drift guards: every `_from` readout equals its `_of`
-//! wrapper on the same world, one pair at a time. Since each `_of` wrapper
-//! is now literally "sculpt, then call the `_from` twin," this cannot
-//! actually catch a threading bug today — both sides reduce to the same
-//! `f(x) == f(x)`. What it guards against is a FUTURE edit that forks a
-//! `_from` body from its `_of` wrapper (e.g. a hand patch to one that
-//! forgets the other). It is NOT this campaign's byte-identity evidence —
-//! that is the cross-binary artifact comparison: the committed gallery
-//! artifact `book/src/gallery/the-book.md` (unchanged at this campaign's
-//! HEAD) and Task 6's pre/post-binary diffs.
+//! Determinism pins for the chorus/lexicon/exposure `_from` readout family
+//! (post-The-Weir): each `_from` function, called twice over the same
+//! already-built terrain/climate, must reproduce byte-identical output — the
+//! derived-never-stored contract every readout in this family makes.
+//!
+//! Before The Weir this file instead asserted each `_of` wrapper equalled its
+//! `_from` twin (a guard against a future hand patch forking the two bodies
+//! apart). Task 2 deleted every `_of` wrapper in this family — there is
+//! nothing left to diverge from — so this file now pins the `_from` behavior
+//! directly: two independent calls over the same inputs must agree.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -15,7 +20,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 #[test]
-fn from_variants_equal_their_of_wrappers() {
+fn from_variants_are_pure_over_the_same_world() {
     let world = build_world(
         Seed(1),
         &SkyPins::default(),
@@ -39,23 +44,26 @@ fn from_variants_equal_their_of_wrappers() {
         assert_eq!(
             format!(
                 "{:?}",
-                hornvale_worldgen::account_params_of(&world, kind).ok()
+                hornvale_worldgen::account_params_from(&world, kind, &terrain, &climate).ok()
             ),
             format!(
                 "{:?}",
                 hornvale_worldgen::account_params_from(&world, kind, &terrain, &climate).ok()
             ),
-            "account_params diverged for {kind}"
+            "account_params_from must be pure for {kind}"
         );
         assert_eq!(
-            format!("{:?}", hornvale_worldgen::cyclic_beliefs_of(&world, kind)),
             format!(
                 "{:?}",
                 hornvale_worldgen::cyclic_beliefs_from(&world, kind, &climate)
             ),
-            "cyclic_beliefs diverged for {kind}"
+            format!(
+                "{:?}",
+                hornvale_worldgen::cyclic_beliefs_from(&world, kind, &climate)
+            ),
+            "cyclic_beliefs_from must be pure for {kind}"
         );
-        let doctrine = hornvale_worldgen::doctrine_of(&world, kind);
+        let doctrine = hornvale_worldgen::doctrine_from(&world, kind, &terrain, &climate);
         if doctrine.is_some() {
             saw_a_doctrine = true;
         }
@@ -65,46 +73,52 @@ fn from_variants_equal_their_of_wrappers() {
                 "{:?}",
                 hornvale_worldgen::doctrine_from(&world, kind, &terrain, &climate)
             ),
-            "doctrine diverged for {kind}"
+            "doctrine_from must be pure for {kind}"
         );
         assert_eq!(
-            hornvale_worldgen::day_schema_of(&world, kind),
             hornvale_worldgen::day_schema_from(&world, kind, &terrain, &climate),
-            "day_schema diverged for {kind}"
+            hornvale_worldgen::day_schema_from(&world, kind, &terrain, &climate),
+            "day_schema_from must be pure for {kind}"
         );
         for concept in ["sun", "moon", "star", "earth", "person", "river"] {
             assert_eq!(
-                hornvale_worldgen::noun_class_of(&world, kind, concept),
                 hornvale_worldgen::noun_class_from(&world, kind, concept, &terrain, &climate),
-                "noun_class diverged for {kind}/{concept}"
+                hornvale_worldgen::noun_class_from(&world, kind, concept, &terrain, &climate),
+                "noun_class_from must be pure for {kind}/{concept}"
             );
         }
         assert_eq!(
             format!(
                 "{:?}",
-                hornvale_worldgen::observations_of(&world, kind, at).ok()
+                hornvale_worldgen::observations_from(&world, kind, at, &terrain, &climate).ok()
             ),
             format!(
                 "{:?}",
                 hornvale_worldgen::observations_from(&world, kind, at, &terrain, &climate).ok()
             ),
-            "observations diverged for {kind}"
+            "observations_from must be pure for {kind}"
         );
         assert_eq!(
-            format!("{:?}", hornvale_worldgen::ladder_of(&world, kind, at).ok()),
             format!(
                 "{:?}",
                 hornvale_worldgen::ladder_from(&world, kind, at, &terrain, &climate).ok()
             ),
-            "ladder diverged for {kind}"
+            format!(
+                "{:?}",
+                hornvale_worldgen::ladder_from(&world, kind, at, &terrain, &climate).ok()
+            ),
+            "ladder_from must be pure for {kind}"
         );
         assert_eq!(
-            format!("{:?}", hornvale_worldgen::crisis_of(&world, kind, at).ok()),
             format!(
                 "{:?}",
                 hornvale_worldgen::crisis_from(&world, kind, at, &terrain, &climate).ok()
             ),
-            "crisis diverged for {kind}"
+            format!(
+                "{:?}",
+                hornvale_worldgen::crisis_from(&world, kind, at, &terrain, &climate).ok()
+            ),
+            "crisis_from must be pure for {kind}"
         );
     }
 

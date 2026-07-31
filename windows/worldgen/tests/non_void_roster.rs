@@ -20,6 +20,11 @@
 //! comment) - it is the position in the `species_biosphere` slice passed in,
 //! so the index -> [`hornvale_kernel::KindId`] mapping here is rebuilt fresh,
 //! per seed, from that exact same `wc.biosphere.iter()` ordering.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};

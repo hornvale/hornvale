@@ -1081,7 +1081,7 @@ fn lexicon_is_regular_for_both_species() {
 /// The worlds are fine. The SECOND OPINION is stale. `exposure_sound` asks
 /// whether any `Root` stands at a concept `independently_steeped_concepts`
 /// (windows/lab/src/metrics.rs) does not steep, and that function is a
-/// deliberate duplicate of `hornvale_worldgen::exposure_of`'s Steeped rules —
+/// deliberate duplicate of `hornvale_worldgen::exposure_from`'s Steeped rules —
 /// duplicated on purpose, because a check that called the code it is checking
 /// would assert nothing. The cost of that design is that every new Steeped
 /// rule in worldgen must be taught to the duplicate, and **The Watershed's
@@ -1093,7 +1093,7 @@ fn lexicon_is_regular_for_both_species() {
 /// Steeped rules and the duplicate did not learn them (Task 11a diagnosed,
 /// Task 11c repaired, 252/1000 false). The Watershed added the staple rules
 /// and the duplicate did not learn them either (767/1000 false). The pattern
-/// is not carelessness, it is the architecture: `exposure_of` and
+/// is not carelessness, it is the architecture: `exposure_from` and
 /// `independently_steeped_concepts` are two hand-maintained copies of one
 /// rule set with nothing structural holding them in step, so they drift apart
 /// every time a campaign touches the original. Repairing this occurrence

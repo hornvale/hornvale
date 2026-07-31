@@ -181,21 +181,49 @@ pub struct LocaleContext {
 
 impl LocaleContext {
     /// Build the coarse world (climate + terrain + nearest-cell index) once.
+    /// The sanctioned entry point for any caller that has not already
+    /// sculpted terrain/climate itself — derives them once here and
+    /// delegates to [`Self::build_from`] (the book-entry-point pattern: a
+    /// wrapper that derives once, mirroring `windows/book`'s `parse_context`/
+    /// `parse_context_from` split).
+    // Named construction site (decision 0092): this entry wrapper sculpts/
+    // fits once, then delegates to `build_from`.
+    #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<LocaleContext, LocaleError> {
         let terrain = terrain_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
         let climate =
             climate_from(world, &terrain).map_err(|e| LocaleError::Build(e.to_string()))?;
+        Ok(Self::build_from(world, &terrain, &climate))
+    }
+
+    /// Build the coarse world from an ALREADY-sculpted terrain and fit
+    /// climate (The Weir, Stage 2) — the "pass the pre-built value" idiom
+    /// `hornvale_worldgen::climate_from` already established, so a caller
+    /// that must also thread `terrain`/`climate` into further derivation
+    /// (`Session::start`'s demography fit, the lab health sweep) builds them
+    /// ONCE and shares the same pair with this context, instead of `build`
+    /// quietly re-sculpting a second copy underneath it. Infallible: both
+    /// inputs are already validated by construction (the caller obtained
+    /// them from `terrain_of`/`climate_from` succeeding), so there is
+    /// nothing left here that can fail. Byte-identical to `build` whenever
+    /// `terrain` equals `terrain_of(world)` and `climate` equals
+    /// `climate_from(world, &terrain)`.
+    pub fn build_from(
+        world: &World,
+        terrain: &GeneratedTerrain,
+        climate: &GeneratedClimate,
+    ) -> LocaleContext {
         let index = NearestCellIndex::new(climate.geosphere());
         let globe_level = climate.geosphere().level();
-        let budget = StrangenessBudget::build(world.seed, &climate, &terrain);
-        Ok(LocaleContext {
+        let budget = StrangenessBudget::build(world.seed, climate, terrain);
+        LocaleContext {
             seed: world.seed,
-            climate,
-            terrain,
+            climate: climate.clone(),
+            terrain: terrain.clone(),
             index,
             globe_level,
             budget,
-        })
+        }
     }
 
     /// The canonical globe level (canonical-grid refinement depth).
@@ -456,7 +484,7 @@ impl LocaleContext {
     /// Corner-blend an externally-supplied per-cell `field` (over the canonical
     /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
     /// `hazards_at` use, generalized so a caller can sample a field this context
-    /// does not itself hold. The Quarry injects `worldgen::predator_pressure`
+    /// does not itself hold. The Quarry injects `worldgen::predator_pressure_from`
     /// (the carnivore-pressure field) and reads it here per room. Full precision
     /// (a compute-path read, not quantized). `None` for a room the canonical grid
     /// does not cover.

@@ -54,7 +54,7 @@ pub struct BookVolume {
     pub tongue_gaps: Vec<String>,
     /// C4 T4: one chorus section per placed people with a committed
     /// collective — the same ground truth composed through that culture's
-    /// epistemic account (`hornvale_worldgen::accounts_of`). The
+    /// epistemic account (`hornvale_worldgen::accounts_from`). The
     /// null-filter law (spec §4.1): an identity account's section
     /// reproduces `lines` byte-identically — see
     /// `identity_chorus_reproduces_the_gods_eye_lines`.
@@ -88,7 +88,7 @@ pub struct ChorusSection {
     pub margin: Vec<String>,
     /// C6 (The Doctrine): this culture's doctrine section, when its
     /// flagship's committed `cult-form` fact gates it in (the SOC-1 gate,
-    /// `hornvale_worldgen::doctrine_of`) — `None` for a folk-cult-form
+    /// `hornvale_worldgen::doctrine_from`) — `None` for a folk-cult-form
     /// culture. The folk registers above (`emic`/`margin`) are
     /// byte-unchanged by this campaign regardless of this field.
     pub doctrine: Option<DoctrineSection>,
@@ -96,7 +96,7 @@ pub struct ChorusSection {
 
 /// C6 (The Doctrine): one organized culture's doctrine section — the
 /// institution's second account (the priesthood's own composition of the
-/// SAME ground truth, run through `hornvale_worldgen::doctrine_of`'s four
+/// SAME ground truth, run through `hornvale_worldgen::doctrine_from`'s four
 /// preregistered deltas), split into four registers rather than the folk
 /// section's two: `tongue_taught_line` (C7: the in-tongue taught contrast),
 /// `emic` (the doctrine's own paragraph, with the `RevealedClaim`
@@ -133,14 +133,14 @@ pub struct DoctrineSection {
 
 /// C8 (The Diachronic Book): one epoch's Reckoning-of-Years section — the
 /// observation ledger at a fixed day `T`, read back through
-/// `hornvale_worldgen::{observations_of, ladder_of}` for every placed
+/// `hornvale_worldgen::{observations_from, ladder_from}` for every placed
 /// culture (see [`reckoning_epoch`]). `lines` is empty-arm-or-per-culture
 /// (never both): the empty arm (`"The sky keeps no dates to number."`)
 /// when the true event count at `T` is zero, else one run of lines per
 /// placed culture at `Counted`+ (the folk line, then — organized cultures
 /// only — the Numbered line, then — `Predictive` only — the prediction
 /// line). `margin` carries zero or more lines: one per placed culture with
-/// a live prediction crisis (`hornvale_worldgen::crisis_of`, placed-culture
+/// a live prediction crisis (`hornvale_worldgen::crisis_from`, placed-culture
 /// order), then — exactly when some culture's held knowledge falls short of
 /// the true count — the world-level shortfall sentence, last.
 /// type-audit: bare-ok(prose: heading), bare-ok(prose: lines), bare-ok(prose: margin)
@@ -153,7 +153,7 @@ pub struct ReckoningEpoch {
     /// order) — see the struct doc.
     pub lines: Vec<String>,
     /// `margin` carries zero or more lines: one per placed culture with a
-    /// live prediction crisis (`hornvale_worldgen::crisis_of`,
+    /// live prediction crisis (`hornvale_worldgen::crisis_from`,
     /// placed-culture order), then — exactly when some culture's held
     /// knowledge falls short of the true count — the world-level shortfall
     /// sentence, last.
@@ -272,9 +272,12 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 /// globe ~85 times before this threading, once after. On a world whose
 /// committed terrain pins fail to parse (malformed save data a built world
 /// cannot actually produce), renders an empty volume — the same
-/// silent-empty posture `hornvale_worldgen::accounts_of` already takes on
+/// silent-empty posture `hornvale_worldgen::accounts_from` already takes on
 /// the identical failure, rather than panicking on state a normal build
 /// never reaches.
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `render_volume_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn render_volume(world: &World) -> BookVolume {
     let empty = || BookVolume {
         seed: world.seed.0,
@@ -599,7 +602,7 @@ fn chorus_sections_from(
 
 // ---------------------------------------------------------------------
 // C8, The Diachronic Book: the Reckoning of Years — the Book's time axis.
-// Pure derivation over `hornvale_worldgen::{observations_of, ladder_of}`
+// Pure derivation over `hornvale_worldgen::{observations_from, ladder_from}`
 // (T1); zero new draws, facts, or save-format state. See `ReckoningEpoch`'s
 // doc for the per-epoch shape and the plan's Preregistered block for every
 // closed string below (frozen before measurement).
@@ -700,8 +703,11 @@ fn reckoning_epochs_from(
 /// this same function. Sculpts once (`terrain_of`+`climate_from`) and
 /// delegates to [`reckoning_at_from`] — a build failure on a normal world's
 /// committed pins is unreachable, so this panics on it (the same posture
-/// `reckoning_epoch`'s own `observations_of`/`ladder_of` calls already took
+/// `reckoning_epoch`'s own `observations_from`/`ladder_from` calls already took
 /// before The Shuttle threaded them).
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `reckoning_at_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
     let terrain = hornvale_worldgen::terrain_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable terrain: {e}"));
@@ -737,14 +743,14 @@ pub fn reckoning_at_from(
 /// The true count of eclipse events to `at` (spec §3.4): every syzygy in
 /// `[0, at]`, solar AND lunar, regardless of any culture's witnessing
 /// capability — the world's own physical record, as opposed to
-/// [`hornvale_worldgen::observations_of`]'s per-culture WITNESSED subset.
+/// [`hornvale_worldgen::observations_from`]'s per-culture WITNESSED subset.
 /// The margin law compares each culture's held count against this. A
 /// tier-0 constant-sun world ([`hornvale_worldgen::Sky::Constant`]) has no
 /// calendar and so no eclipses ever — honestly zero, never a panic, so
 /// `render_volume` stays total over every world `hornvale_worldgen` can
 /// build (not just the Book's own `SkyChoice::Generated` worlds); the
 /// zero short-circuits [`reckoning_epoch`] straight to the empty arm
-/// before it ever calls `observations_of`/`ladder_of` (both of which
+/// before it ever calls `observations_from`/`ladder_from` (both of which
 /// themselves require a Generated sky).
 fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
@@ -944,7 +950,7 @@ fn reckoning_crisis_margin_line(
 /// ledger #3) -- `None` for a folk-only culture, matching every other
 /// doctrine-gated render path's existing convention. `has_doctrine` is
 /// always `true` at every real call site in this file today (a
-/// `Predictive`-rung culture always has a doctrine, by `ladder_of`'s own
+/// `Predictive`-rung culture always has a doctrine, by `ladder_from`'s own
 /// gate), so the `false` arm is unreachable through any live world -- kept
 /// and tested anyway (see the tests above), the same defensive posture
 /// `reckoning_culture_lines`'s own `Unknown` arm already keeps.
@@ -1672,6 +1678,9 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 ///
 /// [`RevealedClaim`]: ConflictState::RevealedClaim
 /// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `esoteric_lines_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec<String> {
     let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
         return Vec::new();
@@ -1684,7 +1693,7 @@ pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec
 
 /// [`esoteric_lines`], threaded: takes ALREADY-BUILT terrain/climate instead
 /// of re-sculpting the globe. On a sculpt failure, [`esoteric_lines`] mirrors
-/// `hornvale_worldgen::accounts_of`'s own posture on the same failure — an
+/// `hornvale_worldgen::accounts_from`'s own posture on the same failure — an
 /// empty `Vec`, never a panic.
 /// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
 pub fn esoteric_lines_from(
@@ -2039,17 +2048,20 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 /// `"earth"`) — a book-layer carving that never appears as a committed
 /// `is-a` object, so a chorus emic line naming it would otherwise parse as
 /// `UnknownComplement`. The closed set stays derived from the world:
-/// walking `accounts_of(world)` rather than hardcoding the carving text.
+/// walking `accounts_from(world)` rather than hardcoding the carving text.
 /// Sculpts once (`terrain_of` + `climate_from`) and delegates to
 /// [`parse_context_from`] on success — the vessel session's `write` verb
 /// (The Shuttle) threads an already-built terrain/climate instead of
 /// paying for this sculpt on every turn. On a sculpt failure, mirrors
-/// `hornvale_worldgen::accounts_of`'s own posture: only the chorus-derived
+/// `hornvale_worldgen::accounts_from`'s own posture: only the chorus-derived
 /// complements are absent (an empty voice list), never the whole set — the
 /// two pure-ledger loops (`is-a`, `instance-of`) still run, so a world
 /// whose terrain pins fail to parse still parses every Common line it
 /// would have accepted before that failure, just without the chorus
 /// vocabulary.
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `parse_context_with_voices`.
+#[allow(clippy::disallowed_methods)]
 pub fn parse_context(world: &World) -> ParseContext {
     let sculpted = hornvale_worldgen::terrain_of(world)
         .ok()
@@ -2065,8 +2077,7 @@ pub fn parse_context(world: &World) -> ParseContext {
     parse_context_with_voices(world, voices)
 }
 
-/// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate
-/// (`hornvale_worldgen::accounts_from` instead of `accounts_of`) instead of
+/// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate instead of
 /// re-sculpting the globe. Success path only — a caller already holding a
 /// terrain/climate pair has, by construction, a sculpt that succeeded, so
 /// this never takes the degraded (empty-voices) arm [`parse_context`]
@@ -2315,7 +2326,7 @@ pub enum ChorusLine {
 /// sentence shapes plus the truth margin, which carries a count rather
 /// than a classification clause, so it cannot reuse `ParsedLine`). Carries
 /// no ground-fact recovery: the section states counts drawn from
-/// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
+/// `hornvale_worldgen::{observations_from, ladder_from}`, not a `chorus_ground`
 /// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
 /// truth walk has nothing here to check.
 /// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count), bare-ok(prose: Crisis.autonym), bare-ok(diagnostic-value: Crisis.taught_day), bare-ok(diagnostic-value: Crisis.actual_day), bare-ok(prose: Doctrine.autonym), bare-ok(flag: Doctrine.crisis_live)
@@ -2823,6 +2834,11 @@ mod tests {
     //! nothing and the assertion saw an empty vec — which reads as "the
     //! esoteric law stopped working" rather than "the planet was renamed".
     //! Fix the key, never the behaviour.
+    //!
+    //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    //! points directly to build its own world state, once per test — the
+    //! sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
 
     fn constant(seed: u64) -> World {
@@ -3000,7 +3016,7 @@ mod tests {
 
     /// C3 T3's self-statement law (spec §5): every placed people's autonym
     /// and own-kind concept are Steeped by construction (worldgen's
-    /// `exposure_of`), so every placed people's tongue self-statement
+    /// `exposure_from`), so every placed people's tongue self-statement
     /// renders — no gaps. C7 T3 adds a second line per placed people (the
     /// emic world-statement — `every_people_states_the_world_in_its_tongue`
     /// pins that law directly), so `tongue_lines` now carries TWO lines per
@@ -3528,8 +3544,11 @@ mod tests {
         let grammar = hornvale_language::tongue_grammar(&world.seed, "goblin", &ph);
         let morph = hornvale_worldgen::tongue_morphology_of(&world, "goblin")
             .expect("goblin morphology derives at seed 1");
-        let noun_class_of =
-            |concept: &str| hornvale_worldgen::noun_class_of(&world, "goblin", concept);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        let noun_class_of = |concept: &str| {
+            hornvale_worldgen::noun_class_from(&world, "goblin", concept, &terrain, &climate)
+        };
         let mut exposures = BTreeMap::new();
         exposures.insert("planet".to_string(), ExposureClass::Steeped);
         let lexicon = build_lexicon(
@@ -3878,7 +3897,10 @@ mod tests {
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
             let vol = render_volume(&world);
-            for voice in hornvale_worldgen::accounts_of(&world) {
+            let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+            let climate =
+                hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+            for voice in hornvale_worldgen::accounts_from(&world, &terrain, &climate) {
                 for entry in &voice.account.entries {
                     let Disposition::Explained {
                         schema,
@@ -3943,11 +3965,11 @@ mod tests {
 
     /// Task 4, the null-filter law extended: the identity account (used by
     /// `identity_chorus_reproduces_the_gods_eye_lines`) never runs through
-    /// `explain` (only `accounts_of` calls it), so its chorus section must
+    /// `explain` (only `accounts_from` calls it), so its chorus section must
     /// carry none of the six frames' distinguishing text — and
     /// `render_volume`'s god's-eye `lines` (never touched by C5's causal
     /// filter at all — `explain` only ever runs inside `voice_section` via
-    /// `accounts_of`) stay exactly as C4 shipped them.
+    /// `accounts_from`) stay exactly as C4 shipped them.
     #[test]
     fn the_null_volume_is_untouched() {
         let world = generated(1);
@@ -4106,8 +4128,13 @@ mod tests {
         for seed in 1u64..=5 {
             let world = generated(seed);
             let vol = render_volume(&world);
-            for voice in hornvale_worldgen::accounts_of(&world) {
-                let Some(doctrine) = hornvale_worldgen::doctrine_of(&world, &voice.kind) else {
+            let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+            let climate =
+                hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+            for voice in hornvale_worldgen::accounts_from(&world, &terrain, &climate) {
+                let Some(doctrine) =
+                    hornvale_worldgen::doctrine_from(&world, &voice.kind, &terrain, &climate)
+                else {
                     continue;
                 };
                 let mut contested_here = 0usize;
@@ -5537,12 +5564,16 @@ mod tests {
         // arm, no shortfall. The solar-only pair (goblin, hobgoblin) hold only
         // 49, a shortfall that fires the margin.
         let world = generated(2);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
         let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&world, at), 81);
 
         for kind in ["bugbear", "kobold"] {
-            let (rung, _) = hornvale_worldgen::ladder_of(&world, kind, at).unwrap();
-            let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
+            let (rung, _) =
+                hornvale_worldgen::ladder_from(&world, kind, at, &terrain, &climate).unwrap();
+            let obs =
+                hornvale_worldgen::observations_from(&world, kind, at, &terrain, &climate).unwrap();
             assert_eq!(rung, hornvale_worldgen::LadderRung::Predictive);
             assert_eq!(
                 obs.events.len(),
@@ -5555,8 +5586,10 @@ mod tests {
             );
         }
         for kind in ["goblin", "hobgoblin"] {
-            let (rung, _) = hornvale_worldgen::ladder_of(&world, kind, at).unwrap();
-            let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
+            let (rung, _) =
+                hornvale_worldgen::ladder_from(&world, kind, at, &terrain, &climate).unwrap();
+            let obs =
+                hornvale_worldgen::observations_from(&world, kind, at, &terrain, &climate).unwrap();
             assert_eq!(
                 obs.events.len(),
                 49,
@@ -5576,11 +5609,15 @@ mod tests {
         // seed 3: the same shape at a smaller scale (true 53; the solar-only
         // pair holds 32, a shortfall that fires the margin).
         let seed3 = generated(3);
+        let terrain3 = hornvale_worldgen::terrain_of(&seed3).expect("terrain reconstructs");
+        let climate3 = hornvale_worldgen::climate_from(&seed3, &terrain3).expect("climate derives");
         let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&seed3, at3), 53);
         for kind in ["goblin", "hobgoblin"] {
-            let (rung, _) = hornvale_worldgen::ladder_of(&seed3, kind, at3).unwrap();
-            let obs = hornvale_worldgen::observations_of(&seed3, kind, at3).unwrap();
+            let (rung, _) =
+                hornvale_worldgen::ladder_from(&seed3, kind, at3, &terrain3, &climate3).unwrap();
+            let obs = hornvale_worldgen::observations_from(&seed3, kind, at3, &terrain3, &climate3)
+                .unwrap();
             assert_eq!(
                 obs.events.len(),
                 32,

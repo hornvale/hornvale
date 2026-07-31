@@ -265,7 +265,7 @@ pub struct Hazards {
     /// COLD — how far below.
     pub cold: f64,
     /// PREDATOR — the ambient density of carnivores (The Quarry, the first
-    /// BIOTIC hazard: `worldgen::predator_pressure`, injected into
+    /// BIOTIC hazard: `worldgen::predator_pressure_from`, injected into
     /// `LocaleTerrain`). `0` where no predators range.
     pub predator: f64,
 }
@@ -480,13 +480,13 @@ pub trait Terrain {
 
     /// The cell's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
     /// prey-base biomass a HUNTER can eat there, the anti-symmetric dual of the
-    /// predator hazard (`worldgen::prey_pressure`). A creature's `food_value`
-    /// dots this against its `ANIMAL_PREY` diet weight, so a carnivore is drawn
-    /// up the prey gradient. The DEFAULT is `0.0` (a prey-empty cell) — so
-    /// planted/synthetic test terrains have no prey field and a carnivore reads
-    /// only the ordinary productivity unless a scenario plants prey; a live
-    /// `LocaleTerrain` OVERRIDES it with the injected `prey_pressure` field. A
-    /// slow field, so it takes no `day`.
+    /// predator hazard (`worldgen::prey_pressure_from`). A creature's
+    /// `food_value` dots this against its `ANIMAL_PREY` diet weight, so a
+    /// carnivore is drawn up the prey gradient. The DEFAULT is `0.0` (a
+    /// prey-empty cell) — so planted/synthetic test terrains have no prey
+    /// field and a carnivore reads only the ordinary productivity unless a
+    /// scenario plants prey; a live `LocaleTerrain` OVERRIDES it with the
+    /// injected prey-pressure field. A slow field, so it takes no `day`.
     /// type-audit: bare-ok(ratio: return)
     fn prey_value(&self, _room: &RoomAddr) -> f64 {
         0.0
@@ -586,13 +586,13 @@ pub struct LocaleTerrain<'a> {
     /// `None` falls back to the fractional-day sun.
     calendar: Option<&'a hornvale_astronomy::Calendar>,
     /// The world's predator-pressure field (The Quarry — `worldgen::
-    /// predator_pressure`), injected here (a domain/window can't reach up to
-    /// demography); `None` → no PREDATOR hazard (throwaway reads / no field).
+    /// predator_pressure_from`), injected here (a domain/window can't reach up
+    /// to demography); `None` → no PREDATOR hazard (throwaway reads / no field).
     predator: Option<&'a hornvale_kernel::CellMap<f64>>,
-    /// The world's prey-pressure field (The Teeth — `worldgen::prey_pressure`),
-    /// the dual of `predator`, injected the same way; `None` → no prey draw
-    /// (throwaway reads / no field), so a carnivore reads only ordinary
-    /// productivity.
+    /// The world's prey-pressure field (The Teeth — `worldgen::
+    /// prey_pressure_from`), the dual of `predator`, injected the same way;
+    /// `None` → no prey draw (throwaway reads / no field), so a carnivore
+    /// reads only ordinary productivity.
     prey: Option<&'a hornvale_kernel::CellMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
     /// `built_rooms`), injected the same way (a domain/window can't reach up
@@ -2228,7 +2228,7 @@ const HUNGER: DriveParams = DriveParams {
 const EAT_THRESHOLD: f64 = 0.15;
 
 /// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
-/// strongly a carnivore is drawn up the `prey_pressure` gradient, per unit of
+/// strongly a carnivore is drawn up the prey-pressure gradient, per unit of
 /// `ANIMAL_PREY` diet weight. The prey term is ADDITIVE (it only raises
 /// `food_value`), so a creature that already eats where it stands keeps doing so
 /// — the current settled peoples are byte-identical regardless of this value
@@ -3373,7 +3373,7 @@ pub fn affect_of_memo_occupied(
 
 /// The per-tick ALARM field (The Alarm) — fear-contagion as a derived,
 /// order-independent field over the frozen population, the vessel's dynamic
-/// sibling of `worldgen::predator_pressure`. For each creature that is
+/// sibling of `worldgen::predator_pressure_from`. For each creature that is
 /// **primary-afraid** (its own Danger drive is active — `affect_of` reads
 /// `object == Some(Danger)` with `arousal ≥ DANGER_ACT`), it stamps the
 /// emitter's felt-threat magnitude onto its cell and each `neighbors()` cell
@@ -4756,24 +4756,29 @@ pub fn derive_npcs(
         .collect()
 }
 
-/// Derive up to `k` WILD NPCs (The Wilding) — beast agents, one per distinct
-/// mobile-beast concentration (`worldgen::wild_concentrations`: a herd, a lair).
-/// A wild NPC is the same `Npc` a settlement produces — its home is the
-/// concentration's cell, its traits its biosphere's, its psyche the DEFAULT
-/// (beasts carry no `psyche_registry` entry, so the `.unwrap_or` fallbacks apply,
-/// exactly as they already do for a settlement of a non-peopled species). The
-/// threat niche derives (The Bane/Quarry) with LIVE predator dread, so a
-/// herbivore beast finally FEARS predator ground — The Quarry, waking. Appended
-/// to the peopled `derive_npcs` output; genesis untouched (the session's ledger
-/// clone only, like `derive_npcs`).
-/// type-audit: bare-ok(count: k)
+/// Derive WILD NPCs (The Wilding) — beast agents, one per distinct
+/// mobile-beast `concentrations` entry (`worldgen::wild_concentrations_from`:
+/// a herd, a lair). A wild NPC is the same `Npc` a settlement produces — its
+/// home is the concentration's cell, its traits its biosphere's, its psyche
+/// the DEFAULT (beasts carry no `psyche_registry` entry, so the `.unwrap_or`
+/// fallbacks apply, exactly as they already do for a settlement of a
+/// non-peopled species). The threat niche derives (The Bane/Quarry) with LIVE
+/// predator dread, so a herbivore beast finally FEARS predator ground — The
+/// Quarry, waking. Appended to the peopled `derive_npcs` output; genesis
+/// untouched (the session's ledger clone only, like `derive_npcs`).
+///
+/// Takes the already-fit `concentrations` (a caller's
+/// `wild_concentrations_from(wc, report, k)`) rather than fitting the
+/// coexistence stack itself — since The Weir (Stage 1b), the caller shares
+/// ONE demography report across the predator/prey/wild fields instead of
+/// this minting step re-running its own fourth fit.
+/// type-audit: bare-ok(identifier-text: concentrations)
 pub fn derive_wild_npcs(
     world: &World,
     ctx: &LocaleContext,
     ledger: &mut Ledger,
-    k: usize,
+    concentrations: Vec<(String, [f64; 3])>,
 ) -> Vec<Npc> {
-    let concentrations = hornvale_worldgen::wild_concentrations(world, k).unwrap_or_default();
     let biosphere = hornvale_species::biosphere_registry();
     let psyche = hornvale_species::psyche_registry();
     concentrations
@@ -5361,8 +5366,24 @@ impl Occupancy {
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
     use hornvale_kernel::{ConceptRegistry, Seed};
+
+    /// Test-only helper: fits the coexistence stack once and reads the `k`
+    /// densest wild concentrations — the prelude `derive_wild_npcs` used to
+    /// run internally (The Weir, Stage 1b), now the caller's job.
+    fn wild_concentrations_of(world: &World, k: usize) -> Vec<(String, [f64; 3])> {
+        let wc = hornvale_worldgen::WorldComponents::assemble().unwrap();
+        let terrain = hornvale_worldgen::terrain_of(world).unwrap();
+        let climate = hornvale_worldgen::climate_from(world, &terrain).unwrap();
+        let report =
+            hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate).unwrap();
+        hornvale_worldgen::wild_concentrations_from(&wc, &report, k)
+    }
 
     /// A thin positional adapter over [`arbitrate`] for the tests (The
     /// Disposition): it packs the four loose disposition scalars into a
@@ -6941,7 +6962,7 @@ mod tests {
     fn derive_wild_npcs_mint_beast_agents_with_defaulted_psyche() {
         // THE WILDING: the wild roster is minted from the world's beast
         // concentrations, NOT its peoples. A beast is, by construction, a
-        // species whose `social_form` is not `Settled` (`wild_concentrations`'s
+        // species whose `social_form` is not `Settled` (`wild_concentrations_from`'s
         // `is_mobile_beast`). On today's seed-42 roster every such wild kind
         // also carries no `psyche_registry` entry, so every wild NPC takes the
         // DEFAULT psyche dials — steady boldness, mid latency/horizon — while
@@ -6962,7 +6983,8 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, 4);
+        let concentrations = wild_concentrations_of(&world, 4);
+        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, concentrations);
         assert!(
             !wild.is_empty() && wild.len() <= 4,
             "seed 42 mints between 1 and 4 wild beasts, got {}",
@@ -7012,7 +7034,8 @@ mod tests {
         );
         // Deterministic: the same world mints the same beast roster.
         let mut ledger2 = world.ledger.clone();
-        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, 4);
+        let concentrations2 = wild_concentrations_of(&world, 4);
+        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, concentrations2);
         let species: Vec<&str> = wild.iter().map(|n| n.species.as_str()).collect();
         let species2: Vec<&str> = wild2.iter().map(|n| n.species.as_str()).collect();
         assert_eq!(species, species2, "the wild roster is deterministic");
@@ -7039,7 +7062,8 @@ mod tests {
         let mut ledger = world.ledger.clone();
         let home = hornvale_settlement::village_info(&world).unwrap().id;
         let mut npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
-        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, 4));
+        let concentrations = wild_concentrations_of(&world, 4);
+        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, concentrations));
         assert!(!npcs.is_empty(), "the probe world derives a population");
         for n in &npcs {
             assert!(

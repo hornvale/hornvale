@@ -306,24 +306,54 @@ impl<'w> Session<'w> {
     /// Begin a possession: build the locale context, mint the flagship
     /// agent, absorb the first projection, and return the opening text.
     /// type-audit: bare-ok(prose: return)
+    // Named construction site (decision 0092): the motivating fix — sculpts/
+    // fits exactly ONCE per session (The Weir, Stage 2), threaded below.
+    #[allow(clippy::disallowed_methods)]
     pub fn start(
         world: &'w World,
         opts: &PossessOpts,
     ) -> Result<(Session<'w>, String), VesselError> {
-        let ctx = LocaleContext::build(world).map_err(VesselError::Locale)?;
-        // Sculpt the globe once (The Shuttle): every book-reading verb
-        // (`write`, `consult`) threads this pair through the worldgen/book
-        // `_from` readout family instead of re-sculpting terrain+climate on
-        // every turn. `None` on a world whose committed terrain pins fail to
-        // parse — the same failure `LocaleContext::build` above would already
-        // have surfaced, so in practice this always succeeds once `ctx` does;
-        // still built defensively rather than `.expect`ed, matching the
-        // `calendar`/`predator`/`prey` `Option` posture below.
-        let terrain = hornvale_worldgen::terrain_of(world).ok();
-        let climate = terrain
-            .as_ref()
-            .and_then(|t| hornvale_worldgen::climate_from(world, t).ok());
+        // ONE derivation block (The Weir, Stage 2): terrain, climate, the
+        // locale context, the species roster and the demography report are
+        // each derived EXACTLY ONCE here, then threaded into everything
+        // below — `LocaleContext::build_from`, the predator/prey pressures,
+        // the wild-NPC concentration fit — instead of a consumer quietly
+        // re-sculpting or re-fitting its own copy. Terrain/climate failure
+        // is a hard failure for `start`, exactly the failure
+        // `LocaleContext::build` used to surface on this identical call
+        // (`build` is still the right entry point for a caller that has not
+        // already sculpted its own pair — see its doc).
+        let terrain = hornvale_worldgen::terrain_of(world)
+            .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
+        let climate = hornvale_worldgen::climate_from(world, &terrain)
+            .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
+        let ctx = LocaleContext::build_from(world, &terrain, &climate);
+        // A cheap failure path (a settlement/species lookup) — resolved
+        // before the expensive coexistence-stack fit below (Task 3 review
+        // carry-over), so a settlement-less or unspecied world fails fast
+        // rather than paying for a fit `start` would then discard.
         let agent = mint_flagship(world, &ctx)?;
+        // The species roster and the demography report, assembled/fit ONCE
+        // per session (The Weir, Stage 1b/2): shared below by `predator`/
+        // `prey` and by the wild-NPC derivation instead of each
+        // independently re-running the coexistence-stack fit over the same
+        // `(world, wc, terrain, climate)`. `None` whenever `wc` or the fit
+        // itself fails — the same `Option` posture as `calendar`/
+        // `predator`/`prey` below.
+        let wc = hornvale_worldgen::WorldComponents::assemble().ok();
+        let report = match wc.as_ref() {
+            Some(wc) => {
+                hornvale_worldgen::demography_report_from(world, wc, &terrain, &climate).ok()
+            }
+            None => None,
+        };
+        // Wrapped in `Some` from here on: both derivations above already
+        // succeeded (the `?`s), so `Session::terrain`/`Session::climate`
+        // are `Option` only for the field's own defensive posture (see its
+        // doc), never because a second, independent derivation could fail
+        // where this one didn't.
+        let terrain = Some(terrain);
+        let climate = Some(climate);
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
         // Idempotent (same def every session): never conflicts, since
@@ -376,20 +406,39 @@ impl<'w> Session<'w> {
         // finally fears predator ground (The Quarry, live). Off only for the
         // settled-population narration unit tests that isolate the peopled path.
         if opts.wild_agents {
-            npcs.extend(derive_wild_npcs(world, &ctx, &mut ledger, WILD_COUNT));
+            // The wild-concentration roster, from the same shared `report`
+            // (The Weir, Stage 1b) rather than a fourth independent fit.
+            let concentrations = match (wc.as_ref(), report.as_ref()) {
+                (Some(wc), Some(report)) => {
+                    hornvale_worldgen::wild_concentrations_from(wc, report, WILD_COUNT)
+                }
+                _ => Vec::new(),
+            };
+            npcs.extend(derive_wild_npcs(world, &ctx, &mut ledger, concentrations));
         }
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
             .and_then(|sky| sky.calendar().cloned());
-        // Compute the predator-pressure field once (The Quarry), so the danger
-        // drive senses carnivore territory. A demography fit — bounded to session
-        // start; `None` on failure (danger simply loses its PREDATOR axis).
-        let predator = hornvale_worldgen::predator_pressure(world).ok();
+        // The predator-pressure field (The Quarry), so the danger drive
+        // senses carnivore territory — from the shared `report` above (The
+        // Weir, Stage 1b) rather than its own fit. `None` on a missing
+        // input (danger simply loses its PREDATOR axis).
+        let predator = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+            (Some(wc), Some(terrain), Some(report)) => Some(
+                hornvale_worldgen::predator_pressure_from(wc, terrain, report),
+            ),
+            _ => None,
+        };
         // The prey-pressure field (The Teeth), so a carnivore's hunger senses
-        // prey territory — the dual of the predator field, same one-shot fit.
-        let prey = hornvale_worldgen::prey_pressure(world).ok();
+        // prey territory — the dual of the predator field, same shared fit.
+        let prey = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+            (Some(wc), Some(terrain), Some(report)) => {
+                Some(hornvale_worldgen::prey_pressure_from(wc, terrain, report))
+            }
+            _ => None,
+        };
         // The settlement-territory set (The Threshold, task 5b), so a room a
         // settlement actually occupies reads as built and can draw a real
         // hearth — the real answer Task 5's arming had nothing to read before
