@@ -4858,6 +4858,41 @@ fn independently_steeped_concepts(
         }
     }
 
+    // The STAPLE of every settled cell (The Watershed), re-derived here the
+    // same way the biome and variant above are: independently of
+    // `exposure_of`, which is this function's whole reason for existing.
+    //
+    // Steeped only where the cell's subsistence is Farming. A people that
+    // fishes, herds or forages has met the plant and never named it as a
+    // staple -- an EXPERIENTIAL gap, not a perceptual one -- so the crop must
+    // NOT be steeped by merely growing where they live. Subsistence is read
+    // per cell, so a people farming one valley and fishing another is steeped
+    // in the valley's grain, and one Farming cell is enough: the rule never
+    // downgrades a crop another cell already steeped.
+    for &cell in &settled {
+        let expr = v.climate().biome_expr_at(cell);
+        let Some(crop) = hornvale_climate::crop_at(
+            expr.formation,
+            v.climate().mean_temperature_at(cell),
+            v.climate().moisture_at(cell),
+        ) else {
+            continue;
+        };
+        let coastal = v
+            .terrain()
+            .geosphere()
+            .neighbors(cell)
+            .iter()
+            .any(|n| v.terrain().is_ocean(*n));
+        if hornvale_culture::subsistence(
+            hornvale_worldgen::biome_class(v.climate().biome_at(cell)),
+            coastal,
+        ) == hornvale_culture::Subsistence::Farming
+        {
+            steeped.insert(crop.concept_name().to_string());
+        }
+    }
+
     let own_kind = format!("{species}-kind");
     if v.world().registry.concept(&own_kind).is_some() {
         steeped.insert(own_kind);
@@ -6697,7 +6732,6 @@ mod tests {
     /// mutation test that has stopped mutating. It comes back with the staple
     /// repair, and both halves must be re-derived then.
     #[test]
-    #[ignore = "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not learned The Watershed's staple Steeped rules, so this mutation test's Flag(true) baseline is false and the mutation would prove nothing. Repair owes a regen — see the doc comment"]
     fn exposure_sound_reports_false_when_the_toponymic_gates_are_removed() {
         const TOPONYMIC: [&str; 7] = [
             "river", "ford", "hill", "valley", "marsh", "spring", "island",
@@ -6718,7 +6752,7 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford", "hill", "valley", "spring"],
+            vec!["river", "ford", "hill", "marsh", "spring"],
             "seed 7 goblins must root these five toponymic concepts for this test to bite"
         );
         for concept in &rooted {

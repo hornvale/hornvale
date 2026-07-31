@@ -168,15 +168,11 @@ const EXPECTED_UNTOKENISED: [&str; 18] = [
     "timekeeper: reads the run.json `make ci` writes; not a standalone test",
 ];
 
-const STALE_SECOND_OPINION: [&str; 2] = [
-    "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not \
-     learned The Watershed's staple Steeped rules, so exposure-sound reads false on every \
-     world where a species is placed. The census is current; the metric is not. Repair owes \
-     a regen — see the doc comment",
-    "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not \
-     learned The Watershed's staple Steeped rules, so this mutation test's Flag(true) \
-     baseline is false and the mutation would prove nothing. Repair owes a regen — see the \
-     doc comment",
+const STALE_SECOND_OPINION: [&str; 1] = [
+    "stale-second-opinion: independently_steeped_concepts is REPAIRED (it learned the staple \
+     rules) and exposure-sound now reads true live at every seed checked. This test asserts \
+     over the committed census FIXTURE, which was authored against the broken duplicate, so \
+     it awaits the regen alone. Un-ignore in the commit that lands the regen",
 ];
 
 #[test]

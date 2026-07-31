@@ -1118,7 +1118,7 @@ fn lexicon_is_regular_for_both_species() {
 /// world is misclassifying anything. Only the lab's copy of the rulebook is
 /// out of date.
 #[test]
-#[ignore = "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not learned The Watershed's staple Steeped rules, so exposure-sound reads false on every world where a species is placed. The census is current; the metric is not. Repair owes a regen — see the doc comment"]
+#[ignore = "stale-second-opinion: independently_steeped_concepts is REPAIRED (it learned the staple rules) and exposure-sound now reads true live at every seed checked. This test asserts over the committed census FIXTURE, which was authored against the broken duplicate, so it awaits the regen alone. Un-ignore in the commit that lands the regen"]
 fn lexicon_is_exposure_sound_for_both_species() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
