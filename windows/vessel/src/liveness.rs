@@ -1641,15 +1641,119 @@ pub struct Resolution {
     pub affect: Affect,
 }
 
+/// A single-slot, key-validated memo for a drive's [`Drive::affordance`] —
+/// the shape both [`Thirst`] and [`Hunger`] need (the-waymark, Task 6b,
+/// ledger #8). Within one [`arbitrate`] call, `serviceability` is invoked
+/// once per candidate action across (at least) the `grab_utility`/`utility`
+/// fold, always against the SAME `view`/`budget` — the fold's candidates
+/// never change what the drive's OWN affordance is, only which candidate the
+/// caller compares it to. Naively, `Thirst::affordance`/`Hunger::affordance`
+/// re-derive that identical answer (an uncached `plan_to_water` search, or a
+/// `forage_step` neighbour scan) once per candidate: measured at ~41 real
+/// `plan_to_water` searches/tick on the health battery (Task 6, ledger #8),
+/// almost all of them this same-view repetition.
+///
+/// Caching the LAST `(key, result)` pair collapses that to one real search
+/// per view. The key is validated on every read: a key that differs from
+/// last time (a genuinely different view — e.g. a test that deliberately
+/// reuses one drive instance across several scenarios, as
+/// `affect_reads_each_circumplex_region` does) simply misses and recomputes,
+/// so the memo can only ever SAVE a search, never answer a stale one. This
+/// is the "once per `arbitrate` call" half of the hoist (its sibling is
+/// [`Social`]'s `home_step`, precomputed once at construction, Task 4) — no
+/// `Drive`-trait signature change, no altered semantics for any caller.
+#[derive(Debug)]
+struct AffordanceMemo<K> {
+    /// The last `(key, answer)` computed, if any.
+    slot: std::cell::RefCell<Option<(K, Option<Action>)>>,
+}
+
+impl<K> Default for AffordanceMemo<K> {
+    // Hand-rolled rather than `#[derive(Default)]`: the derive would add a
+    // spurious `K: Default` bound (neither `ThirstKey` nor `RoomAddr`, the
+    // two keys in use, implements it) even though an empty slot never needs
+    // one.
+    fn default() -> Self {
+        Self {
+            slot: std::cell::RefCell::new(None),
+        }
+    }
+}
+
+impl<K: PartialEq> AffordanceMemo<K> {
+    /// The cached answer for `key`, computing (and caching) it via `compute`
+    /// on a miss — including the first read, when the slot is empty.
+    fn get(&self, key: K, compute: impl FnOnce() -> Option<Action>) -> Option<Action> {
+        if let Some((k, v)) = self.slot.borrow().as_ref()
+            && *k == key
+        {
+            return v.clone();
+        }
+        let value = compute();
+        *self.slot.borrow_mut() = Some((key, value.clone()));
+        value
+    }
+}
+
+/// The fields [`Thirst::affordance`] actually reads from a [`Perceived`]
+/// view, plus the routing `budget` — the [`AffordanceMemo`] key. Two calls
+/// with an identical key are guaranteed to answer identically (`affordance`
+/// is a pure function of exactly these), so caching on it can never be wrong.
+#[derive(Clone, Debug, PartialEq)]
+struct ThirstKey {
+    /// The creature's current room.
+    position: RoomAddr,
+    /// The believed-water branch `affordance` takes.
+    believed_water: Option<RoomAddr>,
+    /// The route-avoid set the A*/explore search reads.
+    believed_hazard: std::collections::BTreeSet<RoomAddr>,
+    /// The exploration step the ignorant branch reads.
+    explore_step: Option<RoomAddr>,
+    /// The search budget.
+    budget: usize,
+}
+
+impl ThirstKey {
+    /// The key for `view`/`budget` — every field [`Thirst::affordance`]
+    /// reads, so an unchanged key guarantees an unchanged answer.
+    fn of(view: &Perceived, budget: usize) -> Self {
+        Self {
+            position: view.position.clone(),
+            believed_water: view.believed_water.clone(),
+            believed_hazard: view.believed_hazard.clone(),
+            explore_step: view.explore_step.clone(),
+            budget,
+        }
+    }
+}
+
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
 /// `drive_at` fold surfaced on the view; `affordance` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
 /// the same `DriveParams`/`SUSTENANCE` the fold uses.
 /// type-audit: bare-ok(return)
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct Thirst {
     /// The homeostatic parameters (rise/act) governing this drive.
     pub params: DriveParams,
+    /// The-waymark, Task 6b (ledger #8): [`AffordanceMemo`] over one
+    /// `arbitrate` call's fixed view/budget — see that type's own doc for
+    /// why this can only ever save a search, never answer a stale one.
+    memo: AffordanceMemo<ThirstKey>,
+}
+
+impl Thirst {
+    /// A fresh thirst drive over `params`, with an empty memo — the
+    /// constructor every call site uses (`decide_step` and its stateless
+    /// siblings build a new `Thirst` per call, never carrying one tick to
+    /// tick), so the memo always starts cold, exactly as a bare struct
+    /// literal would have.
+    pub fn new(params: DriveParams) -> Self {
+        Self {
+            params,
+            memo: AffordanceMemo::default(),
+        }
+    }
 }
 
 impl Drive for Thirst {
@@ -1665,14 +1769,15 @@ impl Drive for Thirst {
         self.params.rise * horizon * ANTICIPATION_HORIZON_DAYS
     }
     fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
-        match &view.believed_water {
-            // Knows water: the first step of the A* plan toward it (None when
-            // that known water is unreachable within budget).
-            Some(w) => plan_to_water(&view.position, w, budget, &view.believed_hazard)
-                .and_then(|pl| pl.into_iter().next()),
-            // Ignorant: the exploration step (None when nowhere new to look).
-            None => view.explore_step.clone().map(Action::MoveTo),
-        }
+        self.memo
+            .get(ThirstKey::of(view, budget), || match &view.believed_water {
+                // Knows water: the first step of the A* plan toward it (None when
+                // that known water is unreachable within budget).
+                Some(w) => plan_to_water(&view.position, w, budget, &view.believed_hazard)
+                    .and_then(|pl| pl.into_iter().next()),
+                // Ignorant: the exploration step (None when nowhere new to look).
+                None => view.explore_step.clone().map(Action::MoveTo),
+            })
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Thirst
@@ -2395,9 +2500,35 @@ pub struct Hunger<'a> {
     pub terrain: &'a dyn Terrain,
     /// The day the food is sensed at (for the sun-fed autotroph seam's light).
     pub day: WorldTime,
+    /// The-waymark, Task 6b (ledger #8): [`AffordanceMemo`] over one
+    /// `arbitrate` call's fixed view — `affordance` ignores `budget`
+    /// entirely (see its own doc), so the key is just the position. Mirrors
+    /// [`Thirst`]'s memo; see [`AffordanceMemo`]'s own doc for why this can
+    /// only ever save a search, never answer a stale one.
+    memo: AffordanceMemo<RoomAddr>,
 }
 
 impl<'a> Hunger<'a> {
+    /// A fresh hunger drive, with an empty memo — the constructor every call
+    /// site uses (mirrors [`Thirst::new`]: `decide_step` and its stateless
+    /// siblings build a new `Hunger` per call, never carrying one tick to
+    /// tick).
+    /// type-audit: bare-ok(ratio: urgency)
+    pub fn new(
+        urgency: f64,
+        niche: ResourceVector,
+        terrain: &'a dyn Terrain,
+        day: WorldTime,
+    ) -> Self {
+        Self {
+            urgency,
+            niche,
+            terrain,
+            day,
+            memo: AffordanceMemo::default(),
+        }
+    }
+
     /// The food-value at `room` for this creature's niche — the drive's own
     /// perception of a cell.
     fn food_value_at(&self, room: &RoomAddr) -> f64 {
@@ -2421,11 +2552,13 @@ impl<'a> Drive for Hunger<'a> {
         // Eat in place where the cell is rich enough; else forage toward a
         // richer neighbour (None when boxed in / everywhere barren → the
         // creature holds, reading distress if hungry).
-        if self.food_value_at(&view.position) >= EAT_THRESHOLD {
-            Some(Action::Eat)
-        } else {
-            forage_step(&view.position, &self.niche, self.terrain, self.day).map(Action::MoveTo)
-        }
+        self.memo.get(view.position.clone(), || {
+            if self.food_value_at(&view.position) >= EAT_THRESHOLD {
+                Some(Action::Eat)
+            } else {
+                forage_step(&view.position, &self.niche, self.terrain, self.day).map(Action::MoveTo)
+            }
+        })
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Hunger
@@ -3002,7 +3135,7 @@ impl HomeNavCache {
 /// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
-    let thirst = Thirst { params: *p };
+    let thirst = Thirst::new(*p);
     let drives: [&dyn Drive; 1] = [&thirst];
     // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
     // not helpless, awake — exactly the literals the byte-identical seam passed.
@@ -3548,7 +3681,7 @@ pub fn affect_of_memo_occupied(
         believed_hazard: memory.shunned.clone(),
         explore_step,
     };
-    let thirst = Thirst { params: SUSTENANCE };
+    let thirst = Thirst::new(SUSTENANCE);
     // THE THRESHOLD's arming: the room `view.position` is in, ACTUALLY derives
     // an interior now, owned here so `thermal` below can borrow it — see
     // `landing_interior`'s own doc for why "landing" is the right anchor for
@@ -3575,8 +3708,8 @@ pub fn affect_of_memo_occupied(
     let rest = Fatigue {
         home: npc.home.clone(),
     };
-    let hunger = Hunger {
-        urgency: hunger_at(
+    let hunger = Hunger::new(
+        hunger_at(
             frozen,
             npc.entity,
             &npc.home,
@@ -3584,10 +3717,10 @@ pub fn affect_of_memo_occupied(
             terrain,
             npc.metabolic_class,
         ),
-        niche: npc.niche.clone(),
+        npc.niche.clone(),
         terrain,
         day,
-    };
+    );
     let danger = Danger {
         terrain,
         threat_niche: npc.threat_niche,
@@ -4137,7 +4270,7 @@ fn decide_step(
         believed_hazard: hazard.shunned.clone(),
         explore_step,
     };
-    let thirst = Thirst { params: *params };
+    let thirst = Thirst::new(*params);
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
@@ -4147,12 +4280,12 @@ fn decide_step(
     let rest = Fatigue {
         home: npc.home.clone(),
     };
-    let hunger = Hunger {
-        urgency: hunger_urgency,
-        niche: npc.niche.clone(),
+    let hunger = Hunger::new(
+        hunger_urgency,
+        npc.niche.clone(),
         terrain,
-        day: WorldTime { day },
-    };
+        WorldTime { day },
+    );
     let danger = Danger {
         terrain,
         threat_niche: npc.threat_niche,
@@ -9743,12 +9876,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let hunger = Hunger {
-            urgency: 0.9,
-            niche: omnivore_niche(),
-            terrain: &t,
-            day,
-        };
+        let hunger = Hunger::new(0.9, omnivore_niche(), &t, day);
         // Barren cell: forage toward the richer neighbour.
         assert_eq!(
             hunger.affordance(&view_barren, PLAN_BUDGET),
@@ -10017,7 +10145,7 @@ mod tests {
             alarm: None,
             dread: None,
         };
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let view = Perceived {
             position: home.clone(),
             drive: 0.9, // very thirsty
@@ -10760,7 +10888,7 @@ mod tests {
             loneliness: 0.9,
             home_step: Some(step.clone()),
         };
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let drives: [&dyn Drive; 2] = [&thirst, &social];
         // Thirsty (drive past act) and knows nearby water: thirst wins.
         let thirsty = Perceived {
@@ -11326,7 +11454,7 @@ mod tests {
             (ns[1].clone(), 18.0),
             (ns[2].clone(), 18.0),
         ]);
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11426,7 +11554,7 @@ mod tests {
             (ns[2].clone(), 18.0),
         ]);
         let params = SUSTENANCE;
-        let thirst = Thirst { params };
+        let thirst = Thirst::new(params);
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11530,7 +11658,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11585,9 +11713,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let thirst = Thirst {
-            params: eager_thirst(),
-        };
+        let thirst = Thirst::new(eager_thirst());
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -11670,9 +11796,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let eager = Thirst {
-            params: eager_thirst(),
-        };
+        let eager = Thirst::new(eager_thirst());
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
             arb(
@@ -11700,7 +11824,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let survival = Thirst { params: SUSTENANCE };
+        let survival = Thirst::new(SUSTENANCE);
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
             arb(
@@ -11739,7 +11863,7 @@ mod tests {
             day,
             interior: None,
         };
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Thirst BELOW act (0.85) but within a full-foresight lead
         // (rise·1·HORIZON_DAYS = 0.30 → act_eff 0.55): 0.70 sits in [0.55, 0.85).
@@ -11800,7 +11924,7 @@ mod tests {
             day: WorldTime { day: 0.0 },
             interior: None,
         };
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         assert_eq!(thermal.anticipation_lead(0.0), 0.0);
         assert_eq!(
             thermal.anticipation_lead(1.0),
@@ -11856,7 +11980,7 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[1].clone();
         let terrain = PlantedTerrain::fresh_only([water.clone()]);
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12016,7 +12140,7 @@ mod tests {
         let home = raddr(1.0);
         let water = home.neighbors()[1].clone();
         let terrain = PlantedTerrain::fresh_only([water.clone()]);
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12162,9 +12286,7 @@ mod tests {
             (water.clone(), -20.0),
             (ns[2].clone(), -20.0),
         ]);
-        let thirst = Thirst {
-            params: eager_thirst(),
-        };
+        let thirst = Thirst::new(eager_thirst());
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12276,7 +12398,7 @@ mod tests {
             believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let thermal = Thermal {
             niche: warm_niche(),
             terrain: &terrain,
@@ -12819,7 +12941,7 @@ mod tests {
             (ns[1].clone(), -15.0),
             (ns[2].clone(), -15.0),
         ]);
-        let thirst = Thirst { params: SUSTENANCE };
+        let thirst = Thirst::new(SUSTENANCE);
         let thermal = Thermal {
             niche: cold_niche(),
             terrain: &t,
