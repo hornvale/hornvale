@@ -90,6 +90,39 @@ world text: `ocean`, `salt-basin`, `dry-land`, `farmer`, `herder`, `fisher`,
 | `windows/vessel/src/chamber_prose.rs:12,52,86` | ~19 authored sentences |
 | `windows/worldgen/src/lib.rs:2534,2537,2694` | **proper names minted in English** at the composition root |
 | `windows/explain/src/lib.rs:74` | `"× Earth's sunlight"` — names Earth in narration |
+| `domains/astronomy/src/facts.rs:268` | **`star-class` commits `Value::Text("yellow dwarf (G)")` — into the ledger.** See below; this is the worst site in the table and was not in its first draft |
+| `domains/astronomy/src/facts.rs:499` | `neighbor-class` commits `"sun-like star"`, `"red giant"` — Sol-relative taxonomy, likewise committed |
+
+**The one leak that is not a leak — added after the audit, at Nathan's
+reading.** Every other row above is prose that should be *derived from* a
+concept. `star-class` is different in kind, and worse in three ways at once.
+
+It is **committed**: `facts.rs:268` writes `Value::Text("yellow dwarf (G)")`
+into the ledger, so Morgan–Keenan spectral classification is a durable fact
+about the world rather than a sentence about it. It is **unthinkable
+in-world**: no inhabitant has the concept of a main-sequence star, so no
+observer could ever say it, which no amount of lexicalization repairs. And it
+is **redundant**: `star-mass-solar` is already committed
+(`0.90340651` on seed 42) and the class is a pure function of it —
+`if mass < 0.8 {K} else if mass < 1.05 {G} else {F}`.
+
+So the answer here is **deletion, not translation**. Keep the physics; drop the
+taxonomy; derive any internal class label as a registry concept rather than
+prose; and render what an observer actually perceives — colour and warmth,
+gated through the Berlin & Kay ladders, so a culture with a two-term colour
+lexicon says something different from one with eleven.
+
+This draws a line the taxonomy in §3 lacked, and which the rest of this spec
+should be read against: **units are the author's frame; names are the world's.**
+`0.903 M☉` in the ledger is a measurement convention and is fine.
+`"yellow dwarf (G)"` is a name, and names are what observers use. `"sun-like
+star"` fails the test twice — Sol-relative taxonomy for a star seen from a
+world whose sun is not Sol.
+
+Out of scope for part 1: deleting a committed fact *moves* committed facts,
+which is precisely the property every task in part 1 gated on, and it needs its
+own epoch measurement under decision 0084. Registry row:
+`SKY-star-class-ontology`.
 
 **Two aggravating patterns.** `figures.rs:256` and `provider.rs:1278` are two
 *different* number vocabularies (three…twelve vs one…five) while
