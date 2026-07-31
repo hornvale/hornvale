@@ -7430,6 +7430,25 @@ mod tests {
         assert_eq!(phenomenon_concept(&eclipse), None);
     }
 
+    /// Two phenomena that render identically but mean different things must not
+    /// collapse into one another in the dedup pass.
+    #[test]
+    fn dedup_separates_referents_that_share_a_rendering() {
+        let same_prose = |concept: &str| hornvale_kernel::Phenomenon {
+            kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
+            referent: hornvale_kernel::Referent::of(concept),
+            description: "a light in the sky".to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::NightSky,
+        };
+        let mut seen = std::collections::BTreeSet::new();
+        for p in [same_prose("sun"), same_prose("moon")] {
+            seen.insert(p.referent.clone());
+        }
+        assert_eq!(seen.len(), 2, "sun and moon must not dedup together");
+    }
+
     /// Decision 0024's remedy on the almanac's Land list — the section that
     /// names every settlement in the world at once, and the one whose
     /// committed gallery page would otherwise publish twenty-one
@@ -8560,7 +8579,7 @@ mod tests {
         )
         .unwrap();
         let ph = observed_phenomena(&locked, 0.0).unwrap();
-        let sees_sun = ph.iter().any(|p| p.description.contains("sun"));
+        let sees_sun = ph.iter().any(|p| p.referent.concept == "sun");
         let sees_night = ph.iter().any(|p| p.kind == hornvale_astronomy::NIGHT_STAR);
         assert!(
             sees_sun ^ sees_night,

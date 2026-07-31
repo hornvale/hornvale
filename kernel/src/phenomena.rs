@@ -38,7 +38,7 @@ pub enum Venue {
 /// rather than tidy — a colour that a culture has not lexicalized under the
 /// Berlin & Kay ladders simply has no key, so it cannot be said.
 /// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: qualifiers)
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Referent {
     /// The registered concept id this phenomenon is about.
     pub concept: String,
