@@ -11,9 +11,9 @@ use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
 use hornvale_kernel::{
-    ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
-    ResourceVector, RoomAddr, RoomId, RoomMeshMemo, SearchSpace, TickSystem, Value, World,
-    WorldTime, astar,
+    ANIMAL_PREY, AStarSolver, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE,
+    PLANT_FORAGE, ResourceVector, RoomAddr, RoomId, RoomMeshMemo, SearchSpace, Solver, TickSystem,
+    Value, World, WorldTime, astar,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
@@ -2935,7 +2935,13 @@ impl HomeNavCache {
     /// never a search; a miss (including one caused solely by a different
     /// `home`/`budget` — the key-hardening rider, Task 4 fix round) runs the
     /// real search (costing exactly what every caller always paid) and
-    /// counts it in `searches`.
+    /// counts it in `searches`. `mesh_memo` (the-waymark, Task 6 — ledger #7's
+    /// re-plan) is threaded straight through to a real search's
+    /// [`plan_to_room_memo`] call, so a MISS no longer recomputes
+    /// `RoomAddr::neighbors` from scratch on every `astar` expansion when the
+    /// caller has a session-lived [`RoomMeshMemo`] to share — a cache HIT
+    /// above never touches it at all.
+    #[allow(clippy::too_many_arguments)]
     fn home_nav(
         &mut self,
         entity: EntityId,
@@ -2943,6 +2949,7 @@ impl HomeNavCache {
         home: &RoomAddr,
         avoid: &std::collections::BTreeSet<RoomAddr>,
         budget: usize,
+        mesh_memo: &mut RoomMeshMemo,
     ) -> HomeNavFeature {
         let state = self.entries.entry(entity).or_insert_with(|| HomeNavState {
             avoid_epoch: 0,
@@ -2966,7 +2973,7 @@ impl HomeNavCache {
             return feature.clone();
         }
         self.searches += 1;
-        let plan = plan_to_room(pos, home, budget, avoid);
+        let plan = plan_to_room_memo(pos, home, budget, avoid, Some(mesh_memo));
         let feature = HomeNavFeature {
             distance: plan.as_ref().map(|p| p.len()),
             first_step: plan.and_then(|p| p.into_iter().next()),
@@ -2991,7 +2998,8 @@ impl HomeNavCache {
 /// round) is given a throwaway, single-call [`HomeNavCache`] and a fixed
 /// placeholder entity — this function is already documented stateless
 /// ("a fresh `Idle` mode per call"), so a cache that cannot outlive the call
-/// costs nothing beyond what this seam always paid.
+/// costs nothing beyond what this seam always paid. Likewise builds a
+/// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
@@ -3005,6 +3013,7 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
         awake: true,
     };
     let mut home_nav_cache = HomeNavCache::new();
+    let mut mesh_memo = RoomMeshMemo::new();
     arbitrate(
         view,
         home,
@@ -3014,6 +3023,7 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
         budget,
         EntityId::new(1).expect("1 is a valid nonzero entity id"),
         &mut home_nav_cache,
+        &mut mesh_memo,
     )
     .intent
 }
@@ -3079,6 +3089,11 @@ pub struct Disposition {
 /// to have no active drive this tick just re-reads the entry its own
 /// `Social` construction already warmed.
 ///
+/// `mesh_memo` (the-waymark, Task 6 — ledger #7's re-plan) is threaded
+/// straight through to the fallback's own `home_nav_cache.home_nav` call —
+/// the SAME session-lived [`RoomMeshMemo`] `decide_step`'s own
+/// `lowest_unvisited_neighbor_memo` read already shares, not a second one.
+///
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
@@ -3090,6 +3105,7 @@ pub fn arbitrate(
     budget: usize,
     entity: EntityId,
     home_nav_cache: &mut HomeNavCache,
+    mesh_memo: &mut RoomMeshMemo,
 ) -> Resolution {
     let Disposition {
         latency,
@@ -3180,6 +3196,7 @@ pub fn arbitrate(
                 home,
                 &view.believed_hazard,
                 budget,
+                mesh_memo,
             );
             return Resolution {
                 intent: feature.first_step.map(Intent::Do).unwrap_or(Intent::Hold),
@@ -3609,6 +3626,7 @@ pub fn affect_of_memo_occupied(
             &npc.home,
             &view.believed_hazard,
             PLAN_BUDGET,
+            mesh_memo,
         );
         Social {
             loneliness: loneliness_from_distance(feature.distance),
@@ -3642,6 +3660,7 @@ pub fn affect_of_memo_occupied(
         PLAN_BUDGET,
         npc.entity,
         home_nav_cache,
+        mesh_memo,
     )
     .affect
 }
@@ -4154,6 +4173,7 @@ fn decide_step(
             &npc.home,
             &view.believed_hazard,
             PLAN_BUDGET,
+            mesh_memo,
         );
         Social {
             loneliness: loneliness_from_distance(feature.distance),
@@ -4187,6 +4207,7 @@ fn decide_step(
         budget,
         npc.entity,
         home_nav_cache,
+        mesh_memo,
     );
     (resolution, drive)
 }
@@ -5586,17 +5607,50 @@ struct NavSpace<'a> {
     /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
     avoid: &'a std::collections::BTreeSet<RoomAddr>,
 }
-impl<'a> SearchSpace for NavSpace<'a> {
-    type State = RoomAddr;
-    type Action = Action;
-    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
-        s.neighbors()
+impl<'a> NavSpace<'a> {
+    /// The `move_cost`/`avoid` edge-building rule, shared verbatim by
+    /// [`SearchSpace::successors`] and [`SearchSpace::successors_memo`]
+    /// below (the-waymark, Task 6) so memoizing the raw neighbor lookup can
+    /// never accidentally also change how an edge's cost is computed — the
+    /// memo boundary is `neighbors`/`neighbors_memo` ALONE, never the
+    /// successor list this builds from it.
+    fn edges_from(&self, neighbors: [RoomAddr; 3]) -> Vec<(Action, RoomAddr, u64)> {
+        neighbors
             .into_iter()
             .map(|n| {
                 let cost = move_cost(&n, self.avoid);
                 (Action::MoveTo(n.clone()), n, cost)
             })
             .collect()
+    }
+}
+impl<'a> SearchSpace for NavSpace<'a> {
+    type State = RoomAddr;
+    type Action = Action;
+    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
+        self.edges_from(s.neighbors())
+    }
+    /// Ledger #7's re-plan (the-waymark, Task 6): consults a caller-owned
+    /// [`RoomMeshMemo`] for the neighbor lookup instead of recomputing the
+    /// icosphere lattice arithmetic on every `astar` expansion — this is the
+    /// specific hot path (`RoomAddr::neighbors` inside `NavSpace::successors`
+    /// → `astar` expansions) Task 3's memo was built for but could not reach,
+    /// because `SearchSpace::successors(&self, ...)` alone had no way to
+    /// thread a caller's memo down into it. Byte-identical to `successors`
+    /// either way ([`RoomAddr::neighbors_memo`] is a cache of the same pure
+    /// function `neighbors` computes), and the `edges_from` cost rule is
+    /// untouched — only which of `neighbors`/`neighbors_memo` supplies the
+    /// three rooms it costs.
+    fn successors_memo(
+        &self,
+        s: &RoomAddr,
+        memo: Option<&mut RoomMeshMemo>,
+    ) -> Vec<(Action, RoomAddr, u64)> {
+        let neighbors = match memo {
+            Some(m) => s.neighbors_memo(m),
+            None => s.neighbors(),
+        };
+        self.edges_from(neighbors)
     }
     fn goal(&self, s: &RoomAddr) -> bool {
         *s == self.dest
@@ -5606,9 +5660,40 @@ impl<'a> SearchSpace for NavSpace<'a> {
     }
 }
 
+/// [`plan_to_room`], threading a caller-owned [`RoomMeshMemo`] through the
+/// underlying [`AStarSolver`] search instead of recomputing `RoomAddr::
+/// neighbors` on every expansion (the-waymark, Task 6 — ledger #7's
+/// re-plan). `mesh_memo: None` is exactly `plan_to_room`'s own behavior
+/// (`NavSpace::successors_memo`'s default-free override still falls back to
+/// plain `neighbors`); `Some(memo)` is byte-identical too, by construction —
+/// see `NavSpace::successors_memo`'s own doc. `pub(crate)`: today's one
+/// caller worth the memo is [`HomeNavCache::home_nav`], which already sits
+/// in this module; a future external caller can widen this if it ever needs
+/// to.
+pub(crate) fn plan_to_room_memo(
+    from: &RoomAddr,
+    dest: &RoomAddr,
+    budget: usize,
+    avoid: &std::collections::BTreeSet<RoomAddr>,
+    mesh_memo: Option<&mut RoomMeshMemo>,
+) -> Option<Vec<Action>> {
+    AStarSolver.solve(
+        &NavSpace {
+            dest: dest.clone(),
+            avoid,
+        },
+        from.clone(),
+        budget,
+        mesh_memo,
+    )
+}
+
 /// Plan a pure navigation path to `dest` (the home-return goal), or `None`.
 /// `avoid` is the remembered-danger set the A* routes around (The Haunt); pass
-/// an empty set for the memory-less path.
+/// an empty set for the memory-less path. A thin delegator to
+/// [`plan_to_room_memo`] with `mesh_memo: None` (the-waymark, Task 6) — every
+/// existing caller (there is no session memo in scope at most of them) is
+/// unchanged.
 /// type-audit: bare-ok(count: budget)
 pub fn plan_to_room(
     from: &RoomAddr,
@@ -5616,14 +5701,7 @@ pub fn plan_to_room(
     budget: usize,
     avoid: &std::collections::BTreeSet<RoomAddr>,
 ) -> Option<Vec<Action>> {
-    astar(
-        &NavSpace {
-            dest: dest.clone(),
-            avoid,
-        },
-        from.clone(),
-        budget,
-    )
+    plan_to_room_memo(from, dest, budget, avoid, None)
 }
 
 /// Which anchor each creature stands at, inside the presence bubble.
@@ -5811,6 +5889,7 @@ mod tests {
         budget: usize,
     ) -> Resolution {
         let mut home_nav_cache = HomeNavCache::new();
+        let mut mesh_memo = RoomMeshMemo::new();
         arbitrate(
             view,
             home,
@@ -5825,6 +5904,7 @@ mod tests {
             budget,
             EntityId::new(1).expect("1 is a valid nonzero entity id"),
             &mut home_nav_cache,
+            &mut mesh_memo,
         )
     }
 
@@ -13785,9 +13865,10 @@ mod tests {
         let home = start.neighbors()[0].neighbors()[0].clone();
         let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
 
-        let first = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        let first = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             cache.searches, 1,
             "the very first call is necessarily a cold miss"
@@ -13797,7 +13878,7 @@ mod tests {
         // the IDENTICAL query (same pos, same avoid) several times, as a
         // stationary creature's every subsequent tick would.
         for _ in 0..5 {
-            let again = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+            let again = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
             assert_eq!(
                 again, first,
                 "a cache hit must return the identical feature every time"
@@ -13819,19 +13900,20 @@ mod tests {
         let home = start.neighbors()[0].neighbors()[0].clone();
         let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
 
-        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(cache.searches, 1, "warm-up search");
 
         // Repeat at the SAME position a few times first, to prove the
         // subsequent count bump is attributable to the move, not to noise.
         for _ in 0..3 {
-            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         }
         assert_eq!(cache.searches, 1, "still warm before the move");
 
-        let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET);
+        let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             cache.searches, 2,
             "a moved entity (a Step resolution changing `pos`) must trigger \
@@ -13840,7 +13922,7 @@ mod tests {
 
         // And it goes cold again at the new position.
         for _ in 0..3 {
-            let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET);
+            let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET, &mut mesh);
         }
         assert_eq!(
             cache.searches, 2,
@@ -13854,26 +13936,27 @@ mod tests {
         let home = start.neighbors()[0].neighbors()[0].clone();
         let mut avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
 
-        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(cache.searches, 1, "warm-up search");
         for _ in 0..3 {
-            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         }
         assert_eq!(cache.searches, 1, "still warm before the belief changes");
 
         // The believed-hazard set changes (the entity stood on ground that
         // frightened it): the avoid-epoch write point.
         avoid.insert(start.neighbors()[1].clone());
-        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             cache.searches, 2,
             "a believed-hazard change must trigger EXACTLY one new search"
         );
 
         for _ in 0..3 {
-            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
         }
         assert_eq!(
             cache.searches, 2,
@@ -13890,22 +13973,23 @@ mod tests {
         let start = raddr(1.0);
         let home = start.neighbors()[0].neighbors()[0].clone();
         let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
         let (a, b) = (npc_id(1), npc_id(2));
         let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
 
-        let _ = cache.home_nav(a, &start, &home, &empty, PLAN_BUDGET);
-        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET);
+        let _ = cache.home_nav(a, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
+        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
         assert_eq!(cache.searches, 2, "both entities warm up independently");
 
         let mut a_avoid = empty.clone();
         a_avoid.insert(start.neighbors()[1].clone());
-        let _ = cache.home_nav(a, &start, &home, &a_avoid, PLAN_BUDGET);
+        let _ = cache.home_nav(a, &start, &home, &a_avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             cache.searches, 3,
             "A's own belief change costs A one search"
         );
 
-        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET);
+        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             cache.searches, 3,
             "B's cache must be UNAFFECTED by A's belief change — a global \
@@ -13933,9 +14017,10 @@ mod tests {
             .clone();
         let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
 
-        let before = cache.home_nav(e, &start, &dest, &empty, 10_000);
+        let before = cache.home_nav(e, &start, &dest, &empty, 10_000, &mut mesh);
         assert_eq!(
             before.first_step,
             Some(Action::MoveTo(via.clone())),
@@ -13944,7 +14029,7 @@ mod tests {
 
         let mut avoid = empty.clone();
         avoid.insert(via.clone());
-        let after = cache.home_nav(e, &start, &dest, &avoid, 10_000);
+        let after = cache.home_nav(e, &start, &dest, &avoid, 10_000, &mut mesh);
         assert_ne!(
             after.first_step, before.first_step,
             "an avoid-set change MUST change the cached plan feature — a \
@@ -13974,9 +14059,10 @@ mod tests {
         assert_ne!(home_a, home_b, "sanity: two distinct neighbor destinations");
         let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
         let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
         let e = npc_id(1);
 
-        let feature_a = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET);
+        let feature_a = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             feature_a.first_step,
             Some(Action::MoveTo(home_a.clone())),
@@ -13984,7 +14070,7 @@ mod tests {
         );
         assert_eq!(cache.searches, 1, "warm-up search for home_a");
 
-        let feature_b = cache.home_nav(e, &start, &home_b, &avoid, PLAN_BUDGET);
+        let feature_b = cache.home_nav(e, &start, &home_b, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             feature_b.first_step,
             Some(Action::MoveTo(home_b.clone())),
@@ -14000,7 +14086,7 @@ mod tests {
         // Asking about home_a again costs a search too (the cache holds one
         // entry per ENTITY, not one per (entity, home) pair) — but it must
         // still reproduce home_a's own correct feature, never home_b's.
-        let feature_a_again = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET);
+        let feature_a_again = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET, &mut mesh);
         assert_eq!(
             feature_a_again, feature_a,
             "re-asking about home_a must reproduce its own correct feature"

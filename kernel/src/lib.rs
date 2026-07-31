@@ -29,7 +29,7 @@ pub mod streams;
 pub mod units;
 pub mod world;
 
-pub use astar::{SearchSpace, astar};
+pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
