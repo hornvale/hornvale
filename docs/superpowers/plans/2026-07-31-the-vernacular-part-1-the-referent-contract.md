@@ -822,9 +822,17 @@ Line 98 (`p.description.starts_with("the sun")`) becomes
 `p.referent.concept == "sun"`. Line 179
 (`p.description == neighbor.night_description()`) becomes
 `p.referent == Referent::of("star")` — the neighbour's *colour* is not yet in
-the referent, so this assertion legitimately weakens; add
-`// TODO(the-vernacular stage 3): re-tighten once colour is a qualifier` **with
-the campaign name**, per the no-TODOs-without-a-reference rule.
+the referent, so this assertion legitimately weakens.
+
+**Do not mark that with a `TODO`.** The workspace contains **zero** TODO
+comments (`grep -rn "// TODO" --include=*.rs kernel/ domains/ windows/ cli/`
+returns none), and the Definition of Done bans TODOs without issue numbers.
+Weakened-assertion debt goes in the campaign's followup register
+(`.superpowers/sdd/followups.md`), which is promoted into the retrospective at
+close — that is where this repo keeps such findings. Write a plain doc comment
+on the assertion saying what it does and does not check, with no `TODO` token,
+and append a followup entry naming the file, the line, and what stage 3 owes
+it.
 
 **Leave alone** any assertion whose subject is the *rendering itself* — lines
 :717, :719 (`"The light is golden."`), :860, :867 (`"shows its full face"`),
