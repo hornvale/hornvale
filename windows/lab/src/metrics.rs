@@ -4305,7 +4305,12 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
 /// `NAME_GLOSS` facts and this SAME public site-concept function every
 /// other name-truthfulness consumer (the worldgen keystone test, this
 /// metric) also calls, so all three stay in lockstep by construction
-/// rather than by three hand-kept copies. `None` if the settlement is
+/// rather than by three hand-kept copies — true for every slot
+/// `worldgen_settlement_site_concepts` computes itself. The presiding slot
+/// is the one exception: this function cannot pass it through that
+/// call (see the comment on `presiding` below), so it is appended here
+/// instead, in a position that has to be hand-kept in sync with where
+/// worldgen appends it internally. `None` if the settlement is
 /// missing a cell-id/species fact, which `name_gloss_true` below treats as
 /// an unverifiable (failing) row rather than skipping it silently.
 fn settlement_site_concepts(
@@ -4328,8 +4333,22 @@ fn settlement_site_concepts(
     // (decision 0094 stopped this being a `&'static` codomain match), so it
     // cannot feed `worldgen_settlement_site_concepts`'s `presiding:
     // Option<&'static str>` parameter directly — `phenomena` doesn't outlive
-    // that call. Own the string instead and append it after, rather than
-    // reintroducing a `&'static` codomain match here.
+    // that call. Own the string instead and pass `None` for `presiding`,
+    // appending it here after the fact.
+    //
+    // This reproduces the exact vector `worldgen_settlement_site_concepts`
+    // would have returned, not merely an order-insensitive equivalent of it:
+    // that function appends `presiding` LAST
+    // (`windows/worldgen/src/lib.rs:4902`, `concepts.extend(presiding)` as
+    // its final line before returning), and appending it last here matches
+    // that exactly. This is now a real assumption this crate hand-keeps
+    // about worldgen's push order, not something decision 0094 lets us
+    // avoid — if that push ever moves,
+    // `settlement_site_concepts_orders_a_real_multi_concept_vector_most_
+    // specific_first` (`windows/worldgen/src/lib.rs:10471`) reds and gets
+    // updated on that side, and this `.extend(presiding)` must move with it
+    // or this crate silently drifts out of the composition it claims to
+    // reproduce.
     let presiding = phenomena
         .first()
         .and_then(phenomenon_concept)
