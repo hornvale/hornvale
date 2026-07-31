@@ -116,14 +116,48 @@ which claims to be the single source of freshness truth and is not.
 
 ## Follow-ups
 
-F1–F8 in the campaign's scratch register, promoted here at close. The two worth
-acting on beyond this campaign:
+Promoted here in full, because the scratch register dies with the worktree.
+Ranked: F8 and F1 are the two worth acting on beyond this campaign.
 
-- **F8** — share the exposure *rule roster* between `exposure_of` and its
-  deliberate duplicate while keeping the *derivations* independent, so omission
-  becomes a compile error rather than an invisible gap. Twice-burned in eleven
-  days; a third repair is not the answer.
-- **F1** — a preregistered baseline must come from a committed harness.
+- **F8 — the deliberate duplicate breaks on every exposure-rule addition.**
+  `independently_steeped_concepts` duplicates `exposure_of`'s rules on purpose
+  (a check calling the code under test asserts nothing), and that should stay.
+  What should not is that omission is invisible: twice in eleven days it fell
+  behind and `exposure-sound` read false on ~75% of worlds with nothing red.
+  **Proposal:** share the rule *roster* — one declarative list of exposure
+  classes — while both sides keep computing their own answer, so a missing
+  class is a compile error and the derivations stay independent. Worth a
+  decision record; the repo uses "duplicate deliberately" in several places
+  (`phenomenon_concept` has three copies) and none of them says how to keep the
+  duplicate honest.
+- **F1 — a preregistered baseline must be reproducible from the repo alone.**
+  A number a spec's verification section leans on comes from a committed
+  harness, never an ad-hoc script in scratch. This campaign lost its own
+  headline baseline that way.
+- **F2 — `landmass_size_capped` and the spec's `LandmassId` are one
+  computation twice.** If the landscape layer is ever built, the window must
+  read the domain's definition rather than keep its own capped flood fill, or
+  "is this an island" and "which landmass is this" will disagree.
+- **F3 — the measurement harness's battery is a declared guess.** Seeds 1..=8
+  are not the original set (1837 settlements against the recorded 1842, with a
+  demonstrably unmoved pipeline). Its numbers are a new baseline, never a delta
+  against 59.8%.
+- **F4/F5 — `the-shibboleth` is lefford-local**, and the spec anchored Items
+  2–3 on its `sitefact` module, which §8 had simultaneously decided to discard.
+  Re-anchor to main's `is_river_cell` / `WATERFALL_MIN_DRAINAGE` /
+  `ISLAND_CELL_CAP` / `landmass_size_capped` before planning that work.
+- **F6 — `regenerate-artifacts.sh` never calls `hornvale voice`.** The
+  phonology page's audio is content-addressed on the very words an epoch
+  re-mints; only a gate test catches the drift, and it reports a failure rather
+  than a stale artifact. One line in the script fixes a source-of-truth claim
+  that is currently false.
+- **F7 — resolved during the campaign.** The 62-minute gate was inherited cost,
+  not ours: The Shuttle and The Weir took the suite to ~330 s across two
+  absorptions.
+- **F9 (new, from the close) — a census re-pin has a fifth surface.** It
+  touches four files, and the *comments beside the pins* are a fifth that
+  nothing checks. Two sites were found asserting one value while their own
+  adjacent note recorded another.
 
 ## What the next campaign inherits
 
