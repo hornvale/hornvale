@@ -3264,9 +3264,10 @@ pub fn affect_of_memo(
 ///
 /// `mesh_memo` (the-waymark fix round, rider (b)): this function used to
 /// build its OWN throwaway [`RoomMeshMemo`] inline for the
-/// `lowest_unvisited_neighbor` read below — the same shape [`PrimaryAfraidMemo`]
-/// would have had if it were not already an explicit, caller-supplied
-/// parameter. It is now threaded the same way `memo` already is: a caller
+/// `lowest_unvisited_neighbor_memo` read below — the same shape
+/// [`PrimaryAfraidMemo`] would have had if it were not already an explicit,
+/// caller-supplied parameter. It is now threaded the same way `memo` already
+/// is: a caller
 /// that owns a session/battery-scoped memo (`windows/lab`'s `run_simulation`)
 /// shares it here too; a caller that only has `&self` (`Session::snapshot`/
 /// `needs`) supplies a local throwaway, exactly as it already does for cases

@@ -677,6 +677,20 @@ impl RoomMeshMemo {
     pub fn corner_weights_lookup(&self, addr: &RoomAddr) -> Option<Option<[(CellId, u64); 3]>> {
         self.corner_weights.get(addr).copied()
     }
+
+    /// The `Geosphere::level()` this memo's `corner_weights` half was FIRST
+    /// filled against (the-waymark fix round, round 2) — `None` before any
+    /// `corner_weights_memo` insert. A read-side consumer that also holds
+    /// the `(Geosphere, NearestCellIndex)` it is ABOUT to read through (e.g.
+    /// `windows/locale`'s `LocaleContext`) can compare this against its own
+    /// `geo.level()` and refuse (or `debug_assert`) a mismatched pairing
+    /// BEFORE trusting a single cached weight — the read-path half of the
+    /// same geo-aliasing guard `corner_weights_memo`'s own `debug_assert_eq!`
+    /// already gives the WRITE path.
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights_geo_level(&self) -> Option<u32> {
+        self.corner_weights_geo_level
+    }
 }
 
 impl RoomAddr {
