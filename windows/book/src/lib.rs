@@ -3301,6 +3301,10 @@ mod tests {
         let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
         let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
         let a = render_volume(&world);
+        assert!(
+            !a.lines.is_empty(),
+            "seed 1 must render a non-empty volume or this drift guard is vacuous"
+        );
         let b = render_volume_from(&world, &terrain, &climate);
         assert_eq!(a.lines, b.lines);
         assert_eq!(a.tongue_lines, b.tongue_lines);

@@ -43,7 +43,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
         assert_eq!(
             doctrine_from(&w, kind, &terrain, &climate).is_some(),
             is_organized,
-            "seed 1's {kind}: doctrine_of must be Some iff its flagship cult-form is organized \
+            "seed 1's {kind}: doctrine_from must be Some iff its flagship cult-form is organized \
              (cult_form={cult_form:?})"
         );
         if is_organized {
@@ -61,7 +61,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     assert_eq!(
         doctrines.len(),
         organized_count,
-        "doctrines_of must cover exactly every organized placed culture"
+        "doctrines_from must cover exactly every organized placed culture"
     );
 
     // Negative arm: sweep for any species whose flagship's committed
@@ -96,7 +96,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
                     hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
                 assert!(
                     doctrine_from(&w, kind, &terrain, &climate).is_none(),
-                    "seed {seed}'s {kind} carries a folk flagship — doctrine_of must gate to None"
+                    "seed {seed}'s {kind} carries a folk flagship — doctrine_from must gate to None"
                 );
             }
         }
@@ -104,7 +104,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     assert!(
         found_folk,
         "SOC-1's negative arm found NO folk-cult-form flagship across seeds 1..=60 — this must \
-         not silently pass. Add a synthetic-society unit test driving doctrine_of directly \
+         not silently pass. Add a synthetic-society unit test driving doctrine_from directly \
          against a hand-built world whose flagship's committed cult-form is \"folk\" instead of \
          relying on this sweep."
     );

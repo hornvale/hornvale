@@ -66,7 +66,7 @@ fn the_coherence_law() {
                 assert_eq!(
                     noun_class_from(&w, kind, concept, &terrain, &climate),
                     expected,
-                    "seed {seed} {kind} concept {concept:?}: day_schema_of == {schema:?}"
+                    "seed {seed} {kind} concept {concept:?}: day_schema_from == {schema:?}"
                 );
             }
 
@@ -120,7 +120,7 @@ fn day_schema_of_matches_the_explained_entry() {
     assert_eq!(
         day_schema_from(&w, "goblin", &terrain, &climate),
         Some(schema),
-        "day_schema_of must resolve the SAME draw explain_day already resolved into this account"
+        "day_schema_from must resolve the SAME draw explain_day already resolved into this account"
     );
 }
 
