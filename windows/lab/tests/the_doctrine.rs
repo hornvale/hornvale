@@ -8,14 +8,14 @@
 //!
 //! Preregistered (before this file was written, against the already-
 //! measured values Task 2 pinned): the SOC-1 gate holds at seed 1 (every
-//! placed culture's flagship is organized, so `doctrine_of` gates every one
-//! to `Some`); the dial-roster law holds structurally (`accounts_of`
+//! placed culture's flagship is organized, so `doctrine_from` gates every one
+//! to `Some`); the dial-roster law holds structurally (`accounts_from`
 //! returns `ChorusVoice`, never `DoctrineVoice` — a compile-time fact this
 //! file also exercises at the value level: goblin's folk `sky_capability`
 //! is the measured `0.5` exactly, seeds 1..=5, completely unperturbed by
-//! the doctrine voice's own `+0.25` delta living only in `doctrines_of`).
+//! the doctrine voice's own `+0.25` delta living only in `doctrines_from`).
 
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_of, doctrine_of, doctrines_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, doctrine_from, doctrines_from};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -33,8 +33,8 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 }
 
 /// The SOC-1 gate law, restated: at seed 1, a placed culture's flagship
-/// cult-form gates `doctrine_of` exactly — `"organized"` <=> `Some`,
-/// `"folk"` <=> `None` — and `doctrines_of`'s length matches the organized
+/// cult-form gates `doctrine_from` exactly — `"organized"` <=> `Some`,
+/// `"folk"` <=> `None` — and `doctrines_from`'s length matches the organized
 /// subset. Post-Demesne (BIO-35 Stage 1 recalibration), seed-1's goblin is
 /// organized while its hobgoblin flipped to folk, so this seed exercises
 /// BOTH arms of the gate directly (the anticipated genesis-change reddening
@@ -44,6 +44,8 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 #[test]
 fn the_soc1_gate_holds_at_seed_1() {
     let world = generated(1);
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let placed = hornvale_worldgen::placed_peoples(&world);
     assert!(!placed.is_empty(), "seed 1 must place at least one culture");
     let mut organized_count = 0usize;
@@ -52,9 +54,9 @@ fn the_soc1_gate_holds_at_seed_1() {
         let cult_form = hornvale_religion::cult_form_held_by(&world, village.id);
         let is_organized = cult_form.as_deref() == Some("organized");
         assert_eq!(
-            doctrine_of(&world, kind).is_some(),
+            doctrine_from(&world, kind, &terrain, &climate).is_some(),
             is_organized,
-            "seed 1's {kind}: doctrine_of must be Some iff its flagship cult-form is organized \
+            "seed 1's {kind}: doctrine_from must be Some iff its flagship cult-form is organized \
              (cult_form={cult_form:?})"
         );
         if is_organized {
@@ -69,18 +71,18 @@ fn the_soc1_gate_holds_at_seed_1() {
         "seed 1's goblin flagship is organized (the seed-1 anchor)"
     );
     assert_eq!(
-        doctrines_of(&world).len(),
+        doctrines_from(&world, &terrain, &climate).len(),
         organized_count,
-        "doctrines_of must cover exactly every organized placed culture"
+        "doctrines_from must cover exactly every organized placed culture"
     );
 }
 
-/// The dial-roster law, restated: `accounts_of` never carries a doctrine
+/// The dial-roster law, restated: `accounts_from` never carries a doctrine
 /// voice — structurally true (its return type is `Vec<ChorusVoice>`, which
 /// has no doctrine field at all), and restated here at the value level: the
 /// goblin folk voice's `sky_capability` is the measured `0.5` EXACTLY,
 /// seeds 1..=5, with no `+0.25` doctrine-delta leak ever touching the folk
-/// account (that delta lives only in `doctrine_of`'s own params, read
+/// account (that delta lives only in `doctrine_from`'s own params, read
 /// separately below and confirmed to differ). A future change to the dial
 /// that let the doctrine delta leak into the folk roster's own params
 /// would redden this exact-value pin.
@@ -88,7 +90,9 @@ fn the_soc1_gate_holds_at_seed_1() {
 fn the_dial_roster_law_folk_params_are_stable() {
     for seed in 1u64..=5 {
         let world = generated(seed);
-        let voices = accounts_of(&world);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        let voices = accounts_from(&world, &terrain, &climate);
         let Some(goblin) = voices.iter().find(|v| v.kind == "goblin") else {
             // Not every seed places a goblin; the law only constrains seeds
             // that do (mirrors `windows/worldgen/tests/chorus_params.rs`'s
@@ -104,7 +108,7 @@ fn the_dial_roster_law_folk_params_are_stable() {
         // The doctrine voice's own params DO carry the delta — confirming
         // the two rosters are genuinely separate values, not merely
         // separate types that happen to agree.
-        if let Some(doctrine) = doctrine_of(&world, "goblin") {
+        if let Some(doctrine) = doctrine_from(&world, "goblin", &terrain, &climate) {
             assert_eq!(
                 doctrine.params.sky_capability, 0.75,
                 "seed {seed}: goblin's doctrine sky_capability must be folk (0.5) + 0.25"

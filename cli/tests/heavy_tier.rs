@@ -125,7 +125,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// That class is narrow and specific. Two rows are blocked on ONE diagnosed
 /// defect: `windows/lab/src/metrics.rs::independently_steeped_concepts` is a
 /// deliberate hand-maintained duplicate of
-/// `hornvale_worldgen::exposure_of`'s Steeped rules — duplicated on purpose,
+/// `hornvale_worldgen::exposure_from`'s Steeped rules — duplicated on purpose,
 /// since a check that called the code under test would assert nothing — and it
 /// has not learned The Watershed's staple rules. So `exposure-sound-*` reads
 /// false on every world where a people is placed. The census is CURRENT; the

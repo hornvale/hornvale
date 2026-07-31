@@ -5,8 +5,8 @@
 
 use hornvale_astronomy::{EclipseBody, StdDays};
 use hornvale_worldgen::{
-    LadderRung, SettlementPins, SkyChoice, crisis_from, doctrine_from, ladder_from, ladder_of,
-    observations_from, observations_of, placed_peoples,
+    LadderRung, SettlementPins, SkyChoice, crisis_from, doctrine_from, ladder_from,
+    observations_from, placed_peoples,
 };
 
 /// Build a world with the shipped four-people component set, generated
@@ -178,7 +178,7 @@ type Row = (
 // so all four (now five) placed peoples on a given seed share the exact
 // same predicted day — only the witnessed COUNT differs (lunar-witnessing
 // group vs solar-only pair). Re-pinned at the-living-community merge: the
-// values are the live `ladder_of` output (the prior table carried
+// values are the live `ladder_from` output (the prior table carried
 // per-culture-varying predictions, which was a mispinning — the closed form
 // is world-global). The Vacancy T9 re-pins again: the gnoll places at every
 // seed 1..=5 and its witnessed count matches bugbear/kobold's exactly at
@@ -391,7 +391,7 @@ const LADDER_TABLE: &[Row] = &[
 fn the_ladder_law() {
     // The full measured (seed 1..=5 × culture × epoch) rung table, pinned
     // exact, plus the structural law: no rung above Counted without
-    // doctrine_of (the SOC-1 gate's diachronic consequence).
+    // doctrine_from (the SOC-1 gate's diachronic consequence).
     for seed in 1..=5u64 {
         let w = generated(seed);
         let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
@@ -468,7 +468,7 @@ fn the_prophecy_law() {
     // now: a Predictive culture's taught day, when `Some`, is EXACTLY
     // what the naive model computes from that culture's OWN witnessed
     // days for its own top recurrence class -- self-consistency between
-    // `ladder_of` and the model it's built from, not a truth guarantee.
+    // `ladder_from` and the model it's built from, not a truth guarantee.
     let t = at(EPOCH_2);
     let mut any_predictive = false;
 
@@ -487,7 +487,7 @@ fn the_prophecy_law() {
             };
 
             // Re-derive the most-observed recurrence class with the same
-            // deterministic tie-break ladder_of documents (max count,
+            // deterministic tie-break ladder_from documents (max count,
             // ties toward the numerically smallest (moon, body) key).
             let obs = observations_from(&w, kind, t, &terrain, &climate).unwrap();
             let mut counts: std::collections::BTreeMap<(usize, u8), usize> =
@@ -537,14 +537,28 @@ fn diachronic_is_deterministic() {
     // Pure derivation: the same (world, species, at) twice → identical
     // Debug output, for both the ledger and the ladder.
     let w = generated(1);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let t = at(EPOCH_2);
     for (kind, _) in placed_peoples(&w) {
-        let obs_a = format!("{:?}", observations_of(&w, kind, t).unwrap());
-        let obs_b = format!("{:?}", observations_of(&w, kind, t).unwrap());
-        assert_eq!(obs_a, obs_b, "{kind}: observations_of must be pure");
-        let ladder_a = format!("{:?}", ladder_of(&w, kind, t).unwrap());
-        let ladder_b = format!("{:?}", ladder_of(&w, kind, t).unwrap());
-        assert_eq!(ladder_a, ladder_b, "{kind}: ladder_of must be pure");
+        let obs_a = format!(
+            "{:?}",
+            observations_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        let obs_b = format!(
+            "{:?}",
+            observations_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        assert_eq!(obs_a, obs_b, "{kind}: observations_from must be pure");
+        let ladder_a = format!(
+            "{:?}",
+            ladder_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        let ladder_b = format!(
+            "{:?}",
+            ladder_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        assert_eq!(ladder_a, ladder_b, "{kind}: ladder_from must be pure");
     }
 }
 

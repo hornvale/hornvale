@@ -4,7 +4,7 @@
 
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};
-use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_from, doctrines_from, doctrines_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_from, doctrines_from};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -24,11 +24,11 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 #[test]
 fn the_soc1_gate_is_the_flagship_cult_form() {
     // Positive arm, seed 1: the SOC-1 gate is exact — a placed culture's
-    // flagship cult-form gates doctrine_of exactly (organized <=> Some, folk
+    // flagship cult-form gates doctrine_from exactly (organized <=> Some, folk
     // <=> None). Post-Demesne (BIO-35 Stage 1 recalibration), seed-1's goblin
     // is organized and its hobgoblin flipped to folk (the same organized->folk
     // drift the book's seed-1 doctrine tests pin), so this seed exercises BOTH
-    // arms of the gate directly, and doctrines_of covers exactly the organized
+    // arms of the gate directly, and doctrines_from covers exactly the organized
     // subset (no longer every placed culture).
     let w = generated(1);
     let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
@@ -65,7 +65,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     );
 
     // Negative arm: sweep for any species whose flagship's committed
-    // cult-form is "folk" -> doctrine_of must gate to None. If the sweep
+    // cult-form is "folk" -> doctrine_from must gate to None. If the sweep
     // finds no such culture at all, PANIC (fail loudly, the C5 F2 lesson)
     // rather than silently passing a law whose negative arm was never
     // exercised.
@@ -80,7 +80,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // Folk hits are rare in this sweep (per the note above, the first
     // appears at seed 56), so terrain/climate are derived lazily, only on
     // an actual hit — deriving them unconditionally for all 60 seeds would
-    // cost MORE sculpts than the original per-hit doctrine_of wrapper ever
+    // cost MORE sculpts than the original per-hit doctrine_from wrapper ever
     // paid, defeating the point of this migration. (Measured: the negative
     // arm's ~172 s is ~159 s of `generated(seed)` world-building alone
     // across 60 seeds — irreducible by this migration — against ~13 s for
@@ -227,7 +227,7 @@ fn the_high_god_takes_the_day_where_compatible() {
     // day binding falls straight through to folk's OWN period-match rule.
     // That rule finds the SAME belief (Voovoo, period 1.55 std days,
     // matching the world's committed day-length-std, 1.5507196, within the
-    // 1% tolerance) folk's own cyclic_beliefs_of would also find — even
+    // 1% tolerance) folk's own cyclic_beliefs_from would also find — even
     // though folk's OWN measured schema draw for this fact (PathJourney)
     // is agentless and so never surfaces a deity at all. "Whichever branch
     // is true" (plan header): this is the no-high-god branch, pinned
@@ -286,22 +286,24 @@ fn the_high_god_takes_the_day_where_compatible() {
 
 #[test]
 fn doctrine_voices_never_enter_the_dial_roster() {
-    // accounts_of(seed 1) returns exactly placed_peoples-many folk voices
+    // accounts_from(seed 1) returns exactly placed_peoples-many folk voices
     // — never a DoctrineVoice (a distinct type, so this could not even
-    // compile the other way). Determinism check: re-deriving accounts_of
+    // compile the other way). Determinism check: re-deriving accounts_from
     // twice yields byte-identical Debug output, and the folk goblin's
     // sky_capability is 0.5 EXACTLY (no +0.25 leak from the doctrine
     // stack) — the dial-roster law (ledger #4), value-level.
     let w = generated(1);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let placed = hornvale_worldgen::placed_peoples(&w);
 
-    let voices_a = hornvale_worldgen::accounts_of(&w);
-    let voices_b = hornvale_worldgen::accounts_of(&w);
+    let voices_a = hornvale_worldgen::accounts_from(&w, &terrain, &climate);
+    let voices_b = hornvale_worldgen::accounts_from(&w, &terrain, &climate);
     assert_eq!(voices_a.len(), placed.len());
     assert_eq!(
         format!("{voices_a:?}"),
         format!("{voices_b:?}"),
-        "accounts_of must be a pure, deterministic function of the world"
+        "accounts_from must be a pure, deterministic function of the world"
     );
 
     let goblin = voices_a
@@ -310,17 +312,19 @@ fn doctrine_voices_never_enter_the_dial_roster() {
         .expect("goblin folk voice at seed 1");
     assert_eq!(
         goblin.params.sky_capability, 0.5,
-        "the folk goblin's capability must stay exactly 0.5 — no doctrine leak into accounts_of"
+        "the folk goblin's capability must stay exactly 0.5 — no doctrine leak into accounts_from"
     );
 }
 
 #[test]
 fn doctrine_is_deterministic() {
     let w = generated(1);
-    let a = format!("{:?}", doctrines_of(&w));
-    let b = format!("{:?}", doctrines_of(&w));
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let a = format!("{:?}", doctrines_from(&w, &terrain, &climate));
+    let b = format!("{:?}", doctrines_from(&w, &terrain, &climate));
     assert_eq!(
         a, b,
-        "doctrines_of (post-doctrine-explain) must be a pure function of the world"
+        "doctrines_from (post-doctrine-explain) must be a pure function of the world"
     );
 }

@@ -1,7 +1,7 @@
 //! The Deep Grammar (C7 Task 2): the worldgen readouts —
-//! `tongue_morphology_of`, `day_schema_of` (the SAME draw `explain_day`
+//! `tongue_morphology_of`, `day_schema_from` (the SAME draw `explain_day`
 //! resolves — no drift between the two readers), and the derived
-//! `noun_class_of` animacy coherence law — measured against live worlds and
+//! `noun_class_from` animacy coherence law — measured against live worlds and
 //! pinned exact.
 
 use hornvale_language::{Disposition, MorphDepth, NounClass, SchemaId};
@@ -27,15 +27,15 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 
 #[test]
 fn the_coherence_law() {
-    // Every placed culture: noun_class_of(.., "sun") is Animate IFF
-    // day_schema_of == Some(Agentive); same for "moon"/"earth"/"star";
+    // Every placed culture: noun_class_from(.., "sun") is Animate IFF
+    // day_schema_from == Some(Agentive); same for "moon"/"earth"/"star";
     // "<kind>-kind" always Animate; a terrain concept (e.g. "forest")
     // always Inanimate. Measure which cultures are agentive (never force
     // it) — C5 measured PathJourney/CycleReturn/Balance at 1..=3; the DAY
     // schema draws Agentive at seed 4 bugbear
     // (`explanations.rs::the_day_binds_by_period_match_never_identity`), so
     // seed 4 joins the sweep specifically to reach it (each of
-    // day_schema_of/noun_class_of independently re-derives a whole Account
+    // day_schema_from/noun_class_from independently re-derives a whole Account
     // per call — the re-derivation idiom every readout in this module
     // follows — so a full battery over ALL of 1..=10 costs meaningfully
     // more than this targeted set for no added coverage) — assert at least
@@ -91,9 +91,9 @@ fn the_coherence_law() {
 }
 
 #[test]
-fn day_schema_of_matches_the_explained_entry() {
+fn day_schema_from_matches_the_explained_entry() {
     // For a culture whose day entry IS Explained (seed 1 goblin):
-    // day_schema_of == Some(that entry's schema) — the accessor and the
+    // day_schema_from == Some(that entry's schema) — the accessor and the
     // explain pass resolve the SAME draw (no drift between the two readers
     // of one stream).
     let w = generated(1);

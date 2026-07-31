@@ -28,7 +28,7 @@ use hornvale_language::{
     Account, Disposition, account_of, distinctiveness, identity_params, recoverability,
 };
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, accounts_of, build_world, chorus_ground, pathological_params,
+    SettlementPins, SkyChoice, accounts_from, build_world, chorus_ground, pathological_params,
 };
 
 /// Build a world with the shipped four-people component set, generated sky,
@@ -116,7 +116,9 @@ fn the_dial_separates_the_poles() {
 
     for seed in MEASURED_SEEDS {
         let world = generated(seed);
-        let voices = accounts_of(&world);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        let voices = accounts_from(&world, &terrain, &climate);
         if voices.len() < 2 {
             // Skip: the multi-people criteria (C1c/C2/C3) need at least two
             // placed cultures to compare. C1a/C1b (single-voice pole

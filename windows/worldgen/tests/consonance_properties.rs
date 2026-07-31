@@ -7,7 +7,7 @@ use hornvale_astronomy::resonance::detect_moon_period_ratio;
 use hornvale_language::numeracy::{NumeracyRung, expressible_at_rung};
 use hornvale_language::schemas::SchemaId;
 use hornvale_language::{Disposition, LossReason};
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from};
 
 fn days(x: f64) -> StdDays {
     StdDays::new(x).expect("test fixture uses a finite positive value")
@@ -46,7 +46,7 @@ fn non_degeneracy_some_worlds_match_some_dont() {
 }
 
 /// Law 3 + Law 4, together, over real generated worlds and the full
-/// public `accounts_of` pipeline: search a fixed seed range for a world
+/// public `accounts_from` pipeline: search a fixed seed range for a world
 /// where astronomy's own real moon periods produced a clean ratio, then
 /// confirm that for every placed culture, `moon-period-ratio` is EITHER
 /// absent from the account entirely, OR present and gated below this
@@ -87,7 +87,9 @@ fn witnessed_access_and_explanation_hold_over_a_real_world() {
             continue;
         }
         let world = generated(seed);
-        let voices = accounts_of(&world);
+        let terrain = hornvale_worldgen::terrain_of(&world).unwrap();
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).unwrap();
+        let voices = accounts_from(&world, &terrain, &climate);
         for voice in &voices {
             let Some(entry) = voice
                 .account

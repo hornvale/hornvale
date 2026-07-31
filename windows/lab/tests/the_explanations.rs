@@ -32,7 +32,7 @@
 //! `the_dial.rs`, per spec §4.5).
 
 use hornvale_language::{Disposition, SchemaId, SubFrame};
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_of, flagship_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, flagship_of};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -76,7 +76,9 @@ fn differing_subframes_do_not_share_one_verb() {
 
     for seed in 1..=5u64 {
         let world = generated(seed);
-        for voice in accounts_of(&world) {
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        for voice in accounts_from(&world, &terrain, &climate) {
             let Some(village) = flagship_of(&world, &voice.kind) else {
                 continue;
             };
@@ -184,7 +186,9 @@ fn day_schema_competition_clears_the_floor() {
 
     for seed in 1..=5u64 {
         let world = generated(seed);
-        for voice in accounts_of(&world) {
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        for voice in accounts_from(&world, &terrain, &climate) {
             let day = voice
                 .account
                 .entries

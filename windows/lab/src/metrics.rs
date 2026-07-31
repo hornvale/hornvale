@@ -3214,7 +3214,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "kobold")),
         },
         // --- The Chorus (C4, LANG-41): the six census-visible dial metrics
-        // over `accounts_of` — how far each placed culture's epistemic
+        // over `accounts_from` — how far each placed culture's epistemic
         // account of the ground truth strays from the truth (distortion),
         // from each other (distinctiveness), and how much of a substituted
         // fact a listener could still recover (recoverability); plus the
@@ -4249,9 +4249,9 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 }
 
 /// This world's `species` lexicon, reusing the view's already-built terrain
-/// and climate instead of re-sculpting the globe inside `exposure_of` — the
+/// and climate instead of re-sculpting the globe inside `exposure_from` — the
 /// census's dominant cost once the name-gloss sculpts were removed (the
-/// terrain pipeline ran twice per `lexicon_of` call, ~14 metrics deep). The
+/// terrain pipeline ran twice per `lexicon_from` call, ~14 metrics deep). The
 /// Single Sculpt, applied to the lexicon path; byte-identical to
 /// `lex(v, species)`.
 fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
@@ -4642,18 +4642,18 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
 
 // --- The Wearing (Task 11c): the lab's own reading of the toponymic gates.
 //
-// Task 4 gave `hornvale_worldgen::exposure_of` seven new `Steeped` rules —
+// Task 4 gave `hornvale_worldgen::exposure_from` seven new `Steeped` rules —
 // `river`, `ford`, `hill`, `valley`, `marsh`, `spring`, `island` — each
 // gated on a real terrain query over a species' settled cells rather than
 // on roster membership. `independently_steeped_concepts` never learned
 // them, so from the regen at `f32d6ce2` it classified as non-Steeped seven
 // concepts worldgen classifies `Steeped`, and `exposure-sound-{goblin,
 // kobold}` read false on 252 of 1000 worlds for a lexicon that was doing
-// exactly what `exposure_of` told it to.
+// exactly what `exposure_from` told it to.
 //
 // The rules below are re-derived here rather than imported, and that is
 // the whole point of the duplicate: the metric is a SECOND OPINION on
-// `exposure_of`, so calling `hornvale_worldgen::exposure_of` (or its
+// `exposure_from`, so calling `hornvale_worldgen::exposure_from` (or its
 // private `is_river_cell`/`is_hill_cell`/… helpers, which are not `pub`
 // in any case) would turn the check into an echo of the thing it exists
 // to check. What these functions share with worldgen is only the terrain
@@ -4675,7 +4675,7 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
 // complaining that the generator was more conservative than its second
 // opinion expected.
 //
-// `coast` and `lake` are deliberately absent: `exposure_of` classes both
+// `coast` and `lake` are deliberately absent: `exposure_from` classes both
 // `KnowsOf`, and `build_lexicon` mints a `Root` only from `Steeped`, so
 // they cannot reach the check (the same argument the doc comment below
 // already makes for the KnowsOf-via-neighbour and sea-proximity rules).
@@ -4776,16 +4776,16 @@ fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
 }
 
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
-/// classify `Steeped` — duplicating `exposure_of`'s own Steeped rules
+/// classify `Steeped` — duplicating `exposure_from`'s own Steeped rules
 /// (`windows/worldgen/src/lib.rs`) directly from ledger/roster/terrain/
-/// climate data rather than calling `exposure_of` itself (spec §9.2: "the
+/// climate data rather than calling `exposure_from` itself (spec §9.2: "the
 /// flag re-derives the exposure class from the ledger independently of the
-/// lexicon pipeline" — calling `exposure_of` would be the config-echo trap
+/// lexicon pipeline" — calling `exposure_from` would be the config-echo trap
 /// `epithet_honorific`'s doc comment already names for a different metric).
 /// Sufficient for `exposure_sound`'s "no Root at Unknown" check:
 /// `build_lexicon` only ever mints a `Root` from a `Steeped` classification
 /// (`KnowsOf`/`Unknown` both fall through to `Compound`/`Gap`), so the
-/// KnowsOf-via-neighbor and sea-proximity rules `exposure_of` also carries
+/// KnowsOf-via-neighbor and sea-proximity rules `exposure_from` also carries
 /// are irrelevant to this specific soundness check and are not reproduced
 /// here. The seven toponymic terrain rules Task 4 added ARE reproduced,
 /// because those ones are `Steeped` and so do reach the check — see the
@@ -4836,7 +4836,7 @@ fn independently_steeped_concepts(
         steeped.insert(v.climate().biome_at(cell).concept_name().to_string());
         // The Toponym: a people is steeped in the VARIANT of every cell it
         // settled, as it is in the biome. Re-derived here independently of
-        // `exposure_of`, which is the point of this function.
+        // `exposure_from`, which is the point of this function.
         let expr = v.climate().biome_expr_at(cell);
         if let Some(var) = hornvale_climate::variant_at_cell(
             v.world().seed,
@@ -4991,10 +4991,10 @@ const ALL_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
 /// Whether `species` is a member of THIS view's own roster (not the global
 /// species registry) — every family-battery function below must check this
 /// before calling `language_of_in` (which panics on a species outside
-/// `v.roster`) or before treating a `lexicon_of` result as meaningful: a
+/// `v.roster`) or before treating a `lexicon_from` result as meaningful: a
 /// study pin set may build with a non-default roster (e.g.
 /// `census-of-the-meeting`'s solo `[goblin]`/`[goblin-twin]` rosters), and
-/// `lexicon_of` alone would silently keep resolving hobgoblin/bugbear/
+/// `lexicon_from` alone would silently keep resolving hobgoblin/bugbear/
 /// kobold against the GLOBAL default roster even when they were never part
 /// of this particular world.
 fn in_roster(v: &FullView, species: &str) -> bool {
@@ -5040,7 +5040,7 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
 
 /// Re-derive the "goblinoid" family's injective proto-root assignment (epoch
 /// `root/v2`) INDEPENDENTLY of any daughter's recorded derivation — over the
-/// world's full registered concept universe (`exposure_of` classifies every
+/// world's full registered concept universe (`exposure_from` classifies every
 /// registered concept, so its key set is exactly the registry), exactly as
 /// `build_lexicon` does. The shared basis for the monophyly and clean-outgroup
 /// checks: it proves shared ancestry, never mere self-consistency.
@@ -5572,7 +5572,7 @@ fn attested_roman_forms(lexicon: &hornvale_language::Lexicon) -> Vec<String> {
 /// deriving `attested_roman` from a lexicon must resolve `species` within
 /// the roster first, same as every other lexicon-derived caller in this
 /// module (see the caveat at [`in_roster`]'s doc, and `phonotactic_validity`
-/// for the pattern: `language_of_in`/`lexicon_of` together against
+/// for the pattern: `language_of_in`/`lexicon_from` together against
 /// `v.roster()`).
 fn is_phonotactically_valid(name: &str, ph: &Phonology, attested_roman: &[String]) -> bool {
     let chars: Vec<char> = name.to_lowercase().chars().collect();
@@ -6445,9 +6445,14 @@ mod tests {
         let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
         for species in ["goblin", "kobold"] {
             let ph = hornvale_worldgen::language_of(view.world(), species);
-            let attested = hornvale_worldgen::lexicon_of(view.world(), species)
-                .map(|lex| attested_roman_forms(&lex))
-                .unwrap_or_default();
+            let attested = hornvale_worldgen::lexicon_from(
+                view.world(),
+                species,
+                view.terrain(),
+                view.climate(),
+            )
+            .map(|lex| attested_roman_forms(&lex))
+            .unwrap_or_default();
             for n in species_generated_names(&view, species) {
                 assert!(
                     is_phonotactically_valid(&n, &ph, &attested),
@@ -7658,7 +7663,7 @@ mod tests {
     }
 
     // --- The Chorus (C4, LANG-41): the six dial metrics over
-    // `accounts_of`. Seed 1 places goblin (sky_capability 0.5) and
+    // `accounts_from`. Seed 1 places goblin (sky_capability 0.5) and
     // hobgoblin (0.55) only — both below the moon-count SkyGraded
     // threshold (0.6), so both lose every sky fact and their sky
     // distortions tie at 1.0. Seed 2 additionally places kobold

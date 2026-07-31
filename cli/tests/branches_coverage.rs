@@ -131,6 +131,8 @@ fn species_pin_isolation_holds_for_hobgoblin() {
 #[test]
 fn derivations_replay() {
     let world = default_generated_seed_42();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let mut checked = 0;
 
     // Language/lexicon coverage is a speaker-only concern. Since The Eremite the
@@ -145,11 +147,11 @@ fn derivations_replay() {
         // crate's default-regime draw_cascade): the articulation registry is
         // dragon-reachable (The Solitary Tongue), and a dragon's cascade must
         // be drawn at its frozen regime, consistent with the lexicon
-        // lexicon_of below already builds at that same regime.
+        // lexicon_from below already builds at that same regime.
         let cascade = hornvale_worldgen::cascade_of(&world, species)
             .unwrap_or_else(|e| panic!("cascade_of({species}) failed: {e:?}"));
-        let lex = hornvale_worldgen::lexicon_of(&world, species)
-            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
+        let lex = hornvale_worldgen::lexicon_from(&world, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from({species}) failed: {e:?}"));
 
         for (concept, entry) in lex.entries() {
             if let LexEntry::Root { derivation, .. } = entry {
@@ -177,6 +179,8 @@ fn derivations_replay() {
 #[test]
 fn every_concept_resolves_once() {
     let world = default_generated_seed_42();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let concept_count = world.registry.concepts().count();
     assert!(concept_count > 0, "the registry should hold concepts");
 
@@ -187,8 +191,8 @@ fn every_concept_resolves_once() {
     // `windows/worldgen`'s settlement-genesis pass applies).
     for kind in hornvale_language::articulation_registry().ids() {
         let species = kind.0;
-        let lex = hornvale_worldgen::lexicon_of(&world, species)
-            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
+        let lex = hornvale_worldgen::lexicon_from(&world, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from({species}) failed: {e:?}"));
         for concept in world.registry.concepts() {
             assert!(
                 lex.entry(&concept.name).is_some(),
@@ -214,6 +218,8 @@ fn every_concept_resolves_once() {
 #[test]
 fn gaps_have_reasons() {
     let world = default_generated_seed_42();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let mut checked = 0;
     // Substrings drawn directly from worldgen's `experiential_reason`/
     // `perceptual_reason` and lexicon's own composed compound-gap messages
@@ -233,8 +239,8 @@ fn gaps_have_reasons() {
     // `windows/worldgen`'s settlement-genesis pass applies).
     for kind in hornvale_language::articulation_registry().ids() {
         let species = kind.0;
-        let lex = hornvale_worldgen::lexicon_of(&world, species)
-            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
+        let lex = hornvale_worldgen::lexicon_from(&world, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from({species}) failed: {e:?}"));
         for (concept, entry) in lex.entries() {
             if let LexEntry::Gap { reason } = entry {
                 checked += 1;

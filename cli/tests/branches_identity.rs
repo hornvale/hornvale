@@ -124,7 +124,7 @@ fn seed_42_is_deterministic_across_two_builds() {
     assert_eq!(a, b, "same seed + pins must yield byte-identical worlds");
 }
 
-/// (2) Singleton mechanism (kobold): `lexicon_of` for the one people
+/// (2) Singleton mechanism (kobold): `lexicon_from` for the one people
 /// outside the goblinoid family must still resolve through the direct,
 /// pre-family `build_lexicon` call — `family == species`, `proto_ph ==
 /// ph` — end to end. Mirrors worldgen's own
@@ -134,9 +134,11 @@ fn seed_42_is_deterministic_across_two_builds() {
 #[test]
 fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
     let world = default_generated_seed_42();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let kph = hornvale_worldgen::language_of(&world, "kobold");
-    let kex = hornvale_worldgen::exposure_of(&world, "kobold")
-        .expect("exposure_of(kobold) must succeed for a placed species");
+    let kex = hornvale_worldgen::exposure_from(&world, "kobold", &terrain, &climate)
+        .expect("exposure_from(kobold) must succeed for a placed species");
     let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
     let kdaughters = hornvale_worldgen::family_daughters(&world, &wc, "kobold");
     let direct = hornvale_language::build_lexicon(
@@ -150,7 +152,8 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
         hornvale_language::CascadeRegime::SETTLED,
     );
     assert_eq!(
-        hornvale_worldgen::lexicon_of(&world, "kobold").expect("lexicon_of(kobold) must succeed"),
+        hornvale_worldgen::lexicon_from(&world, "kobold", &terrain, &climate)
+            .expect("lexicon_from(kobold) must succeed"),
         direct,
         "kobold — the one unrelated outgroup, a singleton family — must \
          still resolve through the direct build_lexicon call with \
@@ -375,11 +378,13 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
 #[test]
 fn every_goblinoid_words_root_is_in_its_own_daughters_inventory() {
     let world = default_generated_seed_42();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let mut checked = 0;
     for species in ["goblin", "hobgoblin", "bugbear"] {
         let ph = hornvale_worldgen::language_of(&world, species);
-        let lex = hornvale_worldgen::lexicon_of(&world, species)
-            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
+        let lex = hornvale_worldgen::lexicon_from(&world, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from({species}) failed: {e:?}"));
         for (concept, entry) in lex.entries() {
             if let LexEntry::Root { derivation, .. } = entry {
                 checked += 1;
@@ -545,14 +550,16 @@ fn reduced_reflexes(citation: &str) -> Vec<String> {
 #[test]
 fn the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42() {
     let world = default_generated_seed_42();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let mut checked = 0;
 
     for species in ["goblin", "hobgoblin", "bugbear", "kobold"] {
         let Some(village) = hornvale_worldgen::flagship_of(&world, species) else {
             continue;
         };
-        let lex = hornvale_worldgen::lexicon_of(&world, species)
-            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
+        let lex = hornvale_worldgen::lexicon_from(&world, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from({species}) failed: {e:?}"));
         let Some(LexEntry::Root { views, .. }) = lex.entry("gloom") else {
             // Not every species need root "gloom"; skip rather than fail —
             // this probe only exercises species that can.

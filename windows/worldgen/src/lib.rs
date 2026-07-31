@@ -91,12 +91,10 @@ pub mod traversal;
 pub mod vestige;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_from,
-    account_params_of, accounts_from, accounts_of, beta_of, chorus_ground, crisis_from, crisis_of,
-    cyclic_beliefs_from, cyclic_beliefs_of, day_schema_from, day_schema_of, doctrine_beta_of,
-    doctrine_from, doctrine_of, doctrine_params_of, doctrines_from, doctrines_of, folk_verifiable,
-    ladder_from, ladder_of, noun_class_from, noun_class_of, noun_class_with_sky,
-    observability_table, observations_from, observations_of, pathological_params, schema_prior,
-    sky_capability, tongue_morphology_of,
+    accounts_from, beta_of, chorus_ground, crisis_from, cyclic_beliefs_from, day_schema_from,
+    doctrine_beta_of, doctrine_from, doctrine_params_of, doctrines_from, folk_verifiable,
+    ladder_from, noun_class_from, noun_class_with_sky, observability_table, observations_from,
+    pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
 pub use graph_derive::{
@@ -3579,7 +3577,7 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 /// "goblinoid", env)`), a language with no speakers of its own, only
 /// daughters. Panics if `family` is not in `family_proto` (a singleton
 /// family has no entry there and never reaches this function — see
-/// `lexicon_of`'s resolution).
+/// `lexicon_of_in`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
 pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_language::Phonology {
     // The convenience entry: assemble the canonical component set (the sole
@@ -3593,7 +3591,7 @@ pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_langu
 /// (ECS c3): read the family's proto ancestral vector from `wc.family_proto`
 /// — the composed proto store, `worldgen`'s sole proto read path — rather than
 /// re-fetch language's global `family_proto()` per call. A singleton family
-/// has no entry there and never reaches this function (see `lexicon_of`'s
+/// has no entry there and never reaches this function (see `lexicon_of_in`'s
 /// resolution). Panics if `family` is not in `wc.family_proto`.
 fn proto_phonology_of_in(
     world: &World,
@@ -3706,7 +3704,7 @@ fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
 
 /// Whether some cell within `max_hops` of `start` (inclusive of `start`
 /// itself) satisfies `pred` — the "lies within N cells" proximity test
-/// `exposure_of` uses for `sea`. A plain breadth-first walk over the
+/// `exposure_from` uses for `sea`. A plain breadth-first walk over the
 /// Geosphere's adjacency; `max_hops` is small (2) so this is cheap per
 /// settled cell.
 fn within_hops(
@@ -3742,7 +3740,7 @@ fn within_hops(
 /// The size (in cells) of the contiguous non-ocean landmass reachable from
 /// `start` by land, capped at `cap + 1` — a plain breadth-first walk that
 /// stops early once it has visited more than `cap` cells, so a full
-/// continent costs the same bounded work as a small island (`exposure_of`'s
+/// continent costs the same bounded work as a small island (`exposure_from`'s
 /// `island` gate). `start` is assumed land (a settled cell); the result
 /// saturates at `cap + 1` rather than continuing to the mainland's true
 /// size, which the caller only needs to compare against `cap`.
@@ -3981,34 +3979,11 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   settled to reach) gets a generic but still recountable
 ///   `GapReason::Experiential`.
 ///
+/// Takes ALREADY-BUILT terrain and climate instead of re-sculpting them.
+/// Threaded down the `lexicon_from` chain so the census's ~14 lexicon
+/// metrics stop re-sculpting per call.
 /// type-audit: bare-ok(identifier-text)
-pub fn exposure_of(
-    world: &World,
-    species: &str,
-) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
-    let wc = WorldComponents::assemble()?;
-    let name = resolve_kind(&wc, species)?;
-    let terrain = terrain_of(world)?;
-    let climate = climate_from(world, &terrain)?;
-    let settled = settled_cells(world, species);
-    // `exposure_of_impl` alone owns the "coexisting counts only once the
-    // querying species has settled" rule; the outer gate this replaced was
-    // vestigial belt-and-suspenders from the merge reconciliation.
-    let coexisting = placed_species(world);
-    exposure_of_impl(world, &wc, name, &settled, &coexisting, &terrain, &climate)
-}
-
-/// [`exposure_of`], reusing ALREADY-BUILT terrain and climate instead of
-/// re-sculpting them (`exposure_of` runs the terrain pipeline twice — once
-/// directly, once inside its `climate_of`). Byte-identical: the sole
-/// difference is that the passed terrain/climate replace `terrain_of(world)`/
-/// `climate_of(world)`, which a Lab view's `terrain()`/`climate()` equal by
-/// construction; every other input (the assembled roster, the settled/
-/// coexisting cells) is derived exactly as `exposure_of` derives it. Threaded
-/// down the `lexicon_from` chain so the census's ~14 lexicon metrics stop
-/// re-sculpting per call.
-/// type-audit: bare-ok(identifier-text)
-fn exposure_from(
+pub fn exposure_from(
     world: &World,
     species: &str,
     terrain: &GeneratedTerrain,
@@ -4017,11 +3992,14 @@ fn exposure_from(
     let wc = WorldComponents::assemble()?;
     let name = resolve_kind(&wc, species)?;
     let settled = settled_cells(world, species);
+    // `exposure_of_impl` alone owns the "coexisting counts only once the
+    // querying species has settled" rule; the outer gate this replaced was
+    // vestigial belt-and-suspenders from the merge reconciliation.
     let coexisting = placed_species(world);
     exposure_of_impl(world, &wc, name, &settled, &coexisting, terrain, climate)
 }
 
-/// [`exposure_of`]'s classification rules (spec §7), factored out so
+/// [`exposure_from`]'s classification rules (spec §7), factored out so
 /// glossed naming (Task 9) can classify a species' exposure from the
 /// scatter *this build pass is about to place* rather than from committed
 /// facts: glossed settlement/deity names are drawn before
@@ -4030,10 +4008,10 @@ fn exposure_from(
 /// final value — and before `peopled-by` facts exist at all (species
 /// entities mint last, entity-id stability, spec §8 of Y2-1)), so the
 /// ledger-backed `settled_cells`/`placed_species` this species' own
-/// `exposure_of` normally reads would see nothing yet. `settled` and
+/// `exposure_from` normally reads would see nothing yet. `settled` and
 /// `coexisting` carry exactly what those two ledger reads would have
 /// produced, sourced one step earlier from the in-memory placement scatter
-/// instead; every other rule is identical to `exposure_of`'s doc comment.
+/// instead; every other rule is identical to `exposure_from`'s doc comment.
 fn exposure_of_impl(
     world: &World,
     wc: &WorldComponents,
@@ -4051,11 +4029,11 @@ fn exposure_of_impl(
     // Source perception from the world's component set (ECS c3), keyed by the
     // kind's `KindId` label. Since The Vigil every minded speaker perceives
     // (`check_integrity` enforces speech ⊆ perception), so this lookup is total
-    // for every kind that can reach a lexicon. `exposure_of` is public and
-    // `resolve_kind` accepts any biosphere kind, so a caller may still pass
-    // plain fauna — which fails loudly here rather than silently classifying
-    // colour as though a bear saw like a goblin. Mirrors the same failure in
-    // `chorus::account_params_from`.
+    // for every kind that can reach a lexicon. `lexicon_of_in`/`lexicon_from`
+    // are public and `resolve_kind` accepts any biosphere kind, so a caller
+    // may still pass plain fauna — which fails loudly here rather than
+    // silently classifying colour as though a bear saw like a goblin. Mirrors
+    // the same failure in `chorus::account_params_from`.
     let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
         BuildError::MalformedKind(format!(
             "'{name}' carries no perception component (not a peopled kind)"
@@ -4314,16 +4292,6 @@ fn exposure_of_impl(
     Ok(classes)
 }
 
-/// Build a species' full lexicon in one call — the re-derivation path
-/// surfaces use (nothing about a lexicon is persisted): draw its phonology
-/// (`language_of`), classify every concept's exposure (`exposure_of`), and
-/// assemble the two into a `Lexicon` (`hornvale_language::build_lexicon`).
-/// type-audit: bare-ok(identifier-text: species)
-pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
-    let wc = WorldComponents::assemble()?;
-    lexicon_of_in(world, &wc, species)
-}
-
 /// The family's members (all kinds in `wc` sharing `family`), each as a
 /// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
 /// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
@@ -4439,16 +4407,39 @@ pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cas
 }
 
 /// Build `species`' lexicon within an explicit component set `wc` — the
-/// merger-aware composition-root path. Assembles the family's daughters so the
-/// proto assignment drives core homophony to zero across the whole family.
+/// merger-aware composition-root path: draw its phonology (`language_of_in`),
+/// classify every concept's exposure (`exposure_from`), and assemble the two
+/// into a `Lexicon` (`hornvale_language::build_lexicon`). Assembles the
+/// family's daughters so the proto assignment drives core homophony to zero
+/// across the whole family. Derives terrain/climate once and delegates to
+/// [`lexicon_of_in_from`].
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_of_in(
     world: &World,
     wc: &WorldComponents,
     species: &str,
 ) -> Result<hornvale_language::Lexicon, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    lexicon_of_in_from(world, wc, species, &terrain, &climate)
+}
+
+/// [`lexicon_of_in`], taking ALREADY-BUILT terrain and climate down the
+/// exposure step ([`exposure_from`]) instead of re-sculpting the globe. The
+/// draw order (`ph` before exposure) is preserved so the seed stream is
+/// consumed identically regardless of caller. Byte-identity pinned by the
+/// census A/B and the `*_lexicon_mechanism_is_stable_given_fixed_exposures`
+/// tests.
+/// type-audit: bare-ok(identifier-text: species)
+fn lexicon_of_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
     let ph = language_of_in(world, wc, species);
-    let exposures = exposure_of(world, species)?;
+    let exposures = exposure_from(world, species, terrain, climate)?;
     let name = resolve_kind(wc, species)?;
     let family = *wc
         .family_of
@@ -4480,53 +4471,11 @@ pub fn lexicon_of_in(
     ))
 }
 
-/// [`lexicon_of_in`], reusing ALREADY-BUILT terrain and climate down the
-/// exposure step ([`exposure_from`]) instead of re-sculpting the globe. Only
-/// the `exposure_*` line differs from `lexicon_of_in`; the draw order (`ph`
-/// before exposure, exactly as `lexicon_of_in`) is preserved so the seed
-/// stream is consumed identically. Byte-identity pinned by the census A/B and
-/// the `lexicon_from_matches_lexicon_of` test.
-/// type-audit: bare-ok(identifier-text: species)
-fn lexicon_of_in_from(
-    world: &World,
-    wc: &WorldComponents,
-    species: &str,
-    terrain: &GeneratedTerrain,
-    climate: &GeneratedClimate,
-) -> Result<hornvale_language::Lexicon, BuildError> {
-    let ph = language_of_in(world, wc, species);
-    let exposures = exposure_from(world, species, terrain, climate)?;
-    let name = resolve_kind(wc, species)?;
-    let family = *wc
-        .family_of
-        .get(&KindId(name))
-        .expect("every kind has a family row (integrity-checked)");
-    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
-        Some(_) => (family, proto_phonology_of_in(world, wc, family)),
-        None => (name, ph.clone()),
-    };
-    let daughters = family_daughters(world, wc, family);
-    let bio = wc
-        .biosphere
-        .get(&KindId(name))
-        .expect("every kind has a biosphere row (integrity-checked)");
-    Ok(hornvale_language::build_lexicon(
-        &world.seed,
-        name,
-        fam_label,
-        &ph,
-        &proto_ph,
-        &exposures,
-        &daughters,
-        cascade_regime_of(bio),
-    ))
-}
-
-/// [`lexicon_of`], reusing ALREADY-BUILT terrain and climate (a Lab view's
+/// [`lexicon_of_in_from`] over the canonical (assembled) component set —
+/// takes ALREADY-BUILT terrain and climate (a Lab view's
 /// `terrain()`/`climate()`) so the census's many lexicon metrics stop
 /// re-sculpting the globe per call — the terrain sculpt was ~80% of the
-/// post-name-gloss census cost, almost all of it here. Byte-identical to
-/// `lexicon_of` (same assembled roster, same draw order).
+/// post-name-gloss census cost, almost all of it here.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_from(
     world: &World,
@@ -5472,11 +5421,11 @@ fn build_to(
 
     // Per-species lexicon, for glossed naming (Task 9) below — built from
     // THIS pass's in-memory placement scatter via `exposure_of_impl` rather
-    // than the ledger-backed `exposure_of`: glossed settlement/deity names
+    // than the ledger-backed `exposure_from`: glossed settlement/deity names
     // are drawn before `hornvale_settlement::genesis` commits the
     // (functional, one-shot) `name` fact, and well before `peopled-by`
     // facts exist at all (species entities mint last — entity-id stability,
-    // spec §8 of Y2-1), so `exposure_of`'s usual ledger reads would see no
+    // spec §8 of Y2-1), so `exposure_from`'s usual ledger reads would see no
     // settlements yet.
     let mut lexicons: std::collections::BTreeMap<&str, hornvale_language::Lexicon> =
         std::collections::BTreeMap::new();
@@ -6389,7 +6338,7 @@ pub fn dominant_people(world: &World) -> Option<KindId> {
 }
 
 /// [`dominant_people`] over an explicit component set — the testable core
-/// (mirrors `lexicon_of`/`lexicon_of_in`), so a mutation check can perturb a
+/// (mirrors `language_of`/`language_of_in`), so a mutation check can perturb a
 /// candidate's mass without touching the canonical registries.
 pub fn dominant_people_in(world: &World, wc: &WorldComponents) -> Option<KindId> {
     let mut best: Option<(f64, KindId)> = None;
@@ -6434,7 +6383,7 @@ pub fn world_name(world: &World) -> Option<String> {
 }
 
 /// [`world_name`] over an explicit component set — the testable core
-/// (mirrors `lexicon_of`/`lexicon_of_in` and `dominant_people`/
+/// (mirrors `language_of`/`language_of_in` and `dominant_people`/
 /// `dominant_people_in`), so the planet genesis stage can use the SAME
 /// injected `wc` it already built rather than re-assembling components.
 /// type-audit: bare-ok(identifier-text)
@@ -10491,8 +10440,10 @@ mod tests {
         // holds as a Root and assert cognacy over that set — robust to
         // placement.
         let world = generated(42);
-        let g = lexicon_of(&world, "goblin").unwrap();
-        let h = lexicon_of(&world, "hobgoblin").unwrap();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
+        let g = lexicon_from(&world, "goblin", &terrain, &climate).unwrap();
+        let h = lexicon_from(&world, "hobgoblin", &terrain, &climate).unwrap();
         let shared: Vec<&str> = root_concepts(&g)
             .into_iter()
             .filter(|c| root_concepts(&h).contains(c))
@@ -10542,9 +10493,11 @@ mod tests {
         }
 
         let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
         let lexes: Vec<_> = ["goblin", "hobgoblin", "bugbear"]
             .iter()
-            .map(|s| lexicon_of(&world, s).unwrap())
+            .map(|s| lexicon_from(&world, s, &terrain, &climate).unwrap())
             .collect();
         assert!(
             some_shared_concept_has_distinct_forms(&lexes),
@@ -10555,9 +10508,11 @@ mod tests {
     #[test]
     fn every_goblinoid_word_is_in_its_inventory() {
         let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
         for sp in ["goblin", "hobgoblin", "bugbear"] {
             let ph = language_of(&world, sp);
-            let lex = lexicon_of(&world, sp).unwrap();
+            let lex = lexicon_from(&world, sp, &terrain, &climate).unwrap();
             for (_c, e) in lex.entries() {
                 if let hornvale_language::LexEntry::Root { derivation, .. } = e {
                     assert!(
@@ -10572,13 +10527,15 @@ mod tests {
     #[test]
     fn kobold_lexicon_mechanism_is_stable_given_fixed_exposures() {
         let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
         let ph = language_of(&world, "kobold");
-        let ex = exposure_of(&world, "kobold").unwrap();
+        let ex = exposure_from(&world, "kobold", &terrain, &climate).unwrap();
         // Singleton path: family == species, proto_ph == ph; the merger-aware
         // daughters slice is the family's one member (kobold itself). Kobold
         // is Settled, so `cascade_regime_of` resolves to SETTLED here too —
         // the literal stays for a direct, mechanism-level comparison against
-        // `lexicon_of`.
+        // `lexicon_from`.
         let wc = WorldComponents::assemble().unwrap();
         let daughters = family_daughters(&world, &wc, "kobold");
         let direct = hornvale_language::build_lexicon(
@@ -10591,20 +10548,25 @@ mod tests {
             &daughters,
             hornvale_language::CascadeRegime::SETTLED,
         );
-        assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
+        assert_eq!(
+            lexicon_from(&world, "kobold", &terrain, &climate).unwrap(),
+            direct
+        );
     }
 
     #[test]
     fn goblin_lexicon_mechanism_is_stable_given_fixed_exposures() {
         // THE SOLITARY TONGUE (Task 2) byte-identity guard: goblin exercises
-        // the OTHER branch of `lexicon_of_in` (a real multi-member family
+        // the OTHER branch of `lexicon_of_in_from` (a real multi-member family
         // with a shared proto phonology, unlike kobold's singleton path).
         // Goblin is Settled, so `cascade_regime_of` must resolve to the
         // historical SETTLED regime here exactly as the pre-Task-2 literal
         // did — a dragon-blind caller sees byte-identical draws.
         let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
         let ph = language_of(&world, "goblin");
-        let ex = exposure_of(&world, "goblin").unwrap();
+        let ex = exposure_from(&world, "goblin", &terrain, &climate).unwrap();
         let wc = WorldComponents::assemble().unwrap();
         let proto_ph = proto_phonology_of_in(&world, &wc, "goblinoid");
         let daughters = family_daughters(&world, &wc, "goblinoid");
@@ -10618,7 +10580,10 @@ mod tests {
             &daughters,
             hornvale_language::CascadeRegime::SETTLED,
         );
-        assert_eq!(lexicon_of(&world, "goblin").unwrap(), direct);
+        assert_eq!(
+            lexicon_from(&world, "goblin", &terrain, &climate).unwrap(),
+            direct
+        );
     }
 
     #[test]
