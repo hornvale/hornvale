@@ -4289,8 +4289,15 @@ fn settlement_site_concepts(
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
     let presiding = phenomena.first().and_then(phenomenon_concept);
-    let concepts =
-        worldgen_settlement_site_concepts(&v.world().seed, cell, v.terrain(), climate, presiding);
+    let concepts = worldgen_settlement_site_concepts(
+        v.world(),
+        &v.world().seed,
+        &species,
+        cell,
+        v.terrain(),
+        climate,
+        presiding,
+    );
     Some(concepts.into_iter().map(str::to_string).collect())
 }
 
@@ -4567,7 +4574,9 @@ fn name_transparency(v: &FullView) -> MetricValue {
             continue;
         };
         let mut vocab: std::collections::BTreeSet<&str> = worldgen_settlement_site_concepts(
+            v.world(),
             &v.world().seed,
+            &species,
             CellId(*cell as u32),
             v.terrain(),
             v.climate(),
@@ -6174,7 +6183,7 @@ mod tests {
         // than a surprise: SSP reorders only the templates that violate it.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.683_168_316_831_683_3)
+            MetricValue::Number(2.603_960_396_039_604)
         );
     }
 
@@ -6207,13 +6216,14 @@ mod tests {
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 209 of 329 glossed settlement names — up from 202 at The Watershed's
-        // sonority merge (Item 0). Seven more names became analyzable, which is
-        // the direction SSP predicts: a name whose clusters are legal is a name
-        // whose morphemes survive repair intact, so the gloss stays audible in
-        // it. Recorded because it is the one metric that moved FAVOURABLY on
-        // its own terms rather than merely moving.
-        assert_eq!(share, 209.0 / 329.0, "seed 42 transparency drifted");
+        // 216 of 329 glossed settlement names. 202 before The Watershed;
+        // 209 after Item 0's sonority merge (legal clusters let a morpheme
+        // survive repair intact, so the gloss stays audible in it); 216 after
+        // Item 5 adds the predecessor people, which contributes a concept that
+        // is itself a registered word rather than an opaque one. Both steps
+        // moved this metric FAVOURABLY on its own terms, which is why it is
+        // tracked here rather than merely re-pinned.
+        assert_eq!(share, 216.0 / 329.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
