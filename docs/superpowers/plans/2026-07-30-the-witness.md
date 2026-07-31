@@ -763,6 +763,86 @@ is_spring_cell drops the Karst proxy it has stood on since The Wearing."
 
 ---
 
+### Task 5b: The lithology water model — range, threshold, and the contact
+
+*(Added 2026-07-30. Owner-approved. Supersedes Task 5's constant, which was
+pinned on the wrong population.)*
+
+Full measurement and the criterion are in `.superpowers/sdd/baseline-report.md`
+§"Task 5b". The short version: **clastic porosity on land is one value**
+(p25–p95 all 0.325), so no threshold can partition it — Task 5's shipped `0.25`
+yields **69.64% of land as Aquifer**. Three changes, correct only together.
+
+**Files:**
+- Modify: `domains/terrain/src/lithology.rs` (`porosity` ~445; `hydrogeology`
+  ~288–312; `SPRING_DRAINAGE_THRESHOLD` ~312)
+- Modify: `domains/terrain/src/provider.rs` (~215, the `hydrogeology` call site)
+- Modify: `windows/worldgen/src/lib.rs` (`is_spring_cell`),
+  `windows/lab/src/metrics.rs` (`lab_is_spring_cell`)
+
+- [ ] **Step 1: Give porosity dynamic range**
+
+```rust
+const GRAIN_POROSITY_GAIN: f64 = 0.40;
+
+let porosity = (0.5 * carbonate
+    + GRAIN_POROSITY_GAIN * grain * (1.0 - induration)
+    + 0.3 * (1.0 - metamorphic_grade))
+    .clamp(0.0, 1.0);
+```
+
+The doc comment must say **the grain term exists for range, not to cross a
+gate**: without it clastic porosity is exactly 0.325 on ~90% of land, because
+`carbonate` is binary and `mg` is 0 outside orogens. With it, porosity is a
+continuous function of crust age spanning `[0.416, 0.494]`, and the threshold
+selects **old, coarse, weakly-cemented crust** — which is what an aquifer is.
+
+- [ ] **Step 2: Threshold mid-band**
+
+`CLASTIC_AQUIFER_MIN_POROSITY = 0.46`, at 56% of the band. The comment records
+the band, the measured aquifer share (16.4% of land), and **why mid-band rather
+than the tidier `k_g=0.30 / 0.44`** (8.7%, but 80% of a narrower band — two
+hundredths from reading zero).
+
+- [ ] **Step 3: Spring becomes a descending contact; delete `SPRING_DRAINAGE_THRESHOLD`**
+
+`hydrogeology` stays pointwise and returns matrix petrophysics only —
+`Aquifer` / `Aquitard` / `Runoff` / `Karst`, **no `Spring`**, and it no longer
+takes a `drainage` argument if nothing else needs it. The **provider**
+(`provider.rs:215`, where the geosphere is in hand) promotes:
+
+> `Aquifer` → `Spring` when some neighbour is not an `Aquifer` **and** is lower
+> than this cell.
+
+Decision **0085** is the precedent for the split: pointwise petrophysics is the
+durable signal, the geometric promotion is derived from it. `drainage` measures
+water flowing *over* a cell; a spring is water emerging *from* one — and land
+drainage maxes at 219 against the old threshold of 500, so that gate was
+unreachable regardless.
+
+- [ ] **Step 4: Verify BOTH variants on real worlds, at level 6**
+
+Extend Task 5's world-derived test to assert `Aquifer` **and** `Spring`
+separately, and assert the shares are in a **loose band** (aquifer 5–35%, spring
+0.5–8%) — a floor and a ceiling, not a golden. A ceiling is the half Task 5
+lacked, and its absence is why 69.64% shipped without reddening anything.
+
+- [ ] **Step 5: Re-pin the drift, in this commit**
+
+Task 5 left six failures. Re-derive them here — `solitary_tongue`'s lexicon
+golden, the two seed-42 name pins, the lab mutation test, and both `exposure.rs`
+spring tests, which should recover now that `spring` is steepable again. Re-pin
+in the drifting commit; never defer to the close.
+
+- [ ] **Step 6: Regenerate, review, commit**
+
+```bash
+SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh
+git diff --stat book/ docs/audits/
+```
+
+---
+
 ### Task 6: Keystone guard 1 — every `Hydro` variant must be witnessed
 
 **Files:**
