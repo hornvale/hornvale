@@ -858,15 +858,30 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
     let mut out = String::from("# The Book\n");
     let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
     for seed in [1u64, 2, 3] {
-        let world = world_builder::build_world(
+        // Build once, threaded (The Shuttle): `build_world_to_with_artifacts`
+        // hands back the terrain/climate the build already sculpted — at
+        // `BuildDepth::Full` both are `Some` — so the three renders below
+        // reuse them via the `_from` entry points instead of each
+        // re-sculpting the globe (`terrain_of`/`climate_from`) on its own.
+        let wc = world_builder::WorldComponents::assemble().map_err(|e| e.to_string())?;
+        let world_builder::BuildArtifacts {
+            world,
+            terrain,
+            climate,
+        } = world_builder::build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
             world_builder::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
+            &wc,
+            world_builder::BuildDepth::Full,
         )
         .map_err(|e| e.to_string())?;
-        let vol = hornvale_book::render_volume(&world);
+        let vol = match (terrain.as_ref(), climate.as_ref()) {
+            (Some(t), Some(c)) => hornvale_book::render_volume_from(&world, t, c),
+            _ => hornvale_book::render_volume(&world),
+        };
         let title = world_builder::planet_entity(&world)
             .and_then(|p| world.ledger.text_of(p, hornvale_kernel::NAME))
             .map(str::to_string)
@@ -934,7 +949,11 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
             Some(day) => {
                 let at_days =
                     hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
-                vec![hornvale_book::reckoning_at(&world, at_days)]
+                let epoch = match (terrain.as_ref(), climate.as_ref()) {
+                    (Some(t), Some(c)) => hornvale_book::reckoning_at_from(&world, at_days, t, c),
+                    _ => hornvale_book::reckoning_at(&world, at_days),
+                };
+                vec![epoch]
             }
             None => vol.reckoning,
         };
@@ -966,7 +985,10 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
                     .into_iter()
                     .map(|f| (f.subject, f.predicate))
                     .collect();
-            let initiated = hornvale_book::esoteric_lines(&world, &reader);
+            let initiated = match (terrain.as_ref(), climate.as_ref()) {
+                (Some(t), Some(c)) => hornvale_book::esoteric_lines_from(&world, &reader, t, c),
+                _ => hornvale_book::esoteric_lines(&world, &reader),
+            };
             if !initiated.is_empty() {
                 out.push_str("\n### To the initiated\n\n");
                 for line in &initiated {

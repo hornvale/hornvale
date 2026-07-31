@@ -64,6 +64,7 @@ name = "hornvale-book"
 version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
+ "hornvale-climate",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-terrain",

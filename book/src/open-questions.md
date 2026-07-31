@@ -432,7 +432,14 @@ and a single camera move spent roughly fifteen seconds generating the same
 world two dozen times. ([The Cistern](./chronicle/the-cistern.md) closed that
 the following day — the derivation now happens once per world, and a region
 patch measured 11.1× cheaper. The entry stays on the ledger because the
-*failure mode* is what it records, not the defect's lifetime.) The bet is
+*failure mode* is what it records, not the defect's lifetime. [The
+Winnowing](./chronicle/the-winnowing.md) then took the residual The Cistern
+named: the globe document's cost is no longer redundant *derivation* but sheer
+*volume*, and the schema said nothing about that either. A caller may now name
+the per-tile layers it will read — the eight the Orrery's parser actually
+extracts are 46.3% of the bytes — which is the same lesson one turn on. A
+contract about contents says nothing about the cost of producing a document,
+and it says nothing about which parts of one a consumer will use.) The bet is
 untouched — nothing crosses the seam incorrectly,
 and the interface required no change to be measured. What sharpens is the
 same scope lesson The Selvage drew about geometry, transposed to cost: a
@@ -443,6 +450,59 @@ recurring rule. Six failure modes were found by a human reading output; this
 one is invisible to reading — every document is correct — and visible only to
 a fixture shaped like the consumer's session, since redundancy is a property
 of a sequence of calls and cannot appear in any one of them.
+
+[The Pyx](./chronicle/the-pyx.md) adds an eighth entry, and it generalizes the
+ledger's own recurring rule one step further. The Cartographer's lesson was
+that a determinism claim is only as good as the *route* it was checked along.
+The Pyx's is that it is only as good as the **apparatus** it was checked on:
+every check in this repository regenerates on the canonical box and compares
+against a golden authored on the canonical box, so the machine sits on both
+sides of the comparison and cannot be what the comparison detects. In the
+vocabulary metrology uses for exactly this distinction, the project had been
+enforcing *repeatability* and describing it as *reproducibility*. The audit
+that closed the gap found nothing wrong — a full census reproduced on its
+authoring host eleven days later with zero bytes different, two clean builds
+of one commit hashed identically, and a forty-world all-metric probe was
+byte-identical between x86_64/Linux and aarch64/Darwin, including the one
+seed whose count decision 0063 had recorded two
+machines disagreeing on. The bet on deterministic serialization is
+**strengthened, and for the first time by evidence from outside the machine
+that authors the goldens**. What sharpens is the scoring instrument rather
+than the claim: the cheapest sufficient check turned out to be a comparison of
+*binaries* rather than of outputs, which nobody had tried and which the
+campaign's own frozen prediction said would not work.
+
+That instrument then needed a correction of its own, and the correction
+belongs on this ledger as much as the entry does. Two builds of one commit in
+two directories hashed identically on the canonical box, and the campaign
+generalized from that single host to a property of the toolchain. Repeating
+the comparison on the second machine produced two *different* binaries, each
+carrying the absolute path it was built in — a path written in deliberately by
+ordinary code asking where its own source tree is, not by debug information as
+first supposed. So the oracle is real but conditional: it holds when both
+machines build at the same absolute path, which an image supplies for free and
+an ad-hoc checkout does not. The entry's shape is therefore the ledger's rule
+turned on the ledger's own author — a claim verified on one apparatus is a
+fact about that apparatus, and the campaign that had just finished saying so
+in prose went on to forget it in a decision record within the hour.
+
+[The Twin](./chronicle/the-twin.md) closes that correction and sharpens the
+bet itself. Holding the compiler, the system library, and the build directory
+fixed, two machines that share almost nothing else — different processors,
+kernels, and operating systems, one of them an appliance that cannot be logged
+into — produced the same binary to the byte; and two *different* system
+libraries produced the same forty worlds, even compiled the old way, where the
+operation everyone suspected leaves the program and enters the library. So the
+long-standing explanation for the one recorded cross-machine disagreement is
+eliminated, and with it the machine itself. **What determines the output is
+the environment, not the host** — which is the strongest form this bet has
+been stated in, and the first version of it supported by a comparison in which
+only one thing varied. Every earlier cross-machine check in this project moved
+five things at once, which is why the disagreement of nineteen July was
+observable for four months and diagnosable for none of them. It is still
+unexplained. The space it can hide in is now small enough to name: how a build
+chooses its compiler, given that this project's pin is silently conditional on
+the directory you invoke it from.
 
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
