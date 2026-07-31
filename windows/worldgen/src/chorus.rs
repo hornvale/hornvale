@@ -1591,16 +1591,41 @@ pub fn day_schema_from(
     .map(|(schema, _rank)| schema)
 }
 
+/// The four sky-body concepts whose animacy needs the C5 day-schema draw
+/// (and therefore a terrain/climate sculpt); every other concept answers
+/// from [`noun_class_plain`] alone.
+const SKY_OVERRIDE: [&str; 4] = ["sun", "moon", "star", "earth"];
+
+/// The non-sky-override half of the animacy coherence law (plan header):
+/// every `*-kind` concept (e.g. `"goblin-kind"`) and `"person"` are
+/// [`NounClass::Animate`]; every other concept is [`NounClass::Inanimate`].
+/// Pure string comparison — needs no world, terrain, or climate — so
+/// [`noun_class_of`] and [`noun_class_from`] can both answer it before
+/// paying for a sculpt, and it can never be affected by a `BuildError` on
+/// an unrelated (sky) concept.
+fn noun_class_plain(concept: &str) -> NounClass {
+    if concept == "person" || concept.ends_with("-kind") {
+        NounClass::Animate
+    } else {
+        NounClass::Inanimate
+    }
+}
+
 /// C7's derived noun-class assignment (the animacy coherence law, plan
-/// header): every `*-kind` concept (e.g. `"goblin-kind"`) and `"person"` are
-/// [`NounClass::Animate`]; every other concept is [`NounClass::Inanimate`] —
-/// EXCEPT `"sun"`/`"moon"`/`"star"`/`"earth"`, which are `Animate` iff
-/// `species`' C5 day-schema draw ([`day_schema_of`]) is
+/// header): [`noun_class_plain`] for every concept EXCEPT
+/// `"sun"`/`"moon"`/`"star"`/`"earth"` ([`SKY_OVERRIDE`]), which are
+/// `Animate` iff `species`' C5 day-schema draw ([`day_schema_of`]) is
 /// [`SchemaId::Agentive`]. Zero draws (the anti-astrology line): the sky
 /// override reads a draw `day_schema_of` already made, never rolls a fresh
-/// die. Sculpts once and delegates to [`noun_class_from`].
+/// die. Answers the non-sky-override arm BEFORE sculpting: a plain concept
+/// (`"person"`, any `*-kind`, anything else) never pays for terrain/climate
+/// and can never be misclassified by a `BuildError` on this world; only the
+/// four sky concepts sculpt once and delegate to [`noun_class_from`].
 /// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: concept)
 pub fn noun_class_of(world: &World, species: &str, concept: &str) -> NounClass {
+    if !SKY_OVERRIDE.contains(&concept) {
+        return noun_class_plain(concept);
+    }
     let Ok(terrain) = crate::terrain_of(world) else {
         return NounClass::Inanimate;
     };
@@ -1621,7 +1646,6 @@ pub fn noun_class_from(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> NounClass {
-    const SKY_OVERRIDE: [&str; 4] = ["sun", "moon", "star", "earth"];
     if SKY_OVERRIDE.contains(&concept) {
         return if day_schema_from(world, species, terrain, climate) == Some(SchemaId::Agentive) {
             NounClass::Animate
@@ -1629,11 +1653,7 @@ pub fn noun_class_from(
             NounClass::Inanimate
         };
     }
-    if concept == "person" || concept.ends_with("-kind") {
-        NounClass::Animate
-    } else {
-        NounClass::Inanimate
-    }
+    noun_class_plain(concept)
 }
 
 // --- C8, The Diachronic Book: the observation ledger and the knowledge

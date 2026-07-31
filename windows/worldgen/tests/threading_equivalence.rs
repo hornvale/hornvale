@@ -20,7 +20,14 @@ fn from_variants_equal_their_of_wrappers() {
     let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let at = hornvale_astronomy::StdDays::new(36_525.0).expect("valid day");
 
-    for (kind, _v) in hornvale_worldgen::placed_peoples(&world) {
+    let peoples = hornvale_worldgen::placed_peoples(&world);
+    assert!(
+        !peoples.is_empty(),
+        "seed 1 must place peoples or this test is vacuous"
+    );
+    let mut saw_a_doctrine = false;
+
+    for (kind, _v) in peoples {
         assert_eq!(
             format!(
                 "{:?}",
@@ -40,8 +47,12 @@ fn from_variants_equal_their_of_wrappers() {
             ),
             "cyclic_beliefs diverged for {kind}"
         );
+        let doctrine = hornvale_worldgen::doctrine_of(&world, kind);
+        if doctrine.is_some() {
+            saw_a_doctrine = true;
+        }
         assert_eq!(
-            format!("{:?}", hornvale_worldgen::doctrine_of(&world, kind)),
+            format!("{:?}", doctrine),
             format!(
                 "{:?}",
                 hornvale_worldgen::doctrine_from(&world, kind, &terrain, &climate)
@@ -80,4 +91,10 @@ fn from_variants_equal_their_of_wrappers() {
             "ladder diverged for {kind}"
         );
     }
+
+    assert!(
+        saw_a_doctrine,
+        "seed 1 must organize at least one placed people's doctrine or the \
+         doctrine/ladder pairs above are vacuous"
+    );
 }
