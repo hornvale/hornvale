@@ -603,6 +603,13 @@ dense-index rule applied to the health battery's hottest flat frame."
 - [ ] **Step 1: Absorb main; re-run the byte-identity sweep** (Task 6 Steps
 2–3 verbatim — an absorbed commit may have moved a golden; attribute any
 drift to its mover before touching anything, per the inherited-debt memory).
+- [ ] **Step 1b: Regenerate the committed type-audit report** — this
+campaign adds pub-boundary items, so `docs/audits/type-audit-report.md` is
+guaranteed stale, and NOTHING in the local gate says so (`make gate` runs
+`check`, not `report`; CI is manual-only). AFTER the last absorb (a
+pre-absorb regen reverts main's own report entries — the standing memory):
+`cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md`
+then commit the diff. (Task 2's review, finding 5.)
 - [ ] **Step 2: Full gate on a quiet box** (claim check first), then
 `make preflight` from the branch.
 - [ ] **Step 3: Final timing table** — the four target tests plus a whole
