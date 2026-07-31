@@ -40,8 +40,8 @@ pub use weather::{
 
 use hornvale_kernel::{
     CognitiveHandle, ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest,
-    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, Position, RegistryError, Venue,
-    Void, World, WorldContext,
+    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, Position, Referent, RegistryError,
+    Venue, Void, World, WorldContext,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -281,6 +281,7 @@ impl PhenomenaSource for UniformClimate {
     fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
         vec![Phenomenon {
             kind: AMBIENT.to_string(),
+            referent: Referent::of("wind"),
             description: "warm, still, unchanging air".to_string(),
             period_days: None,
             salience: 0.15,

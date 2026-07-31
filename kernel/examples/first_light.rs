@@ -11,8 +11,8 @@
 
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
-    EntityId, Fact, Ledger, ObserverContext, PhenomenaSource, Phenomenon, Seed, Value, Venue,
-    World, WorldTime, choose_consistent, fbm_2d, observe,
+    EntityId, Fact, Ledger, ObserverContext, PhenomenaSource, Phenomenon, Referent, Seed, Value,
+    Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
 };
 use std::io::Write as _;
 use std::path::Path;
@@ -65,6 +65,7 @@ impl PhenomenaSource for MiniSun {
     fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
         vec![Phenomenon {
             kind: "celestial-body".to_string(),
+            referent: Referent::of("sun"),
             description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,

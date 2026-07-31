@@ -65,8 +65,8 @@ pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
-    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, RegistryError, Venue, Visibility,
-    Void, WorldTime,
+    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, Referent, RegistryError, Venue,
+    Visibility, Void, WorldTime,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -474,6 +474,7 @@ impl PhenomenaSource for ConstantSun {
     fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
         vec![Phenomenon {
             kind: CELESTIAL_BODY.to_string(),
+            referent: Referent::of("sun"),
             description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,

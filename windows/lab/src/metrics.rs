@@ -6176,20 +6176,38 @@ mod tests {
     /// glosses that carry it.
     #[test]
     fn presiding_concepts_are_phenomenon_concepts_codomain() {
-        let phenomenon = |kind: &str, description: &str| hornvale_kernel::Phenomenon {
-            kind: kind.to_string(),
-            description: description.to_string(),
-            period_days: None,
-            salience: 1.0,
-            venue: hornvale_kernel::Venue::DaySky,
-        };
+        let phenomenon =
+            |kind: &str, concept: &str, description: &str| hornvale_kernel::Phenomenon {
+                kind: kind.to_string(),
+                referent: hornvale_kernel::Referent::of(concept),
+                description: description.to_string(),
+                period_days: None,
+                salience: 1.0,
+                venue: hornvale_kernel::Venue::DaySky,
+            };
         let cases = [
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the moon rides high"),
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "a wandering star"),
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the disc at noon"),
-            phenomenon(hornvale_astronomy::SEASONAL_CYCLE, "the turning year"),
-            phenomenon(hornvale_astronomy::NIGHT_STAR, "a fixed star"),
-            phenomenon(hornvale_climate::AMBIENT, "the prevailing wind"),
+            phenomenon(
+                hornvale_astronomy::CELESTIAL_BODY,
+                "sun",
+                "the moon rides high",
+            ),
+            phenomenon(
+                hornvale_astronomy::CELESTIAL_BODY,
+                "star",
+                "a wandering star",
+            ),
+            phenomenon(
+                hornvale_astronomy::CELESTIAL_BODY,
+                "sun",
+                "the disc at noon",
+            ),
+            phenomenon(
+                hornvale_astronomy::SEASONAL_CYCLE,
+                "day",
+                "the turning year",
+            ),
+            phenomenon(hornvale_astronomy::NIGHT_STAR, "star", "a fixed star"),
+            phenomenon(hornvale_climate::AMBIENT, "wind", "the prevailing wind"),
         ];
         let mut produced: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
         for p in &cases {
