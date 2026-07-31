@@ -349,3 +349,81 @@ being inert or miswired.
 git add docs/superpowers/plans/the-contour-readout.md
 git commit -m "test(the-contour): the readout, adjudicated against the frozen predictions"
 ```
+
+---
+
+## Addendum: the null decomposes, and M3 was built as half of itself
+
+*Added after an ideonomy pass on the readout, before the campaign closed. It
+changes nothing about the numbers above; it changes what they license.*
+
+### The null is two claims, not one
+
+Writing the prediction in power-analysis notation exposes a required slot this
+campaign never filled — **headroom**:
+
+```
+metric        peoples_alive ∈ {0,1,2,3,4,5}   DISCRETE, BOUNDED, max = roster size
+baseline      P(5) = 0.767     <- ALREADY AT THE CEILING
+              P(0) = 0.200     <- at the floor
+              P(4) = 0.033
+prediction    "M3 rises"
+HEADROOM      ZERO for 76.7% of the probability mass
+```
+
+"M3 rises" was close to unfalsifiable upward: in 23 of 30 seeds the metric
+*could not* rise, because five settled peoples is the roster and all five were
+already alive. So the null above must be split, because its two halves do not
+have the same evidential status:
+
+1. **"A second contest axis does not rescue worlds from extinction."**
+   **Strong.** Six extinction seeds at baseline, six live, the **identical seed
+   set** (6, 9, 18, 20, 22, 29). That is a detectable effect measured as
+   exactly zero, and it is the null §4.3 anticipated.
+
+2. **"A second contest axis does not improve diversity in surviving worlds."**
+   **Untested.** The instrument is saturated at its ceiling in 23 of the 24
+   surviving worlds. This readout does not license this claim in either
+   direction.
+
+Reporting these as one verdict, as the sections above do, overstates what was
+measured. The sections stand as written; this addendum is the correction.
+
+### M3 was specified as two metrics and built as one
+
+Spec §4.1 asks for both halves, verbatim:
+
+> **M3 — peoples-diversity at bake end.** Count of peoples with a live
+> community, **and the effective diversity** (the same reading `coexist.rs`
+> uses in space, computed here in time).
+
+Only the count was registered. The effective-diversity half was never built —
+though `domains/demography/src/byproducts.rs::strife` already computes exactly
+that reading, and `coexist.rs` documents it at ≈2.4 in space at β = 2.0.
+
+**A count measures presence; decision 0089 is about diversity.** A world with
+five peoples where one holds 95% of everything is monoculture with survivors,
+and no count can tell those apart. The metric with headroom was specified,
+exists in the codebase, and was not wired up — and neither the Task 4 brief nor
+the Task 4 review caught it, because both checked M3 against what was built
+rather than against what was specified.
+
+This is the campaign's sharpest process finding and it is the fourth instance
+of one pattern: **a claim frozen against an instrument nobody verified could
+carry it** (amendment 3, amendment 4, the absent M1 metric, and now M3's
+missing half).
+
+### Why the diversity measurement is deliberately NOT run here
+
+Building the effective-diversity half and re-running would be *executing* the
+preregistration rather than amending it — the metric was specified before any
+code existed. That argument is sound and it is not the argument being followed.
+
+**Running a new measurement immediately after a disappointing one has the shape
+of metric-chasing even when the logic is clean.** *The Tithe* amended five
+times and every amendment had a clean local justification. So the effective-
+diversity reading is deferred to the successor campaign, where it gets a fresh
+preregistration, both branches informative, **and its headroom declared in
+advance** — with no disappointing number sitting behind it.
+
+The null above ships as this campaign's result, unsoftened.
