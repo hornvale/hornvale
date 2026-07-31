@@ -1577,10 +1577,7 @@ fn noun_class_plain(concept: &str) -> NounClass {
 /// `Animate` iff `species`' C5 day-schema draw ([`day_schema_from`]) is
 /// [`SchemaId::Agentive`]. Zero draws (the anti-astrology line): the sky
 /// override reads a draw `day_schema_from` already made, never rolls a
-/// fresh die. Answers the non-sky-override arm BEFORE sculpting: a plain
-/// concept (`"person"`, any `*-kind`, anything else) never pays for
-/// terrain/climate and can never be misclassified by a `BuildError` on this
-/// world; only the four sky concepts sculpt.
+/// fresh die.
 ///
 /// Takes ALREADY-BUILT terrain/climate (down the sky-override arm's
 /// [`day_schema_from`]) instead of re-sculpting the globe. Computes the

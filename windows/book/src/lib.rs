@@ -2065,8 +2065,7 @@ pub fn parse_context(world: &World) -> ParseContext {
     parse_context_with_voices(world, voices)
 }
 
-/// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate
-/// (`hornvale_worldgen::accounts_from` instead of `accounts_from`) instead of
+/// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate instead of
 /// re-sculpting the globe. Success path only — a caller already holding a
 /// terrain/climate pair has, by construction, a sculpt that succeeded, so
 /// this never takes the degraded (empty-voices) arm [`parse_context`]

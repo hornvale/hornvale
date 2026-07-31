@@ -3577,7 +3577,7 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 /// "goblinoid", env)`), a language with no speakers of its own, only
 /// daughters. Panics if `family` is not in `family_proto` (a singleton
 /// family has no entry there and never reaches this function — see
-/// `lexicon_of_in`'s resolution).
+/// `lexicon_of_in_from`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
 pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_language::Phonology {
     // The convenience entry: assemble the canonical component set (the sole
@@ -3591,8 +3591,9 @@ pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_langu
 /// (ECS c3): read the family's proto ancestral vector from `wc.family_proto`
 /// — the composed proto store, `worldgen`'s sole proto read path — rather than
 /// re-fetch language's global `family_proto()` per call. A singleton family
-/// has no entry there and never reaches this function (see `lexicon_of_in`'s
-/// resolution). Panics if `family` is not in `wc.family_proto`.
+/// has no entry there and never reaches this function (see
+/// `lexicon_of_in_from`'s resolution). Panics if `family` is not in
+/// `wc.family_proto`.
 fn proto_phonology_of_in(
     world: &World,
     wc: &WorldComponents,
@@ -4029,8 +4030,8 @@ fn exposure_of_impl(
     // Source perception from the world's component set (ECS c3), keyed by the
     // kind's `KindId` label. Since The Vigil every minded speaker perceives
     // (`check_integrity` enforces speech ⊆ perception), so this lookup is total
-    // for every kind that can reach a lexicon. `lexicon_of_in`/`lexicon_from`
-    // are public and `resolve_kind` accepts any biosphere kind, so a caller
+    // for every kind that can reach a lexicon. `lexicon_of_in_from`/
+    // `lexicon_from` are public and `resolve_kind` accepts any biosphere kind, so a caller
     // may still pass plain fauna — which fails loudly here rather than
     // silently classifying colour as though a bear saw like a goblin. Mirrors
     // the same failure in `chorus::account_params_from`.
@@ -4411,25 +4412,13 @@ pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cas
 /// classify every concept's exposure (`exposure_from`), and assemble the two
 /// into a `Lexicon` (`hornvale_language::build_lexicon`). Assembles the
 /// family's daughters so the proto assignment drives core homophony to zero
-/// across the whole family. Derives terrain/climate once and delegates to
-/// [`lexicon_of_in_from`].
-/// type-audit: bare-ok(identifier-text: species)
-pub fn lexicon_of_in(
-    world: &World,
-    wc: &WorldComponents,
-    species: &str,
-) -> Result<hornvale_language::Lexicon, BuildError> {
-    let terrain = terrain_of(world)?;
-    let climate = climate_from(world, &terrain)?;
-    lexicon_of_in_from(world, wc, species, &terrain, &climate)
-}
-
-/// [`lexicon_of_in`], taking ALREADY-BUILT terrain and climate down the
-/// exposure step ([`exposure_from`]) instead of re-sculpting the globe. The
-/// draw order (`ph` before exposure) is preserved so the seed stream is
-/// consumed identically regardless of caller. Byte-identity pinned by the
-/// census A/B and the `*_lexicon_mechanism_is_stable_given_fixed_exposures`
-/// tests.
+/// across the whole family.
+///
+/// Takes ALREADY-BUILT terrain and climate down the exposure step
+/// ([`exposure_from`]) instead of re-sculpting the globe. The draw order
+/// (`ph` before exposure) is preserved so the seed stream is consumed
+/// identically regardless of caller. Byte-identity pinned by the census A/B
+/// and the `*_lexicon_mechanism_is_stable_given_fixed_exposures` tests.
 /// type-audit: bare-ok(identifier-text: species)
 fn lexicon_of_in_from(
     world: &World,
@@ -4476,6 +4465,11 @@ fn lexicon_of_in_from(
 /// `terrain()`/`climate()`) so the census's many lexicon metrics stop
 /// re-sculpting the globe per call — the terrain sculpt was ~80% of the
 /// post-name-gloss census cost, almost all of it here.
+///
+/// **Derived, never stored** (LANG-36): nothing about a lexicon is
+/// persisted — re-running this over the same world and species always
+/// reconstructs the same `Lexicon` byte-for-byte; a caller must never cache
+/// or serialize the result.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_from(
     world: &World,
