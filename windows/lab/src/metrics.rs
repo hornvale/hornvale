@@ -4742,14 +4742,17 @@ fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId)
 
 /// Whether `cell` reads directly as `Hydro::Spring`. Previously a Karst
 /// proxy (`hydro_at == Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because
-/// `Hydro::Spring` was analytically unreachable — `hydrogeology`'s aquifer
-/// gate was a carbonate-scale threshold applied to clastic rock, whose
-/// porosity never reached it, so the branch sat entirely inside the region
-/// Karst already claimed (The Witness, F5). `hydrogeology` now gates the
-/// clastic case on its own scale, so `Spring` is reachable and this reads
-/// the real variant — independently restated here rather than calling
-/// `worldgen`'s `is_spring_cell` (the lab does not depend on worldgen's
-/// window-local predicates).
+/// `Hydro::Spring` was analytically unreachable under the original
+/// carbonate-scale gate (The Witness, F5), and F5's own replacement gate was
+/// itself mismeasured — pinned to a level-4 sweep but applied at the
+/// model's real level-6 resolution, it made 69.64% of land Aquifer (The
+/// Witness, Task 5b). Both are fixed now: `hydrogeology` gates the clastic
+/// case on a porosity threshold measured on the correct population, and
+/// `Spring` is no longer a still-vs-flowing drainage split at all — it is a
+/// geometric descending contact (`GeneratedTerrain::hydro_at` promotes an
+/// `Aquifer` cell with a lower non-`Aquifer` neighbour) — independently
+/// restated here rather than calling `worldgen`'s `is_spring_cell` (the lab
+/// does not depend on worldgen's window-local predicates).
 fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
     terrain.hydro_at(cell) == Hydro::Spring
 }
@@ -6294,6 +6297,16 @@ mod tests {
     /// 3.031_25 -> 2.466_666_666_666_667, kobold 2.241_379_310_344_827_6 ->
     /// 2.742_574_257_425_743.
     ///
+    /// The Witness, Task 5b re-measurement (2026-07-30): kobold moved again,
+    /// 2.742_574_257_425_743 (277/101) -> 2.752_475_247_524_752_3 (278/101)
+    /// — the same 101-settlement denominator, one more syllable across the
+    /// roster. `hydrogeology`'s clastic aquifer threshold moved from a
+    /// mismeasured `0.25` to the correctly-measured `0.46`, and `Spring`
+    /// stopped being a drainage split and became a geometric descending
+    /// contact — both reclassify which cells read `Aquifer`/`Spring`, which
+    /// moves settlement placement exactly the way the history-bake landing
+    /// did above. Goblin is untouched by this pass.
+    ///
     /// The claim above is re-checked, not assumed: both peoples still read
     /// inside the 2-3 target, which is the whole point of the row. They moved
     /// in OPPOSITE directions to get there — goblin down by 0.56, kobold up by
@@ -6311,7 +6324,7 @@ mod tests {
         );
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.742_574_257_425_743)
+            MetricValue::Number(2.752_475_247_524_752_3)
         );
     }
 
@@ -6341,11 +6354,22 @@ mod tests {
         // then, which is the same near-doubling of the surviving roster The
         // Tithe recorded (seed 42: 203 -> 329 live settlements).
         //
+        // The Witness, Task 5b re-measurement (2026-07-30): 202/329 ->
+        // 207/329 — the denominator (329 glossed names) is unchanged, so
+        // this is NOT another placement-count shift; five more of the same
+        // 329 names now carry a transparent gloss. `hydrogeology`'s clastic
+        // aquifer threshold moved from a mismeasured `0.25` to the
+        // correctly-measured `0.46`, and `Spring` became a geometric
+        // descending contact rather than a drainage split — both
+        // reclassify which cells read `Aquifer`/`Spring`/`Aquitard`/`Runoff`,
+        // which is exactly the exposure vocabulary transparency's gloss
+        // check reads against.
+        //
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 202 of 329 glossed settlement names.
-        assert_eq!(share, 202.0 / 329.0, "seed 42 transparency drifted");
+        // 207 of 329 glossed settlement names.
+        assert_eq!(share, 207.0 / 329.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

@@ -1085,7 +1085,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): kobold has no exposure to 'snowfield' |
 | `south` | the compass point opposite north | Rooraaxaa | /rooraaxaa/ | Rooraaxaa | Rooraaxaa → no change → Rooraaxaa |
 | `spirit` | a lesser or unseen supernatural presence | Rorraa | /rorraa/ | Rrorraa | Rrorraa → clustersimplify → Rorraa |
-| `spring` | where water rises from the ground | — | — | — | gap (experiential): kobold has no exposure to 'spring' |
+| `spring` | where water rises from the ground | Raarroa | /raarroa/ | Rraarroa | Rraarroa → clustersimplify → Raarroa |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): kobold has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): kobold has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Roxoo | /roxoo/ | Roxoo | Roxoo → no change → Roxoo |

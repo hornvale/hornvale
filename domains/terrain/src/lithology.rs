@@ -277,7 +277,18 @@ pub enum Hydro {
     Aquifer,
     /// Impermeable: perched water, seeps.
     Aquitard,
-    /// Where an aquifer meets the surface with flow.
+    /// Where an aquifer meets the surface with flow. Never produced by
+    /// [`hydrogeology`] itself (The Witness, Task 5b) — `hydrogeology` is a
+    /// pointwise matrix-petrophysics read and a spring is not a property of
+    /// a single cell's rock, it is a property of a *contact*: water flowing
+    /// over from an `Aquifer` cell was the shipped model at F5, but land
+    /// drainage at production resolution (L6) maxes at 219 against the old
+    /// 500 threshold, so that gate was unreachable regardless. `Spring` is
+    /// promoted from `Aquifer` by `GeneratedTerrain::hydro_at` (decision
+    /// 0085's precedent: the pointwise petrophysics is the durable signal,
+    /// the geometric promotion is derived from it), when some neighbouring
+    /// cell is not itself an `Aquifer` and sits lower — the descending
+    /// contact a spring geologically is.
     Spring,
     /// Sheds water: thin-soil runoff.
     Runoff,
@@ -285,9 +296,14 @@ pub enum Hydro {
     Karst,
 }
 
-/// Classify hydrogeology from porosity/carbonate × drainage (spec §3).
-/// type-audit: bare-ok(count: drainage), bare-ok(flag: ocean)
-pub fn hydrogeology(buf: &MaterialBuffer, drainage: f64, ocean: bool) -> Hydro {
+/// Classify hydrogeology from porosity/carbonate (spec §3). Pointwise matrix
+/// petrophysics only — `Aquifer`/`Aquitard`/`Runoff`/`Karst`, never
+/// `Spring` (The Witness, Task 5b): `Spring` is a property of a contact
+/// between cells, not of one cell's rock, and is promoted separately by
+/// `GeneratedTerrain::hydro_at`. No longer takes a `drainage` argument —
+/// its only use was the retired flowing-vs-still split below.
+/// type-audit: bare-ok(flag: ocean)
+pub fn hydrogeology(buf: &MaterialBuffer, ocean: bool) -> Hydro {
     if ocean {
         return Hydro::Aquitard;
     }
@@ -298,11 +314,7 @@ pub fn hydrogeology(buf: &MaterialBuffer, drainage: f64, ocean: bool) -> Hydro {
         return Hydro::Aquitard;
     }
     if buf.porosity > CLASTIC_AQUIFER_MIN_POROSITY {
-        return if drainage > SPRING_DRAINAGE_THRESHOLD {
-            Hydro::Spring
-        } else {
-            Hydro::Aquifer
-        };
+        return Hydro::Aquifer;
     }
     Hydro::Runoff
 }
@@ -325,38 +337,61 @@ const KARST_MIN_POROSITY: f64 = 0.4;
 /// (`0.025`, and about half of `0.100`) as `Aquitard`. Unchanged by F5.
 const AQUITARD_MAX_POROSITY: f64 = 0.15;
 
-/// Porosity above which non-carbonate (clastic) rock reads as `Spring`/
-/// `Aquifer` — the CLASTIC scale, distinct from [`KARST_MIN_POROSITY`]'s
-/// carbonate scale. **Was `0.5`**: a carbonate-scale threshold silently
-/// applied to clastic rock. Against the measured clastic distribution above
-/// (`max = 0.325`), `0.5` was 54% above the entire clastic range and sat
-/// *inside* the carbonate class's own `[p50, p75] = [0.425, 0.575]` window —
-/// every cell it could select already satisfied `carbonate > 0.5 &&
-/// porosity > KARST_MIN_POROSITY` above, so this branch was analytically
-/// unreachable on all 1000 census seeds (The Witness, F5; `aquifer-fraction`
-/// took exactly one distinct value, 0, across the committed census).
-/// Pinned to the measured **p75** of the clastic distribution (`0.25`):
-/// with the ~0.075 quantisation above, `porosity > 0.25` selects exactly
-/// the top band (`0.325`, the class's p95/max value) — the loosest,
-/// least-cemented, least-metamorphosed clastic cells, sandstone's
-/// archetypal-aquifer end of the range. Confirmed by measurement, not
-/// asserted: [`hydrogeology`]'s companion world-derived test
-/// (`a_real_world_produces_a_porous_non_carbonate_cell`) fails at `0.5` and
-/// passes at this value.
-const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.25;
+/// Porosity above which non-carbonate (clastic) rock reads as `Aquifer` —
+/// the CLASTIC scale, distinct from [`KARST_MIN_POROSITY`]'s carbonate
+/// scale. **Task 5's `0.25` was itself mismeasured** (The Witness, Task
+/// 5b): it was pinned to a p75 measured at `Geosphere::new(4)` filtered by
+/// `basement == Continental`, but the model runs at `Geosphere::new(6)` and
+/// classifies on `elevation > sea_level`. Re-measured on the correct
+/// population *before* the grain term existed, clastic land porosity was
+/// one value end to end (`p25..=p95 == 0.325`, `n=52207`) because
+/// `carbonate` is binary and `metamorphic_grade` is 0 outside an orogen —
+/// no threshold could partition it, and `0.25` shipped **69.64% of land as
+/// Aquifer**.
+///
+/// With [`GRAIN_POROSITY_GAIN`] added, clastic land porosity becomes a
+/// continuous function of crust age spanning the band `[0.416, 0.494]`
+/// (measured, `k_g = 0.40`, level 6, 4 seeds). A joint sweep of `k_g` and
+/// this threshold found `k_g = 0.40` gives the *widest* such band
+/// (`0.078`, vs. `0.059` at `k_g = 0.30` and a ceiling-hugging `0.039` at
+/// `k_g = 0.20`), so a threshold placed inside it is farthest from
+/// flipping to select everything or nothing on the next terrain change —
+/// the failure mode this whole campaign is about. `0.46` sits at **56% of
+/// that band** (mid-band, not the tidier `k_g=0.30 / thr=0.44`, which gives
+/// a cleaner-looking 8.7%/1.98% aquifer/spring split but sits at 80% of a
+/// narrower `0.059`-wide band — two hundredths of porosity from reading
+/// zero, the same edge-hugging mistake Task 4 made with `0.42` over
+/// `0.45`). Measured aquifer share at `0.46`: **16.4% of land**, a notable
+/// but non-dominant feature, with the promoted `Spring` contact (see
+/// [`Hydro::Spring`]) at 3.69%, forming lines along aquifer margins — what
+/// a spring line geologically is.
+const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
 
-/// Drainage above which a porous cell expresses as a flowing `Spring` rather
-/// than a still `Aquifer`. Shares scale with `cave_proneness`'s wetting term.
-/// Unchanged by F5 (The Witness). Measured follow-up, not addressed here:
-/// at the production `GLOBE_LEVEL` (6), a 40-seed sweep of default-pin
-/// worlds never saw land-cell drainage clear this value even once (max
-/// observed: 297) — `Spring` is analytically reachable post-F5 but was not
-/// empirically witnessed at production resolution in that sweep, only at
-/// the next mesh level up. Left as an open finding, not retuned here: this
-/// constant is out of F5's scope, and nudging it would be exactly the
-/// "relax a threshold to manufacture a witness" move the campaign's own
-/// measurement discipline exists to forbid.
-const SPRING_DRAINAGE_THRESHOLD: f64 = 500.0;
+/// How much loose, uncemented coarse grain contributes to `porosity` (in
+/// `assemble_material`), via `GRAIN_POROSITY_GAIN * grain * (1 -
+/// induration)`. Exists for **dynamic range, not to cross a gate**: without
+/// it, clastic land porosity is a single value (0.325) on ~90% of land, so
+/// no threshold on [`CLASTIC_AQUIFER_MIN_POROSITY`] could ever partition
+/// it. With it, porosity spans `[0.416, 0.494]` as a continuous function of
+/// crust age. Calibrated by sweep (The Witness, Task 5b) against the
+/// *width* of that band across `k_g ∈ {0.20, 0.30, 0.40}`: `0.40` gives the
+/// widest band (`0.078`), so [`CLASTIC_AQUIFER_MIN_POROSITY`] has the most
+/// room before a terrain change flips it to select everything or nothing —
+/// a retune of this value is a retune, not a cleanup (decision 0057).
+const GRAIN_POROSITY_GAIN: f64 = 0.40;
+
+/// Drainage scale for [`cave_proneness`]'s wetting term. Formerly shared
+/// with `hydrogeology`'s flowing-vs-still `Spring` gate (named
+/// `SPRING_DRAINAGE_THRESHOLD`); that gate is retired (The Witness, Task
+/// 5b) — `drainage` measures water flowing *over* a cell, but a spring is
+/// water emerging *from* one, so `hydrogeology` never needed `drainage` in
+/// the first place, and the retired gate was unreachable regardless (land
+/// drainage at production `GLOBE_LEVEL` (6) maxes at 219 against this
+/// value of 500). `Spring` is now a geometric contact promoted by
+/// `GeneratedTerrain::hydro_at`, entirely independent of this constant.
+/// This constant's sole remaining consumer is the wetting term below;
+/// value unchanged, only the name and the surviving justification.
+const CAVE_WETNESS_DRAINAGE_SCALE: f64 = 500.0;
 
 /// Void-proneness (caves/sinkholes), `[0,1]` (spec §3, negation "solid → void").
 /// Dominated by the carbonate/porosity product (dissolution needs both
@@ -365,7 +400,7 @@ const SPRING_DRAINAGE_THRESHOLD: f64 = 500.0;
 /// gates the base rate.
 /// type-audit: bare-ok(ratio: return), bare-ok(count: drainage)
 pub fn cave_proneness(buf: &MaterialBuffer, drainage: f64) -> f64 {
-    let wetting = (drainage / SPRING_DRAINAGE_THRESHOLD).min(1.0);
+    let wetting = (drainage / CAVE_WETNESS_DRAINAGE_SCALE).min(1.0);
     (buf.carbonate * buf.porosity * (0.85 + 0.15 * wetting)).clamp(0.0, 1.0)
 }
 
@@ -488,8 +523,23 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         // of elevation (the Sculpting/Ground seam) — kept identical here so
         // the buffer's axis and the globe's standalone field never diverge.
         let induration = induration_at(age, continental, boundary.map(|b| b.kind), hops);
-        // Porosity: high in carbonate (karst) and young oceanic basalt, low in shale/gneiss.
-        let porosity = (0.5 * carbonate + 0.3 * (1.0 - metamorphic_grade)).clamp(0.0, 1.0);
+        // Porosity: dissolution in carbonate (karst), packing in loose coarse
+        // grain, and recrystallisation closing pores in metamorphics. The
+        // grain term (The Witness, Task 5b) exists to give the axis DYNAMIC
+        // RANGE, not to cross any particular gate: without it, `carbonate`
+        // is binary (0.05 or 0.7-0.9) and `metamorphic_grade` is 0 outside
+        // an orogen, so clastic land porosity is *exactly* 0.325 on ~90% of
+        // land (measured at production L6: p25 through p95 all 0.325) — the
+        // axis carries almost no information and no threshold can partition
+        // it. With `GRAIN_POROSITY_GAIN * grain * (1 - induration)` added,
+        // porosity becomes a continuous function of crust age, spanning
+        // `[0.416, 0.494]` on clastic land (measured, k_g=0.40) — a
+        // threshold placed inside that band then selects old, coarse,
+        // weakly-cemented crust, which is what an aquifer geologically is.
+        let porosity = (0.5 * carbonate
+            + GRAIN_POROSITY_GAIN * grain * (1.0 - induration)
+            + 0.3 * (1.0 - metamorphic_grade))
+            .clamp(0.0, 1.0);
 
         let sediment_m = *globe.sediment_thickness.get(cell);
         let soil_depth = soil_depth_at(geo, globe, cell, sediment_m);
@@ -982,61 +1032,72 @@ mod tests {
         // pure-function tests were green). See
         // `a_real_world_produces_a_porous_non_carbonate_cell` for the
         // world-derived check, and `hydro_witness.rs` (Task 6) for the
-        // cross-seed reachability guard.
+        // cross-seed reachability guard. `hydrogeology` is pointwise matrix
+        // petrophysics only (The Witness, Task 5b) — it never returns
+        // `Spring`; that promotion is a geometric contact tested in
+        // `provider.rs`'s `promote_to_spring_only_touches_aquifer_with_a_lower_non_aquifer_neighbor`.
         // High carbonate + porosity -> karst; cave-proneness high.
         let mut b = flat_buffer();
         b.carbonate = 0.8;
         b.porosity = 0.8;
-        assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Karst);
+        assert_eq!(hydrogeology(&b, false), Hydro::Karst);
         assert!(cave_proneness(&b, 10.0) > 0.5);
-        // Porous non-carbonate + flow -> aquifer.
+        // Porous non-carbonate -> aquifer.
         let mut b = flat_buffer();
         b.porosity = 0.7;
         b.carbonate = 0.05;
-        assert_eq!(hydrogeology(&b, 200.0, false), Hydro::Aquifer);
+        assert_eq!(hydrogeology(&b, false), Hydro::Aquifer);
         // Impermeable -> aquitard, near-zero cave-proneness.
         let mut b = flat_buffer();
         b.porosity = 0.05;
-        assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Aquitard);
+        assert_eq!(hydrogeology(&b, false), Hydro::Aquitard);
         assert!(cave_proneness(&b, 10.0) < 0.1);
     }
 
     #[test]
-    fn high_porosity_with_flow_and_low_carbonate_reads_as_spring() {
-        // NOTE: this buffer is hand-built and synthetic — it does not
-        // certify reachability from the real derivation. See
-        // `a_real_world_produces_a_porous_non_carbonate_cell` for the
-        // world-derived check, and `hydro_witness.rs` (Task 6) for the
-        // cross-seed reachability guard.
-        // Porous, non-carbonate (so not Karst), with drainage above the
-        // spring threshold -> Spring rather than the still-water Aquifer.
-        let mut b = flat_buffer();
-        b.porosity = 0.7;
-        b.carbonate = 0.05;
-        assert_eq!(hydrogeology(&b, 600.0, false), Hydro::Spring);
-    }
-
-    #[test]
-    fn a_real_world_produces_a_porous_non_carbonate_cell() {
-        // The defect this closes: `hydrogeology_reads_porosity_and_carbonate`
-        // and `high_porosity_with_flow_and_low_carbonate_reads_as_spring`
-        // both pass today on hand-built `MaterialBuffer`s the real
-        // derivation cannot emit — `porosity` was gated at a carbonate-scale
-        // `0.5`, but the derivation's clastic (non-carbonate) porosity maxes
-        // at 0.325 (measured: The Witness, F5), so no land cell on any seed
-        // could ever clear it. Asserted here against a buffer the pipeline
-        // actually derives, never one hand-constructed.
+    fn a_real_world_produces_a_porous_non_carbonate_cell_in_bounded_shares() {
+        // The defect this closes has two halves, and Task 5 shipped only a
+        // fix for the first: `hydrogeology_reads_porosity_and_carbonate`
+        // passed on hand-built `MaterialBuffer`s the real derivation could
+        // not emit — `porosity` was gated at a carbonate-scale `0.5`, but
+        // the derivation's clastic (non-carbonate) porosity maxed at 0.325
+        // (The Witness, F5), so no land cell on any seed could ever clear
+        // it. Fixing that (a floor: `Aquifer`/`Spring` become reachable) is
+        // NOT sufficient — Task 5's own fix, measured on the wrong
+        // population, made 69.64% of land Aquifer, and a floor-only test
+        // ("found >= 1") is exactly as green on that world as on this one.
+        // The MISSING CEILING is why 69.64% shipped without reddening
+        // anything (The Witness, Task 5b). This test therefore asserts a
+        // floor AND a ceiling on both variants, at the production mesh
+        // level (`GLOBE_LEVEL`, 6) real worlds actually build at — not a
+        // golden (the exact share moves with terrain, seed, and mesh), but
+        // a band wide enough to hold and tight enough to catch "ate the
+        // world" or "regressed to unreachable." Measured at k_g=0.40,
+        // thr=0.46 (The Witness, Task 5b): aquifer ~16.4% of land, spring
+        // ~3.69% of land, forming lines along aquifer margins.
         let geo = Geosphere::new(6);
         let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
-        let found = geo.cells().filter(|&c| !terrain.is_ocean(c)).any(|c| {
-            let h = terrain.hydro_at(c);
-            h == Hydro::Aquifer || h == Hydro::Spring
-        });
+        let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        let land_count = land.len() as f64;
+        let aquifer = land
+            .iter()
+            .filter(|&&c| terrain.hydro_at(c) == Hydro::Aquifer)
+            .count() as f64;
+        let spring = land
+            .iter()
+            .filter(|&&c| terrain.hydro_at(c) == Hydro::Spring)
+            .count() as f64;
+        let aquifer_share = aquifer / land_count;
+        let spring_share = spring / land_count;
         assert!(
-            found,
-            "no land cell on seed 0 reads Aquifer or Spring — the branch is \
-             still unreachable from the real derivation"
+            (0.05..=0.35).contains(&aquifer_share),
+            "aquifer share {aquifer_share:.4} outside the loose band [0.05, 0.35] \
+             (0 means the branch regressed to unreachable; near 1 means it ate the world)"
+        );
+        assert!(
+            (0.005..=0.08).contains(&spring_share),
+            "spring share {spring_share:.4} outside the loose band [0.005, 0.08]"
         );
     }
 

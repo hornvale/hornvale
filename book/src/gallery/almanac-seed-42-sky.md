@@ -232,7 +232,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Rooro** — temperate-rainforest
 - **Rara (24.4°N, 19.7°E)** — temperate-forest
 - **Dzoovqzhaovgzhoavgshoovngzhaov** — temperate-forest
-- **Raarra** — taiga
+- **Xaora** — taiga
 - **Xoxo (23.4°N, 19.6°E)** — temperate-forest
 - **Nsaodzov** — temperate-rainforest
 - **Dotoa (1.9°N, 86.8°E)** — temperate-forest
@@ -434,6 +434,7 @@ Glaciated strata lie in the cover over 4981 cells — the ice left its mark.
 
 The land's lode is dominantly salt, found across 32% of it.
 Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
+0% of the land is cave country.
 
 ## The Vestige
 

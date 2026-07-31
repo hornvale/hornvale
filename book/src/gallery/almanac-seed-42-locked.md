@@ -92,7 +92,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Noabeodoebe** — tropical-rainforest
 - **Toa (25.1°S, 78.5°W)** — temperate-forest
 - **Nzhodshoxngsox** — tropical-seasonal-forest
-- **Qzhaovgzhov (37.3°N, 80.6°E)** — temperate-forest
+- **Pzofdzhax** — temperate-forest
 - **Gaabo (59.6°S, 78.8°W)** — temperate-forest
 - **Psaavnshavnsa** — tropical-seasonal-forest
 - **Toanaoka** — tropical-seasonal-forest
@@ -139,7 +139,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Nenanetea** — temperate-forest
 - **Roro** — tropical-seasonal-forest
 - **Beodoebetoabetoe** — tropical-seasonal-forest
-- **Gshofnshavgshovngzhav (37.2°N, 79.2°E)** — temperate-forest
+- **Gshoovngzhavgshofnshav** — temperate-forest
 - **Dotoa (58.8°S, 77.9°W)** — temperate-forest
 - **Dodo (57.7°S, 78.9°W)** — temperate-forest
 - **Raaxo** — tropical-seasonal-forest
@@ -244,7 +244,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Nsaafnsov (36.0°N, 75.8°E)** — temperate-forest
 - **Dsonsof (79.4°N, 50.5°W)** — alpine
 - **Beo (74.9°N, 55.0°E)** — alpine
-- **Gshofnshavnsafnsovpsof** — temperate-forest
+- **Nsaafnsovpsofdzhaf** — temperate-forest
 - **Ngsavdsonsof (76.4°N, 38.9°W)** — alpine
 - **Boo (60.0°S, 70.9°W)** — alpine
 - **Boo (60.9°S, 72.3°W)** — alpine
@@ -276,7 +276,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Toanetea** — temperate-forest
 - **Rarro (60.0°S, 66.9°W)** — alpine
 - **Psaav** — tropical-seasonal-forest
-- **Ngzoafnsof (37.1°N, 77.8°E)** — temperate-forest
+- **Qzhaovgzhov (37.1°N, 77.8°E)** — temperate-forest
 - **Nsaafnsov (35.5°N, 79.5°E)** — temperate-forest
 - **Boo (60.5°S, 80.4°W)** — alpine
 - **Gshoovngzhav (39.9°N, 82.4°E)** — temperate-forest
@@ -286,27 +286,27 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Psofmzav** — taiga
 - **Qzhaovgzhovgshofnshav (46.7°N, 81.5°E)** — temperate-forest
 - **Nsaafnsovnsa** — temperate-rainforest
-- **Ngzoafnsof (76.7°N, 81.6°W)** — temperate-forest
+- **Ngzoafnsof** — temperate-forest
 - **Neneo** — temperate-forest
 - **Toaqaneo** — alpine
-- **Gshofnshavngsofngshav (43.4°N, 83.6°E)** — temperate-forest
+- **Gshofnshavngsofngshav** — temperate-forest
 - **Nshaavnsa (41.6°N, 82.2°E)** — temperate-forest
 - **Qzhaovgzhovngsofngshav** — temperate-forest
 - **Nshaavnsa (42.5°N, 82.9°E)** — temperate-forest
 - **Qadoo (60.8°S, 74.4°W)** — temperate-forest
 - **Dodo (59.9°S, 72.9°W)** — temperate-forest
 - **Qadoo** — alpine
-- **Nsaafnsov (38.3°N, 82.6°E)** — temperate-forest
+- **Dzhaaf** — temperate-forest
 - **Gshofnshavnsafnsov** — temperate-forest
-- **Dzoov** — temperate-forest
+- **Gshofnshav (36.9°N, 76.4°E)** — temperate-forest
 - **Qzhaovgzhovnsafnsov** — temperate-forest
 - **Getoe (67.9°N, 38.4°E)** — tropical-seasonal-forest
 - **Dshogshovngzhav** — taiga
 - **Psof** — taiga
 - **Qzhaovgzhovgshofnshavgshovngzhav** — temperate-forest
-- **Gshofnshavgshovngzhav (40.0°N, 83.9°E)** — temperate-forest
+- **Gshofnshavgshovngzhav** — temperate-forest
 - **Gzavmzho** — tropical-rainforest
-- **Gshofnshavngsofngshav (35.9°N, 74.4°E)** — temperate-forest
+- **Gshofnshavgzhofgshof** — temperate-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -336,6 +336,7 @@ Glaciated strata lie in the cover over 2235 cells — the ice left its mark.
 
 The land's lode is dominantly salt, found across 32% of it.
 Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
+0% of the land is cave country.
 
 ## The Vestige
 

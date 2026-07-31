@@ -329,7 +329,7 @@ snow: gap (experiential): hobgoblin has no exposure to 'snow'
 snowfield: gap (experiential): hobgoblin has no exposure to 'snowfield'
 south: root Qaeneo /qaeneo/
 spirit: root Baa /baa/
-spring: root Negao /negao/
+spring: gap (experiential): hobgoblin has no exposure to 'spring'
 spur-and-groove: gap (experiential): hobgoblin has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): hobgoblin has no exposure to 'staghorn-stand'
 star: root Noe /noe/
@@ -515,7 +515,7 @@ snow: gap (experiential): bugbear has no exposure to 'snow'
 snowfield: gap (experiential): bugbear has no exposure to 'snowfield'
 south: root Qaodoo /qaodoo/
 spirit: root Baa /baa/
-spring: root Dogao /dogao/
+spring: gap (experiential): bugbear has no exposure to 'spring'
 spur-and-groove: gap (experiential): bugbear has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): bugbear has no exposure to 'staghorn-stand'
 star: root Doo /doo/
@@ -887,7 +887,7 @@ snow: gap (experiential): gnoll has no exposure to 'snow'
 snowfield: gap (experiential): gnoll has no exposure to 'snowfield'
 south: root Nshax /nʃax/
 spirit: root Ngsoavngsho /ŋsoavŋʃo/
-spring: root Dzhaaf /dʒaaf/
+spring: gap (experiential): gnoll has no exposure to 'spring'
 spur-and-groove: gap (experiential): gnoll has no exposure to 'spur-and-groove'
 staghorn-stand: gap (experiential): gnoll has no exposure to 'staghorn-stand'
 star: root Gzo /gzo/

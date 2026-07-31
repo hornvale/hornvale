@@ -3882,24 +3882,19 @@ fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
 /// Whether `cell` reads directly as `Hydro::Spring` — "where an aquifer
 /// meets the surface with flow." Previously a Karst proxy (`hydro_at ==
 /// Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because `Hydro::Spring`
-/// was analytically unreachable: `hydrogeology`'s aquifer gate was a
-/// carbonate-scale `porosity > 0.5` applied to clastic rock, whose porosity
-/// never exceeds 0.325, so the branch was preempted by Karst on every one
-/// of the thousand census seeds (The Witness, F5). `hydrogeology` now gates
-/// on a clastic-scale threshold, so `Spring` is reachable, and `spring` is
-/// the independent signal it was always meant to be rather than `river`
-/// partitioned by rock type — the disclosure that documented that overlap
-/// no longer applies.
-///
-/// Measured follow-up: reachable is not the same as common. At the
-/// production `GLOBE_LEVEL` (6), a 40-seed sweep never saw drainage clear
-/// `SPRING_DRAINAGE_THRESHOLD` (500.0) on a porosity-eligible cell — max
-/// drainage measured was 297. `Spring` was witnessed at the next mesh
-/// resolution up (level 7: 1 cell on 5 of 8 sampled seeds), so the fix is
-/// real, but at production resolution `Spring` may still read as vanishingly
-/// rare or absent on any given seed; this is left as a separate open
-/// question, not addressed by this repair. The single definition of "is
-/// this cell a spring," shared the same way.
+/// was analytically unreachable under the original carbonate-scale gate
+/// (The Witness, F5). F5's own replacement gate was itself mismeasured — a
+/// threshold pinned to a level-4 sweep applied at the model's real level-6
+/// resolution made 69.64% of land Aquifer (The Witness, Task 5b) — and
+/// `Spring` was, at the time, still a still-vs-flowing split on `drainage`
+/// against a threshold land drainage never clears at production resolution.
+/// Both are fixed now: `hydrogeology` gates on a clastic-scale porosity
+/// threshold measured on the correct population, and `Spring` is no longer
+/// a drainage split at all — it is a geometric descending contact
+/// (`GeneratedTerrain::hydro_at` promotes an `Aquifer` cell with a lower
+/// non-`Aquifer` neighbour), so `spring` is the independent signal it was
+/// always meant to be rather than `river` partitioned by rock type. The
+/// single definition of "is this cell a spring," shared the same way.
 fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
     terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring
 }
