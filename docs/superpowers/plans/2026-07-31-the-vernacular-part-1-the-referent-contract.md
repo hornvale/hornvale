@@ -939,11 +939,30 @@ single `make gate` already saturates ten cores at `cpu_ratio` 8.25–8.50.
 
 - [ ] **Step 3: Write the measured readout into the spec**
 
-Replace §7's prediction table's "after Stage 2" column with the measured
-values, and add one line naming the commit each was measured at. If any number
-is non-zero, **write it down as the result** — the spec says a falsified
-prediction ships as the headline, and tuning the gate to rescue the prediction
-is exactly what decision 0016's preregistration exists to prevent.
+**Take a paired measurement on current physics.** The spec's `73` was measured
+before this branch absorbed The Watershed, which itself moved facts — so the
+before/after pair in §7 is not apples-to-apples until both halves are taken on
+the same tree. Do this:
+
+1. **After** — reword one phenomenon description with a synonym that names
+   nothing (e.g. `domains/astronomy/src/provider.rs`'s `"a {} moon"` →
+   `"a {} lunar disc"`), regenerate seed 42, and diff against `$BASELINE`.
+   Count differing facts, and `deity-name` / `deity-epithet` among them.
+   Revert the reword and prove a clean tree.
+2. **Before** — temporarily reinstate the pre-referent dispatch in worldgen's
+   `phenomenon_concept` (the `description.contains("moon")` /
+   `contains("star")` / else-`sun` ladder), apply the same reword, regenerate,
+   and count the same three numbers. Then revert BOTH edits and prove the tree
+   is clean with `git status --porcelain`.
+
+That is the technique this campaign's Task 3 and Task 4 reviewers both used
+successfully; it leaves no residue when done in that order.
+
+Write both columns into §7 with the commit each was measured at, and say
+plainly that the original `73` was a pre-merge figure. If the "after" number is
+non-zero, **write it down as the result** — the spec says a falsified
+prediction ships as the headline, and tuning the gate to rescue a prediction is
+exactly what decision 0016's preregistration exists to prevent.
 
 - [ ] **Step 4: Commit**
 
