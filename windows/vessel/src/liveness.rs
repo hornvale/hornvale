@@ -523,7 +523,7 @@ pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
 /// The single steepest-descent neighbour ("water lies low" — the prior an
 /// ignorant agent explores along). `total_cmp` with an ascending-`RoomAddr`
 /// tie-break (the constitutional no-native-float-cmp rule), the same rule
-/// `nearest_water`'s BFS and `lowest_unvisited_neighbor` use. Always a
+/// `nearest_water`'s BFS and `lowest_unvisited_neighbor_memo` use. Always a
 /// neighbour (never `from` itself).
 pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
     let mut best: Option<(RoomAddr, f64)> = None;
@@ -601,11 +601,27 @@ pub struct LocaleTerrain<'a> {
     /// throwaway read with no world), the same fail-safe-to-wilderness
     /// posture `Terrain::is_built`'s own default takes.
     built: Option<&'a std::collections::BTreeSet<RoomId>>,
+    /// A PREFILLED, READ-ONLY [`hornvale_kernel::RoomMeshMemo`] (the-waymark
+    /// fix round, Finding 1): every `corner_weights`-backed read below
+    /// consults it first, falling through to a fresh recompute on a miss.
+    /// `None` (every non-`with_fields` constructor) is byte-identical to the
+    /// pre-Finding-1 behaviour — always a miss. This field is set ONCE, here,
+    /// at construction, and never mutated: the cache is filled by the
+    /// CALLER, under `&mut`, before any `LocaleTerrain` (and so before any
+    /// drive) exists — see `windows/vessel/src/session.rs`'s `wait` and
+    /// `windows/lab/src/health.rs`'s `simulate_world` for the fill sites.
+    /// Reading it here needs no `&mut self`, which is what lets `Terrain`'s
+    /// trait methods stay `&self` (they must: `decide_step` holds
+    /// `Thermal`/`Hunger`/`Danger`'s `&dyn Terrain` copies alive
+    /// SIMULTANEOUSLY in one `Vec<&dyn Drive>`, so a `&mut self` receiver
+    /// here is not merely undesired but borrow-checker-infeasible without
+    /// restructuring `arbitrate` — see the-waymark Task 3's report).
+    cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
 }
 impl<'a> LocaleTerrain<'a> {
     /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
     /// predator field — for throwaway reads (water/elevation) that never consult
-    /// the wake cycle or the danger drive.
+    /// the wake cycle or the danger drive. No prefilled cache.
     pub fn new(ctx: &'a LocaleContext) -> Self {
         Self {
             ctx,
@@ -613,13 +629,14 @@ impl<'a> LocaleTerrain<'a> {
             predator: None,
             prey: None,
             built: None,
+            cache: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
     /// the wake cycle) follows the REAL sun — latitude × season × the terminator
     /// (Tier-1). `None` falls back to the fractional-day sun. No predator field
     /// (use [`with_calendar_and_predators`](Self::with_calendar_and_predators) for
-    /// the full drive read).
+    /// the full drive read). No prefilled cache.
     pub fn with_calendar(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
@@ -630,19 +647,20 @@ impl<'a> LocaleTerrain<'a> {
             predator: None,
             prey: None,
             built: None,
+            cache: None,
         }
     }
     /// Build with the world's `calendar` AND its predator-pressure field (The
-    /// Quarry) — no prey field, no settlement-territory set. Retained for
-    /// callers that read danger but not the hunt; delegates to
-    /// [`with_fields`](Self::with_fields).
+    /// Quarry) — no prey field, no settlement-territory set, no prefilled
+    /// cache. Retained for callers that read danger but not the hunt;
+    /// delegates to [`with_fields`](Self::with_fields).
     /// type-audit: bare-ok(ratio: predator)
     pub fn with_calendar_and_predators(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
     ) -> Self {
-        Self::with_fields(ctx, calendar, predator, None, None)
+        Self::with_fields(ctx, calendar, predator, None, None, None)
     }
     /// Build with the world's `calendar`, predator-pressure field (The Quarry),
     /// prey-pressure field (The Teeth), AND settlement-territory set (The
@@ -650,7 +668,10 @@ impl<'a> LocaleTerrain<'a> {
     /// senses carnivore territory, a carnivore's hunger senses prey, and a
     /// creature's thermal drive can find a real hearth. `built` is `None` for
     /// every caller with no world to read one from (the throwaway/no-field
-    /// case `Terrain::is_built`'s own default already covers).
+    /// case `Terrain::is_built`'s own default already covers). `cache` is the
+    /// prefilled, read-only [`hornvale_kernel::RoomMeshMemo`] (the-waymark
+    /// fix round, Finding 1) — `None` for a caller with nothing prefilled
+    /// (byte-identical to the pre-Finding-1 behaviour).
     /// type-audit: bare-ok(ratio: predator), bare-ok(ratio: prey)
     pub fn with_fields(
         ctx: &'a LocaleContext,
@@ -658,6 +679,7 @@ impl<'a> LocaleTerrain<'a> {
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
         prey: Option<&'a hornvale_kernel::CellMap<f64>>,
         built: Option<&'a std::collections::BTreeSet<RoomId>>,
+        cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
     ) -> Self {
         Self {
             ctx,
@@ -665,19 +687,20 @@ impl<'a> LocaleTerrain<'a> {
             predator,
             prey,
             built,
+            cache,
         }
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
     fn elevation(&self, room: &RoomAddr) -> f64 {
         self.ctx
-            .describe(room, WorldTime { day: 0.0 })
+            .describe_at_cached(room, WorldTime { day: 0.0 }, None, self.cache)
             .map(|l| l.fields.elevation_m)
             .unwrap_or(f64::INFINITY)
     }
     fn is_fresh_water(&self, room: &RoomAddr) -> bool {
         self.ctx
-            .describe(room, WorldTime { day: 0.0 })
+            .describe_at_cached(room, WorldTime { day: 0.0 }, None, self.cache)
             .map(|l| l.fields.water.is_fresh())
             .unwrap_or(false)
     }
@@ -686,12 +709,15 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // annual-mean `temperature_c` — so the drive gets a diurnal/seasonal
         // swing while the render path stays byte-identical. INFINITY for an
         // undescribable room (never chosen as a comfort target).
-        self.ctx.temperature_at(room, day).unwrap_or(f64::INFINITY)
+        self.ctx
+            .temperature_at_cached(room, day, self.cache)
+            .unwrap_or(f64::INFINITY)
     }
     fn solar_altitude(&self, room: &RoomAddr, day: WorldTime) -> Option<f64> {
         // The real sun where the world carries a calendar (latitude from the
         // room's centroid; `None` on a locked world → no cycle); else the
-        // fractional-day fallback.
+        // fractional-day fallback. No `corner_weights` read here (a pure
+        // astronomy calc over the room's centroid), so no cache to consult.
         match self.calendar {
             Some(cal) => hornvale_astronomy::StdDays::new(day.day)
                 .ok()
@@ -703,19 +729,24 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // The real climate's net-primary-productivity proxy (The Provender);
         // an undescribable/above-grid room reads 0 (no food), the never-fed
         // fallback (the dual of `temperature`'s never-chosen INFINITY).
-        self.ctx.productivity_at(room).unwrap_or(0.0)
+        self.ctx
+            .productivity_at_cached(room, self.cache)
+            .unwrap_or(0.0)
     }
     fn hazards(&self, room: &RoomAddr) -> Hazards {
         // The real climate's per-axis hazard field (The Bane: the uncanny plus
         // graded heat/cold); an undescribable/above-grid room reads all-zero
         // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
-        let (uncanny, heat, cold) = self.ctx.hazards_at(room).unwrap_or((0.0, 0.0, 0.0));
+        let (uncanny, heat, cold) = self
+            .ctx
+            .hazards_at_cached(room, self.cache)
+            .unwrap_or((0.0, 0.0, 0.0));
         // The PREDATOR axis (The Quarry): the injected carnivore-pressure field,
         // corner-blended per room; `0` where no field is injected or the room is
         // above the grid.
         let predator = self
             .predator
-            .and_then(|field| self.ctx.blend_at(room, field))
+            .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
             .unwrap_or(0.0);
         Hazards {
             uncanny,
@@ -730,7 +761,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // field is injected or the room is above the grid — the prey-empty
         // fallback, so a carnivore there reads only ordinary productivity.
         self.prey
-            .and_then(|field| self.ctx.blend_at(room, field))
+            .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
             .unwrap_or(0.0)
     }
     fn is_built(&self, room: &RoomAddr) -> bool {
@@ -739,7 +770,8 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // `None` (no set injected — a throwaway read with no world) or a pack
         // failure (only possible past `MAX_DEPTH`, never reached here) both
         // read as unbuilt, the same fail-safe-to-wilderness posture
-        // `Terrain::is_built`'s own default already takes.
+        // `Terrain::is_built`'s own default already takes. No `corner_weights`
+        // read here, so no cache to consult.
         self.built
             .zip(room.pack().ok())
             .is_some_and(|(set, id)| set.contains(&id))
@@ -3171,7 +3203,8 @@ pub fn affect_of(
     terrain: &dyn Terrain,
 ) -> Affect {
     let mut memo = PrimaryAfraidMemo::new();
-    affect_of_memo(frozen, npc, band, day, terrain, &mut memo)
+    let mut mesh_memo = RoomMeshMemo::new();
+    affect_of_memo(frozen, npc, band, day, terrain, &mut memo, &mut mesh_memo)
 }
 
 /// [`affect_of`] sharing a caller-owned [`PrimaryAfraidMemo`] — for the lab's
@@ -3180,6 +3213,9 @@ pub fn affect_of(
 /// re-derivations to one `affect_of` per `(emitter, day)`. Reads interior
 /// warmth at the room's landing anchor only — see [`affect_of_memo_occupied`]
 /// for the occupancy-aware sibling this delegates to with `occupancy: None`.
+/// `mesh_memo` (the-waymark fix round, rider (b)) is the caller-owned
+/// [`RoomMeshMemo`] this call's own `lowest_unvisited_neighbor_memo` read
+/// shares — see [`affect_of_memo_occupied`]'s own doc.
 pub fn affect_of_memo(
     frozen: &Ledger,
     npc: &Npc,
@@ -3187,8 +3223,9 @@ pub fn affect_of_memo(
     day: WorldTime,
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
+    mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
-    affect_of_memo_occupied(frozen, npc, band, day, terrain, memo, None)
+    affect_of_memo_occupied(frozen, npc, band, day, terrain, memo, None, mesh_memo)
 }
 
 /// [`affect_of_memo`], but given a caller-owned [`Occupancy`] to read the
@@ -3224,6 +3261,17 @@ pub fn affect_of_memo(
 /// never a foreign `AnchorId` read against a room's freshly-derived
 /// `Interior`, which [`crate::interior::warmth_at`] has no bounds check
 /// against.
+///
+/// `mesh_memo` (the-waymark fix round, rider (b)): this function used to
+/// build its OWN throwaway [`RoomMeshMemo`] inline for the
+/// `lowest_unvisited_neighbor` read below — the same shape [`PrimaryAfraidMemo`]
+/// would have had if it were not already an explicit, caller-supplied
+/// parameter. It is now threaded the same way `memo` already is: a caller
+/// that owns a session/battery-scoped memo (`windows/lab`'s `run_simulation`)
+/// shares it here too; a caller that only has `&self` (`Session::snapshot`/
+/// `needs`) supplies a local throwaway, exactly as it already does for cases
+/// where session-scoping isn't reachable.
+#[allow(clippy::too_many_arguments)]
 pub fn affect_of_memo_occupied(
     frozen: &Ledger,
     npc: &Npc,
@@ -3232,6 +3280,7 @@ pub fn affect_of_memo_occupied(
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
     occupancy: Option<&Occupancy>,
+    mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
@@ -3250,7 +3299,7 @@ pub fn affect_of_memo_occupied(
         npc.metabolic_class,
     );
     let visited = std::collections::BTreeSet::new();
-    let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
+    let explore_step = lowest_unvisited_neighbor_memo(&pos, &visited, terrain, mesh_memo);
     let fatigue = fatigue_at(frozen, npc.entity, day);
     // The Haunt + The Phantom: the ground this creature remembers being
     // frightened on — a fold over its committed history (empty for a never-
@@ -4077,7 +4126,22 @@ impl<'a> DriveMovements<'a> {
     /// sampler needs to read warmth where a creature actually walked to
     /// rather than always at its room's landing anchor. See
     /// [`affect_of_memo_occupied`] for the read this occupancy feeds.
-    pub fn step_with_occupancy(&self, frozen: &Ledger) -> (Vec<Fact>, Occupancy) {
+    ///
+    /// `mesh_memo` (the-waymark fix round, Finding 2) is a caller-owned
+    /// [`RoomMeshMemo`], threaded `&mut` rather than built fresh here: the
+    /// PREVIOUS shape (`let mut mesh_memo = RoomMeshMemo::new()` local to
+    /// this function) discarded a tick's worth of `neighbors()` reuse every
+    /// single call — the lab's health battery alone calls this once per tick
+    /// for 40 ticks, so the old shape rebuilt (and threw away) the memo 40
+    /// times over a single run. The caller now owns it for as long as ITS
+    /// own scope lasts (a `Session`'s whole possession; `run_simulation`'s
+    /// whole 40-tick sweep), so cross-tick reuse is the point, not per-tick
+    /// accident.
+    pub fn step_with_occupancy(
+        &self,
+        frozen: &Ledger,
+        mesh_memo: &mut RoomMeshMemo,
+    ) -> (Vec<Fact>, Occupancy) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
         // stands at, tracked across this tick's own walk. Shared across
@@ -4097,14 +4161,6 @@ impl<'a> DriveMovements<'a> {
         // `PrimaryAfraidMemo`). Byte-identical: a cache of a pure function over a
         // fixed ledger.
         let mut afraid_memo = PrimaryAfraidMemo::new();
-        // One geometry memo for the whole step (the-waymark, Task 3): every
-        // creature's `catch_up` and `advance_one`/`decide_step` calls below
-        // share it, so a room's `neighbors()` (read by
-        // `lowest_unvisited_neighbor_memo`) is computed once no matter how
-        // many creatures or how many pops of this tick's shared clock visit
-        // it. Byte-identical: a cache of a pure function of the room address
-        // alone (see `RoomMeshMemo`'s own doc).
-        let mut mesh_memo = RoomMeshMemo::new();
         // THE ALARM: build the per-tick alarm field ONCE, from the frozen
         // population, before advancing any creature — it is fixed across the whole
         // interval (the next-tick wave). Built alarm-free (via `affect_of`), so
@@ -4222,7 +4278,7 @@ impl<'a> DriveMovements<'a> {
                 &out,
                 CATCH_UP_STEP_CAP,
                 self.day_length_std,
-                &mut mesh_memo,
+                mesh_memo,
             );
 
             queue.insert((from_ticks, npc.entity));
@@ -4243,7 +4299,7 @@ impl<'a> DriveMovements<'a> {
                 &alarm,
                 &memory,
                 &mut out,
-                &mut mesh_memo,
+                mesh_memo,
             ) {
                 // This creature's walk is over — past `to`, out of `MAX_STEPS`,
                 // or halted by an arm's own stop condition. It is not requeued.
@@ -4270,7 +4326,15 @@ impl<'a> TickSystem for DriveMovements<'a> {
         "drive-movements"
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
-        self.step_with_occupancy(frozen).0
+        // `TickSystem::step`'s signature is fixed by the kernel's scheduler
+        // (`tick()` dispatches every registered system through it generically,
+        // so it cannot carry a `RoomMeshMemo` parameter without a kernel-trait
+        // change — out of the-waymark's scope). This path therefore cannot
+        // share a caller-owned memo the way the direct `step_with_occupancy`
+        // call (`Session::wait`, `run_simulation`) does; a throwaway one costs
+        // nothing beyond what the pre-Finding-2 code already paid every call.
+        let mut throwaway = RoomMeshMemo::new();
+        self.step_with_occupancy(frozen, &mut throwaway).0
     }
 }
 
@@ -4635,33 +4699,15 @@ fn nearer_to_home(
 }
 
 /// The lowest-elevation neighbour not yet visited this walk (the directed-
-/// exploration step), or `None` if every neighbour is visited. Terminating: the
-/// visited set only grows. A throwaway one-shot [`RoomMeshMemo`] delegate of
-/// [`lowest_unvisited_neighbor_memo`] (the-waymark, Task 3) — this fn's own
-/// single caller ([`affect_of_memo_occupied`]'s stateless, one-room-at-a-time
-/// health-sampler read) has no session-scoped memo of its own to share, so a
-/// fresh one costs nothing extra; byte-identical to the pre-memo behaviour by
-/// construction.
-fn lowest_unvisited_neighbor(
-    from: &RoomAddr,
-    visited: &std::collections::BTreeSet<RoomAddr>,
-    terrain: &dyn Terrain,
-) -> Option<RoomAddr> {
-    let mut memo = RoomMeshMemo::new();
-    lowest_unvisited_neighbor_memo(from, visited, terrain, &mut memo)
-}
-
-/// [`lowest_unvisited_neighbor`], consulting/filling a caller-owned
-/// [`RoomMeshMemo`] for the `neighbors()` read instead of recomputing the
-/// icosphere lattice/edge-crossing arithmetic every call (the-waymark, Task
-/// 3). The live walk's hot caller: `decide_step` shares ONE memo across every
-/// creature's every tick (`DriveMovements::step_with_occupancy` builds it,
-/// exactly the [`PrimaryAfraidMemo`] per-tick scope), so a room visited by
-/// more than one creature — or revisited across ticks in the SAME
-/// `step_with_occupancy` call by the same creature's own `advance_one` loop —
-/// pays for its three neighbours once. Byte-identical to
-/// `lowest_unvisited_neighbor` by construction (`neighbors_memo` is pinned
-/// bit-equal to `neighbors`).
+/// exploration step), or `None` if every neighbour is visited. Terminating:
+/// the visited set only grows. Consults/fills a caller-owned [`RoomMeshMemo`]
+/// for the `neighbors()` read instead of recomputing the icosphere
+/// lattice/edge-crossing arithmetic every call (the-waymark, Task 3). Two hot
+/// callers share it: the live walk's `decide_step` (via
+/// `DriveMovements::step_with_occupancy`'s session-owned memo, the-waymark
+/// fix round, Finding 2) and the stateless health-sampler read
+/// [`affect_of_memo_occupied`] (rider (b)) — both thread whatever memo THEIR
+/// own caller supplies, never build one silently inline.
 fn lowest_unvisited_neighbor_memo(
     from: &RoomAddr,
     visited: &std::collections::BTreeSet<RoomAddr>,
@@ -7357,7 +7403,7 @@ mod tests {
             !built.is_empty(),
             "seed 42's flagship settlement must contribute at least one built room"
         );
-        let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built));
+        let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built), None);
         assert!(
             terrain.is_built(&home),
             "the settlement's own room must read as built"
@@ -12527,7 +12573,7 @@ mod tests {
             day_length_std: None,
             terrain: &hearth_terrain,
         };
-        let (_facts, occ) = sys.step_with_occupancy(&ledger);
+        let (_facts, occ) = sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
         let hearth_id = interior
@@ -12573,7 +12619,7 @@ mod tests {
             day_length_std: None,
             terrain: &wild_terrain,
         };
-        let (_facts2, occ2) = sys2.step_with_occupancy(&ledger2);
+        let (_facts2, occ2) = sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new());
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
         assert_eq!(
@@ -12965,7 +13011,7 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (facts, occ) = sys.step_with_occupancy(&ledger);
+        let (facts, occ) = sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
         assert!(
             facts.is_empty(),
             "an instantaneous tick (from == to) leaves the live walk nothing \
@@ -13234,7 +13280,7 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (_f1, occ_forward) = forward.step_with_occupancy(&ledger);
+        let (_f1, occ_forward) = forward.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
 
         let reversed = DriveMovements {
             npcs: vec![
@@ -13247,7 +13293,7 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (_f2, occ_reversed) = reversed.step_with_occupancy(&ledger);
+        let (_f2, occ_reversed) = reversed.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
 
         assert_eq!(
             occ_forward.at(a),

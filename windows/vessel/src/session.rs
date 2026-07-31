@@ -263,6 +263,18 @@ pub struct Session<'w> {
     /// The depth band, mirroring `inside`: a second way of being somewhere
     /// other than out of doors at ground level.
     submerged: Option<hornvale_climate::Stratum>,
+    /// The session-lived geometry memo (the-waymark fix round, Finding 2):
+    /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
+    /// is world-independent; `corner_weights` is fixed once `ctx`'s
+    /// `(Geosphere, NearestCellIndex)` pair is built at `start` and never
+    /// changes), so it is owned HERE — one level above
+    /// `DriveMovements::step_with_occupancy`'s own per-tick loop, not rebuilt
+    /// (and discarded) inside it every `wait`. `wait` prefills it for each
+    /// NPC's current position and neighbours before building this tick's
+    /// `LocaleTerrain` (Finding 1) and threads it `&mut` into
+    /// `step_with_occupancy` (for the neighbours half); `snapshot`/`needs`
+    /// (both `&self`) read whatever it already holds without adding to it.
+    mesh_memo: hornvale_kernel::RoomMeshMemo,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -468,6 +480,7 @@ impl<'w> Session<'w> {
             last_text: String::new(),
             inside: None,
             submerged: None,
+            mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -500,14 +513,25 @@ impl<'w> Session<'w> {
         // `last_text` (this turn's real response), not from here.
         let focalized = self.focalizer.render(&vantage);
 
+        // `&self`-only: can read whatever `self.mesh_memo` already holds
+        // (Finding 1's cache field is a shared borrow, not a mutation) but
+        // cannot prefill it fresh — `wait`'s tick is where that happens.
         let terrain = LocaleTerrain::with_fields(
             &self.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
             Some(&self.built),
+            Some(&self.mesh_memo),
         );
         let mut afraid_memo = PrimaryAfraidMemo::new();
+        // A throwaway `RoomMeshMemo` for `affect_of_memo_occupied`'s own
+        // `neighbors_memo` write-through (rider (b)): `&self` here cannot
+        // reach `&mut self.mesh_memo`, so this specific read does not grow
+        // the session-owned memo — it still benefits from `terrain`'s
+        // prefilled `corner_weights` cache above, just not from a warm
+        // `neighbors` cache of its own.
+        let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
         let present = self
             .colocated_npcs()
             .iter()
@@ -520,6 +544,7 @@ impl<'w> Session<'w> {
                     &terrain,
                     &mut afraid_memo,
                     Some(&self.occupancy),
+                    &mut mesh_memo,
                 );
                 PresentEntry {
                     entity: npc.entity.0.get(),
@@ -1316,6 +1341,9 @@ impl<'w> Session<'w> {
             self.predator.as_ref(),
             self.prey.as_ref(),
             Some(&self.built),
+            // `&self`-only reader: shares whatever `self.mesh_memo` already
+            // holds (free — no mutation), same posture as `snapshot`.
+            Some(&self.mesh_memo),
         )
     }
 
@@ -1661,12 +1689,42 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
+        // Prefill the session-owned geometry memo (the-waymark fix round,
+        // Finding 1) for each NPC's CURRENT position (`before`, captured
+        // above) and its three neighbours — the rooms this tick's drive
+        // stack (Thermal/Hunger/Danger/is_water/forage/hazards, all read via
+        // `LocaleTerrain`) will touch for a stationary or slow-moving
+        // creature. Under `&mut self.mesh_memo`, strictly BEFORE any
+        // `LocaleTerrain` (and so any drive) exists for this tick — a
+        // creature that moves further than one hop this tick still gets a
+        // correct answer, just an unmemoized one (`corner_weights_lookup`'s
+        // fall-through), which is the whole point of the miss path.
+        {
+            let geo = self.ctx.climate().geosphere();
+            let index = self.ctx.nearest_index();
+            for pos in &before {
+                pos.corner_weights_memo(geo, index, &mut self.mesh_memo);
+                for n in pos.neighbors_memo(&mut self.mesh_memo) {
+                    n.corner_weights_memo(geo, index, &mut self.mesh_memo);
+                }
+            }
+        }
+        // A read-only SNAPSHOT of the just-filled memo: `LocaleTerrain`
+        // (below) needs a SHARED reference for the rest of this tick, while
+        // `self.mesh_memo` stays independently `&mut`-able for
+        // `step_with_occupancy`'s own `neighbors` threading — a live shared
+        // borrow embedded in `terrain` AND a live `&mut` borrow passed to
+        // `step_with_occupancy` in the SAME call would otherwise alias the
+        // same field. Cloning a `BTreeMap` of a few dozen entries is cheap
+        // next to the grid scans it is standing in for.
+        let mesh_snapshot = self.mesh_memo.clone();
         let terrain = LocaleTerrain::with_fields(
             &self.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
             Some(&self.built),
+            Some(&mesh_snapshot),
         );
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
@@ -1692,7 +1750,7 @@ impl<'w> Session<'w> {
         // colder felt state than the NPC actually experienced — warmth at
         // the room's landing anchor, never wherever its own walk carried it
         // (Important 4, The Threshold whole-branch review).
-        let (_facts, occupancy) = sys.step_with_occupancy(&self.ledger);
+        let (_facts, occupancy) = sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo);
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
@@ -2096,14 +2154,22 @@ impl<'w> Session<'w> {
         // Read each co-located NPC's felt state through the SAME arbitration
         // that drives it (spec §7) — the affect label coloured by what the
         // feeling is about (its intentional object), not a bare thirst scalar.
+        // `&self`-only: shares whatever `self.mesh_memo` already holds
+        // (free — no mutation), same posture as `snapshot`.
         let terrain = LocaleTerrain::with_fields(
             &self.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
             Some(&self.built),
+            Some(&self.mesh_memo),
         );
         let mut afraid_memo = PrimaryAfraidMemo::new();
+        // A throwaway `RoomMeshMemo` for `affect_of_memo_occupied`'s own
+        // `neighbors_memo` write-through (rider (b)) — see `snapshot`'s
+        // identical comment for why `&self` cannot reach the session-owned
+        // one here.
+        let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
         here.iter()
             .map(|npc| {
                 let affect = affect_of_memo_occupied(
@@ -2114,6 +2180,7 @@ impl<'w> Session<'w> {
                     &terrain,
                     &mut afraid_memo,
                     Some(&self.occupancy),
+                    &mut mesh_memo,
                 );
                 format!("The {} {}.", npc.label, felt_phrase(&affect))
             })

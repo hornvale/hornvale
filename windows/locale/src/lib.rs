@@ -391,9 +391,61 @@ impl LocaleContext {
         self.describe_with_weights(addr, stratum, id, weights)
     }
 
-    /// The shared tail of [`Self::describe_at`]/[`Self::describe_at_memo`]:
-    /// everything past resolving `id` and `weights`, so the two callers can
-    /// never drift apart in how a `Locale` is built from them.
+    /// [`Self::describe_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// the shape a `&self`-only reader needs: a `&dyn Terrain` implementor
+    /// (`windows/vessel`'s `LocaleTerrain`) can hold a prefilled cache and
+    /// consult it from an ordinary `&self` trait method, never needing `&mut`
+    /// access at read time. A cache miss falls through to a fresh
+    /// [`RoomAddr::corner_weights`] call — correctness never depends on the
+    /// cache being complete, only speed does. `cache: None` is byte-identical
+    /// to `describe_at` (always a miss). Byte-identical to `describe_at` on
+    /// a hit too, by construction (`corner_weights_lookup` only ever returns
+    /// what `corner_weights_memo` would have inserted, which is pinned
+    /// bit-equal to `corner_weights` itself).
+    pub fn describe_at_cached(
+        &self,
+        addr: &RoomAddr,
+        at: WorldTime,
+        stratum: Option<Stratum>,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Result<Locale, LocaleError> {
+        let id = addr
+            .pack()
+            .map_err(|e| LocaleError::Unaddressable(format!("{e:?}")))?
+            .0;
+        let geo = self.climate.geosphere();
+        let weights = self
+            .corner_weights_for(addr, geo, cache)
+            .ok_or(LocaleError::AboveGrid)?;
+        let _ = at; // v1: time-independent (see `describe_at`'s doc)
+        self.describe_with_weights(addr, stratum, id, weights)
+    }
+
+    /// The shared corner_weights read every `_cached` reader uses: a hit in
+    /// `cache` returns the memoized answer (including a memoized above-grid
+    /// `None`, which is why the lookup itself returns `Option<Option<_>>` —
+    /// see [`hornvale_kernel::RoomMeshMemo::corner_weights_lookup`]'s own
+    /// doc); a miss (or no cache at all) falls through to a fresh
+    /// [`RoomAddr::corner_weights`] call. No mutation — this never fills a
+    /// miss back into `cache`, which is exactly what lets a `&self` reader
+    /// use it without `&mut` access.
+    fn corner_weights_for(
+        &self,
+        addr: &RoomAddr,
+        geo: &hornvale_kernel::Geosphere,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<[(CellId, u64); 3]> {
+        if let Some(hit) = cache.and_then(|c| c.corner_weights_lookup(addr)) {
+            return hit;
+        }
+        addr.corner_weights(geo, &self.index)
+    }
+
+    /// The shared tail of [`Self::describe_at`]/[`Self::describe_at_memo`]/
+    /// [`Self::describe_at_cached`]: everything past resolving `id` and
+    /// `weights`, so the three callers can never drift apart in how a
+    /// `Locale` is built from them.
     fn describe_with_weights(
         &self,
         addr: &RoomAddr,
@@ -520,6 +572,27 @@ impl LocaleContext {
         Some(sum / denom as f64)
     }
 
+    /// [`Self::temperature_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `temperature_at`.
+    /// type-audit: pending(wave-2: return)
+    pub fn temperature_at_cached(
+        &self,
+        addr: &RoomAddr,
+        at: WorldTime,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let sum: f64 = weights
+            .iter()
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day).get())
+            .sum();
+        Some(sum / denom as f64)
+    }
+
     /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
     /// net-primary-productivity proxy over the climate, the food-value field
     /// the drive layer's hunger drive reads (The Provender). Blends the three
@@ -571,6 +644,28 @@ impl LocaleContext {
         Some(miami_npp(temp, moisture))
     }
 
+    /// [`Self::productivity_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `productivity_at`.
+    /// type-audit: pending(wave-2: return)
+    pub fn productivity_at_cached(
+        &self,
+        addr: &RoomAddr,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
+            let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
+            sum / denom as f64
+        };
+        let temp = blend(&|c| self.climate.mean_temperature_at(c).get());
+        let moisture = blend(&|c| self.climate.moisture_at(c));
+        Some(miami_npp(temp, moisture))
+    }
+
     /// Corner-blend an externally-supplied per-cell `field` (over the canonical
     /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
     /// `hazards_at` use, generalized so a caller can sample a field this context
@@ -601,6 +696,24 @@ impl LocaleContext {
     ) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights_memo(geo, &self.index, memo)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
+        Some(sum / denom as f64)
+    }
+
+    /// [`Self::blend_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `blend_at`.
+    /// type-audit: bare-ok(ratio: field), bare-ok(ratio: return)
+    pub fn blend_at_cached(
+        &self,
+        addr: &RoomAddr,
+        field: &hornvale_kernel::CellMap<f64>,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
         Some(sum / denom as f64)
@@ -662,6 +775,45 @@ impl LocaleContext {
     ) -> Option<(f64, f64, f64)> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights_memo(geo, &self.index, memo)?;
+        // The dominant corner cell (max weight, tie-break lowest CellId) — the
+        // same pick `describe` uses for the categorical biome/regime.
+        let mut best = weights[0];
+        for &cand in &weights[1..] {
+            if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
+                best = cand;
+            }
+        }
+        // The uncanny: a placed exotic site's strangeness, normalized to [0,1].
+        let uncanny = self
+            .budget
+            .regime_at(best.0)
+            .map(|n| n.strangeness() / crate::regime::STRANGENESS_CEILING)
+            .unwrap_or(0.0);
+        // Graded heat/cold: 0 within the safe band, rising to 1 at the lethal
+        // extreme.
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let temp: f64 = weights
+            .iter()
+            .map(|&(c, w)| w as f64 * self.climate.mean_temperature_at(c).get())
+            .sum::<f64>()
+            / denom as f64;
+        let heat = ((temp - HOT_DANGER_C) / (LETHAL_HEAT_C - HOT_DANGER_C)).clamp(0.0, 1.0);
+        let cold = ((COLD_DANGER_C - temp) / (COLD_DANGER_C - LETHAL_COLD_C)).clamp(0.0, 1.0);
+        Some((uncanny.clamp(0.0, 1.0), heat, cold))
+    }
+
+    /// [`Self::hazards_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `hazards_at`.
+    /// type-audit: pending(wave-2: return)
+    pub fn hazards_at_cached(
+        &self,
+        addr: &RoomAddr,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<(f64, f64, f64)> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
         // The dominant corner cell (max weight, tie-break lowest CellId) — the
         // same pick `describe` uses for the categorical biome/regime.
         let mut best = weights[0];
@@ -1230,5 +1382,112 @@ mod tests {
             let got_hazards = ctx.hazards_at_memo(addr, &mut memo);
             assert_eq!(got_hazards, expected_hazards, "hazards_at_memo at {addr:?}");
         }
+    }
+
+    #[test]
+    fn the_five_cached_readers_bit_equal_their_recomputing_siblings_with_a_partial_prefill() {
+        // The-waymark fix round, Finding 1: a PREFILLED, READ-ONLY cache
+        // (never mutated by the readers themselves) must still be
+        // byte-identical to the raw recomputing siblings, on BOTH a cache
+        // hit (prefilled rooms) and a cache miss (rooms deliberately left
+        // out of the prefill, falling through to a fresh `corner_weights`
+        // call) — correctness must never depend on prefill completeness.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let start = RoomAddr {
+            face: 4,
+            path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
+        };
+        let rooms = walk_visited(&start, 3);
+        assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
+        let at = WorldTime { day: 12.5 };
+        let zero_field = hornvale_kernel::CellMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
+
+        // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay
+        // deliberately un-prefilled, so this run exercises both a hit and a
+        // miss for every one of the five readers.
+        let mut memo = hornvale_kernel::RoomMeshMemo::new();
+        let geo = ctx.climate().geosphere();
+        let mut prefilled = 0usize;
+        for (i, addr) in rooms.iter().enumerate() {
+            if i % 2 == 0 {
+                addr.corner_weights_memo(geo, ctx.nearest_index(), &mut memo);
+                prefilled += 1;
+            }
+        }
+        assert!(
+            prefilled > 0 && prefilled < rooms.len(),
+            "fixture must actually mix hits and misses"
+        );
+
+        // Count hits vs misses directly against the read-only lookup — the
+        // review's own ask: prove the prefill actually covers the hot rooms,
+        // not just that the byte-identity holds regardless.
+        let mut hits = 0usize;
+        let mut misses = 0usize;
+        for addr in &rooms {
+            match memo.corner_weights_lookup(addr) {
+                Some(_) => hits += 1,
+                None => misses += 1,
+            }
+        }
+        assert_eq!(hits, prefilled, "every prefilled room must be a cache hit");
+        assert_eq!(
+            misses,
+            rooms.len() - prefilled,
+            "every un-prefilled room must be a cache miss"
+        );
+
+        // Now the actual byte-identity check, reading through the cache
+        // (Some(&memo)) for every room — hits AND misses both included.
+        for addr in &rooms {
+            let expected_describe = ctx.describe_at(addr, at, None);
+            let got_describe = ctx.describe_at_cached(addr, at, None, Some(&memo));
+            assert_eq!(
+                expected_describe.is_ok(),
+                got_describe.is_ok(),
+                "describe_at_cached Ok/Err mismatch at {addr:?}"
+            );
+            if let (Ok(exp), Ok(got)) = (expected_describe, got_describe) {
+                assert_eq!(
+                    serde_json::to_string(&exp).unwrap(),
+                    serde_json::to_string(&got).unwrap(),
+                    "describe_at_cached mismatch at {addr:?}"
+                );
+            }
+
+            let expected_temp = ctx.temperature_at(addr, at);
+            let got_temp = ctx.temperature_at_cached(addr, at, Some(&memo));
+            assert_eq!(got_temp, expected_temp, "temperature_at_cached at {addr:?}");
+
+            let expected_prod = ctx.productivity_at(addr);
+            let got_prod = ctx.productivity_at_cached(addr, Some(&memo));
+            assert_eq!(
+                got_prod, expected_prod,
+                "productivity_at_cached at {addr:?}"
+            );
+
+            let expected_blend = ctx.blend_at(addr, &zero_field);
+            let got_blend = ctx.blend_at_cached(addr, &zero_field, Some(&memo));
+            assert_eq!(got_blend, expected_blend, "blend_at_cached at {addr:?}");
+
+            let expected_hazards = ctx.hazards_at(addr);
+            let got_hazards = ctx.hazards_at_cached(addr, Some(&memo));
+            assert_eq!(
+                got_hazards, expected_hazards,
+                "hazards_at_cached at {addr:?}"
+            );
+        }
+
+        // `cache: None` must also be byte-identical (always a miss).
+        let addr = &rooms[0];
+        assert_eq!(
+            ctx.describe_at(addr, at, None).is_ok(),
+            ctx.describe_at_cached(addr, at, None, None).is_ok()
+        );
+        assert_eq!(
+            ctx.temperature_at(addr, at),
+            ctx.temperature_at_cached(addr, at, None)
+        );
     }
 }
