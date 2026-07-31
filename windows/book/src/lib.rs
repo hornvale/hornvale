@@ -2041,32 +2041,54 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 /// `UnknownComplement`. The closed set stays derived from the world:
 /// walking `accounts_of(world)` rather than hardcoding the carving text.
 /// Sculpts once (`terrain_of` + `climate_from`) and delegates to
-/// [`parse_context_from`] — the vessel session's `write` verb (The
-/// Shuttle) threads an already-built terrain/climate instead of paying for
-/// this sculpt on every turn.
+/// [`parse_context_from`] on success — the vessel session's `write` verb
+/// (The Shuttle) threads an already-built terrain/climate instead of
+/// paying for this sculpt on every turn. On a sculpt failure, mirrors
+/// `hornvale_worldgen::accounts_of`'s own posture: only the chorus-derived
+/// complements are absent (an empty voice list), never the whole set — the
+/// two pure-ledger loops (`is-a`, `instance-of`) still run, so a world
+/// whose terrain pins fail to parse still parses every Common line it
+/// would have accepted before that failure, just without the chorus
+/// vocabulary.
 pub fn parse_context(world: &World) -> ParseContext {
-    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
-        return ParseContext {
-            complements: BTreeSet::new(),
-        };
+    let sculpted = hornvale_worldgen::terrain_of(world)
+        .ok()
+        .and_then(|terrain| {
+            hornvale_worldgen::climate_from(world, &terrain)
+                .ok()
+                .map(|climate| (terrain, climate))
+        });
+    let voices = match &sculpted {
+        Some((terrain, climate)) => hornvale_worldgen::accounts_from(world, terrain, climate),
+        None => Vec::new(),
     };
-    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else {
-        return ParseContext {
-            complements: BTreeSet::new(),
-        };
-    };
-    parse_context_from(world, &terrain, &climate)
+    parse_context_with_voices(world, voices)
 }
 
 /// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate
 /// (`hornvale_worldgen::accounts_from` instead of `accounts_of`) instead of
-/// re-sculpting the globe. On a sculpt failure, [`parse_context`] mirrors
-/// `hornvale_worldgen::accounts_of`'s own posture on the same failure — an
-/// empty complement set, never a panic.
+/// re-sculpting the globe. Success path only — a caller already holding a
+/// terrain/climate pair has, by construction, a sculpt that succeeded, so
+/// this never takes the degraded (empty-voices) arm [`parse_context`]
+/// falls back to on its own internal sculpt failure.
 pub fn parse_context_from(
     world: &World,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
+) -> ParseContext {
+    parse_context_with_voices(
+        world,
+        hornvale_worldgen::accounts_from(world, terrain, climate),
+    )
+}
+
+/// The shared body behind [`parse_context`] and [`parse_context_from`]: the
+/// two pure-ledger loops (`is-a`, `instance-of`) always run; `voices` is the
+/// only part either caller varies — the real (sculpted) chorus accounts, or
+/// an empty list on a sculpt failure ([`parse_context`]'s degraded arm).
+fn parse_context_with_voices(
+    world: &World,
+    voices: Vec<hornvale_worldgen::ChorusVoice>,
 ) -> ParseContext {
     let mut complements = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
@@ -2079,7 +2101,7 @@ pub fn parse_context_from(
             complements.insert(species_label(kind));
         }
     }
-    for voice in hornvale_worldgen::accounts_from(world, terrain, climate) {
+    for voice in voices {
         for entry in &voice.account.entries {
             if let Disposition::Substituted { theirs, .. } = effective(&entry.disposition) {
                 complements.insert(theirs.clone());

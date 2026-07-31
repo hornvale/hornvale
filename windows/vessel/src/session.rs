@@ -2081,7 +2081,11 @@ impl<'w> Session<'w> {
     /// of how many facts the sentence carried (heard is not true, but
     /// written is initiation — spec §1). The acceptable floor shape — no
     /// NPC addressing yet (a future `write <npc> <sentence>` is a UX
-    /// decision this spec doesn't commit to, G3 flag 2).
+    /// decision this spec doesn't commit to, G3 flag 2). Threaded (The
+    /// Shuttle): calls `hornvale_book::parse_context_from` with
+    /// `self.terrain`/`self.climate` when both are `Some`, so a session's
+    /// repeated `write` calls share `start`'s one sculpt instead of
+    /// re-sculpting the globe every turn, the same posture as `consult`.
     fn write(&mut self, line: &str) -> String {
         if line.is_empty() {
             return "Write what? Speak a line of Common.".to_string();
