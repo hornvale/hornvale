@@ -282,6 +282,7 @@
 - [The Siding](./chronicle/the-siding.md)
 - [The Timekeeper](./chronicle/the-timekeeper.md)
 - [The Pyx](./chronicle/the-pyx.md)
+- [The Twin](./chronicle/the-twin.md)
 
 # Appendix: The Frontier
 

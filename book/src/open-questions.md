@@ -479,6 +479,24 @@ turned on the ledger's own author — a claim verified on one apparatus is a
 fact about that apparatus, and the campaign that had just finished saying so
 in prose went on to forget it in a decision record within the hour.
 
+[The Twin](./chronicle/the-twin.md) closes that correction and sharpens the
+bet itself. Holding the compiler, the system library, and the build directory
+fixed, two machines that share almost nothing else — different processors,
+kernels, and operating systems, one of them an appliance that cannot be logged
+into — produced the same binary to the byte; and two *different* system
+libraries produced the same forty worlds, even compiled the old way, where the
+operation everyone suspected leaves the program and enters the library. So the
+long-standing explanation for the one recorded cross-machine disagreement is
+eliminated, and with it the machine itself. **What determines the output is
+the environment, not the host** — which is the strongest form this bet has
+been stated in, and the first version of it supported by a comparison in which
+only one thing varied. Every earlier cross-machine check in this project moved
+five things at once, which is why the disagreement of nineteen July was
+observable for four months and diagnosable for none of them. It is still
+unexplained. The space it can hide in is now small enough to name: how a build
+chooses its compiler, given that this project's pin is silently conditional on
+the directory you invoke it from.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing
