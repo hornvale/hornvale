@@ -4,7 +4,7 @@
 
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};
-use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_of, doctrines_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_from, doctrines_from, doctrines_of};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -31,6 +31,8 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // arms of the gate directly, and doctrines_of covers exactly the organized
     // subset (no longer every placed culture).
     let w = generated(1);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let placed = hornvale_worldgen::placed_peoples(&w);
     assert!(!placed.is_empty(), "seed 1 must place at least one culture");
     let mut organized_count = 0usize;
@@ -39,7 +41,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
         let cult_form = hornvale_religion::cult_form_held_by(&w, village.id);
         let is_organized = cult_form.as_deref() == Some("organized");
         assert_eq!(
-            doctrine_of(&w, kind).is_some(),
+            doctrine_from(&w, kind, &terrain, &climate).is_some(),
             is_organized,
             "seed 1's {kind}: doctrine_of must be Some iff its flagship cult-form is organized \
              (cult_form={cult_form:?})"
@@ -55,7 +57,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
         goblin_organized,
         "seed 1's goblin flagship is organized (the seed-1 anchor; ledger #1)"
     );
-    let doctrines = doctrines_of(&w);
+    let doctrines = doctrines_from(&w, &terrain, &climate);
     assert_eq!(
         doctrines.len(),
         organized_count,
@@ -75,14 +77,25 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // the minimal window that still reaches a real folk flagship and keeps
     // this negative arm exercised (the property itself — doctrine iff
     // organized — is unchanged and holds across the whole sweep).
+    // Folk hits are rare in this sweep (per the note above, the first
+    // appears at seed 56), so terrain/climate are derived lazily, only on
+    // an actual hit — deriving them unconditionally for all 60 seeds would
+    // cost MORE sculpts than the original per-hit doctrine_of wrapper ever
+    // paid, defeating the point of this migration. (Measured: the negative
+    // arm's ~172 s is ~159 s of `generated(seed)` world-building alone
+    // across 60 seeds — irreducible by this migration — against ~13 s for
+    // the 11 live folk hits' terrain/climate + doctrine_from calls.)
     let mut found_folk = false;
     for seed in 1..=60u64 {
         let w = generated(seed);
         for (kind, village) in hornvale_worldgen::placed_peoples(&w) {
             if hornvale_religion::cult_form_held_by(&w, village.id).as_deref() == Some("folk") {
                 found_folk = true;
+                let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+                let climate =
+                    hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
                 assert!(
-                    doctrine_of(&w, kind).is_none(),
+                    doctrine_from(&w, kind, &terrain, &climate).is_none(),
                     "seed {seed}'s {kind} carries a folk flagship — doctrine_of must gate to None"
                 );
             }
@@ -103,8 +116,12 @@ fn the_selection_bias_law_field_by_field() {
     // exactly folk + 0.25 (capped at 1.0). Every other AccountParams field
     // is copied verbatim — no hidden divergence.
     let w = generated(1);
-    let folk_params = hornvale_worldgen::account_params_of(&w, "goblin").unwrap();
-    let doctrine = doctrine_of(&w, "goblin").expect("goblin must be organized at seed 1");
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let folk_params =
+        hornvale_worldgen::account_params_from(&w, "goblin", &terrain, &climate).unwrap();
+    let doctrine = doctrine_from(&w, "goblin", &terrain, &climate)
+        .expect("goblin must be organized at seed 1");
     let doctrine_params = &doctrine.params;
 
     assert_eq!(folk_params.sky_capability, 0.5, "measured folk capability");
@@ -137,11 +154,14 @@ fn doctrine_keeps_what_folk_lose() {
     // threshold): moon-count is Lost in the folk account but effectively
     // Kept (however explain wraps it) in the doctrine account.
     let w = generated(1);
-    let folk = hornvale_worldgen::accounts_of(&w)
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let folk = hornvale_worldgen::accounts_from(&w, &terrain, &climate)
         .into_iter()
         .find(|v| v.kind == "goblin")
         .expect("goblin folk voice at seed 1");
-    let doctrine = doctrine_of(&w, "goblin").expect("goblin doctrine voice at seed 1");
+    let doctrine =
+        doctrine_from(&w, "goblin", &terrain, &climate).expect("goblin doctrine voice at seed 1");
 
     let folk_moon = folk
         .account
@@ -213,6 +233,8 @@ fn the_high_god_takes_the_day_where_compatible() {
     // is true" (plan header): this is the no-high-god branch, pinned
     // exact.
     let w = generated(1);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let flagship = hornvale_worldgen::flagship_of(&w, "goblin").expect("goblin flagship at seed 1");
     let beliefs = hornvale_religion::beliefs_held_by(&w, flagship.id);
     assert!(
@@ -220,7 +242,8 @@ fn the_high_god_takes_the_day_where_compatible() {
         "seed 1 goblin's pantheon must carry no high-god belief (measured, unranked society)"
     );
 
-    let doctrine = doctrine_of(&w, "goblin").expect("goblin doctrine voice at seed 1");
+    let doctrine =
+        doctrine_from(&w, "goblin", &terrain, &climate).expect("goblin doctrine voice at seed 1");
     let doctrine_day = doctrine
         .account
         .entries
@@ -249,7 +272,7 @@ fn the_high_god_takes_the_day_where_compatible() {
     // Cross-check against folk's own period-match rule, driven directly:
     // the same belief the doctrine bound is exactly the one folk's rule
     // would find, independent of which schema either account's draw fires.
-    let cyclic = hornvale_worldgen::cyclic_beliefs_of(&w, "goblin");
+    let cyclic = hornvale_worldgen::cyclic_beliefs_from(&w, "goblin", &climate);
     let day_value = 1.5507196;
     let folk_bound = cyclic
         .iter()

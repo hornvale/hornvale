@@ -6,7 +6,7 @@
 
 use hornvale_language::{Disposition, MorphDepth, NounClass, SchemaId};
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, accounts_of, day_schema_of, noun_class_of, placed_peoples,
+    SettlementPins, SkyChoice, accounts_from, day_schema_from, noun_class_from, placed_peoples,
     tongue_morphology_of,
 };
 
@@ -48,8 +48,10 @@ fn the_coherence_law() {
     let mut any_animate_sky = false;
     for seed in [1, 2, 3, 4, 10] {
         let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         for (kind, _village) in placed_peoples(&w) {
-            let schema = day_schema_of(&w, kind);
+            let schema = day_schema_from(&w, kind, &terrain, &climate);
             let expect_animate = schema == Some(SchemaId::Agentive);
             if expect_animate {
                 any_animate_sky = true;
@@ -62,7 +64,7 @@ fn the_coherence_law() {
             };
             for concept in ["sun", "moon", "earth", "star"] {
                 assert_eq!(
-                    noun_class_of(&w, kind, concept),
+                    noun_class_from(&w, kind, concept, &terrain, &climate),
                     expected,
                     "seed {seed} {kind} concept {concept:?}: day_schema_of == {schema:?}"
                 );
@@ -70,12 +72,12 @@ fn the_coherence_law() {
 
             let kind_concept = format!("{kind}-kind");
             assert_eq!(
-                noun_class_of(&w, kind, &kind_concept),
+                noun_class_from(&w, kind, &kind_concept, &terrain, &climate),
                 NounClass::Animate,
                 "seed {seed} {kind}: '{kind_concept}' must always be Animate"
             );
             assert_eq!(
-                noun_class_of(&w, kind, "forest"),
+                noun_class_from(&w, kind, "forest", &terrain, &climate),
                 NounClass::Inanimate,
                 "seed {seed} {kind}: a terrain concept must always be Inanimate"
             );
@@ -95,7 +97,9 @@ fn day_schema_of_matches_the_explained_entry() {
     // explain pass resolve the SAME draw (no drift between the two readers
     // of one stream).
     let w = generated(1);
-    let voices = accounts_of(&w);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let voices = accounts_from(&w, &terrain, &climate);
     let goblin = voices
         .iter()
         .find(|v| v.kind == "goblin")
@@ -114,7 +118,7 @@ fn day_schema_of_matches_the_explained_entry() {
         );
     };
     assert_eq!(
-        day_schema_of(&w, "goblin"),
+        day_schema_from(&w, "goblin", &terrain, &climate),
         Some(schema),
         "day_schema_of must resolve the SAME draw explain_day already resolved into this account"
     );
