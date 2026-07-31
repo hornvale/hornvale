@@ -134,16 +134,86 @@ a moved creature triggers exactly one. Search counts are deterministic
 integers, so these pin the scaling property itself, not a wall-clock
 proxy.
 
-### Stage 4 — re-profile gate
+### Stage 3b — the shared reverse field (equivalence-gated, the settlement rung)
 
-After Stages 1–3: one FP flamegraph of the health battery and one vessel
-walk. If comparison churn (`RoomAddr` BTree keys, ~12.7 % today) is then
-the dominant remainder, the packed-address idea (a fixed-width encoding
-preserving `(face, path)` lexicographic order) is **specced as a follow-up
-campaign, not implemented here** — it touches the address type every
-domain sees, and this campaign does not open that surface without its own
-evidence and its own G3. If the remainder is diffuse, the campaign ships
-what it has.
+Settled NPCs share one home, so the crowd-pathfinding answer applies: a
+single reverse Dijkstra from the shared goal yields every creature's
+`(distance, first_step)` by lookup — one search amortized across the
+population and across ticks. Validity bounds (both verified, not assumed):
+it serves only **empty-avoid** entities (per-entity hazard penalties make
+costs entity-specific; conveniently, empty-avoid is exactly when edge
+costs are symmetric, so reverse distance provably equals forward
+distance), and the field-derived first step must match forward A*'s
+BTree-ordered tie-break **byte-for-byte** — proven by a property test
+comparing `(distance, first_step)` against forward search over a real
+world's visited rooms before adoption; if the equivalence fails, 3b ships
+disabled and the per-entity cache carries alone. Entities with non-empty
+avoid sets always use their own cached search.
+
+### Stage 4 — the solver seam and the substitutability contract (Nathan, G3)
+
+Pathfinding is a multi-level, multi-aspect tool in this project's future
+(navigation now; the same shapes recur wherever a least-cost traversal
+appears), so the solver must be **substitutable**. The kernel's
+`SearchSpace` trait already abstracts the space; this stage abstracts the
+*solver*: a minimal trait (solve a space from a start to a goal-shape,
+yield the result the seam's consumers read) with **exactly two shipped
+implementations, both live** — forward A* (the existing code behind the
+trait, zero behavior change) and the Stage-3b reverse field. No
+speculative third impl: substitutability is proven by the second real
+backend, not by an empty socket (YAGNI). The `home_nav(entity) →
+(distance, first_step)` seam from Stage 3 is the consumer-facing half;
+`decide_step` never learns which backend answered.
+
+**Literature grounding** (the check-the-literature rule): the named
+landscape is flow/distance fields (crowds sharing goals — Stage 3b), D*
+Lite (incremental replanning under small world changes — the tool for the
+rung where avoid-sets churn constantly), and HPA* (hierarchical paths —
+the tool if `PLAN_BUDGET`-scale searches ever dominate). This campaign
+ships plain caching + the shared field as the simplest pair that meets
+the bar; the others are named on the shelf with their rungs, not built.
+
+### Stage 5 — the nav bench: massive-scale, informative, not a gate (Nathan, G3)
+
+A benchmark harness (the `profile_build` example precedent) that exercises
+the **nav seam in isolation** — synthetic walkers with goals on a real
+world's room mesh — at rungs **10 / 100 / 1 000 / 10 000 / 100 000 /
+1 000 000 subjects**, reporting searches, per-subject marginal cost, and
+memory per rung, for each backend the solver seam offers. Results are
+recorded in `docs/timings.md` and the chronicle as *information*, never a
+pass/fail gate (wall-clock at scale is load-sensitive; the deterministic
+search-count pins remain the gate). Two honest bounds stated up front:
+the bench measures the nav layer, not the full liveness stack (drives and
+affect at 10⁵–10⁶ subjects are a different campaign's question), and at
+the top rungs the bench is expected to *hit* the known limitations — that
+is its purpose: it turns the parked packed-address question and the
+D*-Lite/HPA* shelf into measured cases with numbers attached, instead of
+speculation.
+
+### Stage 6 — re-profile gate
+
+After Stages 1–5: one FP flamegraph of the health battery and one vessel
+walk, PLUS the bench's per-rung numbers. If comparison churn (`RoomAddr`
+BTree keys, ~12.7 % today; expected to dominate at the bench's top rungs)
+is the dominant remainder, the packed-address idea (a fixed-width
+encoding preserving `(face, path)` lexicographic order) is **specced as a
+follow-up campaign with the bench's numbers as its evidence, not
+implemented here** — it touches the address type every domain sees, and
+this campaign does not open that surface without its own G3. If the
+remainder is diffuse, the campaign ships what it has.
+
+### Stage 3 refinements (from the requested extra ideonomy pass)
+
+Folded into the stages above, recorded here so the pass's yield is
+visible: cache the **consumed feature** `(distance, first_step)`, not the
+full plan (plan-time check of what `decide_step` actually reads; smaller
+value, smaller invalidation surface); the epoch counter is **per-entity**,
+never global (a global epoch would stampede every cache on any one belief
+change; `believed_hazard`'s per-entity-ness verified at plan time); the
+`home_nav` seam isolates `decide_step` from every backing choice; "nav
+searches per tick" becomes a first-class deterministic instrumentation
+(and an idea-registry row as a future lab metric, so population-scaling
+regressions are measurable).
 
 ### Out of scope (followups / registry)
 
