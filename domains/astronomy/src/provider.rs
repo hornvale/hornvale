@@ -169,15 +169,10 @@ mod tests {
             ..SkyPins::default()
         });
         let seen = s.phenomena(&ctx(0.0));
-        for _neighbor in &s.system().neighbors {
-            // Weakened by the referent contract: this only checks that SOME
-            // night star exists, not that ITS colour matches `_neighbor`'s own
-            // wording — the neighbour's colour is not yet part of the
-            // referent (only its concept, "star", is). See
-            // `.superpowers/sdd/followups.md` for what stage 3 owes this test.
+        for neighbor in &s.system().neighbors {
             assert!(
                 seen.iter()
-                    .any(|p| p.kind == NIGHT_STAR && p.referent == Referent::of("star"))
+                    .any(|p| p.kind == NIGHT_STAR && p.description == neighbor.night_description())
             );
         }
     }
