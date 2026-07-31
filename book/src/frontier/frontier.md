@@ -58,6 +58,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The verb as reaction — a property-transformation chemistry](#the-verb-as-reaction--a-property-transformation-chemistry)
   - [Emotion as appraisal — the affective readout of the gap](#emotion-as-appraisal--the-affective-readout-of-the-gap)
   - [The derived-view architecture — the game layer as readouts over one ledger](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
+  - [Narrative delivery — which piece next, when content is derived](#narrative-delivery--which-piece-next-when-content-is-derived)
   - [The self-reflective ledger — the capability schema as a derived view](#the-self-reflective-ledger--the-capability-schema-as-a-derived-view)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
@@ -2597,6 +2598,148 @@ is wiring the existing views (belief, graph, emotion) and the two engines togeth
 over the ledger the event campaign (IV) already builds. The convergence is the
 design: agility comes from there being *less* here than it looks — the game-layer
 analogue of the constitution's "coarse constrains fine."
+
+---
+
+## Narrative delivery — which piece next, when content is derived
+
+*(Provoked by Emily Short's 2016 survey of quality-based, salience-based, and
+waypoint narrative structures — a craft taxonomy that explicitly brackets
+simulation out, and whose excluded case this is. Nine ideonomic passes over one
+essay; high confidence in the diagnosis, which is checkable today, medium in the
+mechanisms it implies, and one conclusion demoted mid-pass. Nothing built.)*
+
+**The question has never been asked here.** Six hundred-odd registry rows across
+two dozen clusters, and not one of them answers *the world is made of pieces of
+content — how do I choose which piece reaches the player next?* The rendering
+cluster answers **how** a thing is rendered; the derived-view architecture
+answers **where content comes from**; neither answers **in what order it
+arrives**. Delivery decomposes into six policies — selection, piece-boundary,
+ordering, rate, repetition, and refusal — and the craft literature's three
+canonical structures are all *selection* policies. They exhaust one branch of
+six, which is the precise sense in which a taxonomy built for authored content
+underdetermines a derived one.
+
+**Hornvale already ships the salience structure, and only its degenerate half.**
+Phenomena are literally that mechanism: a candidate pool with per-observer
+conditions, scored and top-ranked, anonymous as to producer (decision 0003). But
+the rank is over *observations*, never *scenes*, and the score is
+`f(phenomenon, observer)` with no argument for what the observer was last shown.
+The engine exists; nothing points it at sequence.
+
+**The diagnosis is two bits, and not the two one expects.** Delivery varies
+independently along *initiative* — does the player pull, or does the world push?
+— and *reversibility* — is a delivered piece spent, or can it be delivered again
+unchanged? Hornvale is **pull and idempotent**: every window is a query and
+every query repeatable; ask twice, receive twice. All three craft structures are
+**push and spent**, diagonally opposite. This, rather than prose quality or
+content volume, is why a generated world reads as an encyclopedia instead of a
+story — an encyclopedia is exactly a pull-idempotent readout, and that is what
+the architecture is. Stated as a lifecycle, the machine holds states for latent,
+derived, perceivable, offered, delivered, stale and forgotten, and **no `spent`
+state at all**: `delivered` transitions straight back to `offered`. One missing
+state, and one missing policy.
+
+That lifecycle needs no new machinery, because PSY-5 already specifies it —
+*latent → noticed → held → expressed → transmitted → ritualized* — for an idea
+inside a creature. The delivery machine is that machine pointed at the player,
+which surfaces the same asymmetry twice over: every creature in this world has
+belief, purview, surmise and decay, and the player, whose experience is the
+entire point, has no epistemic model whatsoever.
+
+**Delivery is the sixth readout.** Its siblings at its own level of generality
+are the other reductions of world state into a serial channel — the chart
+(spatial), the almanac (documentary), the census (statistical), the ephemeris
+(predictive), the `explain` trace (causal). All five are built. Prose delivery is
+the missing sixth, and it belongs beside them in the derived-view architecture
+rather than in a subsystem of its own.
+
+**Narration is an emit boundary, and the quantization discipline transfers
+verbatim.** Stripped of craft vocabulary, delivery is lossy compression of world
+state into a rate-limited serial channel — structurally, serialization. Decision
+0033's rule (quantize at the emit boundary only, never in the compute path)
+therefore carries an exact narrative reading: **never let what you are going to
+narrate change what happens.** That is the anti-*Façade* rule, and it means the
+delivery layer answers to a legality test the constitution already contains.
+
+**Attention is the scarce resource; content is not.** This is the inversion that
+makes the craft literature's advice non-transferable at the root. Where content
+is authored, it is scarce and attention abundant, so the craft is *selection*.
+Here content is unbounded and attention is the only bounded quantity, so the
+craft is *budgeting* — which is why the nearest usable precedent is not a gating
+scheme but MAP-62's keystone, *salience-budgeted feature selection per zoom*,
+already ratified for cartographic symbols and never pointed at prose. The
+implementation seam is likewise already present: phenomena *sources* are fully
+distributed across the domain roster, but the *rank* is concentrated at a single
+merge, so a budget or rotation policy has exactly one place to live.
+
+**Coverage is not the problem, and this is the conclusion that moved.** Placed on
+an axis of *fraction of derived content ever surfaced*, a walked world sits near
+a thousandth of a percent; a quality-based game at completion reaches perhaps ten
+percent; an almanac read end to end is the hundred-percent case. The target is
+the **museum** at roughly one percent — and a museum keeps ninety-nine percent of
+its collection in storage without that being a failure. So the ambition is
+selection *quality* at permanently tiny coverage, not coverage. Rotation — the
+lectionary's answer, where a fixed multi-year cycle guarantees the corpus is seen
+and salience-ranking is recognised as *starving* low-salience content forever —
+governs the exhibition tier only, not the collection. The same axis extends past
+a hundred percent into **fabrication**: content narrated that was never there,
+which is where rumour, memory and error live, and the only organon in the pass
+that placed false content on one axis with true content rather than treating it
+as separate machinery.
+
+**Piece size wants settling offline, by form.** Two eras answered this
+identically and independently: the lectionary's *pericope* fixes excerpt
+boundaries once, by committee; oral-formulaic composition selects the epithet
+that *fits the metrical slot*. Both let the form determine the size, before
+delivery, rather than deciding per-delivery. The museum's label hierarchy —
+object label, wall panel, room text, catalogue — then supplies the better answer
+to altitude: rather than choosing a scale, offer every scale at once and let
+attention descend. Read that way, `explain` stops being a derivation dump and
+becomes a depth ladder.
+
+**An arc is available without authoring one.** Delivery today is temporally
+*steady*; substituting the other temporal directions yields a backlog
+(accumulating), content that rots unseen (decaying), alternating registers
+(oscillating), and — the useful one — **drift**, a monotone over the salience
+weighting across a session. A drift term is the cheapest possible dramatic shape:
+no beat, no destination, no authored plot, and constitutionally free because it
+lives in a lens (decision 0022). Set-construction supplies its sibling, the
+callback, whose value depends on *session position* rather than world state —
+worthless early, and cheap to know. The same move dissolves the standing
+objection to waypoint narrative: *Glass* heals a story toward an authored beat,
+but crossing waypoint with salience yields a **drifting waypoint** whose
+destination is drawn from the world instead of written, and MAP-14's fate
+rigidity — draw either the outcome or the path and derive the other in one pass —
+turns out to be that same mechanism reached from metaphysics rather than craft.
+
+**Refusal is a delivery act.** The three craft structures differ most in the
+column nobody discusses: a locked storylet shown greyed out, versus silence,
+versus a fallback line, are three genuinely distinct designs for absence, and
+RENDER-7 currently has no vocabulary for the distinction. Reading delivery's
+*side effects* as its main effect sharpens that further — delivery establishes
+priors, so a salient absence is illegible until enough presence has been
+delivered to violate. The anti-phenomenon has a delivery-history prerequisite
+that was never written down.
+
+**Two negative results worth keeping.** The rate policy is where the
+quality-based tradition is most distinctive and least importable: Fallen London's
+action economy is a rate limiter shaped by monetization, and it is simultaneously
+the most obvious thing to copy and the wrong thing. And the player-belief model,
+attractive as it is, is blocked at the step where a piece becomes *taken up* —
+the system cannot observe whether a reader understood. Rotation needs only what
+was *shown*, so it is both cheaper and more robust than modelling uptake; where a
+decay schedule is wanted, time since last mention is the free legal proxy.
+
+**What makes any of it legal is measurement.** Short notes that a sequencing
+system of this kind could now be validated by running thousands of randomized
+playthroughs and visualizing which sequences never fire and which are overused.
+That instrument is already built here — the Laboratory, its census scale, metrics
+as code, preregistered studies — and delivery is the one subsystem it has never
+been pointed at. Coverage, dominance (which phenomenon kind heads every world's
+ranking), and pacing distributions are lab metrics, not features; under the
+governing principle that ambition is bounded by verification surface, they are
+the rung that makes the rest of this section admissible.
 
 ---
 
