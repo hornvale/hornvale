@@ -605,7 +605,7 @@ impl<'a> Namer<'a> {
         if frequency < WEAR_FLOOR {
             return segments.to_vec();
         }
-        let cascade = draw_wear_cascade(&self.seed, &self.species);
+        let cascade = draw_wear_cascade(&self.seed, &self.species, self.ph);
         evolve(segments, &cascade, self.ph).modern
     }
 
@@ -2124,7 +2124,7 @@ mod tests {
         let ph = wordy_ph();
         let seed = Seed(42);
         let namer = Namer::new(&seed, "kobold", &ph);
-        let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold");
+        let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold", &ph);
         assert!(
             cascade.rules.iter().any(|r| matches!(
                 r.kind,
@@ -2624,7 +2624,7 @@ mod tests {
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);
-        let cascade = crate::etymology::draw_wear_cascade(&Seed(42), "kobold");
+        let cascade = crate::etymology::draw_wear_cascade(&Seed(42), "kobold", &ph);
         assert!(
             cascade.rules.iter().any(|r| matches!(
                 r.kind,
@@ -2712,12 +2712,15 @@ mod tests {
         // morphemes and left nine settlements committing a `name-gloss`
         // naming a word their name did not contain.
         //
-        // Lexicon seed 49 is exactly that case: kobold@42's wear cascade
-        // fires on both roots, and neither worn form survives repair. The
-        // survival rule must therefore give the wear back rather than let
-        // the morpheme vanish.
+        // Lexicon seed 2 (re-searched for Task 8b, The Witness, 2026-07-30/
+        // 31: the phonology gate in `draw_rule` reseeded kobold@42's wear
+        // cascade again on top of F7's own reseed, and lexicon seed 49 —
+        // F7's own pair — stopped satisfying the preconditions below. Swept
+        // 0..3000): kobold@42's wear cascade fires on both roots, and
+        // neither worn form survives repair. The survival rule must
+        // therefore give the wear back rather than let the morpheme vanish.
         let ph = wordy_ph();
-        let lex = two_word_lexicon(49);
+        let lex = two_word_lexicon(2);
         let namer = Namer::new(&Seed(42), "kobold", &ph);
         let attested = attested_forms(&lex);
         let chosen = ["water", "fire"];
@@ -2768,25 +2771,22 @@ mod tests {
         // name is actually built from, because wear consumes nothing from
         // the name stream.
         let ph = wordy_ph();
-        // Lexicon seed 549 (re-searched for F7, The Witness — see
-        // `wear_is_keyed_to_frequency_not_to_the_compound_slot`'s comment;
-        // this test's own lexicon seed happened to need the same reseed but
-        // is otherwise an independent search): seed 19's lexicon had no
-        // namer seed in 0..200 for which the saturated corpus changed any of
-        // the 80 names below.
-        let lex = two_word_lexicon(549);
+        // Lexicon seed 1319, namer seed 0 (re-searched for Task 8b, The
+        // Witness, 2026-07-30/31): the phonology gate in `draw_rule` now
+        // additionally drops `Tonogenesis`/`VowelShift` a shipped species'
+        // phonology cannot host, reseeding kobold's wear cascade again on
+        // top of F7's own reseed. Lexicon seed 549 / namer seed 32 (F7's
+        // pair) stopped changing any of the 80 names below; swept lexicon
+        // seed against `[549, 19, 846, 1319, 1920]` (F7's own re-search
+        // candidates) then 0..2000, crossed with namer seed 0..300 — the
+        // first hit was (1319, 0). That guard is the point — the agreement
+        // asserted in the loop is worthless if no name ever wears.
+        let lex = two_word_lexicon(1319);
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
         let morph = morph(false);
-        // Namer seed 32, re-searched for F7, The Witness (2026-07-30):
-        // gating `Tonogenesis` on a prior merger reseeded kobold's wear
-        // cascade at every namer seed, and seed 27 (itself a re-search after
-        // The Wearing's nucleus fix) stopped changing ANY of the 80 names
-        // below. Swept namer seed 0..200 against lexicon seed 549; the first
-        // hit was 32. That guard is the point — the agreement asserted in
-        // the loop is worthless if no name ever wears.
-        let namer = Namer::new(&Seed(32), "kobold", &ph);
+        let namer = Namer::new(&Seed(0), "kobold", &ph);
         let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
         saturated.insert("water".to_string(), 1.0);
         saturated.insert("fire".to_string(), 1.0);

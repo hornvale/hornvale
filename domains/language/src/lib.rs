@@ -576,7 +576,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/lexicon/cascade/v2",
-            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root. The Witness (2026-07-30) epoch bump: draw_rule is position-aware, offering Tonogenesis only once a prior ClusterSimplify/FinalLoss has been drawn — a leading Tonogenesis is provably the identity (evolve opens with no pending conditioning), so drawing it unconditioned wasted the roster slot on every world. Draw count is unchanged (Stream::pick is one draw at any slice length); only the drawn values move",
+            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root. The Witness (2026-07-30) epoch bump: draw_rule is position-aware, offering Tonogenesis only once a prior ClusterSimplify/FinalLoss has been drawn — a leading Tonogenesis is provably the identity (evolve opens with no pending conditioning), so drawing it unconditioned wasted the roster slot on every world. Task 8b (same unreleased v2 epoch, per decision 0089: it lands together, so one suffix is the truthful count) adds a second, orthogonal gate: draw_rule now also checks the SPECIES' OWN drawn phonology (via draw_cascade_with_regime/draw_wear_cascade's new Phonology parameter) and drops Tonogenesis unless the phonology can host a toned vowel, and drops VowelShift unless it admits an adjacent-height vowel pair — a cascade may not draw a rule its phonology cannot host, one level up from Task 7's cannot-condition guard. Draw count is unchanged either way (Stream::pick is one draw at any slice length); only the drawn values move",
         ),
         (
             "language/<species>/lexicon/cascade/v2/wear",

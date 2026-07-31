@@ -4619,7 +4619,7 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
     // caller iterates the fixed ALL_DAUGHTERS = ["goblin", "hobgoblin",
     // "bugbear", "kobold"] constant. The default SETTLED regime is
     // therefore always the correct one here.
-    let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
+    let cascade = hornvale_language::draw_cascade(&v.world().seed, species, &ph);
     let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
@@ -6314,6 +6314,16 @@ mod tests {
     /// and not a drift of the naming machinery in one direction. Goblin was
     /// outside the target on the high side before and is inside it now; kobold
     /// was inside and still is.
+    ///
+    /// Task 8b (The Witness, same campaign): the phonology-hosting gate in
+    /// `draw_rule` reseeds every cascade once more, so kobold moved a third
+    /// time, 2.752_475_247_524_752_3 (278/101) -> 2.663_366_336_633_663_5
+    /// (269/101) — the same 101-settlement denominator, one fewer syllable
+    /// across the roster this time (not monotone: F11 added a syllable, this
+    /// removes one, which is expected of a value-level cascade reseed rather
+    /// than a directional trend). Goblin is untouched (unaffected by this
+    /// change per the golden-fixture diff this same commit re-pins). Both
+    /// peoples still read inside the 2-3 target.
     #[test]
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -6324,7 +6334,7 @@ mod tests {
         );
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.752_475_247_524_752_3)
+            MetricValue::Number(2.663_366_336_633_663_5)
         );
     }
 
@@ -6376,11 +6386,20 @@ mod tests {
         // `speakable_properties.rs` measures; it is expected to move on any
         // cascade-affecting change and is not itself evidence of a defect.
         //
+        // The Witness, Task 8b re-measurement (2026-07-30/31): 188/329 ->
+        // 149/329 — the denominator is still unchanged (no placement moved),
+        // and the numerator dropped again: the phonology-hosting gate in
+        // `draw_rule` reseeds every cascade once more (removing the dead
+        // Tonogenesis/VowelShift roster slots for every atonal/narrow-vowel
+        // species), so `evolve`'s output and `namer.wear`'s cascade limb both
+        // move again. Same story as F7: expected on any cascade-affecting
+        // change, not itself evidence of a defect.
+        //
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 188 of 329 glossed settlement names.
-        assert_eq!(share, 188.0 / 329.0, "seed 42 transparency drifted");
+        // 149 of 329 glossed settlement names.
+        assert_eq!(share, 149.0 / 329.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

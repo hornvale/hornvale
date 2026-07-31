@@ -228,6 +228,40 @@ const MIN_MARGIN: f64 = 0.03;
 /// The seeds claim (b) is demanded at. More than one deliberately: the
 /// single-seed form of this test was one unlucky draw away from looking
 /// broken.
+///
+/// **FINDING, left unfixed and reported rather than patched (The Witness,
+/// Task 8b, 2026-07-31).** Task 8b's phonology-hosting gate in `draw_rule`
+/// (`domains/language/src/etymology.rs`) removes VowelShift/Tonogenesis from
+/// every atonal/narrow-vowel species' roster — including the frozen isolate
+/// regime's — so a 0-1 rule cascade "wastes" fewer of its very few draws on a
+/// kind that could never have changed anything anyway. That repair raises
+/// realized divergence for BOTH the isolate and the settled family (the same
+/// mechanism `windows/lab/tests/wear_funnel.rs`'s rung 3 shows jumping
+/// 18.7% -> 60.9%), but disproportionately for the isolate, whose 0-1 rule
+/// budget has far less room to absorb a shrunk roster than the family's 2-4.
+/// Measured post-fix at all four seeds:
+///
+/// | seed | draconic | goblinoid | gap |
+/// |---|---|---|---|
+/// | 42 | 0.6615 | 0.3893 | **-0.2722 (SIGN FLIP)** |
+/// | 1 | 0.1922 | 0.3129 | 0.1207 |
+/// | 99 | 0.2041 | 0.5631 | 0.3590 |
+/// | 777 | 0.0331 | 0.5976 | 0.5645 |
+///
+/// Three of four seeds still clear MIN_MARGIN comfortably (two even widened);
+/// seed 42 — already flagged above as "the tightest sampled draw" before this
+/// change — crosses zero and now diverges MORE than the family. This is a
+/// real consequence of the repair, not a bug in it: draw-count invariance
+/// holds, the roster-never-empty invariant holds, and `cascade_regime_of`
+/// still resolves every Settled people to `CascadeRegime::SETTLED`
+/// (`cascade_regime_of_matches_the_authored_regime_map` passes unchanged).
+/// Swapping seed 42 out of this array to make the test green would be
+/// retuning a sample point to rescue a prediction after the fact — the
+/// pattern this codebase's own process history warns against — so this test
+/// is left RED and reported, not patched. Whether the isolate's frozen
+/// regime bound, `MIN_MARGIN`, or `DIVERGENCE_SEEDS` should change is a
+/// judgment call for the campaign to make explicitly, not a byproduct of a
+/// phonology-gate task quietly editing its seed list.
 const DIVERGENCE_SEEDS: [u64; 4] = [REFERENCE_SEED, 1, 99, 777];
 
 #[test]

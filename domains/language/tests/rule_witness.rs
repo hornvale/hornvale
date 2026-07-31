@@ -90,11 +90,29 @@
 //! `[VowelShift, Tonogenesis]` unwitnessed — confirmed by actually running
 //! it, not merely asserted here — evidence the sweep is doing real work
 //! rather than trivially passing; restoring the probe returns it to green.
+//!
+//! # Task 8b closes the gap one level up, at the DRAW, not just the fire
+//!
+//! Both findings above describe kinds that were *drawn but structurally
+//! inert*. The Witness's Task 8b (this same campaign, one task later) moves
+//! the guard from the codomain check up to `draw_rule` itself:
+//! `can_host_toned_vowel`/`has_adjacent_vowel_heights`
+//! (`domains/language/src/etymology.rs`) now read the SAME phonology facts
+//! this module doc describes — the realized tone inventory, the realized
+//! adjacent-vowel-height pairs — and drop `Tonogenesis`/`VowelShift` from
+//! the roster before either is ever offered to a shipped, atonal/narrow
+//! species. Every claim in the two findings above stays true (a shipped
+//! species still cannot witness either kind change a word) but the
+//! *reason* sharpens: it is no longer "drawn, then wasted," it is "never
+//! drawn at all." This guard's own behavior is unchanged by that — it
+//! still needs `TONE_PROBE_SPECIES` to keep both kinds reachable, since a
+//! kind the roster gate always excludes for every shipped envelope can
+//! never be witnessed without one.
 
 use hornvale_kernel::Seed;
 use hornvale_language::{
-    Envelope, ExoticSeg, RuleKind, draw_cascade, draw_phonology, evolve, proto_root,
-    universal_stratum,
+    Envelope, ExoticSeg, RuleKind, draw_cascade, draw_phonology, draw_wear_cascade, evolve,
+    proto_root, universal_stratum,
 };
 use std::collections::BTreeSet;
 
@@ -163,7 +181,7 @@ fn every_rule_kind_is_witnessed_changing_a_word() {
     'seeds: for seed in 0u64..32 {
         for (species, env) in species_envelopes() {
             let ph = draw_phonology(&Seed(seed), species, &env);
-            let cascade = draw_cascade(&Seed(seed), species);
+            let cascade = draw_cascade(&Seed(seed), species, &ph);
             for concept in universal_stratum() {
                 let proto = proto_root(&Seed(seed), species, concept.concept, &ph);
                 let derivation = evolve(&proto, &cascade, &ph);
@@ -191,5 +209,98 @@ fn every_rule_kind_is_witnessed_changing_a_word() {
             .iter()
             .map(|(s, _)| *s)
             .collect::<Vec<_>>()
+    );
+}
+
+/// Every currently shipped, speaking species' real production envelope,
+/// transcribed from `domains/language/src/lib.rs`'s `articulation_registry`
+/// (the same transcription discipline `shipped_env`'s doc comment
+/// describes) — the WHOLE placed roster this world can generate today, not
+/// the three-species subset [`species_envelopes`] samples for the fire
+/// guard above.
+fn full_shipped_roster() -> Vec<(&'static str, Envelope)> {
+    vec![
+        (
+            "goblin",
+            shipped_env(0.5, 0.5, 0.5, 0.5, 0.5, ExoticSeg::None),
+        ),
+        (
+            "kobold",
+            shipped_env(0.1, 0.3, 0.6, 0.9, 0.2, ExoticSeg::Trill),
+        ),
+        (
+            "hobgoblin",
+            shipped_env(0.5, 0.5, 0.6, 0.4, 0.8, ExoticSeg::None),
+        ),
+        (
+            "bugbear",
+            shipped_env(0.5, 0.4, 0.7, 0.2, 0.3, ExoticSeg::None),
+        ),
+        (
+            "white-dragon",
+            shipped_env(0.2, 0.4, 0.7, 0.9, 0.9, ExoticSeg::None),
+        ),
+        (
+            "red-dragon",
+            shipped_env(0.2, 0.4, 0.7, 0.9, 0.9, ExoticSeg::None),
+        ),
+        (
+            "black-dragon",
+            shipped_env(0.2, 0.4, 0.7, 0.9, 0.9, ExoticSeg::None),
+        ),
+        (
+            "gnoll",
+            shipped_env(0.35, 0.35, 0.6, 0.55, 0.85, ExoticSeg::None),
+        ),
+    ]
+}
+
+/// **The production-gap statement (The Witness, Task 8b).** The test above
+/// proves `Tonogenesis`/`VowelShift` are reachable IN CODE via a synthetic
+/// probe — it says nothing about what a real placed world ever generates.
+/// This is the complementary, explicitly-named claim: over the WHOLE
+/// shipped roster ([`full_shipped_roster`], no probe) and a 64-seed sweep of
+/// both the historical and the toponymic-wear cascade, neither
+/// `RuleKind::Tonogenesis` nor `RuleKind::VowelShift` is ever even DRAWN —
+/// not merely inert once drawn (the pre-Task-8b state), but structurally
+/// excluded from the roster before the draw, by
+/// `can_host_toned_vowel`/`has_adjacent_vowel_heights`
+/// (`domains/language/src/etymology.rs`'s `draw_rule`). A reader who saw
+/// only the probe-based guard above could mistake "reachable in principle"
+/// for "reachable in production"; this test exists so that mistake is not
+/// available — the reported line names exactly which kinds a real world can
+/// draw today.
+#[test]
+fn tonogenesis_and_vowel_shift_are_never_drawn_for_the_shipped_roster() {
+    let roster = full_shipped_roster();
+    let mut drawn: BTreeSet<RuleKind> = BTreeSet::new();
+    for seed in 0u64..64 {
+        for (species, env) in &roster {
+            let ph = draw_phonology(&Seed(seed), species, env);
+            for cascade in [
+                draw_cascade(&Seed(seed), species, &ph),
+                draw_wear_cascade(&Seed(seed), species, &ph),
+            ] {
+                for rule in &cascade.rules {
+                    drawn.insert(rule.kind);
+                }
+            }
+        }
+    }
+    println!(
+        "shipped-roster ({} species) drawn RuleKinds over 64 seeds x {{cascade, wear}}: {drawn:?}",
+        roster.len()
+    );
+    assert!(
+        !drawn.contains(&RuleKind::Tonogenesis),
+        "Tonogenesis was drawn for a shipped species — every shipped species is \
+         atonal (tonality: 0.0), so this means the phonology gate in `draw_rule` \
+         regressed and the production gap this test names has silently closed"
+    );
+    assert!(
+        !drawn.contains(&RuleKind::VowelShift),
+        "VowelShift was drawn for a shipped species — every shipped species sits \
+         at vowel_space <= 0.5 (below the adjacent-height threshold), so this \
+         means the phonology gate in `draw_rule` regressed"
     );
 }

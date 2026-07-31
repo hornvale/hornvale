@@ -225,6 +225,14 @@ fn moons_explained_only_where_kept() {
     // re-draws again: "Nggoo" -> "Goo". Same story once more — `underlying`,
     // `schema`, `lexeme` and `manner` compare byte-identical; only `agent`
     // moved.
+    //
+    // Re-pinned again at Task 8b (The Witness, same campaign): the
+    // phonology-hosting gate in `draw_rule` reseeds every cascade once more:
+    // "Goo" -> "Nggoo" — coincidentally the same string F7 moved away from,
+    // an artifact of a shorter roster length re-landing on the same draw
+    // index, not a reversion of F7's own effect. `underlying`, `schema`,
+    // `lexeme` and `manner` again compare byte-identical; only `agent`
+    // moved.
     let w = generated(2);
     let voices = accounts_of(&w);
     let kobold = voices
@@ -247,7 +255,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Goo".to_string()),
+            agent: Some("Nggoo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

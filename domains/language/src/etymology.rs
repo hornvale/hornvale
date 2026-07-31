@@ -18,7 +18,7 @@
 
 use crate::naming::Namer;
 use crate::phoneme::{Height, Manner, Segment, Tone};
-use crate::phonology::Phonology;
+use crate::phonology::{Phonology, tone_inventory};
 use crate::streams;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
@@ -179,6 +179,76 @@ const RULE_KINDS_UNCONDITIONED: [RuleKind; 5] = [
 /// picked.
 const RULE_PARAM_RANGE: (u32, u32) = (0, 1);
 
+/// Whether `ph` can host a toned vowel at all — the necessary condition for
+/// [`RuleKind::Tonogenesis`]'s codomain check (`apply_tonogenesis`) to ever
+/// land on a real word. Derived directly from the drawn inventory via
+/// [`tone_inventory`] (the same read the Lab's `tone-count` metric and the
+/// capacity floor use), never from `Envelope::tonality` re-guessed at the
+/// call site: `tonality` only biases what `draw_phonology` admits, and the
+/// inventory is the ground truth of what actually landed. Every currently
+/// shipped species draws `tonality: 0.0` (`articulation_registry`), so
+/// `tone_inventory` is `{Neutral}` and this is `false` for the whole
+/// bestiary today — which is exactly why [`draw_rule`] must not offer
+/// `Tonogenesis` to them at all (The Witness, Task 8b): a rule that can
+/// only ever apply as identity should not consume a roster slot on every
+/// cascade in every world.
+fn can_host_toned_vowel(ph: &Phonology) -> bool {
+    tone_inventory(ph).iter().any(|&t| t != Tone::Neutral)
+}
+
+/// Whether `ph`'s inventory admits at least one pair of vowels at adjacent
+/// heights (Low/Mid or Mid/High) sharing backness, rounding, and tone — the
+/// necessary condition for [`RuleKind::VowelShift`]'s codomain check
+/// (`apply_segment_rule`, via [`vowel_shift`]) to ever land: a shift changes
+/// only a vowel's height, so without a same-quality neighbour one step away
+/// already in the inventory, every proposed output falls outside
+/// `ph.inventory` and the rule is silently the identity everywhere. Derived
+/// from the actual inventory (the vowel segments `draw_phonology` actually
+/// admitted), never from `Envelope::vowel_space` re-guessed at the call
+/// site: `vowel_space` only biases which vowel qualities the draw admits,
+/// and a hand-built [`Phonology`] (every test fixture, and any future
+/// caller) may not track it at all. Every currently shipped species sits at
+/// `vowel_space <= 0.5`, which admits at most 3 of the 5 canonical vowel
+/// qualities and never an adjacent pair — so this is `false` for the whole
+/// bestiary today, the same shape as [`can_host_toned_vowel`].
+fn has_adjacent_vowel_heights(ph: &Phonology) -> bool {
+    let vowels: Vec<Segment> = ph
+        .inventory
+        .iter()
+        .copied()
+        .filter(|s| matches!(s, Segment::Vowel { .. }))
+        .collect();
+    vowels.iter().any(|&a| {
+        let Segment::Vowel {
+            height: ha,
+            backness: ba,
+            rounded: ra,
+            tone: ta,
+        } = a
+        else {
+            unreachable!("filtered to Segment::Vowel above");
+        };
+        vowels.iter().any(|&b| {
+            let Segment::Vowel {
+                height: hb,
+                backness: bb,
+                rounded: rb,
+                tone: tb,
+            } = b
+            else {
+                unreachable!("filtered to Segment::Vowel above");
+            };
+            ba == bb
+                && ra == rb
+                && ta == tb
+                && matches!(
+                    (ha, hb),
+                    (Height::Low, Height::Mid) | (Height::Mid, Height::High)
+                )
+        })
+    })
+}
+
 /// The inclusive range of rules a drawn cascade contains, as a passed-in
 /// value rather than a global constant — the mechanism [`draw_cascade_with_regime`]
 /// draws its rule count from. A settled, socially connected people drifts at
@@ -220,16 +290,40 @@ impl CascadeRegime {
 }
 
 /// Draw one rule: a kind, then a param, in that order. `seen_merger` selects
-/// the kind roster — see [`RULE_KINDS_UNCONDITIONED`]. Draw COUNT is identical
-/// either way (`Stream::pick` is one `next_u64()` regardless of slice length),
-/// so this changes drawn values, never consumption.
-fn draw_rule(stream: &mut Stream, seen_merger: bool) -> SoundRule {
-    let kinds: &[RuleKind] = if seen_merger {
+/// the position roster — see [`RULE_KINDS_UNCONDITIONED`] (Task 7); `ph`
+/// then narrows it further (The Witness, Task 8b) — a cascade may not draw a
+/// rule its phonology cannot host, on top of not drawing one it cannot yet
+/// condition. [`RuleKind::Tonogenesis`] is dropped unless
+/// [`can_host_toned_vowel`], and [`RuleKind::VowelShift`] is dropped unless
+/// [`has_adjacent_vowel_heights`] — both derived from `ph`'s actual drawn
+/// inventory, never from the envelope dimensions that merely bias it. Draw
+/// COUNT is identical regardless of which kinds survive the filter
+/// (`Stream::pick` is one `next_u64()` regardless of slice length), so this
+/// changes drawn values, never consumption. The roster can never empty: the
+/// four position-unconditioned, phonology-independent kinds (Lenition,
+/// Fortition, ClusterSimplify, FinalLoss) are never filtered by either
+/// gate — asserted below via `Stream::pick`'s `None` on an empty slice,
+/// rather than trusted from the arithmetic alone.
+fn draw_rule(stream: &mut Stream, seen_merger: bool, ph: &Phonology) -> SoundRule {
+    let base: &[RuleKind] = if seen_merger {
         &RULE_KINDS
     } else {
         &RULE_KINDS_UNCONDITIONED
     };
-    let kind = *stream.pick(kinds).expect("both rosters are non-empty");
+    let hosts_tone = can_host_toned_vowel(ph);
+    let hosts_vowel_shift = has_adjacent_vowel_heights(ph);
+    let kinds: Vec<RuleKind> = base
+        .iter()
+        .copied()
+        .filter(|k| match k {
+            RuleKind::Tonogenesis => hosts_tone,
+            RuleKind::VowelShift => hosts_vowel_shift,
+            _ => true,
+        })
+        .collect();
+    let kind = *stream
+        .pick(&kinds)
+        .expect("Lenition/Fortition/ClusterSimplify/FinalLoss are never phonology-gated, so the roster is never empty");
     let param = stream.range_u32(RULE_PARAM_RANGE.0, RULE_PARAM_RANGE.1);
     SoundRule { kind, param }
 }
@@ -240,10 +334,11 @@ fn draw_rule(stream: &mut Stream, seen_merger: bool) -> SoundRule {
 /// the historical rate every existing caller drew at before `CascadeRegime`
 /// existed. Byte-identical to the pre-regime `draw_cascade`: the stream
 /// derivation is unchanged, only the rule-count bounds now flow through a
-/// regime value instead of a bare constant.
+/// regime value instead of a bare constant. `ph` is `species`'s own drawn
+/// phonology — see [`draw_cascade_with_regime`] for what it gates.
 /// type-audit: bare-ok(identifier-text)
-pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
-    draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED)
+pub fn draw_cascade(seed: &Seed, species: &str, ph: &Phonology) -> Cascade {
+    draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED, ph)
 }
 
 /// Draw a cascade for `species` whose rule count is bounded by `regime`,
@@ -251,10 +346,23 @@ pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
 /// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE).derive(streams::CASCADE_V2)`.
 /// The stream derivation is identical regardless of `regime` — only the
 /// `range_u32` bounds it draws the rule count from change, so
-/// `draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED)` is
+/// `draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED, ph)` is
 /// exactly [`draw_cascade`]'s behavior.
+///
+/// `ph` is `species`'s own drawn [`Phonology`] (The Witness, Task 8b): every
+/// drawn rule is filtered through [`can_host_toned_vowel`] and
+/// [`has_adjacent_vowel_heights`] against it (see [`draw_rule`]), so a
+/// cascade never draws a rule kind the phonology cannot host in the first
+/// place — one level up from Task 7's "cannot draw a rule it cannot yet
+/// condition." `ph` gates which kinds are OFFERED; it is read, never drawn
+/// from, so passing it changes no stream consumption.
 /// type-audit: bare-ok(identifier-text)
-pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegime) -> Cascade {
+pub fn draw_cascade_with_regime(
+    seed: &Seed,
+    species: &str,
+    regime: CascadeRegime,
+    ph: &Phonology,
+) -> Cascade {
     let mut stream = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
@@ -266,7 +374,7 @@ pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegim
     let mut rules = Vec::with_capacity(count as usize);
     let mut seen_merger = false;
     for _ in 0..count {
-        let rule = draw_rule(&mut stream, seen_merger);
+        let rule = draw_rule(&mut stream, seen_merger, ph);
         if matches!(rule.kind, RuleKind::ClusterSimplify | RuleKind::FinalLoss) {
             seen_merger = true;
         }
@@ -290,8 +398,12 @@ pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegim
 /// counterexamples exist, so it is near-inert rather than provably inert).
 /// This is one further, independent epoch of drift, applied only to the
 /// forms said often enough to suffer it.
+///
+/// `ph` is `species`'s own drawn [`Phonology`], read (never drawn from) the
+/// same way [`draw_cascade_with_regime`] reads it — see that function's doc
+/// for what [`can_host_toned_vowel`]/[`has_adjacent_vowel_heights`] gate.
 /// type-audit: bare-ok(identifier-text)
-pub fn draw_wear_cascade(seed: &Seed, species: &str) -> Cascade {
+pub fn draw_wear_cascade(seed: &Seed, species: &str, ph: &Phonology) -> Cascade {
     let mut stream = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
@@ -304,7 +416,7 @@ pub fn draw_wear_cascade(seed: &Seed, species: &str) -> Cascade {
     let mut rules = Vec::with_capacity(count as usize);
     let mut seen_merger = false;
     for _ in 0..count {
-        let rule = draw_rule(&mut stream, seen_merger);
+        let rule = draw_rule(&mut stream, seen_merger, ph);
         if matches!(rule.kind, RuleKind::ClusterSimplify | RuleKind::FinalLoss) {
             seen_merger = true;
         }
@@ -1014,7 +1126,7 @@ mod tests {
     fn evolve_lands_in_inventory() {
         // Codomain: every modern segment is in the phonology's inventory.
         let ph = test_phonology();
-        let cascade = draw_cascade(&Seed(5), "test");
+        let cascade = draw_cascade(&Seed(5), "test", &ph);
         let proto = proto_root(&Seed(5), "test", "water", &ph);
         let d = evolve(&proto, &cascade, &ph);
         for seg in &d.modern {
@@ -1029,7 +1141,7 @@ mod tests {
     fn derivation_replays() {
         // evolve(d.proto, cascade, ph).modern == d.modern — byte-stable replay.
         let ph = test_phonology();
-        let cascade = draw_cascade(&Seed(9), "test");
+        let cascade = draw_cascade(&Seed(9), "test", &ph);
         let proto = proto_root(&Seed(9), "test", "fire", &ph);
         let d = evolve(&proto, &cascade, &ph);
         let replayed = evolve(&d.proto, &cascade, &ph);
@@ -1040,7 +1152,10 @@ mod tests {
     fn draw_cascade_default_equals_settled_regime() {
         // draw_cascade must stay a thin wrapper over draw_cascade_with_regime
         // at CascadeRegime::SETTLED — byte-identical for every existing
-        // caller, across several seeds/species.
+        // caller, across several seeds/species. Both sides of the assertion
+        // are fed the SAME `ph`, so this exercises wrapper equivalence, not
+        // the phonology gate itself (covered separately below).
+        let ph = test_phonology();
         for (seed, species) in [
             (Seed(1), "goblin"),
             (Seed(5), "kobold"),
@@ -1048,8 +1163,8 @@ mod tests {
             (Seed(42), "test"),
         ] {
             assert_eq!(
-                draw_cascade(&seed, species),
-                draw_cascade_with_regime(&seed, species, CascadeRegime::SETTLED),
+                draw_cascade(&seed, species, &ph),
+                draw_cascade_with_regime(&seed, species, CascadeRegime::SETTLED, &ph),
                 "draw_cascade({seed:?}, {species:?}) must equal the SETTLED-regime draw"
             );
         }
@@ -1763,11 +1878,31 @@ mod tests {
         // In the 1-2 rule WEAR regime that can be the entire cascade. The test
         // fixture that masked this (`merge_then_tonogenize`) puts the merger
         // first, so the absent-conditioning case was never exercised.
+        //
+        // Task 8b gates `Tonogenesis` out of the roster entirely for a
+        // phonology that cannot host a toned vowel — which, per
+        // `articulation_registry`, is every shipped species. Drawing under
+        // each species' REAL (atonal) envelope would therefore never draw a
+        // Tonogenesis at all and this loop would trivially pass without
+        // exercising the position guard it names. Draw under a tone-capable,
+        // wide-vowel probe envelope instead (mirroring `rule_witness.rs`'s
+        // `TONE_PROBE_SPECIES`) so Tonogenesis keeps reaching the roster and
+        // the "no leading Tonogenesis" property stays under real test.
+        let probe_env = Envelope {
+            labiality: 1.0,
+            vowel_space: 1.0,
+            voicing: 1.0,
+            sibilance: 1.0,
+            voice_loudness: 1.0,
+            tonality: 1.0,
+            exotic: ExoticSeg::None,
+        };
         for seed in 0u64..64 {
             for sp in ["goblin", "kobold", "gnoll"] {
+                let ph = draw_phonology(&Seed(seed), sp, &probe_env);
                 for cascade in [
-                    draw_cascade(&Seed(seed), sp),
-                    draw_wear_cascade(&Seed(seed), sp),
+                    draw_cascade(&Seed(seed), sp, &ph),
+                    draw_wear_cascade(&Seed(seed), sp, &ph),
                 ] {
                     let mut seen_merger = false;
                     for rule in &cascade.rules {
@@ -1859,7 +1994,7 @@ mod tests {
         let proto_ph = test_phonology();
         let daughter_ph = restrictive_no_postalveolar();
         let proto = proto_root(&Seed(2), "goblinoid", "water", &proto_ph);
-        let cascade = draw_cascade(&Seed(2), "bugbear");
+        let cascade = draw_cascade(&Seed(2), "bugbear", &daughter_ph);
         let d = evolve(&proto, &cascade, &daughter_ph);
         assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
     }
@@ -1890,7 +2025,11 @@ mod tests {
             "ŋ must be off-inventory for this test"
         );
         let proto = vec![a, eng, a]; // /aŋa/: the nasal is medial, untouched by all rules
-        let d = evolve(&proto, &draw_cascade(&Seed(5), "bugbear"), &daughter_ph);
+        let d = evolve(
+            &proto,
+            &draw_cascade(&Seed(5), "bugbear", &daughter_ph),
+            &daughter_ph,
+        );
         assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
         assert_ne!(
             d.modern, proto,
@@ -1928,9 +2067,12 @@ mod tests {
             ("bugbear", gob_env(0.5, 0.4, 0.7, 0.2, 0.3)),
         ]
         .iter()
-        .map(|(name, env)| Daughter {
-            cascade: draw_cascade(&Seed(seed), name),
-            phonology: draw_phonology(&Seed(seed), name, env),
+        .map(|(name, env)| {
+            let phonology = draw_phonology(&Seed(seed), name, env);
+            Daughter {
+                cascade: draw_cascade(&Seed(seed), name, &phonology),
+                phonology,
+            }
         })
         .collect();
         (proto_ph, daughters)

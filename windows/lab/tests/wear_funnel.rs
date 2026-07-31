@@ -381,7 +381,7 @@ fn the_wear_funnel_is_reproducible() {
                 // Rung 3 (H1's actual quantity): the drawn cascade limb
                 // ALONE, restated from `Namer::sounded`'s body (private)
                 // using only `draw_wear_cascade` and `evolve` (both `pub`).
-                let cascade = draw_wear_cascade(&world.seed, &s.species);
+                let cascade = draw_wear_cascade(&world.seed, &s.species, ph);
                 let cascade_evolved = evolve(&citation, &cascade, ph).modern;
                 if cascade_evolved == citation {
                     // The cascade drew only identity-effect rules for this

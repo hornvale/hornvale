@@ -249,7 +249,7 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                     // private to `naming.rs`.
                     let sounded_form = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
-                            let cascade = draw_wear_cascade(&Seed(seed), "swept");
+                            let cascade = draw_wear_cascade(&Seed(seed), "swept", &ph);
                             render_views(&evolve(&derivation.modern, &cascade, &ph).modern)
                                 .roman
                                 .to_lowercase()

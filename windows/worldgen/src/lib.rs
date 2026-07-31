@@ -4364,13 +4364,15 @@ pub fn family_daughters(
                 .biosphere
                 .get(kind)
                 .expect("every kind in family_of has a biosphere row (integrity-checked)");
+            let phonology = language_of_wc(world, wc, kind.0);
             hornvale_language::Daughter {
                 cascade: hornvale_language::draw_cascade_with_regime(
                     &world.seed,
                     kind.0,
                     cascade_regime_of(bio),
+                    &phonology,
                 ),
-                phonology: language_of_wc(world, wc, kind.0),
+                phonology,
             }
         })
         .collect()
@@ -4430,10 +4432,12 @@ pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cas
         .biosphere
         .get(&KindId(name))
         .expect("resolve_kind only returns kinds with a biosphere row (integrity-checked)");
+    let ph = language_of_wc(world, &wc, name);
     Ok(hornvale_language::draw_cascade_with_regime(
         &world.seed,
         name,
         cascade_regime_of(bio),
+        &ph,
     ))
 }
 
