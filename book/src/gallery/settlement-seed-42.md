@@ -2,10 +2,10 @@
 
 The land holds 329 settlement(s).
 The chief bugbear settlement, Gootoogotoodaoka, holds 118 souls amid tropical-seasonal-forest.
-The chief gnoll settlement, Pzofdzhaxgzavmzho, holds 119 souls amid tropical-rainforest.
+The chief gnoll settlement, Pzofdzhaxgzavshmo, holds 119 souls amid tropical-rainforest.
 The chief goblin settlement, Nakano, holds 118 souls amid tropical-rainforest.
 The chief hobgoblin settlement, Geoboegetoanaoga, holds 127 souls amid tropical-rainforest.
-The chief kobold settlement, Xaora, holds 110 souls amid temperate-forest.
+The chief kobold settlement, Roara, holds 110 souls amid temperate-forest.
 
 ```text
                                                                         

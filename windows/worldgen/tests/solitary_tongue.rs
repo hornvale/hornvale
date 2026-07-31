@@ -365,6 +365,31 @@ const PEOPLES: [&str; 5] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll"]
 /// exactly: 6 of 304 entries moved, all exposure-shaped, and all 188 words
 /// present in both versions byte-identical.)
 ///
+/// 3. **A deliberate, global phonology epoch** -- every surviving word may
+///    render differently, at once, because the phonology the assignment
+///    algorithm draws FROM has deliberately changed. Added 2026-07-30 (The
+///    Watershed, Item 0: sonority sequencing reorders every drawn onset and
+///    coda template, so the same draws mint different words).
+///
+///    This reads as case 1 on the discriminator above -- surviving words
+///    render differently -- and the case-1 instruction ("do NOT rebaseline;
+///    find the bug") is WRONG for it. The two are told apart not by the
+///    golden but by the change that caused it:
+///
+///    - Case 1 is a *regime* fault: a wrong `CascadeRegime` threaded into a
+///      people's lexicon. It is narrow and nobody meant it.
+///    - Case 3 changes `draw_phonotactics`/`phoneme` and touches no regime
+///      threading at all, so it is global and deliberate.
+///
+///    Check it mechanically before accepting: `git show <commit> --stat`
+///    should name only phonology sources, and the commit must add no line
+///    mentioning `CascadeRegime` (it was 0 for the sonority merge). A drift
+///    that is global AND touches regime threading is still case 1 -- the
+///    breadth is what makes a regime fault dangerous, not what excuses it.
+///
+///    Accepting a case 3 is a campaign-level decision with an artifact
+///    re-pin behind it, not a routine rebaseline.
+///
 /// See `hornvale_kernel::golden`'s module docs for the accept path
 /// (REBASELINE=1), appropriate for case 2 only, and only after confirming
 /// the drift is deliberate and in scope.

@@ -1,21 +1,46 @@
 #!/usr/bin/env bash
-# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus a
-# conditional tripwire-guard (see below).
+# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus three
+# guards (see below).
 #
-# Runs `make quick` (fmt --check + clippy) before every commit. These are the
-# cheapest checks and the most common review finding per CLAUDE.md, so catching
-# them here reserves the expensive `--workspace` test gate for pre-push/CI.
+# Runs `make quick` (fmt --check + clippy + type-audit) before every commit that
+# could change its outcome. These are the cheapest checks and the most common
+# review finding per CLAUDE.md, so catching them here reserves the expensive
+# `--workspace` test gate for pre-push/CI.
 #
 # Opt-in: enable with `make install-hooks` (sets core.hooksPath). Bypass a
 # single commit with `git commit --no-verify` only when you have a reason —
 # never to skip the fmt gate (CLAUDE.md forbids --no-verify for that).
+#
+# ORDER MATTERS: the three guards below are pure-git and effectively free, so
+# they run BEFORE `make quick` — a commit that a guard will refuse should not
+# first pay a build. `make quick` is last because it is the only expensive step
+# in the common case.
+#
+# This file absorbed the two features of a second, orphaned hook that used to
+# sit at the repo root (`hooks/pre-commit`, deleted 2026-07-31): the
+# linked-worktree/main branch guard, and the skip-the-build-on-docs-only fast
+# path. Only one hook can be active — core.hooksPath names a single directory —
+# and the root one had drifted to a weaker check set while still advertising
+# `git config core.hooksPath hooks` in its own header, so following that comment
+# silently disabled the two incident-derived guards below.
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-if ! make quick; then
-    echo "pre-commit: 'make quick' failed — fix fmt/clippy before committing." >&2
+# The linked-worktree branch guard. Campaigns run in worktrees under
+# `.claude/worktrees/`, and a linked worktree sitting on `main` is essentially
+# always a wrong-branch mistake — a campaign subagent committed to main that way
+# once. The PRIMARY checkout on `main` is legitimate (merges, infra, docs), so
+# the guard keys on linked-vs-primary (git-dir != git-common-dir), not on the
+# branch name alone.
+git_dir="$(cd "$(git rev-parse --git-dir)" && pwd -P)"
+git_common="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+branch="$(git symbolic-ref --short -q HEAD || echo DETACHED)"
+if [[ "$git_dir" != "$git_common" && "$branch" == "main" ]]; then
+    echo "pre-commit: refusing to commit to 'main' from a linked worktree —" >&2
+    echo "            you are almost certainly on the wrong branch." >&2
+    echo "            (The primary checkout may commit to main; a worktree may not.)" >&2
     exit 1
 fi
 
@@ -67,5 +92,38 @@ if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/
     git diff --cached --name-only --diff-filter=d | grep -E '(^|/)\.superpowers/' | sed 's/^/  /' >&2
     echo "" >&2
     echo "Unstage with: git rm --cached <path>   (the file stays on disk)" >&2
+    exit 1
+fi
+
+# `make quick`, and the docs-only fast path.
+#
+# The repo commits a great many docs-only changes — chronicles, retrospectives,
+# specs, decision records, the book — and none of them can change what
+# fmt-check, clippy, or the type audit say. Paying a workspace `cargo clippy` on
+# a chronicle edit is pure latency (~16 s warm on this box, minutes cold), so
+# skip it when nothing staged can affect the verdict.
+#
+# The predicate is deliberately WIDER than the `*.rs` test the orphaned root
+# hook used: fmt is configured by nothing here (no rustfmt.toml), but clippy
+# reads `clippy.toml` (it holds the disallowed-types bans — no HashMap, no
+# wall-clock), the build reads `Cargo.toml` / `Cargo.lock` /
+# `.cargo/config.toml` / `rust-toolchain.toml`, and the type audit is its own
+# crate under `tools/type-audit/` whose behaviour changes when IT changes.
+# Missing any of those would let a real regression through on a commit that
+# staged no `.rs` file at all.
+#
+# NOTE — this fast path gates ONLY `make quick`. The three guards above run
+# unconditionally, and that is load-bearing: `.superpowers/` scratch is markdown
+# and `golden-pins.sql` is SQL, so hanging the whole hook on "is Rust staged"
+# (as the root hook's early `exit 0` did) would have disabled both guards on
+# precisely the commits that trip them.
+rust_relevant='\.rs$|(^|/)Cargo\.(toml|lock)$|(^|/)clippy\.toml$|(^|/)rustfmt\.toml$|(^|/)rust-toolchain\.toml$|(^|/)\.cargo/|(^|/)tools/type-audit/'
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant"; then
+    echo "pre-commit: no Rust-relevant paths staged — skipping 'make quick'." >&2
+    exit 0
+fi
+
+if ! make quick; then
+    echo "pre-commit: 'make quick' failed — fix fmt/clippy/type-audit before committing." >&2
     exit 1
 fi

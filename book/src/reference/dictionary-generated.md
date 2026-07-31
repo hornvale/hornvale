@@ -15,15 +15,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | Gdood | /gdood/ | Kweed | Kweed → lenition → Gdood |
-| `blood` | the circulating fluid of a body | Ddadddaod | /ddadddaod/ | Mmadmnaeb | Mmadmnaeb → no change → Ddadddaod |
+| `blood` | the circulating fluid of a body | Doaddoad | /doaddoad/ | Meadmeab | Meadmeab → no change → Doaddoad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
-| `bone` | the rigid frame of a body | Ddaaddgod | /ddaaddgod/ | Nnaadmngod | Nnaadmngod → no change → Ddaaddgod |
+| `bone` | the rigid frame of a body | Doggoog | /doggoog/ | Negngeok | Negngeok → lenition → Doggoog |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): black-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): black-dragon has no exposure to 'bugbear-kind' |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): black-dragon has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): black-dragon has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Gdod | /gdod/ | Ngneb | Ngneb → no change → Gdod |
+| `child` | one's son or daughter | Gog | /gog/ | Ngeg | Ngeg → no change → Gog |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): black-dragon has no exposure to 'closed-canopy' |
 | `coast` | where the land meets the sea | — | — | — | gap (experiential): black-dragon has no exposure to 'coast' |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): black-dragon has no exposure to 'cold' |
@@ -32,23 +32,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): black-dragon has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): black-dragon has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Ddoggdaad | /ddoggdaad/ | Bwogngnaap | Bwogngnaap → no change → Ddoggdaad |
+| `dark` | the color term for black/dark hues | Ddoggoad | /ddoggoad/ | Bwogngoab | Bwogngoab → no change → Ddoggoad |
 | `day` | the light half of the day-night cycle | Dzhog | /dʒog/ | Djog | Djog → no change → Dzhog |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Shgaad | /ʃgaad/ | Shkaad | Shkaad → lenition → Shgaad |
+| `die` | to cease living | Dsaad | /dsaad/ | Dsaad | Dsaad → no change → Dsaad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): black-dragon has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shgag | /ʃgag/ | Shgak | Shgak → lenition → Shgag |
-| `earth` | the ground underfoot | Gzhodshgod | /gʒodʃgod/ | Gjedshged | Gjedshged → no change → Gzhodshgod |
-| `eat` | to consume food | Dgood | /dgood/ | Nngeed | Nngeed → no change → Dgood |
+| `drink` | to swallow liquid | Dsag | /dsag/ | Dsak | Dsak → lenition → Dsag |
+| `earth` | the ground underfoot | Gzhodgshod | /gʒodgʃod/ | Gjedkshed | Gjedkshed → lenition → Gzhodgshod |
+| `eat` | to consume food | Dood | /dood/ | Need | Need → no change → Dood |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): black-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): black-dragon has no exposure to 'erg' |
-| `eye` | the organ of sight | Ddoagdgood | /ddoagdgood/ | Mmoaknngoop | Mmoaknngoop → lenition → Ddoagdgood |
+| `eye` | the organ of sight | Daddad | /daddad/ | Madnad | Madnad → no change → Daddad |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): black-dragon has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Ddadsdog | /ddadsdog/ | Nmabsdek | Nmabsdek → lenition → Ddadsdog |
+| `fire` | flame and heat | Doddod | /doddod/ | Nebmep | Nebmep → no change → Doddod |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): black-dragon has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): black-dragon has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Gdoog | /gdoog/ | Ngmoek | Ngmoek → lenition → Gdoog |
+| `foot` | the walking limb-end | Dod | /dod/ | Nop | Nop → no change → Dod |
 | `ford` | where a river runs shallow enough to cross | — | — | — | gap (experiential): black-dragon has no exposure to 'ford' |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): black-dragon has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): black-dragon has no exposure to 'frost-heave' |
@@ -66,14 +66,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): black-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): black-dragon has no exposure to 'god' |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): black-dragon has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Ddag | /ddag/ | Nnak | Nnak → lenition → Ddag |
+| `great` | large in size or extent | Gogdzhood | /gogdʒood/ | Ngekpjood | Ngekpjood → lenition → Gogdzhood |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): black-dragon has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Sdoggzhood | /sdoggʒood/ | Spokgjood | Spokgjood → lenition → Sdoggzhood |
+| `hand` | the manipulating limb-end | Dsoggzhood | /dsoggʒood/ | Bsokgjood | Bsokgjood → lenition → Dsoggzhood |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): black-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): black-dragon has no exposure to 'heat' |
-| `high` | far above the ground | Sdaod | /sdaod/ | Sbaep | Sbaep → no change → Sdaod |
+| `high` | far above the ground | Dshoggood | /dʃoggood/ | Pshokngood | Pshokngood → lenition → Dshoggood |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): black-dragon has no exposure to 'hill' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): black-dragon has no exposure to 'hobgoblin-kind' |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): black-dragon has no exposure to 'holdfast-tangle' |
@@ -88,47 +88,47 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): black-dragon has no exposure to 'kobold-kind' |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): black-dragon has no exposure to 'lake' |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): black-dragon has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Ggooddgood | /ggooddgood/ | Ngngeobmngoeb | Ngngeobmngoeb → no change → Ggooddgood |
+| `light` | the color term for white/light hues | Gaoggzhag | /gaoggʒag/ | Ngaekkjak | Ngaekkjak → lenition → Gaoggzhag |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): black-dragon has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Sdaagdgod | /sdaagdgod/ | Sdaakmngep | Sdaakmngep → lenition → Sdaagdgod |
-| `low` | near the ground | Dgaog | /dgaog/ | Mngaok | Mngaok → lenition → Dgaog |
-| `many` | an indefinitely large count | Ddaog | /ddaog/ | Mnaeg | Mnaeg → no change → Ddaog |
+| `little` | small in size or extent | Gshaagdood | /gʃaagdood/ | Kshaakmoep | Kshaakmoep → lenition → Gshaagdood |
+| `low` | near the ground | Gaoddood | /gaoddood/ | Ngaebmoeb | Ngaebmoeb → no change → Gaoddood |
+| `many` | an indefinitely large count | Dsaag | /dsaag/ | Psaag | Psaag → no change → Dsaag |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): black-dragon has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): black-dragon has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): black-dragon has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'millet' |
-| `moon` | a moon | Sdod | /sdod/ | Sbep | Sbep → no change → Sdod |
+| `moon` | a moon | Dshod | /dʃod/ | Dshep | Dshep → no change → Dshod |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): black-dragon has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): black-dragon has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Gdoag | /gdoag/ | Gweak | Gweak → lenition → Gdoag |
-| `move` | to go from one place to another | Shdad | /ʃdad/ | Shpap | Shpap → no change → Shdad |
+| `move` | to go from one place to another | Doad | /doad/ | Mead | Mead → no change → Doad |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): black-dragon has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Ddog | /ddog/ | Nmok | Nmok → lenition → Ddog |
-| `new` | recently come to be | Shdaag | /ʃdaag/ | Shpaak | Shpaak → lenition → Shdaag |
-| `night` | the dark half of the day-night cycle | Shdod | /ʃdod/ | Shdeb | Shdeb → no change → Shdod |
+| `name` | a word that identifies one who bears it | Doog | /doog/ | Neok | Neok → lenition → Doog |
+| `new` | recently come to be | Gshaag | /gʃaag/ | Gshaak | Gshaak → lenition → Gshaag |
+| `night` | the dark half of the day-night cycle | Dad | /dad/ | Nad | Nad → no change → Dad |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): black-dragon has no exposure to 'nodule-field' |
 | `north` | the compass point opposite south | Ddadgdoag | /ddadgdoag/ | Bwadkweag | Bwadkweag → lenition → Ddadgdoag |
-| `old` | long in existence | Sdodshgoog | /sdodʃgoog/ | Sbobshgoog | Sbobshgoog → no change → Sdodshgoog |
+| `old` | long in existence | Dsoddshoog | /dsoddʃoog/ | Dsobdshoog | Dsobdshoog → no change → Dsoddshoog |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): black-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Ddood | /ddood/ | Dweep | Dweep → no change → Ddood |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): black-dragon has no exposure to 'open-blue' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): black-dragon has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Ddoaggdoag | /ddoaggdoag/ | Nmeakngneak | Nmeakngneak → lenition → Ddoaggdoag |
+| `over` | above; atop | Ddog | /ddog/ | Bwek | Bwek → lenition → Ddog |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): black-dragon has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Sdad | /sdad/ | Sbad | Sbad → no change → Sdad |
-| `person` | a person; a member of a people (the autonym root) | Ddadshdood | /ddadʃdood/ | Nmabshdoed | Nmabshdoed → no change → Ddadshdood |
+| `parent` | one's father or mother | Dshad | /dʃad/ | Pshad | Pshad → no change → Dshad |
+| `person` | a person; a member of a people (the autonym root) | Gsod | /gsod/ | Ksep | Ksep → lenition → Gsod |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): black-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): black-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): black-dragon has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): black-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'rain' |
-| `red` | the color term for red | Sdag | /sdag/ | Spag | Spag → no change → Sdag |
+| `red` | the color term for red | Dsag | /dsag/ | Psag | Psag → no change → Dsag |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'red-dragon-kind' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): black-dragon has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Dgodshgad | /dgodʃgad/ | Mngodshkad | Mngodshkad → lenition → Dgodshgad |
+| `rest` | to stop and recover strength | Dogddoad | /dogddoad/ | Mogpwead | Mogpwead → no change → Dogddoad |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): black-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): black-dragon has no exposure to 'river' |
@@ -140,23 +140,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): black-dragon has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Ggaod | /ggaod/ | Ngngaed | Ngngaed → no change → Ggaod |
+| `shadow` | cast dark, distinct from open gloom | God | /god/ | Ngod | Ngod → no change → God |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): black-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Shgaagshgod | /ʃgaagʃgod/ | Shkaakshgeb | Shkaakshgeb → lenition → Shgaagshgod |
-| `sleep` | to rest unconscious | Shdoag | /ʃdoag/ | Shpoag | Shpoag → no change → Shdoag |
+| `sibling` | one's brother or sister | Dsaagdshod | /dsaagdʃod/ | Psaakdsheb | Psaakdsheb → lenition → Dsaagdshod |
+| `sleep` | to rest unconscious | Gshoag | /gʃoag/ | Kshoag | Kshoag → lenition → Gshoag |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): black-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): black-dragon has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Ddod | /ddod/ | Dwep | Dwep → no change → Ddod |
+| `south` | the compass point opposite north | Gshoggsad | /gʃoggsad/ | Gshegksap | Gshegksap → lenition → Gshoggsad |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): black-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): black-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): black-dragon has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): black-dragon has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Ddoodddaod | /ddoodddaod/ | Bwoepmmaep | Bwoepmmaep → no change → Ddoodddaod |
+| `star` | a fixed point of light in the night sky | Ddooddoad | /ddooddoad/ | Bwoepmoad | Bwoepmoad → no change → Ddooddoad |
 | `starlit` | dark faintly lit by stars | Gdagdzhood | /gdagdʒood/ | Kwagdjoeb | Kwagdjoeb → lenition → Gdagdzhood |
-| `stone` | rock | Shdog | /ʃdog/ | Shpok | Shpok → lenition → Shdog |
-| `sun` | the sun | Sgaod | /sgaod/ | Sgaed | Sgaed → no change → Sgaod |
+| `stone` | rock | Gshoddood | /gʃoddood/ | Gshepmoop | Gshepmoop → no change → Gshoddood |
+| `sun` | the sun | Gshaod | /gʃaod/ | Gshaed | Gshaed → no change → Gshaod |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -174,14 +174,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): black-dragon has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): black-dragon has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Gdoddgog | /gdoddgog/ | Kwebmngek | Kwebmngek → lenition → Gdoddgog |
-| `under` | beneath; below | Gzhoodgzhaod | /gʒoodgʒaod/ | Gjoebkjaob | Gjoebkjaob → lenition → Gzhoodgzhaod |
+| `two` | the cardinal number 2 | Gdoddaog | /gdoddaog/ | Kwebmaek | Kwebmaek → lenition → Gdoddaog |
+| `under` | beneath; below | Gdoog | /gdoog/ | Kweok | Kweok → lenition → Gdoog |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): black-dragon has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): black-dragon has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): black-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'vine' |
-| `water` | the drinkable liquid | Ddodddoag | /ddodddoag/ | Mmodnnoag | Mmodnnoag → no change → Ddodddoag |
+| `water` | the drinkable liquid | Doddad | /doddad/ | Mopnab | Mopnab → no change → Doddad |
 | `wheat` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'white-dragon-kind' |
 | `wind` | moving air | Gdog | /gdog/ | Kwok | Kwok → lenition → Gdog |
@@ -386,20 +386,20 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal-plain` | The flat floor of the deep ocean. | — | — | — | gap (experiential): gnoll has no exposure to 'abyssal-plain' |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bait-ball` | A dense turning mass of fish. | — | — | — | gap (experiential): gnoll has no exposure to 'bait-ball' |
-| `barley` | a staple crop | Mzavqsaf | /mzavqsaf/ | Mzavqsaf | Mzavqsaf → no change → Mzavqsaf |
+| `barley` | a staple crop | Sngavqsaf | /sŋavqsaf/ | Sngavqsaf | Sngavqsaf → no change → Sngavqsaf |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): gnoll has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Mzaa | /mzaa/ | Mzaa | Mzaa → no change → Mzaa |
+| `blood` | the circulating fluid of a body | Zhmaa | /ʒmaa/ | Zhmaa | Zhmaa → no change → Zhmaa |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
-| `bone` | the rigid frame of a body | Ngshoaf | /ŋʃoaf/ | Ngshoaf | Ngshoaf → no change → Ngshoaf |
+| `bone` | the rigid frame of a body | Shnoaf | /ʃnoaf/ | Shnoaf | Shnoaf → no change → Shnoaf |
 | `boreal-stand` | A stand of northern conifers. | Gzax | /gzax/ | Gzax | Gzax → no change → Gzax |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Dsaaf | /dsaaf/ | Dsaaf | Dsaaf → no change → Dsaaf |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): gnoll has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): gnoll has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Gzhoox | /gʒoox/ | Gzhoox | Gzhoox → no change → Gzhoox |
-| `closed-canopy` | Tall closed-canopy tropical forest. | Dshoxngsox | /dʃoxŋsox/ | Dshoxngsox | Dshoxngsox → no change → Dshoxngsox |
-| `coast` | where the land meets the sea | Nshaavnsa | /nʃaavnsa/ | — | compound: `earth` + `water` |
+| `closed-canopy` | Tall closed-canopy tropical forest. | Dshoxzhmox | /dʃoxʒmox/ | Dshoxzhmox | Dshoxzhmox → no change → Dshoxzhmox |
+| `coast` | where the land meets the sea | Zngaavsma | /zŋaavsma/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): gnoll has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): gnoll has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): gnoll has no exposure to 'coral-head' |
@@ -407,26 +407,26 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): gnoll has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | Dzoov | /dzoov/ | Dzoov | Dzoov → no change → Dzoov |
 | `dark` | the color term for black/dark hues | Gsov | /gsov/ | Gsov | Gsov → no change → Gsov |
-| `day` | the light half of the day-night cycle | Ngshaf | /ŋʃaf/ | Ngshaf | Ngshaf → no change → Ngshaf |
+| `day` | the light half of the day-night cycle | Sngaf | /sŋaf/ | Sngaf | Sngaf → no change → Sngaf |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Dzhax | /dʒax/ | Tzhax | Tzhax → lenition → Dzhax |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gnoll has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Qshofnzoox | /qʃofnzoox/ | Qshofnzoox | Qshofnzoox → no change → Qshofnzoox |
-| `earth` | the ground underfoot | Nsa | /nsa/ | Nsa | Nsa → no change → Nsa |
-| `eat` | to consume food | Pshaoxnzhaaf | /pʃaoxnʒaaf/ | Pshaoxnzhaaf | Pshaoxnzhaaf → no change → Pshaoxnzhaaf |
+| `drink` | to swallow liquid | Qshofznoox | /qʃofznoox/ | Qshofznoox | Qshofznoox → no change → Qshofznoox |
+| `earth` | the ground underfoot | Sma | /sma/ | Sma | Sma → no change → Sma |
+| `eat` | to consume food | Pshaoxshngaaf | /pʃaoxʃŋaaf/ | Pshaoxshngaaf | Pshaoxshngaaf → no change → Pshaoxshngaaf |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): gnoll has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): gnoll has no exposure to 'erg' |
 | `eye` | the organ of sight | Dsox | /dsox/ | Dsox | Dsox → no change → Dsox |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): gnoll has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Qsofnshoo | /qsofnʃoo/ | Qsofnshoo | Qsofnshoo → no change → Qsofnshoo |
+| `fire` | flame and heat | Qsofzmoo | /qsofzmoo/ | Qsofzmoo | Qsofzmoo → no change → Qsofzmoo |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): gnoll has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): gnoll has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Mzoaqsav | /mzoaqsav/ | Mzoaqsav | Mzoaqsav → no change → Mzoaqsav |
-| `ford` | where a river runs shallow enough to cross | Psoaxngshaaf | /psoaxŋʃaaf/ | Psoaxngshaaf | Psoaxngshaaf → no change → Psoaxngshaaf |
-| `forest-gap` | A break in the canopy where light reaches the ground. | Ngsoafngshav | /ŋsoafŋʃav/ | Ngsoafngshav | Ngsoafngshav → no change → Ngsoafngshav |
+| `foot` | the walking limb-end | Shmoaqsav | /ʃmoaqsav/ | Shmoaqsav | Shmoaqsav → no change → Shmoaqsav |
+| `ford` | where a river runs shallow enough to cross | Psoaxsmaaf | /psoaxsmaaf/ | Psoaxsmaaf | Psoaxsmaaf → no change → Psoaxsmaaf |
+| `forest-gap` | A break in the canopy where light reaches the ground. | Snoafshmav | /snoafʃmav/ | Snoafshmav | Snoafshmav → no change → Snoafshmav |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): gnoll has no exposure to 'frost-heave' |
-| `gallery-forest` | Forest following a watercourse. | Pzhofmshof | /pʒofmʃof/ | Pzhofmshof | Pzhofmshof → no change → Pzhofmshof |
+| `gallery-forest` | Forest following a watercourse. | Pzhofshmof | /pʒofʃmof/ | Pzhofshmof | Pzhofshmof → no change → Pzhofshmof |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): gnoll has no exposure to 'giant-constrictor-snake-kind' |
 | `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): gnoll has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): gnoll has no exposure to 'giant-elk-kind' |
@@ -436,22 +436,22 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): gnoll has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): gnoll has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Gzhoo | /gʒoo/ | Gzhoo | Gzhoo → no change → Gzhoo |
-| `gnoll-kind` | a gnoll | Nsafngzav | /nsafŋzav/ | Nsafngzav | Nsafngzav → no change → Nsafngzav |
-| `goblin-kind` | a goblin | Msoadzhaav | /msoadʒaav/ | Msoadzhaav | Msoadzhaav → no change → Msoadzhaav |
+| `gnoll-kind` | a gnoll | Snaf | /snaf/ | Snaf | Snaf → no change → Snaf |
+| `goblin-kind` | a goblin | Shngoadzhaav | /ʃŋoadʒaav/ | Shngoadzhaav | Shngoadzhaav → no change → Shngoadzhaav |
 | `god` | a deity | Dzhoxpzhov | /dʒoxpʒov/ | Dzhoxpzhov | Dzhoxpzhov → no change → Dzhoxpzhov |
-| `grass-sward` | Open grassland, unbroken by trees. | Dshoxnzhof | /dʃoxnʒof/ | Tshoxnzhof | Tshoxnzhof → lenition → Dshoxnzhof |
-| `great` | large in size or extent | Nshaafdzhox | /nʃaafdʒox/ | Nshaafdzhox | Nshaafdzhox → no change → Nshaafdzhox |
+| `grass-sward` | Open grassland, unbroken by trees. | Dshoxsmof | /dʃoxsmof/ | Tshoxsmof | Tshoxsmof → lenition → Dshoxsmof |
+| `great` | large in size or extent | Shngaafdzhox | /ʃŋaafdʒox/ | Shngaafdzhox | Shngaafdzhox → no change → Shngaafdzhox |
 | `green` | the color term for green | Gzhof | /gʒof/ | Gzhof | Gzhof → no change → Gzhof |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): gnoll has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Nsho | /nʃo/ | Nsho | Nsho → no change → Nsho |
-| `hearth` | the fire at the center of a home | Ngshoaqzov | /ŋʃoaqzov/ | Ngshoaqzov | Ngshoaqzov → no change → Ngshoaqzov |
+| `hand` | the manipulating limb-end | Dzhaafqsox | /dʒaafqsox/ | Dzhaafqsox | Dzhaafqsox → no change → Dzhaafqsox |
+| `hearth` | the fire at the center of a home | Shmoaqzov | /ʃmoaqzov/ | Shmoaqzov | Shmoaqzov → no change → Shmoaqzov |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): gnoll has no exposure to 'heat' |
 | `high` | far above the ground | Pzaovdshof | /pzaovdʃof/ | Pzaovdshof | Pzaovdshof → no change → Pzaovdshof |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): gnoll has no exposure to 'hill' |
-| `hobgoblin-kind` | a hobgoblin | Ngsafdzho | /ŋsafdʒo/ | Ngsaftzho | Ngsaftzho → lenition → Ngsafdzho |
+| `hobgoblin-kind` | a hobgoblin | Snafdzho | /snafdʒo/ | Snaftzho | Snaftzho → lenition → Snafdzho |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): gnoll has no exposure to 'holdfast-tangle' |
-| `home` | one's dwelling | Mshaax | /mʃaax/ | Mshaax | Mshaax → no change → Mshaax |
+| `home` | one's dwelling | Sngaax | /sŋaax/ | Sngaax | Sngaax → no change → Sngaax |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): gnoll has no exposure to 'ice-lead' |
@@ -461,48 +461,48 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): gnoll has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | Gsho | /gʃo/ | Gsho | Gsho → no change → Gsho |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): gnoll has no exposure to 'lake' |
-| `liana-forest` | Tropical forest tangled with climbing vines. | Nsovmzhoav | /nsovmʒoav/ | Nsovmzhoav | Nsovmzhoav → no change → Nsovmzhoav |
+| `liana-forest` | Tropical forest tangled with climbing vines. | Zmovsngoav | /zmovsŋoav/ | Zmovsngoav | Zmovsngoav → no change → Zmovsngoav |
 | `light` | the color term for white/light hues | Psoxgzof | /psoxgzof/ | Psoxgzof | Psoxgzof → no change → Psoxgzof |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): gnoll has no exposure to 'lightless-water' |
 | `little` | small in size or extent | Dzof | /dzof/ | Dzof | Dzof → no change → Dzof |
-| `low` | near the ground | Ngzhoof | /ŋʒoof/ | Ngzhoof | Ngzhoof → no change → Ngzhoof |
-| `many` | an indefinitely large count | Nzhoa | /nʒoa/ | Nzhoa | Nzhoa → no change → Nzhoa |
+| `low` | near the ground | Zngoof | /zŋoof/ | Zngoof | Zngoof → no change → Zngoof |
+| `many` | an indefinitely large count | Znoa | /znoa/ | Znoa | Znoa → no change → Znoa |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): gnoll has no exposure to 'marine-snow' |
-| `marsh` | soft wet ground | Gshoovngzhaov | /gʃoovŋʒaov/ | Gshoovngzhaov | Gshoovngzhaov → no change → Gshoovngzhaov |
+| `marsh` | soft wet ground | Gshoovzngaov | /gʃoovzŋaov/ | Gshoovzngaov | Gshoovzngaov → no change → Gshoovzngaov |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): gnoll has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `millet` | a staple crop | Psafqsaax | /psafqsaax/ | Psafqsaax | Psafqsaax → no change → Psafqsaax |
-| `moon` | a moon | Ngsaa | /ŋsaa/ | Ngsaa | Ngsaa → no change → Ngsaa |
-| `mossy-deadfall` | Fallen timber going back to moss and lichen. | Ngzoafnsof | /ŋzoafnsof/ | Ngzoafnsof | Ngzoafnsof → no change → Ngzoafnsof |
+| `moon` | a moon | Dzaa | /dzaa/ | Dzaa | Dzaa → no change → Dzaa |
+| `mossy-deadfall` | Fallen timber going back to moss and lichen. | Znoafzhmof | /znoafʒmof/ | Znoafzhmof | Znoafzhmof → no change → Znoafzhmof |
 | `mountain` | high ground | — | — | — | gap (experiential): gnoll has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Gsaf | /gsaf/ | Gsaf | Gsaf → no change → Gsaf |
 | `move` | to go from one place to another | Pzaf | /pzaf/ | Pzaf | Pzaf → no change → Pzaf |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): gnoll has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Mzho | /mʒo/ | Mzho | Mzho → no change → Mzho |
+| `name` | a word that identifies one who bears it | Sno | /sno/ | Sno | Sno → no change → Sno |
 | `new` | recently come to be | Qzaov | /qzaov/ | Qzaov | Qzaov → no change → Qzaov |
-| `night` | the dark half of the day-night cycle | Mzhoofngshox | /mʒoofŋʃox/ | Mzhoofngshox | Mzhoofngshox → no change → Mzhoofngshox |
+| `night` | the dark half of the day-night cycle | Zhnoofznox | /ʒnoofznox/ | Zhnoofznox | Zhnoofznox → no change → Zhnoofznox |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): gnoll has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Mzhafdzhoav | /mʒafdʒoav/ | Mzhafdzhoav | Mzhafdzhoav → no change → Mzhafdzhoav |
-| `old` | long in existence | Qsaoxngzhax | /qsaoxŋʒax/ | Qsaoxngzhax | Qsaoxngzhax → no change → Qsaoxngzhax |
-| `old-growth` | Mature forest, closed above and open beneath. | Nsaafnsoov | /nsaafnsoov/ | Nsaafnsoov | Nsaafnsoov → no change → Nsaafnsoov |
-| `one` | the cardinal number 1 | Psoanzoov | /psoanzoov/ | Psoanzoov | Psoanzoov → no change → Psoanzoov |
+| `north` | the compass point opposite south | Shmafdzhoav | /ʃmafdʒoav/ | Shmafdzhoav | Shmafdzhoav → no change → Shmafdzhoav |
+| `old` | long in existence | Qsaoxshngax | /qsaoxʃŋax/ | Qsaoxshngax | Qsaoxshngax → no change → Qsaoxshngax |
+| `old-growth` | Mature forest, closed above and open beneath. | Snaafzmoov | /snaafzmoov/ | Snaafzmoov | Snaafzmoov → no change → Snaafzmoov |
+| `one` | the cardinal number 1 | Psoaznoov | /psoaznoov/ | Psoaznoov | Psoaznoov → no change → Psoaznoov |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): gnoll has no exposure to 'open-blue' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): gnoll has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Gshaovmshoov | /gʃaovmʃoov/ | Gshaovmshoov | Gshaovmshoov → no change → Gshaovmshoov |
+| `over` | above; atop | Gshaovzhmoov | /gʃaovʒmoov/ | Gshaovzhmoov | Gshaovzhmoov → no change → Gshaovzhmoov |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): gnoll has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Ngzhof | /ŋʒof/ | Ngzhof | Ngzhof → no change → Ngzhof |
-| `person` | a person; a member of a people (the autonym root) | Msao | /msao/ | Msao | Msao → no change → Msao |
+| `parent` | one's father or mother | Zngof | /zŋof/ | Zngof | Zngof → no change → Zngof |
+| `person` | a person; a member of a people (the autonym root) | Zmao | /zmao/ | Zmao | Zmao → no change → Zmao |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): gnoll has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): gnoll has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): gnoll has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): gnoll has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'rain' |
-| `red` | the color term for red | Nshadzhav | /nʃadʒav/ | Nshadzhav | Nshadzhav → no change → Nshadzhav |
+| `red` | the color term for red | Zmadzhav | /zmadʒav/ | Zmadzhav | Zmadzhav → no change → Zmadzhav |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): gnoll has no exposure to 'red-dragon-kind' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): gnoll has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): gnoll has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): gnoll has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Ngzhoaxnzhav | /ŋʒoaxnʒav/ | Ngzhoaxnzhav | Ngzhoaxnzhav → no change → Ngzhoaxnzhav |
+| `rest` | to stop and recover strength | Sngoaxsnav | /sŋoaxsnav/ | Sngoaxsnav | Sngoaxsnav → no change → Sngoaxsnav |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): gnoll has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Psaav | /psaav/ | Psaav | Psaav → no change → Psaav |
 | `river` | fresh water running across land | Pzofdzhax | /pzofdʒax/ | Pzoftzhax | Pzoftzhax → lenition → Pzofdzhax |
@@ -512,58 +512,58 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): gnoll has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | Gzof | /gzof/ | Gzof | Gzof → no change → Gzof |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): gnoll has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Nshaavnzhoa | /nʃaavnʒoa/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Zngaavznoa | /zŋaavznoa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Mzaxdzhoaf | /mzaxdʒoaf/ | Mzaxtzhoaf | Mzaxtzhoaf → lenition → Mzaxdzhoaf |
+| `shadow` | cast dark, distinct from open gloom | Snaxdzhoaf | /snaxdʒoaf/ | Snaxtzhoaf | Snaxtzhoaf → lenition → Snaxdzhoaf |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): gnoll has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | Gzaof | /gzaof/ | Gzaof | Gzaof → no change → Gzaof |
-| `sibling` | one's brother or sister | Nshaxmsov | /nʃaxmsov/ | Nshaxmsov | Nshaxmsov → no change → Nshaxmsov |
+| `sibling` | one's brother or sister | Shngaxzhmov | /ʃŋaxʒmov/ | Shngaxzhmov | Shngaxzhmov → no change → Shngaxzhmov |
 | `sleep` | to rest unconscious | Dzhaox | /dʒaox/ | Tzhaox | Tzhaox → lenition → Dzhaox |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): gnoll has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gnoll has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Nshax | /nʃax/ | Nshax | Nshax → no change → Nshax |
-| `spirit` | a lesser or unseen supernatural presence | Ngsoavngsho | /ŋsoavŋʃo/ | Ngsoavngsho | Ngsoavngsho → no change → Ngsoavngsho |
+| `south` | the compass point opposite north | Gsoov | /gsoov/ | Gsoov | Gsoov → no change → Gsoov |
+| `spirit` | a lesser or unseen supernatural presence | Zhnoavzmo | /ʒnoavzmo/ | Zhnoavzmo | Zhnoavzmo → no change → Zhnoavzmo |
 | `spring` | where water rises from the ground | Dzhaaf | /dʒaaf/ | Dzhaaf | Dzhaaf → no change → Dzhaaf |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): gnoll has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): gnoll has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Gzo | /gzo/ | Gzo | Gzo → no change → Gzo |
-| `starlit` | dark faintly lit by stars | Qshangsho | /qʃaŋʃo/ | Qshangsho | Qshangsho → no change → Qshangsho |
-| `stone` | rock | Ngzhoax | /ŋʒoax/ | Ngzhoax | Ngzhoax → no change → Ngzhoax |
-| `sun` | the sun | Ngshoafngzaf | /ŋʃoafŋzaf/ | Ngshoafngzaf | Ngshoafngzaf → no change → Ngshoafngzaf |
+| `starlit` | dark faintly lit by stars | Qshazmo | /qʃazmo/ | Qshazmo | Qshazmo → no change → Qshazmo |
+| `stone` | rock | Sngoax | /sŋoax/ | Sngoax | Sngoax → no change → Sngoax |
+| `sun` | the sun | Shnoafzhngaf | /ʃnoafʒŋaf/ | Shnoafzhngaf | Shnoafzhngaf → no change → Shnoafzhngaf |
 | `taiga` | a biome class | Dsho | /dʃo/ | Dsho | Dsho → no change → Dsho |
-| `temperate-forest` | a biome class | Gshofnshav | /gʃofnʃav/ | Gshofnshav | Gshofnshav → no change → Gshofnshav |
+| `temperate-forest` | a biome class | Gshofzngav | /gʃofzŋav/ | Gshofzngav | Gshofzngav → no change → Gshofzngav |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | Nsao | /nsao/ | Nsao | Nsao → no change → Nsao |
+| `temperate-rainforest` | a biome class | Zhngaa | /ʒŋaa/ | Zhngaa | Zhngaa → no change → Zhngaa |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): gnoll has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): gnoll has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): gnoll has no exposure to 'treant-kind' |
 | `tree` | a woody plant | Dshoax | /dʃoax/ | Tshoax | Tshoax → lenition → Dshoax |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): gnoll has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): gnoll has no exposure to 'trench-wall' |
-| `tropical-rainforest` | a biome class | Gzavmzhoa | /gzavmʒoa/ | Gzavmzhoa | Gzavmzhoa → no change → Gzavmzhoa |
-| `tropical-seasonal-forest` | a biome class | Nzho | /nʒo/ | Nzho | Nzho → no change → Nzho |
+| `tropical-rainforest` | a biome class | Gzavshmoa | /gzavʃmoa/ | Gzavshmoa | Gzavshmoa → no change → Gzavshmoa |
+| `tropical-seasonal-forest` | a biome class | Shno | /ʃno/ | Shno | Shno → no change → Shno |
 | `tuber` | a staple crop | Psof | /psof/ | Psof | Psof → no change → Psof |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | — | — | — | gap (experiential): gnoll has no exposure to 'tubeworm-thicket' |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): gnoll has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): gnoll has no exposure to 'twilight-water' |
 | `two` | the cardinal number 2 | Qzhoxdzo | /qʒoxdzo/ | Qzhoxtzo | Qzhoxtzo → lenition → Qzhoxdzo |
-| `under` | beneath; below | Qsoavngzax | /qsoavŋzax/ | Qsoavngzax | Qsoavngzax → no change → Qsoavngzax |
+| `under` | beneath; below | Shngox | /ʃŋox/ | Shngox | Shngox → no change → Shngox |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): gnoll has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): gnoll has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): gnoll has no exposure to 'vent-plume' |
 | `vine` | a staple crop | Gzhofgshoof | /gʒofgʃoof/ | Gzhofgshoof | Gzhofgshoof → no change → Gzhofgshoof |
-| `water` | the drinkable liquid | Nshaav | /nʃaav/ | Nshaav | Nshaav → no change → Nshaav |
+| `water` | the drinkable liquid | Zngaav | /zŋaav/ | Zngaav | Zngaav → no change → Zngaav |
 | `wheat` | a staple crop | Qzhaovgzhoav | /qʒaovgʒoav/ | Qzhaovgzhoav | Qzhaovgzhoav → no change → Qzhaovgzhoav |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): gnoll has no exposure to 'white-dragon-kind' |
-| `wind` | moving air | Gzhovnshoaf | /gʒovnʃoaf/ | Gzhovnshoaf | Gzhovnshoaf → no change → Gzhovnshoaf |
+| `wind` | moving air | Gzhovsmoaf | /gʒovsmoaf/ | Gzhovsmoaf | Gzhovsmoaf → no change → Gzhovsmoaf |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): gnoll has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): gnoll has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): gnoll has no exposure to 'xorn-kind' |
-| `yellow` | the color term for yellow | Msoa | /msoa/ | Msoa | Msoa → no change → Msoa |
+| `yellow` | the color term for yellow | Zmoazhnga | /zmoaʒŋa/ | Zmoazhnga | Zmoazhnga → no change → Zmoazhnga |
 
 ## Goblin
 
@@ -947,7 +947,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal-plain` | The flat floor of the deep ocean. | — | — | — | gap (experiential): kobold has no exposure to 'abyssal-plain' |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bait-ball` | A dense turning mass of fish. | — | — | — | gap (experiential): kobold has no exposure to 'bait-ball' |
-| `barley` | a staple crop | Rooxoa | /rooxoa/ | Rooxoa | Rooxoa → no change → Rooxoa |
+| `barley` | a staple crop | Raarora | /raarora/ | Raarora | Raarora → no change → Raarora |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): kobold has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Ra | /ra/ | Ra | Ra → no change → Ra |
@@ -955,12 +955,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Xoo | /xoo/ | Xoo | Xoo → no change → Xoo |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): kobold has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
-| `bugbear-kind` | a bugbear | Raoxa | /raoxa/ | Rraoxa | Rraoxa → clustersimplify → Raoxa |
+| `bugbear-kind` | a bugbear | Roraa | /roraa/ | Roraa | Roraa → no change → Roraa |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): kobold has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): kobold has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Raxa | /raxa/ | Rraxa | Rraxa → clustersimplify → Raxa |
+| `child` | one's son or daughter | Raaxa | /raaxa/ | Raaxa | Raaxa → no change → Raaxa |
 | `closed-canopy` | Tall closed-canopy tropical forest. | Rooxaa | /rooxaa/ | Rooxaa | Rooxaa → no change → Rooxaa |
-| `coast` | where the land meets the sea | Rorororoorro | /rorororoorro/ | — | compound: `earth` + `water` |
+| `coast` | where the land meets the sea | Raxaroorao | /raxaroorao/ | — | compound: `earth` + `water` |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): kobold has no exposure to 'cold' |
 | `cold-upwelling` | Cold nutrient-rich water rising from below. | — | — | — | gap (experiential): kobold has no exposure to 'cold-upwelling' |
 | `coral-head` | A massive coral colony standing proud of the reef. | — | — | — | gap (experiential): kobold has no exposure to 'coral-head' |
@@ -970,24 +970,24 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dark` | the color term for black/dark hues | Xo | /xo/ | Xo | Xo → no change → Xo |
 | `day` | the light half of the day-night cycle | Raa | /raa/ | Raa | Raa → no change → Raa |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Raarro | /raarro/ | Raarro | Raarro → no change → Raarro |
+| `die` | to cease living | Raarao | /raarao/ | Raarao | Raarao → no change → Raarao |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): kobold has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Raarao | /raarao/ | Rraarao | Rraarao → clustersimplify → Raarao |
-| `earth` | the ground underfoot | Roorro | /roorro/ | Roorro | Roorro → no change → Roorro |
-| `eat` | to consume food | Raoxa | /raoxa/ | Raoxa | Raoxa → no change → Raoxa |
+| `drink` | to swallow liquid | Roroxao | /roroxao/ | Roroxao | Roroxao → no change → Roroxao |
+| `earth` | the ground underfoot | Roorao | /roorao/ | Roorao | Roorao → no change → Roorao |
+| `eat` | to consume food | Xaro | /xaro/ | Xaro | Xaro → no change → Xaro |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): kobold has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): kobold has no exposure to 'erg' |
-| `eye` | the organ of sight | Roxao | /roxao/ | Rroxao | Rroxao → clustersimplify → Roxao |
+| `eye` | the organ of sight | Raoxao | /raoxao/ | Raoxao | Raoxao → no change → Raoxao |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): kobold has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Xoarro | /xoarro/ | Xoarro | Xoarro → no change → Xoarro |
+| `fire` | flame and heat | Xoara | /xoara/ | Xoara | Xoara → no change → Xoara |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): kobold has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): kobold has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Raaraa | /raaraa/ | Raaraa | Raaraa → no change → Raaraa |
-| `ford` | where a river runs shallow enough to cross | Roaxo | /roaxo/ | Rroaxo | Rroaxo → clustersimplify → Roaxo |
-| `forest-gap` | A break in the canopy where light reaches the ground. | Raraa | /raraa/ | Raraa | Raraa → no change → Raraa |
+| `foot` | the walking limb-end | Xaaxoo | /xaaxoo/ | Xaaxoo | Xaaxoo → no change → Xaaxoo |
+| `ford` | where a river runs shallow enough to cross | Raaxora | /raaxora/ | Raaxora | Raaxora → no change → Raaxora |
+| `forest-gap` | A break in the canopy where light reaches the ground. | Xoxao | /xoxao/ | Xoxao | Xoxao → no change → Xoxao |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): kobold has no exposure to 'frost-heave' |
-| `gallery-forest` | Forest following a watercourse. | Roroa | /roroa/ | Rroroa | Rroroa → clustersimplify → Roroa |
+| `gallery-forest` | Forest following a watercourse. | Xoora | /xoora/ | Xoora | Xoora → no change → Xoora |
 | `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): kobold has no exposure to 'giant-constrictor-snake-kind' |
 | `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): kobold has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): kobold has no exposure to 'giant-elk-kind' |
@@ -996,21 +996,21 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): kobold has no exposure to 'giant-octopus-kind' |
 | `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): kobold has no exposure to 'giant-scorpion-kind' |
 | `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): kobold has no exposure to 'giant-squid-kind' |
-| `gloom` | the deepest, starless dark | Roraa | /roraa/ | Rroraa | Rroraa → clustersimplify → Roraa |
-| `gnoll-kind` | a gnoll | Xarraa | /xarraa/ | Xarraa | Xarraa → no change → Xarraa |
+| `gloom` | the deepest, starless dark | Raoraa | /raoraa/ | Raoraa | Raoraa → no change → Raoraa |
+| `gnoll-kind` | a gnoll | Xaroa | /xaroa/ | Xaroa | Xaroa → no change → Xaroa |
 | `goblin-kind` | a goblin | Xoaro | /xoaro/ | Xoaro | Xoaro → no change → Xoaro |
-| `god` | a deity | Raoxoo | /raoxoo/ | Rraoxoo | Rraoxoo → clustersimplify → Raoxoo |
+| `god` | a deity | Ro | /ro/ | Ro | Ro → no change → Ro |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): kobold has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Roaxoarroo | /roaxoarroo/ | Rroaxoarroo | Rroaxoarroo → clustersimplify → Roaxoarroo |
+| `great` | large in size or extent | Roxaxa | /roxaxa/ | Roxaxa | Roxaxa → no change → Roxaxa |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): kobold has no exposure to 'hamada' |
 | `hand` | the manipulating limb-end | Roaro | /roaro/ | Roaro | Roaro → no change → Roaro |
 | `hearth` | the fire at the center of a home | Xorao | /xorao/ | Xorao | Xorao → no change → Xorao |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): kobold has no exposure to 'heat' |
-| `high` | far above the ground | Xoroa | /xoroa/ | Xoroa | Xoroa → no change → Xoroa |
+| `high` | far above the ground | Xoraroa | /xoraroa/ | Xoraroa | Xoraroa → no change → Xoraroa |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): kobold has no exposure to 'hill' |
-| `hobgoblin-kind` | a hobgoblin | Roa | /roa/ | Rroa | Rroa → clustersimplify → Roa |
+| `hobgoblin-kind` | a hobgoblin | Xooxa | /xooxa/ | Xooxa | Xooxa → no change → Xooxa |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): kobold has no exposure to 'holdfast-tangle' |
 | `home` | one's dwelling | Raxaa | /raxaa/ | Raxaa | Raxaa → no change → Raxaa |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
@@ -1020,106 +1020,106 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): kobold has no exposure to 'kelp-canopy' |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): kobold has no exposure to 'killer-whale-kind' |
-| `kobold-kind` | a kobold | Roorrao | /roorrao/ | Roorrao | Roorrao → no change → Roorrao |
-| `lake` | still water held in a hollow that has no outlet to the sea | Rororororao | /rororororao/ | — | compound: `little` + `water` |
-| `liana-forest` | Tropical forest tangled with climbing vines. | Raorra | /raorra/ | Raorra | Raorra → no change → Raorra |
-| `light` | the color term for white/light hues | Raaxo | /raaxo/ | Rraaxo | Rraaxo → clustersimplify → Raaxo |
+| `kobold-kind` | a kobold | Raoroa | /raoroa/ | Raoroa | Raoroa → no change → Raoroa |
+| `lake` | still water held in a hollow that has no outlet to the sea | Raxaroxooro | /raxaroxooro/ | — | compound: `little` + `water` |
+| `liana-forest` | Tropical forest tangled with climbing vines. | Raoxoo | /raoxoo/ | Raoxoo | Raoxoo → no change → Raoxoo |
+| `light` | the color term for white/light hues | Roara | /roara/ | Roara | Roara → no change → Roara |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): kobold has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Rorao | /rorao/ | Rorao | Rorao → no change → Rorao |
-| `low` | near the ground | Roorraa | /roorraa/ | Rroorraa | Rroorraa → clustersimplify → Roorraa |
-| `many` | an indefinitely large count | Raaxo | /raaxo/ | Raaxo | Raaxo → no change → Raaxo |
+| `little` | small in size or extent | Roxooro | /roxooro/ | Roxooro | Roxooro → no change → Roxooro |
+| `low` | near the ground | Roraroo | /roraroo/ | Roraroo | Roraroo → no change → Roraroo |
+| `many` | an indefinitely large count | Raaxoa | /raaxoa/ | Raaxoa | Raaxoa → no change → Raaxoa |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): kobold has no exposure to 'marine-snow' |
-| `marsh` | soft wet ground | Rorraarroo | /rorraarroo/ | Rorraarroo | Rorraarroo → no change → Rorraarroo |
+| `marsh` | soft wet ground | Rorora | /rorora/ | Rorora | Rorora → no change → Rorora |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): kobold has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `millet` | a staple crop | — | — | — | gap (experiential): kobold has no exposure to 'millet' |
-| `moon` | a moon | Xaoraa | /xaoraa/ | Xaoraa | Xaoraa → no change → Xaoraa |
-| `mossy-deadfall` | Fallen timber going back to moss and lichen. | Rooro | /rooro/ | Rooro | Rooro → no change → Rooro |
+| `moon` | a moon | Roaraa | /roaraa/ | Roaraa | Roaraa → no change → Roaraa |
+| `mossy-deadfall` | Fallen timber going back to moss and lichen. | Raoxoroo | /raoxoroo/ | Raoxoroo | Raoxoroo → no change → Raoxoroo |
 | `mountain` | high ground | — | — | — | gap (experiential): kobold has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Raxaa | /raxaa/ | Rraxaa | Rraxaa → clustersimplify → Raxaa |
-| `move` | to go from one place to another | Raroa | /raroa/ | Raroa | Raroa → no change → Raroa |
-| `muskeg` | Waterlogged peat ground in the boreal forest. | Raarra | /raarra/ | Raarra | Raarra → no change → Raarra |
+| `mouth` | the organ of eating and speech | Raroa | /raroa/ | Raroa | Raroa → no change → Raroa |
+| `move` | to go from one place to another | Roroaraa | /roroaraa/ | Roroaraa | Roroaraa → no change → Roroaraa |
+| `muskeg` | Waterlogged peat ground in the boreal forest. | Xaorao | /xaorao/ | Xaorao | Xaorao → no change → Xaorao |
 | `name` | a word that identifies one who bears it | Raxao | /raxao/ | Raxao | Raxao → no change → Raxao |
-| `new` | recently come to be | Roxara | /roxara/ | Roxara | Roxara → no change → Roxara |
-| `night` | the dark half of the day-night cycle | Ro | /ro/ | Rro | Rro → clustersimplify → Ro |
+| `new` | recently come to be | Roaxoorao | /roaxoorao/ | Roaxoorao | Roaxoorao → no change → Roaxoorao |
+| `night` | the dark half of the day-night cycle | Xora | /xora/ | Xora | Xora → no change → Xora |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): kobold has no exposure to 'nodule-field' |
 | `north` | the compass point opposite south | Xoaxao | /xoaxao/ | Xoaxao | Xoaxao → no change → Xoaxao |
-| `old` | long in existence | Roxo | /roxo/ | Rroxo | Rroxo → clustersimplify → Roxo |
-| `old-growth` | Mature forest, closed above and open beneath. | Xoxao | /xoxao/ | Xoxao | Xoxao → no change → Xoxao |
+| `old` | long in existence | Raararoo | /raararoo/ | Raararoo | Raararoo → no change → Raararoo |
+| `old-growth` | Mature forest, closed above and open beneath. | Roaxora | /roaxora/ | Roaxora | Roaxora → no change → Roaxora |
 | `one` | the cardinal number 1 | Xooxoa | /xooxoa/ | Xooxoa | Xooxoa → no change → Xooxoa |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): kobold has no exposure to 'open-blue' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): kobold has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Xaorraa | /xaorraa/ | Xaorraa | Xaorraa → no change → Xaorraa |
+| `over` | above; atop | Xooraro | /xooraro/ | Xooraro | Xooraro → no change → Xooraro |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): kobold has no exposure to 'owlbear-kind' |
 | `parent` | one's father or mother | Xoxo | /xoxo/ | Xoxo | Xoxo → no change → Xoxo |
-| `person` | a person; a member of a people (the autonym root) | Rora | /rora/ | Rrora | Rrora → clustersimplify → Rora |
+| `person` | a person; a member of a people (the autonym root) | Raora | /raora/ | Raora | Raora → no change → Raora |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): kobold has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): kobold has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): kobold has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): kobold has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
-| `red` | the color term for red | Roa | /roa/ | Roa | Roa → no change → Roa |
+| `red` | the color term for red | Rooxoa | /rooxoa/ | Rooxoa | Rooxoa → no change → Rooxoa |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): kobold has no exposure to 'red-dragon-kind' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): kobold has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): kobold has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): kobold has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Raoxaa | /raoxaa/ | Rraoxaa | Rraoxaa → clustersimplify → Raoxaa |
+| `rest` | to stop and recover strength | Xaxoa | /xaxoa/ | Xaxoa | Xaxoa → no change → Xaxoa |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): kobold has no exposure to 'rhinoceros-kind' |
-| `rice` | a staple crop | Raaxoa | /raaxoa/ | Raaxoa | Raaxoa → no change → Raaxoa |
-| `river` | fresh water running across land | Roarra | /roarra/ | Roarra | Roarra → no change → Roarra |
+| `rice` | a staple crop | Xaoxo | /xaoxo/ | Xaoxo | Xaoxo → no change → Xaoxo |
+| `river` | fresh water running across land | Xoraaxa | /xoraaxa/ | Xoraaxa | Xoraaxa → no change → Xoraaxa |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): kobold has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): kobold has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `scattering-layer` | The daily-rising layer of small sea life. | — | — | — | gap (experiential): kobold has no exposure to 'scattering-layer' |
 | `sclerophyll-scrub` | Hard-leaved drought-adapted scrub. | — | — | — | gap (experiential): kobold has no exposure to 'sclerophyll-scrub' |
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): kobold has no exposure to 'scoured-ice' |
-| `sea` | a body of salt water | Rorororaaxo | /rorororaaxo/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Raxaraaxoa | /raxaraaxoa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Xaaro | /xaaro/ | Xaaro | Xaaro → no change → Xaaro |
+| `shadow` | cast dark, distinct from open gloom | Raoxoa | /raoxoa/ | Raoxoa | Raoxoa → no change → Raoxoa |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): kobold has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Raarroo | /raarroo/ | Raarroo | Raarroo → no change → Raarroo |
-| `sleep` | to rest unconscious | Raoroo | /raoroo/ | Rraoroo | Rraoroo → clustersimplify → Raoroo |
+| `sibling` | one's brother or sister | Xoraa | /xoraa/ | Xoraa | Xoraa → no change → Xoraa |
+| `sleep` | to rest unconscious | Raoroo | /raoroo/ | Raoroo | Raoroo → no change → Raoroo |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): kobold has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): kobold has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Rooraaxaa | /rooraaxaa/ | Rooraaxaa | Rooraaxaa → no change → Rooraaxaa |
-| `spirit` | a lesser or unseen supernatural presence | Rorraa | /rorraa/ | Rrorraa | Rrorraa → clustersimplify → Rorraa |
-| `spring` | where water rises from the ground | Raarroa | /raarroa/ | Rraarroa | Rraarroa → clustersimplify → Raarroa |
+| `south` | the compass point opposite north | Xaaraa | /xaaraa/ | Xaaraa | Xaaraa → no change → Xaaraa |
+| `spirit` | a lesser or unseen supernatural presence | Raoro | /raoro/ | Raoro | Raoro → no change → Raoro |
+| `spring` | where water rises from the ground | Roraaxaa | /roraaxaa/ | Roraaxaa | Roraaxaa → no change → Roraaxaa |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): kobold has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): kobold has no exposure to 'staghorn-stand' |
 | `star` | a fixed point of light in the night sky | Roxoo | /roxoo/ | Roxoo | Roxoo → no change → Roxoo |
 | `starlit` | dark faintly lit by stars | Raro | /raro/ | Raro | Raro → no change → Raro |
 | `stone` | rock | Xaroo | /xaroo/ | Xaroo | Xaroo → no change → Xaroo |
-| `sun` | the sun | Xorroa | /xorroa/ | Xorroa | Xorroa → no change → Xorroa |
-| `taiga` | a biome class | Xorroo | /xorroo/ | Xorroo | Xorroo → no change → Xorroo |
-| `temperate-forest` | a biome class | Xaxoo | /xaxoo/ | Xaxoo | Xaxoo → no change → Xaxoo |
+| `sun` | the sun | Roaroora | /roaroora/ | Roaroora | Roaroora → no change → Roaroora |
+| `taiga` | a biome class | Xoaxoroo | /xoaxoroo/ | Xoaxoroo | Xoaxoroo → no change → Xoaxoroo |
+| `temperate-forest` | a biome class | Roo | /roo/ | Roo | Roo → no change → Roo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | Xaarra | /xaarra/ | Xaarra | Xaarra → no change → Xaarra |
+| `temperate-rainforest` | a biome class | Xaara | /xaara/ | Xaara | Xaara → no change → Xaara |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): kobold has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): kobold has no exposure to 'treant-kind' |
-| `tree` | a woody plant | Roaxoo | /roaxoo/ | Rroaxoo | Rroaxoo → clustersimplify → Roaxoo |
+| `tree` | a woody plant | Rooxoo | /rooxoo/ | Rooxoo | Rooxoo → no change → Rooxoo |
 | `trench-floor` | The deepest floor of an ocean trench. | — | — | — | gap (experiential): kobold has no exposure to 'trench-floor' |
 | `trench-wall` | The steep side of an ocean trench. | — | — | — | gap (experiential): kobold has no exposure to 'trench-wall' |
-| `tropical-rainforest` | a biome class | Roarra | /roarra/ | Rroarra | Rroarra → clustersimplify → Roarra |
-| `tropical-seasonal-forest` | a biome class | Rooraa | /rooraa/ | Rooraa | Rooraa → no change → Rooraa |
-| `tuber` | a staple crop | Xoorro | /xoorro/ | Xoorro | Xoorro → no change → Xoorro |
+| `tropical-rainforest` | a biome class | Rooraa | /rooraa/ | Rooraa | Rooraa → no change → Rooraa |
+| `tropical-seasonal-forest` | a biome class | Xoaroa | /xoaroa/ | Xoaroa | Xoaroa → no change → Xoaroa |
+| `tuber` | a staple crop | Xaaroa | /xaaroa/ | Xaaroa | Xaaroa → no change → Xaaroa |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | — | — | — | gap (experiential): kobold has no exposure to 'tubeworm-thicket' |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): kobold has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): kobold has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Roo | /roo/ | Rroo | Rroo → clustersimplify → Roo |
-| `under` | beneath; below | Roroorra | /roroorra/ | Roroorra | Roroorra → no change → Roroorra |
+| `two` | the cardinal number 2 | Roaroo | /roaroo/ | Roaroo | Roaroo → no change → Roaroo |
+| `under` | beneath; below | Roorora | /roorora/ | Roorora | Roorora → no change → Roorora |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): kobold has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): kobold has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): kobold has no exposure to 'vent-plume' |
-| `vine` | a staple crop | Raxarroa | /raxarroa/ | Rraxarroa | Rraxarroa → clustersimplify → Raxarroa |
-| `water` | the drinkable liquid | Rororo | /rororo/ | Rororo | Rororo → no change → Rororo |
-| `wheat` | a staple crop | Rora | /rora/ | Rora | Rora → no change → Rora |
+| `vine` | a staple crop | Xoorao | /xoorao/ | Xoorao | Xoorao → no change → Xoorao |
+| `water` | the drinkable liquid | Raxa | /raxa/ | Raxa | Raxa → no change → Raxa |
+| `wheat` | a staple crop | Roxoa | /roxoa/ | Roxoa | Roxoa → no change → Roxoa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): kobold has no exposure to 'white-dragon-kind' |
-| `wind` | moving air | Xaarrao | /xaarrao/ | Xaarrao | Xaarrao → no change → Xaarrao |
+| `wind` | moving air | Xaaro | /xaaro/ | Xaaro | Xaaro → no change → Xaaro |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): kobold has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): kobold has no exposure to 'wooded-grassland' |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): kobold has no exposure to 'woolly-mammoth-kind' |
@@ -1137,15 +1137,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Ddadddaod | /ddadddaod/ | Mmadmnaeb | Mmadmnaeb → no change → Ddadddaod |
+| `blood` | the circulating fluid of a body | Doaddoad | /doaddoad/ | Meadmeab | Meadmeab → no change → Doaddoad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
-| `bone` | the rigid frame of a body | Ddaadddod | /ddaadddod/ | Nnaadmngod | Nnaadmngod → no change → Ddaadddod |
+| `bone` | the rigid frame of a body | Doddook | /doddook/ | Negngeok | Negngeok → no change → Doddook |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): red-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): red-dragon has no exposure to 'bugbear-kind' |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): red-dragon has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): red-dragon has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Ddod | /ddod/ | Ngneb | Ngneb → no change → Ddod |
+| `child` | one's son or daughter | Dod | /dod/ | Ngeg | Ngeg → no change → Dod |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): red-dragon has no exposure to 'closed-canopy' |
 | `coast` | where the land meets the sea | — | — | — | gap (experiential): red-dragon has no exposure to 'coast' |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): red-dragon has no exposure to 'cold' |
@@ -1154,23 +1154,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): red-dragon has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): red-dragon has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Djodddaak | /djodddaak/ | Bwogngnaap | Bwogngnaap → no change → Djodddaak |
+| `dark` | the color term for black/dark hues | Djoddoad | /djoddoad/ | Bwogngoab | Bwogngoab → no change → Djoddoad |
 | `day` | the light half of the day-night cycle | Djod | /djod/ | Djog | Djog → no change → Djod |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Shkaad | /ʃkaad/ | Shkaad | Shkaad → no change → Shkaad |
+| `die` | to cease living | Dsaad | /dsaad/ | Dsaad | Dsaad → no change → Dsaad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): red-dragon has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shdak | /ʃdak/ | Shgak | Shgak → no change → Shdak |
-| `earth` | the ground underfoot | Djodshdod | /djodʃdod/ | Gjedshged | Gjedshged → no change → Djodshdod |
-| `eat` | to consume food | Ddood | /ddood/ | Nngeed | Nngeed → no change → Ddood |
+| `drink` | to swallow liquid | Dsak | /dsak/ | Dsak | Dsak → no change → Dsak |
+| `earth` | the ground underfoot | Djodkshod | /djodkʃod/ | Gjedkshed | Gjedkshed → no change → Djodkshod |
+| `eat` | to consume food | Dood | /dood/ | Need | Need → no change → Dood |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): red-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): red-dragon has no exposure to 'erg' |
-| `eye` | the organ of sight | Ddoakddook | /ddoakddook/ | Mmoaknngoop | Mmoaknngoop → no change → Ddoakddook |
+| `eye` | the organ of sight | Daddad | /daddad/ | Madnad | Madnad → no change → Daddad |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): red-dragon has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Ddadsdok | /ddadsdok/ | Nmabsdek | Nmabsdek → no change → Ddadsdok |
+| `fire` | flame and heat | Doddok | /doddok/ | Nebmep | Nebmep → no change → Doddok |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): red-dragon has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): red-dragon has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Ddook | /ddook/ | Ngmoek | Ngmoek → no change → Ddook |
+| `foot` | the walking limb-end | Dok | /dok/ | Nop | Nop → no change → Dok |
 | `ford` | where a river runs shallow enough to cross | — | — | — | gap (experiential): red-dragon has no exposure to 'ford' |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): red-dragon has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): red-dragon has no exposure to 'frost-heave' |
@@ -1188,14 +1188,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): red-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): red-dragon has no exposure to 'god' |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): red-dragon has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Ddak | /ddak/ | Nnak | Nnak → no change → Ddak |
+| `great` | large in size or extent | Dokkjood | /dokkjood/ | Ngekpjood | Ngekpjood → no change → Dokkjood |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): red-dragon has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Skokdjood | /skokdjood/ | Spokgjood | Spokgjood → no change → Skokdjood |
+| `hand` | the manipulating limb-end | Dsokdjood | /dsokdjood/ | Bsokgjood | Bsokgjood → no change → Dsokdjood |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): red-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): red-dragon has no exposure to 'heat' |
-| `high` | far above the ground | Sdaok | /sdaok/ | Sbaep | Sbaep → no change → Sdaok |
+| `high` | far above the ground | Kshokdood | /kʃokdood/ | Pshokngood | Pshokngood → no change → Kshokdood |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): red-dragon has no exposure to 'hill' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): red-dragon has no exposure to 'hobgoblin-kind' |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): red-dragon has no exposure to 'holdfast-tangle' |
@@ -1210,47 +1210,47 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): red-dragon has no exposure to 'kobold-kind' |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): red-dragon has no exposure to 'lake' |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): red-dragon has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Ddoodddood | /ddoodddood/ | Ngngeobmngoeb | Ngngeobmngoeb → no change → Ddoodddood |
+| `light` | the color term for white/light hues | Daokkjak | /daokkjak/ | Ngaekkjak | Ngaekkjak → no change → Daokkjak |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): red-dragon has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Sdaakddok | /sdaakddok/ | Sdaakmngep | Sdaakmngep → no change → Sdaakddok |
-| `low` | near the ground | Ddaok | /ddaok/ | Mngaok | Mngaok → no change → Ddaok |
-| `many` | an indefinitely large count | Ddaod | /ddaod/ | Mnaeg | Mnaeg → no change → Ddaod |
+| `little` | small in size or extent | Kshaakdook | /kʃaakdook/ | Kshaakmoep | Kshaakmoep → no change → Kshaakdook |
+| `low` | near the ground | Daoddood | /daoddood/ | Ngaebmoeb | Ngaebmoeb → no change → Daoddood |
+| `many` | an indefinitely large count | Ksaad | /ksaad/ | Psaag | Psaag → no change → Ksaad |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): red-dragon has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): red-dragon has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): red-dragon has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'millet' |
-| `moon` | a moon | Sdok | /sdok/ | Sbep | Sbep → no change → Sdok |
+| `moon` | a moon | Dshok | /dʃok/ | Dshep | Dshep → no change → Dshok |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): red-dragon has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): red-dragon has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Djoak | /djoak/ | Gweak | Gweak → no change → Djoak |
-| `move` | to go from one place to another | Shkak | /ʃkak/ | Shpap | Shpap → no change → Shkak |
+| `move` | to go from one place to another | Doad | /doad/ | Mead | Mead → no change → Doad |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): red-dragon has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Ddok | /ddok/ | Nmok | Nmok → no change → Ddok |
-| `new` | recently come to be | Shkaak | /ʃkaak/ | Shpaak | Shpaak → no change → Shkaak |
-| `night` | the dark half of the day-night cycle | Shdod | /ʃdod/ | Shdeb | Shdeb → no change → Shdod |
+| `name` | a word that identifies one who bears it | Dook | /dook/ | Neok | Neok → no change → Dook |
+| `new` | recently come to be | Dshaak | /dʃaak/ | Gshaak | Gshaak → no change → Dshaak |
+| `night` | the dark half of the day-night cycle | Dad | /dad/ | Nad | Nad → no change → Dad |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): red-dragon has no exposure to 'nodule-field' |
 | `north` | the compass point opposite south | Djadkjoad | /djadkjoad/ | Bwadkweag | Bwadkweag → no change → Djadkjoad |
-| `old` | long in existence | Sdodshdood | /sdodʃdood/ | Sbobshgoog | Sbobshgoog → no change → Sdodshdood |
+| `old` | long in existence | Dsoddshood | /dsoddʃood/ | Dsobdshoog | Dsobdshoog → no change → Dsoddshood |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): red-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Djook | /djook/ | Dweep | Dweep → no change → Djook |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): red-dragon has no exposure to 'open-blue' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): red-dragon has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Ddoakddoak | /ddoakddoak/ | Nmeakngneak | Nmeakngneak → no change → Ddoakddoak |
+| `over` | above; atop | Djok | /djok/ | Bwek | Bwek → no change → Djok |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): red-dragon has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Sdad | /sdad/ | Sbad | Sbad → no change → Sdad |
-| `person` | a person; a member of a people (the autonym root) | Ddadshdood | /ddadʃdood/ | Nmabshdoed | Nmabshdoed → no change → Ddadshdood |
+| `parent` | one's father or mother | Kshad | /kʃad/ | Pshad | Pshad → no change → Kshad |
+| `person` | a person; a member of a people (the autonym root) | Ksok | /ksok/ | Ksep | Ksep → no change → Ksok |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): red-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): red-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): red-dragon has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): red-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'rain' |
-| `red` | the color term for red | Skad | /skad/ | Spag | Spag → no change → Skad |
-| `red-dragon-kind` | a red dragon | Djadddad | /djadddad/ | Bjabngmag | Bjabngmag → no change → Djadddad |
+| `red` | the color term for red | Ksad | /ksad/ | Psag | Psag → no change → Ksad |
+| `red-dragon-kind` | a red dragon | Djaddoad | /djaddoad/ | Bjabngoag | Bjabngoag → no change → Djaddoad |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): red-dragon has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Ddodshkad | /ddodʃkad/ | Mngodshkad | Mngodshkad → no change → Ddodshkad |
+| `rest` | to stop and recover strength | Dodkjoad | /dodkjoad/ | Mogpwead | Mogpwead → no change → Dodkjoad |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): red-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): red-dragon has no exposure to 'river' |
@@ -1262,23 +1262,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): red-dragon has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Ddaod | /ddaod/ | Ngngaed | Ngngaed → no change → Ddaod |
+| `shadow` | cast dark, distinct from open gloom | Dod | /dod/ | Ngod | Ngod → no change → Dod |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): red-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Shkaakshdod | /ʃkaakʃdod/ | Shkaakshgeb | Shkaakshgeb → no change → Shkaakshdod |
-| `sleep` | to rest unconscious | Shkoad | /ʃkoad/ | Shpoag | Shpoag → no change → Shkoad |
+| `sibling` | one's brother or sister | Ksaakdshod | /ksaakdʃod/ | Psaakdsheb | Psaakdsheb → no change → Ksaakdshod |
+| `sleep` | to rest unconscious | Kshoad | /kʃoad/ | Kshoag | Kshoag → no change → Kshoad |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): red-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): red-dragon has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Djok | /djok/ | Dwep | Dwep → no change → Djok |
+| `south` | the compass point opposite north | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): red-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): red-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): red-dragon has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): red-dragon has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Djookddaok | /djookddaok/ | Bwoepmmaep | Bwoepmmaep → no change → Djookddaok |
+| `star` | a fixed point of light in the night sky | Djookdoad | /djookdoad/ | Bwoepmoad | Bwoepmoad → no change → Djookdoad |
 | `starlit` | dark faintly lit by stars | Kjaddjood | /kjaddjood/ | Kwagdjoeb | Kwagdjoeb → no change → Kjaddjood |
-| `stone` | rock | Shkok | /ʃkok/ | Shpok | Shpok → no change → Shkok |
-| `sun` | the sun | Sdaod | /sdaod/ | Sgaed | Sgaed → no change → Sdaod |
+| `stone` | rock | Dshokdook | /dʃokdook/ | Gshepmoop | Gshepmoop → no change → Dshokdook |
+| `sun` | the sun | Dshaod | /dʃaod/ | Gshaed | Gshaed → no change → Dshaod |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -1296,14 +1296,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): red-dragon has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): red-dragon has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Kjodddok | /kjodddok/ | Kwebmngek | Kwebmngek → no change → Kjodddok |
-| `under` | beneath; below | Djoodkjaod | /djoodkjaod/ | Gjoebkjaob | Gjoebkjaob → no change → Djoodkjaod |
+| `two` | the cardinal number 2 | Kjoddaok | /kjoddaok/ | Kwebmaek | Kwebmaek → no change → Kjoddaok |
+| `under` | beneath; below | Kjook | /kjook/ | Kweok | Kweok → no change → Kjook |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): red-dragon has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): red-dragon has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): red-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'vine' |
-| `water` | the drinkable liquid | Ddodddoad | /ddodddoad/ | Mmodnnoag | Mmodnnoag → no change → Ddodddoad |
+| `water` | the drinkable liquid | Dokdad | /dokdad/ | Mopnab | Mopnab → no change → Dokdad |
 | `wheat` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'white-dragon-kind' |
 | `wind` | moving air | Kjok | /kjok/ | Kwok | Kwok → no change → Kjok |
@@ -1324,15 +1324,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'black-dragon-kind' |
-| `blood` | the circulating fluid of a body | Nnadnnaod | /nnadnnaod/ | Mmadmnaeb | Mmadmnaeb → no change → Nnadnnaod |
+| `blood` | the circulating fluid of a body | Noadnoad | /noadnoad/ | Meadmeab | Meadmeab → no change → Noadnoad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
-| `bone` | the rigid frame of a body | Nnaadnngod | /nnaadnŋod/ | Nnaadmngod | Nnaadmngod → no change → Nnaadnngod |
+| `bone` | the rigid frame of a body | Nodngook | /nodŋook/ | Negngeok | Negngeok → no change → Nodngook |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): white-dragon has no exposure to 'boreal-stand' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): white-dragon has no exposure to 'bugbear-kind' |
 | `burn` | Ground recovering from fire. | — | — | — | gap (experiential): white-dragon has no exposure to 'burn' |
 | `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): white-dragon has no exposure to 'carrion-crawler-kind' |
-| `child` | one's son or daughter | Ngnod | /ŋnod/ | Ngneb | Ngneb → no change → Ngnod |
+| `child` | one's son or daughter | Ngod | /ŋod/ | Ngeg | Ngeg → no change → Ngod |
 | `closed-canopy` | Tall closed-canopy tropical forest. | — | — | — | gap (experiential): white-dragon has no exposure to 'closed-canopy' |
 | `coast` | where the land meets the sea | — | — | — | gap (experiential): white-dragon has no exposure to 'coast' |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): white-dragon has no exposure to 'cold' |
@@ -1341,23 +1341,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `crevasse-field` | Ice split by crevasses. | — | — | — | gap (experiential): white-dragon has no exposure to 'crevasse-field' |
 | `damp-hollow` | A shaded, wet fold in the forest floor. | — | — | — | gap (experiential): white-dragon has no exposure to 'damp-hollow' |
-| `dark` | the color term for black/dark hues | Ddodngnaak | /ddodŋnaak/ | Bwogngnaap | Bwogngnaap → no change → Ddodngnaak |
+| `dark` | the color term for black/dark hues | Ddodngoad | /ddodŋoad/ | Bwogngoab | Bwogngoab → no change → Ddodngoad |
 | `day` | the light half of the day-night cycle | Dzhod | /dʒod/ | Djog | Djog → no change → Dzhod |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Shkaad | /ʃkaad/ | Shkaad | Shkaad → no change → Shkaad |
+| `die` | to cease living | Dsaad | /dsaad/ | Dsaad | Dsaad → no change → Dsaad |
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): white-dragon has no exposure to 'dire-wolf-kind' |
-| `drink` | to swallow liquid | Shdak | /ʃdak/ | Shgak | Shgak → no change → Shdak |
-| `earth` | the ground underfoot | Dzhodshdod | /dʒodʃdod/ | Gjedshged | Gjedshged → no change → Dzhodshdod |
-| `eat` | to consume food | Nngood | /nŋood/ | Nngeed | Nngeed → no change → Nngood |
+| `drink` | to swallow liquid | Dsak | /dsak/ | Dsak | Dsak → no change → Dsak |
+| `earth` | the ground underfoot | Dzhodkshod | /dʒodkʃod/ | Gjedkshed | Gjedkshed → no change → Dzhodkshod |
+| `eat` | to consume food | Nood | /nood/ | Need | Need → no change → Nood |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): white-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `erg` | A sand sea of dunes. | — | — | — | gap (experiential): white-dragon has no exposure to 'erg' |
-| `eye` | the organ of sight | Nnoaknngook | /nnoaknŋook/ | Mmoaknngoop | Mmoaknngoop → no change → Nnoaknngook |
+| `eye` | the organ of sight | Nadnad | /nadnad/ | Madnad | Madnad → no change → Nadnad |
 | `felsenmeer` | A field of frost-shattered boulders. | — | — | — | gap (experiential): white-dragon has no exposure to 'felsenmeer' |
-| `fire` | flame and heat | Nnadsdok | /nnadsdok/ | Nmabsdek | Nmabsdek → no change → Nnadsdok |
+| `fire` | flame and heat | Nodnok | /nodnok/ | Nebmep | Nebmep → no change → Nodnok |
 | `fire-scrub` | Scrub regrowing after fire. | — | — | — | gap (experiential): white-dragon has no exposure to 'fire-scrub' |
 | `fish-shoal` | A shoal moving as one body. | — | — | — | gap (experiential): white-dragon has no exposure to 'fish-shoal' |
-| `foot` | the walking limb-end | Ngnook | /ŋnook/ | Ngmoek | Ngmoek → no change → Ngnook |
+| `foot` | the walking limb-end | Nok | /nok/ | Nop | Nop → no change → Nok |
 | `ford` | where a river runs shallow enough to cross | — | — | — | gap (experiential): white-dragon has no exposure to 'ford' |
 | `forest-gap` | A break in the canopy where light reaches the ground. | — | — | — | gap (experiential): white-dragon has no exposure to 'forest-gap' |
 | `frost-heave` | Ground churned and patterned by freezing. | — | — | — | gap (experiential): white-dragon has no exposure to 'frost-heave' |
@@ -1375,14 +1375,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): white-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): white-dragon has no exposure to 'god' |
 | `grass-sward` | Open grassland, unbroken by trees. | — | — | — | gap (experiential): white-dragon has no exposure to 'grass-sward' |
-| `great` | large in size or extent | Nnak | /nnak/ | Nnak | Nnak → no change → Nnak |
+| `great` | large in size or extent | Ngokkzhood | /ŋokkʒood/ | Ngekpjood | Ngekpjood → no change → Ngokkzhood |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hamada` | A stony desert pavement of bare rock. | — | — | — | gap (experiential): white-dragon has no exposure to 'hamada' |
-| `hand` | the manipulating limb-end | Skokdzhood | /skokdʒood/ | Spokgjood | Spokgjood → no change → Skokdzhood |
+| `hand` | the manipulating limb-end | Dsokdzhood | /dsokdʒood/ | Bsokgjood | Bsokgjood → no change → Dsokdzhood |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): white-dragon has no exposure to 'hearth' |
 | `heat` | felt, oppressive warmth | — | — | — | gap (experiential): white-dragon has no exposure to 'heat' |
-| `high` | far above the ground | Sdaok | /sdaok/ | Sbaep | Sbaep → no change → Sdaok |
+| `high` | far above the ground | Kshokngood | /kʃokŋood/ | Pshokngood | Pshokngood → no change → Kshokngood |
 | `hill` | ground that rises above what surrounds it | — | — | — | gap (experiential): white-dragon has no exposure to 'hill' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): white-dragon has no exposure to 'hobgoblin-kind' |
 | `holdfast-tangle` | The anchored base of a kelp forest. | — | — | — | gap (experiential): white-dragon has no exposure to 'holdfast-tangle' |
@@ -1397,47 +1397,47 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): white-dragon has no exposure to 'kobold-kind' |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): white-dragon has no exposure to 'lake' |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): white-dragon has no exposure to 'liana-forest' |
-| `light` | the color term for white/light hues | Ngngoodnngood | /ŋŋoodnŋood/ | Ngngeobmngoeb | Ngngeobmngoeb → no change → Ngngoodnngood |
+| `light` | the color term for white/light hues | Ngaokkzhak | /ŋaokkʒak/ | Ngaekkjak | Ngaekkjak → no change → Ngaokkzhak |
 | `lightless-water` | Water below all light. | — | — | — | gap (experiential): white-dragon has no exposure to 'lightless-water' |
-| `little` | small in size or extent | Sdaaknngok | /sdaaknŋok/ | Sdaakmngep | Sdaakmngep → no change → Sdaaknngok |
-| `low` | near the ground | Nngaok | /nŋaok/ | Mngaok | Mngaok → no change → Nngaok |
-| `many` | an indefinitely large count | Nnaod | /nnaod/ | Mnaeg | Mnaeg → no change → Nnaod |
+| `little` | small in size or extent | Kshaaknook | /kʃaaknook/ | Kshaakmoep | Kshaakmoep → no change → Kshaaknook |
+| `low` | near the ground | Ngaodnood | /ŋaodnood/ | Ngaebmoeb | Ngaebmoeb → no change → Ngaodnood |
+| `many` | an indefinitely large count | Ksaad | /ksaad/ | Psaag | Psaag → no change → Ksaad |
 | `marine-snow` | Organic debris drifting endlessly down. | — | — | — | gap (experiential): white-dragon has no exposure to 'marine-snow' |
 | `marsh` | soft wet ground | — | — | — | gap (experiential): white-dragon has no exposure to 'marsh' |
 | `melt-pond` | A pool of meltwater on sea ice. | — | — | — | gap (experiential): white-dragon has no exposure to 'melt-pond' |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `millet` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'millet' |
-| `moon` | a moon | Sdok | /sdok/ | Sbep | Sbep → no change → Sdok |
+| `moon` | a moon | Dshok | /dʃok/ | Dshep | Dshep → no change → Dshok |
 | `mossy-deadfall` | Fallen timber going back to moss and lichen. | — | — | — | gap (experiential): white-dragon has no exposure to 'mossy-deadfall' |
 | `mountain` | high ground | — | — | — | gap (experiential): white-dragon has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Ddoak | /ddoak/ | Gweak | Gweak → no change → Ddoak |
-| `move` | to go from one place to another | Shkak | /ʃkak/ | Shpap | Shpap → no change → Shkak |
+| `move` | to go from one place to another | Noad | /noad/ | Mead | Mead → no change → Noad |
 | `muskeg` | Waterlogged peat ground in the boreal forest. | — | — | — | gap (experiential): white-dragon has no exposure to 'muskeg' |
-| `name` | a word that identifies one who bears it | Nnok | /nnok/ | Nmok | Nmok → no change → Nnok |
-| `new` | recently come to be | Shkaak | /ʃkaak/ | Shpaak | Shpaak → no change → Shkaak |
-| `night` | the dark half of the day-night cycle | Shdod | /ʃdod/ | Shdeb | Shdeb → no change → Shdod |
+| `name` | a word that identifies one who bears it | Nook | /nook/ | Neok | Neok → no change → Nook |
+| `new` | recently come to be | Dshaak | /dʃaak/ | Gshaak | Gshaak → no change → Dshaak |
+| `night` | the dark half of the day-night cycle | Nad | /nad/ | Nad | Nad → no change → Nad |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): white-dragon has no exposure to 'nodule-field' |
 | `north` | the compass point opposite south | Ddadkdoad | /ddadkdoad/ | Bwadkweag | Bwadkweag → no change → Ddadkdoad |
-| `old` | long in existence | Sdodshdood | /sdodʃdood/ | Sbobshgoog | Sbobshgoog → no change → Sdodshdood |
+| `old` | long in existence | Dsoddshood | /dsoddʃood/ | Dsobdshoog | Dsobdshoog → no change → Dsoddshood |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): white-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Ddook | /ddook/ | Dweep | Dweep → no change → Ddook |
 | `open-blue` | Open sunlit water, far from any shore. | — | — | — | gap (experiential): white-dragon has no exposure to 'open-blue' |
 | `otyugh-kind` | an otyugh | — | — | — | gap (experiential): white-dragon has no exposure to 'otyugh-kind' |
-| `over` | above; atop | Nnoakngnoak | /nnoakŋnoak/ | Nmeakngneak | Nmeakngneak → no change → Nnoakngnoak |
+| `over` | above; atop | Ddok | /ddok/ | Bwek | Bwek → no change → Ddok |
 | `owlbear-kind` | an owlbear | — | — | — | gap (experiential): white-dragon has no exposure to 'owlbear-kind' |
-| `parent` | one's father or mother | Sdad | /sdad/ | Sbad | Sbad → no change → Sdad |
-| `person` | a person; a member of a people (the autonym root) | Nnadshdood | /nnadʃdood/ | Nmabshdoed | Nmabshdoed → no change → Nnadshdood |
+| `parent` | one's father or mother | Kshad | /kʃad/ | Pshad | Pshad → no change → Kshad |
+| `person` | a person; a member of a people (the autonym root) | Ksok | /ksok/ | Ksep | Ksep → no change → Ksok |
 | `plankton-bloom` | Water thick with plankton. | — | — | — | gap (experiential): white-dragon has no exposure to 'plankton-bloom' |
 | `playa` | A dry lake bed of salt and cracked clay. | — | — | — | gap (experiential): white-dragon has no exposure to 'playa' |
 | `pressure-ridge` | Sea ice buckled into a ridge. | — | — | — | gap (experiential): white-dragon has no exposure to 'pressure-ridge' |
 | `rafted-floe` | Ice floes driven over one another. | — | — | — | gap (experiential): white-dragon has no exposure to 'rafted-floe' |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'rain' |
-| `red` | the color term for red | Skad | /skad/ | Spag | Spag → no change → Skad |
+| `red` | the color term for red | Ksad | /ksad/ | Psag | Psag → no change → Ksad |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'red-dragon-kind' |
 | `reef-rubble` | Broken coral debris behind a reef. | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-rubble' |
 | `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-shark-kind' |
 | `reg` | A desert floor of wind-swept gravel. | — | — | — | gap (experiential): white-dragon has no exposure to 'reg' |
-| `rest` | to stop and recover strength | Nngodshkad | /nŋodʃkad/ | Mngodshkad | Mngodshkad → no change → Nngodshkad |
+| `rest` | to stop and recover strength | Nodkdoad | /nodkdoad/ | Mogpwead | Mogpwead → no change → Nodkdoad |
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): white-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): white-dragon has no exposure to 'river' |
@@ -1449,23 +1449,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `scoured-ice` | Ice swept bare and carved by wind. | — | — | — | gap (experiential): white-dragon has no exposure to 'scoured-ice' |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Ngngaod | /ŋŋaod/ | Ngngaed | Ngngaed → no change → Ngngaod |
+| `shadow` | cast dark, distinct from open gloom | Ngod | /ŋod/ | Ngod | Ngod → no change → Ngod |
 | `shrieker-kind` | a shrieker | — | — | — | gap (experiential): white-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Shkaakshdod | /ʃkaakʃdod/ | Shkaakshgeb | Shkaakshgeb → no change → Shkaakshdod |
-| `sleep` | to rest unconscious | Shkoad | /ʃkoad/ | Shpoag | Shpoag → no change → Shkoad |
+| `sibling` | one's brother or sister | Ksaakdshod | /ksaakdʃod/ | Psaakdsheb | Psaakdsheb → no change → Ksaakdshod |
+| `sleep` | to rest unconscious | Kshoad | /kʃoad/ | Kshoag | Kshoag → no change → Kshoad |
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): white-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): white-dragon has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Ddok | /ddok/ | Dwep | Dwep → no change → Ddok |
+| `south` | the compass point opposite north | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): white-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): white-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): white-dragon has no exposure to 'spur-and-groove' |
 | `staghorn-stand` | A thicket of branching coral. | — | — | — | gap (experiential): white-dragon has no exposure to 'staghorn-stand' |
-| `star` | a fixed point of light in the night sky | Ddooknnaok | /ddooknnaok/ | Bwoepmmaep | Bwoepmmaep → no change → Ddooknnaok |
+| `star` | a fixed point of light in the night sky | Ddooknoad | /ddooknoad/ | Bwoepmoad | Bwoepmoad → no change → Ddooknoad |
 | `starlit` | dark faintly lit by stars | Kdaddzhood | /kdaddʒood/ | Kwagdjoeb | Kwagdjoeb → no change → Kdaddzhood |
-| `stone` | rock | Shkok | /ʃkok/ | Shpok | Shpok → no change → Shkok |
-| `sun` | the sun | Sdaod | /sdaod/ | Sgaed | Sgaed → no change → Sdaod |
+| `stone` | rock | Dshoknook | /dʃoknook/ | Gshepmoop | Gshepmoop → no change → Dshoknook |
+| `sun` | the sun | Dshaod | /dʃaod/ | Gshaed | Gshaed → no change → Dshaod |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
@@ -1483,16 +1483,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): white-dragon has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): white-dragon has no exposure to 'twilight-water' |
-| `two` | the cardinal number 2 | Kdodnngok | /kdodnŋok/ | Kwebmngek | Kwebmngek → no change → Kdodnngok |
-| `under` | beneath; below | Dzhoodkzhaod | /dʒoodkʒaod/ | Gjoebkjaob | Gjoebkjaob → no change → Dzhoodkzhaod |
+| `two` | the cardinal number 2 | Kdodnaok | /kdodnaok/ | Kwebmaek | Kwebmaek → no change → Kdodnaok |
+| `under` | beneath; below | Kdook | /kdook/ | Kweok | Kweok → no change → Kdook |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `urchin-barren` | Seabed grazed bare of kelp. | — | — | — | gap (experiential): white-dragon has no exposure to 'urchin-barren' |
 | `valley` | low ground between heights | — | — | — | gap (experiential): white-dragon has no exposure to 'valley' |
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): white-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'vine' |
-| `water` | the drinkable liquid | Nnodnnoad | /nnodnnoad/ | Mmodnnoag | Mmodnnoag → no change → Nnodnnoad |
+| `water` | the drinkable liquid | Noknad | /noknad/ | Mopnab | Mopnab → no change → Noknad |
 | `wheat` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'wheat' |
-| `white-dragon-kind` | a white dragon | Nnoodsdak | /nnoodsdak/ | Nmeegsdak | Nmeegsdak → no change → Nnoodsdak |
+| `white-dragon-kind` | a white dragon | Nookdzhoak | /nookdʒoak/ | Noekdjeak | Noekdjeak → no change → Nookdzhoak |
 | `wind` | moving air | Kdok | /kdok/ | Kwok | Kwok → no change → Kdok |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): white-dragon has no exposure to 'wind-scour' |
 | `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): white-dragon has no exposure to 'wooded-grassland' |
@@ -1508,52 +1508,52 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 
 | Concept | Gloss | Proto | Black-dragon | Red-dragon | White-dragon | Descent |
 |---|---|---|---|---|---|---|
-| `blood` | the circulating fluid of a body | *Mmadmnaeb /mmadmnaeb/ | Ddadddaod /ddadddaod/ | Ddadddaod /ddadddaod/ | Nnadnnaod /nnadnnaod/ | *Mmadmnaeb → Ddadddaod / Ddadddaod / Nnadnnaod |
-| `bone` | the rigid frame of a body | *Nnaadmngod /nnaadmŋod/ | Ddaaddgod /ddaaddgod/ | Ddaadddod /ddaadddod/ | Nnaadnngod /nnaadnŋod/ | *Nnaadmngod → Ddaaddgod / Ddaadddod / Nnaadnngod |
-| `child` | one's son or daughter | *Ngneb /ŋneb/ | Gdod /gdod/ | Ddod /ddod/ | Ngnod /ŋnod/ | *Ngneb → Gdod / Ddod / Ngnod |
-| `dark` | the color term for black/dark hues | *Bwogngnaap /bwogŋnaap/ | Ddoggdaad /ddoggdaad/ | Djodddaak /djodddaak/ | Ddodngnaak /ddodŋnaak/ | *Bwogngnaap → Ddoggdaad / Djodddaak / Ddodngnaak |
+| `blood` | the circulating fluid of a body | *Meadmeab /meadmeab/ | Doaddoad /doaddoad/ | Doaddoad /doaddoad/ | Noadnoad /noadnoad/ | *Meadmeab → Doaddoad / Doaddoad / Noadnoad |
+| `bone` | the rigid frame of a body | *Negngeok /negŋeok/ | Doggoog /doggoog/ | Doddook /doddook/ | Nodngook /nodŋook/ | *Negngeok → Doggoog / Doddook / Nodngook |
+| `child` | one's son or daughter | *Ngeg /ŋeg/ | Gog /gog/ | Dod /dod/ | Ngod /ŋod/ | *Ngeg → Gog / Dod / Ngod |
+| `dark` | the color term for black/dark hues | *Bwogngoab /bwogŋoab/ | Ddoggoad /ddoggoad/ | Djoddoad /djoddoad/ | Ddodngoad /ddodŋoad/ | *Bwogngoab → Ddoggoad / Djoddoad / Ddodngoad |
 | `day` | the light half of the day-night cycle | *Djog /djog/ | Dzhog /dʒog/ | Djod /djod/ | Dzhod /dʒod/ | *Djog → Dzhog / Djod / Dzhod |
-| `die` | to cease living | *Shkaad /ʃkaad/ | Shgaad /ʃgaad/ | Shkaad /ʃkaad/ | Shkaad /ʃkaad/ | *Shkaad → Shgaad / Shkaad / Shkaad |
-| `drink` | to swallow liquid | *Shgak /ʃgak/ | Shgag /ʃgag/ | Shdak /ʃdak/ | Shdak /ʃdak/ | *Shgak → Shgag / Shdak / Shdak |
-| `earth` | the ground underfoot | *Gjedshged /gjedʃged/ | Gzhodshgod /gʒodʃgod/ | Djodshdod /djodʃdod/ | Dzhodshdod /dʒodʃdod/ | *Gjedshged → Gzhodshgod / Djodshdod / Dzhodshdod |
-| `eat` | to consume food | *Nngeed /nŋeed/ | Dgood /dgood/ | Ddood /ddood/ | Nngood /nŋood/ | *Nngeed → Dgood / Ddood / Nngood |
-| `eye` | the organ of sight | *Mmoaknngoop /mmoaknŋoop/ | Ddoagdgood /ddoagdgood/ | Ddoakddook /ddoakddook/ | Nnoaknngook /nnoaknŋook/ | *Mmoaknngoop → Ddoagdgood / Ddoakddook / Nnoaknngook |
-| `fire` | flame and heat | *Nmabsdek /nmabsdek/ | Ddadsdog /ddadsdog/ | Ddadsdok /ddadsdok/ | Nnadsdok /nnadsdok/ | *Nmabsdek → Ddadsdog / Ddadsdok / Nnadsdok |
-| `foot` | the walking limb-end | *Ngmoek /ŋmoek/ | Gdoog /gdoog/ | Ddook /ddook/ | Ngnook /ŋnook/ | *Ngmoek → Gdoog / Ddook / Ngnook |
+| `die` | to cease living | *Dsaad /dsaad/ | Dsaad /dsaad/ | Dsaad /dsaad/ | Dsaad /dsaad/ | *Dsaad → Dsaad / Dsaad / Dsaad |
+| `drink` | to swallow liquid | *Dsak /dsak/ | Dsag /dsag/ | Dsak /dsak/ | Dsak /dsak/ | *Dsak → Dsag / Dsak / Dsak |
+| `earth` | the ground underfoot | *Gjedkshed /gjedkʃed/ | Gzhodgshod /gʒodgʃod/ | Djodkshod /djodkʃod/ | Dzhodkshod /dʒodkʃod/ | *Gjedkshed → Gzhodgshod / Djodkshod / Dzhodkshod |
+| `eat` | to consume food | *Need /need/ | Dood /dood/ | Dood /dood/ | Nood /nood/ | *Need → Dood / Dood / Nood |
+| `eye` | the organ of sight | *Madnad /madnad/ | Daddad /daddad/ | Daddad /daddad/ | Nadnad /nadnad/ | *Madnad → Daddad / Daddad / Nadnad |
+| `fire` | flame and heat | *Nebmep /nebmep/ | Doddod /doddod/ | Doddok /doddok/ | Nodnok /nodnok/ | *Nebmep → Doddod / Doddok / Nodnok |
+| `foot` | the walking limb-end | *Nop /nop/ | Dod /dod/ | Dok /dok/ | Nok /nok/ | *Nop → Dod / Dok / Nok |
 | `gloom` | the deepest, starless dark | *Gwedbweg /gwedbweg/ | Gdodddog /gdodddog/ | Djoddjod /djoddjod/ | Ddodddod /ddodddod/ | *Gwedbweg → Gdodddog / Djoddjod / Ddodddod |
-| `great` | large in size or extent | *Nnak /nnak/ | Ddag /ddag/ | Ddak /ddak/ | Nnak /nnak/ | *Nnak → Ddag / Ddak / Nnak |
-| `hand` | the manipulating limb-end | *Spokgjood /spokgjood/ | Sdoggzhood /sdoggʒood/ | Skokdjood /skokdjood/ | Skokdzhood /skokdʒood/ | *Spokgjood → Sdoggzhood / Skokdjood / Skokdzhood |
-| `high` | far above the ground | *Sbaep /sbaep/ | Sdaod /sdaod/ | Sdaok /sdaok/ | Sdaok /sdaok/ | *Sbaep → Sdaod / Sdaok / Sdaok |
-| `light` | the color term for white/light hues | *Ngngeobmngoeb /ŋŋeobmŋoeb/ | Ggooddgood /ggooddgood/ | Ddoodddood /ddoodddood/ | Ngngoodnngood /ŋŋoodnŋood/ | *Ngngeobmngoeb → Ggooddgood / Ddoodddood / Ngngoodnngood |
-| `little` | small in size or extent | *Sdaakmngep /sdaakmŋep/ | Sdaagdgod /sdaagdgod/ | Sdaakddok /sdaakddok/ | Sdaaknngok /sdaaknŋok/ | *Sdaakmngep → Sdaagdgod / Sdaakddok / Sdaaknngok |
-| `low` | near the ground | *Mngaok /mŋaok/ | Dgaog /dgaog/ | Ddaok /ddaok/ | Nngaok /nŋaok/ | *Mngaok → Dgaog / Ddaok / Nngaok |
-| `many` | an indefinitely large count | *Mnaeg /mnaeg/ | Ddaog /ddaog/ | Ddaod /ddaod/ | Nnaod /nnaod/ | *Mnaeg → Ddaog / Ddaod / Nnaod |
-| `moon` | a moon | *Sbep /sbep/ | Sdod /sdod/ | Sdok /sdok/ | Sdok /sdok/ | *Sbep → Sdod / Sdok / Sdok |
+| `great` | large in size or extent | *Ngekpjood /ŋekpjood/ | Gogdzhood /gogdʒood/ | Dokkjood /dokkjood/ | Ngokkzhood /ŋokkʒood/ | *Ngekpjood → Gogdzhood / Dokkjood / Ngokkzhood |
+| `hand` | the manipulating limb-end | *Bsokgjood /bsokgjood/ | Dsoggzhood /dsoggʒood/ | Dsokdjood /dsokdjood/ | Dsokdzhood /dsokdʒood/ | *Bsokgjood → Dsoggzhood / Dsokdjood / Dsokdzhood |
+| `high` | far above the ground | *Pshokngood /pʃokŋood/ | Dshoggood /dʃoggood/ | Kshokdood /kʃokdood/ | Kshokngood /kʃokŋood/ | *Pshokngood → Dshoggood / Kshokdood / Kshokngood |
+| `light` | the color term for white/light hues | *Ngaekkjak /ŋaekkjak/ | Gaoggzhag /gaoggʒag/ | Daokkjak /daokkjak/ | Ngaokkzhak /ŋaokkʒak/ | *Ngaekkjak → Gaoggzhag / Daokkjak / Ngaokkzhak |
+| `little` | small in size or extent | *Kshaakmoep /kʃaakmoep/ | Gshaagdood /gʃaagdood/ | Kshaakdook /kʃaakdook/ | Kshaaknook /kʃaaknook/ | *Kshaakmoep → Gshaagdood / Kshaakdook / Kshaaknook |
+| `low` | near the ground | *Ngaebmoeb /ŋaebmoeb/ | Gaoddood /gaoddood/ | Daoddood /daoddood/ | Ngaodnood /ŋaodnood/ | *Ngaebmoeb → Gaoddood / Daoddood / Ngaodnood |
+| `many` | an indefinitely large count | *Psaag /psaag/ | Dsaag /dsaag/ | Ksaad /ksaad/ | Ksaad /ksaad/ | *Psaag → Dsaag / Ksaad / Ksaad |
+| `moon` | a moon | *Dshep /dʃep/ | Dshod /dʃod/ | Dshok /dʃok/ | Dshok /dʃok/ | *Dshep → Dshod / Dshok / Dshok |
 | `mouth` | the organ of eating and speech | *Gweak /gweak/ | Gdoag /gdoag/ | Djoak /djoak/ | Ddoak /ddoak/ | *Gweak → Gdoag / Djoak / Ddoak |
-| `move` | to go from one place to another | *Shpap /ʃpap/ | Shdad /ʃdad/ | Shkak /ʃkak/ | Shkak /ʃkak/ | *Shpap → Shdad / Shkak / Shkak |
-| `name` | a word that identifies one who bears it | *Nmok /nmok/ | Ddog /ddog/ | Ddok /ddok/ | Nnok /nnok/ | *Nmok → Ddog / Ddok / Nnok |
-| `new` | recently come to be | *Shpaak /ʃpaak/ | Shdaag /ʃdaag/ | Shkaak /ʃkaak/ | Shkaak /ʃkaak/ | *Shpaak → Shdaag / Shkaak / Shkaak |
-| `night` | the dark half of the day-night cycle | *Shdeb /ʃdeb/ | Shdod /ʃdod/ | Shdod /ʃdod/ | Shdod /ʃdod/ | *Shdeb → Shdod / Shdod / Shdod |
+| `move` | to go from one place to another | *Mead /mead/ | Doad /doad/ | Doad /doad/ | Noad /noad/ | *Mead → Doad / Doad / Noad |
+| `name` | a word that identifies one who bears it | *Neok /neok/ | Doog /doog/ | Dook /dook/ | Nook /nook/ | *Neok → Doog / Dook / Nook |
+| `new` | recently come to be | *Gshaak /gʃaak/ | Gshaag /gʃaag/ | Dshaak /dʃaak/ | Dshaak /dʃaak/ | *Gshaak → Gshaag / Dshaak / Dshaak |
+| `night` | the dark half of the day-night cycle | *Nad /nad/ | Dad /dad/ | Dad /dad/ | Nad /nad/ | *Nad → Dad / Dad / Nad |
 | `north` | the compass point opposite south | *Bwadkweag /bwadkweag/ | Ddadgdoag /ddadgdoag/ | Djadkjoad /djadkjoad/ | Ddadkdoad /ddadkdoad/ | *Bwadkweag → Ddadgdoag / Djadkjoad / Ddadkdoad |
-| `old` | long in existence | *Sbobshgoog /sbobʃgoog/ | Sdodshgoog /sdodʃgoog/ | Sdodshdood /sdodʃdood/ | Sdodshdood /sdodʃdood/ | *Sbobshgoog → Sdodshgoog / Sdodshdood / Sdodshdood |
+| `old` | long in existence | *Dsobdshoog /dsobdʃoog/ | Dsoddshoog /dsoddʃoog/ | Dsoddshood /dsoddʃood/ | Dsoddshood /dsoddʃood/ | *Dsobdshoog → Dsoddshoog / Dsoddshood / Dsoddshood |
 | `one` | the cardinal number 1 | *Dweep /dweep/ | Ddood /ddood/ | Djook /djook/ | Ddook /ddook/ | *Dweep → Ddood / Djook / Ddook |
-| `over` | above; atop | *Nmeakngneak /nmeakŋneak/ | Ddoaggdoag /ddoaggdoag/ | Ddoakddoak /ddoakddoak/ | Nnoakngnoak /nnoakŋnoak/ | *Nmeakngneak → Ddoaggdoag / Ddoakddoak / Nnoakngnoak |
-| `parent` | one's father or mother | *Sbad /sbad/ | Sdad /sdad/ | Sdad /sdad/ | Sdad /sdad/ | *Sbad → Sdad / Sdad / Sdad |
-| `person` | a person; a member of a people (the autonym root) | *Nmabshdoed /nmabʃdoed/ | Ddadshdood /ddadʃdood/ | Ddadshdood /ddadʃdood/ | Nnadshdood /nnadʃdood/ | *Nmabshdoed → Ddadshdood / Ddadshdood / Nnadshdood |
-| `red` | the color term for red | *Spag /spag/ | Sdag /sdag/ | Skad /skad/ | Skad /skad/ | *Spag → Sdag / Skad / Skad |
-| `rest` | to stop and recover strength | *Mngodshkad /mŋodʃkad/ | Dgodshgad /dgodʃgad/ | Ddodshkad /ddodʃkad/ | Nngodshkad /nŋodʃkad/ | *Mngodshkad → Dgodshgad / Ddodshkad / Nngodshkad |
-| `shadow` | cast dark, distinct from open gloom | *Ngngaed /ŋŋaed/ | Ggaod /ggaod/ | Ddaod /ddaod/ | Ngngaod /ŋŋaod/ | *Ngngaed → Ggaod / Ddaod / Ngngaod |
-| `sibling` | one's brother or sister | *Shkaakshgeb /ʃkaakʃgeb/ | Shgaagshgod /ʃgaagʃgod/ | Shkaakshdod /ʃkaakʃdod/ | Shkaakshdod /ʃkaakʃdod/ | *Shkaakshgeb → Shgaagshgod / Shkaakshdod / Shkaakshdod |
-| `sleep` | to rest unconscious | *Shpoag /ʃpoag/ | Shdoag /ʃdoag/ | Shkoad /ʃkoad/ | Shkoad /ʃkoad/ | *Shpoag → Shdoag / Shkoad / Shkoad |
-| `south` | the compass point opposite north | *Dwep /dwep/ | Ddod /ddod/ | Djok /djok/ | Ddok /ddok/ | *Dwep → Ddod / Djok / Ddok |
-| `star` | a fixed point of light in the night sky | *Bwoepmmaep /bwoepmmaep/ | Ddoodddaod /ddoodddaod/ | Djookddaok /djookddaok/ | Ddooknnaok /ddooknnaok/ | *Bwoepmmaep → Ddoodddaod / Djookddaok / Ddooknnaok |
+| `over` | above; atop | *Bwek /bwek/ | Ddog /ddog/ | Djok /djok/ | Ddok /ddok/ | *Bwek → Ddog / Djok / Ddok |
+| `parent` | one's father or mother | *Pshad /pʃad/ | Dshad /dʃad/ | Kshad /kʃad/ | Kshad /kʃad/ | *Pshad → Dshad / Kshad / Kshad |
+| `person` | a person; a member of a people (the autonym root) | *Ksep /ksep/ | Gsod /gsod/ | Ksok /ksok/ | Ksok /ksok/ | *Ksep → Gsod / Ksok / Ksok |
+| `red` | the color term for red | *Psag /psag/ | Dsag /dsag/ | Ksad /ksad/ | Ksad /ksad/ | *Psag → Dsag / Ksad / Ksad |
+| `rest` | to stop and recover strength | *Mogpwead /mogpwead/ | Dogddoad /dogddoad/ | Dodkjoad /dodkjoad/ | Nodkdoad /nodkdoad/ | *Mogpwead → Dogddoad / Dodkjoad / Nodkdoad |
+| `shadow` | cast dark, distinct from open gloom | *Ngod /ŋod/ | God /god/ | Dod /dod/ | Ngod /ŋod/ | *Ngod → God / Dod / Ngod |
+| `sibling` | one's brother or sister | *Psaakdsheb /psaakdʃeb/ | Dsaagdshod /dsaagdʃod/ | Ksaakdshod /ksaakdʃod/ | Ksaakdshod /ksaakdʃod/ | *Psaakdsheb → Dsaagdshod / Ksaakdshod / Ksaakdshod |
+| `sleep` | to rest unconscious | *Kshoag /kʃoag/ | Gshoag /gʃoag/ | Kshoad /kʃoad/ | Kshoad /kʃoad/ | *Kshoag → Gshoag / Kshoad / Kshoad |
+| `south` | the compass point opposite north | *Gshegksap /gʃegksap/ | Gshoggsad /gʃoggsad/ | Dshodksak /dʃodksak/ | Dshodksak /dʃodksak/ | *Gshegksap → Gshoggsad / Dshodksak / Dshodksak |
+| `star` | a fixed point of light in the night sky | *Bwoepmoad /bwoepmoad/ | Ddooddoad /ddooddoad/ | Djookdoad /djookdoad/ | Ddooknoad /ddooknoad/ | *Bwoepmoad → Ddooddoad / Djookdoad / Ddooknoad |
 | `starlit` | dark faintly lit by stars | *Kwagdjoeb /kwagdjoeb/ | Gdagdzhood /gdagdʒood/ | Kjaddjood /kjaddjood/ | Kdaddzhood /kdaddʒood/ | *Kwagdjoeb → Gdagdzhood / Kjaddjood / Kdaddzhood |
-| `stone` | rock | *Shpok /ʃpok/ | Shdog /ʃdog/ | Shkok /ʃkok/ | Shkok /ʃkok/ | *Shpok → Shdog / Shkok / Shkok |
-| `sun` | the sun | *Sgaed /sgaed/ | Sgaod /sgaod/ | Sdaod /sdaod/ | Sdaod /sdaod/ | *Sgaed → Sgaod / Sdaod / Sdaod |
+| `stone` | rock | *Gshepmoop /gʃepmoop/ | Gshoddood /gʃoddood/ | Dshokdook /dʃokdook/ | Dshoknook /dʃoknook/ | *Gshepmoop → Gshoddood / Dshokdook / Dshoknook |
+| `sun` | the sun | *Gshaed /gʃaed/ | Gshaod /gʃaod/ | Dshaod /dʃaod/ | Dshaod /dʃaod/ | *Gshaed → Gshaod / Dshaod / Dshaod |
 | `tree` | a woody plant | *Kjeegkjoop /kjeegkjoop/ | Gzhooggzhood /gʒooggʒood/ | Kjoodkjook /kjoodkjook/ | Kzhoodkzhook /kʒoodkʒook/ | *Kjeegkjoop → Gzhooggzhood / Kjoodkjook / Kzhoodkzhook |
-| `two` | the cardinal number 2 | *Kwebmngek /kwebmŋek/ | Gdoddgog /gdoddgog/ | Kjodddok /kjodddok/ | Kdodnngok /kdodnŋok/ | *Kwebmngek → Gdoddgog / Kjodddok / Kdodnngok |
-| `under` | beneath; below | *Gjoebkjaob /gjoebkjaob/ | Gzhoodgzhaod /gʒoodgʒaod/ | Djoodkjaod /djoodkjaod/ | Dzhoodkzhaod /dʒoodkʒaod/ | *Gjoebkjaob → Gzhoodgzhaod / Djoodkjaod / Dzhoodkzhaod |
-| `water` | the drinkable liquid | *Mmodnnoag /mmodnnoag/ | Ddodddoag /ddodddoag/ | Ddodddoad /ddodddoad/ | Nnodnnoad /nnodnnoad/ | *Mmodnnoag → Ddodddoag / Ddodddoad / Nnodnnoad |
+| `two` | the cardinal number 2 | *Kwebmaek /kwebmaek/ | Gdoddaog /gdoddaog/ | Kjoddaok /kjoddaok/ | Kdodnaok /kdodnaok/ | *Kwebmaek → Gdoddaog / Kjoddaok / Kdodnaok |
+| `under` | beneath; below | *Kweok /kweok/ | Gdoog /gdoog/ | Kjook /kjook/ | Kdook /kdook/ | *Kweok → Gdoog / Kjook / Kdook |
+| `water` | the drinkable liquid | *Mopnab /mopnab/ | Doddad /doddad/ | Dokdad /dokdad/ | Noknad /noknad/ | *Mopnab → Doddad / Dokdad / Noknad |
 | `wind` | moving air | *Kwok /kwok/ | Gdog /gdog/ | Kjok /kjok/ | Kdok /kdok/ | *Kwok → Gdog / Kjok / Kdok |
 
 ### Goblinoid
