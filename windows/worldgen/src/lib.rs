@@ -4030,9 +4030,10 @@ fn exposure_of_impl(
     // Source perception from the world's component set (ECS c3), keyed by the
     // kind's `KindId` label. Since The Vigil every minded speaker perceives
     // (`check_integrity` enforces speech ⊆ perception), so this lookup is total
-    // for every kind that can reach a lexicon. `lexicon_of_in_from`/
-    // `lexicon_from` are public and `resolve_kind` accepts any biosphere kind, so a caller
-    // may still pass plain fauna — which fails loudly here rather than
+    // for every kind that can reach a lexicon. `lexicon_from` is public (its
+    // crate-private `lexicon_of_in_from` core shares the same resolution) and
+    // `resolve_kind` accepts any biosphere kind, so a caller may still pass
+    // plain fauna — which fails loudly here rather than
     // silently classifying colour as though a bear saw like a goblin. Mirrors
     // the same failure in `chorus::account_params_from`.
     let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
