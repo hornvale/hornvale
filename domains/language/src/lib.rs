@@ -575,12 +575,12 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "(retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root",
         ),
         (
-            "language/<species>/lexicon/cascade",
-            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root",
+            "language/<species>/lexicon/cascade/v2",
+            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root. The Witness (2026-07-30) epoch bump: draw_rule is position-aware, offering Tonogenesis only once a prior ClusterSimplify/FinalLoss has been drawn — a leading Tonogenesis is provably the identity (evolve opens with no pending conditioning), so drawing it unconditioned wasted the roster slot on every world. Draw count is unchanged (Stream::pick is one draw at any slice length); only the drawn values move",
         ),
         (
-            "language/<species>/lexicon/cascade/wear",
-            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing)",
+            "language/<species>/lexicon/cascade/v2/wear",
+            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing). Reseeded by the same v2 epoch bump as its parent leg",
         ),
         (
             "language/<species>/lexicon/headedness",

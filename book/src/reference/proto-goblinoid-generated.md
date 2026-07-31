@@ -66,13 +66,13 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `dire-wolf-kind` | a dire wolf | *Penae | /penae/ |
 | `drink` | to swallow liquid | *Ganae | /ganae/ |
 | `earth` | the ground underfoot | *Geo | /geo/ |
-| `eat` | to consume food | *Koo | /koo/ |
+| `eat` | to consume food | *Nao | /nao/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Ne | /ne/ |
 | `epipelagic` | a biome class | *Naenoo | /naenoo/ |
 | `erg` | A sand sea of dunes. | *Genoe | /genoe/ |
 | `eye` | the organ of sight | *Ta | /ta/ |
 | `felsenmeer` | A field of frost-shattered boulders. | *Nenoa | /nenoa/ |
-| `fire` | flame and heat | *Nao | /nao/ |
+| `fire` | flame and heat | *Qaa | /qaa/ |
 | `fire-scrub` | Scrub regrowing after fire. | *Neanoa | /neanoa/ |
 | `fish-shoal` | A shoal moving as one body. | *Doqeo | /doqeo/ |
 | `foot` | the walking limb-end | *Nono | /nono/ |
@@ -108,7 +108,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `hydrothermal-vent` | a biome class | *Teo | /teo/ |
 | `ice` | frozen water | *Na | /na/ |
 | `ice-lead` | A channel of open water through sea ice. | *Kea | /kea/ |
-| `island` | land the water surrounds | *Goqao | /goqao/ |
+| `island` | land the water surrounds | *Pee | /pee/ |
 | `kelp-canopy` | The floating canopy of a kelp forest. | *Noonea | /noonea/ |
 | `kelp-forest` | a biome class | *Noo | /noo/ |
 | `killer-whale-kind` | a killer whale | *Neeqe | /neeqe/ |
@@ -134,14 +134,14 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `name` | a word that identifies one who bears it | *Noenae | /noenae/ |
 | `new` | recently come to be | *Nopee | /nopee/ |
 | `night` | the dark half of the day-night cycle | *Neqa | /neqa/ |
-| `nodule-field` | Seafloor strewn with mineral nodules. | *Negea | /negea/ |
+| `nodule-field` | Seafloor strewn with mineral nodules. | *Koo | /koo/ |
 | `north` | the compass point opposite south | *Nanoe | /nanoe/ |
 | `old` | long in existence | *Tape | /tape/ |
 | `old-growth` | Mature forest, closed above and open beneath. | *Neneo | /neneo/ |
-| `one` | the cardinal number 1 | *Kaa | /kaa/ |
+| `one` | the cardinal number 1 | *Koego | /koego/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Paqoo | /paqoo/ |
 | `otyugh-kind` | an otyugh | *Neonoo | /neonoo/ |
-| `over` | above; atop | *Datee | /datee/ |
+| `over` | above; atop | *Dodoake | /dodoake/ |
 | `owlbear-kind` | an owlbear | *Poko | /poko/ |
 | `parent` | one's father or mother | *Gatea | /gatea/ |
 | `person` | a person; a member of a people (the autonym root) | *Neoda | /neoda/ |
@@ -156,7 +156,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `reef-shark-kind` | a reef shark | *Deopoe | /deopoe/ |
 | `reg` | A desert floor of wind-swept gravel. | *Neono | /neono/ |
 | `rest` | to stop and recover strength | *Kaeno | /kaeno/ |
-| `rhinoceros-kind` | a rhinoceros | *Qateo | /qateo/ |
+| `rhinoceros-kind` | a rhinoceros | *Naa | /naa/ |
 | `rice` | a staple crop | *Naoka | /naoka/ |
 | `river` | fresh water running across land | *Gootoe | /gootoe/ |
 | `rust-monster-kind` | a rust monster | *Koa | /koa/ |
@@ -182,9 +182,9 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `staghorn-stand` | A thicket of branching coral. | *Ga | /ga/ |
 | `star` | a fixed point of light in the night sky | *Noe | /noe/ |
 | `starlit` | dark faintly lit by stars | *Kee | /kee/ |
-| `stone` | rock | *Tee | /tee/ |
+| `stone` | rock | *Poatoe | /poatoe/ |
 | `sun` | the sun | *Toa | /toa/ |
-| `taiga` | a biome class | *Naa | /naa/ |
+| `taiga` | a biome class | *Kaa | /kaa/ |
 | `temperate-forest` | a biome class | *Nena | /nena/ |
 | `temperate-grassland` | a biome class | *Dano | /dano/ |
 | `temperate-rainforest` | a biome class | *Doqa | /doqa/ |
@@ -202,7 +202,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `twig-blight-kind` | a twig blight | *Qaaqee | /qaaqee/ |
 | `twilight-water` | Water at the edge of the light. | *Taote | /taote/ |
 | `two` | the cardinal number 2 | *Naanee | /naanee/ |
-| `under` | beneath; below | *Nootae | /nootae/ |
+| `under` | beneath; below | *Tagee | /tagee/ |
 | `upwelling` | a biome class | *Qoa | /qoa/ |
 | `urchin-barren` | Seabed grazed bare of kelp. | *Gee | /gee/ |
 | `valley` | low ground between heights | *Konoa | /konoa/ |

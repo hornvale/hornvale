@@ -96,11 +96,17 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // "hobgoblin-kind" as `Koe`. Sweeping 0..16 post-fix, 5 of the 14 seeds
     // that root all four words hit such a collision (1, 7, 10, 12, 13) --
     // so this is the rate the paragraph above anticipated, measured, not a
-    // regression in the exposure rule. Seed 3 renders all four distinctly
-    // (`Zhoze`/`Sasta` against `Zhozeg`/`Shashtak`), and the pair reads as
+    // regression in the exposure rule. Seed 3 rendered all four distinctly
+    // (`Zhoze`/`Sasta` against `Zhozeg`/`Shashtak`), and the pair read as
     // the cognates two sibling languages should have.
+    //
+    // Seed 0, re-searched for F7 (The Witness, 2026-07-30): gating
+    // `Tonogenesis` on a prior merger reseeded every species' cascade, and
+    // seed 3 collided again ("Zgaeg" for both goblin and hobgoblin's
+    // "hobgoblin-kind"). Sweeping 0..40 post-fix, seed 0 was the first that
+    // rendered all four words distinctly.
     let w = build_world(
-        hornvale_kernel::Seed(3),
+        hornvale_kernel::Seed(0),
         &hornvale_astronomy::SkyPins::default(),
         SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
@@ -345,7 +351,7 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_i
     );
     assert_eq!(
         rooted,
-        vec![("bugbear", "Dootoa".to_string())],
+        vec![("bugbear", "Doodoa".to_string())],
         "at seed 42 exactly one people roots 'hill' — bugbear, whose flagship \
          sits on a strict local elevation maximum"
     );

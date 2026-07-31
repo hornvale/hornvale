@@ -6365,11 +6365,22 @@ mod tests {
         // which is exactly the exposure vocabulary transparency's gloss
         // check reads against.
         //
+        // The Witness, Task 7 re-measurement (2026-07-30, F7): 207/329 ->
+        // 188/329 — the denominator is still unchanged (no placement moved),
+        // but the numerator dropped: gating `Tonogenesis` on a prior merger
+        // reseeds every cascade, so `evolve`'s output moves for essentially
+        // every root, and `namer.wear`'s cascade limb draws different rules
+        // too. Some names that used to contain an audible reflex of their
+        // glossed concept no longer do under the new draws (and vice versa,
+        // net down 19). This is the same wear-audibility surface
+        // `speakable_properties.rs` measures; it is expected to move on any
+        // cascade-affecting change and is not itself evidence of a defect.
+        //
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 207 of 329 glossed settlement names.
-        assert_eq!(share, 207.0 / 329.0, "seed 42 transparency drifted");
+        // 188 of 329 glossed settlement names.
+        assert_eq!(share, 188.0 / 329.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

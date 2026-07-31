@@ -219,6 +219,12 @@ fn moons_explained_only_where_kept() {
     // which reseeds every proto-root: "Tsaasngkoo" -> "Nggoo". Same story —
     // `underlying` (Kept), `schema` (Agentive), `lexeme` ("strides") and
     // `manner` (Slow) compare byte-identical; only `agent` moved.
+    //
+    // Re-pinned again at F7 (The Witness, 2026-07-30): gating `Tonogenesis`
+    // on a prior merger reseeds every cascade, so every lexicon-derived name
+    // re-draws again: "Nggoo" -> "Goo". Same story once more — `underlying`,
+    // `schema`, `lexeme` and `manner` compare byte-identical; only `agent`
+    // moved.
     let w = generated(2);
     let voices = accounts_of(&w);
     let kobold = voices
@@ -241,7 +247,7 @@ fn moons_explained_only_where_kept() {
         Disposition::Explained {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
-            agent: Some("Nggoo".to_string()),
+            agent: Some("Goo".to_string()),
             lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }

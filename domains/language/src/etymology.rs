@@ -138,6 +138,20 @@ const RULE_KINDS: [RuleKind; 6] = [
     RuleKind::Tonogenesis,
 ];
 
+/// The kinds available before any merger has been drawn — every kind except
+/// [`RuleKind::Tonogenesis`], which needs a prior merger's dropped feature to
+/// condition on and is otherwise the identity (`evolve` opens with no pending
+/// conditioning). The model claim, not merely the optimisation: a language does
+/// not innovate tone before it has a merger to feed it — tonogenesis is a
+/// CONSEQUENCE of segmental loss.
+const RULE_KINDS_UNCONDITIONED: [RuleKind; 5] = [
+    RuleKind::Lenition,
+    RuleKind::Fortition,
+    RuleKind::VowelShift,
+    RuleKind::ClusterSimplify,
+    RuleKind::FinalLoss,
+];
+
 /// The `param` range every drawn rule consumes, regardless of kind (only
 /// [`RuleKind::VowelShift`] gives it meaning) — keeping the draw uniform
 /// across kinds keeps stream consumption independent of which kind is
@@ -184,11 +198,17 @@ impl CascadeRegime {
     }
 }
 
-/// Draw one rule: a kind, then a param, in that order.
-fn draw_rule(stream: &mut Stream) -> SoundRule {
-    let kind = *stream
-        .pick(&RULE_KINDS)
-        .expect("RULE_KINDS is a fixed non-empty array");
+/// Draw one rule: a kind, then a param, in that order. `seen_merger` selects
+/// the kind roster — see [`RULE_KINDS_UNCONDITIONED`]. Draw COUNT is identical
+/// either way (`Stream::pick` is one `next_u64()` regardless of slice length),
+/// so this changes drawn values, never consumption.
+fn draw_rule(stream: &mut Stream, seen_merger: bool) -> SoundRule {
+    let kinds: &[RuleKind] = if seen_merger {
+        &RULE_KINDS
+    } else {
+        &RULE_KINDS_UNCONDITIONED
+    };
+    let kind = *stream.pick(kinds).expect("both rosters are non-empty");
     let param = stream.range_u32(RULE_PARAM_RANGE.0, RULE_PARAM_RANGE.1);
     SoundRule { kind, param }
 }
@@ -207,7 +227,7 @@ pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
 
 /// Draw a cascade for `species` whose rule count is bounded by `regime`,
 /// from
-/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE)`.
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE).derive(streams::CASCADE_V2)`.
 /// The stream derivation is identical regardless of `regime` — only the
 /// `range_u32` bounds it draws the rule count from change, so
 /// `draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED)` is
@@ -219,16 +239,25 @@ pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegim
         .derive(StreamLabel::dynamic(species))
         .derive(streams::LEXICON)
         .derive(streams::CASCADE)
+        .derive(streams::CASCADE_V2)
         .stream();
     let count = stream.range_u32(regime.min, regime.max);
-    let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
+    let mut rules = Vec::with_capacity(count as usize);
+    let mut seen_merger = false;
+    for _ in 0..count {
+        let rule = draw_rule(&mut stream, seen_merger);
+        if matches!(rule.kind, RuleKind::ClusterSimplify | RuleKind::FinalLoss) {
+            seen_merger = true;
+        }
+        rules.push(rule);
+    }
     Cascade { rules }
 }
 
 /// Draw `species`' **toponymic wear** cascade — the short cascade
 /// [`crate::naming::Namer::wear`] runs a high-frequency name morpheme
 /// through — from
-/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE).derive(streams::WEAR)`,
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE).derive(streams::CASCADE_V2).derive(streams::WEAR)`,
 /// at [`CascadeRegime::WEAR`] (1–2 rules).
 ///
 /// The extra [`streams::WEAR`] leg is the whole point and is documented at
@@ -247,10 +276,19 @@ pub fn draw_wear_cascade(seed: &Seed, species: &str) -> Cascade {
         .derive(StreamLabel::dynamic(species))
         .derive(streams::LEXICON)
         .derive(streams::CASCADE)
+        .derive(streams::CASCADE_V2)
         .derive(streams::WEAR)
         .stream();
     let count = stream.range_u32(CascadeRegime::WEAR.min, CascadeRegime::WEAR.max);
-    let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
+    let mut rules = Vec::with_capacity(count as usize);
+    let mut seen_merger = false;
+    for _ in 0..count {
+        let rule = draw_rule(&mut stream, seen_merger);
+        if matches!(rule.kind, RuleKind::ClusterSimplify | RuleKind::FinalLoss) {
+            seen_merger = true;
+        }
+        rules.push(rule);
+    }
     Cascade { rules }
 }
 
@@ -1694,6 +1732,38 @@ mod tests {
         let d = evolve(&proto, &cascade, &ph);
         assert_eq!(d.modern, proto, "no prior merger ⇒ no tone written");
         assert!(!d.steps[0].changed);
+    }
+
+    #[test]
+    fn no_drawn_cascade_leads_with_a_tonogenesis() {
+        // A leading Tonogenesis is PROVABLY the identity: `evolve` opens with
+        // `pending = None` and only a FIRED merger ever sets it, so
+        // `apply_tonogenesis` returns unchanged on every word in every language.
+        // In the 1-2 rule WEAR regime that can be the entire cascade. The test
+        // fixture that masked this (`merge_then_tonogenize`) puts the merger
+        // first, so the absent-conditioning case was never exercised.
+        for seed in 0u64..64 {
+            for sp in ["goblin", "kobold", "gnoll"] {
+                for cascade in [
+                    draw_cascade(&Seed(seed), sp),
+                    draw_wear_cascade(&Seed(seed), sp),
+                ] {
+                    let mut seen_merger = false;
+                    for rule in &cascade.rules {
+                        if rule.kind == RuleKind::Tonogenesis {
+                            assert!(
+                                seen_merger,
+                                "seed {seed} / {sp}: a Tonogenesis is drawn with no \
+                                 prior merger, so it is the identity by construction"
+                            );
+                        }
+                        if matches!(rule.kind, RuleKind::ClusterSimplify | RuleKind::FinalLoss) {
+                            seen_merger = true;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // ---- Nativization fixtures and tests.

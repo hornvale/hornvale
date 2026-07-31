@@ -5,7 +5,8 @@
 use hornvale_kernel::Seed;
 use hornvale_language::{
     CascadeRegime, Envelope, ExoticSeg, ExposureClass, LexEntry, MorphOptions, NameCorpus,
-    NameKind, Namer, Phonology, SiteConcepts, build_lexicon, draw_phonology, render_views,
+    NameKind, Namer, Phonology, SiteConcepts, build_lexicon, draw_phonology, draw_wear_cascade,
+    evolve, render_views,
 };
 use std::collections::BTreeMap;
 
@@ -144,14 +145,34 @@ fn permissive_proto() -> Phonology {
 /// code with the rule it admits. This one was **not edited at all**. It
 /// widened implicitly, because its `worn_form` is
 /// `namer.wear(&derivation.modern, 1.0)` — production code, which now runs
-/// the reduction. So half of this test's acceptance set is computed by the
+/// the reduction. So most of this test's acceptance set is computed by the
 /// very machinery it checks, and it would not catch a reduction that was
 /// wrong in the same way on both sides. Recorded rather than repaired: the
-/// erasure it exists to catch is a *disagreement* between the name and both
-/// reflexes, and the disarming check confirms it still fires — it reds under
+/// erasure it exists to catch is a *disagreement* between the name and every
+/// reflex, and the disarming check confirms it still fires — it reds under
 /// a reduction mutation as well as under a containment-guard stub. The
 /// independent check on the reduction itself is the unworn sweep and the
 /// unit battery in `naming.rs`, not this one.
+///
+/// **The Witness (2026-07-30) widened the acceptance set from two to
+/// three.** `worn_compound`'s survival ladder (`naming.rs`) has a rung
+/// below the full `wear()` (cascade + positional reduction) that surrenders
+/// only the reduction and keeps the cascade-only sound change — the private
+/// `sounded()` — when the fully-reduced compound cannot be assembled and
+/// containment must fall back. That rung is not new: it shipped with the
+/// ladder. What is new is that a leading, unconditioned `Tonogenesis` used
+/// to be the identity on most cascades (F7), so most sound changes were
+/// near-inert and rung 0 (full wear) rarely failed containment for the
+/// 0..64 sweep below. Gating `Tonogenesis` on a prior merger makes more
+/// cascades do real work, so more of this sweep's compounds now fall to the
+/// cascade-only rung — seed 11 / salt 1 / Settlement is the first observed
+/// case (`water`'s reflex "seos", neither its citation "shseos" nor its
+/// fully-worn "ses"). `sounded_form` below reconstructs that rung's output
+/// from the two public functions it composes (`draw_wear_cascade` +
+/// `evolve`) at frequency 1.0, which the saturated corpus here always
+/// clears (`WEAR_FLOOR` is 0.25). This is not a weakened assertion — the
+/// erasure check is unchanged; it is a third genuinely producible surface
+/// form the check was never wide enough to admit.
 #[test]
 fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut worn_names = 0usize;
@@ -222,13 +243,29 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                         }
                         _ => unreachable!("checked above"),
                     };
+                    // The survival ladder's cascade-only rung (see the
+                    // module doc above): `sounded()` restated from its two
+                    // public building blocks, since the method itself is
+                    // private to `naming.rs`.
+                    let sounded_form = match lex.entry(concept) {
+                        Some(LexEntry::Root { derivation, .. }) => {
+                            let cascade = draw_wear_cascade(&Seed(seed), "swept");
+                            render_views(&evolve(&derivation.modern, &cascade, &ph).modern)
+                                .roman
+                                .to_lowercase()
+                        }
+                        _ => unreachable!("checked above"),
+                    };
                     let surface = name.roman.to_lowercase();
                     checked += 1;
                     assert!(
-                        surface.contains(&citation) || surface.contains(&worn_form),
+                        surface.contains(&citation)
+                            || surface.contains(&worn_form)
+                            || surface.contains(&sounded_form),
                         "seed {seed} salt {salt} {kind:?}: name {:?} contains NEITHER \
-                         {concept}'s citation form {citation:?} nor its worn reflex \
-                         {worn_form:?} — the gloss names a morpheme the name does not say",
+                         {concept}'s citation form {citation:?}, its fully-worn reflex \
+                         {worn_form:?}, nor its cascade-only reflex {sounded_form:?} — the \
+                         gloss names a morpheme the name does not say",
                         name.roman
                     );
                 }

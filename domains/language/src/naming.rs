@@ -2594,7 +2594,7 @@ mod tests {
         // where `FinalLoss` can only ever touch the word's last segment)
         // would grind the same slot both times.
         let ph = wordy_ph();
-        // Lexicon seed 186 over `wordy_ph`: both roots are consonant-final,
+        // Lexicon seed 549 over `wordy_ph`: both roots are consonant-final,
         // so kobold@42's wear cascade has an environment to fire in for
         // each, AND both worn forms survive repair (asserted below as a
         // precondition — the survival rule would otherwise silently give
@@ -2611,10 +2611,16 @@ mod tests {
         // v4 reseeded the lexicon draws again and seed 186 stopped satisfying
         // the survive-repair precondition (both worn forms surrendered, 1/1
         // against a required 0/0) — the precondition caught it a second time,
-        // exactly as designed. Re-swept 0..600 on all six clauses: seed 19 is
-        // the ONLY one, so the fixture is narrower than ever and this comment
-        // is the standing warning for the next reseed.
-        let lex = two_word_lexicon(19);
+        // exactly as designed. Re-swept 0..600 on all six clauses and seed 19
+        // was the ONLY one — until The Witness (2026-07-30, F7) gated
+        // `Tonogenesis` on a prior merger, reseeding kobold@42's own wear
+        // cascade (which draws from the same `RULE_KINDS` roster) and every
+        // lexicon draw below it. Seed 19 stopped satisfying the give-up
+        // preconditions; re-swept 0..2000 on all six clauses and found only
+        // four survivors (549, 846, 1319, 1920) — narrower still, so the
+        // note again stands: expect another re-search after the next
+        // cascade-affecting change.
+        let lex = two_word_lexicon(549);
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);
@@ -2762,17 +2768,25 @@ mod tests {
         // name is actually built from, because wear consumes nothing from
         // the name stream.
         let ph = wordy_ph();
-        let lex = two_word_lexicon(19);
+        // Lexicon seed 549 (re-searched for F7, The Witness — see
+        // `wear_is_keyed_to_frequency_not_to_the_compound_slot`'s comment;
+        // this test's own lexicon seed happened to need the same reseed but
+        // is otherwise an independent search): seed 19's lexicon had no
+        // namer seed in 0..200 for which the saturated corpus changed any of
+        // the 80 names below.
+        let lex = two_word_lexicon(549);
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
         let morph = morph(false);
-        // Namer seed 27, re-searched after The Wearing's nucleus fix: at the
-        // previous seed 42 the saturated corpus stopped changing ANY of the
-        // 80 names below, so the non-vacuity guard at the end of this test
-        // went red. That guard is the point — the agreement asserted in the
-        // loop is worthless if no name ever wears.
-        let namer = Namer::new(&Seed(27), "kobold", &ph);
+        // Namer seed 32, re-searched for F7, The Witness (2026-07-30):
+        // gating `Tonogenesis` on a prior merger reseeded kobold's wear
+        // cascade at every namer seed, and seed 27 (itself a re-search after
+        // The Wearing's nucleus fix) stopped changing ANY of the 80 names
+        // below. Swept namer seed 0..200 against lexicon seed 549; the first
+        // hit was 32. That guard is the point — the agreement asserted in
+        // the loop is worthless if no name ever wears.
+        let namer = Namer::new(&Seed(32), "kobold", &ph);
         let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
         saturated.insert("water".to_string(), 1.0);
         saturated.insert("fire".to_string(), 1.0);

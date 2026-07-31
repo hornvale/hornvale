@@ -301,6 +301,14 @@ mod tests {
         // campaign's bump was in flight on its branch, so the two met for the
         // first time at the close merge; the roster is updated to record the
         // bump, and the assertion is left exactly as strong as it was.
+        //
+        // The Witness (F7, 2026-07-30) adds `language/<species>/lexicon/
+        // cascade` at `v2` (and its `v2/wear` child): `draw_rule` becomes
+        // position-aware, offering `Tonogenesis` only once a merger has been
+        // drawn, so every cascade reseeds. See
+        // `domains/language/src/streams.rs`'s `CASCADE_V2` doc for the full
+        // reasoning, including why this is the leg that owes the bump and
+        // not `name/settlement/v4` or `lexicon/root/v4`.
         let rows: Vec<String> = versioned_labels()
             .into_iter()
             .map(|(k, v)| format!("{k} {v}"))
@@ -314,6 +322,8 @@ mod tests {
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
                 "language/<family>/lexicon/root/<concept> v3",
+                "language/<species>/lexicon/cascade v2",
+                "language/<species>/lexicon/cascade/wear v2",
                 "language/<species>/name/deity v3",
                 "language/<species>/name/epithet v3",
                 "language/<species>/name/settlement v3",

@@ -3063,21 +3063,26 @@ mod tests {
     /// unchanged. The pre-C7 bytes remain unreachable by construction —
     /// that is a consequence of the naming work, not a weakening of this
     /// test, which still asserts the clause SHAPE exactly.
+    ///
+    /// Re-pinned again at F7 (The Witness, 2026-07-30): gating `Tonogenesis`
+    /// on a prior merger reseeds every cascade, so `evolve`'s output moves
+    /// for every root — seed 2's goblin `Mepmee Gmaamea` -> `Mepmee Maa` and
+    /// kobold `Ngkooqngto Ngkaa` -> `Kooqngto Kaa`. Same story again: only
+    /// the drawn word forms moved.
     #[test]
     fn shallow_species_lines_are_byte_identical_to_c3() {
         let world = generated(2);
         let vol = render_volume(&world);
         assert!(
             vol.tongue_lines.contains(
-                &"Mepmee Gmaamea. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
+                &"Mepmee Maa. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
             ),
             "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
         );
         assert!(
             vol.tongue_lines.contains(
-                &"Ngkooqngto Ngkaa. (in the kobold tongue: \"The Ngkooqngto are kobolds.\")"
-                    .to_string()
+                &"Kooqngto Kaa. (in the kobold tongue: \"The Kooqngto are kobolds.\")".to_string()
             ),
             "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
@@ -4188,7 +4193,7 @@ mod tests {
             goblin.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Gabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Zhzho are kobolds — neighbors.".to_string(),
@@ -4214,7 +4219,7 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Gabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Zhzho are kobolds — rivals.".to_string(),
@@ -4632,10 +4637,10 @@ mod tests {
                 "The Booxo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Kabjab, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kabjab numbers the darkenings: 6472.".to_string(),
+                "Among the Gabja, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Gabja numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Kabjab's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Gabja's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Woove, the sky has darkened, now and again.".to_string(),
@@ -4666,7 +4671,7 @@ mod tests {
                 "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Kabjab's priesthood taught the darkening would come on day \
+                "In truth, the Gabja's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Woove's priesthood taught the darkening would come on day \
@@ -4698,10 +4703,10 @@ mod tests {
                 "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Klojsho, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Klojsho numbers the darkenings: 81.".to_string(),
+                "Among the Lojsho, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Lojsho numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Klojsho's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Lojsho's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
@@ -4716,10 +4721,10 @@ mod tests {
                 "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Ngkooqngto, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngkooqngto numbers the darkenings: 81.".to_string(),
+                "Among the Kooqngto, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kooqngto numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Ngkooqngto's own priesthood taught wrongly, and could be shown wrong by \
+                "The Kooqngto's own priesthood taught wrongly, and could be shown wrong by \
                  any who kept their own count."
                     .to_string(),
             ]
@@ -4730,7 +4735,7 @@ mod tests {
                 "In truth, the Bobboo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Klojsho's priesthood taught the darkening would come on day \
+                "In truth, the Lojsho's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day \
@@ -4739,7 +4744,7 @@ mod tests {
                 "In truth, the Webwee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Ngkooqngto's priesthood taught the darkening would come on day \
+                "In truth, the Kooqngto's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
@@ -4750,20 +4755,27 @@ mod tests {
         // Ztashoeg, Sqaojxo); the lunar-witnessing group (bugbear/Tashoo,
         // gnoll/Jpajjpa, kobold/Sqaojxo) numbers 53, the solar-only pair
         // (goblin/Ztasoe, hobgoblin/Ztashoeg) 32.
+        //
+        // Re-pinned at F7 (The Witness, 2026-07-30): gating `Tonogenesis` on
+        // a prior merger reseeds every cascade — bugbear `Doozka` ->
+        // `Shdoozga`, gnoll `Jpojjpo` -> `Pojjpoj`, kobold `Jjojjjo` ->
+        // `Jojjjo`; goblin `Sdoozka` and hobgoblin `Shtoozka` happened to
+        // land unchanged. Same story: only drawn word forms moved, the day
+        // numbers and counts (53/32) are untouched.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                "Among the Doozka, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Doozka numbers the darkenings: 53.".to_string(),
+                "Among the Shdoozga, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Shdoozga numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Doozka's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Shdoozga's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Jpojjpo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jpojjpo numbers the darkenings: 53.".to_string(),
+                "Among the Pojjpoj, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Pojjpoj numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jpojjpo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Pojjpoj's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Sdoozka, the sky has darkened, now and again.".to_string(),
@@ -4778,10 +4790,10 @@ mod tests {
                 "The Shtoozka's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Jjojjjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jjojjjo numbers the darkenings: 53.".to_string(),
+                "Among the Jojjjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Jojjjo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jjojjjo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Jojjjo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
             ],
@@ -4791,10 +4803,10 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
-                "In truth, the Doozka's priesthood taught the darkening would come on day \
+                "In truth, the Shdoozga's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Jpojjpo's priesthood taught the darkening would come on day \
+                "In truth, the Pojjpoj's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Sdoozka's priesthood taught the darkening would come on day \
@@ -4803,7 +4815,7 @@ mod tests {
                 "In truth, the Shtoozka's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Jjojjjo's priesthood taught the darkening would come on day \
+                "In truth, the Jojjjo's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
@@ -4866,7 +4878,7 @@ mod tests {
                 "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Kabjab's priesthood taught the darkening would come on day \
+                "In truth, the Gabja's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Woove's priesthood taught the darkening would come on day \
@@ -4913,7 +4925,7 @@ mod tests {
                  lasts about 1.5 standard days."
                     .to_string(),
                 "The Booxo are bugbears.".to_string(),
-                "The Kabjab are gnolls.".to_string(),
+                "The Gabja are gnolls.".to_string(),
                 "The Woove are goblins.".to_string(),
                 "The Boove are hobgoblins.".to_string(),
                 "The Zhzho are kobolds.".to_string(),
@@ -4939,13 +4951,22 @@ mod tests {
                 // tongue-pairing. The additivity law this test exists for —
                 // C8 adds only `reckoning`, perturbing no pre-C8 register's
                 // SHAPE — is therefore intact.
+                //
+                // Re-pinned again at F7 (The Witness, 2026-07-30): gating
+                // `Tonogenesis` on a prior merger reseeds every cascade.
+                // Only the gnoll lines moved this time — the exonym `Kabjab`
+                // -> `Gabja` and the gnoll-tongue self-statement `Kabjab Paab
+                // Jaadjaakjood` -> `Gabja Paab Jaadjaajoo` (and its earth
+                // clause `Paobkaad` -> `Baogaa`); every other tongue's
+                // rendering happened to land unchanged. Same story: only
+                // drawn word forms moved, shape and gloss untouched.
                 "Nxatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
                     .to_string(),
                 "Nxatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
-                "Kabjab Paab Jaadjaakjood. (in the gnoll tongue: \"The Kabjab are gnolls.\")"
+                "Gabja Paab Jaadjaajoo. (in the gnoll tongue: \"The Gabja are gnolls.\")"
                     .to_string(),
-                "Xoaboa Paab Paobkaad. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Xoaboa Paab Baogaa. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
                 "Sa Woowoo Woove. (in the goblin tongue: \"The Woove are goblins.\")".to_string(),
                 "Sa Weveawea Xoaboa. (in the goblin tongue: \"Xoaboa is the earth.\")".to_string(),
                 "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")"
@@ -4978,7 +4999,7 @@ mod tests {
             goblin.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Gabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Zhzho are kobolds — neighbors.".to_string(),
@@ -5009,7 +5030,7 @@ mod tests {
             goblin_doctrine.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Gabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Zhzho are kobolds — neighbors.".to_string(),
@@ -5038,7 +5059,7 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Gabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Zhzho are kobolds — rivals.".to_string(),
@@ -5068,7 +5089,7 @@ mod tests {
             hobgoblin_doctrine.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Gabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Zhzho are kobolds — rivals.".to_string(),
