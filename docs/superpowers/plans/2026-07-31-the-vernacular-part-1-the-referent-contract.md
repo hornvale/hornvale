@@ -874,6 +874,18 @@ behaviour *could* legitimately move — if it does, stop and report: it means
 two phenomena were being collapsed that should not have been, which is a real
 finding and a spec-§7 result rather than a bug to paper over.
 
+Then confirm no committed artifact went stale:
+
+```bash
+make rebaseline
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ && echo "NO DRIFT"
+```
+
+Expected: `NO DRIFT`. **If `docs/audits/type-audit-report.md` drifted, commit
+the regenerated file as part of this task** — it drifts on any pub-boundary
+change and omitting it is named in `CLAUDE.md` as a common miss. Task 3 missed
+exactly this and it had to be swept afterwards.
+
 - [ ] **Step 5: Commit**
 
 ```bash
