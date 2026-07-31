@@ -27,7 +27,7 @@ use hornvale_kernel::{Seed, Stream};
 /// a total function on a segment (or, for the two structural rules, on a
 /// word-position); see [`evolve`] for how a rule composes with the
 /// inventory codomain constraint.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RuleKind {
     /// A voiceless stop becomes its voiced counterpart at the same place.
     Lenition,
@@ -55,6 +55,27 @@ pub enum RuleKind {
     /// voicing), never a stream draw, so it stays a pure function of
     /// `(proto, cascade, ph)`.
     Tonogenesis,
+}
+
+impl RuleKind {
+    /// Every variant, so a witness test (`domains/language/tests/
+    /// rule_witness.rs`, The Witness Task 8) derives its checklist from the
+    /// type rather than from an author re-typing the enum's members by
+    /// hand — the language-domain twin of `hornvale_terrain::Hydro::ALL`
+    /// (`domains/terrain`, Task 6): adding a variant here enrolls it in the
+    /// guard automatically, which is the property a hand-maintained
+    /// checklist cannot offer. `PartialOrd`/`Ord` (declaration order,
+    /// derived above) exist only so the guard can collect witnessed kinds
+    /// into a `BTreeSet` (the project bans `HashSet`) — there is no
+    /// meaningful ranking between rule kinds.
+    pub const ALL: [RuleKind; 6] = [
+        RuleKind::Lenition,
+        RuleKind::Fortition,
+        RuleKind::VowelShift,
+        RuleKind::ClusterSimplify,
+        RuleKind::FinalLoss,
+        RuleKind::Tonogenesis,
+    ];
 }
 
 /// One drawn sound rule: its kind, and `param` selecting the kind's drawn

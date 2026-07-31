@@ -408,18 +408,27 @@ fn the_wear_funnel_is_reproducible() {
 
     let cascade_rate = 100.0 * cascade_alters as f64 / clears_floor.max(1) as f64;
     let combined_rate = 100.0 * combined_alters as f64 / clears_floor.max(1) as f64;
-    // The Wearing's own chronicle reports its (differently-seeded, and
-    // possibly differently-defined) cascade-only rung at 53/611 = 8.7%.
-    // This is a sanity check, not a pin: printed plainly so a divergence is
-    // a stated finding rather than a smoothed-over surprise.
-    const CHRONICLE_CASCADE_RATE_PCT: f64 = 8.7;
-    let sanity_note = if (cascade_rate - CHRONICLE_CASCADE_RATE_PCT).abs() <= 5.0 {
-        "within ~5 points of the chronicle's 8.7% — consistent with the same quantity"
-    } else {
-        "MORE than 5 points from the chronicle's 8.7% — a FINDING: the two rungs may still \
-         differ in definition, not just in seeds; do not smooth this over before Task 9"
-    };
-
+    // Historical note, not a live check (The Witness, Task 8/Deliverable C):
+    // this used to compare `cascade_rate` against The Wearing's chronicle
+    // figure (53/611 = 8.7% cascade-only) on every run and print "a FINDING"
+    // whenever they diverged by more than 5 points. That was a legitimate
+    // corroboration exactly once: at the Task 1b pre-repair baseline
+    // (commit `cb6916bb`, before Tasks 2-7 touched the pipeline), this
+    // instrument's rung 3 read 31/373 = 8.3% — within 5 points of the
+    // chronicle's 8.7%, which is what established that rung 3 measures the
+    // *same quantity* the chronicle's cascade-only rung reported, despite
+    // different seeds and a from-scratch re-derivation
+    // (`.superpowers/sdd/baseline-report.md`, Figure 4b).
+    //
+    // It is not a live check, because Tasks 2-7 (this campaign's own
+    // repairs) *legitimately move* rung 3's rate — F7 alone changed which
+    // `RuleKind`s a wear cascade can draw before a merger, and Task 9
+    // measures exactly that movement as its headline. Comparing a
+    // post-repair run against the frozen pre-repair 8.7% figure fires
+    // "a FINDING" precisely because the repair worked, not because
+    // anything is wrong — that false alarm is what this rescoping removes.
+    // The one-time corroboration above stands; nothing below re-evaluates
+    // it against a moving number.
     println!("=== THE WEAR FUNNEL (seeds {FUNNEL_SEEDS:?}) ===");
     println!("rung 1   morphemes in settlement names:                     {total_morphemes}");
     println!(
@@ -436,9 +445,6 @@ fn the_wear_funnel_is_reproducible() {
     );
     println!(
         "rung 5   carry surviving wear (MEASURED directly, descends from rung 3): {carries_surviving_wear}"
-    );
-    println!(
-        "sanity check vs. The Wearing's chronicle (53/611 = 8.7% cascade-only): {sanity_note}"
     );
 
     // A loose floor only: non-empty, and monotonically narrowing rung over
