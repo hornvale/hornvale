@@ -507,12 +507,16 @@ checks AS (
   SELECT 'goblin epithet-honorific absent count (calibration.rs::epithet_honorific_is_true_for_goblin_and_false_for_kobold)',
          CAST(epithet_goblin_absent AS DOUBLE), 233.0, epithet_goblin_absent = 233 FROM agg
   UNION ALL
-  SELECT 'goblin epithet-honorific lowest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
-         CAST(epithet_goblin_false_lo AS DOUBLE), 400.0, epithet_goblin_false_lo = 400 FROM agg
-  UNION ALL
-  SELECT 'goblin epithet-honorific highest false seed (calibration.rs::HONORIFIC_DETECTOR_BLIND_SEEDS)',
-         CAST(epithet_goblin_false_hi AS DOUBLE), 400.0, epithet_goblin_false_hi = 400 FROM agg
-  UNION ALL
+  -- The two seed-identity pins that stood here (lowest/highest goblin
+  -- epithet-honorific false seed, both 400) are DELETED, not re-pinned. The
+  -- Watershed's sonority epoch took the blind-world count to zero, so
+  -- `min`/`max` over an empty set return NULL, the comparison returns NULL,
+  -- and the checker reports neither pass nor fail. A pin that cannot fail is
+  -- worse than no pin: it reads as coverage. Same argument that retired
+  -- `STALE_SECOND_OPINION` in the same commit range. The count pins above
+  -- (false = 0) carry the claim now, and they CAN fail — if a blind world
+  -- returns, that row reddens and the seed identity can be re-established
+  -- from the diagnosis kept at HONORIFIC_DETECTOR_BLIND_SEEDS.
   -- Unmoved in KIND by anything since Task 11d, as it must be: the detector
   -- reads a PRESENT affix, and kobold (Knowledge status basis) has none. Only
   -- the counts move, with the worlds that hold a flagship pantheon at all.
