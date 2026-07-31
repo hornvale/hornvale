@@ -1265,7 +1265,9 @@ impl<'a> Bake<'a> {
                     None => (value, 0.0, None),
                     Some(&h) => {
                         let hs = self.strength(h);
-                        if !may_take_held_land || strength <= hs * RAID_MARGIN {
+                        if !may_take_held_land
+                            || strength <= hs * defensibility(self.cur(), from, n) * RAID_MARGIN
+                        {
                             continue; // not a fight this people can win, or survive winning
                         }
                         if !self.has_spoils(era, h) {
@@ -2682,7 +2684,7 @@ impl<'a> Bake<'a> {
             };
             let t_val = self.eff_capacity(era, n);
             let t_str = self.strength(t);
-            if raider_str <= t_str * RAID_MARGIN {
+            if raider_str <= t_str * defensibility(self.cur(), raider_site, n) * RAID_MARGIN {
                 continue; // dominance: only a fight it can win
             }
             if !self.has_spoils(era, t) {
@@ -3557,6 +3559,127 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    #[test]
+    fn a_cheaply_reached_holder_is_raided_and_a_dearly_reached_one_is_not() {
+        // Two holders identical in every respect except the CONDUCTANCE of the
+        // route reaching them from the raider. Only the cheaply-reached one may
+        // be taken. Two defects this catches: the term wired to the ATTACKER's
+        // side, and `from`/`to` transposed (the graph is mirrored, so a
+        // transposition compiles and mostly works — it fails exactly when the
+        // two cells' parallel-edge sets differ).
+        use hornvale_kernel::ReferenceElevation;
+
+        let geo = Geosphere::new(1);
+        let raider_site = CellId(0);
+        let neighbors = geo.neighbors(raider_site);
+        assert!(
+            neighbors.len() >= 2,
+            "fixture precondition: the raider's cell needs at least two neighbours"
+        );
+        let easy = neighbors[0];
+        let hard = neighbors[1];
+
+        // A hand-built graph carrying ONLY the two approach edges the test
+        // cares about — `traversable_neighbors` reads solely off
+        // `raider_site`'s edge list, so nothing else needs to exist. Same
+        // edge kind, wildly different conductance: the only difference
+        // between the two approaches is how easy the road is.
+        let mut graph = ConnectionGraph::new(geo.cell_count());
+        graph.add_edge(
+            raider_site,
+            Edge {
+                to: easy,
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0e3,
+            },
+        );
+        graph.add_edge(
+            raider_site,
+            Edge {
+                to: hard,
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0e-6,
+            },
+        );
+        let graphs = vec![graph];
+
+        // Uniform capacity everywhere: raider and both holders read the same
+        // land value, so nothing but the approach conductance can decide
+        // which holder falls.
+        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let era = EraClimate {
+            day: 0.0,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        // Population and tech are pinned identical between the two holders
+        // (both KindId("kobold"), both opened at year 0 with no tech
+        // offset) — the fixture's whole point is that conductance is the
+        // only axis left to decide the outcome.
+        let raider = bake.open(
+            KindId("goblin"),
+            raider_site,
+            0.0,
+            15.0,
+            Founding::Genesis(raider_site),
+            None,
+            0.0,
+        );
+        let easy_idx = bake.open(
+            KindId("kobold"),
+            easy,
+            0.0,
+            10.0,
+            Founding::Genesis(easy),
+            None,
+            0.0,
+        );
+        let hard_idx = bake.open(
+            KindId("kobold"),
+            hard,
+            0.0,
+            10.0,
+            Founding::Genesis(hard),
+            None,
+            0.0,
+        );
+
+        // Precondition, so a failure here points at the fixture rather than
+        // the mechanism: the raider must clear the easy holder's threshold
+        // but not the dear one's, computed from the SAME `defensibility` the
+        // mechanism itself reads (not a hand-rolled approximation of it).
+        let raider_str = bake.strength(raider);
+        let easy_str = bake.strength(easy_idx);
+        let hard_str = bake.strength(hard_idx);
+        let easy_threshold = easy_str * defensibility(bake.cur(), raider_site, easy) * RAID_MARGIN;
+        let hard_threshold = hard_str * defensibility(bake.cur(), raider_site, hard) * RAID_MARGIN;
+        assert!(
+            raider_str > easy_threshold && raider_str <= hard_threshold,
+            "precondition: raider strength ({raider_str}) must clear the easy \
+             threshold ({easy_threshold}) but not the dear one ({hard_threshold}), \
+             or the split below proves nothing"
+        );
+
+        bake.maybe_raid(raider, &era, 0.0);
+
+        assert_eq!(
+            bake.tribute.get(&easy_idx).map(|tr| tr.patron),
+            Some(raider),
+            "the cheaply-reached holder must be taken, by the raider"
+        );
+        assert!(
+            !bake.tribute.contains_key(&hard_idx),
+            "the dearly-reached holder must be left alone"
         );
     }
 
