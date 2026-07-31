@@ -13,11 +13,21 @@ it, and prove that rewording a description now moves zero committed facts.
 `Phenomenon` gains a non-optional `referent` field, so the compiler forces all
 31 construction sites to declare what their phenomenon is *about*. The two
 copies of `phenomenon_concept` (composition root and lab metric) then read
-`referent.concept` instead of grepping `description`, through a kind gate that
-preserves today's gloss codomain exactly — so this plan is a pure refactor and
-must move zero facts. Widening the codomain (letting eclipses and tides gloss,
-which they cannot today) is a deliberate world change and is **out of scope
-here**.
+`referent.concept` instead of grepping `description`, through a shared roster
+that preserves today's gloss codomain exactly — so this plan is a pure refactor
+and must move zero facts. Widening the codomain (letting eclipses and tides
+gloss, which they cannot today) is a deliberate world change and is **out of
+scope here**.
+
+**Decision 0094 governs Task 2's shape.** It landed on `main` on 2026-07-31,
+after this campaign's spec was approved, and names `phenomenon_concept` in its
+own scope list: a deliberate duplicate shares its *roster* (which kinds must be
+answered for) and never its *derivation* (what the answer is). So the kind gate
+becomes one `GLOSSING_KINDS` list read by both sides, worldgen keeps its closed
+codomain match, and the lab's second opinion is **re-grounded on the concept
+registry and the lexicon** — a source of truth the gloss path never consults —
+rather than copying worldgen's match arms. This resolves what the spec's §8
+risk 1 left open.
 
 **Tech Stack:** Rust edition 2024, `serde` only (decision 0004). No new
 dependencies. `cargo nextest` for tests, `make gate` as the commit gate.
@@ -296,17 +306,20 @@ Nothing reads it yet: seed 42 is byte-identical."
 
 **Interfaces:**
 - Consumes: `hornvale_kernel::Referent` and `Phenomenon.referent` from Task 1.
-- Produces: no signature change. `fn phenomenon_concept(phenomenon: &Phenomenon)
-  -> Option<&'static str>` keeps its exact name, argument type and return type
-  in both copies, so all seven call sites are untouched.
+- Produces: `hornvale_worldgen::GLOSSING_KINDS: &[&str]` (the shared roster) and
+  `hornvale_worldgen::gloss_concept_of` (added in Task 3).
+  `windows/worldgen`'s private `fn phenomenon_concept(&Phenomenon) ->
+  Option<&'static str>` keeps its exact signature, so all seven of its call
+  sites are untouched. `windows/lab`'s copy changes return type to
+  `Option<&str>` and gains a sibling `referent_is_nameable`.
 
-**The codomain gate is the whole point of this task.** Today
-`phenomenon_concept` returns `Some(..)` only for `celestial-body`,
+**The roster preserves the codomain, and that is the whole point of this task.**
+Today `phenomenon_concept` returns `Some(..)` only for `celestial-body`,
 `seasonal-cycle`, `night-star` and `ambient`, and `None` for everything else —
 so eclipses, tides, heat, cold, rain and snow contribute nothing to a gloss
-even though they now carry perfectly good referents. Keeping that gate is what
-makes this task a refactor. **Do not widen it**; widening is a deliberate world
-change with its own spec flag.
+even though they now carry perfectly good referents. Keeping that set is what
+makes this task a refactor. **Do not widen `GLOSSING_KINDS`**; widening is a
+deliberate world change with its own spec flag and its own epoch measurement.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -353,31 +366,56 @@ Run: `cargo test -p hornvale-worldgen --lib the_gloss_ignores_the_description`
 Expected: FAIL — `phenomenon_concept(&moon("a vast lunar disc"))` returns
 `Some("sun")`, because the substring branch falls through.
 
-- [ ] **Step 3: Rewrite both copies**
+- [ ] **Step 3: Publish the shared roster (decision 0094)**
 
-`windows/worldgen/src/lib.rs` — replace the body, and replace the doc comment's
-"disambiguates by its description text" paragraph with the gate's rationale:
+**Decision 0094 lands on this task and governs its shape**: a deliberate
+duplicate shares its *roster* — what classes of thing must be answered for —
+and never its *derivation*. It names `phenomenon_concept` in its own scope
+list. So the kind gate becomes one declarative list read by both sides, while
+the two sides keep computing independently.
+
+In `windows/worldgen/src/lib.rs`, beside `phenomenon_concept`:
+
+```rust
+/// The phenomenon kinds that gloss — the shared **roster** under decision
+/// 0094, read by this crate's `phenomenon_concept` and independently by
+/// `windows/lab`'s nameability check. It names *which questions must be
+/// answered*, never *what the answers are*: adding a kind here obliges both
+/// sides to account for it, and neither side learns the other's derivation.
+///
+/// Deliberately narrower than the set of phenomena that carry referents.
+/// Eclipses, tides, heat, cold, rain and snow all name real registered
+/// concepts and would gloss if listed — but they never have, so listing them
+/// is a **world change**, not a refactor. Widen only with a spec behind it,
+/// and expect `PRESIDING_CONCEPTS` in `windows/lab/src/metrics.rs` to red
+/// until it is widened to match.
+/// type-audit: bare-ok(identifier-text)
+pub const GLOSSING_KINDS: &[&str] = &[
+    hornvale_astronomy::CELESTIAL_BODY,
+    hornvale_astronomy::SEASONAL_CYCLE,
+    hornvale_astronomy::NIGHT_STAR,
+    hornvale_climate::AMBIENT,
+];
+```
+
+- [ ] **Step 4: Rewrite worldgen's derivation**
+
+Replace the body, and replace the doc comment's "disambiguates by its
+description text" paragraph:
 
 ```rust
 /// The concept a phenomenon glosses to, for glossed naming (Task 9).
 ///
-/// Reads `referent.concept` — never the description. The kind gate below is
-/// the *codomain* of glossing, and it is deliberately narrower than the set
-/// of phenomena that carry referents: eclipses, tides, heat, cold, rain and
-/// snow all name real concepts but have never contributed to a gloss, and
-/// teaching them to would be a world change, not a refactor. Widen it only
-/// with a spec behind it — and expect `PRESIDING_CONCEPTS` in
-/// `windows/lab/src/metrics.rs` to red until it is widened to match.
+/// Reads `referent.concept` — never the description. The rostered kinds are
+/// [`GLOSSING_KINDS`]; the closed codomain below is this side's own
+/// derivation, which `windows/lab` does not share (decision 0094).
 fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
-    let concept = match phenomenon.kind.as_str() {
-        CELESTIAL_BODY | SEASONAL_CYCLE | NIGHT_STAR | AMBIENT => {
-            phenomenon.referent.concept.as_str()
-        }
-        _ => return None,
-    };
+    if !GLOSSING_KINDS.contains(&phenomenon.kind.as_str()) {
+        return None;
+    }
     // Returned as `&'static str` so callers keep their existing signature:
     // the codomain is closed, and a referent outside it is a producer bug.
-    match concept {
+    match phenomenon.referent.concept.as_str() {
         "sun" => Some("sun"),
         "moon" => Some("moon"),
         "star" => Some("star"),
@@ -388,25 +426,106 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 }
 ```
 
-Apply the identical body to `windows/lab/src/metrics.rs:4252`, qualifying the
-kind constants as it already does (`hornvale_astronomy::CELESTIAL_BODY`, etc.).
-Update its doc comment: the two copies are no longer independent
-re-derivations, and saying so is required — replace "Deliberately duplicated
-rather than imported: … what makes `name-gloss-true` a real cross-check" with:
+- [ ] **Step 5: Re-ground the lab's second opinion on the registry**
+
+`windows/lab/src/metrics.rs:4252` reads the same roster but must **not** copy
+worldgen's codomain match — that would be a second opinion that agrees by
+construction, which 0094 says is not a second opinion. Its independent
+computation is **nameability**, derived from a different source of truth: the
+concept registry and the culture's lexicon, neither of which worldgen consults
+when glossing.
+
+Replace the copy with:
 
 ```rust
-/// Mirrors worldgen's own private `phenomenon_concept`. NOTE: since The
-/// Vernacular both copies read one field, so this is no longer an independent
-/// re-derivation and `name-gloss-true` is no longer a cross-check of the
-/// mapping — only of the naming that consumes it. Re-grounding it against the
-/// concept registry is an open follow-up (The Vernacular spec §8 risk 1).
+/// The concept a phenomenon glosses to, read from the shared roster
+/// (`hornvale_worldgen::GLOSSING_KINDS`) and the phenomenon's own referent.
+///
+/// This is a READ, not a derivation — the derivation this crate owns is
+/// [`referent_is_nameable`] below, which answers the same roster from the
+/// concept registry and the lexicon rather than from worldgen's codomain.
+/// Decision 0094: share the roster, never the derivation. Before The
+/// Vernacular this function re-implemented worldgen's mapping by grepping the
+/// phenomenon's English description, which made the gloss a function of prose.
+fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&str> {
+    hornvale_worldgen::GLOSSING_KINDS
+        .contains(&phenomenon.kind.as_str())
+        .then(|| phenomenon.referent.concept.as_str())
+}
+
+/// This crate's own derivation over the shared roster: is a rostered
+/// phenomenon's referent a concept the world can actually *say*?
+///
+/// Independent of worldgen by construction — it consults the concept registry
+/// and the culture's lexicon, which the gloss path never reads. A referent
+/// that is unregistered, outside the presiding codomain, or a lexical `Gap`
+/// for this culture is a phenomenon whose deity could never be named after it,
+/// which is exactly the defect The Vernacular exists to make visible.
+fn referent_is_nameable(
+    phenomenon: &Phenomenon,
+    registry: &hornvale_kernel::ConceptRegistry,
+    lexicon: &hornvale_language::Lexicon,
+) -> Option<bool> {
+    let concept = phenomenon_concept(phenomenon)?;
+    Some(
+        registry.concept(concept).is_some()
+            && PRESIDING_CONCEPTS.contains(&concept)
+            && !matches!(lexicon.entry(concept), None | Some(hornvale_language::LexEntry::Gap { .. })),
+    )
+}
 ```
 
-While here, delete the stale citation of `cli/tests/words_identity.rs` from
-that comment: **that file does not exist** — `ls cli/tests/` does not list it,
-and a workspace grep for `phenomenon_concept` finds two definitions, not three.
+Check `LexEntry`'s actual `Gap` variant shape before writing that last line —
+`grep -n "enum LexEntry" -A 20 domains/language/src/lexicon.rs`. If `Gap`
+carries fields the `{ .. }` pattern does not fit, match its real shape; do not
+change `LexEntry`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+Note the return type change to `Option<&str>` (borrowed from the referent
+rather than `&'static str`). Fix the call site at
+`windows/lab/src/metrics.rs:4310` — it feeds `presiding` into the site-concept
+vector; a borrow of the phenomenon lives long enough there, but if the borrow
+checker disagrees, `.map(str::to_string)` at the call site rather than
+reintroducing a `&'static` codomain match.
+
+While here, delete the stale citation of `cli/tests/words_identity.rs` from
+that comment: **that file does not exist**. It was added in `79dbe768` and
+deleted in `4c3d3f7f` ("retire words/tongues identity, superseded by branches
+keystone"); a workspace grep for `fn phenomenon_concept` finds two definitions,
+not three. Decision 0094's own scope list repeats the same stale count — that
+is Nathan's to handle, not this task's; do not edit the decision.
+
+- [ ] **Step 5b: Wire the nameability check into a test**
+
+Add to `windows/lab/src/metrics.rs`'s inline `mod tests`:
+
+```rust
+/// Every rostered phenomenon in seed 42 names a concept the world can say.
+/// The lab's own derivation over the shared roster (decision 0094) — it asks
+/// the registry and the lexicon, never worldgen's codomain.
+#[test]
+fn every_rostered_referent_is_nameable() {
+    let view = WorldView::new(hornvale_kernel::Seed(42)).expect("seed 42 builds");
+    let world = view.world();
+    let lexicon = species_lexicon(&view, "goblin").expect("goblin has a lexicon");
+    for p in hornvale_worldgen::observed_phenomena(world, 0.0).expect("phenomena") {
+        if let Some(nameable) = referent_is_nameable(&p, &world.registry, &lexicon) {
+            assert!(
+                nameable,
+                "rostered phenomenon {:?} refers to {:?}, which this world cannot name",
+                p.kind, p.referent.concept
+            );
+        }
+    }
+}
+```
+
+`WorldView::new` and the species-lexicon helper already exist in this module
+(the file builds lexicons for `name-gloss-true` today) — grep for
+`fn species_lexicon` and for how the existing gloss metrics obtain a
+`WorldView`, and use those names rather than the placeholders above if they
+differ.
+
+- [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `cargo nextest run -p hornvale-worldgen -p hornvale-lab 2>&1 | tail -20`
 Expected: PASS, including
@@ -414,7 +533,7 @@ Expected: PASS, including
 were given referents in Task 1 step 5 and its expected codomain
 (`day, moon, star, sun, wind`) is unchanged.
 
-- [ ] **Step 5: Prove zero facts moved — the task's real gate**
+- [ ] **Step 7: Prove zero facts moved — the task's real gate**
 
 ```bash
 cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-vern-t2-world.json
@@ -426,7 +545,7 @@ If facts moved, a referent in Task 1's table disagrees with what the old
 substring hack produced for that phenomenon — find which, and fix the
 referent; do not adjust the gate to match.
 
-- [ ] **Step 6: Confirm no artifact drift**
+- [ ] **Step 8: Confirm no artifact drift**
 
 ```bash
 make rebaseline
@@ -435,7 +554,7 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 
 Expected: `NO DRIFT`.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 cargo fmt
