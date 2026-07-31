@@ -2,7 +2,10 @@
 
 **Campaign:** the-weir
 **Date:** 2026-07-31
-**Status:** Draft — awaiting G3 review
+**Status:** G3 approved (Nathan, 2026-07-31) — both flagged judgment calls
+accepted: the wrappers' fallback arms die with them, and Stage 3's
+test-breadth reduction is ratified under the new no-seed-hunting principle
+(decision 0093 below).
 **Thesis:** The Shuttle fixed the callers; the pulpit still stands. The
 `_of` convenience readouts that embed a full derivation invited the next
 sin before the last one was merged — `Session::start` runs the demography
@@ -63,10 +66,25 @@ existed.
    build path, `Session::start`, lab's `FullView::build`, CLI command
    entries, and test fixtures. The `#[allow]` attribute at the site IS the
    sanctioned-site list — one source of truth, greppable.
-4. **The decision record** (`docs/decisions/0092-…`): "derivation happens
-   at named construction sites; readouts take artifacts" — the durable
-   statement, with the lint named as its mechanical arm and this spec's
-   evidence as its grounds.
+4. **Two decision records:**
+   - `docs/decisions/0092-…`: "derivation happens at named construction
+     sites; readouts take artifacts" — the durable statement, with the
+     lint named as its mechanical arm and this spec's evidence as its
+     grounds. **Mechanism verified at spec time, not assumed:** a probe
+     entry `hornvale_worldgen::terrain_of` in `clippy.toml`
+     `disallowed-methods` fired on 87 call sites across worldgen,
+     including internal `crate::terrain_of` calls (clippy resolves to the
+     canonical path, so re-export shape is immaterial); the
+     enforcement-test fallback in §6 is therefore not needed.
+   - `docs/decisions/0093-…`: "seed-hunting is not a test mechanism"
+     (Nathan, G3, 2026-07-31): a desirable but non-deterministic property
+     is a **census** question (measure its frequency, pin the
+     distribution); a *behavior* of that property is a **synthetic**
+     question (hand-build a world that has it, test the behavior
+     directly). A test that sweeps seeds to *find* a property instance is
+     doing the census's job badly and the synthetic's job expensively —
+     Stage 3 is the surgical instance, and the followup build-volume
+     audit inherits this as its criterion.
 
 ### Stage 2 — one fit per start (the motivating sin)
 
