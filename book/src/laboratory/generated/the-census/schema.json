@@ -1,5 +1,4 @@
 {
-  "backfilled": true,
   "columns": [
     {
       "kind": "integer",
@@ -2028,7 +2027,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xf32f9357a4358a39"
+    "fnv1a64": "0x023c80a38eee6658"
   },
   "schema_version": 1,
   "study": {

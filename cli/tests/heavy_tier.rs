@@ -168,37 +168,6 @@ const EXPECTED_UNTOKENISED: [&str; 18] = [
     "timekeeper: reads the run.json `make ci` writes; not a standalone test",
 ];
 
-const STALE_SECOND_OPINION: [&str; 1] = [
-    "stale-second-opinion: independently_steeped_concepts is REPAIRED (it learned the staple \
-     rules) and exposure-sound now reads true live at every seed checked. This test asserts \
-     over the committed census FIXTURE, which was authored against the broken duplicate, so \
-     it awaits the regen alone. Un-ignore in the commit that lands the regen",
-];
-
-#[test]
-fn stale_second_opinion_reason_strings_are_canonical() {
-    let reasons = ignore_reasons();
-    let stale: Vec<&String> = reasons
-        .iter()
-        .filter(|r| r.contains("stale-second-opinion:"))
-        .collect();
-    assert!(
-        !stale.is_empty(),
-        "expected at least one stale-second-opinion #[ignore] test; found none. If \
-         `independently_steeped_concepts` has been taught The Watershed's staple rules, \
-         the census regenerated and both rows re-derived, delete this test and its \
-         constant along with the last ignore — do not leave a guard standing over an \
-         empty set."
-    );
-    for r in &stale {
-        assert!(
-            STALE_SECOND_OPINION.contains(&r.as_str()),
-            "stale-second-opinion ignore reason must be one of the two canonical \
-             strings verbatim; found: {r:?}"
-        );
-    }
-}
-
 /// The other direction the two token guards do not cover, added at the F11
 /// discharge (2026-07-30).
 ///
