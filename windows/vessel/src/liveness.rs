@@ -3194,12 +3194,31 @@ pub struct Disposition {
 /// re-derived), so positional identity (`cache[i]`, filled once, read
 /// thereafter) is already a complete and correct key — there is no way for
 /// a stale answer to reach a different view from inside this function.
-/// `#[cfg(debug_assertions)]` still recomputes and asserts equality on every
-/// cache HIT (free in release) as a standing regression guard: if a future
-/// change to `Thirst::affordance`/`Hunger::affordance` ever made the answer
-/// depend on something that varies WITHIN one `arbitrate` call (breaking the
-/// candidate-invariance this cache assumes), that assumption would fail
-/// loudly in every debug test run rather than silently going stale.
+///
+/// **No production recompute-and-assert guard (controller correction,
+/// ledger #9 round 2).** An earlier version of this cache recomputed
+/// `Drive::affordance` and `debug_assert_eq!`'d it against the cached value
+/// on EVERY cache hit, gated on `#[cfg(debug_assertions)]`. That traded
+/// away the entire point of the cache under the exact profile that matters:
+/// `debug_assertions` is on by default in the `dev`/`test` Cargo profiles,
+/// which is what plain `cargo test` and (critically) `make gate`/`make ci`
+/// both build under — neither passes `--release`. So every one of those
+/// "free in release" recomputes was a REAL, uncached `plan_to_water`/
+/// `forage_step` call on every single candidate action, in every test run
+/// this campaign's own gate performs — the water-search count measured
+/// right back at the pre-optimization baseline (1632/40 ticks) under the
+/// one profile the fix was meant to speed up. The named test
+/// `arbitrates_affordance_cache_matches_a_fresh_recompute` already pins
+/// "cached answer == fresh recompute" for the real production path,
+/// unconditionally (not gated on `debug_assertions`, so it holds in every
+/// build), and pays for exactly ONE extra recompute total — not one per
+/// candidate action per drive per `arbitrate` call. A per-call "assert only
+/// on the first hit" residual guard was considered and rejected: it would
+/// still force one extra real search per (creature, tick, call site) that
+/// ever reaches a second candidate query — multiplying the water count back
+/// toward ~2× its collapsed value for a correctness guarantee the named
+/// test already gives for free, once, campaign-wide. The cache is trusted
+/// on positional identity alone; the named test is the whole guard.
 fn cached_serviceability(
     drives: &[&dyn Drive],
     view: &Perceived,
@@ -3211,19 +3230,7 @@ fn cached_serviceability(
     let slot = &mut cache[i];
     let mut affordance = || -> Option<Action> {
         match slot {
-            Some(cached) => {
-                #[cfg(debug_assertions)]
-                {
-                    let fresh = drives[i].affordance(view, budget);
-                    debug_assert_eq!(
-                        *cached, fresh,
-                        "cached_serviceability: a cache hit for drive {i} disagreed with a \
-                         fresh Drive::affordance recompute on the same view/budget — the \
-                         candidate-invariance this cache assumes (ledger #9) has gone stale"
-                    );
-                }
-                cached.clone()
-            }
+            Some(cached) => cached.clone(),
             None => {
                 let value = drives[i].affordance(view, budget);
                 *slot = Some(value.clone());
@@ -11561,13 +11568,20 @@ mod tests {
         // `arbitrate` call, never re-derived, so there is no separate
         // key-equality branch to exercise from outside `arbitrate` (unlike
         // Task 6b's `RefCell`-per-drive design, which validated an explicit
-        // key on every read because the memo could outlive one view). This
-        // external check — the resolved `Intent` matches a fresh recompute
-        // — together with the `debug_assert_eq!` twin inside
-        // `cached_serviceability`'s own cache-hit path (recompute-and-assert
-        // under `debug_assertions`; every candidate past the first one in
-        // THIS test's own `arbitrate` call exercises that hit path) is the
-        // WHOLE guard: there is nothing else to pin.
+        // key on every read because the memo could outlive one view).
+        //
+        // Controller correction (ledger #9 round 2): this test used to share
+        // the guard with a `debug_assert_eq!` twin recomputed on every cache
+        // HIT inside `cached_serviceability` itself — but that recompute ran
+        // under `debug_assertions`, which is exactly the profile plain
+        // `cargo test`/`make gate` build under, so it silently paid for a
+        // real search on every candidate action and erased the whole point
+        // of the cache in the one place (the gate) this fix exists to speed
+        // up. The twin is gone; THIS test — asserting the resolved `Intent`
+        // equals a fresh, standalone recompute — is now the WHOLE guard,
+        // unconditional (not gated on `debug_assertions`) and paid for
+        // exactly once, not once per candidate per drive per `arbitrate`
+        // call.
         let home = raddr(1.0);
         let ns = home.neighbors();
         let water = ns[0].clone();
