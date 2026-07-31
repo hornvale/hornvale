@@ -577,8 +577,8 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// 0.7222 — a real, if modest, margin over the keystone floor rather than
 /// sitting on top of it. A save-format constant from here on. Module scope
 /// (hoisted from the settlement-genesis stage closure, Task A16a) so
-/// [`demography_report`]'s Lab accessor and the genesis path share the one
-/// definition — they must never diverge.
+/// [`demography_report_from`]'s Lab accessor and the genesis path share the
+/// one definition — they must never diverge.
 const CONDENSATION_THRESHOLD: f64 = 1.7;
 
 /// Settlers a maximal-suitability cell supports: the scale that turns
@@ -1070,36 +1070,28 @@ pub fn niche_per_species_k(
 /// species' field, since no pin is reconstructed here), against an
 /// EXPLICITLY supplied `beta`/`floor` rather than the frozen
 /// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
-/// Reconstructs terrain and climate, then assembles the report from
-/// [`niche_per_species_k`] (The Niche's differentiated K) using demography's
-/// pub building blocks, mirroring [`hornvale_demography::report`]'s body.
-/// Since The Seam's cutover, settlement genesis packs the same niche-K stack
-/// (peopled species only), so this accessor and genesis share one pipeline
-/// shape; this variant just exposes it over the full roster with a tunable
-/// `beta`. Pure and seed-free beyond the world's already-committed facts:
-/// two calls with the same `(world, roster, beta, floor)` produce
-/// byte-identical reports, so a β-sweep calibration harness (task A16b) can
-/// vary `beta` across many calls without rebuilding the world or drawing new
-/// seed state. [`demography_report`] is this function pinned to the frozen
+/// Assembles the report from [`niche_per_species_k`] (The Niche's
+/// differentiated K) using demography's pub building blocks, mirroring
+/// [`hornvale_demography::report`]'s body. Since The Seam's cutover,
+/// settlement genesis packs the same niche-K stack (peopled species only),
+/// so this accessor and genesis share one pipeline shape; this variant just
+/// exposes it over the full roster with a tunable `beta`. Pure and seed-free
+/// beyond the world's already-committed facts: two calls with the same
+/// `(world, roster, beta, floor, terrain, climate)` produce byte-identical
+/// reports, so a β-sweep calibration harness (task A16b) can vary `beta`
+/// across many calls without rebuilding the world or drawing new seed
+/// state. [`demography_report_from`] is this function pinned to the frozen
 /// constants — the Lab accessor worldgen ships.
 ///
-/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
-pub fn demography_report_with_beta(
-    world: &World,
-    wc: &WorldComponents,
-    beta: f64,
-    floor: f64,
-) -> Result<hornvale_demography::DemographyReport, BuildError> {
-    let terrain = terrain_of(world)?;
-    let climate = climate_from(world, &terrain)?;
-    demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
-}
-
-/// [`demography_report_with_beta`], reusing ALREADY-BUILT terrain/climate
-/// (a Lab view's `terrain()`/`climate()`) instead of re-sculpting the globe —
-/// the census's demography metrics call this. Byte-identical: the passed
-/// terrain/climate equal `terrain_of`/`climate_of`, and the report is pure
-/// over the committed world (no seed draws).
+/// Takes ALREADY-BUILT terrain/climate (a Lab view's `terrain()`/`climate()`,
+/// or a caller's own `terrain_of`/`climate_from`) instead of re-sculpting the
+/// globe — since The Weir (Stage 1b), every caller assembles or already
+/// holds these once per call scope rather than paying a redundant fit; the
+/// bare `(world, wc, beta, floor)` form that re-sculpted internally is
+/// deleted. Byte-identical whenever the passed terrain/climate equal
+/// `terrain_of`/`climate_of`, since the report is pure over the committed
+/// world (no seed draws).
+///
 /// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
 pub(crate) fn demography_report_with_beta_from(
     world: &World,
@@ -1162,25 +1154,6 @@ pub(crate) fn demography_report_with_beta_from(
     })
 }
 
-/// Build the full coexistence-stack demography report for `world`, over
-/// `roster`, at the FROZEN `BETA`/`FLOOR` constants — so the report is byte-
-/// identical to the one settlement genesis built internally (task A16a: a
-/// Lab accessor for the later A16b β calibration). Delegates to
-/// [`demography_report_with_beta`]; see that function for the full wiring
-/// doc. Deterministic: reads only already-committed facts, draws nothing new
-/// from the seed.
-pub fn demography_report(
-    world: &World,
-    wc: &WorldComponents,
-) -> Result<hornvale_demography::DemographyReport, BuildError> {
-    demography_report_with_beta(
-        world,
-        wc,
-        hornvale_demography::BETA,
-        hornvale_demography::FLOOR,
-    )
-}
-
 /// The diet-niche `ANIMAL_PREY` weight above which a species counts as a
 /// CARNIVORE for the predator-pressure field (The Quarry) — a prey-dominant
 /// diet. The obligate apexes (dragons, owlbear) sit at `1.0`; a balanced
@@ -1196,16 +1169,22 @@ const CARNIVORE_THRESHOLD: f64 = 0.5;
 /// settled ground reads LOW even where the land COULD support carnivores) and
 /// home-range-adjusted (an apex spread over a wide range is thin everywhere), so
 /// it concentrates on genuine WILD predator territory rather than lighting up all
-/// fertile land. Derived from [`demography_report`]'s stack (the same fit
+/// fertile land. Derived from [`demography_report_from`]'s stack (the same fit
 /// settlement genesis uses) over the canonical roster — no seed, byte-identical
 /// across calls. The first BIOTIC hazard — sourced from life, not climate.
+///
+/// Takes an ALREADY-BUILT `wc`/`terrain`/`report` — since The Weir (Stage
+/// 1b), the fit is run once per call scope and shared with
+/// [`prey_pressure_from`]/[`wild_concentrations_from`] rather than each
+/// re-running [`demography_report_from`] on identical inputs; the bare
+/// `(world)` form that fit internally is deleted.
 /// type-audit: bare-ok(ratio: return)
-pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
-    let wc = WorldComponents::assemble()?;
-    let terrain = terrain_of(world)?;
-    let climate = climate_from(world, &terrain)?;
+pub fn predator_pressure_from(
+    wc: &WorldComponents,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    report: &hornvale_demography::DemographyReport,
+) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let geo = terrain.geosphere();
-    let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
     // build-local dense index the stack uses), for prey-dominant diets.
     let carnivore: std::collections::BTreeSet<u32> = wc
@@ -1262,7 +1241,7 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 }
 
 /// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
-/// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure`].
+/// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure_from`].
 /// Where the predator field sums CARNIVORE realized density (so a quarry flees
 /// it), this sums the PREY BASE's realized density (so a carnivore's hunger is
 /// drawn UP it): the coexistence-stack density of **mobile-beast, non-carnivore**
@@ -1271,16 +1250,21 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 /// settlements — the acute-hunt tier owns predators-stalk-towns), and autotrophs
 /// are excluded (a plant is not a carnivore's prey). Realized density, not
 /// capacity, so it concentrates on genuine wild prey ground (the same honesty
-/// `predator_pressure` paid for). Normalized to `[0, 1]` by its own maximum.
+/// `predator_pressure_from` paid for). Normalized to `[0, 1]` by its own maximum.
 /// Derived from the committed demography stack — no seed, no epoch, byte-identical
 /// across calls.
+///
+/// Takes an ALREADY-BUILT `wc`/`terrain`/`report` — since The Weir (Stage
+/// 1b), the fit is run once per call scope and shared with
+/// [`predator_pressure_from`]/[`wild_concentrations_from`]; the bare
+/// `(world)` form that fit internally is deleted.
 /// type-audit: bare-ok(ratio: return)
-pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
-    let wc = WorldComponents::assemble()?;
-    let terrain = terrain_of(world)?;
-    let climate = climate_from(world, &terrain)?;
+pub fn prey_pressure_from(
+    wc: &WorldComponents,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    report: &hornvale_demography::DemographyReport,
+) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let geo = terrain.geosphere();
-    let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
     // species — not a settling people (`social_form != Settled`), not a
     // rooted `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <=
@@ -1322,7 +1306,7 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 
 /// The `k` densest WILD concentrations (The Wilding) — the herds and lairs of
 /// distinct MOBILE BEAST species, as `(species label, unit-sphere position)`.
-/// From [`demography_report`]'s coexistence-stack settlements (the per-cell
+/// From [`demography_report_from`]'s coexistence-stack settlements (the per-cell
 /// density condensations), keeps those whose DOMINANT species is a mobile beast —
 /// *not* a settling people (`social_form != Settled`) and *not*
 /// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
@@ -1331,12 +1315,18 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 /// Deterministic (mass-descending, label tie-break) and seed-free. Encapsulates
 /// the demography — the vessel mints wild NPCs from these without ever reaching
 /// into the stack.
+///
+/// Takes an ALREADY-BUILT `wc`/`report` — since The Weir (Stage 1b), the fit
+/// is run once per call scope and shared with
+/// [`predator_pressure_from`]/[`prey_pressure_from`] (this accessor reads no
+/// terrain field itself, only the report's `stack_settlements`); the bare
+/// `(world, k)` form that fit internally is deleted.
 /// type-audit: bare-ok(count: k), bare-ok(identifier-text: return)
-pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
-    let wc = WorldComponents::assemble()?;
-    let terrain = terrain_of(world)?;
-    let climate = climate_from(world, &terrain)?;
-    let report = demography_report_from(world, &wc, &terrain, &climate)?;
+pub fn wild_concentrations_from(
+    wc: &WorldComponents,
+    report: &hornvale_demography::DemographyReport,
+    k: usize,
+) -> Result<Vec<(String, [f64; 3])>, BuildError> {
     // The dense-index → species-label map (the same ascending-`KindId` order the
     // stack's `dominant` tag indexes into).
     let labels: Vec<String> = wc
@@ -1403,9 +1393,16 @@ pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64;
     Ok(wild.into_iter().map(|(l, p, _)| (l, p)).collect())
 }
 
-/// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
-/// `terrain()`/`climate()`) instead of re-sculpting the globe — the census's
-/// demography metrics call this. Byte-identical to `demography_report`.
+/// [`demography_report_with_beta_from`] pinned to the frozen `BETA`/`FLOOR`
+/// constants (task A16a: a Lab accessor for the later A16b β calibration),
+/// taking ALREADY-BUILT terrain/climate (a Lab view's `terrain()`/
+/// `climate()`, or a caller's own `terrain_of`/`climate_from`) instead of
+/// re-sculpting the globe — the census's demography metrics call this, and
+/// since The Weir it is the ONE fit `predator_pressure_from`/
+/// `prey_pressure_from`/`wild_concentrations_from` share per call scope.
+/// Byte-identical to the one settlement genesis builds internally.
+/// Deterministic: reads only already-committed facts, draws nothing new
+/// from the seed.
 pub fn demography_report_from(
     world: &World,
     wc: &WorldComponents,
@@ -7234,6 +7231,24 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 mod tests {
     use super::*;
 
+    /// The `(wc, terrain, report)` prelude the pressure/report `_from` family
+    /// takes as parameters (The Weir, Stage 1b) — a test-only helper so each
+    /// call site below builds the fit once rather than repeating the
+    /// assemble/sculpt/fit prelude the bare forms used to hide.
+    fn wc_terrain_report(
+        world: &World,
+    ) -> (
+        WorldComponents,
+        hornvale_terrain::GeneratedTerrain,
+        hornvale_demography::DemographyReport,
+    ) {
+        let wc = WorldComponents::assemble().unwrap();
+        let terrain = terrain_of(world).unwrap();
+        let climate = climate_from(world, &terrain).unwrap();
+        let report = demography_report_from(world, &wc, &terrain, &climate).unwrap();
+        (wc, terrain, report)
+    }
+
     /// A seed-42 generated-sky world with the default roster — the shared
     /// fixture for the fact-emission tests below.
     fn vigil_world() -> World {
@@ -7575,8 +7590,9 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap();
-        let a = wild_concentrations(&world, 5).unwrap();
-        let b = wild_concentrations(&world, 5).unwrap();
+        let (wc, _terrain, report) = wc_terrain_report(&world);
+        let a = wild_concentrations_from(&wc, &report, 5).unwrap();
+        let b = wild_concentrations_from(&wc, &report, 5).unwrap();
         assert_eq!(a, b, "deterministic");
         assert!(!a.is_empty(), "the wild is populated: {a:?}");
         let biosphere = hornvale_species::biosphere_registry();
@@ -7615,9 +7631,10 @@ mod tests {
         )
         .unwrap();
         let biosphere = hornvale_species::biosphere_registry();
+        let (wc, _terrain, report) = wc_terrain_report(&world);
         // Ask for far more than the roster holds, so the guard is what excludes
         // a sea creature rather than the `k` cutoff happening to.
-        let wild = wild_concentrations(&world, 100).unwrap();
+        let wild = wild_concentrations_from(&wc, &report, 100).unwrap();
         for (species, _pos) in &wild {
             let marine = biosphere
                 .get_by_label(species)
@@ -7793,8 +7810,9 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap();
-        let a = predator_pressure(&world).unwrap();
-        let b = predator_pressure(&world).unwrap();
+        let (wc, terrain, report) = wc_terrain_report(&world);
+        let a = predator_pressure_from(&wc, &terrain, &report).unwrap();
+        let b = predator_pressure_from(&wc, &terrain, &report).unwrap();
         let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
         let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
         assert_eq!(va, vb, "two calls produce byte-identical fields");
@@ -7875,8 +7893,9 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap();
-        let a = prey_pressure(&world).unwrap();
-        let b = prey_pressure(&world).unwrap();
+        let (wc, terrain, report) = wc_terrain_report(&world);
+        let a = prey_pressure_from(&wc, &terrain, &report).unwrap();
+        let b = prey_pressure_from(&wc, &terrain, &report).unwrap();
         let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
         let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
         assert_eq!(va, vb, "two calls produce byte-identical fields");
@@ -7894,7 +7913,7 @@ mod tests {
         );
         // The prey field is not the predator field: at least some cells differ
         // (the two populations do not perfectly coincide).
-        let pred: Vec<f64> = predator_pressure(&world)
+        let pred: Vec<f64> = predator_pressure_from(&wc, &terrain, &report)
             .unwrap()
             .iter()
             .map(|(_, v)| *v)
@@ -11030,11 +11049,13 @@ mod tests {
         let world = generated(seed);
         let wc = WorldComponents::assemble().unwrap();
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
-        // Reuse the exact pack params (BETA/FLOOR) genesis and
-        // `demography_report` share — no bespoke beta/floor here.
-        let report = demography_report(&world, &wc).expect("demography report");
-
         let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
+        // Reuse the exact pack params (BETA/FLOOR) genesis and
+        // `demography_report_from` share — no bespoke beta/floor here.
+        let report =
+            demography_report_from(&world, &wc, &terrain, &climate).expect("demography report");
+
         let geo = terrain.geosphere();
 
         // Per-cell dominant species id: greatest density wins; deterministic

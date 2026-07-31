@@ -259,14 +259,16 @@ fn different_uptake_vectors_peak_in_different_cells() {
 /// build-local dense-index contract `niche_per_species_k`'s doc comment
 /// spells out (never identity, valid only within this one report call).
 /// Counts settlements per dominant kind over the WHOLE roster (fauna
-/// included) — [`hornvale_worldgen::demography_report`]'s stack, not the
+/// included) — [`hornvale_worldgen::demography_report_from`]'s stack, not the
 /// peopled-only settlement-genesis pipeline (which never places a fauna
 /// kind by construction; see `species_worlds.rs`'s module doc).
 fn dominant_settlement_counts(
     world: &World,
     wc: &WorldComponents,
 ) -> std::collections::BTreeMap<&'static str, u32> {
-    let report = hornvale_worldgen::demography_report(world, wc).unwrap();
+    let terrain = terrain_of(world).unwrap();
+    let climate = hornvale_worldgen::climate_from(world, &terrain).unwrap();
+    let report = hornvale_worldgen::demography_report_from(world, wc, &terrain, &climate).unwrap();
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let mut counts: std::collections::BTreeMap<&'static str, u32> =
         std::collections::BTreeMap::new();

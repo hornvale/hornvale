@@ -323,6 +323,20 @@ impl<'w> Session<'w> {
         let climate = terrain
             .as_ref()
             .and_then(|t| hornvale_worldgen::climate_from(world, t).ok());
+        // The species roster and the demography report, assembled/fit ONCE
+        // per session (The Weir, Stage 1b): shared below by `predator`/
+        // `prey` and by the wild-NPC derivation instead of each
+        // independently re-running the coexistence-stack fit over the same
+        // `(world, wc, terrain, climate)`. `None` whenever `terrain`/
+        // `climate`/`wc` is `None` or the fit itself fails — the same
+        // `Option` posture as `calendar`/`predator`/`prey` below.
+        let wc = hornvale_worldgen::WorldComponents::assemble().ok();
+        let report = match (wc.as_ref(), terrain.as_ref(), climate.as_ref()) {
+            (Some(wc), Some(terrain), Some(climate)) => {
+                hornvale_worldgen::demography_report_from(world, wc, terrain, climate).ok()
+            }
+            _ => None,
+        };
         let agent = mint_flagship(world, &ctx)?;
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
@@ -376,20 +390,40 @@ impl<'w> Session<'w> {
         // finally fears predator ground (The Quarry, live). Off only for the
         // settled-population narration unit tests that isolate the peopled path.
         if opts.wild_agents {
-            npcs.extend(derive_wild_npcs(world, &ctx, &mut ledger, WILD_COUNT));
+            // The wild-concentration roster, from the same shared `report`
+            // (The Weir, Stage 1b) rather than a fourth independent fit.
+            let concentrations = match (wc.as_ref(), report.as_ref()) {
+                (Some(wc), Some(report)) => {
+                    hornvale_worldgen::wild_concentrations_from(wc, report, WILD_COUNT)
+                        .unwrap_or_default()
+                }
+                _ => Vec::new(),
+            };
+            npcs.extend(derive_wild_npcs(world, &ctx, &mut ledger, concentrations));
         }
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
             .and_then(|sky| sky.calendar().cloned());
-        // Compute the predator-pressure field once (The Quarry), so the danger
-        // drive senses carnivore territory. A demography fit — bounded to session
-        // start; `None` on failure (danger simply loses its PREDATOR axis).
-        let predator = hornvale_worldgen::predator_pressure(world).ok();
+        // The predator-pressure field (The Quarry), so the danger drive
+        // senses carnivore territory — from the shared `report` above (The
+        // Weir, Stage 1b) rather than its own fit. `None` on a missing
+        // input (danger simply loses its PREDATOR axis).
+        let predator = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+            (Some(wc), Some(terrain), Some(report)) => {
+                hornvale_worldgen::predator_pressure_from(wc, terrain, report).ok()
+            }
+            _ => None,
+        };
         // The prey-pressure field (The Teeth), so a carnivore's hunger senses
-        // prey territory — the dual of the predator field, same one-shot fit.
-        let prey = hornvale_worldgen::prey_pressure(world).ok();
+        // prey territory — the dual of the predator field, same shared fit.
+        let prey = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+            (Some(wc), Some(terrain), Some(report)) => {
+                hornvale_worldgen::prey_pressure_from(wc, terrain, report).ok()
+            }
+            _ => None,
+        };
         // The settlement-territory set (The Threshold, task 5b), so a room a
         // settlement actually occupies reads as built and can draw a real
         // hearth — the real answer Task 5's arming had nothing to read before

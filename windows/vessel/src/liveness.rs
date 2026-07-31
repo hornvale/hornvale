@@ -4756,24 +4756,29 @@ pub fn derive_npcs(
         .collect()
 }
 
-/// Derive up to `k` WILD NPCs (The Wilding) — beast agents, one per distinct
-/// mobile-beast concentration (`worldgen::wild_concentrations`: a herd, a lair).
-/// A wild NPC is the same `Npc` a settlement produces — its home is the
-/// concentration's cell, its traits its biosphere's, its psyche the DEFAULT
-/// (beasts carry no `psyche_registry` entry, so the `.unwrap_or` fallbacks apply,
-/// exactly as they already do for a settlement of a non-peopled species). The
-/// threat niche derives (The Bane/Quarry) with LIVE predator dread, so a
-/// herbivore beast finally FEARS predator ground — The Quarry, waking. Appended
-/// to the peopled `derive_npcs` output; genesis untouched (the session's ledger
-/// clone only, like `derive_npcs`).
-/// type-audit: bare-ok(count: k)
+/// Derive WILD NPCs (The Wilding) — beast agents, one per distinct
+/// mobile-beast `concentrations` entry (`worldgen::wild_concentrations_from`:
+/// a herd, a lair). A wild NPC is the same `Npc` a settlement produces — its
+/// home is the concentration's cell, its traits its biosphere's, its psyche
+/// the DEFAULT (beasts carry no `psyche_registry` entry, so the `.unwrap_or`
+/// fallbacks apply, exactly as they already do for a settlement of a
+/// non-peopled species). The threat niche derives (The Bane/Quarry) with LIVE
+/// predator dread, so a herbivore beast finally FEARS predator ground — The
+/// Quarry, waking. Appended to the peopled `derive_npcs` output; genesis
+/// untouched (the session's ledger clone only, like `derive_npcs`).
+///
+/// Takes the already-fit `concentrations` (a caller's
+/// `wild_concentrations_from(wc, report, k)`) rather than fitting the
+/// coexistence stack itself — since The Weir (Stage 1b), the caller shares
+/// ONE demography report across the predator/prey/wild fields instead of
+/// this minting step re-running its own fourth fit.
+/// type-audit: bare-ok(identifier-text: concentrations)
 pub fn derive_wild_npcs(
     world: &World,
     ctx: &LocaleContext,
     ledger: &mut Ledger,
-    k: usize,
+    concentrations: Vec<(String, [f64; 3])>,
 ) -> Vec<Npc> {
-    let concentrations = hornvale_worldgen::wild_concentrations(world, k).unwrap_or_default();
     let biosphere = hornvale_species::biosphere_registry();
     let psyche = hornvale_species::psyche_registry();
     concentrations
@@ -5363,6 +5368,18 @@ impl Occupancy {
 mod tests {
     use super::*;
     use hornvale_kernel::{ConceptRegistry, Seed};
+
+    /// Test-only helper: fits the coexistence stack once and reads the `k`
+    /// densest wild concentrations — the prelude `derive_wild_npcs` used to
+    /// run internally (The Weir, Stage 1b), now the caller's job.
+    fn wild_concentrations_of(world: &World, k: usize) -> Vec<(String, [f64; 3])> {
+        let wc = hornvale_worldgen::WorldComponents::assemble().unwrap();
+        let terrain = hornvale_worldgen::terrain_of(world).unwrap();
+        let climate = hornvale_worldgen::climate_from(world, &terrain).unwrap();
+        let report =
+            hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate).unwrap();
+        hornvale_worldgen::wild_concentrations_from(&wc, &report, k).unwrap_or_default()
+    }
 
     /// A thin positional adapter over [`arbitrate`] for the tests (The
     /// Disposition): it packs the four loose disposition scalars into a
@@ -6962,7 +6979,8 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, 4);
+        let concentrations = wild_concentrations_of(&world, 4);
+        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, concentrations);
         assert!(
             !wild.is_empty() && wild.len() <= 4,
             "seed 42 mints between 1 and 4 wild beasts, got {}",
@@ -7012,7 +7030,8 @@ mod tests {
         );
         // Deterministic: the same world mints the same beast roster.
         let mut ledger2 = world.ledger.clone();
-        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, 4);
+        let concentrations2 = wild_concentrations_of(&world, 4);
+        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, concentrations2);
         let species: Vec<&str> = wild.iter().map(|n| n.species.as_str()).collect();
         let species2: Vec<&str> = wild2.iter().map(|n| n.species.as_str()).collect();
         assert_eq!(species, species2, "the wild roster is deterministic");
@@ -7039,7 +7058,8 @@ mod tests {
         let mut ledger = world.ledger.clone();
         let home = hornvale_settlement::village_info(&world).unwrap().id;
         let mut npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
-        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, 4));
+        let concentrations = wild_concentrations_of(&world, 4);
+        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, concentrations));
         assert!(!npcs.is_empty(), "the probe world derives a population");
         for n in &npcs {
             assert!(

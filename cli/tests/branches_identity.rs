@@ -54,7 +54,7 @@
 //!    strictly positive density fraction in at least one settlement's
 //!    composition — matching The Niche's accepted 2-way coexistence
 //!    result. Recomputes the same coexistence stack genesis built
-//!    (`hornvale_worldgen::demography_report`, the pure/deterministic
+//!    (`hornvale_worldgen::demography_report_from`, the pure/deterministic
 //!    accessor mirroring genesis's own pipeline byte-for-byte), since
 //!    composition, unlike dominance, commits no ledger fact of its own.
 
@@ -253,7 +253,7 @@ fn goblin_names_are_rebaselined_not_frozen() {
 /// under the niche-differentiated-K coexistence stack — is present anyway.
 /// Composition commits no ledger fact of its own (only a settlement's
 /// dominant species does, via `peopled-by`), so this recomputes the same
-/// coexistence stack genesis built via `hornvale_worldgen::demography_report`
+/// coexistence stack genesis built via `hornvale_worldgen::demography_report_from`
 /// — the pure, deterministic accessor that mirrors genesis's own
 /// `niche_per_species_k` → `coexist::pack` → `stack_condense::condense_stack`
 /// pipeline byte-for-byte at the frozen `BETA`/`FLOOR` constants — over the
@@ -307,8 +307,11 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
         ComponentStore::new(),
     )
     .expect("the peopled-only component set is well-formed");
-    let report = hornvale_worldgen::demography_report(&world, &wc)
-        .expect("demography_report must recompute over an already-built world's committed facts");
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let report = hornvale_worldgen::demography_report_from(&world, &wc, &terrain, &climate).expect(
+        "demography_report_from must recompute over an already-built world's committed facts",
+    );
 
     let tag_of = |species: &str| -> u32 {
         names

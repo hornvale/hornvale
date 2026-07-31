@@ -6924,7 +6924,13 @@ mod tests {
         // non-flat. Build the seed-42 report directly for these structural
         // asserts (the built view above no longer exposes its fields).
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        let report = hornvale_worldgen::demography_report(view.world(), view.components()).unwrap();
+        let report = hornvale_worldgen::demography_report_from(
+            view.world(),
+            view.components(),
+            view.settlement.terrain(),
+            view.settlement.climate(),
+        )
+        .unwrap();
         let dominants: std::collections::BTreeSet<u32> = report
             .stack_settlements
             .iter()
