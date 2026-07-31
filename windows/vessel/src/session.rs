@@ -2,9 +2,9 @@
 //! verb is read-only; possessing a world never changes it.
 
 use crate::liveness::{
-    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, affect_of_memo_occupied, agent_position,
-    built_rooms, derive_npcs, derive_wild_npcs,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
+    LocaleTerrain, Npc, Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, affect_of_memo_occupied,
+    agent_position, built_rooms, derive_npcs, derive_wild_npcs,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -275,6 +275,13 @@ pub struct Session<'w> {
     /// `step_with_occupancy` (for the neighbours half); `snapshot`/`needs`
     /// (both `&self`) read whatever it already holds without adding to it.
     mesh_memo: hornvale_kernel::RoomMeshMemo,
+    /// The session-lived, CROSS-tick home-plan cache (the-waymark, Task 4):
+    /// unlike `mesh_memo` above (whose per-tick geometry is re-prefilled every
+    /// `wait`), this one is never rebuilt — a stationary NPC with an unchanged
+    /// believed-hazard set must pay zero `plan_to_room` searches on every
+    /// `wait` after its first, which requires the cache itself, not merely
+    /// its backing memo, to outlive one tick. See `HomeNavCache`'s own doc.
+    home_nav_cache: HomeNavCache,
 }
 
 /// Where the possession is while indoors. `FRAME`-tier in its entirety: derived
@@ -481,6 +488,7 @@ impl<'w> Session<'w> {
             inside: None,
             submerged: None,
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
+            home_nav_cache: HomeNavCache::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -532,6 +540,12 @@ impl<'w> Session<'w> {
         // prefilled `corner_weights` cache above, just not from a warm
         // `neighbors` cache of its own.
         let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
+        // A throwaway `HomeNavCache` (the-waymark, Task 4), same reasoning as
+        // `mesh_memo` above: `&self` cannot reach a session-lived one, but it
+        // is still shared across every colocated NPC THIS call reads, so two
+        // co-located creatures asking about the same room don't each cost a
+        // fresh search.
+        let mut home_nav_cache = HomeNavCache::new();
         let present = self
             .colocated_npcs()
             .iter()
@@ -545,6 +559,7 @@ impl<'w> Session<'w> {
                     &mut afraid_memo,
                     Some(&self.occupancy),
                     &mut mesh_memo,
+                    &mut home_nav_cache,
                 );
                 PresentEntry {
                     entity: npc.entity.0.get(),
@@ -1750,7 +1765,8 @@ impl<'w> Session<'w> {
         // colder felt state than the NPC actually experienced — warmth at
         // the room's landing anchor, never wherever its own walk carried it
         // (Important 4, The Threshold whole-branch review).
-        let (_facts, occupancy) = sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo);
+        let (_facts, occupancy) =
+            sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
@@ -2170,6 +2186,9 @@ impl<'w> Session<'w> {
         // identical comment for why `&self` cannot reach the session-owned
         // one here.
         let mut mesh_memo = hornvale_kernel::RoomMeshMemo::new();
+        // A throwaway `HomeNavCache` (the-waymark, Task 4) — see `snapshot`'s
+        // identical comment.
+        let mut home_nav_cache = HomeNavCache::new();
         here.iter()
             .map(|npc| {
                 let affect = affect_of_memo_occupied(
@@ -2181,6 +2200,7 @@ impl<'w> Session<'w> {
                     &mut afraid_memo,
                     Some(&self.occupancy),
                     &mut mesh_memo,
+                    &mut home_nav_cache,
                 );
                 format!("The {} {}.", npc.label, felt_phrase(&affect))
             })

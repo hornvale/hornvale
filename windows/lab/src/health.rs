@@ -16,9 +16,9 @@
 use hornvale_kernel::{Ledger, RoomMeshMemo, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
-    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied, agent_position,
-    built_rooms, derive_npcs, waking_offset,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
+    LocaleTerrain, Npc, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied,
+    agent_position, built_rooms, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -110,6 +110,14 @@ pub fn run_simulation(
     // instance (it must be embedded, read-only, in `terrain` for the WHOLE
     // sweep, while this one needs `&mut` access every tick for `neighbors`).
     let mut mesh_memo = RoomMeshMemo::new();
+    // The session-lived, CROSS-tick home-plan cache (the-waymark, Task 4):
+    // `run_simulation` IS the "struct/scope that owns the sim loop" for a lab
+    // run (see `mesh_memo`'s own comment above), so this cache — unlike
+    // `mesh_memo`, it must survive ACROSS calls to `step_with_occupancy`, not
+    // merely across one call's own creatures/pops, to show the campaign's
+    // scaling bar (a stationary, unchanged-belief creature pays zero searches
+    // after its first tick) — lives here too, one per run.
+    let mut home_nav_cache = HomeNavCache::new();
     for _ in 0..ticks {
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
@@ -126,7 +134,8 @@ pub fn run_simulation(
         // calls read the identical frozen `ledger`, so this changes nothing
         // about how the world evolves — only what the affect sample below
         // gets to see.
-        let (_facts, occupancy) = sys.step_with_occupancy(&ledger, &mut mesh_memo);
+        let (_facts, occupancy) =
+            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         // The kernel tick applies the drive-movement facts; the same headless
         // step `Session::wait` runs, minus the player. This path goes through
         // `TickSystem::step`, whose signature is kernel-fixed and so cannot
@@ -160,6 +169,7 @@ pub fn run_simulation(
                 &mut afraid_memo,
                 Some(&occupancy),
                 &mut mesh_memo,
+                &mut home_nav_cache,
             ));
         }
     }
@@ -202,6 +212,8 @@ pub fn run_simulation_with_locale(
     // a room read on tick N stays warm for tick N+1 even if no creature is
     // standing there right now.
     let mut mesh_memo = RoomMeshMemo::new();
+    // Cross-tick, one per run — see `run_simulation`'s identical comment.
+    let mut home_nav_cache = HomeNavCache::new();
     let geo = ctx.climate().geosphere();
     let index = ctx.nearest_index();
     for _ in 0..ticks {
@@ -230,7 +242,8 @@ pub fn run_simulation_with_locale(
             day_length_std,
             terrain: &terrain,
         };
-        let (_facts, occupancy) = sys.step_with_occupancy(&ledger, &mut mesh_memo);
+        let (_facts, occupancy) =
+            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
             Ok(next) => next,
             Err(_) => break,
@@ -250,6 +263,7 @@ pub fn run_simulation_with_locale(
                 &mut afraid_memo,
                 Some(&occupancy),
                 &mut mesh_memo,
+                &mut home_nav_cache,
             ));
         }
     }

@@ -2777,9 +2777,14 @@ const SOCIAL_CEIL: f64 = 0.6;
 /// creature's thirst/other distress unmasked (social dormant). Computed ONCE per
 /// drive construction (the plan is reused for the affordance), so the drive's
 /// `urgency` stays O(1).
-fn loneliness_from_plan(plan_home: &Option<Vec<Action>>) -> f64 {
-    match plan_home {
-        Some(p) => (p.len() as f64 / LONELY_SCALE_HOPS).clamp(0.0, 1.0),
+///
+/// Takes the plan's hop count directly (the-waymark, Task 4: both callers —
+/// `decide_step` and `affect_of_memo_occupied` — now read this off a
+/// [`HomeNavFeature`] rather than a full `Option<Vec<Action>>`, so this
+/// shares the one formula between them instead of duplicating it).
+fn loneliness_from_distance(distance: Option<usize>) -> f64 {
+    match distance {
+        Some(hops) => (hops as f64 / LONELY_SCALE_HOPS).clamp(0.0, 1.0),
         None => 0.0,
     }
 }
@@ -2800,7 +2805,7 @@ fn loneliness_from_plan(plan_home: &Option<Vec<Action>>) -> f64 {
 /// sociality niche (solitary ↔ eusocial, the sign-flip at solitary) is reserved.
 /// type-audit: bare-ok(ratio: loneliness)
 pub struct Social {
-    /// The precomputed loneliness (`loneliness_from_plan`) in `[0, 1]` — the
+    /// The precomputed loneliness (`loneliness_from_distance`) in `[0, 1]` — the
     /// felt isolation, carried here rather than recomputed per call.
     pub loneliness: f64,
     /// The precomputed first step of the A* plan home (`None` at home, or when
@@ -2831,6 +2836,131 @@ impl Drive for Social {
             Some(a) if a == action => 1.0,
             _ => 0.0,
         }
+    }
+}
+
+/// The feature [`decide_step`] (and [`affect_of_memo_occupied`]) actually
+/// consume from a home plan — never the full path (the-waymark, Task 4; the
+/// campaign spec's own ideonomy refinement: "cache the consumed feature, not
+/// the full plan"). Mirrors exactly what [`loneliness_from_distance`] and the
+/// `Social::home_step` construction already read off an `Option<Vec<Action>>`:
+/// `distance` is `Some(p.len())` if `home` is reachable within budget, `None`
+/// if not (`plan_to_room`'s own `None`); `first_step` is the plan's first
+/// action, `None` either when unreachable OR when the plan is the empty
+/// vec — already standing at `home` — which is `loneliness_from_distance`'s own
+/// `Some(0)`-but-`home_step: None` case, preserved here rather than collapsed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct HomeNavFeature {
+    /// The plan's hop count, or `None` if `home` is unreachable within budget.
+    distance: Option<usize>,
+    /// The plan's first action, or `None` if unreachable or already home.
+    first_step: Option<Action>,
+}
+
+/// One entity's [`HomeNavCache`] bookkeeping: its avoid-epoch state (see the
+/// cache's own doc) plus whatever feature was last computed and at which
+/// `(pos, epoch)`.
+struct HomeNavState {
+    /// Bumped whenever a `home_nav` call's `avoid` set differs from
+    /// `last_avoid` — a per-entity counter, never global (a global epoch
+    /// would stampede every entity's cache on any ONE creature's belief
+    /// change).
+    avoid_epoch: u64,
+    /// The avoid set as of the most recent `home_nav` call, compared against
+    /// on the NEXT call to detect a belief change.
+    last_avoid: std::collections::BTreeSet<RoomAddr>,
+    /// `(pos, avoid_epoch, feature)` as of the last real search for this
+    /// entity — `None` before its first `home_nav` call.
+    cached: Option<(RoomAddr, u64, HomeNavFeature)>,
+}
+
+/// `home_nav`'s cross-tick, per-entity backing (the-waymark, Task 4 — the
+/// campaign's dominant lever): [`decide_step`] used to call `plan_to_room` —
+/// a budget-1000 Dijkstra-mode `astar` search — UNCONDITIONALLY on every
+/// decision, even for a creature standing exactly where it stood last tick
+/// with an unchanged believed-hazard set. The campaign spec's Stage 3 licenses
+/// a cache scoped to exactly the two events that can actually change the
+/// answer: the entity's `pos` (a `Step` resolution) and its believed-hazard
+/// avoid set (`HazardMemory::shunned`). Verified at plan time (see the task
+/// report): `HazardMemory` is a fold over the FROZEN pre-tick ledger, computed
+/// ONCE per creature per tick (`step_with_occupancy`'s setup loop) and never
+/// mutated again that tick, so it never changes mid-tick — the avoid-epoch
+/// check below, run on every `home_nav` call, is therefore a cheap
+/// confirmation (`BTreeSet` equality against an unchanged value) on every
+/// call but the one where the belief genuinely moved, where it is the belief
+/// update's own write point.
+///
+/// Lives with the NPC's sim state, in the SAME session-lived scope
+/// [`hornvale_kernel::RoomMeshMemo`] does (a `Session` field;
+/// `run_simulation`'s own local) — NOT per-tick — because the whole point is
+/// that a stationary, unchanged-belief creature pays ZERO searches on ticks
+/// after its first, which a tick-scoped memo could never show (The Waymark
+/// spec, "the scaling stake").
+///
+/// Also gates the search itself, not only its cache: `decide_step` only calls
+/// `home_nav` for a non-`Ametabolic` creature (plan-time verification (a) —
+/// the Social drive, the plan's only consumer, is never pushed onto an
+/// ametabolic creature's `drives` vec — "lazy AND cached" per the campaign
+/// spec's Stage 3 clause).
+/// type-audit: bare-ok(count: searches)
+#[derive(Default)]
+pub struct HomeNavCache {
+    /// Per-entity state (avoid-epoch bookkeeping and the cached feature).
+    entries: std::collections::BTreeMap<EntityId, HomeNavState>,
+    /// How many real `plan_to_room` searches `home_nav` has run, ever — the
+    /// scaling property's own deterministic witness (the search-count pins),
+    /// never a wall-clock proxy. Test-visible; no drive ever reads it.
+    pub searches: u64,
+}
+
+impl HomeNavCache {
+    /// An empty cache — one per session-lived scope (see the type doc).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `home_nav(entity) → (distance, first_step)`: the seam [`decide_step`]
+    /// (and [`affect_of_memo_occupied`]) read instead of ever calling
+    /// `plan_to_room` directly. A cache hit — `pos` unchanged and `avoid`
+    /// unchanged since the last call for this entity — costs one `BTreeMap`
+    /// lookup and a `BTreeSet` equality check, never a search; a miss runs
+    /// the real search (costing exactly what every caller always paid) and
+    /// counts it in `searches`.
+    fn home_nav(
+        &mut self,
+        entity: EntityId,
+        pos: &RoomAddr,
+        home: &RoomAddr,
+        avoid: &std::collections::BTreeSet<RoomAddr>,
+        budget: usize,
+    ) -> HomeNavFeature {
+        let state = self.entries.entry(entity).or_insert_with(|| HomeNavState {
+            avoid_epoch: 0,
+            last_avoid: avoid.clone(),
+            cached: None,
+        });
+        // The belief's write point: bump iff the avoid set genuinely
+        // changed since we last saw this entity (never global — see the
+        // type doc).
+        if &state.last_avoid != avoid {
+            state.avoid_epoch += 1;
+            state.last_avoid = avoid.clone();
+        }
+        let epoch = state.avoid_epoch;
+        if let Some((cached_pos, cached_epoch, feature)) = &state.cached
+            && cached_pos == pos
+            && *cached_epoch == epoch
+        {
+            return feature.clone();
+        }
+        self.searches += 1;
+        let plan = plan_to_room(pos, home, budget, avoid);
+        let feature = HomeNavFeature {
+            distance: plan.as_ref().map(|p| p.len()),
+            first_step: plan.and_then(|p| p.into_iter().next()),
+        };
+        state.cached = Some((pos.clone(), epoch, feature.clone()));
+        feature
     }
 }
 
@@ -3215,7 +3345,14 @@ pub fn affect_of(
 /// for the occupancy-aware sibling this delegates to with `occupancy: None`.
 /// `mesh_memo` (the-waymark fix round, rider (b)) is the caller-owned
 /// [`RoomMeshMemo`] this call's own `lowest_unvisited_neighbor_memo` read
-/// shares — see [`affect_of_memo_occupied`]'s own doc.
+/// shares — see [`affect_of_memo_occupied`]'s own doc. This function's own
+/// public signature stays exactly as every existing caller expects it (no
+/// `HomeNavCache` parameter): it builds a throwaway one internally for
+/// [`affect_of_memo_occupied`]'s Task 4 `home_nav` read, exactly the
+/// `RoomMeshMemo` throwaway [`DriveMovements::step`] already builds for its
+/// own kernel-fixed signature — a caller that DOES have a session-lived
+/// scope to share (`run_simulation`) calls [`affect_of_memo_occupied`]
+/// directly instead, precisely as it already does for `mesh_memo`.
 pub fn affect_of_memo(
     frozen: &Ledger,
     npc: &Npc,
@@ -3225,7 +3362,18 @@ pub fn affect_of_memo(
     memo: &mut PrimaryAfraidMemo,
     mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
-    affect_of_memo_occupied(frozen, npc, band, day, terrain, memo, None, mesh_memo)
+    let mut home_nav_cache = HomeNavCache::new();
+    affect_of_memo_occupied(
+        frozen,
+        npc,
+        band,
+        day,
+        terrain,
+        memo,
+        None,
+        mesh_memo,
+        &mut home_nav_cache,
+    )
 }
 
 /// [`affect_of_memo`], but given a caller-owned [`Occupancy`] to read the
@@ -3272,6 +3420,16 @@ pub fn affect_of_memo(
 /// shares it here too; a caller that only has `&self` (`Session::snapshot`/
 /// `needs`) supplies a local throwaway, exactly as it already does for cases
 /// where session-scoping isn't reachable.
+///
+/// `home_nav_cache` (the-waymark, Task 4): this function used to call
+/// `plan_to_room` UNCONDITIONALLY, same as `decide_step` did — a SEPARATE
+/// budget-1000 search from `decide_step`'s own, since this is a stateless
+/// re-derivation of felt state, not the live decision. Reads the Social
+/// drive's feature from the caller-owned cache instead, gated on
+/// non-`Ametabolic` exactly as `decide_step`'s own gate is (see that
+/// function's doc). Sharing IS safe across the two consumers: a cache hit
+/// requires an EXACT `(pos, avoid)` match regardless of who asked, so this
+/// can only ever save a search, never answer one incorrectly.
 #[allow(clippy::too_many_arguments)]
 pub fn affect_of_memo_occupied(
     frozen: &Ledger,
@@ -3282,6 +3440,7 @@ pub fn affect_of_memo_occupied(
     memo: &mut PrimaryAfraidMemo,
     occupancy: Option<&Occupancy>,
     mesh_memo: &mut RoomMeshMemo,
+    home_nav_cache: &mut HomeNavCache,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
@@ -3373,18 +3532,6 @@ pub fn affect_of_memo_occupied(
         // bandless replay — gives termination, byte-identity, and no contagion.
         dread: Some(&memory.dread),
     };
-    // Affiliation (The Belonging): loneliness + the home-step, precomputed once
-    // from a single plan home (reused, so the drive's urgency is O(1)).
-    let plan_home = plan_to_room(
-        &view.position,
-        &npc.home,
-        PLAN_BUDGET,
-        &view.believed_hazard,
-    );
-    let social = Social {
-        loneliness: loneliness_from_plan(&plan_home),
-        home_step: plan_home.and_then(|p| p.into_iter().next()),
-    };
     // The metabolism gate (The Kindling): an Ametabolic creature has no
     // homeostatic drives at all — it neither thirsts, thermoregulates, tires
     // (The Slumber), hungers (The Provender), fears (The Dread — a construct
@@ -3392,7 +3539,33 @@ pub fn affect_of_memo_occupied(
     // Content, never distress. The NICHE gate (The Provender, spec §2): hunger
     // is carried only by a creature whose diet niche weights SOMETHING — an
     // empty niche means "no food drive" (no axis, so no source serves it).
+    //
+    // Read early (the-waymark, Task 4): the Social drive built below is the
+    // ONLY consumer of a home plan, and it is never pushed onto `drives` for
+    // an ametabolic creature — see `decide_step`'s identical gate for the
+    // full rationale.
     let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    // Affiliation (The Belonging): loneliness + the home-step, read from the
+    // cross-tick cache instead of an unconditional `plan_to_room` (the-waymark,
+    // Task 4) — precomputed once so the drive's urgency stays O(1) either way.
+    let social = if ametabolic {
+        Social {
+            loneliness: 0.0,
+            home_step: None,
+        }
+    } else {
+        let feature = home_nav_cache.home_nav(
+            npc.entity,
+            &view.position,
+            &npc.home,
+            &view.believed_hazard,
+            PLAN_BUDGET,
+        );
+        Social {
+            loneliness: loneliness_from_distance(feature.distance),
+            home_step: feature.first_step,
+        }
+    };
     let mut drives: Vec<&dyn Drive> = Vec::new();
     if !ametabolic {
         drives.push(&thirst);
@@ -3810,6 +3983,13 @@ fn hold_step(
 /// per-tick scope), so a neighbourhood already visited by an earlier
 /// creature, or an earlier tick-iteration of THIS creature's walk, is not
 /// recomputed.
+///
+/// `home_nav_cache` (the-waymark, Task 4) is the caller-owned
+/// [`HomeNavCache`] the Social drive's own home-plan feature is read from
+/// (`HomeNavCache::home_nav`) instead of an unconditional `plan_to_room` —
+/// session-lived like `mesh_memo`, but cross-tick rather than per-tick (see
+/// the cache's own doc for why a stationary, unchanged-belief creature must
+/// reach zero searches across ticks, not merely within one).
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: f64,
@@ -3830,6 +4010,7 @@ fn decide_step(
     frozen: &Ledger,
     out: &[Fact],
     mesh_memo: &mut RoomMeshMemo,
+    home_nav_cache: &mut HomeNavCache,
 ) -> (Resolution, f64) {
     // Standing in water forms/updates belief (nearest-to-home wins) — the
     // live walk's own first step of every iteration.
@@ -3902,12 +4083,32 @@ fn decide_step(
         alarm: Some(alarm),
         dread: Some(&hazard.dread),
     };
-    let plan_home = plan_to_room(pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
-    let social = Social {
-        loneliness: loneliness_from_plan(&plan_home),
-        home_step: plan_home.and_then(|p| p.into_iter().next()),
-    };
+    // The metabolism gate, read early (the-waymark, Task 4 — plan-time
+    // verification (a)): the Social drive below is the plan's ONLY consumer,
+    // and it is never pushed onto `drives` for an ametabolic creature, so
+    // computing the plan for one was always pure waste. Gating the `home_nav`
+    // call itself (not merely caching its result) is the "lazy AND cached"
+    // half of the campaign spec's Stage 3 clause — an ametabolic creature now
+    // never even touches the cache, let alone runs a search.
     let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let social = if ametabolic {
+        Social {
+            loneliness: 0.0,
+            home_step: None,
+        }
+    } else {
+        let feature = home_nav_cache.home_nav(
+            npc.entity,
+            pos,
+            &npc.home,
+            &view.believed_hazard,
+            PLAN_BUDGET,
+        );
+        Social {
+            loneliness: loneliness_from_distance(feature.distance),
+            home_step: feature.first_step,
+        }
+    };
     let mut drives: Vec<&dyn Drive> = Vec::new();
     if !ametabolic {
         drives.push(&thirst);
@@ -3984,6 +4185,12 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
 /// cache (see [`RoomMeshMemo`]'s own doc) threaded through to
 /// [`decide_step`]'s own `lowest_unvisited_neighbor_memo` read — mutating it
 /// changes nothing this function's callers can observe except speed.
+/// `home_nav_cache` (the-waymark, Task 4) is the same kind of pure-function
+/// cache, threaded through to `decide_step`'s own `HomeNavCache::home_nav`
+/// read for exactly the same reason — every one of this loop's iterations
+/// shares the SAME `hazard`/`pos` pairing the caller already fixed, so a
+/// replay that revisits a position already asked about this call answers
+/// from cache.
 #[allow(clippy::too_many_arguments)]
 fn catch_up(
     entry_day: f64,
@@ -4005,6 +4212,7 @@ fn catch_up(
     cap: usize,
     day_length_std: Option<f64>,
     mesh_memo: &mut RoomMeshMemo,
+    home_nav_cache: &mut HomeNavCache,
 ) -> Mode {
     let mut day = entry_day;
     let mut steps = 0usize;
@@ -4047,6 +4255,7 @@ fn catch_up(
             frozen,
             out,
             mesh_memo,
+            home_nav_cache,
         );
         mode = resolution.mode;
         match resolution.intent {
@@ -4138,10 +4347,17 @@ impl<'a> DriveMovements<'a> {
     /// own scope lasts (a `Session`'s whole possession; `run_simulation`'s
     /// whole 40-tick sweep), so cross-tick reuse is the point, not per-tick
     /// accident.
+    ///
+    /// `home_nav_cache` (the-waymark, Task 4) is likewise caller-owned, but
+    /// CROSS-tick rather than per-tick by design — see [`HomeNavCache`]'s own
+    /// doc for why the campaign's scaling bar needs a cache that survives
+    /// across calls to this very function, not merely across one call's own
+    /// creatures/pops.
     pub fn step_with_occupancy(
         &self,
         frozen: &Ledger,
         mesh_memo: &mut RoomMeshMemo,
+        home_nav_cache: &mut HomeNavCache,
     ) -> (Vec<Fact>, Occupancy) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
@@ -4280,6 +4496,7 @@ impl<'a> DriveMovements<'a> {
                 CATCH_UP_STEP_CAP,
                 self.day_length_std,
                 mesh_memo,
+                home_nav_cache,
             );
 
             queue.insert((from_ticks, npc.entity));
@@ -4301,6 +4518,7 @@ impl<'a> DriveMovements<'a> {
                 &memory,
                 &mut out,
                 mesh_memo,
+                home_nav_cache,
             ) {
                 // This creature's walk is over — past `to`, out of `MAX_STEPS`,
                 // or halted by an arm's own stop condition. It is not requeued.
@@ -4334,8 +4552,13 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // share a caller-owned memo the way the direct `step_with_occupancy`
         // call (`Session::wait`, `run_simulation`) does; a throwaway one costs
         // nothing beyond what the pre-Finding-2 code already paid every call.
+        // `throwaway_nav` (Task 4) carries the identical carve-out: this path
+        // pays a fresh `plan_to_room` per creature per pop, exactly what
+        // EVERY call paid before this task.
         let mut throwaway = RoomMeshMemo::new();
-        self.step_with_occupancy(frozen, &mut throwaway).0
+        let mut throwaway_nav = HomeNavCache::new();
+        self.step_with_occupancy(frozen, &mut throwaway, &mut throwaway_nav)
+            .0
     }
 }
 
@@ -4472,6 +4695,8 @@ impl<'a> DriveMovements<'a> {
     /// ONE [`RoomMeshMemo`] and threads it through every creature's every
     /// `advance_one`/`decide_step`, so the same neighbourhood recurring across
     /// creatures or across this walk's own repeated pops is not recomputed.
+    /// `home_nav_cache` (the-waymark, Task 4) is `step_with_occupancy`'s own
+    /// CROSS-tick [`HomeNavCache`], threaded the same way.
     #[allow(clippy::too_many_arguments)]
     fn advance_one(
         &self,
@@ -4483,6 +4708,7 @@ impl<'a> DriveMovements<'a> {
         memory: &HazardMemory,
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
+        home_nav_cache: &mut HomeNavCache,
     ) -> bool {
         if st.day > self.to.day || st.steps >= MAX_STEPS {
             return false;
@@ -4521,6 +4747,7 @@ impl<'a> DriveMovements<'a> {
             frozen,
             &*out,
             mesh_memo,
+            home_nav_cache,
         );
         st.mode = resolution.mode;
         // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
@@ -10314,20 +10541,22 @@ mod tests {
 
     #[test]
     fn loneliness_is_zero_at_home_rises_with_distance_and_lapses_when_unreachable() {
-        // The three regimes of the social pull (The Belonging).
+        // The three regimes of the social pull (The Belonging). Takes the hop
+        // count directly (the-waymark, Task 4: `loneliness_from_distance` is
+        // `loneliness_from_plan`'s successor, reading a `HomeNavFeature`'s
+        // `distance` rather than a full plan — see its own doc).
         assert_eq!(
-            loneliness_from_plan(&Some(vec![])),
+            loneliness_from_distance(Some(0)),
             0.0,
-            "at home (empty plan) → not lonely"
+            "at home (zero hops) → not lonely"
         );
-        let ten: Vec<Action> = std::iter::repeat_n(Action::Drink, 10).collect();
         assert_eq!(
-            loneliness_from_plan(&Some(ten)),
+            loneliness_from_distance(Some(10)),
             10.0 / LONELY_SCALE_HOPS,
             "loneliness rises with the hop-distance home"
         );
         assert_eq!(
-            loneliness_from_plan(&None),
+            loneliness_from_distance(None),
             0.0,
             "home beyond reach → DORMANT (0), not distress — social is comfort, \
              an unreachable home is a relocation"
@@ -12574,7 +12803,8 @@ mod tests {
             day_length_std: None,
             terrain: &hearth_terrain,
         };
-        let (_facts, occ) = sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
+        let (_facts, occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
         let hearth_id = interior
@@ -12620,7 +12850,8 @@ mod tests {
             day_length_std: None,
             terrain: &wild_terrain,
         };
-        let (_facts2, occ2) = sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new());
+        let (_facts2, occ2) =
+            sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
         assert_eq!(
@@ -13012,7 +13243,8 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (facts, occ) = sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
+        let (facts, occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         assert!(
             facts.is_empty(),
             "an instantaneous tick (from == to) leaves the live walk nothing \
@@ -13105,6 +13337,7 @@ mod tests {
             &ledger,
             &[],
             &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
         );
         assert!(
             correct_thirst > 0.0,
@@ -13143,6 +13376,7 @@ mod tests {
             &ledger,
             &[],
             &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
         );
         assert_eq!(
             buggy_thirst, 0.0,
@@ -13217,6 +13451,7 @@ mod tests {
             CATCH_UP_STEP_CAP,
             None,
             &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
         );
         let after = ledger.len();
 
@@ -13281,7 +13516,11 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (_f1, occ_forward) = forward.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
+        let (_f1, occ_forward) = forward.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+        );
 
         let reversed = DriveMovements {
             npcs: vec![
@@ -13294,7 +13533,11 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (_f2, occ_reversed) = reversed.step_with_occupancy(&ledger, &mut RoomMeshMemo::new());
+        let (_f2, occ_reversed) = reversed.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+        );
 
         assert_eq!(
             occ_forward.at(a),
@@ -13423,6 +13666,7 @@ mod tests {
                 CAP,
                 None,
                 &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
             );
             occ.at(npc.entity)
         };
@@ -13454,6 +13698,193 @@ mod tests {
             "over the cap, catch-up is APPROXIMATE: it must give up hopping \
              and place the creature directly at its drive-preferred anchor \
              (the hearth), not merely stop CAP hops down the corridor"
+        );
+    }
+
+    // --- HomeNavCache (the-waymark, Task 4): the search-count pins and the
+    // adversarial staleness test. Driven directly against `HomeNavCache::
+    // home_nav` rather than through the whole `decide_step`/`step_with_
+    // occupancy` machinery — the cache's own contract (zero searches for a
+    // stationary, unchanged-belief entity; exactly one on a `pos` or avoid-
+    // set change) is what these pin, and testing it directly keeps the
+    // search counter's arithmetic legible instead of buried in a full walk.
+
+    #[test]
+    fn home_nav_pays_zero_searches_for_a_stationary_unchanged_belief_entity_after_warmup() {
+        let start = raddr(1.0);
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let e = npc_id(1);
+
+        let first = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        assert_eq!(
+            cache.searches, 1,
+            "the very first call is necessarily a cold miss"
+        );
+
+        // The scaling bar itself (The Waymark spec's "scaling stake"): repeat
+        // the IDENTICAL query (same pos, same avoid) several times, as a
+        // stationary creature's every subsequent tick would.
+        for _ in 0..5 {
+            let again = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+            assert_eq!(
+                again, first,
+                "a cache hit must return the identical feature every time"
+            );
+        }
+        assert_eq!(
+            cache.searches, 1,
+            "a stationary, unchanged-belief entity must pay ZERO searches on \
+             every call after its first (the campaign's own scaling bar) — \
+             got {} total searches for 6 identical queries",
+            cache.searches
+        );
+    }
+
+    #[test]
+    fn home_nav_moving_triggers_exactly_one_new_search() {
+        let start = raddr(1.0);
+        let elsewhere = start.neighbors()[1].clone();
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let e = npc_id(1);
+
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        assert_eq!(cache.searches, 1, "warm-up search");
+
+        // Repeat at the SAME position a few times first, to prove the
+        // subsequent count bump is attributable to the move, not to noise.
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        }
+        assert_eq!(cache.searches, 1, "still warm before the move");
+
+        let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET);
+        assert_eq!(
+            cache.searches, 2,
+            "a moved entity (a Step resolution changing `pos`) must trigger \
+             EXACTLY one new search, not zero (stale) and not more than one"
+        );
+
+        // And it goes cold again at the new position.
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET);
+        }
+        assert_eq!(
+            cache.searches, 2,
+            "warm again at the new position — no further searches"
+        );
+    }
+
+    #[test]
+    fn home_nav_a_belief_change_triggers_exactly_one_new_search() {
+        let start = raddr(1.0);
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let mut avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let e = npc_id(1);
+
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        assert_eq!(cache.searches, 1, "warm-up search");
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        }
+        assert_eq!(cache.searches, 1, "still warm before the belief changes");
+
+        // The believed-hazard set changes (the entity stood on ground that
+        // frightened it): the avoid-epoch write point.
+        avoid.insert(start.neighbors()[1].clone());
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        assert_eq!(
+            cache.searches, 2,
+            "a believed-hazard change must trigger EXACTLY one new search"
+        );
+
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET);
+        }
+        assert_eq!(
+            cache.searches, 2,
+            "warm again under the NEW belief — no further searches"
+        );
+    }
+
+    #[test]
+    fn home_nav_cache_is_per_entity_never_global() {
+        // A global epoch would stampede every entity's cache on ANY one
+        // creature's belief change (the campaign spec's own refinement,
+        // folded into `HomeNavCache`'s doc) — pinned here directly: entity
+        // A's belief changes; entity B, unchanged, must still hit its cache.
+        let start = raddr(1.0);
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let mut cache = HomeNavCache::new();
+        let (a, b) = (npc_id(1), npc_id(2));
+        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+
+        let _ = cache.home_nav(a, &start, &home, &empty, PLAN_BUDGET);
+        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET);
+        assert_eq!(cache.searches, 2, "both entities warm up independently");
+
+        let mut a_avoid = empty.clone();
+        a_avoid.insert(start.neighbors()[1].clone());
+        let _ = cache.home_nav(a, &start, &home, &a_avoid, PLAN_BUDGET);
+        assert_eq!(
+            cache.searches, 3,
+            "A's own belief change costs A one search"
+        );
+
+        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET);
+        assert_eq!(
+            cache.searches, 3,
+            "B's cache must be UNAFFECTED by A's belief change — a global \
+             epoch would have stampeded it into a third search here"
+        );
+    }
+
+    #[test]
+    fn home_nav_cache_changes_the_plan_when_the_avoid_set_changes() {
+        // THE ADVERSARIAL STALENESS TEST (the-waymark, Task 4 — the
+        // campaign's one real correctness risk, spec §6): mirrors
+        // `planner_routes_around_a_remembered_cell`'s topology (a two-hop
+        // destination reached via a single "via" room on the straight path),
+        // so avoiding `via` provably forces the plan onto a different first
+        // step. Red-run-proven: see the task report for the paired run with
+        // the cache's own invalidation check disabled, which fails this
+        // exact assertion.
+        let start = raddr(1.0);
+        let via = start.neighbors()[0].clone();
+        let dest = via
+            .neighbors()
+            .iter()
+            .find(|n| **n != start)
+            .unwrap()
+            .clone();
+        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let e = npc_id(1);
+
+        let before = cache.home_nav(e, &start, &dest, &empty, 10_000);
+        assert_eq!(
+            before.first_step,
+            Some(Action::MoveTo(via.clone())),
+            "sanity: the straight plan's first step is the direct neighbor"
+        );
+
+        let mut avoid = empty.clone();
+        avoid.insert(via.clone());
+        let after = cache.home_nav(e, &start, &dest, &avoid, 10_000);
+        assert_ne!(
+            after.first_step, before.first_step,
+            "an avoid-set change MUST change the cached plan feature — a \
+             stale first_step surviving a belief change is exactly the \
+             staleness bug this cache exists to prevent"
+        );
+        assert_ne!(
+            after.first_step,
+            Some(Action::MoveTo(via.clone())),
+            "the new plan must not still route through the now-avoided cell"
         );
     }
 }
