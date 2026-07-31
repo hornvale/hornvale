@@ -1,5 +1,13 @@
-//! The Shuttle's equivalence pins: every `_from` readout equals its
-//! `_of` wrapper on the same world. One world, one sculpt, all pairs.
+//! The Shuttle's drift guards: every `_from` readout equals its `_of`
+//! wrapper on the same world, one pair at a time. Since each `_of` wrapper
+//! is now literally "sculpt, then call the `_from` twin," this cannot
+//! actually catch a threading bug today — both sides reduce to the same
+//! `f(x) == f(x)`. What it guards against is a FUTURE edit that forks a
+//! `_from` body from its `_of` wrapper (e.g. a hand patch to one that
+//! forgets the other). It is NOT this campaign's byte-identity evidence —
+//! that is the cross-binary artifact comparison: the committed gallery
+//! artifact `book/src/gallery/the-book.md` (unchanged at this campaign's
+//! HEAD) and Task 6's pre/post-binary diffs.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;

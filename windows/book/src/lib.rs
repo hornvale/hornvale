@@ -257,16 +257,24 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
     }
 }
 
-/// [`render_volume`], sculpting once: reconstruct `terrain`/`climate` and
-/// delegate to [`render_volume_from`], which every internal reader
-/// (`lexicon_from`, `chorus_sections_from`, `reckoning_epochs_from`, …)
-/// threads instead of re-sculpting the globe per call — The Shuttle (this
-/// campaign): one `render_volume` call sculpted the globe ~85 times before
-/// this threading, once after. On a world whose committed terrain pins fail
-/// to parse (malformed save data a built world cannot actually produce),
-/// renders an empty volume — the same silent-empty posture
-/// `hornvale_worldgen::accounts_of` already takes on the identical failure,
-/// rather than panicking on state a normal build never reaches.
+/// Render a volume: one Common sentence per `is-a` fact, subject resolved to
+/// its `name` (or a synthetic `Entity <id>` label when genuinely unnamed),
+/// aggregating that subject's other facts into the sentence via the
+/// construction table (`fragment_for`), in the table's authored order
+/// ([`CONSTRUCTION_ORDER`]) — the sentence's surface order is an authored
+/// grammar decision, not an echo of ledger commit order. Then one more
+/// sentence per `instance-of` fact (C2 T5): a placed peopled species'
+/// collective, named by its autonym. Sculpts once (`terrain_of` +
+/// `climate_from`) and delegates to [`render_volume_from`], which every
+/// internal reader (`lexicon_from`, `chorus_sections_from`,
+/// `reckoning_epochs_from`, …) threads instead of re-sculpting the globe per
+/// call — The Shuttle (this campaign): one `render_volume` call sculpted the
+/// globe ~85 times before this threading, once after. On a world whose
+/// committed terrain pins fail to parse (malformed save data a built world
+/// cannot actually produce), renders an empty volume — the same
+/// silent-empty posture `hornvale_worldgen::accounts_of` already takes on
+/// the identical failure, rather than panicking on state a normal build
+/// never reaches.
 pub fn render_volume(world: &World) -> BookVolume {
     let empty = || BookVolume {
         seed: world.seed.0,
@@ -285,16 +293,10 @@ pub fn render_volume(world: &World) -> BookVolume {
     render_volume_from(world, &terrain, &climate)
 }
 
-/// Render a volume: one Common sentence per `is-a` fact, subject resolved to
-/// its `name` (or a synthetic `Entity <id>` label when genuinely unnamed),
-/// aggregating that subject's other facts into the sentence via the
-/// construction table (`fragment_for`), in the table's authored order
-/// ([`CONSTRUCTION_ORDER`]) — the sentence's surface order is an authored
-/// grammar decision, not an echo of ledger commit order. Then one more
-/// sentence per `instance-of` fact (C2 T5): a placed peopled species'
-/// collective, named by its autonym. The threaded twin of [`render_volume`]:
-/// takes ALREADY-BUILT terrain/climate (a caller that already sculpted the
-/// globe, e.g. for another purpose) instead of re-sculpting it.
+/// [`render_volume`]'s threaded twin: takes ALREADY-BUILT terrain/climate (a
+/// caller that already sculpted the globe, e.g. for another purpose)
+/// instead of re-sculpting it, and otherwise renders the identical volume —
+/// see [`render_volume`] for what a volume contains.
 pub fn render_volume_from(
     world: &World,
     terrain: &hornvale_terrain::GeneratedTerrain,
@@ -3235,8 +3237,15 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// The Shuttle: the threaded entry points equal their wrappers — one
-    /// world, one sculpt, byte-equal volumes.
+    /// The Shuttle: a drift guard, not byte-identity evidence — `render_volume`
+    /// is now literally "sculpt, then call `render_volume_from`," and this
+    /// test derives `terrain`/`climate` the same way, so the two calls reduce
+    /// to `f(x) == f(x)`. What it pins is that a FUTURE edit cannot fork
+    /// `render_volume_from`'s body from `render_volume`'s wrapper without
+    /// reddening this test. The campaign's actual byte-identity evidence is
+    /// the cross-binary artifact comparison: the committed gallery artifact
+    /// `book/src/gallery/the-book.md` (unchanged at this campaign's HEAD) and
+    /// Task 6's pre/post-binary diffs.
     #[test]
     fn from_entry_points_equal_their_wrappers() {
         let world = generated(1);
