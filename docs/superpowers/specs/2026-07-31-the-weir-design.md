@@ -2,10 +2,13 @@
 
 **Campaign:** the-weir
 **Date:** 2026-07-31
-**Status:** G3 approved (Nathan, 2026-07-31) — both flagged judgment calls
-accepted: the wrappers' fallback arms die with them, and Stage 3's
-test-breadth reduction is ratified under the new no-seed-hunting principle
-(decision 0093 below).
+**Status:** Complete — executed 2026-07-31 (G3 approved by Nathan, both
+flagged judgment calls accepted). Chronicle
+`book/src/chronicle/the-weir.md`, retrospective
+`docs/retrospectives/the-weir.md`. §4.1/4.2/4.4 met with evidence; §4.3
+measured at close (see the ci ledger row). The remaining half of the weir
+(~16 cold-path lens readouts behind sanctioned allows) is in the follow-up
+register.
 **Thesis:** The Shuttle fixed the callers; the pulpit still stands. The
 `_of` convenience readouts that embed a full derivation invited the next
 sin before the last one was merged — `Session::start` runs the demography
