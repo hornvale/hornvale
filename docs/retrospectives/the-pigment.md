@@ -136,6 +136,40 @@ current, never that it *covers* anything (memory
   campaign's duration cost measurable by subtraction. First-run-never-alarms
   is documented; *choosing where to spend it* is not automatic, and it is a
   one-shot resource per host.
+- **The duration alarm fired 59 times, and every one was contention.** The
+  close's `make ci` reported 59 per-test regressions at 2.0–2.5×, *all* in
+  `hornvale-worldgen`. A uniform multiplier across one crate's entire test
+  set is the signature of contention rather than a code change — a real
+  regression hits specific tests by specific amounts. Worldgen is where it
+  shows because its tests are the long CPU-bound world-building batteries,
+  which get descheduled under load while short tests finish before it bites.
+
+  **Attributed by A/B rather than by argument.** The same five
+  `history_tithe` tests, run under the same nextest `ci` profile on a quiet
+  box: `origin/main` 2.19–2.93 s, `the-pigment` 2.90–3.12 s, recorded
+  baseline 2.94–3.10 s. The campaign is indistinguishable from the baseline
+  and the alarm's 6.3–8.3 s figures are unreproducible. Nothing was
+  re-recorded; the guard's refusal to write a contended baseline was
+  correct and the baseline stands.
+
+  **The mechanism is The Timekeeper's documented blind spot (1), reproduced
+  independently.** The guard only asks whether a *census claim* is held, so
+  a parallel agent session is invisible to it. Worse than the documented
+  case: the box was verifiably quiet at launch (loadavg 0.68 sustained over
+  three checks a minute apart) and another session began work *during* the
+  16-minute run — loadavg was 38 by the time it finished. **A pre-flight
+  quiet check is necessary and not sufficient**, which strengthens the
+  standing candidate fix: suppress when loadavg exceeds core count, sampled
+  *during* the run rather than only at its start.
+
+- **Check the claim before a long run, not after it refuses.** The first
+  close attempt burned a 13-minute `make ci` that `ci-record` correctly
+  declined, because another campaign's `heavy-run.sh` had held the box for
+  57 minutes already. One `bash scripts/census-run.sh status` would have
+  said so. The gate run immediately before it was also contended — its
+  result stands, since correctness does not care about load, but its
+  timing is meaningless.
+
 - **The two-cargo-runs guard fired once mid-mutation-test** and the agent's
   follow-up run reported a stale tree's result. It caught this by grepping
   the source for its own mutation marker before trusting the output. Worth
@@ -156,3 +190,5 @@ current, never that it *covers* anything (memory
 | F3 | Make "mutate your own deliverable before reporting" standing dispatch-preamble policy, not per-campaign prompt text. |
 | F4 | `red`'s exemplar renders as `#987A3E`, a muted ochre nobody would call red — the observer's medium channel is 0.72-sensitive where red rises. Harmless for naming (which compares signals) but any visualization needs a caption. |
 | F5 | The colour lens draws a flat wash at walking depth because the chart's own fields are equally flat there. Not a colour defect; revisit if room-level lithology ever gains sub-grid resolution. |
+| F6 | **The duration baseline carries no rows for this campaign's ~45 new tests.** They are all sub-second and fold into `<below-floor>`, and no suite-level shift was reported, so nothing regressed — but the first clean `make ci` after merge will legitimately bump that row's summed seconds and count. That is a normal record, not a regression to investigate. |
+| F7 | Strengthen The Timekeeper's blind-spot-1 follow-up: sample load *during* the run, not only at launch. This campaign's close was launched on a verifiably quiet box (loadavg 0.68 sustained) and still measured 59 contended tests, because another session started mid-run. |
