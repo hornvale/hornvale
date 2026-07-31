@@ -133,3 +133,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0091](0091-glibc-does-not-explain-it-and-the-machine-does-not-matter.md) | glibc does not explain 0063, and the machine does not matter | Accepted |
 | [0092](0092-derivation-at-named-sites.md) | Derivation happens at named construction sites; readouts take artifacts | Accepted |
 | [0093](0093-seed-hunting-is-not-a-test-mechanism.md) | Seed-hunting is not a test mechanism | Accepted |
+| [0094](0094-a-deliberate-duplicate-shares-its-roster-never-its-derivation.md) | A deliberate duplicate shares its *roster*, never its *derivation* | Accepted |

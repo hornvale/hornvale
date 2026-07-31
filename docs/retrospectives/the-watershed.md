@@ -129,7 +129,10 @@ Ranked: F8 and F1 are the two worth acting on beyond this campaign.
   class is a compile error and the derivations stay independent. Worth a
   decision record; the repo uses "duplicate deliberately" in several places
   (`phenomenon_concept` has three copies) and none of them says how to keep the
-  duplicate honest.
+  duplicate honest. **Ratified as
+  [decision 0094](../decisions/0094-a-deliberate-duplicate-shares-its-roster-never-its-derivation.md)
+  at the close; the conversion of existing duplicates is not required
+  immediately, but the shape of the answer is now settled.**
 - **F1 — a preregistered baseline must be reproducible from the repo alone.**
   A number a spec's verification section leans on comes from a committed
   harness, never an ad-hoc script in scratch. This campaign lost its own
