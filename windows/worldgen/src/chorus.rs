@@ -1049,9 +1049,20 @@ fn doctrine_explain_moons(
 /// high-god belief id (its presiding deity, per
 /// [`hornvale_religion::Belief::high_god`] — `None` for an unranked
 /// society, which simply leaves delta d's preference inert and falls
-/// through to folk's binding rule every time).
-fn doctrine_explain(world: &World, species: &str, account: &mut Account, params: &AccountParams) {
-    let cyclic = cyclic_beliefs_of(world, species);
+/// through to folk's binding rule every time). Takes ALREADY-BUILT climate
+/// (via [`cyclic_beliefs_from`]) rather than [`cyclic_beliefs_of`] — The
+/// Shuttle found `doctrine_from`'s only caller of this function was still
+/// re-sculpting the globe here despite already holding a `climate`, the
+/// second residual sculpt (after [`crisis_of`]'s) hiding behind a
+/// "byte-identical, threaded" doc claim.
+fn doctrine_explain(
+    world: &World,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    climate: &hornvale_climate::GeneratedClimate,
+) {
+    let cyclic = cyclic_beliefs_from(world, species, climate);
     if cyclic.is_empty() {
         return;
     }
@@ -1158,7 +1169,7 @@ pub fn doctrine_from(
     let params = doctrine_params_of(&folk_params);
     let ground = chorus_ground(world);
     let mut account = account_of(&ground, &params);
-    doctrine_explain(world, species, &mut account, &params);
+    doctrine_explain(world, species, &mut account, &params, climate);
 
     Some(DoctrineVoice {
         kind: species.to_string(),
@@ -1637,7 +1648,12 @@ pub fn noun_class_of(world: &World, species: &str, concept: &str) -> NounClass {
 
 /// [`noun_class_of`], reusing ALREADY-BUILT terrain/climate instead of
 /// re-sculpting the globe (down the sky-override arm's [`day_schema_from`]).
-/// Byte-identical to `noun_class_of`.
+/// Byte-identical to `noun_class_of`. Computes the sky-override's
+/// `sky_animate` answer lazily (only when `concept` is in
+/// [`SKY_OVERRIDE`]) and delegates to [`noun_class_with_sky`] — the single
+/// copy of the animacy-coherence branch, shared with callers (The Shuttle's
+/// book window) that already hold `sky_animate` for a whole kind and want
+/// to answer many concepts without re-running [`day_schema_from`] per call.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: concept)
 pub fn noun_class_from(
     world: &World,
@@ -1647,13 +1663,34 @@ pub fn noun_class_from(
     climate: &hornvale_climate::GeneratedClimate,
 ) -> NounClass {
     if SKY_OVERRIDE.contains(&concept) {
-        return if day_schema_from(world, species, terrain, climate) == Some(SchemaId::Agentive) {
+        let sky_animate =
+            day_schema_from(world, species, terrain, climate) == Some(SchemaId::Agentive);
+        return noun_class_with_sky(sky_animate, concept);
+    }
+    noun_class_plain(concept)
+}
+
+/// The animacy-coherence branch ([`noun_class_of`]/[`noun_class_from`]'s
+/// doc), taking the sky-override's `sky_animate` answer as an argument
+/// instead of deriving it — for a caller (e.g. `windows/book`) that already
+/// computed [`day_schema_from`]'s `Some(SchemaId::Agentive)` answer once per
+/// kind and wants to classify many concepts against it without re-running
+/// the day-schema draw per concept. [`SKY_OVERRIDE`] concepts answer
+/// `sky_animate` (mapped to [`NounClass::Animate`]/[`NounClass::Inanimate`]);
+/// every other concept answers [`noun_class_plain`], unaffected by
+/// `sky_animate`. The one copy of this logic — [`noun_class_from`]'s own
+/// sky-override arm calls this rather than duplicating it.
+/// type-audit: bare-ok(flag: sky_animate), bare-ok(identifier-text: concept)
+pub fn noun_class_with_sky(sky_animate: bool, concept: &str) -> NounClass {
+    if SKY_OVERRIDE.contains(&concept) {
+        if sky_animate {
             NounClass::Animate
         } else {
             NounClass::Inanimate
-        };
+        }
+    } else {
+        noun_class_plain(concept)
     }
-    noun_class_plain(concept)
 }
 
 // --- C8, The Diachronic Book: the observation ledger and the knowledge
@@ -1951,6 +1988,7 @@ pub fn ladder_from(
 /// margin to quote verbatim. Requires the same organized-cult gate
 /// `ladder_of` itself checks (SOC-1): a folk-only culture never has a
 /// crisis to report, since nothing was ever predicted for it to miss.
+/// Sculpts once and delegates to [`crisis_from`].
 ///
 /// type-audit: bare-ok(identifier-text: species)
 pub fn crisis_of(
@@ -1958,8 +1996,30 @@ pub fn crisis_of(
     species: &str,
     at: hornvale_astronomy::StdDays,
 ) -> Result<Option<PredictionCrisis>, BuildError> {
-    let observations = observations_of(world, species, at)?;
-    if doctrine_of(world, species).is_none() {
+    let terrain = crate::terrain_of(world)?;
+    let climate = crate::climate_from(world, &terrain)?;
+    crisis_from(world, species, at, &terrain, &climate)
+}
+
+/// [`crisis_of`], reusing ALREADY-BUILT terrain/climate instead of
+/// re-sculpting the globe (down [`observations_from`] and [`doctrine_from`])
+/// — The Shuttle found this was the one `_of`/`_from` pair the readout
+/// family (Task 2) missed: `windows/book`'s Reckoning section calls this
+/// once per `Predictive`-rung placed culture per epoch, and each
+/// un-threaded call re-sculpted the globe twice (`observations_of` and
+/// `doctrine_of` each sculpt independently), the dominant remaining cost in
+/// `tongue_lines_are_deterministic` even after every other reader in this
+/// module was threaded. Byte-identical to `crisis_of`.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn crisis_from(
+    world: &World,
+    species: &str,
+    at: hornvale_astronomy::StdDays,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Result<Option<PredictionCrisis>, BuildError> {
+    let observations = observations_from(world, species, at, terrain, climate)?;
+    if doctrine_from(world, species, terrain, climate).is_none() {
         return Ok(None);
     }
     let Some((top_key, top_count)) = top_recurrence_class(&observations) else {

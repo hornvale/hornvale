@@ -90,6 +90,14 @@ fn from_variants_equal_their_of_wrappers() {
             ),
             "ladder diverged for {kind}"
         );
+        assert_eq!(
+            format!("{:?}", hornvale_worldgen::crisis_of(&world, kind, at).ok()),
+            format!(
+                "{:?}",
+                hornvale_worldgen::crisis_from(&world, kind, at, &terrain, &climate).ok()
+            ),
+            "crisis diverged for {kind}"
+        );
     }
 
     assert!(
