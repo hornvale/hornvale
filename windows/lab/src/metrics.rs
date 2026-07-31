@@ -4242,29 +4242,46 @@ fn name_collision_rate(v: &FullView) -> MetricValue {
     MetricValue::Number(duplicated as f64 / names.len() as f64)
 }
 
-/// The concept a phenomenon kind glosses to (spec §9.3) — mirrors
-/// worldgen's own private `phenomenon_concept` and the independent copy in
-/// `cli/tests/words_identity.rs`'s `phenomenon_concept`. Deliberately
-/// duplicated rather than imported: this is a composition-root judgment
-/// call, not a save-format contract, so re-deriving it here from the same
-/// public phenomenon-kind constants is what makes `name-gloss-true` a real
-/// cross-check rather than an echo of worldgen's own private mapping.
-fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
-    match phenomenon.kind.as_str() {
-        hornvale_astronomy::CELESTIAL_BODY => {
-            if phenomenon.description.contains("moon") {
-                Some("moon")
-            } else if phenomenon.description.contains("star") {
-                Some("star")
-            } else {
-                Some("sun")
-            }
-        }
-        hornvale_astronomy::SEASONAL_CYCLE => Some("day"),
-        hornvale_astronomy::NIGHT_STAR => Some("star"),
-        hornvale_climate::AMBIENT => Some("wind"),
-        _ => None,
-    }
+/// The concept a phenomenon glosses to, read from the shared roster
+/// (`hornvale_worldgen::GLOSSING_KINDS`) and the phenomenon's own referent.
+///
+/// This is a READ, not a derivation — the derivation this crate owns is
+/// [`referent_is_nameable`] below, which answers the same roster from the
+/// concept registry and the lexicon rather than from worldgen's codomain.
+/// Decision 0094: share the roster, never the derivation. Before The
+/// Vernacular this function re-implemented worldgen's mapping by grepping the
+/// phenomenon's English description, which made the gloss a function of
+/// prose.
+fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&str> {
+    hornvale_worldgen::GLOSSING_KINDS
+        .contains(&phenomenon.kind.as_str())
+        .then_some(phenomenon.referent.concept.as_str())
+}
+
+/// This crate's own derivation over the shared roster: is a rostered
+/// phenomenon's referent a concept the world can actually *say*?
+///
+/// Independent of worldgen by construction — it consults the concept
+/// registry and the culture's lexicon, which the gloss path never reads. A
+/// referent that is unregistered, outside the presiding codomain, or a
+/// lexical `Gap` for this culture is a phenomenon whose deity could never be
+/// named after it, which is exactly the defect The Vernacular exists to make
+/// visible. Reserved integration seam: exercised today only by
+/// `every_rostered_referent_is_nameable` below; a metric wiring it into the
+/// registry is a follow-up outside this task's scope. Present in all builds
+/// so that seam is real, not test-only.
+#[allow(dead_code)]
+fn referent_is_nameable(
+    phenomenon: &Phenomenon,
+    registry: &hornvale_kernel::ConceptRegistry,
+    lexicon: &hornvale_language::Lexicon,
+) -> Option<bool> {
+    let concept = phenomenon_concept(phenomenon)?;
+    Some(
+        registry.concept(concept).is_some()
+            && PRESIDING_CONCEPTS.contains(&concept)
+            && !matches!(lexicon.entry(concept), None | Some(LexEntry::Gap { .. })),
+    )
 }
 
 /// This world's `species` lexicon, reusing the view's already-built terrain
@@ -4307,17 +4324,30 @@ fn settlement_site_concepts(
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
-    let presiding = phenomena.first().and_then(phenomenon_concept);
-    let concepts = worldgen_settlement_site_concepts(
+    // `phenomenon_concept` now borrows from the phenomenon's own referent
+    // (decision 0094 stopped this being a `&'static` codomain match), so it
+    // cannot feed `worldgen_settlement_site_concepts`'s `presiding:
+    // Option<&'static str>` parameter directly — `phenomena` doesn't outlive
+    // that call. Own the string instead and append it after, rather than
+    // reintroducing a `&'static` codomain match here.
+    let presiding = phenomena
+        .first()
+        .and_then(phenomenon_concept)
+        .map(str::to_string);
+    let mut concepts: Vec<String> = worldgen_settlement_site_concepts(
         v.world(),
         &v.world().seed,
         &species,
         cell,
         v.terrain(),
         climate,
-        presiding,
-    );
-    Some(concepts.into_iter().map(str::to_string).collect())
+        None,
+    )
+    .into_iter()
+    .map(str::to_string)
+    .collect();
+    concepts.extend(presiding);
+    Some(concepts)
 }
 
 /// Whether `gloss` reads as a truthful composition of `concepts`: it must
@@ -6188,7 +6218,7 @@ mod tests {
         let cases = [
             phenomenon(
                 hornvale_astronomy::CELESTIAL_BODY,
-                "sun",
+                "moon",
                 "the moon rides high",
             ),
             phenomenon(
@@ -6223,6 +6253,24 @@ mod tests {
             produced, listed,
             "PRESIDING_CONCEPTS lists exactly what phenomenon_concept can return"
         );
+    }
+
+    /// Every rostered phenomenon in seed 42 names a concept the world can
+    /// say. The lab's own derivation over the shared roster (decision 0094)
+    /// — it asks the registry and the lexicon, never worldgen's codomain.
+    #[test]
+    fn every_rostered_referent_is_nameable() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let lexicon = lex(&view, "goblin").expect("goblin has a lexicon");
+        for p in hornvale_worldgen::observed_phenomena(view.world(), 0.0).expect("phenomena") {
+            if let Some(nameable) = referent_is_nameable(&p, &view.world().registry, &lexicon) {
+                assert!(
+                    nameable,
+                    "rostered phenomenon {:?} refers to {:?}, which this world cannot name",
+                    p.kind, p.referent.concept
+                );
+            }
+        }
     }
 
     /// Seed 42, pinned. The syllable columns exist to say the campaign's own

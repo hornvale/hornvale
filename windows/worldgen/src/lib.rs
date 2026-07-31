@@ -3461,34 +3461,38 @@ fn observe_with_sources(
     ))
 }
 
-/// The concept a phenomenon kind glosses to, for glossed naming (Task 9):
-/// `celestial-body` disambiguates by its description text into whichever
-/// body it actually is (astronomy's only two `celestial-body` producers —
-/// `ConstantSun` and `GeneratedSky`'s sun/moon phenomena — describe
-/// themselves with "sun"/"moon"; "star" is included for forward
-/// compatibility even though no current producer emits it under this kind,
-/// since neighbor stars are their own `night-star` kind instead);
-/// `seasonal-cycle` glosses to `day` (the closest registered concept to
-/// "the annual daylight cycle" — there is no dedicated `season` concept);
-/// `night-star` glosses directly to `star`; climate's `ambient` glosses to
-/// `wind` (the moving-air referent behind its one, always-present
-/// phenomenon). Any other/future kind has no mapping yet (`None`) rather
-/// than guessing. A composition-root judgment call, not a spec table —
-/// adjustable here without touching the language engine.
+/// The phenomenon kinds that gloss — the shared **roster** under decision
+/// 0094, read by this crate's `phenomenon_concept` and independently by
+/// `windows/lab`'s nameability check. It names *which questions must be
+/// answered*, never *what the answers are*: adding a kind here obliges both
+/// sides to account for it, and neither side learns the other's derivation.
+///
+/// Deliberately narrower than the set of phenomena that carry referents.
+/// Eclipses, tides, heat, cold, rain and snow all name real registered
+/// concepts and would gloss if listed — but they never have, so listing them
+/// is a **world change**, not a refactor. Widen only with a spec behind it,
+/// and expect `PRESIDING_CONCEPTS` in `windows/lab/src/metrics.rs` to red
+/// until it is widened to match.
+/// type-audit: bare-ok(identifier-text)
+pub const GLOSSING_KINDS: &[&str] = &[CELESTIAL_BODY, SEASONAL_CYCLE, NIGHT_STAR, AMBIENT];
+
+/// The concept a phenomenon glosses to, for glossed naming (Task 9).
+///
+/// Reads `referent.concept` — never the description. The rostered kinds are
+/// [`GLOSSING_KINDS`]; the closed codomain below is this side's own
+/// derivation, which `windows/lab` does not share (decision 0094).
 fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
-    match phenomenon.kind.as_str() {
-        CELESTIAL_BODY => {
-            if phenomenon.description.contains("moon") {
-                Some("moon")
-            } else if phenomenon.description.contains("star") {
-                Some("star")
-            } else {
-                Some("sun")
-            }
-        }
-        SEASONAL_CYCLE => Some("day"),
-        NIGHT_STAR => Some("star"),
-        AMBIENT => Some("wind"),
+    if !GLOSSING_KINDS.contains(&phenomenon.kind.as_str()) {
+        return None;
+    }
+    // Returned as `&'static str` so callers keep their existing signature:
+    // the codomain is closed, and a referent outside it is a producer bug.
+    match phenomenon.referent.concept.as_str() {
+        "sun" => Some("sun"),
+        "moon" => Some("moon"),
+        "star" => Some("star"),
+        "day" => Some("day"),
+        "wind" => Some("wind"),
         _ => None,
     }
 }
@@ -7382,6 +7386,39 @@ mod tests {
             &SettlementPins::default(),
         )
         .expect("seed 42 builds")
+    }
+
+    /// The gloss reads the referent, not the prose. Rewording a description
+    /// must not change which concept a phenomenon glosses to — that coupling
+    /// moved 73 committed facts on seed 42 before the referent existed.
+    #[test]
+    fn the_gloss_ignores_the_description() {
+        let moon = |description: &str| hornvale_kernel::Phenomenon {
+            kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
+            referent: hornvale_kernel::Referent::of("moon"),
+            description: description.to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::NightSky,
+        };
+        assert_eq!(phenomenon_concept(&moon("a vast moon")), Some("moon"));
+        assert_eq!(phenomenon_concept(&moon("a vast lunar disc")), Some("moon"));
+        assert_eq!(phenomenon_concept(&moon("")), Some("moon"));
+    }
+
+    /// The codomain is unchanged: kinds that did not gloss before still do
+    /// not, even though they now carry referents.
+    #[test]
+    fn kinds_outside_the_gloss_codomain_stay_silent() {
+        let eclipse = hornvale_kernel::Phenomenon {
+            kind: hornvale_astronomy::ECLIPSE.to_string(),
+            referent: hornvale_kernel::Referent::qualified("eclipse", &["sun"]),
+            description: "the sun is devoured".to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::DaySky,
+        };
+        assert_eq!(phenomenon_concept(&eclipse), None);
     }
 
     /// Decision 0024's remedy on the almanac's Land list — the section that
