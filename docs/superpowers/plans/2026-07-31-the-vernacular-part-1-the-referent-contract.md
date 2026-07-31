@@ -839,10 +839,19 @@ a description substring to a referent check. Worked example — line 129:
 ```
 
 Line 98 (`p.description.starts_with("the sun")`) becomes
-`p.referent.concept == "sun"`. Line 179
-(`p.description == neighbor.night_description()`) becomes
-`p.referent == Referent::of("star")` — the neighbour's *colour* is not yet in
-the referent, so this assertion legitimately weakens.
+`p.referent.concept == "sun"`.
+
+**Line 179 is NOT converted.** An earlier draft of this plan listed it, which
+contradicted this task's own leave-alone rule and was caught in review:
+`night_star_phenomenon_description_matches_the_neighbor_s_own_wording` asserts
+`p.description == neighbor.night_description()`, which is an oracle about the
+*rendering*, not about what the phenomenon is. Converting it to
+`p.referent == Referent::of("star")` makes it redundant with `p.kind ==
+NIGHT_STAR` (that kind has one emission site, which sets exactly that
+referent), duplicates `neighbors_appear_only_in_darkness_or_on_locked_worlds`
+twenty lines above, and leaves `provider.rs:1812` — where the neighbour's own
+wording is wired into the phenomenon — with no test at all. Leave it as it
+stands.
 
 **Do not mark that with a `TODO`.** The workspace contains **zero** TODO
 comments (`grep -rn "// TODO" --include=*.rs kernel/ domains/ windows/ cli/`
