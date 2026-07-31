@@ -290,8 +290,8 @@ Nothing reads it yet: seed 42 is byte-identical."
 ### Task 2: The gloss reads the referent
 
 **Files:**
-- Modify: `windows/worldgen/src/lib.rs:3464-3494` (`phenomenon_concept`)
-- Modify: `windows/lab/src/metrics.rs:4245-4269` (the second copy)
+- Modify: `windows/worldgen/src/lib.rs:3464-3494` (function at `:3478`) (`phenomenon_concept`)
+- Modify: `windows/lab/src/metrics.rs:4252-4276` (the second copy)
 - Test: `windows/worldgen/src/lib.rs` (inline `mod tests`)
 
 **Interfaces:**
@@ -630,10 +630,10 @@ registry key rather than prose."
 ### Task 4: Retire the remaining description reads
 
 **Files:**
-- Modify: `windows/worldgen/src/lib.rs:7512` (the dedup key)
+- Modify: `windows/worldgen/src/lib.rs:7577` (the dedup key)
 - Modify: `domains/astronomy/src/provider.rs` (test assertions at :98, :113,
   :129, :179, :233, :264, :293, :692, :777, :795)
-- Modify: `windows/worldgen/src/lib.rs:8452`
+- Modify: `windows/worldgen/src/lib.rs:8517`
 
 **Interfaces:**
 - Consumes: `Phenomenon.referent` from Task 1.
@@ -681,11 +681,11 @@ Expected: FAIL to compile — `Referent: Ord` is not satisfied.
 
 - [ ] **Step 3: Flip the dedup key and the oracles**
 
-At `windows/worldgen/src/lib.rs:7512`, change `seen.insert(r.description)` to
+At `windows/worldgen/src/lib.rs:7577`, change `seen.insert(r.description)` to
 `seen.insert(r.referent.clone())` and retype `seen` to
 `BTreeSet<hornvale_kernel::Referent>`.
 
-At `windows/worldgen/src/lib.rs:8452`, change
+At `windows/worldgen/src/lib.rs:8517`, change
 `ph.iter().any(|p| p.description.contains("sun"))` to
 `ph.iter().any(|p| p.referent.concept == "sun")`.
 
