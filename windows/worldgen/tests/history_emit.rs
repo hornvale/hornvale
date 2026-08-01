@@ -405,30 +405,43 @@ fn commit_occupation(
 
 #[test]
 fn same_day_layers_order_by_material_facts_not_mint_order() {
-    // Two occupations of one cell founded the same day. The one that ended
-    // FIRST lies deeper — that is what a stratigraphy is. Mint order is
-    // deliberately the reverse, so a mint-order comparator fails this.
+    // Three occupations of one cell, founded the same day. The one that
+    // ended FIRST lies deepest. The one still alive (`ended: None`) is the
+    // TOP layer, not the bottom — getting that backward inverts the
+    // stratigraphy for every site with a survivor. Mint order is
+    // deliberately arranged to disagree with BOTH placements, so a
+    // mint-order comparator fails every assertion below.
     //
-    // The two commits below are deliberately in ended-DESCENDING order
-    // (late-ending record committed first, early-ending record committed
-    // second): sequential minting then gives the early-ending record the
-    // LARGER entity id, i.e. mint order is the exact opposite of material
-    // order. Committing in the other order would let a mint-order tie-break
-    // coincidentally agree with the material order, and the guard below
-    // would never fire.
+    // Commit order (and why): `none_end` first (so it gets the SMALLEST
+    // entity id, even though it must sort LAST materially), `late_end`
+    // second, `early_end` last (so it gets the LARGEST id, even though it
+    // must sort FIRST materially). Ascending-id order therefore reads
+    // none_end, late_end, early_end — backward on every pair. Committing in
+    // an order that let mint order agree with material order on any pair
+    // would let the old comparator pass that pair by coincidence, and the
+    // guard below would never fire.
     let mut w = world_with_registry();
+    let none_end = commit_occupation(&mut w, CellId(4), 100.0, None, 20);
     let late_end = commit_occupation(&mut w, CellId(4), 100.0, Some(900.0), 20);
     let early_end = commit_occupation(&mut w, CellId(4), 100.0, Some(150.0), 20);
     assert!(
-        early_end.get() > late_end.get(),
-        "fixture must mint the early-ending record LAST, or the test proves nothing"
+        none_end.get() < late_end.get() && late_end.get() < early_end.get(),
+        "fixture must mint in exactly this (materially-backward) order, or the test proves nothing"
     );
 
     let layers = occupations_at(&w, CellId(4));
-    assert_eq!(layers.len(), 2);
+    assert_eq!(layers.len(), 3);
     assert_eq!(
         layers[0].id, early_end,
-        "the layer that closed first lies deeper, whatever order it was minted in"
+        "the layer that closed first lies deepest, whatever order it was minted in"
+    );
+    assert_eq!(
+        layers[1].id, late_end,
+        "the layer that closed second lies in the middle, whatever order it was minted in"
+    );
+    assert_eq!(
+        layers[2].id, none_end,
+        "a still-living occupation is the TOP layer, not the bottom, whatever order it was minted in"
     );
 }
 
@@ -438,6 +451,7 @@ fn the_layer_comparator_is_total_on_the_live_corpus() {
     // the sort falls back to input order — the exact failure this campaign
     // removes. Measured before implementation: (founded, ended, peak) alone
     // ties on 6 records in seed 42, which `founded_from` is there to break.
+    let mut pairs = 0u64;
     for seed in [42u64, 7, 1000] {
         let w = build_world(
             Seed(seed),
@@ -450,6 +464,7 @@ fn the_layer_comparator_is_total_on_the_live_corpus() {
         for (cell, occs) in occupations_by_cell(&w) {
             for i in 0..occs.len() {
                 for j in (i + 1)..occs.len() {
+                    pairs += 1;
                     assert_ne!(
                         layer_key(&occs[i]),
                         layer_key(&occs[j]),
@@ -459,4 +474,9 @@ fn the_layer_comparator_is_total_on_the_live_corpus() {
             }
         }
     }
+    assert!(
+        pairs > 0,
+        "compared zero occupation pairs across seeds 42/7/1000 — this test proves nothing \
+         until at least one site restacks (pairs={pairs})"
+    );
 }

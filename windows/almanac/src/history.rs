@@ -13,10 +13,11 @@
 //! is *derived* on demand — never committed — so this window can invent as
 //! much texture as it likes without touching a save-format contract.
 //!
-//! Determinism: the layers are ordered by founding day (`f64::total_cmp`, a
-//! total order with a stable entity-id tie-break); the flesh seed is derived
-//! purely from the world seed and the occupation entity id. Same world ⇒ same
-//! prose, byte for byte.
+//! Determinism: the layers are ordered by [`hornvale_history::record::layer_key`]
+//! — material facts only (founded, then ended, then peak population, then
+//! `founded_from`), never by the occupation entity's mint order; the flesh
+//! seed is derived purely from the world seed and the occupation entity id.
+//! Same world ⇒ same prose, byte for byte.
 
 use hornvale_history::flesh::{
     Departure, Durability, Residue, ResidueItem, Structure, residue_of, structures_of,

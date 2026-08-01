@@ -171,8 +171,23 @@ impl OccupationRecord {
     }
 }
 
+/// A `u64` whose unsigned order matches `f64::total_cmp` for every input,
+/// including negatives, `-0.0`, and NaN. Lets [`layer_key`] be a plain `Ord`
+/// tuple instead of a hand-written comparator, without inheriting `to_bits`'s
+/// positives-only precondition: `to_bits` alone agrees with float order only
+/// for non-negative, non-NaN inputs (`(-0.0).to_bits() == 1 << 63`, which
+/// would sort after every positive day), and nothing pins the day fields this
+/// key reads to that range — `founded`/`ended` come back from an already-
+/// quantized, non-negative ledger today, but `BakeConfig::start_year` is a
+/// bare `pub f64` with no such validation, so the guarantee belongs in the
+/// key, not in a comment about its callers.
+fn day_key(x: f64) -> u64 {
+    let b = x.to_bits();
+    if b >> 63 == 1 { !b } else { b | 1 << 63 }
+}
+
 /// The order a site's layers stack in: material facts only, oldest-founded
-/// first, and total.
+/// first.
 ///
 /// Lives here rather than beside either caller because `windows/worldgen` and
 /// `windows/almanac` both need it and neither depends on the other — the same
@@ -185,11 +200,31 @@ impl OccupationRecord {
 /// what distinguishes two occupations sharing a site, an epoch, a fate and a
 /// size (measured: 6 such records in seed 42, 4 in seed 7, 0 in seed 1000,
 /// separable by nothing else).
+///
+/// **Total given one invariant this crate does not own**: two layers both
+/// `Founding::Genesis` at the same site carry an *identical* fourth key
+/// (`Genesis` encodes only the site's own cell), so if the (founded, ended,
+/// peak) prefix also ties, the key ties too. That never happens today only
+/// because the bake opens at most one `Genesis` occupation per site
+/// (`windows/worldgen`'s `history_bake.rs`) — a `domains/history` doc leaning
+/// on a `windows/worldgen` invariant. A future re-genesis path (a site razed
+/// and refounded from nothing a second time) must revisit this before
+/// claiming the key is total again.
+///
+/// The fourth key itself is a compromise, not a material fact: `Founding::From`
+/// orders two descended layers by the *predecessor's* `EntityId` — an identity
+/// handle, not anything the world states about either occupation, and itself a
+/// mint-order artifact. It is specified behavior (there is no other handle in
+/// the ledger to break this tie with) and, per the invariant above, it is in
+/// practice the discriminator actually doing the work whenever the first three
+/// keys tie — Genesis-vs-Genesis never reaches it. A future encoding that gave
+/// a founding its own material identity (a "signet") would close this gap;
+/// until then, this is documented as the resort it is, not sold as more.
 /// type-audit: bare-ok(count: return)
 pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>, u8, u64) {
-    let founded = r.core.founded.to_bits();
+    let founded = day_key(r.core.founded);
     let (ended_rank, ended) = match r.core.ended {
-        Some(d) => (0u8, d.to_bits()),
+        Some(d) => (0u8, day_key(d)),
         None => (1u8, 0),
     };
     let (from_rank, from) = match r.founded_from {
