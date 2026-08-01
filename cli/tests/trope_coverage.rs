@@ -62,6 +62,55 @@ fn check_mode_agrees_with_the_committed_artifact() {
     );
 }
 
+/// `check` must actually FAIL when the report diverges. Every other test here
+/// asserts success, so a refactor that made the check arm return `Ok(())`
+/// unconditionally would leave all of them green while the command stopped
+/// discriminating. Spec §7 asks for the ratchet to be disarmed and shown to
+/// redden; without this, that proof exists only in campaign scratch that dies
+/// with the worktree.
+///
+/// The lever is a divergent **corpus**, not a tampered artifact: a corpus that
+/// differs from the frozen one renders a different report, which cannot match
+/// the committed bytes — so the committed artifact is never written to, and
+/// this test cannot leave the tree dirty even if it fails.
+///
+/// Asserts on exit status rather than stderr text, so rewording the message
+/// does not redden it.
+#[test]
+fn check_mode_fails_on_a_divergent_corpus() {
+    let root = workspace_root();
+    // `std::env::temp_dir()`, deliberately not a path built from
+    // `CARGO_MANIFEST_DIR` — see `build_path_embedding.rs`. The pid keeps
+    // concurrent runs from colliding; nextest is process-per-test.
+    let corpus =
+        std::env::temp_dir().join(format!("hv-trope-divergent-{}.json", std::process::id()));
+    std::fs::write(
+        &corpus,
+        r#"{"corpus":"divergent","provenance":"a deliberately different corpus",
+            "frozen":"never","bundles":{},
+            "situations":[{"id":"s1","name":"S","actants":{"subject":"someone"},
+                           "requires":["predicate:absent"],"excluded_by":[]}]}"#,
+    )
+    .expect("writes the temp corpus");
+
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["tropes", "--corpus"])
+        .arg(&corpus)
+        .arg("check")
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+
+    // Clean up before asserting, so a red run still removes the file.
+    let _ = std::fs::remove_file(&corpus);
+
+    assert!(
+        !out.status.success(),
+        "check exited 0 against a corpus that cannot match the committed \
+         artifact — the ratchet is not discriminating"
+    );
+}
+
 /// A mode following a flag is still found. Reading only `args[1]` made
 /// `tropes --corpus <path> check` print a report and exit 0 — a silent false
 /// pass for anything gating on `check`. Nothing else guards that fix.

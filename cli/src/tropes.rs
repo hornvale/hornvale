@@ -565,6 +565,44 @@ mod tests {
         );
     }
 
+    /// The live corpus is structurally sound: ids are unique, and there are
+    /// exactly thirty-six situations.
+    ///
+    /// Uniqueness is the load-bearing half. `resolve` returns a `BTreeMap`
+    /// keyed by `id`, so a duplicated id means the second write wins, one
+    /// situation vanishes, and the report prints a quietly smaller
+    /// denominator — `Stageable 0 of 35` — with no warning. This is the one
+    /// place the campaign's default-deny posture stopped at the corpus door,
+    /// and a second corpus is the explicit next step: a copy-paste while
+    /// adding Propp's inventory would shrink the denominator silently and a
+    /// reader would take the wrong number for the intended size.
+    ///
+    /// The hardcoded 36 looks brittle and is not. This corpus is **frozen**,
+    /// and a change to its situation count is precisely the event that should
+    /// require someone to come here and say so deliberately — the freeze is
+    /// what the preregistered scoring rests on. Do not "fix" this by deriving
+    /// the number from the file it is checking.
+    #[test]
+    fn the_live_corpus_has_thirty_six_uniquely_identified_situations() {
+        let corpus =
+            load(include_str!("../../tropes/polti.trope.json")).expect("the live corpus parses");
+        let mut seen = BTreeSet::new();
+        for st in &corpus.situations {
+            assert!(
+                seen.insert(st.id.as_str()),
+                "duplicate situation id `{}` — one situation would vanish into a \
+                 BTreeMap key collision and the report would understate its denominator",
+                st.id
+            );
+        }
+        assert_eq!(
+            corpus.situations.len(),
+            36,
+            "the frozen corpus must hold exactly 36 situations; changing that \
+             changes what every preregistered number was scored against"
+        );
+    }
+
     /// The corpus's actant roles stay inside Greimas' six. A seventh role, or
     /// a situation declaring none, means the hand-authored decomposition
     /// vocabulary drifted — and nothing else in the workspace checks it.

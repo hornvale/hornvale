@@ -33,6 +33,11 @@ editing:
   footgun.
 - `scripts/` — the gate ladder, `regenerate-artifacts.sh`, `census-run.sh`,
   the (abandoned) AWS remote gate.
+- `tropes/` — frozen, provenance-stamped corpora of dramatic situations, read
+  backwards as capability probes. The corpus is **data** and the resolver is
+  **code** (the studies-are-data rule, decision 0011); a corpus is frozen
+  before measurement and its situation count is asserted, so changing it is a
+  deliberate act.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact
@@ -184,6 +189,7 @@ cargo run -p hornvale -- almanac --world world.json
 cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
 cargo run -p hornvale -- streams         # stream manifest (book reference page)
+cargo run -p hornvale -- tropes report   # trope coverage -> docs/audits/ (`check` = ratchet)
 cargo run -p hornvale -- lab run studies/the-census.study.json
 cargo run -p hornvale -- lab list-metrics
 

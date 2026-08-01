@@ -93,10 +93,13 @@ Two related observations, both first-of-kind:
 ## Estimate deltas
 
 Five tasks, all landed. Task 1 and Task 2 took one fix round each; Task 3 took
-two (the Critical plus a prose round); Task 4 took one. No task exceeded its
-shape — the cost was concentrated entirely in review-and-fix, which is what the
-plan-defect pattern above predicts. The campaign touched no world state, drew
-no seed, and needed no census.
+two (the Critical plus a prose round); Tasks 4 and 5 took one each. Task 5's
+round is worth naming rather than counting: the close itself was carrying the
+campaign's second-most-consequential finding, because the artifact was hiding a
+missing bundle that only the ranked misses could have disclosed. No task
+exceeded its shape — the cost was concentrated entirely in review-and-fix,
+which is what the plan-defect pattern above predicts. The campaign touched no
+world state, drew no seed, and needed no census.
 
 Preregistration paid its rent on schedule. P3 — the corpus-validity kill — was
 scored the day the corpus froze, before a line of resolver code existed. Had
