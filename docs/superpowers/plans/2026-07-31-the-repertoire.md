@@ -526,8 +526,20 @@ pub fn render(
         "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\nA rising demand score with a rising supply count means capability is being\nregistered that nothing uses (spec D5).\n\n",
         orphans.len()
     ));
+    // Annotate `concept:` orphans with their owning domain. Many come from
+    // the language lexicon and are WORDS, not modelled capabilities; an
+    // unannotated list invites reading every orphan as a registered-but-
+    // unused mechanism, which is the opposite of what the Supply count is
+    // for (spec D5).
+    let domains: BTreeMap<String, String> = registry
+        .concepts()
+        .map(|c| (format!("concept:{}", c.name), c.domain.clone()))
+        .collect();
     for t in &orphans {
-        s.push_str(&format!("- `{t}`\n"));
+        match domains.get(t) {
+            Some(d) => s.push_str(&format!("- `{t}` ({d})\n")),
+            None => s.push_str(&format!("- `{t}`\n")),
+        }
     }
     s
 }
