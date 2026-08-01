@@ -289,6 +289,7 @@
 - [The Watershed](./chronicle/the-watershed.md)
 - [The Waymark](./chronicle/the-waymark.md)
 - [The Repertoire](./chronicle/the-repertoire.md)
+- [The Scaffold](./chronicle/the-scaffold.md)
 
 # Appendix: The Frontier
 
