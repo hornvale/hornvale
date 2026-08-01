@@ -111,7 +111,7 @@ that is the difference.
 
 ## Supply
 
-277 registered tokens no situation in this corpus requires.
+286 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -130,6 +130,7 @@ missing half before this list can serve it.
 - `concept:black-dragon-kind` (species)
 - `concept:blood` (language)
 - `concept:blue` (language)
+- `concept:blue-giant` (astronomy)
 - `concept:bone` (language)
 - `concept:boreal-stand` (climate)
 - `concept:brown` (language)
@@ -222,6 +223,8 @@ missing half before this list can serve it.
 - `concept:old-growth` (climate)
 - `concept:one` (language)
 - `concept:open-blue` (climate)
+- `concept:orange-dwarf` (astronomy)
+- `concept:orange-giant` (astronomy)
 - `concept:otyugh-kind` (species)
 - `concept:over` (language)
 - `concept:owlbear-kind` (species)
@@ -232,6 +235,8 @@ missing half before this list can serve it.
 - `concept:rain` (climate)
 - `concept:red` (language)
 - `concept:red-dragon-kind` (species)
+- `concept:red-dwarf` (astronomy)
+- `concept:red-giant` (astronomy)
 - `concept:reef-rubble` (climate)
 - `concept:reef-shark-kind` (species)
 - `concept:reg` (climate)
@@ -262,6 +267,7 @@ missing half before this list can serve it.
 - `concept:starlit` (language)
 - `concept:stone` (terrain)
 - `concept:sun` (astronomy)
+- `concept:sun-like-star` (astronomy)
 - `concept:taiga` (climate)
 - `concept:temperate-forest` (climate)
 - `concept:temperate-grassland` (climate)
@@ -289,12 +295,15 @@ missing half before this list can serve it.
 - `concept:water` (language)
 - `concept:wheat` (climate)
 - `concept:white-dragon-kind` (species)
+- `concept:white-dwarf` (astronomy)
 - `concept:wind` (language)
 - `concept:wind-scour` (climate)
 - `concept:wooded-grassland` (climate)
 - `concept:woolly-mammoth-kind` (species)
 - `concept:xorn-kind` (species)
 - `concept:yellow` (language)
+- `concept:yellow-dwarf` (astronomy)
+- `concept:yellow-white-dwarf` (astronomy)
 - `phenomenon:ambient`
 - `phenomenon:celestial-body`
 - `phenomenon:heliacal-setting`
