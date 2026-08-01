@@ -178,12 +178,28 @@ pub fn astar<S: SearchSpace>(space: &S, start: S::State, budget: usize) -> Optio
 /// ends reconstructs the path to whichever goal state was popped first.
 ///
 /// **Substitutability, proven not asserted.** `FieldSolver::solve` returns
-/// the exact SAME state `AStarSolver::solve` would have returned early: the
-/// first-goal-pop is recorded (not expanded further) the moment it is
-/// popped, using the identical `(f, g, state)` total order and the
-/// identical first-strict-improvement-wins relaxation rule, so nothing
-/// exploration does AFTER that pop can retroactively change which state was
-/// recorded or how `came_from` reconstructs its path. The
+/// the exact SAME action path `AStarSolver::solve` would have returned
+/// early: the first-goal-pop's path is reconstructed from `came_from` and
+/// snapshotted (not the state — the already-materialized `Vec<Action>`) the
+/// instant that pop happens, using the identical `(f, g, state)` total
+/// order and the identical first-strict-improvement-wins relaxation rule up
+/// to that point, mirroring `AStarSolver`'s own at-pop reconstruction
+/// exactly. Exploration then keeps going (the field characteristic) with
+/// `came_from` free to keep mutating for states unrelated to what already
+/// got copied out — but nothing it does afterward can reach back and change
+/// a `Vec` that has already been recorded, so the claim is unconditional by
+/// construction rather than resting on an argument about the heuristic. That
+/// distinction matters here specifically: an earlier revision of this
+/// solver recorded the goal *state* and re-walked `came_from` at
+/// end-of-loop instead, which is equivalent to snapshotting ONLY when no
+/// state on the recorded chain is ever re-relaxed after the goal's pop — true
+/// for every heuristic this module's callers use (`h = 0`, or consistent),
+/// but not a property an admissible-but-unconsistent heuristic guarantees in
+/// general, since consistency (not mere admissibility) is what keeps a
+/// popped node's `came_from` entry from changing later. No in-repo caller
+/// exercises an inconsistent heuristic and `FieldSolver` is unwired, so nothing
+/// observable changed — the point of snapshotting is that the kernel's
+/// contract no longer depends on that being true. The
 /// `field_solver_matches_astar_solver_*` tests below (`kernel::astar::
 /// tests`) pin this across the module's existing fixtures — the least-cost
 /// path, the tie-break keystone (repeated 100×), the unreachable-goal and
@@ -228,10 +244,12 @@ impl<S: SearchSpace> Solver<S> for FieldSolver {
         frontier.insert((h0, 0, start.clone()));
         best_g.insert(start.clone(), 0);
 
-        // The first goal state popped, in frontier order — exactly the state
-        // `AStarSolver` would return at, recorded rather than returned so
-        // exploration can keep going (the field characteristic).
-        let mut found: Option<S::State> = None;
+        // The first goal state's action path, in frontier order — snapshotted
+        // (not the state alone) the instant it is popped, exactly as
+        // `AStarSolver` would reconstruct it if it returned right here, so
+        // exploration can keep going (the field characteristic) without any
+        // risk of later mutating what gets returned.
+        let mut found: Option<Vec<S::Action>> = None;
         let mut expansions = 0usize;
         while let Some(&(_f, g, ref state)) = frontier.iter().next() {
             let (f, g, state) = (_f, g, state.clone());
@@ -243,8 +261,22 @@ impl<S: SearchSpace> Solver<S> for FieldSolver {
                 // Mirrors `AStarSolver`'s early return exactly: this pop is
                 // never counted as an expansion (the same is true there —
                 // the `expansions += 1` below is never reached on the pop
-                // that returns), and its successors are never generated.
-                found = Some(state);
+                // that returns), its successors are never generated, AND
+                // the action path is reconstructed right here from
+                // `came_from` as it stands at this exact moment — the same
+                // data `AStarSolver` would read if this were its own
+                // early-return pop. Snapshotting the `Vec` (not the state)
+                // is what makes the equivalence claim above unconditional:
+                // no relaxation after this point, however it mutates
+                // `came_from`, can reach back and change it.
+                let mut actions = Vec::new();
+                let mut cur = state;
+                while let Some((prev, act)) = came_from.get(&cur) {
+                    actions.push(act.clone());
+                    cur = prev.clone();
+                }
+                actions.reverse();
+                found = Some(actions);
                 continue;
             }
             expansions += 1;
@@ -262,15 +294,7 @@ impl<S: SearchSpace> Solver<S> for FieldSolver {
             }
         }
 
-        let goal_state = found?;
-        let mut actions = Vec::new();
-        let mut cur = goal_state;
-        while let Some((prev, act)) = came_from.get(&cur) {
-            actions.push(act.clone());
-            cur = prev.clone();
-        }
-        actions.reverse();
-        Some(actions)
+        found
     }
 }
 
