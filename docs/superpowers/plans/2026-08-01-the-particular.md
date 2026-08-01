@@ -44,12 +44,13 @@
 |---|---|---|
 | `book/src/reference/layering-generated.md` | Task 1 (a new crate = a new row) | `REBASELINE=1 cargo test -q -p hornvale --test architecture` |
 | `book/src/reference/concept-registry-generated.md` | Task 1 (four new predicates) | `make rebaseline` |
+| `book/src/reference/stream-manifest-generated.md` | Task 1 (the manifest lists every roster crate, including one that declares no labels) | `make rebaseline` |
 | `docs/audits/trope-coverage.md` | Task 1 (**registration alone satisfies the bundle**) | `make rebaseline` |
 | `docs/audits/type-audit-report.md` | Task 1 + 2 (new pub boundaries) | `make rebaseline` |
-| `cli/tests/fixtures/world-seed-42.json` | Task 3 (new facts) | `REBASELINE=1 cargo test -q -p hornvale --test lens_purity` |
+| `cli/tests/fixtures/world-seed-42.json` | **Task 1** (the save serializes the whole `ConceptRegistry`, so registering predicates changes it before any person exists) **and again Task 3** (the facts themselves) | `REBASELINE=1 cargo test -q -p hornvale --test lens_purity` |
 | `book/src/gallery/almanac-seed-42*.md`, `history-seed-42.md` | Task 4 (new prose) | `make rebaseline` |
 
-**Only `lens_purity` and `architecture` may move among the six byte-goldens.** If `scene/golden` or `session_snapshot` also drift, persons have leaked into a client-facing scene document — scene schemas are cross-repo contracts, additive-or-versioned only. **Stop and report; do not rebaseline.**
+**Only `lens_purity` and `architecture` may move among the six byte-goldens**, and `lens_purity` moves **twice** — once in Task 1 for the registry entries and again in Task 3 for the facts. Each task must leave it green; a red gate between tasks makes the next task's own verification unreadable. If `scene/golden` or `session_snapshot` also drift, persons have leaked into a client-facing scene document — scene schemas are cross-repo contracts, additive-or-versioned only. **Stop and report; do not rebaseline.**
 
 ---
 

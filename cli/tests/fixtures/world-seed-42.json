@@ -182,6 +182,11 @@
         "functional": true,
         "doc": "subject is an occupation record"
       },
+      "is-person": {
+        "name": "is-person",
+        "functional": true,
+        "doc": "this entity is an individual person"
+      },
       "is-place": {
         "name": "is-place",
         "functional": true,
@@ -391,6 +396,21 @@
         "name": "peopled-by",
         "functional": true,
         "doc": "the species that peoples a settlement"
+      },
+      "person-born": {
+        "name": "person-born",
+        "functional": true,
+        "doc": "the day this person was born"
+      },
+      "person-died": {
+        "name": "person-died",
+        "functional": true,
+        "doc": "the day this person died"
+      },
+      "person-founded": {
+        "name": "person-founded",
+        "functional": true,
+        "doc": "the community whose occupation this person founded"
       },
       "plate-count": {
         "name": "plate-count",
