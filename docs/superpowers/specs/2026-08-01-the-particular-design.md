@@ -97,7 +97,7 @@ covertly ranking by age; and because older occupations skew slightly larger, the
 earliest founders tend to enter the cast without a rule saying so.
 
 The ledger cost stays a guarantee rather than an estimate: at most
-`4 × cast` facts, exactly `3 × cast` plus one per founder already dead at `now`.
+`5 × cast` facts, exactly `4 × cast` plus one per founder already dead at `now`.
 
 **D3 — Promotion runs last in `build_to`.** `mint_entity` is a monotonic counter
 (`kernel/src/ledger.rs:145-150`), so appending mints cannot shift an existing
@@ -107,57 +107,48 @@ subsystem ... so the new, Y2-1-only entities are appended last rather than
 interleaved" (`windows/worldgen/src/lib.rs:5967-5973`). **Leaving this implicit
 is the difference between correct and silently wrong.**
 
-**D4 — Four facts per person, no committed name, and death is conditional.**
-`is-person`, `person-founded` and `person-born` always; `person-died` **only if
-the derived death day has already passed**. Birth is the occupation's `founded`
-day; death is `founded + lifespan(species)` via
+**D4 — Five facts per person, and death is conditional.**
+`is-person`, `person-founded`, `person-born` and `name` always; `person-died`
+**only if the derived death day has already passed**. Birth is the occupation's
+`founded` day; death is `founded + lifespan(species)` via
 `domains/species::allometry::life_history`, which takes no `Seed` or `Stream`.
 
 **`person-founded` exists for the reader, not the corpus.** It points at the
-community entity whose occupation this founder opened. The bundle does not require
-it — but without it nothing can find a founder from a settlement, and D9's almanac
-consumer would be impossible. It is owned by `domains/person` (subject = the
-person), not named `occ-founded-by`, because the `occ-*` namespace belongs to
-`domains/history` and a domain may not write into another's vocabulary.
+community entity whose occupation this founder opened. The bundle does not
+require it — but without it nothing can find a founder from a settlement, and
+D9's almanac consumer would be impossible. It is owned by `domains/person` (the
+person is the subject), not named `occ-founded-by`, because the `occ-*` namespace
+belongs to `domains/history` and a domain may not write another's vocabulary.
 
-**The name is not committed.** It is derived by `persona_of(handle, seed)` at
-presentation time, which is what that function exists for. Three reasons, in
-ascending order of force:
+**The name IS committed, and an earlier draft of this spec had that wrong.** The
+Constitution says it plainly: *"Once a goblin king has a name, he has it
+forever."* A named individual is a fact-ledger citizen.
 
-1. The corpus never asked for it. `bundle:individual-persons` is
-   `concept:person`, `is-person`, `person-born`, `person-died`.
-2. A name that is a pure function of `(handle, seed)` buys nothing by being
-   stored — the same argument the population-field spec used to refuse
-   serializing fields: *"a new save-format contract to version, quantize, and
-   drift-check, buying nothing."* Determinism makes storage redundant, not
-   safer.
-3. **Committing `name` would push persons into the one part of genesis nothing
-   validates.** `windows/worldgen/src/schedule.rs`'s module doc explains that
-   the classification tail is exempt from the capability schema because it
-   writes `name`, religion *reads* `name`, and the schema's edges are
-   predicate-granular but subject-blind — so a late name-writer is falsely
-   forced before an early name-reader. A person stage writing `name` hits that
-   same false cycle and lands in the unvalidated tail, which is exactly where
-   D3's "run last" convention would then be carrying all the weight. Not
-   writing `name` keeps the stage declarable and checked.
+The reversal is recorded because the reasoning matters more than the conclusion.
+The prior draft declined to commit `name` on three grounds. The first two are
+true but not decisive: the corpus never asked for `name`, and a pure function of
+the seed buys little by being stored. The third was **false** — it claimed
+committing `name` would push persons into the capability schema's unvalidated
+tail, via the false cycle that exempts `planet`/`peoples`. But D3 keeps the
+`person` stage outside that schema regardless, following the same precedent, so
+there was no cycle to avoid and nothing being protected.
 
-The Constitution's *"once a goblin king has a name, he has it forever"* is
-satisfied: `persona_of` is total and deterministic, so the name is forever
-without being stored.
+What settles it is that **naming is not cheap, and only genesis can do it.**
+`Namer::glossed_name(kind, salt, morph, site, lexicon, corpus)` needs a `Namer`
+over a per-species phonology, plus morphology options, a lexicon and a name
+corpus — all built during language genesis. `windows/almanac` has none of that
+and does not even depend on `hornvale-language`. Deriving a name at render time
+would mean re-running language genesis inside a window.
 
-A living person is represented by the **absence** of a death fact. This is the
-asymmetry the data already carries — `OccupationRecord.ended` is
-`Option<f64>` — and it is load-bearing rather than incidental: the corpus needs
-subjects who can *act*, and a world in which every person is dead would satisfy
-all four tokens while missing their point. Because lifespans are short against a
-2,000-year bake, the living cast is small and concentrated in recently-founded
-settlements. That is honest rather than convenient.
+So promotion names the founder where the machinery already stands, and commits
+it. `name` is in `kernel::KERNEL_CORE_PREDICATES` and exempt from the
+single-writer check; several domains already write it.
 
-`name` is in `kernel::KERNEL_CORE_PREDICATES` (`kernel/src/world.rs:51`) and is
-exempt from the single-writer check, so a new domain committing `name` facts is
-not a violation — several domains already do. The four new predicates are
-trivially single-writer, and none is read by any genesis stage, so none can
-manufacture a schedule cycle the way `name` would.
+`Fact.day` stays `Option<f64>`, never `WorldTime` (decision 0014). The four new
+predicates are trivially single-writer, and none is read by any genesis stage, so
+none can manufacture a schedule cycle the way `name` would if the stage were
+declared.
+
 
 **D4a — Only three of the four bundle tokens need registering, and the fourth
 was already satisfied by a word.** `concept:person` is **already registered** —
@@ -178,16 +169,33 @@ no verdict inflated today"* — and it has now come due where it was predicted t
 The corpus is frozen and must not be edited after unblinding (0016), so the
 instrument keeps this flaw for now; §7 F4 carries it forward.
 
-**D5 — No new `Stream` draws, therefore no seed-derivation-label epoch.** Both
-derivations in the promotion path are draw-free, verified: `persona_of` (above)
-and `life_history(mass, class)` (`domains/species/src/allometry.rs:116`, module
-doc: *"pure scaling laws... No draws, no world state"*).
+**D5 — One new draw, on a disjoint path; no existing derivation moves.**
 
-The claim is stated as *no epoch is owed because no `Stream` draw exists to
-bump* — **not** as "0084 confirms it." Decisions 0073, 0083 and 0084 all
-arbitrate label-bumps for draw-*consuming* derivations; 0084's vocabulary
-(RE-PIN / EPOCH / EMPTY / LATENT / UNDECLARED) presumes an already-declared
-label. A zero-draw feature falls outside their literal scope. See §8.
+D4's committed name means this campaign does draw, which an earlier draft of this
+spec denied. What matters is that nothing existing shifts, and that is verified
+rather than argued. `Namer` holds `seed`, `species` and `ph` — **no mutable
+stream** (`domains/language/src/naming.rs:327-331`) — and
+`name(&self, kind, salt, morph)` derives a **fresh stream per call**:
+
+```
+ROOT → species → NAME → kind.label() → salt → .stream()
+```
+
+A founder's name therefore needs a fourth `NameKind` (`Person`, label
+`"person"`) whose derive path is **disjoint from every existing one**. It
+consumes nothing from any other stream, so no existing name of any kind moves.
+
+Everything else in the promotion path stays draw-free: `persona_of` is pure bit
+arithmetic whose own doc says "No `Stream` is drawn", and
+`life_history(mass, class)` takes no `Seed` at all
+(`domains/species/src/allometry.rs:116`: *"pure scaling laws... No draws, no
+world state"*).
+
+**No epoch is owed**, because under 0084 an epoch follows a derivation that
+*moved*, and none did — the new path is additive. **A new label is owed**, and is
+declared from its first commit per 0073. `NameKind::label`'s own doc warns that
+changing an existing label "silently reseeds every name of that kind in every
+saved world"; adding one alongside does not. See §8.
 
 **D6 — `domains/person`, a new domain.** Persisting world-state is a domain's
 job: `windows/CLAUDE.md` is explicit that *"a window that draws has quietly
@@ -214,8 +222,9 @@ detect precisely that, would be self-parody.
 
 `windows/almanac/src/history.rs` already narrates each settlement's history and
 already renders `occ-people` as a collective noun. Where an occupation has a
-remembered founder, name them — resolved through `person-founded` and expanded by
-`persona_of`. Where none is remembered, **say nothing**: silence is the correct
+remembered founder, name them — resolved through `person-founded` and read off the
+committed `name` fact, the same way settlement names are read; D4's reversal makes
+this a two-fact lookup rather than a re-run of language genesis. Where none is remembered, **say nothing**: silence is the correct
 rendering of a founder nobody remembers, and inventing a phrase for absence would
 recreate F1's "an ordinary place, neither famed nor forgotten" for every settlement
 that lacks one.
@@ -244,8 +253,8 @@ All figures measured on this branch, seeds 42 / 7 / 1000, at 218 bytes/fact.
 | `occ-peak` max | 127 | 90 | 119 |
 | peoples | 5 | 5 | 5 |
 | cast at `MEMORY_DEPTH = 20` | 90 | 82 | 100 |
-| added facts (≤ 4 × cast) | ≤ 360 | ≤ 328 | ≤ 400 |
-| ledger growth | **≤ +1.37%** | **≤ +1.12%** | **≤ +1.60%** |
+| added facts (≤ 5 × cast) | ≤ 450 | ≤ 410 | ≤ 500 |
+| ledger growth | **≤ +1.71%** | **≤ +1.39%** | **≤ +2.00%** |
 | `corr(peak, founded)` | −0.32 | −0.39 | −0.33 |
 
 The bound is exact rather than estimated: two facts per founder unconditionally,
@@ -253,8 +262,8 @@ plus one per founder already dead at `now`. Because lifespans are short against 
 2,000-year bake, nearly all will be dead, so the realised figure sits just under
 the bound. The implementation reports the actual split.
 
-For contrast, promoting *every* occupation at four facts each would add 7,104 /
-7,984 / 6,716 facts — **+27%** — and is the branch that would have required a
+For contrast, promoting *every* occupation at five facts each would add 8,880 /
+9,980 / 8,395 facts — **+34%** — and is the branch that would have required a
 forgetting
 mechanism. `MEM-1` is the only such mechanism anywhere on the books and it is
 unbuilt. Gating at promotion means the cast never reaches a size that would
@@ -286,8 +295,8 @@ other way, and P6 most of all.
 - **P3 — The new top row is `bundle:intent`, fan-in 17**, unchanged. Because
   all 35 situations remain blocked, no other bundle's fan-in moves.
 - **P4 — "The closest blocked situation is still missing N bundles" goes 4 → 3.**
-- **P5 — Ledger growth is ≤ 2% on every seed measured**, and the added fact
-  count is exactly `3 × cast + (founders already dead at now)` — an identity,
+- **P5 — Ledger growth is ≤ 2.1% on every seed measured**, and the added fact
+  count is exactly `4 × cast + (founders already dead at now)` — an identity,
   not a bound, so a mismatch means the death rule misfired rather than that the
   estimate was off.
 - **P6 — At least one same-people pair of remembered founders has overlapping
@@ -312,7 +321,9 @@ per-tick simulation of a promoted person — promotion writes genesis facts and
 stops. Fixing `occ-notability` or `occ-function` (§7, F1). Recalibrating
 demography's population scale (§7, F3).
 
-**In scope, deliberately:** the almanac consumer (D9). It is the smallest thing
+**In scope, deliberately:** a fourth `NameKind` in `domains/language`
+(`Person`), which D4's committed name requires — additive, on a disjoint derive
+path, and the campaign's only new draw. Also the almanac consumer (D9). It is the smallest thing
 that stops this campaign from registering a capability nothing reads, and it is
 a window rendering committed facts rather than new world-state. What stays out
 is any *other* reader — no `possess` encounter, no chronicle entry, no scene
@@ -398,11 +409,14 @@ is a demography question, and it bears directly on how much persons are worth.
 
 ## 8. Flagged for review
 
-**The epoch question is ambiguous, not settled.** D5 argues no epoch is owed.
-The argument is sound on the facts — nothing draws — but it rests on a rule
-nobody has written: *a zero-draw feature owes no seed-derivation-label epoch.*
-0073/0083/0084 do not adjudicate this case. This may deserve its own decision
-record.
+**The epoch question, restated after D4's reversal.** The campaign now draws
+once — a founder's name under a new `NameKind::Person` label. That is squarely
+inside 0073/0083/0084's subject matter, and their answer is clear: an epoch
+follows a derivation that *moved*, and this one is additive on a disjoint path.
+So a **label is declared** and **no epoch is owed**. The earlier draft's
+zero-draw argument, which rested on a rule nobody has written, is no longer
+load-bearing.
+
 
 **`cli/tests/lens_purity.rs::seed_42_world_json_matches_the_committed_fixture`
 will redden, by design.** Its own doc anticipates it: drift *"must be
@@ -445,8 +459,7 @@ moves.
 
 ## 11. Candidate decision record
 
-*A zero-draw feature owes no seed-derivation-label epoch.* Adding a derivation
-that consumes no `Stream` draws, appends only new facts, and changes no existing
-derivation does not owe an epoch under 0073/0083/0084 — because there is no
-label whose bump status is in question. Worth ratifying if Nathan agrees the
-rule is general rather than particular to this campaign.
+*A zero-draw feature owes no seed-derivation-label epoch.* No longer needed by
+this campaign — D4's reversal means it draws — but the rule remains unwritten and
+the next zero-draw feature will meet the same silence. Worth ratifying on its own
+merits, or dropping deliberately.

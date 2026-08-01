@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - **A domain crate depends on `hornvale-kernel` and NOTHING else.** `cli/tests/architecture.rs:110-131` asserts `pkg.normal_deps == ["hornvale-kernel"]` exactly. `domains/person` may **not** import `hornvale-history` or `hornvale-species`.
-- No new `Stream` draws anywhere in this campaign (spec D5). No `Seed::derive`, no `.stream()`, in `domains/person` or in the promotion path.
+- **Exactly one new draw** (spec D5): a founder's name, via a new `NameKind::Person` whose derive path is disjoint from every existing one, so no existing name moves. Nothing else in the promotion path draws — `persona_of` and `life_history` are both pure. A new stream label is declared; no epoch is owed.
 - No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Enforced by `clippy.toml`.
 - No wall-clock time. No `Instant::now`, no `SystemTime`.
 - `#![warn(missing_docs)]` in the crate root; every public item, field and variant gets a one-line doc comment.
@@ -30,6 +30,7 @@
 | `domains/person/Cargo.toml` | Create. Kernel-only dependency. |
 | `domains/person/src/lib.rs` | Create. Four predicates, `PersonSeed`, `genesis`, `Domain` impl. |
 | `domains/history/src/flesh.rs` | Modify. `founder_handle`, public, beside `persona_of` — the derivation both worldgen and the almanac must agree on. |
+| `domains/language/src/naming.rs` | Modify. A fourth `NameKind` (`Person`) and its label — additive, disjoint derive path. |
 | `domains/history/tests/flesh.rs` | Modify. The handle's mint-order-independence test. |
 | `windows/worldgen/src/person_promote.rs` | Create. Per-people selection, the cast-uniqueness assertion, and `promote`. Pure but for the ledger write. |
 | `windows/worldgen/src/lib.rs` | Modify. `DOMAINS` roster, the roster-count assertion, `mod person_promote`, the `"person"` stage. |
@@ -62,7 +63,7 @@
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
-- Produces: `hornvale_person::{Person, PersonSeed, genesis, IS_PERSON, PERSON_FOUNDED, PERSON_BORN, PERSON_DIED, register_concepts}`. `PersonSeed { community: EntityId, birth_day: f64, death_day: Option<f64> }`. `genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>, LedgerError>`.
+- Produces: `hornvale_person::{Person, PersonSeed, genesis, IS_PERSON, PERSON_FOUNDED, PERSON_BORN, PERSON_DIED, register_concepts}`. `PersonSeed { community: EntityId, name: String, birth_day: f64, death_day: Option<f64> }`. `genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>, LedgerError>`.
 
 - [ ] **Step 1: Create the manifest**
 
@@ -180,8 +181,18 @@ Add to the test module:
         let ids = crate::genesis(
             &mut world,
             &[
-                crate::PersonSeed { community, birth_day: 10.0, death_day: Some(60.0) },
-                crate::PersonSeed { community, birth_day: 20.0, death_day: None },
+                crate::PersonSeed {
+                    community,
+                    name: "Grokk".to_string(),
+                    birth_day: 10.0,
+                    death_day: Some(60.0),
+                },
+                crate::PersonSeed {
+                    community,
+                    name: "Vashti".to_string(),
+                    birth_day: 20.0,
+                    death_day: None,
+                },
             ],
         )
         .expect("commits");
@@ -216,6 +227,9 @@ Expected: FAIL — `PersonSeed` and `genesis` not found.
 pub struct PersonSeed {
     /// The community whose occupation this person founded.
     pub community: EntityId,
+    /// The name this person is remembered by, drawn at genesis where the
+    /// language machinery lives. Committed, not derived at render time.
+    pub name: String,
     /// Birth, in absolute standard days.
     pub birth_day: f64,
     /// Death, in absolute standard days. `None` means still alive at `now`.
@@ -237,7 +251,11 @@ fn fact(subject: EntityId, predicate: &str, object: Value, community: EntityId, 
 
 /// Commit one person per seed, in the order given.
 ///
-/// Three facts always, plus a fourth when the person has already died. A living
+/// Four facts always — `is-person`, `name`, `person-founded`, `person-born` —
+/// plus a fifth when the person has already died. `name` is kernel-core and
+/// exempt from the single-writer check, so committing it here is not a
+/// violation; several domains already do.
+/// A living
 /// person is represented by the *absence* of `person-died`: birth is known and
 /// death may not have happened, which is the asymmetry the occupation data
 /// already carries.
@@ -247,6 +265,16 @@ pub fn genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>,
         let id = world.ledger.mint_entity();
         world.ledger.commit(
             fact(id, IS_PERSON, Value::Flag(true), s.community, s.birth_day),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                hornvale_kernel::NAME,
+                Value::Text(s.name.clone()),
+                s.community,
+                s.birth_day,
+            ),
             &world.registry,
         )?;
         world.ledger.commit(
@@ -570,6 +598,34 @@ fn founder_handle(occ: &OccupationRecord) -> RoleHandle {
 
 `f64::to_bits` is exact and platform-independent for a given value, and these days come back from the ledger already quantized, so the bits are stable. Founding days are never `NaN` and never negative zero.
 
+- [ ] **Step 3b: Add `NameKind::Person` to `domains/language`**
+
+A founder's name needs a fourth kind. In `domains/language/src/naming.rs`, add the
+variant and its label:
+
+```rust
+    /// A person's name: a bare stem, like a settlement's.
+    Person,
+```
+
+and in `NameKind::label`:
+
+```rust
+            NameKind::Person => "person",
+```
+
+**Why this is additive and safe.** `label`'s own doc warns that *changing* a label
+"silently reseeds every name of that kind in every saved world." Adding one does
+not: `Namer` holds no mutable stream (`naming.rs:327-331`) and `name` derives a
+fresh stream per call from `ROOT → species → NAME → kind.label() → salt`, so the
+new path is disjoint and consumes nothing from any existing stream. Declare the
+label wherever this crate publishes its stream labels, following the neighbouring
+entries.
+
+Run `cargo test -q -p hornvale-language` and confirm green — no existing name test
+may move. If any does, **stop and report**: it would mean the paths are not
+disjoint after all, and that is an epoch, not a rebaseline.
+
 - [ ] **Step 4: Implement the selection in `person_promote.rs`**
 
 ```rust
@@ -781,8 +837,21 @@ pub fn promote(
         let death = lifespan_days
             .map(|d| f.founded + d)
             .filter(|d| *d <= now);
+        // Named here, where the language machinery already stands. `Namer` holds
+        // no mutable stream and derives fresh per call, so this draw is on a
+        // path disjoint from every other name in the world.
+        let ph = crate::language_of_wc(world, wc, f.people.0);
+        let namer = hornvale_language::Namer::new(&world.seed, f.people.0, &ph);
+        let name = namer
+            .name(
+                hornvale_language::NameKind::Person,
+                f.handle.0,
+                &crate::morph_options(world, wc),
+            )
+            .to_string();
         seeds.push(hornvale_person::PersonSeed {
             community: f.community,
+            name,
             birth_day: f.founded,
             death_day: death,
         });
@@ -917,28 +986,23 @@ In `founding_sentence`, after computing the existing sentence, append a founder 
 /// placeholder phrase would reproduce the defect where every settlement in
 /// every world narrated the same sentence.
 fn remembered_founder(world: &World, r: &OccupationRecord) -> Option<String> {
-    // Is a founder remembered for this community at all? Promotion commits
-    // `person-founded` only for the selected cast, so its absence is the answer.
-    world
+    // Promotion commits `person-founded` only for the selected cast, so its
+    // absence is the answer to "is a founder remembered here?".
+    let person = world
         .ledger
         .find(hornvale_person::PERSON_FOUNDED)
-        .find(|f| f.object == Value::Entity(r.community))?;
-    // The name is a pure function of the handle, and the handle is a pure
-    // function of the record already in hand — the same derivation promotion
-    // used, hence the same name. Nothing is read back from the ledger.
-    let persona = hornvale_history::flesh::persona_of(
-        hornvale_history::flesh::founder_handle(r),
-        world.seed,
-    );
-    Some(crate::name_from_seed(persona.name_seed))
+        .find(|f| f.object == Value::Entity(r.community))?
+        .subject;
+    // The name is committed, so read it — the same two-fact lookup the almanac
+    // already does for settlement names. No language machinery in a window.
+    world.ledger.text_of(person, hornvale_kernel::NAME).map(str::to_string)
 }
 ```
 
-**One thing to resolve while implementing, and it must be reported:**
-`crate::name_from_seed` is a placeholder for however this crate already turns a
-name seed into a name. Find the existing helper — the almanac already renders
-generated names — and use it. If none exists, the founder's name must come from
-`domains/language`'s naming surface. **Do not invent a name generator.**
+Check `text_of`'s exact signature before pasting — `windows/almanac/src/history.rs`
+already calls it for settlement names, so copy that call's shape. If it returns
+`Option<&str>`, the `map(str::to_string)` above is right; if it returns
+`Option<String>`, drop the `map`.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
