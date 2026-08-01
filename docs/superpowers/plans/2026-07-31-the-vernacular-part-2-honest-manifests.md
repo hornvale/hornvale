@@ -25,8 +25,13 @@ a proto-root for all of it, `Steeped`/`KnowsOf`/`Unknown` alike. Registering a
 concept as unnameable therefore *minted a proto-goblinoid word for "yellow
 dwarf"* and recorded every daughter as having forgotten it. So Task 2 exists:
 `GapReason` gains a third provenance and the unnameable stop reserving roots.
-Task 1 moves no facts; **Task 2 is expected to move them**, and measures rather
-than assumes.
+
+**Both tasks are expected to move zero facts**, and both measure rather than
+assume. An intermediate draft said Task 2 would move them; that was also wrong.
+The Accession made the proto-root pass insertion-stable by sorting on accession
+epoch first, so the nine — sitting in the epoch-6 cohort Task 1 appended — land
+strictly last and removing them perturbs nothing earlier. See Task 2's
+determinism note.
 
 **Tech Stack:** Rust edition 2024, `serde` only (decision 0004). No new
 dependencies. `make gate` as the commit gate.
