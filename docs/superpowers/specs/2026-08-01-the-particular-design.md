@@ -97,7 +97,7 @@ covertly ranking by age; and because older occupations skew slightly larger, the
 earliest founders tend to enter the cast without a rule saying so.
 
 The ledger cost stays a guarantee rather than an estimate: at most
-`3 × cast` facts, exactly `2 × cast` plus one per founder already dead at `now`.
+`4 × cast` facts, exactly `3 × cast` plus one per founder already dead at `now`.
 
 **D3 — Promotion runs last in `build_to`.** `mint_entity` is a monotonic counter
 (`kernel/src/ledger.rs:145-150`), so appending mints cannot shift an existing
@@ -107,11 +107,18 @@ subsystem ... so the new, Y2-1-only entities are appended last rather than
 interleaved" (`windows/worldgen/src/lib.rs:5967-5973`). **Leaving this implicit
 is the difference between correct and silently wrong.**
 
-**D4 — Three facts per person, no committed name, and death is conditional.**
-`is-person` and `person-born` always; `person-died` **only if the derived death
-day has already passed**. Birth is the occupation's `founded` day; death is
-`founded + lifespan(species)` via `domains/species::allometry::life_history`,
-which takes no `Seed` or `Stream`.
+**D4 — Four facts per person, no committed name, and death is conditional.**
+`is-person`, `person-founded` and `person-born` always; `person-died` **only if
+the derived death day has already passed**. Birth is the occupation's `founded`
+day; death is `founded + lifespan(species)` via
+`domains/species::allometry::life_history`, which takes no `Seed` or `Stream`.
+
+**`person-founded` exists for the reader, not the corpus.** It points at the
+community entity whose occupation this founder opened. The bundle does not require
+it — but without it nothing can find a founder from a settlement, and D9's almanac
+consumer would be impossible. It is owned by `domains/person` (subject = the
+person), not named `occ-founded-by`, because the `occ-*` namespace belongs to
+`domains/history` and a domain may not write into another's vocabulary.
 
 **The name is not committed.** It is derived by `persona_of(handle, seed)` at
 presentation time, which is what that function exists for. Three reasons, in
@@ -148,18 +155,19 @@ settlements. That is honest rather than convenient.
 
 `name` is in `kernel::KERNEL_CORE_PREDICATES` (`kernel/src/world.rs:51`) and is
 exempt from the single-writer check, so a new domain committing `name` facts is
-not a violation — several domains already do. The three new predicates are
-trivially single-writer.
+not a violation — several domains already do. The four new predicates are
+trivially single-writer, and none is read by any genesis stage, so none can
+manufacture a schedule cycle the way `name` would.
 
-**D4a — The campaign registers three predicates, not four tokens, and one token
+**D4a — Only three of the four bundle tokens need registering, and the fourth
 was already satisfied by a word.** `concept:person` is **already registered** —
 by `domains/language`, as `ConceptKind::Living`, *"a person; a member of a
 people (the autonym root)"*: a root the generated conlangs get a word for, with
 no connection to any entity. The probe forms `concept:{name}`, so it counts as
 held today.
 
-So `domains/person` registers `is-person`, `person-born`, `person-died` and **no
-concepts** — `person` is owned by language, and re-registering it with a
+So `domains/person` registers `is-person`, `person-founded`, `person-born`,
+`person-died` and **no concepts** — `person` is owned by language, and re-registering it with a
 different definition would be a `RegistryError::ConflictingDefinition`.
 
 This is worth stating plainly rather than quietly benefiting from: one quarter
@@ -196,6 +204,25 @@ derived from the coarse one rather than asserted beside it. Stated invariant: a
 settlement's promoted founders never exceed its `POPULATION`, and no person's
 birth precedes their occupation's `founded` day.
 
+**D9 — The almanac names remembered founders, so the cast has a reader.** Without
+this, `is-person` would be registered and consumed by nothing — which is the exact
+pattern this campaign found three times over on its way here (`persona_of`, whose
+only caller is its own test; `Notability`, consumed richly and never produced;
+species-aware capacity, wired to a Lab report instead of the world). Shipping a
+fourth instance, in a campaign launched off a probe whose Supply section exists to
+detect precisely that, would be self-parody.
+
+`windows/almanac/src/history.rs` already narrates each settlement's history and
+already renders `occ-people` as a collective noun. Where an occupation has a
+remembered founder, name them — resolved through `person-founded` and expanded by
+`persona_of`. Where none is remembered, **say nothing**: silence is the correct
+rendering of a founder nobody remembers, and inventing a phrase for absence would
+recreate F1's "an ordinary place, neither famed nor forgotten" for every settlement
+that lacks one.
+
+This is a window reading committed facts and rendering them — squarely what a
+window is for, and it draws no world-state.
+
 **D8 — Recognition is out of scope, and the corpus agrees.** Being a person,
 holding a false belief, and being misrecognised are three separately-bundled
 capabilities: `individual-persons` (fan-in 36), `agent-knowledge`
@@ -217,8 +244,8 @@ All figures measured on this branch, seeds 42 / 7 / 1000, at 218 bytes/fact.
 | `occ-peak` max | 127 | 90 | 119 |
 | peoples | 5 | 5 | 5 |
 | cast at `MEMORY_DEPTH = 20` | 90 | 82 | 100 |
-| added facts (≤ 3 × cast) | ≤ 270 | ≤ 246 | ≤ 300 |
-| ledger growth | **≤ +1.03%** | **≤ +0.84%** | **≤ +1.20%** |
+| added facts (≤ 4 × cast) | ≤ 360 | ≤ 328 | ≤ 400 |
+| ledger growth | **≤ +1.37%** | **≤ +1.12%** | **≤ +1.60%** |
 | `corr(peak, founded)` | −0.32 | −0.39 | −0.33 |
 
 The bound is exact rather than estimated: two facts per founder unconditionally,
@@ -226,8 +253,8 @@ plus one per founder already dead at `now`. Because lifespans are short against 
 2,000-year bake, nearly all will be dead, so the realised figure sits just under
 the bound. The implementation reports the actual split.
 
-For contrast, promoting *every* occupation at three facts each would add 5,328 /
-5,988 / 5,037 facts — **+20%** — and is the branch that would have required a
+For contrast, promoting *every* occupation at four facts each would add 7,104 /
+7,984 / 6,716 facts — **+27%** — and is the branch that would have required a
 forgetting
 mechanism. `MEM-1` is the only such mechanism anywhere on the books and it is
 unbuilt. Gating at promotion means the cast never reaches a size that would
@@ -240,7 +267,7 @@ hypothesis field, so the freeze lives here). Scored against
 `docs/audits/trope-coverage.md` at close.
 
 **Two tiers, and the distinction is load-bearing.** P1, P3 and P4 below are
-**verification**, not prediction: registering three predicates *must* remove the
+**verification**, not prediction: registering the three missing tokens *must* remove the
 bundle from Leverage, *must* leave 30 rows, *must* promote `intent` to the top.
 They cannot fail unless the implementation is wrong, which is worth checking and
 is not a hypothesis. Presenting them as predictions would be the same
@@ -259,8 +286,8 @@ other way, and P6 most of all.
 - **P3 — The new top row is `bundle:intent`, fan-in 17**, unchanged. Because
   all 35 situations remain blocked, no other bundle's fan-in moves.
 - **P4 — "The closest blocked situation is still missing N bundles" goes 4 → 3.**
-- **P5 — Ledger growth is ≤ 1.5% on every seed measured**, and the added fact
-  count is exactly `2 × cast + (founders already dead at now)` — an identity,
+- **P5 — Ledger growth is ≤ 2% on every seed measured**, and the added fact
+  count is exactly `3 × cast + (founders already dead at now)` — an identity,
   not a bound, so a mismatch means the death rule misfired rather than that the
   estimate was off.
 - **P6 — At least one same-people pair of remembered founders has overlapping
@@ -284,6 +311,12 @@ between persons. Personality (`PSY-individual-deviation` stays `raw`). Any
 per-tick simulation of a promoted person — promotion writes genesis facts and
 stops. Fixing `occ-notability` or `occ-function` (§7, F1). Recalibrating
 demography's population scale (§7, F3).
+
+**In scope, deliberately:** the almanac consumer (D9). It is the smallest thing
+that stops this campaign from registering a capability nothing reads, and it is
+a window rendering committed facts rather than new world-state. What stays out
+is any *other* reader — no `possess` encounter, no chronicle entry, no scene
+surface for a promoted person.
 
 ## 7. Found on the way — followups, not this campaign's work
 
@@ -391,15 +424,20 @@ determinism: **fixture-vs-live** comparisons redden; **live-vs-live** ones
   death precedes their birth; the cast size is exactly
   `Σ min(MEMORY_DEPTH, occupations per people)`, and every people with at least
   one occupation contributes at least one founder.
-- The three new predicates appear in `hornvale concepts`, and
+- The four new predicates appear in `hornvale concepts`, and
   `hornvale tropes report` shows `individual-persons` absent from Leverage.
+- The almanac names a founder for exactly those settlements that have a
+  remembered one, and emits nothing for the rest — no placeholder phrase.
+- Every `person-founded` object resolves to a community entity that exists,
+  and every remembered founder's community has at least one occupation.
 
 ## 10. Definition of Done
 
 The five predictions scored in the chronicle, including any falsified.
 `docs/audits/trope-coverage.md` regenerated and its ratchet green.
 `cli/tests/lens_purity.rs`'s fixture regenerated with the reason in the
-chronicle. A campaign retrospective. Registry rows flipped, and rows minted for
+chronicle, **and the seed-42 almanac goldens regenerated too** — D9 changes
+narrated prose, so the close diff is wider than the world fixture alone. A campaign retrospective. Registry rows flipped, and rows minted for
 the deferred bundles (`agent-knowledge`, `identity-and-recognition`) so the
 sequel has a pointer. F1–F3 promoted into the retrospective's follow-up
 section. A book freshness sweep, re-scoring any Confidence Gradient bet this
