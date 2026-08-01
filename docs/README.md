@@ -61,6 +61,7 @@ mass without amnesia.
 | **The execution plan for a campaign** | [`superpowers/plans/`](superpowers/plans/) | Staged, with success criteria and tests. |
 | **What was built, as a story** | [`../book/src/chronicle/`](../book/src/chronicle/) | Product history; published. |
 | **What the process taught** | [`retrospectives/`](retrospectives/) | Process lessons, one page per campaign. |
+| **A standing measurement of the codebase** | [`audits/`](audits/) | Generated, drift-checked reports: the type-audit boundary report, the trope-coverage probe. Never hand-edited. |
 | **The law** | [`../book/src/constitution.md`](../book/src/constitution.md) | Constitutional; the spec is authoritative. |
 | **The world as it currently is** | [`../book/`](../book/) | Published reality; never lags a merge. |
 | **The wider, non-binding vision** | [`book/src/frontier/`](../book/src/frontier/) | The Frontier part of the book; `vision/` holds redirect stubs only. |

@@ -60,6 +60,20 @@ its specification cannot catch a specification that disagrees with itself, and
 one of these did: the contention guard was wired backwards against a rationale
 written three lines above it, and passed review as faithful to the plan.
 
+A third campaign extends the tally in a way that narrows the diagnosis. The
+Repertoire (2026-07-31) built a capability probe that touches no world state,
+draws no seed and commits no fact — and produced the same family anyway, from
+its own plan text: a coverage ratchet that read `REBASELINE=0` and an empty
+`REBASELINE=` as permission to rewrite the artifact it was guarding, and a
+resolver whose unknown-requirement branch returned *satisfied* rather than
+*blocked*, inverting the default-deny posture its own spec had set. Both were
+found by mutation — tamper with the input, require the red — and neither by
+reading. So the pattern is not a property of measurement code, or of
+determinism-critical paths, or of instruments that watch themselves. It is a
+property of **plans written as literal code listings**, which get reviewed for
+faithful transcription and not for whether the predicate they contain is the
+one the spec asked for.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

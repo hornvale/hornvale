@@ -287,6 +287,7 @@
 - [The Shuttle](./chronicle/the-shuttle.md)
 - [The Weir](./chronicle/the-weir.md)
 - [The Watershed](./chronicle/the-watershed.md)
+- [The Repertoire](./chronicle/the-repertoire.md)
 
 # Appendix: The Frontier
 
