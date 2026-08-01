@@ -10,6 +10,8 @@ use hornvale_history::record::OccupationRecord;
 use hornvale_kernel::{EntityId, KindId};
 use std::collections::BTreeMap;
 
+use crate::{language_of_wc, morph_options};
+
 /// How many founders one people remembers.
 ///
 /// A constant per *holder*, not per world and not a ratio: oral genealogies
@@ -94,6 +96,86 @@ pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
         );
     }
     cast
+}
+
+/// Promote every remembered founder into a ledger person.
+///
+/// Reads occupation records back out of the committed ledger — the `History`
+/// value is local to an earlier stage's closure and out of scope here.
+///
+/// Birth is `founded − age_at_maturity` and death is `birth + lifespan`, both
+/// from `domains/species::allometry::life_history`, which draws nothing. The
+/// `person-died` fact is committed only once that day has passed at `now`; a
+/// living person is the absence of one. A species with no lifespan
+/// (`Ametabolic`) yields no death fact either, which reads as "not known to have
+/// died", and one with no maturity falls back to founding day as birth.
+pub fn promote(
+    world: &mut hornvale_kernel::World,
+    wc: &crate::components::WorldComponents,
+) -> Result<Vec<EntityId>, crate::BuildError> {
+    let records = crate::occupation_records(world);
+    let now = world
+        .ledger
+        .find("history-now")
+        .filter_map(|f| match f.object {
+            hornvale_kernel::Value::Number(n) => Some(n),
+            _ => None,
+        })
+        .last()
+        .unwrap_or(0.0);
+
+    let cast = select_founders(&records);
+    let mut seeds = Vec::with_capacity(cast.len());
+    for f in &cast {
+        let life = wc
+            .biosphere
+            .get(&f.people)
+            .map(|b| hornvale_species::life_history(b.mass, b.metabolic_class));
+        // A founder was already grown when they founded, so birth precedes the
+        // founding by a maturity. This goes NEGATIVE for day-0 settlements —
+        // the history record begins at day 0 and the founder did not. Honest,
+        // not clamped (spec D4).
+        let maturity_days = life
+            .as_ref()
+            .and_then(|l| l.age_at_maturity)
+            .map_or(0.0, |y| y.days());
+        let birth_day = f.founded - maturity_days;
+        // Death follows BIRTH by a lifespan, not the founding, and is committed
+        // only once it has already passed at `now`.
+        let death = life
+            .as_ref()
+            .and_then(|l| l.lifespan)
+            .map(|y| birth_day + y.days())
+            .filter(|d| *d <= now);
+        // Named here, where the language machinery already stands. `Namer` holds
+        // no mutable stream and derives fresh per call, so this draw is on a
+        // path disjoint from every other name in the world.
+        let ph = language_of_wc(world, wc, f.people.0);
+        let namer = hornvale_language::Namer::new(&world.seed, f.people.0, &ph);
+        let mind = wc
+            .psyche
+            .get(&f.people)
+            .expect("a placed people carries a mind vector");
+        let society = wc
+            .society
+            .get(&f.people)
+            .expect("a placed people carries a society vector");
+        let name = namer
+            .name(
+                hornvale_language::NameKind::Person,
+                f.handle.0,
+                &morph_options(mind, society),
+            )
+            .roman;
+        seeds.push(hornvale_person::PersonSeed {
+            community: f.community,
+            name,
+            birth_day,
+            founding_day: f.founded,
+            death_day: death,
+        });
+    }
+    hornvale_person::genesis(world, &seeds).map_err(crate::BuildError::from)
 }
 
 #[cfg(test)]

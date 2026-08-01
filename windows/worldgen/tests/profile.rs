@@ -6,7 +6,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{BuildProfile, SettlementPins, SkyChoice, build_world, profiled};
 
 #[test]
-fn profiled_records_the_eight_stages() {
+fn profiled_records_the_nine_stages() {
     let (world, profile): (_, BuildProfile) = profiled(|| {
         build_world(
             Seed(42),
@@ -29,6 +29,9 @@ fn profiled_records_the_eight_stages() {
             "deep-time",
             "planet",
             "peoples",
+            // Task 3 (The Particular): the LAST stage, deliberately — see
+            // `windows/worldgen/src/lib.rs`'s comment at the `"person"` stage.
+            "person",
         ]
     );
     // The build still produced a real world.

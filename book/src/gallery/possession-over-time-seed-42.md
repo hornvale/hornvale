@@ -22,13 +22,13 @@ Tropical seasonal forest — buttressed canopy — in the lands of Gootoogotooda
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [1865] bugbear of Gootoogotoodaoka
-  [1866] hobgoblin of Geoboegetoanaoga
-  [1867] gnoll of Pzofdzhaxgzavshmo
-  [1868] a wild rust-monster
-  [1869] a wild otyugh
-  [1870] a wild xorn
-  [1871] a wild carrion-crawler
+  [1955] bugbear of Gootoogotoodaoka
+  [1956] hobgoblin of Geoboegetoanaoga
+  [1957] gnoll of Pzofdzhaxgzavshmo
+  [1958] a wild rust-monster
+  [1959] a wild otyugh
+  [1960] a wild xorn
+  [1961] a wild carrion-crawler
 > needs
 The bugbear of Gootoogotoodaoka seems content.
 > wait 5

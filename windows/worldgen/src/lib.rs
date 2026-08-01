@@ -6146,6 +6146,22 @@ fn build_to(
         Ok(())
     })?;
 
+    // LAST, deliberately. `mint_entity` is a monotonic counter, so appending
+    // mints cannot shift an existing `EntityId` only while nothing mints after
+    // — the same reason species entities are appended rather than interleaved.
+    // Moving this earlier silently rewrites every world.
+    //
+    // Not added to `GENESIS_HAND_ORDER` / `genesis_systems()`: `schedule.rs`'s
+    // module doc already scopes that schema to the eight core stages and
+    // excludes the classification tail (`"planet"`, `"peoples"`) for the same
+    // reason — predicate-granular, subject-blind edges would falsely force a
+    // late `name`-writer before an early `name`-reader. A `"person"` stage
+    // after `"peoples"` is the same case.
+    stage("person", || -> Result<(), BuildError> {
+        person_promote::promote(&mut world, wc)?;
+        Ok(())
+    })?;
+
     Ok(BuildArtifacts {
         world,
         terrain: Some(terrain),
