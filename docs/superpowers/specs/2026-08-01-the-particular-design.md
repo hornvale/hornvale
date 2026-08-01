@@ -59,8 +59,8 @@ peak population.** Not a population threshold. A fixed threshold would silently
 mean something different the moment demography is recalibrated — and §7's F3
 argues it should be. "The hundred most populous occupations in this world's
 history" means the same thing at any scale, and it makes the ledger cost a
-*guarantee* (100 × 4 facts, minus living founders' absent death facts) rather
-than an estimate.
+*guarantee* — at most `3 × 100` facts, and exactly `2 × 100` plus one per
+already-dead founder — rather than an estimate.
 
 Selection order is `(peak_population DESC, site ASC, founded ASC)` — a total
 order over `u32` and structural keys, no float comparison anywhere.
@@ -73,11 +73,36 @@ subsystem ... so the new, Y2-1-only entities are appended last rather than
 interleaved" (`windows/worldgen/src/lib.rs:5967-5973`). **Leaving this implicit
 is the difference between correct and silently wrong.**
 
-**D4 — Four facts per person, and death is conditional.** `is-person`, `name`,
-`person-born` always; `person-died` **only if the derived death day has already
-passed**. Birth is the occupation's `founded` day; death is
+**D4 — Three facts per person, no committed name, and death is conditional.**
+`is-person` and `person-born` always; `person-died` **only if the derived death
+day has already passed**. Birth is the occupation's `founded` day; death is
 `founded + lifespan(species)` via `domains/species::allometry::life_history`,
 which takes no `Seed` or `Stream`.
+
+**The name is not committed.** It is derived by `persona_of(handle, seed)` at
+presentation time, which is what that function exists for. Three reasons, in
+ascending order of force:
+
+1. The corpus never asked for it. `bundle:individual-persons` is
+   `concept:person`, `is-person`, `person-born`, `person-died`.
+2. A name that is a pure function of `(handle, seed)` buys nothing by being
+   stored — the same argument the population-field spec used to refuse
+   serializing fields: *"a new save-format contract to version, quantize, and
+   drift-check, buying nothing."* Determinism makes storage redundant, not
+   safer.
+3. **Committing `name` would push persons into the one part of genesis nothing
+   validates.** `windows/worldgen/src/schedule.rs`'s module doc explains that
+   the classification tail is exempt from the capability schema because it
+   writes `name`, religion *reads* `name`, and the schema's edges are
+   predicate-granular but subject-blind — so a late name-writer is falsely
+   forced before an early name-reader. A person stage writing `name` hits that
+   same false cycle and lands in the unvalidated tail, which is exactly where
+   D3's "run last" convention would then be carrying all the weight. Not
+   writing `name` keeps the stage declarable and checked.
+
+The Constitution's *"once a goblin king has a name, he has it forever"* is
+satisfied: `persona_of` is total and deterministic, so the name is forever
+without being stored.
 
 A living person is represented by the **absence** of a death fact. This is the
 asymmetry the data already carries — `OccupationRecord.ended` is
@@ -157,11 +182,17 @@ All figures measured on this branch, seeds 42 / 7 / 1000, at 218 bytes/fact.
 | occupations | 1,776 | 1,996 | 1,679 |
 | `occ-peak` max | 127 | 90 | 119 |
 | cast at N=100 | 100 | 100 | 100 |
-| added facts | 400 | 400 | 400 |
-| ledger growth | **+1.5%** | **+1.4%** | **+1.6%** |
+| added facts (≤ 3 × 100) | ≤ 300 | ≤ 300 | ≤ 300 |
+| ledger growth | **≤ +1.14%** | **≤ +1.02%** | **≤ +1.20%** |
 
-For contrast, promoting *every* occupation would add 7,104 / 7,984 / 6,716
-facts — **+27%** — and is the branch that would have required a forgetting
+The bound is exact rather than estimated: two facts per founder unconditionally,
+plus one per founder already dead at `now`. Because lifespans are short against a
+2,000-year bake, nearly all will be dead, so the realised figure sits just under
+the bound. The implementation reports the actual split.
+
+For contrast, promoting *every* occupation at three facts each would add 5,328 /
+5,988 / 5,037 facts — **+20%** — and is the branch that would have required a
+forgetting
 mechanism. `MEM-1` is the only such mechanism anywhere on the books and it is
 unbuilt. Gating at promotion means the cast never reaches a size that would
 need forgetting, so MEM-1 stays unbuilt *and* unneeded.
@@ -182,8 +213,10 @@ hypothesis field, so the freeze lives here). Scored against
 - **P3 — The new top row is `bundle:intent`, fan-in 17**, unchanged. Because
   all 35 situations remain blocked, no other bundle's fan-in moves.
 - **P4 — "The closest blocked situation is still missing N bundles" goes 4 → 3.**
-- **P5 — Ledger growth is ≤ 2% on every seed measured**, and the added fact
-  count is exactly `4 × REMEMBERED_FOUNDERS` on every seed.
+- **P5 — Ledger growth is ≤ 1.5% on every seed measured**, and the added fact
+  count is exactly `2 × REMEMBERED_FOUNDERS + (founders already dead at now)`
+  — an identity, not a bound, so a mismatch means the death rule misfired
+  rather than that the estimate was off.
 
 A falsified prediction is a finding, not a failure. Nothing may be retuned to
 rescue one after unblinding.
@@ -198,20 +231,61 @@ demography's population scale (§7, F3).
 
 ## 7. Found on the way — followups, not this campaign's work
 
-**F1 — `occ-notability` and `occ-function` are constants.**
-`windows/worldgen/src/history_bake.rs:1684` hardcodes `Notability::Common` and
-`Function::Agrarian`. Measured: `distinct=1` for both, on all three seeds, all
-5,451 occupations. That is 13.5% of the seed-42 ledger carrying no information.
-Worse, `flesh.rs:303`'s `if occ.notability == Notability::Seat` is the *only*
-producer of `ResidueItem::Reliquary`, `Bauble` and `Inscription`, so those three
-residue items **cannot appear in any world** — and
-`windows/almanac/src/history.rs:765-767` carries authored prose for all three
-that no reader can reach. Dead by *data*, not reachability; no lint can see it.
+**F1 — `occ-notability` and `occ-function` are constants, and the consequence is
+silent presentation collapse.** `windows/worldgen/src/history_bake.rs:1684`
+hardcodes `Notability::Common` and `Function::Agrarian` in `Bake::open`, the sole
+constructor of every occupation record. Measured `distinct=1` for both, on all
+three seeds, all 5,451 occupations — 13.5% of the seed-42 ledger carrying no
+information.
+
+**The spec promised the derivation and no task built it.** The Living Community's
+design says *"An optional 13th, `notability` (backwater ↔ seat of power), gates
+whether residue is a doll or a reliquary"* (`2026-07-20-the-living-community-design.md:119`),
+and its plan made the field non-optional from Task 1 and specified its consumers
+in detail. Task 3, the bake, lays out the full algorithm and never mentions it.
+The gap is a missing task, not a missed step.
+
+What it strands, verified by grep:
+
+- `flesh.rs:303` is the only producer of `ResidueItem::Reliquary`, `Bauble` and
+  `Inscription`. Unreachable in every world.
+- `flesh.rs:316`'s `if !hamlet_scale` branch — a second, independent dead branch
+  (see F3).
+- `windows/almanac/src/history.rs:823` — `notability_phrase` returns *"an
+  ordinary place, neither famed nor forgotten"* for **every settlement in every
+  world**. "A backwater at the region's edge" and "a regional seat of power" are
+  authored, reader-facing, unreachable. `function_noun` always yields "steading".
+- `windows/vessel/src/interior/pattern.rs:412` — chamber index 2 matches
+  `(Some(Notability::Seat), _) => Role::Hall` first, which never fires, so
+  `Role::Loomroom` always wins. **The third room of every multi-chamber building
+  in every world is a Loomroom.** `Hall`, `Smithy` and `Shrine` are authored and
+  never produced.
+- `vestige.rs:90` documents an undercity/ruin split "riding on notability at the
+  consumer" that was never built.
+
+Three campaigns (The Vestige, The Lintel, The Blocking) built consumer logic on
+top over twelve days. No record of the constancy exists before this campaign.
+See F6 for why the suite stayed green.
 
 **F2 — no ledger-size ratchet exists anywhere.** `scene_cost.rs` and
 `graph_cost.rs` gate wall time; `scene_cost.rs` computes scene bytes but only
 asserts `> 0`. Nothing gates `world.json` size or `facts.len()`. This campaign
 is the first to deliberately grow the save.
+
+**F6 — a hand-built fixture proves correctness, never reachability.** Every
+consumer of the constant fields has a unit test that hand-builds
+`Notability::Seat` or `Function::Cult` and asserts correct handling. Every such
+test passes; every such branch is unreachable. The suite was green across all
+twelve days and three campaigns. Clippy cannot see it — the code is reachable by
+*type*, just not by *data*.
+
+The missing assertion is reachability, and nothing in the repo makes it.
+Candidate guard: for any enum whose variants gate observable output, assert every
+variant is produced by *some* world. The census already builds ~2,000 worlds; a
+metric counting distinct values per categorical field would have caught this the
+day it landed. `distinct == 1` on a field with three or more variants is the
+signature. Variant reachability is currently default-*allow*, where the type
+audit and the trope ratchet are both default-deny.
 
 **F4 — a lexicon word satisfies a capability token.** `concept:person` is held
 because `domains/language` registers a *word* for person (D4a). The probe cannot
