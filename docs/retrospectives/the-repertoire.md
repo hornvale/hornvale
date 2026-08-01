@@ -6,8 +6,12 @@ Process, not product. The product is in
 ## Every substantive review finding was a defect in the plan, not its execution
 
 This is the campaign's one real process signal, and it is unusually clean.
-Across Tasks 2, 3 and 4 the reviewers filed one Critical, eight Important and
-twelve Minor. **Not one Important-or-worse was a transcription error.** Every
+Across Tasks 2, 3 and 4 the reviews raised one Critical, nine Important and
+twelve Minor — counted **as adjudicated**, which is what the ledger's four
+per-task summary lines record and which includes one finding a reviewer filed
+Minor and the controller elevated because it fed a published count. Counted as
+the reviewers first filed them it is one, eight and thirteen. **Not one
+Important-or-worse was a transcription error** under either convention. Every
 one of them was already present, verbatim, in the plan's own code listings:
 
 - **The Critical (Task 3).** The leverage table ranked bundles under a heading
@@ -57,10 +61,13 @@ Two incidents this campaign, in opposite directions, from one root cause.
 
 1. A commit message composed in a heredoc contained backticks. They expanded as
    **command substitution and ran a real gate**, whose stdout landed in the
-   message. Repaired by amend — but not completely: the amended message still
-   claims to carry a timing row it does not carry, and re-amending published
-   history to fix a description is a worse trade than the footnote now in the
-   chronicle.
+   message. Repaired by amend — but not completely: `772cf3ee`'s message still
+   claims to fold in a gate timing row when what it carries is two rebaseline
+   rows. The gate row arrives one commit later in `88b11b45`, whose message
+   says so plainly. Permanent history therefore contradicts itself, and it is
+   left that way deliberately: re-amending published history to tidy a
+   description is the worse trade, and the successor commit already records
+   the truth for anyone who follows the file.
 2. Separately, the repo's bash guard **blocked commits three times** because
    the message *prose* named a test command. Nothing was wrong with the commit;
    the guard was reading the command text and correctly refusing something that

@@ -70,6 +70,11 @@ all 36 situations.
 Fan-in is **not** an unlock count: the closest blocked situation is still
 missing 4 bundles, so no single row makes anything stageable on its own.
 
+**1 missing bundle is not ranked below.** `bundle:divine-agency` — required
+only by situations that resolve inapplicable, so they contribute no fan-in
+and no row. The corpus holds 32 missing bundles against the 31 ranked here;
+that is the difference.
+
 | Bundle | Fan-in (blocked) | Corpus | Situations |
 |---|---|---|---|
 | `bundle:individual-persons` | 35 | 36 | polti-01-supplication, polti-02-deliverance, polti-03-crime-pursued-by-vengeance, polti-04-vengeance-for-kin-upon-kin, polti-05-pursuit, polti-06-disaster, polti-07-falling-prey-to-cruelty-or-misfortune, polti-08-revolt, polti-09-daring-enterprise, polti-10-abduction, polti-11-the-enigma, polti-12-obtaining, polti-13-enmity-of-kinsmen, polti-14-rivalry-of-kinsmen, polti-15-murderous-adultery, polti-16-madness, polti-17-fatal-imprudence, polti-18-involuntary-crimes-of-love, polti-19-slaying-of-a-kinsman-unrecognized, polti-20-self-sacrifice-for-an-ideal, polti-21-self-sacrifice-for-kindred, polti-22-all-sacrificed-for-a-passion, polti-23-necessity-of-sacrificing-loved-ones, polti-24-rivalry-of-superior-and-inferior, polti-25-adultery, polti-26-crimes-of-love, polti-27-discovery-of-the-dishonour-of-a-loved-one, polti-28-obstacles-to-love, polti-29-an-enemy-loved, polti-30-ambition, polti-32-mistaken-jealousy, polti-33-erroneous-judgement, polti-34-remorse, polti-35-recovery-of-a-lost-one, polti-36-loss-of-loved-ones |

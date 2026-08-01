@@ -259,6 +259,49 @@ pub fn render(
         "Fan-in is **not** an unlock count: the closest blocked situation is still missing \
          {closest} bundles, so no single row makes anything stageable on its own."
     )));
+    // A bundle required ONLY by inapplicable situations never enters the fan
+    // map above, so a genuinely missing capability can vanish from the
+    // ranking. This is the mirror image of the defect that put seven
+    // SATISFIED bundles under a heading reading "missing": the preamble
+    // licenses the mechanism (inapplicable situations are excluded) but
+    // nothing lets a reader get from the row count to the true total. The
+    // ranked misses are this report's deliverable, so disclose it.
+    let shown: BTreeSet<&str> = ranked
+        .iter()
+        .map(|(b, _)| b.trim_start_matches("bundle:"))
+        .collect();
+    let hidden: Vec<&String> = corpus
+        .bundles
+        .iter()
+        .filter(|(_, toks)| toks.iter().any(|t| !held.contains(t)))
+        .map(|(b, _)| b)
+        .filter(|b| !shown.contains(b.as_str()))
+        .collect();
+    if !hidden.is_empty() {
+        // Total is ranked + hidden rather than an independent count over
+        // `corpus.bundles`, so the two numbers in the sentence always
+        // reconcile to the length of the list beside them. A dangling
+        // `bundle:` reference ranks (default-deny) without being a corpus
+        // key, and an independent count would silently break that arithmetic.
+        let total_missing = ranked.len() + hidden.len();
+        let (lead, verb) = if hidden.len() == 1 {
+            ("1 missing bundle".to_string(), "is")
+        } else {
+            (format!("{} missing bundles", hidden.len()), "are")
+        };
+        let list = hidden
+            .iter()
+            .map(|b| format!("`bundle:{b}`"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        s.push_str("\n\n");
+        s.push_str(&wrap(&format!(
+            "**{lead} {verb} not ranked below.** {list} — required only by situations that \
+             resolve inapplicable, so they contribute no fan-in and no row. The corpus holds \
+             {total_missing} missing bundles against the {} ranked here; that is the difference.",
+            ranked.len()
+        )));
+    }
     s.push_str("\n\n| Bundle | Fan-in (blocked) | Corpus | Situations |\n|---|---|---|---|\n");
     for (bundle, sits) in &ranked {
         let corpus_wide = corpus
@@ -468,6 +511,58 @@ mod tests {
             assert!(text.contains(section), "missing {section}");
         }
         assert!(text.contains("GENERATED FILE"));
+    }
+
+    /// A bundle required ONLY by inapplicable situations never enters the fan
+    /// map, so it silently drops out of the ranked misses. The report must
+    /// disclose it in prose — and must not smuggle it back in as a row, since
+    /// the ranking is by fan-in and this bundle has none.
+    #[test]
+    fn a_bundle_masked_by_an_exclusion_is_disclosed_but_not_ranked() {
+        let json = r#"{
+          "corpus":"t","provenance":"t","frozen":"t",
+          "bundles":{
+            "masked":["predicate:never-registered"],
+            "ranked-bundle":["predicate:also-absent"]
+          },
+          "situations":[
+            {"id":"s1","name":"Blocked","actants":{"subject":"a"},
+             "requires":["bundle:ranked-bundle"],"excluded_by":[]},
+            {"id":"s2","name":"Excluded","actants":{"subject":"a"},
+             "requires":["bundle:masked"],
+             "excluded_by":["this world has no such thing"]}
+          ]
+        }"#;
+        let corpus = load(json).expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        let out = resolve(&corpus, &registry);
+        let text = render(&corpus, &out, &registry);
+
+        // Disclosed in prose, with the arithmetic that gets a reader from the
+        // row count to the true total.
+        assert!(
+            text.contains("1 missing bundle is not ranked below"),
+            "no disclosure sentence:\n{text}"
+        );
+        assert!(
+            text.contains("`bundle:masked`"),
+            "the masked bundle is not named:\n{text}"
+        );
+        assert!(
+            text.contains("2 missing bundles against the 1 ranked here"),
+            "the disclosure does not reconcile 2 - 1 = 1:\n{text}"
+        );
+
+        // Not a row. A disclosure that becomes a 32nd entry in a fan-in
+        // ranking is the defect it was written to fix, one direction over.
+        assert!(
+            !text.contains("| `bundle:masked` |"),
+            "the masked bundle leaked into the ranking table:\n{text}"
+        );
+        assert!(
+            text.contains("| `bundle:ranked-bundle` | 1 |"),
+            "the genuinely ranked bundle lost its row:\n{text}"
+        );
     }
 
     /// The corpus's actant roles stay inside Greimas' six. A seventh role, or

@@ -99,8 +99,10 @@ prediction is close.
 What the instrument actually says is that the catalogue does not bottom out at
 narrative machinery. It bottoms out at **there being no individual people, no
 representation of intent, and no felt affect**. Thirty-five of thirty-five
-blocked situations require at least one of those three, and those three carry
-32% of all demand in the corpus by themselves. The world has settlements,
+blocked situations require at least one of those three. Corpus-wide, the three
+carry 70 of 217 requirement edges — 32% of all demand — by themselves; in the
+narrower frame the first clause uses, the missing edges over blocked
+situations, it is 68 of 197, or 34%. The world has settlements,
 populations, biomes, phenomena, deities-as-mythologisations and a deep-time
 history; eight of forty bundles resolve satisfied and every one of them is
 about places, communities, weather or the sky. The demand side is about
@@ -173,15 +175,3 @@ carries the almanac — and must be read as *unrequired by this catalogue*, not
 *unused*. The Goodhart guard the spec wanted, a rising demand score beside a
 rising count of genuinely unconsumed tokens, needs the missing half before it
 can serve. The section says so, above the list rather than below it.
-
-## A note in the history
-
-One commit on this branch describes its own contents wrongly, and it is left
-that way. `772cf3ee` claims to fold in a gate timing row; it carries two
-rebaseline rows, and the following commit says as much while adding the gate
-row. The cause was a shell-quoting accident — a commit message composed in a
-heredoc whose backticked prose expanded as command substitution and ran a real
-gate, whose output then landed in the message. The message was repaired by
-amendment; the claim about which row it carried was not. Re-amending published
-history to tidy a description is a worse trade than a footnote, so this is the
-footnote.
