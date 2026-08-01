@@ -197,7 +197,7 @@ mod tests {
 
 - [ ] **Step 2: Run it and confirm it fails**
 
-Run: `cargo test -p hornvale --lib tropes::tests::an_unknown_token_blocks_its_situation`
+Run: `cargo test -p hornvale --bin hornvale tropes::tests::an_unknown_token_blocks_its_situation`
 Expected: FAIL — `load`, `resolve`, `Outcome` do not exist.
 
 - [ ] **Step 3: Write the minimal implementation**
@@ -316,7 +316,7 @@ Add `mod tropes;` to `cli/src/main.rs` beside the existing `mod concepts;` line.
 
 - [ ] **Step 4: Run the test and confirm it passes**
 
-Run: `cargo test -p hornvale --lib tropes::tests::an_unknown_token_blocks_its_situation`
+Run: `cargo test -p hornvale --bin hornvale tropes::tests::an_unknown_token_blocks_its_situation`
 Expected: PASS
 
 - [ ] **Step 5: Add the three remaining resolution tests**
@@ -376,7 +376,7 @@ Expected: PASS
 
 - [ ] **Step 6: Run all four and confirm they pass**
 
-Run: `cargo test -p hornvale --lib tropes::`
+Run: `cargo test -p hornvale --bin hornvale tropes::`
 Expected: 4 passed.
 
 - [ ] **Step 7: Commit**
@@ -432,7 +432,7 @@ precondition reads as different, not deficient (spec D4)."
 
 - [ ] **Step 2: Run it and confirm it fails**
 
-Run: `cargo test -p hornvale --lib tropes::tests::the_report_states_provenance_and_all_four_sections`
+Run: `cargo test -p hornvale --bin hornvale tropes::tests::the_report_states_provenance_and_all_four_sections`
 Expected: FAIL — `render` not found.
 
 - [ ] **Step 3: Implement `render`**
@@ -523,10 +523,17 @@ pub fn render(
 
 - [ ] **Step 4: Run the test and confirm it passes**
 
-Run: `cargo test -p hornvale --lib tropes::`
+Run: `cargo test -p hornvale --bin hornvale tropes::`
 Expected: 5 passed.
 
-- [ ] **Step 5: Wire the subcommand**
+- [ ] **Step 5: Wire the subcommand and remove the dead-code allow**
+
+Task 2 added `#![allow(dead_code)]` at the top of `cli/src/tropes.rs` because
+`cli/` is binary-only and the new `pub` surface was unused until now. Wiring the
+command is what makes it used: **delete that line** and confirm clippy stays
+clean. If anything is still unused after wiring, it is genuinely dead — remove
+the item rather than re-adding the allow.
+
 
 In `cli/src/main.rs`, add the dispatch arm immediately after the `concepts` arm
 at line ~135:
