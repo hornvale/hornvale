@@ -277,9 +277,18 @@ fn registry_tokens(r: &ConceptRegistry) -> BTreeSet<String> {
 }
 
 /// Expand a requirement into concrete tokens, following one `bundle:` level.
+///
+/// A dangling `bundle:` reference expands to the reference itself, which no
+/// registry token can ever match, so a typo blocks its situation. Returning
+/// an empty list instead would make a situation whose requirements are all
+/// dangling resolve `Stageable` — the exact inversion of spec D4's
+/// default-deny posture.
 fn expand(corpus: &Corpus, req: &str) -> Vec<String> {
     match req.strip_prefix("bundle:") {
-        Some(b) => corpus.bundles.get(b).cloned().unwrap_or_default(),
+        Some(b) => match corpus.bundles.get(b) {
+            Some(tokens) => tokens.clone(),
+            None => vec![req.to_string()],
+        },
         None => vec![req.to_string()],
     }
 }
@@ -293,12 +302,15 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
             out.insert(s.id.clone(), Outcome::Inapplicable(reason.clone()));
             continue;
         }
-        let missing: Vec<String> = s
-            .requires
-            .iter()
-            .flat_map(|r| expand(corpus, r))
-            .filter(|t| !held.contains(t))
-            .collect();
+        // Deduplicated, in corpus order: two bundles may name the same
+        // token, and `Blocked` is rendered verbatim into the committed
+        // artifact, where a repeat would misstate the count.
+        let mut missing: Vec<String> = Vec::new();
+        for t in s.requires.iter().flat_map(|r| expand(corpus, r)) {
+            if !held.contains(&t) && !missing.contains(&t) {
+                missing.push(t);
+            }
+        }
         out.insert(
             s.id.clone(),
             if missing.is_empty() {
@@ -699,7 +711,24 @@ In `scripts/regenerate-artifacts.sh`, immediately after the type-audit line
 run -p hornvale -- tropes report > docs/audits/trope-coverage.md
 ```
 
-- [ ] **Step 5: Verify regeneration is a no-op on a clean tree**
+- [ ] **Step 5: Regenerate the artifacts and commit the drift**
+
+```bash
+make rebaseline
+git status --short docs/audits/
+```
+
+Two files under `docs/audits/` legitimately change on this branch and must be
+committed here:
+
+- `docs/audits/trope-coverage.md` — the new artifact, first written by Step 4's
+  regeneration line.
+- `docs/audits/type-audit-report.md` — **stale since Task 2.** Every `pub`
+  item added to `cli/src/tropes.rs` moves this report's counts, and `make gate`
+  runs type-audit `check`, not the drift diff, so no gate on this branch has
+  caught it. CLAUDE.md names omitting `docs/audits/` as a common miss.
+
+Then prove idempotence — a second regeneration must change nothing:
 
 ```bash
 make rebaseline
@@ -716,7 +745,7 @@ not run it concurrently with another gate on this box.
 
 ```bash
 cargo fmt
-git add cli/tests/trope_coverage.rs scripts/regenerate-artifacts.sh
+git add cli/tests/trope_coverage.rs scripts/regenerate-artifacts.sh docs/audits/
 git commit -m "test(the-repertoire): ratchet the coverage artifact, wire regeneration
 
 Disarmed to prove it discriminates: appending a bogus supply line reddens the
