@@ -83,7 +83,7 @@
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `pays-tribute-to` | yes | the community this community pays standing tribute to |
 | `peopled-by` | yes | the species that peoples a settlement |
-| `person-born` | yes | the day this person was born |
+| `person-born` | yes | the day this person was born; negative if before the history record began |
 | `person-died` | yes | the day this person died |
 | `person-founded` | yes | the community whose occupation this person founded |
 | `plate-count` | yes | how many tectonic plates the globe has |

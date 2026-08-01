@@ -400,7 +400,7 @@
       "person-born": {
         "name": "person-born",
         "functional": true,
-        "doc": "the day this person was born"
+        "doc": "the day this person was born; negative if before the history record began"
       },
       "person-died": {
         "name": "person-died",

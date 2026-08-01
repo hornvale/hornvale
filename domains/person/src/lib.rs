@@ -16,7 +16,10 @@ pub const IS_PERSON: &str = "is-person";
 /// The community whose occupation this person founded.
 /// type-audit: bare-ok(identifier-text)
 pub const PERSON_FOUNDED: &str = "person-founded";
-/// The day this person was born, in absolute standard days.
+/// The day this person was born, in absolute standard days. **May be
+/// negative:** the history record begins at day 0, and the founder of a day-0
+/// settlement was already grown when it began, so they were born before the
+/// record starts. A negative birth day is honest, not corrupt.
 /// type-audit: bare-ok(identifier-text)
 pub const PERSON_BORN: &str = "person-born";
 /// The day this person died. Absent while they are still alive.
@@ -35,7 +38,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "the community whose occupation this person founded",
     )?;
-    registry.register_predicate(PERSON_BORN, true, "the day this person was born")?;
+    registry.register_predicate(
+        PERSON_BORN,
+        true,
+        "the day this person was born; negative if before the history record began",
+    )?;
     registry.register_predicate(PERSON_DIED, true, "the day this person died")?;
     Ok(())
 }
