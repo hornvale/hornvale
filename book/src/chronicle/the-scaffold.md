@@ -80,10 +80,35 @@ ties by first occurrence; a second probe rebuilt every one of seed 42's 19
 reordered sites under both orderings and found the winning layer identical
 at all 19 — order matters to that render only through an exact `dread` tie,
 and none of the reordered sites produced one. `vestige-seed-42.md` is static
-caption prose with no per-cell data. `book/src/laboratory/generated/
-the-history/summary.md` is a census-gated artifact (decision 0063) and was
-correctly out of `make rebaseline`'s reach; it still needs the
-once-per-campaign census refresh before it reflects the new comparator.
+caption prose with no per-cell data. The spec had also predicted
+`almanac-seed-42*.md` would move; it does not, and the spec was simply wrong
+about the path. `layers_at` is private and reached only by `render_site`,
+which only `hornvale history --site` calls — the almanac document itself
+routes through `vestige_lines_from`, which is count-based and therefore
+order-blind.
+
+**No heavy-tier artifact moves either, and the campaign's first answer about
+why was wrong twice over.** A draft of this chronicle called
+`book/src/laboratory/generated/the-history/summary.md` a census-gated artifact
+awaiting `scripts/census-run.sh`. It is neither census-gated nor awaiting
+anything. It is written by the *heavy tier* —
+`cli/tests/history_battery.rs`, as `scripts/heavy-run.sh`'s own header
+states — so the refresh it would need is `make heavy-remote`, not a census;
+the census path runs exactly two studies, `the-census` and
+`census-of-the-meeting`, and never touches that directory. And it needs no
+refresh at all: every value it prints is an order-independent aggregation.
+`stratigraphy` reads `is-occupation` facts straight off the ledger into a map
+keyed by cell and accumulates counts and summed peak population, never once
+calling the comparator this campaign replaced. A reordering cannot move a
+sum. The same holds for the other two heavy-tier authoring tests, which do
+not consume the reordered helpers at all.
+
+That correction is worth stating rather than quietly fixing, because the
+wrong version was the *plausible* one: an artifact under
+`book/src/laboratory/generated/` that a campaign touching history did not
+regenerate looks exactly like a deferred census. Which mechanism authors a
+given artifact is a fact about the build, checkable in one grep, and this
+campaign twice preferred inference to the grep.
 
 ## What it leaves reserved
 

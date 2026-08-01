@@ -77,7 +77,23 @@ values are exact small integers with no transcendental in the path and the
 file's pre-existing asserts already do the same — was judged not worth its
 own registry row; fixing three in isolation would leave the file internally
 inconsistent, and the honest fix is a file-wide sweep some future campaign
-may or may not find worthwhile. `book/src/laboratory/generated/
-the-history/summary.md` still needs the once-per-campaign census refresh
-(`scripts/census-run.sh`) before it reflects `layer_key` — correctly left to
-the controller rather than run from inside a task.
+may or may not find worthwhile.
+
+**Nothing is left pending for a census or the heavy tier.** An earlier draft
+of this retrospective said `book/src/laboratory/generated/the-history/summary.md`
+awaited `scripts/census-run.sh`. Wrong on the mechanism — that artifact is
+written by the heavy tier (`cli/tests/history_battery.rs`), so the refresh
+would have been `make heavy-remote` — and wrong on the merits, since every
+value in it is an order-independent aggregation off the ledger and cannot
+have moved. The lesson is the same one this campaign learned about artifact
+predictions: **which mechanism authors an artifact is a one-grep fact, and
+"it lives under `book/src/laboratory/generated/`" is not evidence about it.**
+
+One genuine census-adjacent note, kept because it is the opposite case —
+order-sensitive rather than order-independent. Both census studies request
+`metrics: "all"`, which includes `mean-warning-legibility`
+(`windows/lab/src/metrics.rs`), and that metric sums a float per vestige *in
+stack order*. Reordering a stack changes float summation order. The 8-digit
+quantization at `render_csv` will almost certainly absorb it, but "almost
+certainly" is the state of the claim, not a measurement, and the check is
+`make lab-diff STUDY=the-census` whenever the next census runs.

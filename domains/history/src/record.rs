@@ -220,6 +220,13 @@ fn day_key(x: f64) -> u64 {
 /// keys tie — Genesis-vs-Genesis never reaches it. A future encoding that gave
 /// a founding its own material identity (a "signet") would close this gap;
 /// until then, this is documented as the resort it is, not sold as more.
+///
+/// **Sort with a STABLE sort.** Where the key ties (the re-genesis case above),
+/// the three call sites agree only because `sort_by_key` is stable and all
+/// three sort the same ledger iteration order, so all three fall back to the
+/// same order. Switching any of them to `sort_unstable_by_key` would diverge
+/// the worldgen and almanac decoders precisely where this key is not total —
+/// and their agreement is a contract those decoders declare about themselves.
 /// type-audit: bare-ok(count: return)
 pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>, u8, u64) {
     let founded = day_key(r.core.founded);
