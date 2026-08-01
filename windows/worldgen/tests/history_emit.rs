@@ -5,16 +5,20 @@
 
 use hornvale_history::IS_RUIN;
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
-use hornvale_kernel::{CellId, EntityId, KindId, Seed, World};
+use hornvale_kernel::{CellId, KindId, Seed, World};
 use hornvale_worldgen::{
-    History, TributeRelation, emit_history, occupation_records, occupations_at, ruins_of_people,
-    territories,
+    BakeId, BakeOccupation, History, TributeRelation, emit_history, occupation_records,
+    occupations_at, ruins_of_people, territories,
 };
 
-fn eid(n: u64) -> EntityId {
-    EntityId::new(n).unwrap()
+/// A bake-local handle for these hand-built fixtures — every `History` this
+/// file constructs is hand-built, standing in for what a real bake would have
+/// produced, so its `community`/`lineage`/`founded_from`/`ended_by` handles
+/// are `BakeId`s, never `EntityId`s (that translation is `emit_history`'s job).
+fn bid(n: u64) -> BakeId {
+    BakeId(n)
 }
 
 fn test_world() -> World {
@@ -26,23 +30,25 @@ fn test_world() -> World {
 
 /// A record with every "un-set" field filled with a neutral default, so each
 /// test case only spells out what it cares about.
-fn base_record(community: u64, people: &'static str, site: u32, founded: f64) -> OccupationRecord {
-    OccupationRecord {
-        people: KindId(people),
-        community: eid(community),
-        lineage: eid(community),
-        site: CellId(site),
-        founded,
-        ended: None,
-        peak_population: 50,
-        tech: TechHorizon::Neolithic,
-        function: Function::Agrarian,
-        deity: None,
-        tongue: None,
-        cause: None,
-        ended_by: Ended::Nature,
+fn base_record(community: u64, people: &'static str, site: u32, founded: f64) -> BakeOccupation {
+    BakeOccupation {
+        core: Occupation {
+            people: KindId(people),
+            site: CellId(site),
+            founded,
+            ended: None,
+            peak_population: 50,
+            tech: TechHorizon::Neolithic,
+            function: Function::Agrarian,
+            deity: None,
+            tongue: None,
+            cause: None,
+            notability: Notability::Common,
+        },
+        community: bid(community),
+        lineage: bid(community),
         founded_from: Founding::Genesis(CellId(site)),
-        notability: Notability::Common,
+        ended_by: Ended::Nature,
     }
 }
 
@@ -54,17 +60,17 @@ fn hand_history() -> History {
     let alive_goblin = base_record(1, "goblin", 0, 0.0);
 
     let mut starved_goblin = base_record(2, "goblin", 1, 0.0);
-    starved_goblin.ended = Some(100.0);
-    starved_goblin.cause = Some(CauseOfEnd::Famine);
-    starved_goblin.notability = Notability::Backwater;
+    starved_goblin.core.ended = Some(100.0);
+    starved_goblin.core.cause = Some(CauseOfEnd::Famine);
+    starved_goblin.core.notability = Notability::Backwater;
 
     let alive_kobold = base_record(3, "kobold", 2, 50.0);
 
     let mut fled_goblin = base_record(4, "goblin", 3, 10.0);
-    fled_goblin.ended = Some(60.0);
-    fled_goblin.cause = Some(CauseOfEnd::Fled);
-    fled_goblin.ended_by = Ended::By(eid(1)); // raided by the alive goblin community
-    fled_goblin.founded_from = Founding::From(eid(2)); // settlers from the starved ruin
+    fled_goblin.core.ended = Some(60.0);
+    fled_goblin.core.cause = Some(CauseOfEnd::Fled);
+    fled_goblin.ended_by = Ended::By(bid(1)); // raided by the alive goblin community
+    fled_goblin.founded_from = Founding::From(bid(2)); // settlers from the starved ruin
 
     History::new(
         vec![alive_goblin, starved_goblin, alive_kobold, fled_goblin],
@@ -73,7 +79,7 @@ fn hand_history() -> History {
 }
 
 fn alive_count(h: &History) -> usize {
-    h.records.iter().filter(|r| r.is_alive()).count()
+    h.records.iter().filter(|r| r.core.is_alive()).count()
 }
 
 #[test]
@@ -162,8 +168,8 @@ fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
     let mut w = test_world();
     let mut h = hand_history();
     h.tribute = vec![TributeRelation {
-        subordinate: eid(3), // the alive kobold community
-        patron: eid(1),      // …pays the alive goblin one
+        subordinate: bid(3), // the alive kobold community
+        patron: bid(1),      // …pays the alive goblin one
         since: 120.0,
     }];
     emit_history(&mut w, &h).unwrap();
@@ -225,8 +231,8 @@ fn territories_group_alive_occupations_by_people() {
 fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
     let mut w = test_world();
     let mut ruin = base_record(1, "goblin", 0, 100.0);
-    ruin.ended = Some(900.0);
-    ruin.cause = Some(CauseOfEnd::Burned);
+    ruin.core.ended = Some(900.0);
+    ruin.core.cause = Some(CauseOfEnd::Burned);
     let h = History::new(vec![ruin], 1000.0);
     emit_history(&mut w, &h).unwrap();
 
@@ -294,57 +300,54 @@ fn occupation_records_round_trip_every_committed_field() {
 
     let alive_goblin = recs
         .iter()
-        .find(|r| r.site == CellId(0))
+        .find(|r| r.core.site == CellId(0))
         .expect("alive goblin at cell 0");
-    assert_eq!(alive_goblin.people, KindId("goblin"));
-    assert_eq!(alive_goblin.founded, 0.0);
-    assert_eq!(alive_goblin.ended, None);
-    assert_eq!(alive_goblin.peak_population, 50);
-    assert_eq!(alive_goblin.tech, TechHorizon::Neolithic);
-    assert_eq!(alive_goblin.function, Function::Agrarian);
-    assert_eq!(alive_goblin.notability, Notability::Common);
-    assert_eq!(alive_goblin.cause, None);
+    assert_eq!(alive_goblin.core.people, KindId("goblin"));
+    assert_eq!(alive_goblin.core.founded, 0.0);
+    assert_eq!(alive_goblin.core.ended, None);
+    assert_eq!(alive_goblin.core.peak_population, 50);
+    assert_eq!(alive_goblin.core.tech, TechHorizon::Neolithic);
+    assert_eq!(alive_goblin.core.function, Function::Agrarian);
+    assert_eq!(alive_goblin.core.notability, Notability::Common);
+    assert_eq!(alive_goblin.core.cause, None);
     assert_eq!(alive_goblin.ended_by, Ended::Nature);
     assert_eq!(alive_goblin.founded_from, Founding::Genesis(CellId(0)));
 
     let starved_goblin = recs
         .iter()
-        .find(|r| r.site == CellId(1))
+        .find(|r| r.core.site == CellId(1))
         .expect("starved goblin at cell 1");
-    assert_eq!(starved_goblin.ended, Some(100.0));
-    assert_eq!(starved_goblin.cause, Some(CauseOfEnd::Famine));
-    assert_eq!(starved_goblin.notability, Notability::Backwater);
+    assert_eq!(starved_goblin.core.ended, Some(100.0));
+    assert_eq!(starved_goblin.core.cause, Some(CauseOfEnd::Famine));
+    assert_eq!(starved_goblin.core.notability, Notability::Backwater);
 
     let alive_kobold = recs
         .iter()
-        .find(|r| r.site == CellId(2))
+        .find(|r| r.core.site == CellId(2))
         .expect("alive kobold at cell 2");
-    assert_eq!(alive_kobold.people, KindId("kobold"));
-    assert_eq!(alive_kobold.founded, 50.0);
+    assert_eq!(alive_kobold.core.people, KindId("kobold"));
+    assert_eq!(alive_kobold.core.founded, 50.0);
 
     let fled_goblin = recs
         .iter()
-        .find(|r| r.site == CellId(3))
+        .find(|r| r.core.site == CellId(3))
         .expect("fled goblin at cell 3");
-    assert_eq!(fled_goblin.ended, Some(60.0));
-    assert_eq!(fled_goblin.cause, Some(CauseOfEnd::Fled));
+    assert_eq!(fled_goblin.core.ended, Some(60.0));
+    assert_eq!(fled_goblin.core.cause, Some(CauseOfEnd::Fled));
     // The ★ threads: `founded-from` resolves to the starved ruin's own
     // minted entity, `ended-by` to the alive goblin community's — the same
     // resolution `founded_from_and_ended_by_resolve_to_the_right_entities`
     // checks against raw ledger facts, now checked through the decoded
     // `OccupationRecord`.
-    assert_eq!(
-        fled_goblin.founded_from,
-        Founding::From(starved_goblin.community)
-    );
-    assert_eq!(fled_goblin.ended_by, Ended::By(alive_goblin.community));
+    assert_eq!(fled_goblin.founded_from, Founding::From(starved_goblin.id));
+    assert_eq!(fled_goblin.ended_by, Ended::By(alive_goblin.id));
 
     // `occupations_at` finds exactly the one occupation at each site (this
     // fixture never restacks a site), and reports it oldest-founded first.
     for r in &recs {
-        let at = occupations_at(&w, r.site);
+        let at = occupations_at(&w, r.core.site);
         assert_eq!(at.len(), 1);
-        assert_eq!(at[0].founded, r.founded);
+        assert_eq!(at[0].core.founded, r.core.founded);
     }
 }
 

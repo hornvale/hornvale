@@ -49,27 +49,30 @@ pub enum TechHorizon {
     Classical,
 }
 
-/// How an occupation ended: on its own terms, or at another entity's hand
-/// (the ★ global thread — every "ended by" reference in the engine resolves
-/// through this same shape).
+/// How an occupation ended: on its own terms, or at another entity's hand.
+///
+/// Generic over the handle type so the bake can reference its own private
+/// handles and the ledger side can reference committed entities, without the
+/// two being interchangeable.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Ended {
+pub enum Ended<I> {
     /// No antagonist entity — famine, plague, or an orderly departure.
     Nature,
     /// Ended at the hand of another entity (a raiding people, a rival
     /// community, ...).
-    By(EntityId),
+    By(I),
 }
 
 /// How an occupation began: raised from nothing at a site, or founded by
-/// settlers from another community (the ★ global thread — every "founded
-/// from" reference in the engine resolves through this same shape).
+/// settlers from another community.
+///
+/// Generic over the handle type, for the same reason as [`Ended`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Founding {
+pub enum Founding<I> {
     /// The first occupation at a site — no predecessor community.
     Genesis(CellId),
     /// Founded by settlers dispatched from an existing community.
-    From(EntityId),
+    From(I),
 }
 
 /// How notable an occupation was in its region.
@@ -83,19 +86,18 @@ pub enum Notability {
     Seat,
 }
 
-/// One span of a people occupying a site: the atom of Hornvale's history
-/// domain. A community's full history is a sequence of these, chained by
-/// `founded_from`/`ended_by`.
+/// What both sides of the emit boundary agree an occupation is: a people, a
+/// place, a span, and how it fared. Everything here is a committed fact or
+/// derivable from one.
+///
+/// The handle-bearing fields — which community, which lineage, who founded it,
+/// who ended it — live on the bake-side and ledger-side types instead, because
+/// they mean different things there.
 /// type-audit: bare-ok(count: founded), bare-ok(count: ended), bare-ok(count: peak_population)
 #[derive(Clone, Debug, PartialEq)]
-pub struct OccupationRecord {
+pub struct Occupation {
     /// The people occupying the site.
     pub people: KindId,
-    /// The community entity this occupation belongs to.
-    pub community: EntityId,
-    /// The lineage entity this occupation continues (may equal `community`
-    /// for a community's first occupation).
-    pub lineage: EntityId,
     /// The Geosphere cell the occupation sits on.
     pub site: CellId,
     /// The standard day the occupation began.
@@ -114,16 +116,11 @@ pub struct OccupationRecord {
     pub tongue: Option<KindId>,
     /// Why the occupation ended, if it has.
     pub cause: Option<CauseOfEnd>,
-    /// How the occupation ended (nature, or another entity's hand).
-    pub ended_by: Ended,
-    /// How the occupation began (genesis, or founded from another
-    /// community).
-    pub founded_from: Founding,
     /// How notable the occupation was.
     pub notability: Notability,
 }
 
-impl OccupationRecord {
+impl Occupation {
     /// How long the occupation has lasted (or lasted), in standard days, as
     /// of `now`. Ended occupations ignore `now` entirely.
     /// type-audit: bare-ok(count: now), bare-ok(count: return)
@@ -135,5 +132,38 @@ impl OccupationRecord {
     /// type-audit: bare-ok(flag: return)
     pub fn is_alive(&self) -> bool {
         self.ended.is_none()
+    }
+}
+
+/// One span of a people occupying a site, as **reconstructed from committed
+/// facts**. The ledger-side half of the pair.
+///
+/// It carries no `community` and no `lineage`: neither is ever emitted as a
+/// fact, so a reconstructed record genuinely does not know them. What it does
+/// know is its own identity, which earlier versions of this type smuggled into
+/// the `community` field and called a placeholder.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OccupationRecord {
+    /// The facts both sides agree on.
+    pub core: Occupation,
+    /// This occupation's own entity — the subject of every fact above.
+    pub id: EntityId,
+    /// How the occupation began.
+    pub founded_from: Founding<EntityId>,
+    /// How the occupation ended.
+    pub ended_by: Ended<EntityId>,
+}
+
+impl OccupationRecord {
+    /// How long the occupation lasted, as of `now`. Delegates to [`Occupation`].
+    /// type-audit: bare-ok(count: now), bare-ok(count: return)
+    pub fn tenure(&self, now: f64) -> f64 {
+        self.core.tenure(now)
+    }
+
+    /// Whether the occupation is still ongoing. Delegates to [`Occupation`].
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_alive(&self) -> bool {
+        self.core.is_alive()
     }
 }

@@ -102,8 +102,8 @@ pub use graph_derive::{
     land_route_attempt_count,
 };
 pub use history_bake::{
-    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, TributeRelation, bake, cascade_sizes,
-    census,
+    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, TributeRelation,
+    bake, cascade_sizes, census,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,

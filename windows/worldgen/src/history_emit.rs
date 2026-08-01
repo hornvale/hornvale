@@ -11,9 +11,10 @@
 //! `Value::Number` objects (and `day`) at the emit boundary; this module
 //! never quantizes anything itself.
 
+use crate::history_bake::BakeId;
 use crate::{BuildError, History};
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
 };
 use hornvale_kernel::{CellId, EntityId, Fact, KindId, Value, World};
 use std::collections::{BTreeMap, BTreeSet};
@@ -110,12 +111,12 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         .map(|_| world.ledger.mint_entity())
         .collect();
 
-    // The bake's own (non-ledger) community ids referenced by `founded_from`/
-    // `ended_by` are exactly the `community` field of some record in this
-    // same history (a raider, or a founding community, is itself always an
-    // occupation the bake opened) — map each back to the entity minted for
-    // its record.
-    let bake_to_ledger: BTreeMap<EntityId, EntityId> = h
+    // The bake's own (non-ledger) community handles referenced by
+    // `founded_from`/`ended_by` are exactly the `community` field of some
+    // record in this same history (a raider, or a founding community, is
+    // itself always an occupation the bake opened) — map each back to the
+    // entity minted for its record.
+    let bake_to_ledger: BTreeMap<BakeId, EntityId> = h
         .records
         .iter()
         .zip(minted.iter().copied())
@@ -123,14 +124,14 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         .collect();
 
     for (record, &id) in h.records.iter().zip(minted.iter()) {
-        let day = record.founded;
+        let day = record.core.founded;
         // End-of-life facts (`OCC_ENDED`, `OCC_CAUSE`, `OCC_ENDED_BY`,
         // `IS_RUIN`) describe events that became true at `record.ended`, not
         // at founding — `Fact.day` means "the day this fact was observed"
         // (see `kernel/src/ledger.rs`), so an as-of-day-N query must not see
         // an occupation as already-ended on its founding day. A still-alive
         // record never commits these, so the `unwrap_or` fallback is inert.
-        let end_day = record.ended.unwrap_or(record.founded);
+        let end_day = record.core.ended.unwrap_or(record.core.founded);
         let mut commit_on = |predicate: &str, object: Value, day: f64| -> Result<(), BuildError> {
             world
                 .ledger
@@ -141,38 +142,38 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         commit_on(hornvale_history::IS_OCCUPATION, Value::Flag(true), day)?;
         commit_on(
             hornvale_history::OCC_PEOPLE,
-            Value::Text(record.people.0.to_string()),
+            Value::Text(record.core.people.0.to_string()),
             day,
         )?;
         commit_on(
             hornvale_history::OCC_SITE,
-            Value::Number(f64::from(record.site.0)),
+            Value::Number(f64::from(record.core.site.0)),
             day,
         )?;
         commit_on(
             hornvale_history::OCC_FOUNDED,
-            Value::Number(record.founded),
+            Value::Number(record.core.founded),
             day,
         )?;
-        if let Some(ended) = record.ended {
+        if let Some(ended) = record.core.ended {
             commit_on(hornvale_history::OCC_ENDED, Value::Number(ended), end_day)?;
         }
         commit_on(
             hornvale_history::OCC_PEAK,
-            Value::Number(f64::from(record.peak_population)),
+            Value::Number(f64::from(record.core.peak_population)),
             day,
         )?;
         commit_on(
             hornvale_history::OCC_TECH,
-            Value::Text(tech_label(record.tech).to_string()),
+            Value::Text(tech_label(record.core.tech).to_string()),
             day,
         )?;
         commit_on(
             hornvale_history::OCC_FUNCTION,
-            Value::Text(function_label(record.function).to_string()),
+            Value::Text(function_label(record.core.function).to_string()),
             day,
         )?;
-        if let Some(cause) = record.cause {
+        if let Some(cause) = record.core.cause {
             commit_on(
                 hornvale_history::OCC_CAUSE,
                 Value::Text(cause_label(cause).to_string()),
@@ -182,7 +183,7 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         // `ended_by` only means something once an occupation has actually
         // ended; a still-alive record's `Ended::Nature` default is not a
         // claim worth committing.
-        if record.ended.is_some() {
+        if record.core.ended.is_some() {
             let ended_by = match record.ended_by {
                 Ended::Nature => Value::Text("nature".to_string()),
                 Ended::By(e) => Value::Entity(
@@ -204,20 +205,20 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         commit_on(hornvale_history::OCC_FOUNDED_FROM, founded_from, day)?;
         commit_on(
             hornvale_history::OCC_NOTABILITY,
-            Value::Text(notability_label(record.notability).to_string()),
+            Value::Text(notability_label(record.core.notability).to_string()),
             day,
         )?;
 
-        if record.is_alive() {
+        if record.core.is_alive() {
             commit_on(hornvale_settlement::IS_SETTLEMENT, Value::Flag(true), day)?;
             commit_on(
                 hornvale_settlement::POPULATION,
-                Value::Number(f64::from(record.peak_population)),
+                Value::Number(f64::from(record.core.peak_population)),
                 day,
             )?;
             commit_on(
                 hornvale_settlement::CELL_ID,
-                Value::Number(f64::from(record.site.0)),
+                Value::Number(f64::from(record.core.site.0)),
                 day,
             )?;
         } else {
@@ -327,18 +328,18 @@ pub fn occupation_records(world: &World) -> Vec<OccupationRecord> {
 
 /// Occupations on a cell, oldest-founded first (the palimpsest layers a
 /// site's stratigraphy stacks in). Ordered by `founded` via `f64::total_cmp`
-/// (total and deterministic), with the occupation's own entity id (carried in
-/// [`OccupationRecord::community`], the placeholder `reconstruct_occupation`
-/// fills with the minting entity) breaking a same-day tie.
+/// (total and deterministic), with the occupation's own entity id
+/// ([`OccupationRecord::id`]) breaking a same-day tie.
 pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
     let mut v: Vec<OccupationRecord> = occupation_records(world)
         .into_iter()
-        .filter(|o| o.site == cell)
+        .filter(|o| o.core.site == cell)
         .collect();
     v.sort_by(|a, b| {
-        a.founded
-            .total_cmp(&b.founded)
-            .then(a.community.0.cmp(&b.community.0))
+        a.core
+            .founded
+            .total_cmp(&b.core.founded)
+            .then(a.id.0.cmp(&b.id.0))
     });
     v
 }
@@ -356,24 +357,26 @@ pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
 pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
     let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
     for occ in occupation_records(world) {
-        by_cell.entry(occ.site).or_default().push(occ);
+        by_cell.entry(occ.core.site).or_default().push(occ);
     }
     for occs in by_cell.values_mut() {
         occs.sort_by(|a, b| {
-            a.founded
-                .total_cmp(&b.founded)
-                .then(a.community.0.cmp(&b.community.0))
+            a.core
+                .founded
+                .total_cmp(&b.core.founded)
+                .then(a.id.0.cmp(&b.id.0))
         });
     }
     by_cell
 }
 
 /// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
-/// describe — enough of it to render prose and derive flesh. The fields a
-/// derived readout never needs (`community`/`lineage`/`deity`/`tongue`) are
-/// filled with inert placeholders (the entity's own id), matching the
-/// almanac's original convention. `None` if the entity is missing a
-/// load-bearing fact or names a people outside the biosphere roster.
+/// describe — enough of it to render prose and derive flesh. `deity`/`tongue`
+/// are never committed as facts, so they are filled with inert placeholders
+/// (`None`); the record's own identity is the entity itself (`id: entity`),
+/// matching the almanac's original convention. `None` if the entity is
+/// missing a load-bearing fact or names a people outside the biosphere
+/// roster.
 fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
     let people = resolve_people(people_label)?;
@@ -413,21 +416,22 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
     };
 
     Some(OccupationRecord {
-        people,
-        community: entity,
-        lineage: entity,
-        site,
-        founded,
-        ended,
-        peak_population,
-        tech,
-        function,
-        deity: None,
-        tongue: None,
-        cause,
-        ended_by,
+        core: Occupation {
+            people,
+            site,
+            founded,
+            ended,
+            peak_population,
+            tech,
+            function,
+            deity: None,
+            tongue: None,
+            cause,
+            notability,
+        },
+        id: entity,
         founded_from,
-        notability,
+        ended_by,
     })
 }
 
@@ -910,18 +914,19 @@ mod tests {
 
         // A reconstructed record round-trips its site + lifecycle.
         let r = &recs[0];
-        assert!(r.founded >= 0.0);
+        assert!(r.core.founded >= 0.0);
 
         // `occupations_at` groups by cell — the same layer must show up
         // among the records at its own site.
-        let at = occupations_at(&world, r.site);
-        assert!(at.iter().any(|o| o.founded == r.founded));
+        let at = occupations_at(&world, r.core.site);
+        assert!(at.iter().any(|o| o.core.founded == r.core.founded));
 
         // Every returned occupation genuinely sits on the queried cell, and
         // the layers come back oldest-founded first.
-        assert!(at.iter().all(|o| o.site == r.site));
+        assert!(at.iter().all(|o| o.core.site == r.core.site));
         assert!(
-            at.windows(2).all(|w| w[0].founded <= w[1].founded),
+            at.windows(2)
+                .all(|w| w[0].core.founded <= w[1].core.founded),
             "occupations_at must order oldest-founded first"
         );
     }

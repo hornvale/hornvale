@@ -22,7 +22,7 @@ use hornvale_history::flesh::{
     Departure, Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
 };
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
 };
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, Value, World};
@@ -111,19 +111,19 @@ impl SharedLineage {
         }
         let first = &layers[0].record;
         let descriptor_uniform = layers.iter().all(|l| {
-            l.record.tech == first.tech
-                && l.record.function == first.function
-                && l.record.notability == first.notability
+            l.record.core.tech == first.core.tech
+                && l.record.core.function == first.core.function
+                && l.record.core.notability == first.core.notability
                 && l.people == layers[0].people
         });
         let descriptor = descriptor_uniform.then(|| {
-            let tech = tech_word(first.tech);
+            let tech = tech_word(first.core.tech);
             format!(
                 "Every layer here is {article} {tech} {people} {noun}, {notability}.",
                 article = article(tech),
                 people = layers[0].people,
-                noun = function_noun(first.function),
-                notability = notability_phrase(first.notability),
+                noun = function_noun(first.core.function),
+                notability = notability_phrase(first.core.notability),
             )
         });
 
@@ -154,7 +154,7 @@ struct Layer {
     /// The record rebuilt from that entity's committed facts.
     record: OccupationRecord,
     /// The people's canonical label (kept alongside the resolved `KindId` for
-    /// prose; equals `record.people.0`).
+    /// prose; equals `record.core.people.0`).
     people: String,
 }
 
@@ -190,7 +190,7 @@ fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
                 _ => return None,
             }
             let record = record_of(world, entity)?;
-            let people = record.people.0.to_string();
+            let people = record.core.people.0.to_string();
             Some(Layer {
                 entity,
                 record,
@@ -200,18 +200,21 @@ fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
         .collect();
     layers.sort_by(|a, b| {
         a.record
+            .core
             .founded
-            .total_cmp(&b.record.founded)
+            .total_cmp(&b.record.core.founded)
             .then(a.entity.0.cmp(&b.entity.0))
     });
     layers
 }
 
 /// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
-/// describe — enough of it to render prose and derive flesh. The fields flesh
-/// never reads (`community`/`lineage`/`deity`/`tongue`) are filled with inert
-/// placeholders (the entity's own id), since a *derived* readout has no need of
-/// them. `None` if the entity is missing a load-bearing fact or names a people
+/// describe — enough of it to render prose and derive flesh. `deity`/`tongue`
+/// are never committed as facts, so they are filled with inert placeholders
+/// (`None`); the record's own identity is the entity itself (`id: entity`),
+/// which is not a placeholder at all — a reconstructed record never had a
+/// `community`/`lineage` to begin with (see [`OccupationRecord`]'s doc).
+/// `None` if the entity is missing a load-bearing fact or names a people
 /// outside the biosphere roster.
 fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
@@ -252,21 +255,22 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     };
 
     Some(OccupationRecord {
-        people,
-        community: entity,
-        lineage: entity,
-        site,
-        founded,
-        ended,
-        peak_population,
-        tech,
-        function,
-        deity: None,
-        tongue: None,
-        cause,
-        ended_by,
+        core: Occupation {
+            people,
+            site,
+            founded,
+            ended,
+            peak_population,
+            tech,
+            function,
+            deity: None,
+            tongue: None,
+            cause,
+            notability,
+        },
+        id: entity,
         founded_from,
-        notability,
+        ended_by,
     })
 }
 
@@ -388,7 +392,7 @@ fn render_layer(
 ) -> String {
     let r = &layer.record;
     let depth = depth_phrase(index, total);
-    let tech = tech_word(r.tech);
+    let tech = tech_word(r.core.tech);
     // People as an adjectival modifier reads singular ("a bugbear steading"),
     // never "a bugbears steading".
     let mut para = if shared.descriptor.is_some() {
@@ -396,16 +400,16 @@ fn render_layer(
         // its place in the stack and its own headcount.
         format!(
             "{depth} — at its height {}.\n",
-            souls_phrase(r.peak_population)
+            souls_phrase(r.core.peak_population)
         )
     } else {
         format!(
             "{depth} — {article} {tech} {people} {noun}, {notability}, at its height {souls}.\n",
             article = article(tech),
             people = layer.people,
-            noun = function_noun(r.function),
-            notability = notability_phrase(r.notability),
-            souls = souls_phrase(r.peak_population),
+            noun = function_noun(r.core.function),
+            notability = notability_phrase(r.core.notability),
+            souls = souls_phrase(r.core.peak_population),
         )
     };
     if shared.founding.is_none() {
@@ -480,20 +484,20 @@ fn forebears(world: &World, e: EntityId) -> (String, String, bool) {
 /// The span sentence: founded → ended, with the tenure in years, or "stands
 /// yet" for a living community.
 fn span_sentence(r: &OccupationRecord, now: f64) -> String {
-    match r.ended {
+    match r.core.ended {
         None => {
-            let tenure = (now - r.founded).max(0.0);
+            let tenure = (now - r.core.founded).max(0.0);
             format!(
                 "Founded in the year {}, it stands yet — {} years and counting.",
-                year(r.founded),
+                year(r.core.founded),
                 year(tenure)
             )
         }
         Some(end) => {
-            let tenure = (end - r.founded).max(0.0);
+            let tenure = (end - r.core.founded).max(0.0);
             format!(
                 "Founded in the year {}, it held for {} years, until the year {}.",
-                year(r.founded),
+                year(r.core.founded),
                 year(tenure),
                 year(end)
             )
@@ -506,7 +510,7 @@ fn span_sentence(r: &OccupationRecord, now: f64) -> String {
 /// long re-occupation stack the migration line is varied by `index` so the
 /// stratigraphy reads as a chronicle, not a stuck record.
 fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String {
-    let Some(cause) = r.cause else {
+    let Some(cause) = r.core.cause else {
         return "It has never ended; the people are there still.".to_string();
     };
     let by = match r.ended_by {
@@ -578,13 +582,13 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// quantizing boundary, so they compare exactly, and bare float equality is
 /// banned.
 fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
-    if r.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
+    if r.core.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
         return None;
     }
-    let left = r.ended?;
+    let left = r.core.ended?;
     world
         .ledger
-        .query_by_object(&Value::Entity(r.community))
+        .query_by_object(&Value::Entity(r.id))
         .filter(|f| f.predicate == hornvale_history::OCC_ENDED_BY)
         .map(|f| f.subject)
         .filter(|&victim| {
@@ -636,7 +640,7 @@ fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
     let people = pluralize(&layer.people);
     out.push_str(&format!(
         "At its height {}, the last {people} here raised {}.\n",
-        souls_phrase(layer.record.peak_population),
+        souls_phrase(layer.record.core.peak_population),
         structure_phrase(&structures),
     ));
 

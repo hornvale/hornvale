@@ -87,7 +87,7 @@ const WARNING_HALF_LIFE_DAYS: f64 = 300.0;
 /// Read backward: no simulation.
 /// type-audit: bare-ok(diagnostic-value: now)
 pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
-    let kind = match occ.function {
+    let kind = match occ.core.function {
         Function::Mine => VestigeKind::AbandonedDelving,
         Function::Fort | Function::Cult => VestigeKind::SealedVault,
         // Everything else is a buried ruin; the undercity/ruin size split rides
@@ -95,7 +95,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
         // undercities), not on a distinct vestige kind.
         _ => VestigeKind::BuriedRuin,
     };
-    let (seal_state, valence) = match occ.ended {
+    let (seal_state, valence) = match occ.core.ended {
         None => (SealState::Maintained, Valence::Venerated), // a living keeper
         Some(end) => {
             let age = (now - end).max(0.0);
@@ -106,7 +106,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
             }
         }
     };
-    let hazard = match occ.cause {
+    let hazard = match occ.core.cause {
         Some(CauseOfEnd::Plague) => HazardKind::Pestilent,
         Some(CauseOfEnd::Burned) => HazardKind::Cursed,
         // Every other end leaves structural collapse as the default; per-function
@@ -114,7 +114,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
         _ => HazardKind::Structural,
     };
     // Warning decays fast (the fastest of the three rates); recent = legible.
-    let warning_legibility = match occ.ended {
+    let warning_legibility = match occ.core.ended {
         None => 1.0,
         Some(end) => math::exp(-((now - end).max(0.0)) / WARNING_HALF_LIFE_DAYS),
     };
@@ -131,7 +131,7 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
         hazard,
         dread,
         warning_legibility,
-        founded_day: Some(occ.founded),
+        founded_day: Some(occ.core.founded),
     }
 }
 
@@ -218,7 +218,8 @@ pub fn vestiges_field(world: &World, terrain: &GeneratedTerrain) -> CellMap<Vec<
 mod tests {
     use super::*;
     use hornvale_history::record::{
-        CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+        CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord,
+        TechHorizon,
     };
     use hornvale_kernel::{CellId, EntityId, KindId};
 
@@ -233,21 +234,22 @@ mod tests {
         notability: Notability,
     ) -> OccupationRecord {
         OccupationRecord {
-            people: KindId("test-people"),
-            community: eid(1),
-            lineage: eid(1),
-            site: CellId(0),
-            founded: 0.0,
-            ended,
-            peak_population: 100,
-            tech: TechHorizon::Iron,
-            function,
-            deity: None,
-            tongue: None,
-            cause,
-            ended_by: Ended::Nature,
+            core: Occupation {
+                people: KindId("test-people"),
+                site: CellId(0),
+                founded: 0.0,
+                ended,
+                peak_population: 100,
+                tech: TechHorizon::Iron,
+                function,
+                deity: None,
+                tongue: None,
+                cause,
+                notability,
+            },
+            id: eid(1),
             founded_from: Founding::Genesis(CellId(0)),
-            notability,
+            ended_by: Ended::Nature,
         }
     }
 
@@ -427,8 +429,10 @@ mod tests {
         // A sample of cells that actually carry people occupations, so the
         // grouped-by-site path is checked against populated stacks too, not
         // just the two fixture cells above.
-        let occupied_cells: std::collections::BTreeSet<CellId> =
-            occupation_records(&world).iter().map(|o| o.site).collect();
+        let occupied_cells: std::collections::BTreeSet<CellId> = occupation_records(&world)
+            .iter()
+            .map(|o| o.core.site)
+            .collect();
         for cell in occupied_cells.into_iter().take(25) {
             assert_eq!(
                 field.get(cell),
