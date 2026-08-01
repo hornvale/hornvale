@@ -35,11 +35,20 @@ entity* — described in its own doc comment as "the placeholder." Neither
 `community` nor `lineage` is ever emitted as a fact, so a reconstructed record
 cannot know either.
 
-**Two read helpers break ties on mint order.** `occupations_at`
-(`history_emit.rs:341`) and `occupations_by_cell` (`:365`) sort by `founded` and
-then by `a.community.0.cmp(&b.community.0)` — which, post-reconstruction, is the
-occupation's own entity id. The doc calls this "the palimpsest layers a site's
-stratigraphy stacks in."
+**Three read helpers break ties on mint order, not two.** `occupations_at`
+(`history_emit.rs:341`) and `occupations_by_cell` (`:365`) sort by `founded` then
+by `a.community.0.cmp(&b.community.0)` — post-reconstruction, the occupation's own
+entity id. The doc calls this "the palimpsest layers a site's stratigraphy stacks
+in."
+
+**The third is in the almanac**, and it is the one that reaches a reader.
+`windows/almanac/src/history.rs:201-206`'s `layers_at` carries the identical
+tie-break, and `record_of` (`:254`) is an independent duplicate of
+`reconstruct_occupation`. The duplication is deliberate — it avoids an
+almanac↔worldgen dependency cycle — and its own doc states the invariant: the two
+are "kept in lockstep... by copying verbatim in both directions." Changing one and
+not the other breaks a contract the code declares about itself, so **all three move
+together**.
 
 It fires often. Founding days quantise to 25-year epochs, so `(site, founded)`
 collides **239 times in seed 42** — about 13% of occupations share a site and a
@@ -113,10 +122,30 @@ the almanac only renders. So `world.json` stays byte-identical and `lens_purity`
 must **not** move. If it does, something commits from a view and that is a finding
 in its own right.
 
-**D6 — The consumer surface is three sites.** Outside `history_bake.rs` and tests,
-`.community` is read at `history_emit.rs:341`, `:365` and
-`almanac/history.rs:587`. The third passes it to `query_by_object` as the
-occupation's own entity, and becomes `r.id` under D3.
+**D6 — The surface, corrected.** An earlier draft said "three sites," measured
+against too narrow a grep. Outside `history_bake.rs` and tests:
+
+- `history_emit.rs:341`, `:365` — the two comparators.
+- `almanac/history.rs:201-206` — the **third comparator**, in the almanac's
+  duplicate decoder, which must move in lockstep (§2).
+- `almanac/history.rs:254` (`record_of`) — a second construction site, the
+  almanac's own copy of `reconstruct_occupation`.
+- `almanac/history.rs:587` (`conquest_victim`) — passes `r.community` to
+  `query_by_object` as the occupation's own entity, becoming `r.id` under D3.
+
+**The ledger-side type must keep "resolves to this occupation's own identity."**
+`reconstruct_occupation` and `record_of` both set `community` *and* `lineage` to
+the reconstructing entity, and `conquest_victim` depends on that. Renaming the
+field to `id` preserves the meaning and makes it honest; dropping it would break
+the conquest lookup.
+
+**`conquest_victim`'s `min_by_key(|e| e.0.get())` stays as it is.** It is a fourth
+mint-order tie-break by shape, but its own doc argues it is provably inert — "a
+conqueror can have at most one such victim, but the lowest entity id is taken
+regardless so the result never depends on iteration order." No test exercises a
+multi-victim case and `maybe_raid` closes one victim per raid. Touching it would be
+scope creep on a defensive no-op; **it is explicitly out of scope**, decided rather
+than overlooked.
 
 ## 4. Preregistered
 
@@ -162,6 +191,14 @@ worth the name, and inventing one would be the same error.
   entry explaining a surprise that was only surprising relative to an invented
   number.
 
+  **Caveat, and it is mine:** this was computed over `occupation_records`, which is
+  `history_emit`'s path. The almanac's duplicate decoder (§2, D6) sorts the same
+  records with the same comparator, so the fraction should match — but that is an
+  inference, not a measurement. The implementation reports **both** paths
+  separately, and a divergence between them would mean the two decoders were
+  already out of lockstep before this campaign touched them, which is worth knowing
+  either way.
+
 ## 5. Non-goals
 
 Changing how any id is *derived* — that is The Signet. Community identity, which
@@ -174,7 +211,15 @@ waits on `SOC-self-conquest`. Anything about `Ledger::mint_entity`. Emitting
   one where the other belongs is a type error, checked by deliberately trying it
   once during implementation and reverting.
 - `world-seed-42.json` byte-identical (V1).
-- Gallery artifacts regenerate; the diff is read as prose, not just accepted.
+- **`book/src/gallery/vestige-seed-42.png` and `.md` will move**, traced:
+  `cmd_vestige_map` → `render::vestige_png` → `residue_pixels` → `vestiges_field`
+  → `occupations_by_cell`. A committed PNG is a direct function of the comparator
+  being replaced, which no earlier draft anticipated.
+- `almanac-seed-42*.md` and `history-seed-42.md` move **only because the almanac's
+  own `layers_at` changes** (§2) — they do not route through `occupations_at` at
+  all. If they move without the almanac change, something is wired differently than
+  this spec believes.
+- Every gallery diff is read as prose, not just accepted.
 - `occupations_at` and `occupations_by_cell` agree with each other on every site —
   there is an existing test asserting the batched and per-cell paths match, and it
   must still pass under the new comparator.
