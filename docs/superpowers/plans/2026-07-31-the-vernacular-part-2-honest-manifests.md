@@ -47,7 +47,7 @@ dependencies. `make gate` as the commit gate.
   is wrong: `World` serializes the concept registry, so registering a concept
   necessarily changes the world file while moving no fact. Compare fact lists
   directly against `$BASELINE` =
-  `.superpowers/sdd/2026-07-31-the-vernacular-part-1-the-referent-contract/baseline-seed-42.json`:
+  `.superpowers/sdd/2026-07-31-the-vernacular-part-2-honest-manifests/baseline-seed-42.json`:
 
   ```python
   import json
