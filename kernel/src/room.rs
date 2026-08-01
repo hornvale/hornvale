@@ -617,6 +617,130 @@ impl RoomAddr {
     }
 }
 
+/// A session-lived cache of [`RoomAddr::corner_weights`] and
+/// [`RoomAddr::neighbors`] results, keyed by the room they were computed for
+/// (the-waymark, Task 3). Both are pure functions of their inputs — geometry
+/// alone for `neighbors`, plus a fixed `(Geosphere, NearestCellIndex)` pair
+/// for `corner_weights` — so caching either is exactly caching a pure
+/// function, byte-identical to the un-memoized read by construction (the same
+/// argument [`PrimaryAfraidMemo`] makes in `windows/vessel`). Caller-owned and
+/// threaded by `&mut` (the `PrimaryAfraidMemo` shape): no `RefCell`, no
+/// global, no `OnceLock`. Append-only for the memo's lifetime — nothing ever
+/// invalidates an entry, because neither underlying computation depends on
+/// anything that changes while a `Geosphere`/`NearestCellIndex` pair is held
+/// fixed.
+#[derive(Debug, Default, Clone)]
+pub struct RoomMeshMemo {
+    /// `RoomAddr -> corner_weights(geo, index)`, for the ONE `(geo, index)`
+    /// pair this memo is used with. Mixing two different geospheres through
+    /// the same memo would silently return a stale answer — the caller's
+    /// obligation, exactly as `PrimaryAfraidMemo` scopes itself to one fixed
+    /// `frozen` ledger. `corner_weights_geo_level` is a cheap partial guard
+    /// against exactly that mistake (see its own doc).
+    corner_weights: BTreeMap<RoomAddr, Option<[(CellId, u64); 3]>>,
+    /// `RoomAddr -> neighbors()`. Pure geometry, no external dependency, so
+    /// this half never goes stale regardless of which world it is reused
+    /// across.
+    neighbors: BTreeMap<RoomAddr, [RoomAddr; 3]>,
+    /// The `Geosphere::level()` of the FIRST `corner_weights` entry ever
+    /// inserted — a cheap, partial discriminant against the geo-aliasing
+    /// footgun the field above warns about: reusing this memo with a
+    /// DIFFERENT globe level is a caller bug (this memo answers for whatever
+    /// `(geo, index)` filled it, and a `RoomAddr` alone does not name which
+    /// world it came from). `None` until the first insert. Not a full fix —
+    /// two different geospheres at the SAME level would not be caught — but
+    /// it catches the coarse, likely mistake for free. Checked by
+    /// `debug_assert_eq!` on every later insert, so it costs nothing in
+    /// release builds and fails loudly in tests/debug.
+    /// type-audit: bare-ok(count)
+    corner_weights_geo_level: Option<u32>,
+}
+
+impl RoomMeshMemo {
+    /// An empty memo — construct one per session/tick scope, matching
+    /// [`crate::room`]'s sibling `PrimaryAfraidMemo` precedent in
+    /// `windows/vessel`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// A read-only consult of the `corner_weights` half: `None` on a cache
+    /// miss (the caller falls through to a fresh [`RoomAddr::corner_weights`]
+    /// call), `Some(inner)` on a hit, where `inner` is the memoized
+    /// `corner_weights` result itself (which can legitimately be `None` for
+    /// an above-the-grid room — that is a cached ABSENCE, distinct from "not
+    /// looked up yet"). The read-only sibling of [`RoomAddr::
+    /// corner_weights_memo`]: this one takes `&self` (a caller who only
+    /// holds a SHARED reference — e.g. a prefilled cache embedded in a
+    /// `&self`-only reader — can still consult it, just never fill a miss).
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights_lookup(&self, addr: &RoomAddr) -> Option<Option<[(CellId, u64); 3]>> {
+        self.corner_weights.get(addr).copied()
+    }
+
+    /// The `Geosphere::level()` this memo's `corner_weights` half was FIRST
+    /// filled against (the-waymark fix round, round 2) — `None` before any
+    /// `corner_weights_memo` insert. A read-side consumer that also holds
+    /// the `(Geosphere, NearestCellIndex)` it is ABOUT to read through (e.g.
+    /// `windows/locale`'s `LocaleContext`) can compare this against its own
+    /// `geo.level()` and refuse (or `debug_assert`) a mismatched pairing
+    /// BEFORE trusting a single cached weight — the read-path half of the
+    /// same geo-aliasing guard `corner_weights_memo`'s own `debug_assert_eq!`
+    /// already gives the WRITE path.
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights_geo_level(&self) -> Option<u32> {
+        self.corner_weights_geo_level
+    }
+}
+
+impl RoomAddr {
+    /// [`Self::corner_weights`], consulting/filling a caller-owned
+    /// [`RoomMeshMemo`] instead of recomputing the three
+    /// [`NearestCellIndex::nearest_to_position`] scans on every call. Byte-
+    /// identical to `corner_weights` by construction (a cache of a pure
+    /// function of `(self, geo, index)`) — pinned by
+    /// `corner_weights_memo_bit_equals_recomputation` below.
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights_memo(
+        &self,
+        geo: &Geosphere,
+        index: &NearestCellIndex,
+        memo: &mut RoomMeshMemo,
+    ) -> Option<[(CellId, u64); 3]> {
+        if let Some(&cached) = memo.corner_weights.get(self) {
+            return cached;
+        }
+        let level = geo.level();
+        match memo.corner_weights_geo_level {
+            None => memo.corner_weights_geo_level = Some(level),
+            Some(recorded) => debug_assert_eq!(
+                recorded, level,
+                "RoomMeshMemo reused across two different globe levels ({recorded} then \
+                 {level}) — a RoomAddr alone does not name which (Geosphere, NearestCellIndex) \
+                 it was resolved against, so mixing geospheres through one memo silently \
+                 returns a stale corner_weights answer; scope one memo to one fixed pair"
+            ),
+        }
+        let computed = self.corner_weights(geo, index);
+        memo.corner_weights.insert(self.clone(), computed);
+        computed
+    }
+
+    /// [`Self::neighbors`], consulting/filling a caller-owned [`RoomMeshMemo`]
+    /// instead of recomputing the icosphere lattice/edge-crossing arithmetic
+    /// on every call. Byte-identical to `neighbors` by construction (a cache
+    /// of a pure function of `self`) — pinned by
+    /// `neighbors_memo_bit_equals_recomputation` below.
+    pub fn neighbors_memo(&self, memo: &mut RoomMeshMemo) -> [RoomAddr; 3] {
+        if let Some(cached) = memo.neighbors.get(self) {
+            return cached.clone();
+        }
+        let computed = self.neighbors();
+        memo.neighbors.insert(self.clone(), computed.clone());
+        computed
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1184,5 +1308,186 @@ mod tests {
             };
             assert_eq!(r.face_lattice().scale, 1i64 << depth);
         }
+    }
+
+    #[test]
+    fn neighbors_memo_bit_equals_recomputation() {
+        // Every room's memoized neighbours must be EXACTLY (not just
+        // equivalent-up-to-order) what a fresh `neighbors()` call returns —
+        // integer geometry, so plain equality is already exact (no float ULP
+        // concern the way `coord`'s bit-pin needs `to_bits()`). One memo
+        // shared across every base face and both interior and edge-crossing
+        // rooms (the-waymark, Task 3).
+        let mut memo = RoomMeshMemo::new();
+        for level in [0u32, 1, 2, 3] {
+            for addr in all_addrs(level) {
+                let expected = addr.neighbors();
+                let got = addr.neighbors_memo(&mut memo);
+                assert_eq!(got, expected, "neighbour mismatch at {addr:?}");
+                // A second read (guaranteed cache hit) must agree too.
+                let got_again = addr.neighbors_memo(&mut memo);
+                assert_eq!(got_again, expected, "cached read mismatch at {addr:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn neighbors_memo_actually_memoizes() {
+        // Not just correct — actually a cache: two reads of the SAME room
+        // insert exactly one entry, and distinct rooms accumulate one entry
+        // each (private-field check, same module).
+        let mut memo = RoomMeshMemo::new();
+        let a = RoomAddr {
+            face: 3,
+            path: vec![1, 2],
+        };
+        let b = RoomAddr {
+            face: 7,
+            path: vec![0, 3, 1],
+        };
+        let _ = a.neighbors_memo(&mut memo);
+        assert_eq!(memo.neighbors.len(), 1);
+        let _ = a.neighbors_memo(&mut memo);
+        assert_eq!(
+            memo.neighbors.len(),
+            1,
+            "a repeat read must not grow the memo"
+        );
+        let _ = b.neighbors_memo(&mut memo);
+        assert_eq!(memo.neighbors.len(), 2, "a distinct room adds one entry");
+    }
+
+    #[test]
+    fn corner_weights_memo_bit_equals_recomputation() {
+        use crate::NearestCellIndex;
+        // Same exact-equality pin as `neighbors_memo`, over both grid-covered
+        // and above-the-grid (`None`) rooms, at a couple of globe levels —
+        // `corner_weights` is exact-integer too (weights are barycentric
+        // numerators over `3 << depth`), so no ULP concern here either.
+        for globe_level in [2u32, 3] {
+            let geo = Geosphere::new(globe_level);
+            let index = NearestCellIndex::new(&geo);
+            let mut memo = RoomMeshMemo::new();
+            for level in [globe_level, globe_level + 1, globe_level + 2] {
+                for addr in all_addrs(level) {
+                    let expected = addr.corner_weights(&geo, &index);
+                    let got = addr.corner_weights_memo(&geo, &index, &mut memo);
+                    assert_eq!(got, expected, "corner_weights mismatch at {addr:?}");
+                    let got_again = addr.corner_weights_memo(&geo, &index, &mut memo);
+                    assert_eq!(got_again, expected, "cached read mismatch at {addr:?}");
+                }
+            }
+            // Above-the-grid rooms (shallower than the globe level) must
+            // memoize their `None` too, not just grid-covered `Some`s.
+            for addr in all_addrs(globe_level.saturating_sub(1)) {
+                let expected = addr.corner_weights(&geo, &index);
+                assert!(expected.is_none(), "fixture must be above the grid");
+                let got = addr.corner_weights_memo(&geo, &index, &mut memo);
+                assert_eq!(got, expected, "None must memoize at {addr:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn corner_weights_memo_actually_memoizes() {
+        use crate::NearestCellIndex;
+        let geo = Geosphere::new(3);
+        let index = NearestCellIndex::new(&geo);
+        let mut memo = RoomMeshMemo::new();
+        let a = RoomAddr {
+            face: 2,
+            path: vec![0, 3, 1, 2, 3],
+        };
+        let b = RoomAddr {
+            face: 9,
+            path: vec![1, 1, 1, 1, 1],
+        };
+        let _ = a.corner_weights_memo(&geo, &index, &mut memo);
+        assert_eq!(memo.corner_weights.len(), 1);
+        let _ = a.corner_weights_memo(&geo, &index, &mut memo);
+        assert_eq!(
+            memo.corner_weights.len(),
+            1,
+            "a repeat read must not grow the memo"
+        );
+        let _ = b.corner_weights_memo(&geo, &index, &mut memo);
+        assert_eq!(
+            memo.corner_weights.len(),
+            2,
+            "a distinct room adds one entry"
+        );
+    }
+
+    #[test]
+    fn corner_weights_lookup_distinguishes_miss_from_a_cached_none() {
+        use crate::NearestCellIndex;
+        // Above-the-grid `None` and "never looked up" must read differently
+        // through the read-only lookup — a `_cached` consumer (Task 3 fix
+        // round, Finding 1) that only checks "is there a Some inner value"
+        // would otherwise treat a cached above-grid `None` as a miss and
+        // recompute forever, defeating the whole point of prefilling it.
+        let geo = Geosphere::new(3);
+        let index = NearestCellIndex::new(&geo);
+        let mut memo = RoomMeshMemo::new();
+        let above_grid = RoomAddr {
+            face: 0,
+            path: vec![1],
+        };
+        let below_grid = RoomAddr {
+            face: 0,
+            path: vec![0, 3, 1, 2, 3],
+        };
+        assert_eq!(
+            memo.corner_weights_lookup(&above_grid),
+            None,
+            "never looked up: a true miss"
+        );
+        let _ = above_grid.corner_weights_memo(&geo, &index, &mut memo);
+        assert_eq!(
+            memo.corner_weights_lookup(&above_grid),
+            Some(None),
+            "cached as above-grid: a HIT whose inner value is None"
+        );
+        assert_eq!(
+            memo.corner_weights_lookup(&below_grid),
+            None,
+            "a different, never-looked-up room is still a miss"
+        );
+        let expected = below_grid.corner_weights(&geo, &index);
+        let _ = below_grid.corner_weights_memo(&geo, &index, &mut memo);
+        assert_eq!(
+            memo.corner_weights_lookup(&below_grid),
+            Some(expected),
+            "cached as below-grid: a HIT whose inner value is the real weights"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "RoomMeshMemo reused across two different globe levels")]
+    fn corner_weights_memo_asserts_against_geo_level_aliasing() {
+        use crate::NearestCellIndex;
+        // The-waymark fix round, Finding minor rider (a): one memo fed from
+        // TWO different `Geosphere` levels is the exact footgun the field
+        // doc warns about (a `RoomAddr` alone does not name which
+        // `(Geosphere, NearestCellIndex)` resolved it) — the recorded
+        // discriminant must catch it via `debug_assert_eq!`.
+        let geo_a = Geosphere::new(2);
+        let index_a = NearestCellIndex::new(&geo_a);
+        let geo_b = Geosphere::new(3);
+        let index_b = NearestCellIndex::new(&geo_b);
+        let mut memo = RoomMeshMemo::new();
+        let addr = RoomAddr {
+            face: 5,
+            path: vec![0, 3, 1, 2, 3],
+        };
+        // First insert at level 2 records the discriminant...
+        let _ = addr.corner_weights_memo(&geo_a, &index_a, &mut memo);
+        // ...a DIFFERENT room at level 3 through the SAME memo must panic
+        // (same memo, different geosphere — the aliasing this guards).
+        let other = RoomAddr {
+            face: 6,
+            path: vec![1, 0, 3, 1, 2, 3],
+        };
+        let _ = other.corner_weights_memo(&geo_b, &index_b, &mut memo);
     }
 }
