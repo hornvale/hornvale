@@ -838,11 +838,22 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     let outcomes = tropes::resolve(&corpus, &world.registry);
-    // Mode is positional; a leading flag means no mode was given.
-    let mode = args
-        .get(1)
-        .map(String::as_str)
-        .filter(|m| !m.starts_with("--"));
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`. `flag_value`
+    // (above) only ever supports `--flag value` as two separate args, never
+    // `--flag=value`, so every `--`-prefixed token unconditionally consumes
+    // the next token as its value.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
     match mode {
         Some("report") | None => {
             print!("{}", tropes::render(&corpus, &outcomes, &world.registry));

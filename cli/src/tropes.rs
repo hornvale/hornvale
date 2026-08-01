@@ -10,20 +10,15 @@ use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One situation as authored in the corpus.
-///
-/// The corpus JSON also carries a Greimas `actants` map per situation (role →
-/// description); nothing in the coverage report reads it, so it is not
-/// modelled here — an unread field is exactly the dead code that removing
-/// `#![allow(dead_code)]` (Task 3) is meant to surface. `serde` ignores the
-/// unmodelled key rather than erroring, so the committed corpus file is
-/// unaffected.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: name), bare-ok(identifier-text: requires), bare-ok(prose: excluded_by)
+/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: name), bare-ok(prose: actants), bare-ok(identifier-text: requires), bare-ok(prose: excluded_by)
 #[derive(Debug, Deserialize)]
 pub struct Situation {
     /// Stable corpus-local identifier.
     pub id: String,
     /// Human-readable situation name.
     pub name: String,
+    /// Greimas actant role → the role's description in this situation.
+    pub actants: BTreeMap<String, String>,
     /// Namespaced tokens and `bundle:` references this situation needs.
     pub requires: Vec<String>,
     /// Preconditions whose absence makes this situation inapplicable.
@@ -143,7 +138,7 @@ pub fn render(
     s.push_str(&format!("- **Source:** {}\n", corpus.provenance));
     s.push_str(&format!("- **Frozen:** {}\n", corpus.frozen));
     s.push_str(
-        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\n",
+        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\nA low score is the expected reading at this stage: the report is a baseline\ntaken before the machinery it measures exists. What carries information is\nmovement between runs, not the absolute number.\n\n",
     );
 
     let stageable = out.values().filter(|o| **o == Outcome::Stageable).count();
@@ -153,13 +148,23 @@ pub fn render(
         .count();
     s.push_str("## Demand\n\n");
     s.push_str(&format!(
-        "Stageable {stageable} of {} ({inapplicable} inapplicable).\n\n| Situation | Outcome |\n|---|---|\n",
+        "Stageable {stageable} of {} ({inapplicable} inapplicable).\n\n| Situation | Actants | Outcome |\n|---|---|---|\n",
         out.len()
     ));
     let names: BTreeMap<&str, &str> = corpus
         .situations
         .iter()
         .map(|x| (x.id.as_str(), x.name.as_str()))
+        .collect();
+    let roles: BTreeMap<&str, String> = corpus
+        .situations
+        .iter()
+        .map(|x| {
+            (
+                x.id.as_str(),
+                x.actants.keys().cloned().collect::<Vec<_>>().join(", "),
+            )
+        })
         .collect();
     for (id, o) in out {
         let cell = match o {
@@ -168,25 +173,68 @@ pub fn render(
             Outcome::Blocked(m) => format!("blocked — missing `{}`", m.join("`, `")),
         };
         s.push_str(&format!(
-            "| {} ({id}) | {cell} |\n",
-            names.get(id.as_str()).copied().unwrap_or("?")
+            "| {} ({id}) | {} | {cell} |\n",
+            names.get(id.as_str()).copied().unwrap_or("?"),
+            roles.get(id.as_str()).map(String::as_str).unwrap_or("")
         ));
     }
 
+    // Rank only bundles that are actually MISSING. A blocked situation also
+    // requires bundles the world already holds; counting those put seven
+    // satisfied bundles in a table headed "missing", and the backlog
+    // ordering IS the deliverable here (spec D3, P1).
+    let held = registry_tokens(registry);
     let mut fan: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for st in &corpus.situations {
         if let Some(Outcome::Blocked(_)) = out.get(&st.id) {
             for r in st.requires.iter().filter(|r| r.starts_with("bundle:")) {
-                fan.entry(r.clone()).or_default().push(st.id.clone());
+                if expand(corpus, r).iter().any(|t| !held.contains(t)) {
+                    fan.entry(r.clone()).or_default().push(st.id.clone());
+                }
             }
         }
     }
     let mut ranked: Vec<_> = fan.into_iter().collect();
     ranked.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
-    s.push_str("\n## Leverage\n\nMissing bundles by fan-in — the backlog ordering.\n\n| Bundle | Unlocks | Situations |\n|---|---|---|\n");
+
+    // How close is the closest blocked situation? If this is ever 1, a single
+    // bundle really would unlock something and the caveat below should change.
+    let closest = corpus
+        .situations
+        .iter()
+        .filter(|st| matches!(out.get(&st.id), Some(Outcome::Blocked(_))))
+        .map(|st| {
+            st.requires
+                .iter()
+                .filter(|r| r.starts_with("bundle:"))
+                .filter(|r| expand(corpus, r).iter().any(|t| !held.contains(t)))
+                .count()
+        })
+        .min()
+        .unwrap_or(0);
+    let blocked = out
+        .values()
+        .filter(|o| matches!(o, Outcome::Blocked(_)))
+        .count();
+    s.push_str(&format!(
+        "\n## Leverage\n\nMissing bundles ranked by fan-in over the {blocked} **blocked** \
+         situations. The {inapplicable} inapplicable situation(s) are excluded from this \
+         ranking but still count as demand in Supply, so the two sections use different \
+         populations on purpose. The **corpus** column counts all {} situations, including \
+         inapplicable ones.\n\nFan-in is **not** an unlock count: the closest blocked \
+         situation is still missing {closest} bundles, so no single row makes anything \
+         stageable on its own.\n\n| Bundle | Fan-in (blocked) | Corpus | Situations |\n\
+         |---|---|---|---|\n",
+        out.len()
+    ));
     for (bundle, sits) in &ranked {
+        let corpus_wide = corpus
+            .situations
+            .iter()
+            .filter(|st| st.requires.contains(bundle))
+            .count();
         s.push_str(&format!(
-            "| `{bundle}` | {} | {} |\n",
+            "| `{bundle}` | {} | {corpus_wide} | {} |\n",
             sits.len(),
             sits.join(", ")
         ));
@@ -197,12 +245,20 @@ pub fn render(
         .iter()
         .flat_map(|st| st.requires.iter().flat_map(|r| expand(corpus, r)))
         .collect();
-    let orphans: Vec<String> = registry_tokens(registry)
-        .into_iter()
-        .filter(|t| !required.contains(t))
+    let orphans: Vec<String> = held
+        .iter()
+        .filter(|t| !required.contains(*t))
+        .cloned()
         .collect();
     s.push_str(&format!(
-        "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\nA rising demand score with a rising supply count means capability is being\nregistered that nothing uses (spec D5).\n\n",
+        "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\n\n\
+         **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires *and no \
+         readout consumes*; the second half is not implemented. So this list includes \
+         tokens that readouts do consume — `predicate:is-a` carries the Book, and the \
+         `moon-*` family carries the almanac. Read it as *unrequired by this catalogue*, \
+         not *unused*. Spec D5's Goodhart guard — a rising demand score beside a rising \
+         count of genuinely unconsumed tokens — needs the missing half before this list \
+         can serve it.\n\n",
         orphans.len()
     ));
     // Annotate `concept:` orphans with their owning domain. Many come from
@@ -376,5 +432,27 @@ mod tests {
             assert!(text.contains(section), "missing {section}");
         }
         assert!(text.contains("GENERATED FILE"));
+    }
+
+    /// The corpus's actant roles stay inside Greimas' six. A seventh role, or
+    /// a situation declaring none, means the hand-authored decomposition
+    /// vocabulary drifted — and nothing else in the workspace checks it.
+    #[test]
+    fn every_situation_declares_only_greimas_actants() {
+        const GREIMAS: [&str; 6] = [
+            "helper", "object", "opponent", "receiver", "sender", "subject",
+        ];
+        let corpus =
+            load(include_str!("../../tropes/polti.trope.json")).expect("the live corpus parses");
+        for st in &corpus.situations {
+            assert!(!st.actants.is_empty(), "{} declares no actants", st.id);
+            for role in st.actants.keys() {
+                assert!(
+                    GREIMAS.contains(&role.as_str()),
+                    "{}: actant role `{role}` is not one of Greimas' six",
+                    st.id
+                );
+            }
+        }
     }
 }
