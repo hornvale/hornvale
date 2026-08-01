@@ -45,7 +45,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 /// Built by the composition root, which alone can see occupation records and
 /// species lifespans. Every field is a kernel type so this crate needs no
 /// sibling domain.
-/// type-audit: bare-ok(identifier-text: name), bare-ok(count: birth_day), bare-ok(count: death_day)
+/// type-audit: waiver(decision-0014: birth_day), waiver(decision-0014: founding_day), waiver(decision-0014: death_day), bare-ok(identifier-text: name)
 #[derive(Clone, Debug, PartialEq)]
 pub struct PersonSeed {
     /// The community whose occupation this person founded.
@@ -53,8 +53,16 @@ pub struct PersonSeed {
     /// The name this person is remembered by, drawn at genesis where the
     /// language machinery lives. Committed, not derived at render time.
     pub name: String,
-    /// Birth, in absolute standard days.
+    /// Birth, in absolute standard days. May be NEGATIVE: the history record
+    /// begins at day 0 and a founder of a day-0 settlement was already grown,
+    /// so they were born before the record starts. That is honest rather than
+    /// clamped — `Fact.day` carries a sign and nothing downstream assumes
+    /// otherwise.
     pub birth_day: f64,
+    /// The day this person founded `community` — the occupation's own
+    /// founding day. Distinct from `birth_day` because a newborn founds
+    /// nothing.
+    pub founding_day: f64,
     /// Death, in absolute standard days. `None` means still alive at `now`.
     pub death_day: Option<f64>,
 }
@@ -74,14 +82,13 @@ fn fact(subject: EntityId, predicate: &str, object: Value, community: EntityId, 
 
 /// Commit one person per seed, in the order given.
 ///
-/// Four facts always — `is-person`, `name`, `person-founded`, `person-born` —
-/// plus a fifth when the person has already died. `name` is kernel-core and
-/// exempt from the single-writer check, so committing it here is not a
-/// violation; several domains already do.
-/// A living
-/// person is represented by the *absence* of `person-died`: birth is known and
-/// death may not have happened, which is the asymmetry the occupation data
-/// already carries.
+/// Four facts always — `is-person`, `name`, `person-born`, `person-founded` —
+/// plus a fifth when `death_day` is set; the caller decides that, because only
+/// the composition root knows `now`. `name` is kernel-core and exempt from the
+/// single-writer check, so committing it here is not a violation; several
+/// domains already do. Each fact is stamped at the day it became true —
+/// `person-born` at `birth_day`, `person-founded` at `founding_day` — so an
+/// as-of-day query never sees a newborn as already a founder.
 pub fn genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>, LedgerError> {
     let mut ids = Vec::with_capacity(seeds.len());
     for s in seeds {
@@ -103,8 +110,8 @@ pub fn genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>,
         world.ledger.commit(
             fact(
                 id,
-                PERSON_FOUNDED,
-                Value::Entity(s.community),
+                PERSON_BORN,
+                Value::Number(s.birth_day),
                 s.community,
                 s.birth_day,
             ),
@@ -113,10 +120,10 @@ pub fn genesis(world: &mut World, seeds: &[PersonSeed]) -> Result<Vec<EntityId>,
         world.ledger.commit(
             fact(
                 id,
-                PERSON_BORN,
-                Value::Number(s.birth_day),
+                PERSON_FOUNDED,
+                Value::Entity(s.community),
                 s.community,
-                s.birth_day,
+                s.founding_day,
             ),
             &world.registry,
         )?;
@@ -177,12 +184,14 @@ mod tests {
                     community,
                     name: "Grokk".to_string(),
                     birth_day: 10.0,
+                    founding_day: 30.0,
                     death_day: Some(60.0),
                 },
                 crate::PersonSeed {
                     community,
                     name: "Vashti".to_string(),
                     birth_day: 20.0,
+                    founding_day: 25.0,
                     death_day: None,
                 },
             ],
@@ -194,7 +203,57 @@ mod tests {
         assert_eq!(died.len(), 1, "only the dead founder carries a death fact");
         assert_eq!(died[0].subject, ids[0]);
 
+        let founded: Vec<&hornvale_kernel::Fact> =
+            world.ledger.find(crate::PERSON_FOUNDED).collect();
+        assert_eq!(founded.len(), 2, "every founder carries a founding fact");
+        for f in &founded {
+            let day = f.day.expect("person-founded carries a day");
+            assert_ne!(
+                day,
+                if f.subject == ids[0] { 10.0 } else { 20.0 },
+                "founded is stamped at founding_day, not birth_day"
+            );
+        }
+
         let born: Vec<&hornvale_kernel::Fact> = world.ledger.find(crate::PERSON_BORN).collect();
         assert_eq!(born.len(), 2, "every founder carries a birth fact");
+    }
+
+    #[test]
+    fn a_founder_matures_before_founding_and_the_stamps_say_so() {
+        let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
+        crate::register_concepts(&mut world.registry).expect("registers");
+        let community = world.ledger.mint_entity();
+        let ids = crate::genesis(
+            &mut world,
+            &[crate::PersonSeed {
+                community,
+                name: "Grokk".to_string(),
+                birth_day: -7305.0,
+                founding_day: 0.0,
+                death_day: Some(10_000.0),
+            }],
+        )
+        .expect("commits");
+
+        let day_of = |p: &str| -> f64 {
+            world
+                .ledger
+                .facts_about(ids[0])
+                .find(|f| f.predicate == p)
+                .and_then(|f| f.day)
+                .expect("every person fact carries a day")
+        };
+        assert_eq!(
+            day_of(crate::PERSON_BORN),
+            -7305.0,
+            "born before the record"
+        );
+        assert_eq!(day_of(crate::PERSON_FOUNDED), 0.0, "founded when grown");
+        assert_eq!(day_of(crate::PERSON_DIED), 10_000.0, "died at death");
+        assert!(
+            day_of(crate::PERSON_BORN) < day_of(crate::PERSON_FOUNDED),
+            "a newborn founds nothing"
+        );
     }
 }

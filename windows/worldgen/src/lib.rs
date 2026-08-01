@@ -298,6 +298,8 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // seed labels, so its predicates must be registered and its stream labels
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
+    // Order matters on this roster only for concept lenders and borrowers;
+    // person is neither, so it sits last with no ordering constraint.
     &hornvale_person::Person,
 ];
 
