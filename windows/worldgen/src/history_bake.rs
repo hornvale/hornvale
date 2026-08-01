@@ -369,6 +369,13 @@ pub struct BakeId(pub u64);
 /// Unlike [`OccupationRecord`] it knows its community and its lineage, because
 /// the simulation tracks both; neither survives emit, because neither is
 /// committed as a fact.
+///
+/// It deliberately does **not** delegate `is_alive`/`tenure` the way
+/// [`OccupationRecord`] does. Bake-side callers write `.core.is_alive()`, and
+/// the extra word is the point: inside the bake an occupation is one of
+/// thousands being stepped, and the reminder that the liveness question is
+/// asked of the shared core — not of the handle-bearing wrapper — is worth
+/// more than the brevity.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BakeOccupation {
     /// The facts both sides agree on.

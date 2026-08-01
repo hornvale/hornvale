@@ -49,7 +49,9 @@ pub enum TechHorizon {
     Classical,
 }
 
-/// How an occupation ended: on its own terms, or at another entity's hand.
+/// How an occupation ended: on its own terms, or at another entity's hand
+/// (the ★ global thread — every "ended by" reference in the engine resolves
+/// through this same shape).
 ///
 /// Generic over the handle type so the bake can reference its own private
 /// handles and the ledger side can reference committed entities, without the
@@ -64,7 +66,8 @@ pub enum Ended<I> {
 }
 
 /// How an occupation began: raised from nothing at a site, or founded by
-/// settlers from another community.
+/// settlers from another community (the ★ global thread — every "founded
+/// from" reference in the engine resolves through this same shape).
 ///
 /// Generic over the handle type, for the same reason as [`Ended`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
