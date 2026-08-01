@@ -175,3 +175,19 @@ carries the almanac — and must be read as *unrequired by this catalogue*, not
 *unused*. The Goodhart guard the spec wanted, a rising demand score beside a
 rising count of genuinely unconsumed tokens, needs the missing half before it
 can serve. The section says so, above the list rather than below it.
+
+## What was settled
+
+The campaign ratified one thing, as [decision
+0095](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0095-a-corpus-is-an-instrument-never-a-standard.md):
+a trope corpus is a provenance-stamped **instrument**, never a **standard**.
+Provenance is emitted before any number rather than documented elsewhere; a
+situation the world deliberately forecloses resolves `inapplicable(reason)`
+rather than counting against it; and the output is a matrix over corpora, of
+which one corpus can only ever supply a column.
+
+That last commitment is the one still owed. Polti asks which situations exist,
+Propp asks what order they arrive in, a fan taxonomy asks what an audience
+notices — and the disagreement between them is the measurement this instrument
+is eventually for. Until a second corpus exists, the report says *reach against
+this catalogue*, and it is careful never to say *coverage*.
