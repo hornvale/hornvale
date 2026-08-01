@@ -109,9 +109,37 @@ is the difference between correct and silently wrong.**
 
 **D4 — Five facts per person, and death is conditional.**
 `is-person`, `person-founded`, `person-born` and `name` always; `person-died`
-**only if the derived death day has already passed**. Birth is the occupation's
-`founded` day; death is `founded + lifespan(species)` via
-`domains/species::allometry::life_history`, which takes no `Seed` or `Stream`.
+**only if the derived death day has already passed**.
+
+**A founder matures before founding.** An earlier draft of this spec set birth to
+the occupation's `founded` day, which made every founder born on the day they
+founded the place — not a stamping slip but an incoherent life, caught in Task 1's
+review. `life_history` already returns `age_at_maturity` beside the `lifespan` the
+design uses, so:
+
+```
+birth = founded − age_at_maturity      (falls back to founded if None)
+death = birth + lifespan               (committed only if death ≤ now)
+```
+
+Each fact is stamped at the day it became true: `is-person`, `name` and
+`person-born` at **birth**, `person-founded` at **founded**, `person-died` at
+**death**. Born, matured, founded, died — an order a test can check, and one this
+codebase already insists on elsewhere (`history_emit.rs:127-133` splits `founded`
+from `ended` so an as-of-day query cannot see an occupation as already-ended on
+its founding day).
+
+**Birth days go negative, and that is honest.** The history record begins at day
+0; a founder of a day-0 settlement was already grown, so they were born before the
+record starts. `Fact.day` carries a sign and nothing downstream assumes otherwise.
+Clamping to 0 would assert a birth that did not happen.
+
+**This moved P6.** Spreading birth dates changes whether any two same-people
+founders' lifespans overlap, which is exactly what P6 asks. The change is a
+coherence correction rather than a retune — founders born the day they founded is
+wrong independent of any prediction — but the chronicle must state that the rule
+changed, and why, before P6 is scored. `life_history` still takes no `Seed` or
+`Stream`.
 
 **`person-founded` exists for the reader, not the corpus.** It points at the
 community entity whose occupation this founder opened. The bundle does not
@@ -306,6 +334,13 @@ other way, and P6 most of all.
   this fails, the cast contains no contemporaries and cannot stage a two-actant
   situation even in principle** — which would be the single most useful thing
   this campaign could learn, and would reshape the next one.
+
+  **Scored under D4's corrected birth rule**, not the original one. The rule
+  changed during Task 1's review (birth moved from `founded` to
+  `founded − age_at_maturity`) because founders born on their founding day is
+  incoherent regardless of what P6 says. Recording the sequence so the score can
+  be read honestly: the flaw was found by a reviewer, the fix was chosen for
+  coherence, and P6 had not been scored when it was made.
 - **P7 — The cast spans all five peoples on every seed**, with per-people counts
   equal to `min(MEMORY_DEPTH, occupations)`. A people missing entirely means the
   roster resolution or the per-people grouping is wrong.
