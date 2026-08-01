@@ -83,6 +83,7 @@ pub mod components;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
+pub mod person_promote;
 pub mod render;
 pub mod schedule;
 pub mod settlement_pins;

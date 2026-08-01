@@ -97,6 +97,8 @@ pub enum NameKind {
     /// An epithet: a descriptive root, optionally reduplicated and
     /// optionally honorific-prefixed (see [`MorphOptions`]).
     Epithet,
+    /// A person's name: a bare stem, like a settlement's.
+    Person,
 }
 
 impl NameKind {
@@ -108,6 +110,7 @@ impl NameKind {
             NameKind::Settlement => "settlement",
             NameKind::Deity => "deity",
             NameKind::Epithet => "epithet",
+            NameKind::Person => "person",
         }
     }
 }
@@ -1097,7 +1100,7 @@ impl<'a> Namer<'a> {
         stream: &mut Stream,
     ) -> GeneratedName {
         let syllables = match kind {
-            NameKind::Settlement => self.draw_syllables(stream, 2, 3, false),
+            NameKind::Settlement | NameKind::Person => self.draw_syllables(stream, 2, 3, false),
             NameKind::Deity => self.draw_syllables(stream, 2, 3, true),
             NameKind::Epithet => {
                 let mut syllables = self.draw_syllables(stream, 1, 2, false);

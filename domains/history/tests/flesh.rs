@@ -3,8 +3,8 @@
 //! inputs always produce the same output, with no world or global state.
 
 use hornvale_history::flesh::{
-    Departure, Durability, ResidueItem, RoleHandle, Structure, persona_of, residue_of,
-    structures_of,
+    Departure, Durability, ResidueItem, RoleHandle, Structure, founder_handle, persona_of,
+    residue_of, structures_of,
 };
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
@@ -185,4 +185,40 @@ fn structures_are_deterministic_and_gated_by_function() {
     assert!(a.contains(&Structure::Hut));
     assert!(a.contains(&Structure::Granary)); // Function::Agrarian
     assert!(!a.contains(&Structure::Mineshaft));
+}
+
+#[test]
+fn a_founder_handle_ignores_entity_ids_and_notices_semantics() {
+    let e = EntityId::new(1).expect("nonzero");
+    let mut a = OccupationRecord {
+        people: KindId("goblin"),
+        community: e,
+        lineage: e,
+        site: CellId(4),
+        founded: 25.0,
+        ended: None,
+        peak_population: 40,
+        tech: TechHorizon::Neolithic,
+        function: Function::Agrarian,
+        deity: None,
+        tongue: None,
+        cause: None,
+        ended_by: Ended::Nature,
+        founded_from: Founding::Genesis(CellId(4)),
+        notability: Notability::Common,
+    };
+    let mut b = a.clone();
+    b.community = EntityId::new(9_999).expect("nonzero");
+    b.lineage = b.community;
+    assert_eq!(
+        founder_handle(&a).0,
+        founder_handle(&b).0,
+        "mint order must not change a founder's identity (decision 0051)"
+    );
+    a.peak_population = 41;
+    assert_ne!(
+        founder_handle(&a).0,
+        founder_handle(&b).0,
+        "a semantic difference must change the handle"
+    );
 }

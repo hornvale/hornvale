@@ -62,6 +62,41 @@ pub fn persona_of(handle: RoleHandle, seed: Seed) -> Persona {
     }
 }
 
+/// A discriminant mixed into every founder handle, so that a future second
+/// role at the same occupation cannot collide with the founder.
+const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
+
+/// Derive a founder's stable identity from an occupation's **semantic** fields.
+///
+/// Never from its `EntityId` and never from its position in a collection.
+/// Decision 0051 forbids salting a procedural name from mint order, and a
+/// handle is exactly such a salt — `persona_of` turns it into a name. Keying on
+/// the occupation entity would rename every founder in the world the first time
+/// an unrelated domain minted earlier in genesis.
+///
+/// `(people, site, founded, ended, peak_population)` is unique across the
+/// selected cast on every measured seed (90/90, 82/82, 100/100 for seeds 42, 7
+/// and 1000) and collides on 3 of 1776 occupations world-wide — records that are
+/// genuinely indistinguishable in every emitted field. `select_founders`
+/// asserts cast-uniqueness rather than trusting it.
+pub fn founder_handle(occ: &OccupationRecord) -> RoleHandle {
+    let mut x: u64 = 0xA076_1D64_78BD_642F;
+    let mix = |v: u64, x: &mut u64| {
+        *x ^= v;
+        *x = x.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        *x ^= *x >> 29;
+    };
+    for b in occ.people.0.bytes() {
+        mix(u64::from(b), &mut x);
+    }
+    mix(u64::from(occ.site.0), &mut x);
+    mix(occ.founded.to_bits(), &mut x);
+    mix(occ.ended.map_or(u64::MAX, f64::to_bits), &mut x);
+    mix(u64::from(occ.peak_population), &mut x);
+    mix(FOUNDER_ROLE, &mut x);
+    RoleHandle(x)
+}
+
 /// The age (standard years) past which a *perishable* find — cloth, wood,
 /// food, ash, a child's doll — has rotted back into the soil. Only a young
 /// ruin still holds them; this is the same threshold the engine has always
