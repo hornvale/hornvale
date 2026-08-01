@@ -5,12 +5,12 @@
 
 use hornvale_history::IS_RUIN;
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon, layer_key,
 };
-use hornvale_kernel::{CellId, KindId, Seed, World};
+use hornvale_kernel::{CellId, EntityId, KindId, Seed, World};
 use hornvale_worldgen::{
-    BakeId, BakeOccupation, History, TributeRelation, emit_history, occupation_records,
-    occupations_at, ruins_of_people, territories,
+    BakeId, BakeOccupation, History, SkyChoice, TributeRelation, build_world, emit_history,
+    occupation_records, occupations_at, occupations_by_cell, ruins_of_people, territories,
 };
 
 /// A bake-local handle for these hand-built fixtures — every `History` this
@@ -362,4 +362,101 @@ fn emit_is_deterministic() {
         serde_json::to_string(&b.ledger).unwrap(),
         "same history must emit byte-identical ledgers"
     );
+}
+
+/// A fresh world with the concepts the material-comparator tests below need
+/// committed — same registration `test_world` already does, under the name
+/// those tests use.
+fn world_with_registry() -> World {
+    test_world()
+}
+
+/// Commit one hand-built occupation directly into `w`'s ledger via
+/// `emit_history` (a one-record `History`, the same committing style
+/// `hand_history` uses), returning the entity minted for it. Finds the new
+/// entity by set difference against the `is-occupation` subjects already
+/// present before the commit, so it works regardless of how many occupations
+/// already sit on `w`'s ledger.
+fn commit_occupation(
+    w: &mut World,
+    site: CellId,
+    founded: f64,
+    ended: Option<f64>,
+    peak_population: u32,
+) -> EntityId {
+    let before: std::collections::BTreeSet<EntityId> = w
+        .ledger
+        .find(hornvale_history::IS_OCCUPATION)
+        .map(|f| f.subject)
+        .collect();
+
+    let mut record = base_record(1, "goblin", site.0, founded);
+    record.core.ended = ended;
+    record.core.peak_population = peak_population;
+    let h = History::new(vec![record], ended.unwrap_or(founded) + 1.0);
+    emit_history(w, &h).unwrap();
+
+    w.ledger
+        .find(hornvale_history::IS_OCCUPATION)
+        .map(|f| f.subject)
+        .find(|e| !before.contains(e))
+        .expect("emit_history must mint exactly one new occupation entity")
+}
+
+#[test]
+fn same_day_layers_order_by_material_facts_not_mint_order() {
+    // Two occupations of one cell founded the same day. The one that ended
+    // FIRST lies deeper — that is what a stratigraphy is. Mint order is
+    // deliberately the reverse, so a mint-order comparator fails this.
+    //
+    // The two commits below are deliberately in ended-DESCENDING order
+    // (late-ending record committed first, early-ending record committed
+    // second): sequential minting then gives the early-ending record the
+    // LARGER entity id, i.e. mint order is the exact opposite of material
+    // order. Committing in the other order would let a mint-order tie-break
+    // coincidentally agree with the material order, and the guard below
+    // would never fire.
+    let mut w = world_with_registry();
+    let late_end = commit_occupation(&mut w, CellId(4), 100.0, Some(900.0), 20);
+    let early_end = commit_occupation(&mut w, CellId(4), 100.0, Some(150.0), 20);
+    assert!(
+        early_end.get() > late_end.get(),
+        "fixture must mint the early-ending record LAST, or the test proves nothing"
+    );
+
+    let layers = occupations_at(&w, CellId(4));
+    assert_eq!(layers.len(), 2);
+    assert_eq!(
+        layers[0].id, early_end,
+        "the layer that closed first lies deeper, whatever order it was minted in"
+    );
+}
+
+#[test]
+fn the_layer_comparator_is_total_on_the_live_corpus() {
+    // No two distinct occupations of one site may compare Equal. If they do,
+    // the sort falls back to input order — the exact failure this campaign
+    // removes. Measured before implementation: (founded, ended, peak) alone
+    // ties on 6 records in seed 42, which `founded_from` is there to break.
+    for seed in [42u64, 7, 1000] {
+        let w = build_world(
+            Seed(seed),
+            &Default::default(),
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("builds");
+        for (cell, occs) in occupations_by_cell(&w) {
+            for i in 0..occs.len() {
+                for j in (i + 1)..occs.len() {
+                    assert_ne!(
+                        layer_key(&occs[i]),
+                        layer_key(&occs[j]),
+                        "seed {seed}, cell {cell:?}: two layers compare equal"
+                    );
+                }
+            }
+        }
+    }
 }

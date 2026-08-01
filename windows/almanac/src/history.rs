@@ -23,6 +23,7 @@ use hornvale_history::flesh::{
 };
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
+    layer_key,
 };
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, Value, World};
@@ -160,8 +161,11 @@ struct Layer {
 
 /// Every occupation layer sitting on `site`, oldest founding first. Reads the
 /// ledger's `is-occupation` index and keeps only those whose `occ-site`
-/// matches. Ordered by `(founded, entity-id)` via `f64::total_cmp` — total and
-/// deterministic.
+/// matches. Ordered by [`layer_key`]: material facts only (founded, then
+/// ended — a still-living occupation sorts last, then peak population, then
+/// `founded_from`) — never by mint order, so a site's stratigraphy is a
+/// property of the world, not of the order a bake loop happened to mint its
+/// entities in.
 ///
 /// The Vestige (Task 1) lifted this exact decode into
 /// `windows/worldgen::history_emit::{occupation_records, occupations_at}` so
@@ -198,13 +202,7 @@ fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
             })
         })
         .collect();
-    layers.sort_by(|a, b| {
-        a.record
-            .core
-            .founded
-            .total_cmp(&b.record.core.founded)
-            .then(a.entity.0.cmp(&b.entity.0))
-    });
+    layers.sort_by_key(|l| layer_key(&l.record));
     layers
 }
 

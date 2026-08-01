@@ -15,6 +15,7 @@ use crate::history_bake::BakeId;
 use crate::{BuildError, History};
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
+    layer_key,
 };
 use hornvale_kernel::{CellId, EntityId, Fact, KindId, Value, World};
 use std::collections::{BTreeMap, BTreeSet};
@@ -327,20 +328,17 @@ pub fn occupation_records(world: &World) -> Vec<OccupationRecord> {
 }
 
 /// Occupations on a cell, oldest-founded first (the palimpsest layers a
-/// site's stratigraphy stacks in). Ordered by `founded` via `f64::total_cmp`
-/// (total and deterministic), with the occupation's own entity id
-/// ([`OccupationRecord::id`]) breaking a same-day tie.
+/// site's stratigraphy stacks in). Ordered by [`layer_key`]: material facts
+/// only (founded, then ended — a still-living occupation sorts last, then
+/// peak population, then `founded_from`) — never by mint order, so a site's
+/// stratigraphy is a property of the world, not of the order a bake loop
+/// happened to mint its entities in.
 pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
     let mut v: Vec<OccupationRecord> = occupation_records(world)
         .into_iter()
         .filter(|o| o.core.site == cell)
         .collect();
-    v.sort_by(|a, b| {
-        a.core
-            .founded
-            .total_cmp(&b.core.founded)
-            .then(a.id.0.cmp(&b.id.0))
-    });
+    v.sort_by_key(layer_key);
     v
 }
 
@@ -350,9 +348,8 @@ pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
 /// Built for The Vestige's per-world field derivations
 /// ([`crate::vestige::vestiges_field`]) and the coming census, where calling
 /// `occupations_at` per cell would rescan the ledger `O(cells)` times. Each
-/// cell's vec is sorted with the exact same comparator `occupations_at` uses
-/// (`founded` via `f64::total_cmp`, ties broken by the occupation entity's
-/// id), so a cell's entry here is byte-for-byte identical to what
+/// cell's vec is sorted with the exact same [`layer_key`] `occupations_at`
+/// uses, so a cell's entry here is byte-for-byte identical to what
 /// `occupations_at(world, cell)` would produce.
 pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
     let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
@@ -360,12 +357,7 @@ pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationReco
         by_cell.entry(occ.core.site).or_default().push(occ);
     }
     for occs in by_cell.values_mut() {
-        occs.sort_by(|a, b| {
-            a.core
-                .founded
-                .total_cmp(&b.core.founded)
-                .then(a.id.0.cmp(&b.id.0))
-        });
+        occs.sort_by_key(layer_key);
     }
     by_cell
 }

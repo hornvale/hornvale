@@ -170,3 +170,38 @@ impl OccupationRecord {
         self.core.is_alive()
     }
 }
+
+/// The order a site's layers stack in: material facts only, oldest-founded
+/// first, and total.
+///
+/// Lives here rather than beside either caller because `windows/worldgen` and
+/// `windows/almanac` both need it and neither depends on the other — the same
+/// reason their decoders are duplicated. The decoders still are; this is one
+/// less thing that has to be kept in lockstep by hand.
+///
+/// A layer that closed earlier lies deeper, which is what a stratigraphy is; a
+/// still-living occupation is the top layer, so `None` sorts LAST; peak breaks
+/// the remainder. `founded_from` closes the final ties — ancestry is genuinely
+/// what distinguishes two occupations sharing a site, an epoch, a fate and a
+/// size (measured: 6 such records in seed 42, 4 in seed 7, 0 in seed 1000,
+/// separable by nothing else).
+/// type-audit: bare-ok(count: return)
+pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>, u8, u64) {
+    let founded = r.core.founded.to_bits();
+    let (ended_rank, ended) = match r.core.ended {
+        Some(d) => (0u8, d.to_bits()),
+        None => (1u8, 0),
+    };
+    let (from_rank, from) = match r.founded_from {
+        Founding::Genesis(c) => (0u8, u64::from(c.0)),
+        Founding::From(e) => (1u8, e.get()),
+    };
+    (
+        founded,
+        ended_rank,
+        ended,
+        std::cmp::Reverse(r.core.peak_population),
+        from_rank,
+        from,
+    )
+}
