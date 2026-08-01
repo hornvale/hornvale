@@ -691,9 +691,24 @@ Add `mod person_promote;` beside the other module declarations in `windows/world
 Run: `cargo test -q -p hornvale-worldgen person_promote`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 6: Prove the cast-uniqueness assertion discriminates**
+- [ ] **Step 6: Prove the cast-uniqueness assertion discriminates — and keep the test**
 
-Temporarily add a test that builds two records identical in people, site, founded, ended and peak, and confirm `select_founders` panics with the handle message. Run it, watch it panic, then **delete the temporary test** — it asserts a panic that the real corpus must never produce, and leaving it in would enshrine the collision as expected. Record in the commit message that it was exercised.
+```rust
+    #[test]
+    #[should_panic(expected = "share handle")]
+    fn indistinguishable_occupations_in_the_cast_are_a_hard_error() {
+        // Two records identical in every field the handle keys on. The live
+        // corpus must never produce this; the guard must fire when it does.
+        let a = rec("goblin", 7, 50.0, 60);
+        let b = a.clone();
+        let _ = select_founders(&[a, b]);
+    }
+```
+
+This is a **permanent** test, not a scaffold. It asserts that the *guard* fires on
+synthetic input — which is a property worth keeping — rather than asserting that
+the real corpus collides, which would enshrine a collision as expected. Those are
+different claims and only the second would be wrong to keep.
 
 - [ ] **Step 7: Commit**
 
