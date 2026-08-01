@@ -75,6 +75,10 @@ usage:
   hornvale concepts [--manifest]           dump the concept registry as markdown
                           (--manifest: the correspondence ledger — per-concept
                           lexeme/percept/cognition coverage + trial balance)
+  hornvale tropes [report|check] [--corpus <PATH>]
+                          score the frozen dramatic-situation corpus against the live
+                          registry (report: render to stdout; check: diff against the
+                          committed artifact; default corpus: tropes/polti.trope.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -134,6 +138,7 @@ fn main() -> ExitCode {
         Some("connections") => cmd_connections(&args),
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
+        Some("tropes") => cmd_tropes(&args),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
@@ -814,6 +819,47 @@ fn cmd_concepts(args: &[String]) -> Result<(), String> {
         print!("{}", concepts::render_concepts(&world.registry));
     }
     Ok(())
+}
+
+/// The Repertoire: score the frozen corpus against the live registry.
+/// Seed 0 as in `cmd_concepts` — the registry is identical for any seed
+/// because every predicate registers up front; this exercises the fuller
+/// pipeline as a smoke test.
+fn cmd_tropes(args: &[String]) -> Result<(), String> {
+    let path = flag_value(args, "--corpus").unwrap_or("tropes/polti.trope.json");
+    let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = tropes::load(&json)?;
+    let world = world_builder::build_world(
+        Seed(0),
+        &SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    let outcomes = tropes::resolve(&corpus, &world.registry);
+    // Mode is positional; a leading flag means no mode was given.
+    let mode = args
+        .get(1)
+        .map(String::as_str)
+        .filter(|m| !m.starts_with("--"));
+    match mode {
+        Some("report") | None => {
+            print!("{}", tropes::render(&corpus, &outcomes, &world.registry));
+            Ok(())
+        }
+        Some("check") => {
+            let live = tropes::render(&corpus, &outcomes, &world.registry);
+            let committed = std::fs::read_to_string("docs/audits/trope-coverage.md")
+                .map_err(|e| format!("docs/audits/trope-coverage.md: {e}"))?;
+            if live == committed {
+                Ok(())
+            } else {
+                Err("trope coverage drifted; run `make rebaseline` and review the diff".into())
+            }
+        }
+        Some(other) => Err(format!("tropes: unknown mode '{other}' (report|check)")),
+    }
 }
 
 fn cmd_streams() -> Result<(), String> {

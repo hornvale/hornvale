@@ -1,28 +1,29 @@
 //! The Repertoire: score a frozen corpus of dramatic situations against the
 //! concept registry. Build-state only — no seed, no world save, no census.
 //!
-//! Present in all builds; Task 3 wires `load`/`resolve` into a CLI command
-//! that renders a report from them, and Task 4 pins that report as a
-//! ratchet. Until Task 3 lands, nothing in this binary crate calls this
-//! module's public surface, which `cargo clippy -D warnings` otherwise
-//! flags as dead code — the same seam `windows/book/src/lib.rs`'s
-//! `comprehend_quantity` documents for the same reason.
-#![allow(dead_code)]
+//! Wired into the CLI as `hornvale tropes report|check`; `cmd_tropes` in
+//! `main.rs` builds a real world and calls `load`/`resolve`/`render` on it,
+//! and Task 4 pins `render`'s output as a ratchet.
 
 use hornvale_kernel::ConceptRegistry;
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One situation as authored in the corpus.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: name), bare-ok(prose: actants), bare-ok(identifier-text: requires), bare-ok(prose: excluded_by)
+///
+/// The corpus JSON also carries a Greimas `actants` map per situation (role →
+/// description); nothing in the coverage report reads it, so it is not
+/// modelled here — an unread field is exactly the dead code that removing
+/// `#![allow(dead_code)]` (Task 3) is meant to surface. `serde` ignores the
+/// unmodelled key rather than erroring, so the committed corpus file is
+/// unaffected.
+/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: name), bare-ok(identifier-text: requires), bare-ok(prose: excluded_by)
 #[derive(Debug, Deserialize)]
 pub struct Situation {
     /// Stable corpus-local identifier.
     pub id: String,
     /// Human-readable situation name.
     pub name: String,
-    /// Greimas actant role → the role's description in this situation.
-    pub actants: BTreeMap<String, String>,
     /// Namespaced tokens and `bundle:` references this situation needs.
     pub requires: Vec<String>,
     /// Preconditions whose absence makes this situation inapplicable.
@@ -124,6 +125,102 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
         );
     }
     out
+}
+
+/// Render the coverage report. Four sections, provenance first (spec §4 L2).
+/// type-audit: bare-ok(identifier-text: out), bare-ok(prose: return)
+pub fn render(
+    corpus: &Corpus,
+    out: &BTreeMap<String, Outcome>,
+    registry: &ConceptRegistry,
+) -> String {
+    let mut s = String::new();
+    s.push_str(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes report`. -->\n\n",
+    );
+    s.push_str("# Trope coverage\n\n## Provenance\n\n");
+    s.push_str(&format!("- **Corpus:** `{}`\n", corpus.corpus));
+    s.push_str(&format!("- **Source:** {}\n", corpus.provenance));
+    s.push_str(&format!("- **Frozen:** {}\n", corpus.frozen));
+    s.push_str(
+        "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\n",
+    );
+
+    let stageable = out.values().filter(|o| **o == Outcome::Stageable).count();
+    let inapplicable = out
+        .values()
+        .filter(|o| matches!(o, Outcome::Inapplicable(_)))
+        .count();
+    s.push_str("## Demand\n\n");
+    s.push_str(&format!(
+        "Stageable {stageable} of {} ({inapplicable} inapplicable).\n\n| Situation | Outcome |\n|---|---|\n",
+        out.len()
+    ));
+    let names: BTreeMap<&str, &str> = corpus
+        .situations
+        .iter()
+        .map(|x| (x.id.as_str(), x.name.as_str()))
+        .collect();
+    for (id, o) in out {
+        let cell = match o {
+            Outcome::Stageable => "stageable".to_string(),
+            Outcome::Inapplicable(r) => format!("inapplicable — {r}"),
+            Outcome::Blocked(m) => format!("blocked — missing `{}`", m.join("`, `")),
+        };
+        s.push_str(&format!(
+            "| {} ({id}) | {cell} |\n",
+            names.get(id.as_str()).copied().unwrap_or("?")
+        ));
+    }
+
+    let mut fan: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for st in &corpus.situations {
+        if let Some(Outcome::Blocked(_)) = out.get(&st.id) {
+            for r in st.requires.iter().filter(|r| r.starts_with("bundle:")) {
+                fan.entry(r.clone()).or_default().push(st.id.clone());
+            }
+        }
+    }
+    let mut ranked: Vec<_> = fan.into_iter().collect();
+    ranked.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+    s.push_str("\n## Leverage\n\nMissing bundles by fan-in — the backlog ordering.\n\n| Bundle | Unlocks | Situations |\n|---|---|---|\n");
+    for (bundle, sits) in &ranked {
+        s.push_str(&format!(
+            "| `{bundle}` | {} | {} |\n",
+            sits.len(),
+            sits.join(", ")
+        ));
+    }
+
+    let required: BTreeSet<String> = corpus
+        .situations
+        .iter()
+        .flat_map(|st| st.requires.iter().flat_map(|r| expand(corpus, r)))
+        .collect();
+    let orphans: Vec<String> = registry_tokens(registry)
+        .into_iter()
+        .filter(|t| !required.contains(t))
+        .collect();
+    s.push_str(&format!(
+        "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\nA rising demand score with a rising supply count means capability is being\nregistered that nothing uses (spec D5).\n\n",
+        orphans.len()
+    ));
+    // Annotate `concept:` orphans with their owning domain. Many come from
+    // the language lexicon and are WORDS, not modelled capabilities; an
+    // unannotated list invites reading every orphan as a registered-but-
+    // unused mechanism, which is the opposite of what the Supply count is
+    // for (spec D5).
+    let domains: BTreeMap<String, String> = registry
+        .concepts()
+        .map(|c| (format!("concept:{}", c.name), c.domain.clone()))
+        .collect();
+    for t in &orphans {
+        match domains.get(t) {
+            Some(d) => s.push_str(&format!("- `{t}` ({d})\n")),
+            None => s.push_str(&format!("- `{t}`\n")),
+        }
+    }
+    s
 }
 
 #[cfg(test)]
@@ -258,5 +355,26 @@ mod tests {
             }
             other => panic!("expected Blocked, got {other:?}"),
         }
+    }
+
+    /// The report leads with provenance and carries all four sections, so a
+    /// reader cannot mistake the number for a verdict on the world.
+    #[test]
+    fn the_report_states_provenance_and_all_four_sections() {
+        let json = r#"{
+          "corpus":"t","provenance":"a catalogue with known bias","frozen":"t",
+          "bundles":{},
+          "situations":[{"id":"s1","name":"S","actants":{},
+                         "requires":["predicate:absent"],"excluded_by":[]}]
+        }"#;
+        let corpus = load(json).expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        let out = resolve(&corpus, &registry);
+        let text = render(&corpus, &out, &registry);
+        assert!(text.contains("a catalogue with known bias"));
+        for section in ["## Provenance", "## Demand", "## Leverage", "## Supply"] {
+            assert!(text.contains(section), "missing {section}");
+        }
+        assert!(text.contains("GENERATED FILE"));
     }
 }
