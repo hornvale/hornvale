@@ -61,9 +61,14 @@ Stageable 0 of 36 (1 inapplicable).
 
 ## Leverage
 
-Missing bundles ranked by fan-in over the 35 **blocked** situations. The 1 inapplicable situation(s) are excluded from this ranking but still count as demand in Supply, so the two sections use different populations on purpose. The **corpus** column counts all 36 situations, including inapplicable ones.
+Missing bundles ranked by fan-in over the 35 **blocked** situations. The 1
+inapplicable situation is excluded from this ranking, but not from the
+report: the Supply section below still counts its requirements as demand,
+which keeps those tokens off the orphan list. The **corpus** column counts
+all 36 situations.
 
-Fan-in is **not** an unlock count: the closest blocked situation is still missing 4 bundles, so no single row makes anything stageable on its own.
+Fan-in is **not** an unlock count: the closest blocked situation is still
+missing 4 bundles, so no single row makes anything stageable on its own.
 
 | Bundle | Fan-in (blocked) | Corpus | Situations |
 |---|---|---|---|
@@ -103,7 +108,13 @@ Fan-in is **not** an unlock count: the closest blocked situation is still missin
 
 277 registered tokens no situation in this corpus requires.
 
-**Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires *and no readout consumes*; the second half is not implemented. So this list includes tokens that readouts do consume — `predicate:is-a` carries the Book, and the `moon-*` family carries the almanac. Read it as *unrequired by this catalogue*, not *unused*. Spec D5's Goodhart guard — a rising demand score beside a rising count of genuinely unconsumed tokens — needs the missing half before this list can serve it.
+**Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
+*and no readout consumes*; the second half is not implemented. So this list
+includes tokens that readouts do consume — `predicate:is-a` carries the
+Book, and the `moon-*` family carries the almanac. Read it as *unrequired by
+this catalogue*, not *unused*. Spec D5's Goodhart guard — a rising demand
+score beside a rising count of genuinely unconsumed tokens — needs the
+missing half before this list can serve it.
 
 - `concept:abyssal` (climate)
 - `concept:abyssal-plain` (climate)

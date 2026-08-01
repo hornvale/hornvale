@@ -122,6 +122,30 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
     out
 }
 
+/// Hard-wrap a prose paragraph at 76 columns on word boundaries.
+///
+/// The report is a byte-ratcheted artifact. An unwrapped paragraph makes every
+/// future word change a whole-line diff in the review that has to approve it,
+/// so prose is wrapped and tables are not.
+/// type-audit: bare-ok(prose: text), bare-ok(prose: return)
+fn wrap(text: &str) -> String {
+    let mut out = String::new();
+    let mut col = 0;
+    for word in text.split_whitespace() {
+        let w = word.chars().count();
+        if col > 0 && col + 1 + w > 76 {
+            out.push('\n');
+            col = 0;
+        } else if col > 0 {
+            out.push(' ');
+            col += 1;
+        }
+        out.push_str(word);
+        col += w;
+    }
+    out
+}
+
 /// Render the coverage report. Four sections, provenance first (spec §4 L2).
 /// type-audit: bare-ok(identifier-text: out), bare-ok(prose: return)
 pub fn render(
@@ -216,17 +240,26 @@ pub fn render(
         .values()
         .filter(|o| matches!(o, Outcome::Blocked(_)))
         .count();
-    s.push_str(&format!(
-        "\n## Leverage\n\nMissing bundles ranked by fan-in over the {blocked} **blocked** \
-         situations. The {inapplicable} inapplicable situation(s) are excluded from this \
-         ranking but still count as demand in Supply, so the two sections use different \
-         populations on purpose. The **corpus** column counts all {} situations, including \
-         inapplicable ones.\n\nFan-in is **not** an unlock count: the closest blocked \
-         situation is still missing {closest} bundles, so no single row makes anything \
-         stageable on its own.\n\n| Bundle | Fan-in (blocked) | Corpus | Situations |\n\
-         |---|---|---|---|\n",
+    let inapplicable_noun = if inapplicable == 1 {
+        "situation is"
+    } else {
+        "situations are"
+    };
+    s.push_str("\n## Leverage\n\n");
+    s.push_str(&wrap(&format!(
+        "Missing bundles ranked by fan-in over the {blocked} **blocked** situations. The \
+         {inapplicable} inapplicable {inapplicable_noun} excluded from this ranking, but not \
+         from the report: the Supply section below still counts its requirements as demand, \
+         which keeps those tokens off the orphan list. The **corpus** column counts all {} \
+         situations.",
         out.len()
-    ));
+    )));
+    s.push_str("\n\n");
+    s.push_str(&wrap(&format!(
+        "Fan-in is **not** an unlock count: the closest blocked situation is still missing \
+         {closest} bundles, so no single row makes anything stageable on its own."
+    )));
+    s.push_str("\n\n| Bundle | Fan-in (blocked) | Corpus | Situations |\n|---|---|---|---|\n");
     for (bundle, sits) in &ranked {
         let corpus_wide = corpus
             .situations
@@ -251,16 +284,19 @@ pub fn render(
         .cloned()
         .collect();
     s.push_str(&format!(
-        "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\n\n\
-         **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires *and no \
+        "\n## Supply\n\n{} registered tokens no situation in this corpus requires.\n\n",
+        orphans.len()
+    ));
+    s.push_str(&wrap(
+        "**Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires *and no \
          readout consumes*; the second half is not implemented. So this list includes \
          tokens that readouts do consume — `predicate:is-a` carries the Book, and the \
          `moon-*` family carries the almanac. Read it as *unrequired by this catalogue*, \
          not *unused*. Spec D5's Goodhart guard — a rising demand score beside a rising \
          count of genuinely unconsumed tokens — needs the missing half before this list \
-         can serve it.\n\n",
-        orphans.len()
+         can serve it.",
     ));
+    s.push_str("\n\n");
     // Annotate `concept:` orphans with their owning domain. Many come from
     // the language lexicon and are WORDS, not modelled capabilities; an
     // unannotated list invites reading every orphan as a registered-but-

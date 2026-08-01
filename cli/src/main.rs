@@ -840,10 +840,14 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     let outcomes = tropes::resolve(&corpus, &world.registry);
     // Mode is positional but may follow flags, so scan past each flag AND its
     // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
-    // and exit 0 — a false pass for anything gating on `check`. `flag_value`
-    // (above) only ever supports `--flag value` as two separate args, never
-    // `--flag=value`, so every `--`-prefixed token unconditionally consumes
-    // the next token as its value.
+    // and exit 0 — a false pass for anything gating on `check`.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `tropes` has no valueless flags. It is not a property of
+    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
+    // adding an equivalent here would resurrect the bug above. If `tropes`
+    // ever gains a valueless flag, this loop must learn which flags take
+    // values.
     let mut mode = None;
     let mut rest = args.iter().skip(1);
     while let Some(a) = rest.next() {
