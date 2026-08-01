@@ -136,9 +136,31 @@ worth the name, and inventing one would be the same error.
   a preregistered range I cannot justify is weaker than an honest unknown. So it is
   recorded as a **measurement to report**, with no predicted value.
 
-  It may be this campaign's most valuable output. Nobody has ever measured how much
-  of the palimpsest's order the mint index was silently deciding, and the number
-  bears directly on how much The Signet will move.
+  **Measured before implementation, and therefore now a check rather than a
+  discovery.** Both orders are computable from a world built today — the old
+  tie-break is the occupation's own entity id, the new one is material facts — so
+  the number was obtained from the spec's definition without writing any of it:
+
+  | seed | multi-occupation sites | order changes |
+  |---|---|---|
+  | 42 | 299 | **19 (6.4%)** |
+  | 7 | 341 | **6 (1.8%)** |
+  | 1000 | 302 | **13 (4.3%)** |
+
+  The implementation must **reproduce these**. A materially different figure means
+  the comparator built is not the comparator specced, which is exactly the sort of
+  divergence a plan's code listing can introduce silently.
+
+  Recording what this says, since it is the substantive result: mint order was
+  deciding far less than the 239 tied pairs implied. `founded` alone separates most
+  layers, and the tie-break only bites where a site saw two events in one epoch
+  *and* those events differ in end-date or size. The palimpsest has been mostly
+  right by accident.
+
+  Note also that the discarded 5-25% band would have been **falsified at the low
+  end** — seed 7 lands at 1.8%. Preregistering it would have produced a chronicle
+  entry explaining a surprise that was only surprising relative to an invented
+  number.
 
 ## 5. Non-goals
 
