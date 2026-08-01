@@ -2,7 +2,14 @@
 
 **Campaign:** the-waymark
 **Date:** 2026-07-31
-**Status:** Draft — awaiting G3 review
+**Status:** Complete — executed 2026-07-31/08-01 (G3 approved with two
+ratified revisions). Chronicle `book/src/chronicle/the-waymark.md`, retro
+`docs/retrospectives/the-waymark.md`. §4.2: three targets met, health
+47.5 s vs < 45 missed un-retuned (flamegraph attached); §4.3b subsumed by
+the bench's cached-mix ladder (stated on the record); Stage 3b DISPROVEN
+by its gating property test (shipped disabled); the tick-walk hypothesis
+refuted at the close re-profile; packed-address specced out as followup
+(TOOL-packed-roomaddr).
 **Thesis:** With the derivation weir closed, the suite's cost lives in the
 sim loop: A* and room-mesh geometry are 45–50 % of every liveness test, and
 almost all of it is re-derivation of pure functions of stable inputs — a

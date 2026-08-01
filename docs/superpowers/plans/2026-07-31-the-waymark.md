@@ -1,5 +1,11 @@
 # The Waymark Implementation Plan
 
+> **COMPLETE (2026-08-01).** All tasks executed (+ Task 6b under ledger
+> #8; the RefCell ruling ledger #9). health 60.7→47.5 s, heat 48.3→4.7 s,
+> sky 32.9→24.5 s, band 53.8→21.5 s; water searches 1632→130; 1 M-subject
+> bench @ ~13 µs cached; two honest nulls (reverse-field equivalence,
+> tick-walk hypothesis). See chronicle + retro.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The sim loop stops re-deriving its geometry — the ratified sweep
