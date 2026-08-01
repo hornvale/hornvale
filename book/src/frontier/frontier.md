@@ -2352,6 +2352,20 @@ than the missing one we have now. So the test is not that the graph renders;
 it is that a fact's recorded antecedents are exactly what its derivation
 touched, which wants a mechanical check rather than a reviewer's attention.
 
+**A generative system admits output that is not worth having.** This deserves
+recording on its own, because three independent sources now agree on it. The thesis
+behind this essay derives a perfectly valid proof in which the antagonist visits the
+last house first, nothing is contested, and two characters never act again — an
+outcome it concedes "can hardly be argued to have any conflict." A choice-generation
+system built on answer-set solving needs a whole third rule category, distinct from
+the rules that *construct* structure and the rules that reject *nonsense*, purely to
+"discard some valid stories as uninteresting." And two of this project's own
+campaigns ran aground on simulations that admitted consistent, degenerate outcomes.
+The shape is constant: consistency is cheap, sense is checkable, and *interest* is
+neither — it is a separate class of constraint that no amount of correctness supplies,
+and a system that does not name it will keep rediscovering it one campaign at a time.
+Naming it is not the same as solving it; the useful move is to stop being surprised.
+
 **Sequencing.** The causal edges come first, because everything else here is
 downstream of them. The reading modes follow the graph. The generative
 signature is independent of both and is a writing task before it is an
@@ -2751,6 +2765,22 @@ toward vigilance or credulity, UNI-16), bumps a GOAP goal's priority (fear promo
 the safety goal), charges the social-graph edges (the affect *is* the edge's colour,
 SOC-9), and gates salience so emotional things surface first in the phenomena rank.
 It is the derived readout *and* the affective loop over the cognitive core.
+
+**The gap has a typology, and this essay does not yet use it.** *Expectedness*
+above is a single scalar — prediction-error against belief — where the choice-poetics
+literature types both of its sides. An action carries, per goal, one or more
+**expectations** (irrelevant, threatens, enables, fails, achieves) assigned from the
+outcomes that are *possible*; its result carries exactly one **perceived consequence**
+(irrelevant, hinders, advances, fails, achieves) assigned from what *actually*
+happened. The asymmetry is the load-bearing part — expectations are plural because
+several futures are live, consequences are singular because only one occurred — and
+the emotion is a function of the pair, not of either alone. Two further notes. An
+expectation is derived from the agent's *believed capability*, not from the true
+probability, which is the same substitution The Surmise made at the decision seam.
+And the source's own central limitation — that it reasons about an author's *guess*
+at expectations — does not bind here for NPCs: the planner computes the plan, so an
+NPC's expectations are known exactly rather than estimated. It binds only for the
+player.
 
 **Sequencing.** Lands with Milestone-2 liveness (it needs the appraisal inputs — the
 gap, the provenance, the prediction-error, the plan) and colours the focalizer before
@@ -3667,6 +3697,10 @@ Hans Reichenbach, *Elements of Symbolic Logic*, via Nick Montfort's Curveship
 computed from speech, reference, and event times rather than authored); Chris
 Martens, *Programming Interactive Worlds with Linear Logic* (causality derived
 from resource-threading, a trace as a partial order rather than a sequence,
-and generative signatures as grammars over well-formed state).
+and generative signatures as grammars over well-formed state); Michael Mateas,
+Peter Mawhorter and Noah Wardrip-Fruin on choice poetics (a choice as context,
+options and outcomes, read against expectations and perceived consequences —
+taken here as an instrument for recognising dramatic structure, never as a
+generator of it).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
