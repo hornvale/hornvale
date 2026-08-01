@@ -52,6 +52,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
   - [The Teller — narrative discourse as a layer of its own](#the-teller--narrative-discourse-as-a-layer-of-its-own)
   - [The causal trace — the fabula as a partial order](#the-causal-trace--the-fabula-as-a-partial-order)
+  - [Salience is a relation, not a property](#salience-is-a-relation-not-a-property)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [The living community — history as a baked, derivable biography](#the-living-community--history-as-a-baked-derivable-biography)
   - [The connection graph — society's transport topology](#the-connection-graph--societys-transport-topology)
@@ -2214,6 +2215,45 @@ asked for a tense. Joining them makes an already-paid-for conlang feature do
 visible work, and it is why the order model and the time of narrating cannot
 be built separately: they determine the same verb.
 
+**Frequency, and the axis a simulation needs most.** Genette's third category
+asks how many tellings correspond to how many events. Singulative tells once
+what happened once; repetitive tells many times what happened once; and
+**iterative** tells *once* what happened *many times* — "for a long time I used
+to go to bed early." A world simulation structurally produces enormous
+quantities of near-identical events: daily routes, tides, seasons, migrations,
+a thousand years of anything. Iterative narration is the mechanism for
+narrating that without drowning in it, and it reuses the *same* set-assembly
+machinery syllepsis needs, so the grouping is paid for once and spent twice.
+It also carries a sharp failure mode worth stating with it: aggregation
+destroys meaning faster than grouping does. Events that group harmlessly for
+ordering — "killed the dragon, then acquired the grail" — collapse under a
+single utterance into "altered some entities." Iteration demands more
+similarity than syllepsis, and the threshold between them is a calibration,
+not a constant.
+
+**Speed, and a second kind of meaningful nothing.** Each proposed expression
+carries a length factor, and the vocabulary over it is ellipsis, summary,
+scene, stretch, and pause. Deep time makes this structural rather than
+decorative: a chronicle spanning ten thousand years cannot be narrated at
+scene speed, so summary and ellipsis are the operations that make the long
+view sayable at all. The category that earns its own attention is **explicit
+ellipsis** — a telling that announces its own omission, "no mention shall be
+made of what happened in the southern part of the plaza." That is the
+discourse-side twin of the
+[anti-phenomenon](#the-anti-phenomenon--meaningful-absence-as-an-observable):
+one surfaces a gap the *world* has, the other declares a gap the *telling* has.
+Implicit ellipsis stays honest by remaining inferable from consequences —
+describe a room as empty, then show someone crossing it, and the reader knows
+an entrance was elided.
+
+**These axes cannot be set independently, and the coupling is three-way.** A
+single event cannot be told iteratively, so a flashback to one moment is
+incompatible with narrating the past iteratively; and a singulative flashback
+reads as urgent and businesslike where an iterative one reads as diffuse and
+uneventful. Order, speed and frequency jointly determine the same clause, in
+the same way order and the time of narrating jointly determine the same verb.
+Any of these built alone will be rebuilt.
+
 **Style as data — the spin.** Curveship keeps its narrative parameters in a
 file applied to an unchanged simulation: one fiction, many tellings, the world
 untouched. That is a shape this project has already ratified elsewhere —
@@ -2234,12 +2274,27 @@ Underscored noun phrases shift from indefinite to definite on second mention —
 can already express and the focalizer cannot, because nothing tracks what the
 prose has already said.
 
-**Refusal is not failure.** An action *fails* when its preconditions were met
-and its postcondition does not hold; it is *refused* when nothing happens in
-the world at all and something is narrated anyway. The distinction is sharp
-here precisely because it sits badly against an append-only ledger: a refusal
-is an event of the telling with no fact behind it. That is a question to
-settle deliberately rather than implement quietly.
+**Refusal is not failure — and it is not narration either.** An action *fails*
+when its preconditions were met and its postcondition does not hold; it is
+*refused* when nothing happens in the world at all and something is said
+anyway. The distinction is sharp here precisely because it sits badly against
+an append-only ledger: a refusal is an utterance with no fact behind it. The
+dissertation behind this essay resolves the awkwardness by splitting the output
+channel rather than the ledger. Text serving the player's working-through — "you
+notice something unusual" — is addressed to the player as **commander**, and
+the system speaking it is a **suggester**, a second discourse layer beside the
+narrator with its own mood (direct instruction against indirect hint) and its
+own voice. A refusal is suggester text. It sits badly against the ledger
+because it was never narration in the first place.
+
+**The focalized and the commanded need not be the same.** Both are parameters,
+settable independently and arbitrarily — even to an agent the focalizer cannot
+see — and the commanded character may be set to *none*, in which case the
+system runs without input until it reaches a conclusion. That single
+observation is the mechanism under two ideas already banked here: the
+scholar-or-ethnographer vantage, and the autonomous observer that watches
+rather than plays. Attract mode is not a feature to build; it is a parameter
+set to none.
 
 **What it costs, and what keeps it honest.** All of this is emit-boundary
 work: no new world-state, no seeded draws, and therefore no epoch and no
@@ -2251,9 +2306,10 @@ several ways, must remain recognizably the same world. A reordering that
 changes which facts are asserted has stopped being a telling and become a
 second simulation.
 
-**Sequencing.** The order model and the tense bridge are one campaign, because
-the paper's closing finding is that they cannot be separated. The template
-middle and the refusal distinction are independent of both, and cheaper.
+**Sequencing.** The order model, the tense bridge, speed and frequency are one
+campaign, because each of them helps determine the clauses the others produce.
+The template middle, the suggester channel and the focalized/commanded split
+are independent of that knot, and cheaper.
 
 ---
 
@@ -2370,6 +2426,105 @@ Naming it is not the same as solving it; the useful move is to stop being surpri
 downstream of them. The reading modes follow the graph. The generative
 signature is independent of both and is a writing task before it is an
 engineering one.
+
+---
+
+## Salience is a relation, not a property
+
+*(High confidence in the diagnosis, which is checkable against the code today;
+medium on the model, whose weights are unfitted; the religion consequence is
+the concrete payoff and has a falsified measurement already waiting for it.
+Source: Farrell and Ware, AIIDE-17, on Indexter's pairwise event salience
+hypothesis over Zwaan and Radvansky's event-indexing situation model. Read
+2026-08-01.)*
+
+**What salience is in this project today.** A phenomenon carries a scalar in
+`[0, 1]` — "how much this demands attention" — chosen by the domain that
+produced it. An observer's perception lens multiplies it by one of three
+per-venue weights, the result is sorted descending, and anything below a floor
+is dropped. The registry already states this signature exactly: *salience is a
+function of the phenomenon and the observer*. Nothing about **when**,
+**where**, or **after what** enters into it anywhere.
+
+**The missing argument.** The cognitive literature on how narrative events are
+stored and retrieved gives five indices — protagonist, time, space, causality,
+intentionality — and the pairwise hypothesis states that a past event is more
+salient when it shares at least one index with the most recent one. This is
+not an aesthetic claim: it was validated on *recall speed*, with readers
+interrupted mid-story remembering index-sharing events faster. The signature it
+implies has a third argument. Salience is a function of the phenomenon, the
+observer, **and the situation** — and the third is the one that makes an
+observation feel like it is about you.
+
+**Four of the five indices already exist as fields.** A fact carries its
+subject, its day, and its place; an agent's plans supply intentionality. The
+fifth, causality, is exactly the missing derivation argued
+[one section above](#the-causal-trace--the-fabula-as-a-partial-order). That is
+the third distinct payoff for the same small change, arrived at from a third
+direction — which is worth more than any one of the arguments for it.
+
+**The religion consequence, which is the reason this matters now.** Pantheon
+genesis takes the phenomena an observer sees, salience-descending, and mints
+one deity per phenomenon at or above a floor, the most salient presiding where
+society is stratified. Society shapes only the *structure* — which god presides,
+whether the cult is folk or organized — never the *membership*. And the
+observation feeding it is taken **once, at world genesis, from a single place**:
+the species' flagship settlement, its hemisphere culling the sky.
+
+Follow that through. Which phenomena are divine is a threshold applied to a
+number a domain author chose, adjusted by a species constant, sampled once at
+one location before any history exists. So a pantheon encodes **founding
+order** — it cannot encode lived experience, because no channel exists through
+which lived experience could reach it. Nothing a people survives can make a
+thing holy.
+
+This is not a prediction. A campaign chased a religion payoff, measured it,
+falsified it, and diagnosed the cause as "an artifact of founding order that
+has nothing to do with the physics," banking the repair as needing a campaign
+of its own. A context-free, genesis-time, one-observation-per-species model is
+precisely a machine for manufacturing that artifact, and no amount of
+correcting the *physics* upstream will move it. This essay is the shape of the
+second fix.
+
+**What the relation buys is coincidence.** Under an index model a phenomenon
+becomes salient to a people by *sharing* something with what they have lived:
+the comet that shared a year with the famine (time), the mountain that shares a
+place with the founding (space), the tide that shares a causal ancestor with a
+drowning (causality), the eclipse that thwarted a war (intentionality). Two
+communities of the same species under the same sky would then hold different
+gods, which is what religions observably do, and which the current model cannot
+express at any price.
+
+**Their limitations are our instrument's opening.** The source is candid that
+it weights all five indices equally ("which is likely untrue"), asks only
+whether *at least one* index is shared rather than how many, and considers only
+the single most recent event rather than all past events weighted by recency.
+Those are unfitted parameters — and a laboratory that generates thousands of
+worlds can fit what a hand-authored branching study never could. Index weights
+are a preregistrable calibration with a real null available.
+
+**What to refuse.** The source's own application is covert influence:
+engineering choices so that readers pick the ending the author wanted, with 82%
+reporting they had not felt influenced. Decline that. The line worth holding is
+that ranking by what an observer *would actually notice* is modelling
+perception, while ranking to move an observer toward a chosen outcome is
+manipulation — and this project has already committed to the view that nothing
+presented is exempt from having been chosen, with the caption carrying the
+honesty rather than the picture.
+
+**What keeps it honest.** A relational salience depends on history, and history
+makes it **path-dependent** — which is where determinism becomes expensive.
+Today's scalar is a pure function of a phenomenon and an observer, so it
+reproduces trivially. A salience that folds over what a community has lived
+must fold over a *committed, ordered* history or it will not reproduce at all.
+That is a positive argument for deriving it from the ledger, in the same
+posture as belief and drive, rather than accumulating it into a mutable score
+that a reload would have to reconstruct and could silently reconstruct wrong.
+
+**Sequencing.** Downstream of the causal trace, which supplies the fifth index.
+The pantheon is the first consumer worth converting, both because the model's
+poverty is most visible there and because a falsified measurement is already
+sitting in the record waiting for it.
 
 ---
 
@@ -3701,6 +3856,10 @@ and generative signatures as grammars over well-formed state); Michael Mateas,
 Peter Mawhorter and Noah Wardrip-Fruin on choice poetics (a choice as context,
 options and outcomes, read against expectations and perceived consequences —
 taken here as an instrument for recognising dramatic structure, never as a
-generator of it).
+generator of it); Rolf Zwaan and Gabriel Radvansky's event-indexing situation
+model, via Rachelyn Farrell and Stephen Ware on Indexter (salience as a
+relation between an event and the situation, over five shared indices — taken
+here for the perception model and explicitly not for the influence result
+built on it).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
