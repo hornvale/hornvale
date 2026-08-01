@@ -79,9 +79,18 @@ fn registry_tokens(r: &ConceptRegistry) -> BTreeSet<String> {
 }
 
 /// Expand a requirement into concrete tokens, following one `bundle:` level.
+///
+/// A dangling `bundle:` reference expands to the reference itself, which no
+/// registry token can ever match, so a typo blocks its situation. Returning
+/// an empty list instead would make a situation whose requirements are all
+/// dangling resolve `Stageable` — the exact inversion of spec D4's
+/// default-deny posture.
 fn expand(corpus: &Corpus, req: &str) -> Vec<String> {
     match req.strip_prefix("bundle:") {
-        Some(b) => corpus.bundles.get(b).cloned().unwrap_or_default(),
+        Some(b) => match corpus.bundles.get(b) {
+            Some(tokens) => tokens.clone(),
+            None => vec![req.to_string()],
+        },
         None => vec![req.to_string()],
     }
 }
@@ -96,12 +105,15 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
             out.insert(s.id.clone(), Outcome::Inapplicable(reason.clone()));
             continue;
         }
-        let missing: Vec<String> = s
-            .requires
-            .iter()
-            .flat_map(|r| expand(corpus, r))
-            .filter(|t| !held.contains(t))
-            .collect();
+        // Deduplicated, in corpus order: two bundles may name the same
+        // token, and `Blocked` is rendered verbatim into the committed
+        // artifact, where a repeat would misstate the count.
+        let mut missing: Vec<String> = Vec::new();
+        for t in s.requires.iter().flat_map(|r| expand(corpus, r)) {
+            if !held.contains(&t) && !missing.contains(&t) {
+                missing.push(t);
+            }
+        }
         out.insert(
             s.id.clone(),
             if missing.is_empty() {
@@ -193,5 +205,58 @@ mod tests {
         let b = resolve(&corpus, &registry);
         assert_eq!(format!("{a:?}"), format!("{b:?}"));
         assert_eq!(a.keys().collect::<Vec<_>>(), vec!["s1", "s2"]);
+    }
+
+    /// A dangling `bundle:` reference must block, not silently vanish into
+    /// an empty expansion — the exact inversion of default-deny that an
+    /// `unwrap_or_default()` would produce.
+    #[test]
+    fn a_dangling_bundle_reference_blocks() {
+        let json = r#"{
+          "corpus":"t","provenance":"t","frozen":"t","bundles":{},
+          "situations":[{"id":"s1","name":"S","actants":{},
+                         "requires":["bundle:does-not-exist"],"excluded_by":[]}]
+        }"#;
+        let corpus = load(json).expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        match resolve(&corpus, &registry).get("s1") {
+            Some(Outcome::Blocked(missing)) => {
+                assert_eq!(missing, &vec!["bundle:does-not-exist".to_string()]);
+            }
+            other => panic!("expected Blocked, got {other:?}"),
+        }
+    }
+
+    /// Two bundles that share a token must not double-count it in `Blocked`,
+    /// and the survivors keep first-appearance-in-corpus order — not sorted,
+    /// which is the assertion `resolution_is_order_stable` cannot make on
+    /// its own since this repo bans `HashMap` outright.
+    #[test]
+    fn blocked_tokens_are_deduplicated_in_corpus_order() {
+        let json = r#"{
+          "corpus":"t","provenance":"t","frozen":"t",
+          "bundles":{
+            "first":["predicate:shared","predicate:only-in-first"],
+            "second":["predicate:shared","predicate:only-in-second"]
+          },
+          "situations":[{"id":"s1","name":"S","actants":{},
+                         "requires":["bundle:first","bundle:second"],
+                         "excluded_by":[]}]
+        }"#;
+        let corpus = load(json).expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        match resolve(&corpus, &registry).get("s1") {
+            Some(Outcome::Blocked(missing)) => {
+                assert_eq!(
+                    missing,
+                    &vec![
+                        "predicate:shared".to_string(),
+                        "predicate:only-in-first".to_string(),
+                        "predicate:only-in-second".to_string(),
+                    ]
+                );
+            }
+            other => panic!("expected Blocked, got {other:?}"),
+        }
     }
 }
