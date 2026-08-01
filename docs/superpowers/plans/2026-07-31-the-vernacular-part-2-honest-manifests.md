@@ -356,15 +356,26 @@ Two edits, and the ordering constraint matters more than either:
   `GapReason::Unnameable(text)`, not `Experiential`.
 - `build_lexicon` must **not** reserve a proto-root for such a concept.
 
-**Determinism warning — read before editing.** The proto-root pass reserves a
-distinct form per concept over an ordered universe, so *removing* concepts from
-that pass shifts every subsequent assignment and re-mints words across the whole
-lexicon. That is a save-format-class change. It is expected here and it is why
-this task is separated from Task 1 — but it means the committed name fixtures
-and possibly committed settlement names will move. Measure it (step 7) rather
-than assuming either way, and if committed *facts* move, **stop and report**:
-that is a finding about how far the proto-root ordering reaches, and it decides
-whether this task owes an epoch.
+**Determinism note — corrected before this task ran.** An earlier draft warned
+that removing concepts from the proto-root pass would shift every subsequent
+assignment and re-mint the whole lexicon. **That is wrong, and The Accession is
+why.** `assign_proto_roots_with_epoch`
+(`domains/language/src/etymology.rs:360`) sorts by *accession epoch first*, and
+its own comment states the property: "An assignment depends only on the
+concepts sorted at or before it, so sorting by epoch first makes a later-epoch
+concept land **STRICTLY LAST**." The nine concepts are in the epoch-6 cohort
+Task 1 appended, so removing them removes only the last nine assignments and
+perturbs nothing earlier. Two tests pin this
+(`assign_proto_roots_is_insertion_stable_for_earlier_sorting_concepts`,
+`a_later_epoch_concept_is_insertion_stable_from_any_alphabetical_position`),
+one carrying its own non-vacuity guard.
+
+So the honest expectation is **zero committed facts moved**, the same as every
+other task in this campaign — not because this task is forbidden to move them,
+but because the additivity was engineered. Measure it anyway (step 7). If facts
+*do* move, that is a real finding about the epoch's reach and it decides whether
+this task owes an epoch bump under decision 0084 — report it rather than
+accepting it as expected, because it is not.
 
 - [ ] **Step 6: Run the gate**
 
