@@ -3,6 +3,12 @@
   "provenance": "Georges Polti, Les 36 situations dramatiques (1895). French dramaturgical taxonomy of European theatre. An instrument with known bias, not a standard: coverage measures reach against this catalogue only. Role vocabulary for the decomposition is Greimas' actantial model (subject, object, sender, receiver, helper, opponent).",
   "frozen": "before first measurement, The Repertoire",
   "bundles": {
+    "act-chronology": [
+      "predicate:act-occurred-on",
+      "predicate:act-precedes",
+      "predicate:deed-of",
+      "predicate:history-now"
+    ],
     "agent-knowledge": [
       "predicate:believes-falsely",
       "predicate:ignorant-of",
@@ -38,11 +44,20 @@
       "predicate:peopled-by",
       "predicate:population"
     ],
+    "community-chronology": [
+      "predicate:history-now",
+      "predicate:occ-ended",
+      "predicate:occ-founded"
+    ],
     "community-downfall": [
       "predicate:is-ruin",
       "predicate:occ-cause",
       "predicate:occ-ended",
       "predicate:occ-ended-by"
+    ],
+    "community-subordination": [
+      "predicate:has-caste",
+      "predicate:pays-tribute-to"
     ],
     "consanguineal-kin": [
       "concept:child",
@@ -74,11 +89,6 @@
     "erotic-desire": [
       "predicate:desire-requited",
       "predicate:desires"
-    ],
-    "event-chronology": [
-      "predicate:history-now",
-      "predicate:occ-ended",
-      "predicate:occ-founded"
     ],
     "felt-affect": [
       "predicate:affect-intensity",
@@ -149,6 +159,11 @@
       "predicate:held-by-person",
       "predicate:is-holding"
     ],
+    "personal-rank": [
+      "predicate:caste-of-person",
+      "predicate:outranks",
+      "predicate:subordinate-to"
+    ],
     "relinquishment": [
       "predicate:relinquished-for",
       "predicate:relinquishes"
@@ -175,10 +190,6 @@
     "speech-act": [
       "predicate:utterance-force",
       "predicate:uttered-to"
-    ],
-    "standing-domination": [
-      "predicate:has-caste",
-      "predicate:pays-tribute-to"
     ],
     "succession": [
       "predicate:heir-of",
@@ -245,7 +256,7 @@
         "subject": "the avenger"
       },
       "requires": [
-        "bundle:event-chronology",
+        "bundle:act-chronology",
         "bundle:felt-affect",
         "bundle:individual-persons",
         "bundle:intent",
@@ -263,8 +274,8 @@
         "subject": "the avenging kinsman"
       },
       "requires": [
+        "bundle:act-chronology",
         "bundle:consanguineal-kin",
-        "bundle:event-chronology",
         "bundle:felt-affect",
         "bundle:individual-persons",
         "bundle:intent",
@@ -300,10 +311,13 @@
       "requires": [
         "bundle:collective-conflict",
         "bundle:community-as-actor",
+        "bundle:community-chronology",
         "bundle:community-downfall",
+        "bundle:community-subordination",
         "bundle:environmental-adversity",
-        "bundle:event-chronology",
-        "bundle:standing-domination"
+        "bundle:individual-persons",
+        "bundle:speech-act",
+        "bundle:witnessing"
       ],
       "excluded_by": []
     },
@@ -320,7 +334,7 @@
         "bundle:environmental-adversity",
         "bundle:felt-affect",
         "bundle:individual-persons",
-        "bundle:standing-domination"
+        "bundle:personal-rank"
       ],
       "excluded_by": []
     },
@@ -334,11 +348,12 @@
       "requires": [
         "bundle:collective-conflict",
         "bundle:community-as-actor",
+        "bundle:community-subordination",
         "bundle:conspiracy",
         "bundle:individual-persons",
         "bundle:intent",
         "bundle:office-and-authority",
-        "bundle:standing-domination",
+        "bundle:personal-rank",
         "bundle:succession"
       ],
       "excluded_by": []
@@ -491,8 +506,8 @@
         "subject": "the imprudent one"
       },
       "requires": [
+        "bundle:act-chronology",
         "bundle:agent-knowledge",
-        "bundle:event-chronology",
         "bundle:individual-persons",
         "bundle:intent",
         "bundle:personal-property",
@@ -621,8 +636,8 @@
         "bundle:individual-persons",
         "bundle:intent",
         "bundle:office-and-authority",
-        "bundle:reputation-and-dishonour",
-        "bundle:standing-domination"
+        "bundle:personal-rank",
+        "bundle:reputation-and-dishonour"
       ],
       "excluded_by": []
     },
@@ -691,7 +706,7 @@
         "bundle:erotic-desire",
         "bundle:individual-persons",
         "bundle:pair-bond",
-        "bundle:standing-domination"
+        "bundle:personal-rank"
       ],
       "excluded_by": []
     },
@@ -725,8 +740,8 @@
         "bundle:individual-persons",
         "bundle:intent",
         "bundle:office-and-authority",
+        "bundle:personal-rank",
         "bundle:reputation-and-dishonour",
-        "bundle:standing-domination",
         "bundle:succession"
       ],
       "excluded_by": []
@@ -798,7 +813,7 @@
         "subject": "the culprit"
       },
       "requires": [
-        "bundle:event-chronology",
+        "bundle:act-chronology",
         "bundle:felt-affect",
         "bundle:individual-persons",
         "bundle:norm-and-transgression",
