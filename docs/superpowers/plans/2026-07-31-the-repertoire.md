@@ -159,7 +159,6 @@ preregistration evidence (spec §5, decision 0016)."
   `phenomenon_kinds() -> impl Iterator<Item = (&str, &str)>`, and
   `concepts() -> impl Iterator<Item = &ConceptDef>` (field `.name: String`).
 - Produces: `pub struct Corpus`, `pub fn load(json: &str) -> Result<Corpus, String>`,
-  `pub enum Verdict { Satisfied, Missing(String), Waived(String) }`,
   `pub enum Outcome { Stageable, Blocked(Vec<String>), Inapplicable(String) }`,
   `pub fn resolve(c: &Corpus, r: &ConceptRegistry) -> BTreeMap<String, Outcome>`
   keyed by situation `id`. Task 3 renders these; Task 4 tests them.
@@ -243,17 +242,6 @@ pub struct Corpus {
     pub bundles: BTreeMap<String, Vec<String>>,
     /// The situations themselves.
     pub situations: Vec<Situation>,
-}
-
-/// How one requirement resolved.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Verdict {
-    /// The token is registered.
-    Satisfied,
-    /// The token is absent; the string is the proposed name.
-    Missing(String),
-    /// Deliberately excused, with a reason.
-    Waived(String),
 }
 
 /// How one situation resolved.
@@ -567,7 +555,9 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     let outcomes = tropes::resolve(&corpus, &world.registry);
-    match args.get(1).map(String::as_str) {
+    // Mode is positional; a leading flag means no mode was given.
+    let mode = args.get(1).map(String::as_str).filter(|m| !m.starts_with("--"));
+    match mode {
         Some("report") | None => {
             print!("{}", tropes::render(&corpus, &outcomes, &world.registry));
             Ok(())
@@ -808,9 +798,10 @@ no explicit task. It is covered by `make gate` in Task 4 Step 6, which runs
 rather than missed.
 
 **Type consistency.** `load`/`resolve`/`render`/`expand`/`registry_tokens`,
-`Corpus`/`Situation`/`Verdict`/`Outcome` are named identically in Tasks 2 and 3.
-`Verdict` is defined in Task 2 and not consumed by Task 3's `render`, which
-works from `Outcome` — deliberate: `Verdict` is the per-requirement type the
-schema documents and a later column will need. Registry methods match the live
+`Corpus`/`Situation`/`Outcome` are named identically in Tasks 2 and 3.
+A `Verdict` per-requirement enum was drafted and **cut in pre-flight**: nothing
+consumes it, and an unused `pub` enum is speculative generality the review
+rubric and this repo's own "avoid premature abstractions" both reject. Add it
+when a column needs it. Registry methods match the live
 API (`predicates()` → `.name`, `phenomenon_kinds()` → `(&str, &str)`,
 `concepts()` → `.name`), verified against `kernel/src/registry.rs:175-249`.
