@@ -76,9 +76,11 @@ const FOUNDER_ROLE: u64 = 0x466F_756E_6465_7200;
 ///
 /// `(people, site, founded, ended, peak_population)` is unique across the
 /// selected cast on every measured seed (90/90, 82/82, 100/100 for seeds 42, 7
-/// and 1000) and collides on 3 of 1776 occupations world-wide — records that are
-/// genuinely indistinguishable in every emitted field. `select_founders`
-/// asserts cast-uniqueness rather than trusting it.
+/// and 1000) and collides on 3 colliding pairs in seed 42, 2 in seed 7, and 0
+/// in seed 1000 — records that are indistinguishable in every *non-entity*
+/// field (they differ only in `ended_by` and `founded_from`, both
+/// `EntityId`-valued fields decision 0051 already forbids keying on).
+/// `select_founders` asserts cast-uniqueness rather than trusting it.
 pub fn founder_handle(occ: &OccupationRecord) -> RoleHandle {
     let mut x: u64 = 0xA076_1D64_78BD_642F;
     let mix = |v: u64, x: &mut u64| {

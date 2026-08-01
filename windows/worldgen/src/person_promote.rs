@@ -21,7 +21,7 @@ use std::collections::BTreeMap;
 pub const MEMORY_DEPTH: usize = 20;
 
 /// One remembered founder: an identity plus where it came from.
-/// type-audit: bare-ok(count: occupation), bare-ok(count: founded)
+/// type-audit: bare-ok(index: occupation), waiver(decision-0014: founded)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Founder {
     /// The stable identity, expandable by `persona_of`.
@@ -39,9 +39,10 @@ pub struct Founder {
 /// The founders a world remembers: per people, the `MEMORY_DEPTH` occupations
 /// with the largest peak population.
 ///
-/// Ranking is `(peak_population DESC, site ASC, founded ASC)` — a total order
-/// over a `u32` and two structural keys, with no float comparison. Iteration is
-/// over a `BTreeMap`, so the result does not depend on input order.
+/// Ranking is `(peak_population DESC, site ASC, founded ASC, handle ASC)` — a
+/// total order: the first three keys alone can tie (an exact three-way
+/// match), so the handle breaks it. Iteration is over a `BTreeMap`, so the
+/// result does not depend on input order.
 ///
 /// # Panics
 ///
@@ -63,6 +64,11 @@ pub fn select_founders(records: &[OccupationRecord]) -> Vec<Founder> {
                 .cmp(&x.peak_population)
                 .then(x.site.0.cmp(&y.site.0))
                 .then(x.founded.total_cmp(&y.founded))
+                // Total order, so the doc's claim is structural rather than
+                // lucky. Two records reaching this leg with the same handle are
+                // precisely what the uniqueness assert below rejects, so this
+                // defers to the guard rather than hiding from it.
+                .then(founder_handle(x).0.cmp(&founder_handle(y).0))
         });
         for &i in idxs.iter().take(MEMORY_DEPTH) {
             let r = &records[i];
@@ -150,6 +156,31 @@ mod tests {
             "the cast does not depend on input order"
         );
         assert_eq!(a[0].community, forward[1].community);
+    }
+
+    #[test]
+    fn a_tie_resolves_the_same_way_whichever_order_it_arrives_in() {
+        // Same people, site, founded and peak; different `ended`, so different
+        // handles and a genuine three-way tie in the first three keys.
+        let mut a = rec("goblin", 3, 100.0, 42);
+        a.ended = Some(500.0);
+        let mut b = rec("goblin", 3, 100.0, 42);
+        b.ended = Some(900.0);
+
+        let forward = select_founders(&[a.clone(), b.clone()]);
+        let backward = select_founders(&[b, a]);
+        let key = |c: &[Founder]| -> Vec<(u64, EntityId, f64)> {
+            c.iter()
+                .map(|f| (f.handle.0, f.community, f.founded))
+                .collect()
+        };
+        assert_eq!(
+            key(&forward),
+            key(&backward),
+            "a tie must resolve identically whichever order it arrives in — \
+             Task 3 keys facts on `community`, so a flip would attribute a \
+             person to a different settlement"
+        );
     }
 
     #[test]

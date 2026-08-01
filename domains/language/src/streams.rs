@@ -37,17 +37,20 @@ pub const ARTICLES: StreamLabel<'static> = StreamLabel::from_static("articles");
 /// The numeracy-rung draw, under grammar.
 /// type-audit: bare-ok(identifier-text: return)
 pub const NUMERACY_RUNG: StreamLabel<'static> = StreamLabel::from_static("numeracy-rung");
-/// The name sub-tree (settlement/deity/epithet name generation).
+/// The name sub-tree (settlement/deity/epithet/person name generation).
 /// type-audit: bare-ok(identifier-text: return)
 pub const NAME: StreamLabel<'static> = StreamLabel::from_static("name");
 /// The generic epoch-2 suffix leg, appended one level deeper than a v1
-/// name draw (settlement/deity/epithet all reuse this exact leg).
+/// name draw (settlement/deity/epithet all reuse this exact leg; `person`
+/// is a later addition and was never a v1/v2 epoch of anything — see
+/// [`crate::naming::NameKind::Person`]).
 /// **Retired** by [`V3`] (The Wearing, 2026-07-27) but never deleted — an
 /// epoch is a save-format contract, so a superseded leg stays declared.
 /// type-audit: bare-ok(identifier-text: return)
 pub const V2: StreamLabel<'static> = StreamLabel::from_static("v2");
 /// The generic epoch-3 suffix leg, in the same position [`V2`] occupied
-/// (settlement/deity/epithet all reuse this exact leg).
+/// (settlement/deity/epithet all reuse this exact leg; `person` draws
+/// directly off [`NAME`] with no v2/v3 epoch of its own).
 ///
 /// The Wearing (2026-07-27) retires the 2–3 syllable drawn settlement stem
 /// and inserts toponymic wear between compounding and repair, both of which
