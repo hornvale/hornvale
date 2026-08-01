@@ -7,7 +7,8 @@ feel it the same. This campaign added the third psychology dial, **boldness**, a
 let a creature's mettle scale the fear that The Dread computes.
 
 The dial cost almost nothing to find, because it was already there. A species'
-`PsychVector` has carried, since long before any drive existed, a
+`PsychVector` (later split by decision 0067 into `MindVector` and
+`SocietyVector`) has carried, since long before any drive existed, a
 `threat_response` — "flee at zero, stand at one" — authored per people and read
 only by the culture layer, where a society's willingness to stand its ground
 shapes the authority it builds. This is exactly how the first two dials arrived:

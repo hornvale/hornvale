@@ -26,6 +26,7 @@ dependencies = [
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",
+ "serde",
  "serde_json",
 ]
 

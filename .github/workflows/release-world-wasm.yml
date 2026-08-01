@@ -10,6 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      # `make wasm-world` runs wasm-opt over the cargo output, and the
+      # byte-identity smoke and size gate below it both then check the binary
+      # we actually publish. Without binaryen here the Makefile warns and
+      # ships unoptimized, which would be a silently larger release rather
+      # than a failure — so install it explicitly.
+      - name: Install binaryen (wasm-opt)
+        run: sudo apt-get update && sudo apt-get install -y binaryen
       - name: Gate, then build the asset
         run: make world-check
       - name: Package + checksum
