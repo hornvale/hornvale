@@ -271,10 +271,18 @@ vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/c
 	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 	node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
 
-# The wasm features this binary actually uses. wasm-opt validates before it
-# optimizes and rustc emits memory.copy, so without --enable-bulk-memory it
-# refuses the input outright rather than producing a worse result.
-WASM_OPT_FEATURES := --enable-bulk-memory --enable-bulk-memory-opt --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals
+# The wasm features this binary actually uses. wasm-opt VALIDATES before it
+# optimizes, so a feature rustc emitted but binaryen was not told to accept
+# makes it refuse the input outright rather than produce a worse result. All
+# four are required: dropping any one fails validation.
+#
+# Deliberately long-established flags only. An earlier attempt also passed
+# --enable-bulk-memory-opt, which Homebrew's binaryen 131 accepts and the
+# binaryen in Ubuntu's apt repo does not — the release job failed with
+# "Unknown option" while the local gate was green. It bought nothing (byte-
+# identical output at 883473 either way), so it is gone. Prefer flags old
+# enough that a distro package has them over squeezing the last byte.
+WASM_OPT_FEATURES := --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals
 
 wasm-world: ## Build the world catalog wasm (external clients consume this; never committed)
 	rustup target add wasm32-unknown-unknown 2>/dev/null || true
