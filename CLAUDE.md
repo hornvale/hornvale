@@ -257,8 +257,13 @@ Cross-domain communication uses only the kernel's trace protocol:
 - **Facts** — subject/predicate/object envelope, append-only, contradiction-
   checked against the concept registry (predicates registered per domain;
   naming conventions are in the book's concept-registry chapter).
-- **Phenomena** — the universal read: salience-ranked observations. Consumers
-  (e.g. religion) must never learn which system produced a phenomenon.
+- **Phenomena** — the universal read: salience-ranked observations. The
+  channel does not carry a producer, so a consumer (religion, say)
+  receives *appearances*, never sources — decision 0003 states this as a
+  cost it accepts ("a consumer **may** never learn which system produced a
+  given observation"), not as a prohibition. The distinction matters: a
+  consumer must not be *handed* a source, but a future campaign is free to
+  let an observer **achieve** an identification and be wrong about it.
 - **Fields** — typed functions over (space × time), the statistical prior.
 
 **Provider tiers coexist:** the tier-0 `ConstantSun` and the generated star
