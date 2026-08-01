@@ -588,8 +588,8 @@ makes a setting.
 
 ### The caster, from parameters that already exist
 
-Magic asks for no new per-species parameters. `PsychVector` already ships the
-discount rates incidence needs: `in_group_radius` *is* the social discount
+Magic asks for no new per-species parameters. `MindVector` and `SocietyVector`
+already ship the discount rates incidence needs: `in_group_radius` *is* the social discount
 (insular → externalise onto outsiders), `time_horizon` *is* the temporal one
 (immediate → borrow against a later era). `deliberation_latency` governs how
 deep a derivation search a people will run — answering a question the
