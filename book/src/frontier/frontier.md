@@ -53,6 +53,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The Teller — narrative discourse as a layer of its own](#the-teller--narrative-discourse-as-a-layer-of-its-own)
   - [The causal trace — the fabula as a partial order](#the-causal-trace--the-fabula-as-a-partial-order)
   - [Salience is a relation, not a property](#salience-is-a-relation-not-a-property)
+  - [The naming game — the missing axis of agreement](#the-naming-game--the-missing-axis-of-agreement)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [The living community — history as a baked, derivable biography](#the-living-community--history-as-a-baked-derivable-biography)
   - [The connection graph — society's transport topology](#the-connection-graph--societys-transport-topology)
@@ -2409,13 +2410,15 @@ it is that a fact's recorded antecedents are exactly what its derivation
 touched, which wants a mechanical check rather than a reviewer's attention.
 
 **A generative system admits output that is not worth having.** This deserves
-recording on its own, because three independent sources now agree on it. The thesis
+recording on its own, because four independent sources now agree on it. The thesis
 behind this essay derives a perfectly valid proof in which the antagonist visits the
 last house first, nothing is contested, and two characters never act again — an
 outcome it concedes "can hardly be argued to have any conflict." A choice-generation
 system built on answer-set solving needs a whole third rule category, distinct from
 the rules that *construct* structure and the rules that reject *nonsense*, purely to
-"discard some valid stories as uninteresting." And two of this project's own
+"discard some valid stories as uninteresting." A planning-based quest generator
+reports an *unclassifiable* category as the single tallest bar in its own results
+figure, and passes over it without comment. And two of this project's own
 campaigns ran aground on simulations that admitted consistent, degenerate outcomes.
 The shape is constant: consistency is cheap, sense is checkable, and *interest* is
 neither — it is a separate class of constraint that no amount of correctness supplies,
@@ -2525,6 +2528,107 @@ that a reload would have to reconstruct and could silently reconstruct wrong.
 The pantheon is the first consumer worth converting, both because the model's
 poverty is most visible there and because a falsified measurement is already
 sitting in the record waiting for it.
+
+---
+
+## The naming game — the missing axis of agreement
+
+*(High confidence in the diagnosis, which is checkable against the code; medium
+on the mechanism's transfer from vocabulary to interpretation; the convergence
+prediction is preregistrable with a real null. Source: Inukai, Taniguchi,
+Taniguchi and Hagiwara, "Recursive Metropolis-Hastings Naming Game", Frontiers
+2023, over the two-agent MHNG. Expanded through three ideonomy passes,
+2026-08-01.)*
+
+**The acceptance rate is exactly zero.** Not low — zero. Pantheon genesis
+*proposes* a deity for every phenomenon above a threshold, and nothing anywhere
+in the model ever evaluates a proposal, so no belief can be revised, adopted
+from a neighbour, or abandoned. The same hole sits one domain over: the lexicon
+models transmission and change but never *agreement*. A word exists because a
+sound-change cascade produced it and a lineage inherited it. There is no
+mechanism by which a community converges on a word, and therefore none by which
+convergence could fail, or by which two neighbourhoods could settle differently
+for reasons of who-talks-to-whom rather than who-descends-from-whom.
+
+Both models have an inheritance axis and no interaction axis. That is the same
+diagnosis the [salience essay](#salience-is-a-relation-not-a-property) reaches
+from the other side, which is the reason to trust it.
+
+**The mechanism is one comparison.** A speaker samples a sign from its own
+percept; a listener accepts it with probability equal to the ratio of how well
+the proposed sign explains the listener's *own* evidence against how well its
+current sign does. Nothing else. The locality is not incidental — it is
+simultaneously what makes the exchange a valid Metropolis-Hastings sampler and
+what makes it a defensible model of communication, since no agent may read
+another's internal state. What the population does collectively is approximate
+Bayesian inference over a shared latent variable that no individual is
+inferring.
+
+Two properties make it unusually implementable here. The uniform draw the
+acceptance test needs is exactly what the kernel's seeded streams already
+provide, so the method is deterministic without modification. And the
+precondition — *joint attention*, two agents attending the same thing — is
+already computed, because two agents co-observing one phenomenon is joint
+attention in the required sense.
+
+**One machine at two sites.** Exonyms and endonyms are this same sampler with
+an unmixed chain: an exonym is what remains when two communities never ran
+enough rounds to converge. The lexicon case and the pantheon case are not
+analogous, they are one mechanism at two sites, which argues for building it
+once low in the stack rather than twice in two domains. A reasonable division
+of labour with the existing language work: the sound-change cascade owns
+**form**, and the naming game owns **the assignment of form to meaning**.
+Differential lexical replacement is where the two must be reconciled.
+
+**A priesthood is a biased proposal distribution.** This is the structural
+result, and it *removes* code rather than adding it. Acceptance is already
+asymmetric — one party proposes, the other judges — so the only knob needed is
+how far that asymmetry is pushed. Today a priesthood flips a rendered string
+between folk and organized. Under this model, orthodoxy, scripturalism,
+prophecy and heresy are positions of a single parameter over *who is listened
+to*, and the cross-product of acceptance rule against proposal source
+enumerates them: likelihood-from-a-stranger is syncretism, prestige-from-a-text
+is scripturalism, never-accept-from-anyone is the hermit. That last cell is
+already shipped here under another name, which is some evidence the
+cross-product describes something real.
+
+**Model the burn-in, never the limit.** The convergence theorems are all
+statements about infinite time, and the temptation is to run to stationarity
+and report the equilibrium. That instinct is exactly wrong for this
+application: real traditions never mix, and the transient *is* the history. A
+pantheon that has converged is a pantheon with nothing left to narrate.
+
+**Writing pins a sample.** A culture that acquires its own ledger freezes a
+state the chain cannot leave, converting steady drift into punctuated
+equilibrium and making reform a phase transition rather than an authored event.
+That is a *derived* account of why literate traditions are conservative, where
+today the project can only assert it.
+
+**The prediction, and its null.** A deity is currently atomic — name, epithet
+and sentiment minted together in one call. Decomposed, each component
+negotiates at its own rate, which predicts that neighbouring peoples agree on
+the fast-converging components and differ on the slow ones: sharing ritual
+while differing on names, or sharing names while differing on sentiment. The
+null is that all components converge together, so agreement between two peoples
+is all-or-nothing. Both are measurable against the census machinery, and the
+null is worth shipping.
+
+**Three risks, named before any spec.** The agents' shuffle order becomes
+**stream consumption order**, which is a save-format contract sitting in the
+middle of the method. The full recursion costs exponentially in the number of
+agents, so only the one-sample and limited-length approximations are usable —
+and the fidelity of those approximations is itself a measurement question. And
+the deepest: **a sampler has no memory of why it accepted anything.** If belief
+becomes a chain, provenance interrogation gets *worse* rather than better,
+unless every acceptance commits a fact carrying its antecedents — which is the
+[causal trace](#the-causal-trace--the-fabula-as-a-partial-order) again,
+arriving from a fourth direction.
+
+**Sequencing.** Downstream of relational salience, which decides what is
+jointly attended in the first place, and of the causal trace, which keeps the
+chain explicable. The pantheon is the better first site despite the lexicon
+being the mechanism's home domain, because the pantheon already has a falsified
+measurement waiting and the lexicon does not.
 
 ---
 
@@ -3860,6 +3964,11 @@ generator of it); Rolf Zwaan and Gabriel Radvansky's event-indexing situation
 model, via Rachelyn Farrell and Stephen Ware on Indexter (salience as a
 relation between an event and the situation, over five shared indices — taken
 here for the perception model and explicitly not for the influence result
-built on it).
+built on it); Tadahiro Taniguchi and colleagues on the Metropolis-Hastings
+naming game (a population converging on shared signs by accepting whatever
+better explains each hearer's own evidence — decentralized inference over a
+latent variable nobody infers alone); Dov Monderer and Lloyd Shapley on
+potential games, via Diehl et al. (an N-agent equilibrium collapsing to a
+single optimization when pairwise coupling is symmetric).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
