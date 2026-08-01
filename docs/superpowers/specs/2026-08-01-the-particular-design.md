@@ -54,16 +54,50 @@ derived from `EntityId` or mint order*) **by construction rather than by care**:
 `persona_of` salts from `handle ^ seed`, so a name is stable under any mint-order
 churn.
 
-**D2 — The cast is the top `REMEMBERED_FOUNDERS: usize = 100` occupations by
-peak population.** Not a population threshold. A fixed threshold would silently
-mean something different the moment demography is recalibrated — and §7's F3
-argues it should be. "The hundred most populous occupations in this world's
-history" means the same thing at any scale, and it makes the ledger cost a
-*guarantee* — at most `3 × 100` facts, and exactly `2 × 100` plus one per
-already-dead founder — rather than an estimate.
+**D2 — Memory belongs to a people, and its capacity is
+`MEMORY_DEPTH: usize = 20` founders per people.** Not a world-level constant, and
+not a ratio.
 
-Selection order is `(peak_population DESC, site ASC, founded ASC)` — a total
-order over `u32` and structural keys, no float comparison anywhere.
+```
+cast = Σ over peoples: min(MEMORY_DEPTH, occupations of that people)
+```
+
+Within a people, rank by `(peak_population DESC, site ASC, founded ASC)` — a
+total order over `u32` and structural keys, with no float comparison anywhere.
+
+**Why per-people rather than per-world.** A world-level "top 100" implies an
+omniscient rememberer — which is nobody. Three things follow from giving memory a
+holder that a world constant cannot give:
+
+1. **Memory acquires a subject.** A founder remembered by gnolls and unknown to
+   kobolds is a fact *about knowledge*, which is the seam the `KNOW-*` cluster
+   needs later.
+2. **The cast concentrates where relations can exist.** Polti needs pairs — a
+   supplicant *and* a power. A global ranking scatters the cast across five
+   peoples; a per-people ranking puts contemporaries in the same tradition.
+3. **It composes with roster growth.** Add a species and the cast grows because
+   there are more rememberers. No constant to retune —
+   `[[SOC-species-scale-mechanism]]`'s eventual elves and dwarves slot in
+   untouched.
+
+**Why a constant per holder rather than a ratio or a log.** The anchor is
+ethnographic: oral genealogies hold roughly constant *depth* regardless of how
+much time has actually elapsed, because the binding constraint is transmission,
+not history length. Middle generations telescope out. A ratio would say a people
+that founded twice as many hamlets remembers twice as many founders, which gets
+the constraint backwards.
+
+**Measured, three seeds:** cast = 90 / 82 / 100. It varies because some peoples
+barely exist — seed 7's kobolds have 2 occupations in total and therefore 2
+remembered founders. That is the model working, not a shortfall.
+
+**Measured design input:** `corr(peak_population, founded)` = −0.32 / −0.39 /
+−0.33. Mildly negative and consistent, so ranking by magnitude is **not**
+covertly ranking by age; and because older occupations skew slightly larger, the
+earliest founders tend to enter the cast without a rule saying so.
+
+The ledger cost stays a guarantee rather than an estimate: at most
+`3 × cast` facts, exactly `2 × cast` plus one per founder already dead at `now`.
 
 **D3 — Promotion runs last in `build_to`.** `mint_entity` is a monotonic counter
 (`kernel/src/ledger.rs:145-150`), so appending mints cannot shift an existing
@@ -181,9 +215,11 @@ All figures measured on this branch, seeds 42 / 7 / 1000, at 218 bytes/fact.
 | `world.json` bytes | 5,745,708 | 6,424,096 | 5,461,378 |
 | occupations | 1,776 | 1,996 | 1,679 |
 | `occ-peak` max | 127 | 90 | 119 |
-| cast at N=100 | 100 | 100 | 100 |
-| added facts (≤ 3 × 100) | ≤ 300 | ≤ 300 | ≤ 300 |
-| ledger growth | **≤ +1.14%** | **≤ +1.02%** | **≤ +1.20%** |
+| peoples | 5 | 5 | 5 |
+| cast at `MEMORY_DEPTH = 20` | 90 | 82 | 100 |
+| added facts (≤ 3 × cast) | ≤ 270 | ≤ 246 | ≤ 300 |
+| ledger growth | **≤ +1.03%** | **≤ +0.84%** | **≤ +1.20%** |
+| `corr(peak, founded)` | −0.32 | −0.39 | −0.33 |
 
 The bound is exact rather than estimated: two facts per founder unconditionally,
 plus one per founder already dead at `now`. Because lifespans are short against a
@@ -214,9 +250,19 @@ hypothesis field, so the freeze lives here). Scored against
   all 35 situations remain blocked, no other bundle's fan-in moves.
 - **P4 — "The closest blocked situation is still missing N bundles" goes 4 → 3.**
 - **P5 — Ledger growth is ≤ 1.5% on every seed measured**, and the added fact
-  count is exactly `2 × REMEMBERED_FOUNDERS + (founders already dead at now)`
-  — an identity, not a bound, so a mismatch means the death rule misfired
-  rather than that the estimate was off.
+  count is exactly `2 × cast + (founders already dead at now)` — an identity,
+  not a bound, so a mismatch means the death rule misfired rather than that the
+  estimate was off.
+- **P6 — At least one same-people pair of remembered founders has overlapping
+  lifespans.** This is the prediction I am least sure of and it matters most.
+  Founding days span roughly 0–1900 and there are at most 20 founders per
+  people, so the mean gap is near a century while lifespans are decades. **If
+  this fails, the cast contains no contemporaries and cannot stage a two-actant
+  situation even in principle** — which would be the single most useful thing
+  this campaign could learn, and would reshape the next one.
+- **P7 — The cast spans all five peoples on every seed**, with per-people counts
+  equal to `min(MEMORY_DEPTH, occupations)`. A people missing entirely means the
+  roster resolution or the per-people grouping is wrong.
 
 A falsified prediction is a finding, not a failure. Nothing may be retuned to
 rescue one after unblinding.
@@ -333,7 +379,8 @@ determinism: **fixture-vs-live** comparisons redden; **live-vs-live** ones
   unpinned one.
 - Every promoted person's birth ≥ their occupation's `founded`; no person's
   death precedes their birth; the cast size is exactly
-  `min(REMEMBERED_FOUNDERS, occupation_count)`.
+  `Σ min(MEMORY_DEPTH, occupations per people)`, and every people with at least
+  one occupation contributes at least one founder.
 - The three new predicates appear in `hornvale concepts`, and
   `hornvale tropes report` shows `individual-persons` absent from Leverage.
 
