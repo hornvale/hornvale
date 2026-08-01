@@ -50,6 +50,8 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
   - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
+  - [The Teller — narrative discourse as a layer of its own](#the-teller--narrative-discourse-as-a-layer-of-its-own)
+  - [The causal trace — the fabula as a partial order](#the-causal-trace--the-fabula-as-a-partial-order)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [The living community — history as a baked, derivable biography](#the-living-community--history-as-a-baked-derivable-biography)
   - [The connection graph — society's transport topology](#the-connection-graph--societys-transport-topology)
@@ -2154,6 +2156,209 @@ ledger that now holds none) rendered as the still-set table.
 
 ---
 
+## The Teller — narrative discourse as a layer of its own
+
+*(High confidence on the order model and the tense bridge — pure emit-boundary
+work over machinery that already ships; medium on the authoring template and
+the spin. Source: Nick Montfort, "Curveship's Automatic Narrative Style",
+FDG 2011, read 2026-08-01.)*
+
+**Hornvale has a Simulator and no Teller.** Montfort's observation about
+interactive fiction — that decades of work went into computer-controlled
+*characters* and almost none into computer-controlled *narrators* — describes
+this project exactly. The constitutional layering already draws his line, and
+draws it harder than Curveship does: domains model, windows present, and a
+test enforces the direction. But having separated the telling from the world,
+we never gave the telling any parameters. Every window narrates in one voice,
+in one order, in one tense, and there is no seam at which those could be
+anything else.
+
+**The order model is the sharp part.** Genette's anachronies — analepsis
+(flashback), prolepsis (flashforward), syllepsis (grouping by category),
+achrony (unordered) — are *descriptive* categories, and Montfort's
+contribution is the observation that generating them requires algorithms, and
+that a flat sequence of events cannot represent what the algorithms produce.
+The sequence `3 4 5 1 2 6 7` is ambiguous between a flashback, an achronic
+jumble, and a two-category sylleptic telling; nothing in the flattened list
+distinguishes them. Only an **ordered tree** does, because an analepsis is
+*embedded* beneath a node of its main sequence rather than concatenated with
+it. The embedding is not bookkeeping: it is what later determines the verb.
+
+**Where this bites today.** The historiography window recounts an entity by
+replaying its committed facts, and the ledger yields those in **commit
+order** — a contract deliberate enough to carry its own kernel test. Each
+line is stamped with the day it was asserted; nothing sorts by it. So the one
+narrative surface the project has renders *storage* order and presents it as a
+timeline, which in Genette's vocabulary is nearer achrony than chronicle. The
+repair is not to reorder the ledger. That contract is load-bearing, and
+reordering it would be precisely the Simulator/Teller confusion the
+architecture exists to prevent: an order of telling is a structure computed
+*over* the ledger for one telling and discarded afterward.
+
+**Syllepsis is the one that comes free.** Ordering by category instead of by
+time needs a partition of the facts, and the concept registry already
+partitions every fact by predicate and by asserting domain. "Everything the
+world knows about its water, then everything about its stone, each internally
+chronological" is a telling available today and never used — the cheapest of
+the orders, and the least like anything a game normally does.
+
+**The tense bridge.** Reichenbach's three times — speech, reference, event —
+determine a clause's tense, and Montfort's move is to compute tense from them
+rather than author it, letting the telling tree's topology assign reference
+and speech times systematically across embedded sequences. Both ends of this
+bridge already ship here and have never been joined. A fact's day is event
+time. The language domain draws, per tongue, how deeply tense grammaticalizes
+and which side of the word its affix binds — machinery that is measured but
+never *realized* against a real event time, because nothing upstream has ever
+asked for a tense. Joining them makes an already-paid-for conlang feature do
+visible work, and it is why the order model and the time of narrating cannot
+be built separately: they determine the same verb.
+
+**Style as data — the spin.** Curveship keeps its narrative parameters in a
+file applied to an unchanged simulation: one fiction, many tellings, the world
+untouched. That is a shape this project has already ratified elsewhere —
+studies are data, metrics are code — aimed at prose: *spins are data, tellers
+are code*. The payoff is not expressive so much as evidentiary. A telling
+becomes a seed-stable, drift-checked artifact like every other committed
+output, so a change in voice reddens a gate instead of going unnoticed.
+
+**The authoring middle.** Montfort's string-with-slots template — `[*/s]
+[are/v] inside _a_building, _a_well_house for _a_large_spring` — is argued as
+a deliberate compromise, on the grounds that abstract syntax representations
+are too costly to author and fixed strings too rigid to vary. This project
+sits at both poles and not in the middle: the focalizer and the chamber prose
+are format strings, while the clause layer is the abstract pole carrying
+exactly one construction. What the middle buys is visible in his own example.
+Underscored noun phrases shift from indefinite to definite on second mention —
+"you are inside a building" becomes "the building" — which the clause layer
+can already express and the focalizer cannot, because nothing tracks what the
+prose has already said.
+
+**Refusal is not failure.** An action *fails* when its preconditions were met
+and its postcondition does not hold; it is *refused* when nothing happens in
+the world at all and something is narrated anyway. The distinction is sharp
+here precisely because it sits badly against an append-only ledger: a refusal
+is an event of the telling with no fact behind it. That is a question to
+settle deliberately rather than implement quietly.
+
+**What it costs, and what keeps it honest.** All of this is emit-boundary
+work: no new world-state, no seeded draws, and therefore no epoch and no
+save-format change — *provided* the telling's parameters are chosen by an
+author or a player rather than drawn from a stream. A spin that draws has
+become a domain wearing a window's clothes, with no registry entry and no
+pin-isolation test. The honest test is Montfort's own: the same world, told
+several ways, must remain recognizably the same world. A reordering that
+changes which facts are asserted has stopped being a telling and become a
+second simulation.
+
+**Sequencing.** The order model and the tense bridge are one campaign, because
+the paper's closing finding is that they cannot be separated. The template
+middle and the refusal distinction are independent of both, and cheaper.
+
+---
+
+## The causal trace — the fabula as a partial order
+
+*(High confidence on the causal-edge mechanism, which is additive and cheap;
+medium on the reading modes it enables; low on the invariant proofs, whose
+reach the source itself bounds sharply. Source: Chris Martens, "Programming
+Interactive Worlds with Linear Logic", CMU-CS-15-134, 2015, read 2026-08-01.)*
+
+**The ledger records who spoke, not what was used.** A fact carries a
+free-form provenance naming the system that asserted it, and nothing anywhere
+records which *antecedent facts* it was derived from. So the historiography
+window can attribute but it cannot explain: it says "asserted by terrain," and
+it can never say "because of these three facts." The distinction sounds
+pedantic and is not — it is the difference between a byline and a causal
+graph, and every interesting question about a world is on the far side of it.
+
+**Causality is computable from resource-threading.** This is the borrowed
+result. In a forward-chaining proof, each rule application records which
+resources it consumed and which it produced. Give every resource a name and
+write each step as a binding — one rule, its inputs, its freshly-created
+outputs — and then causality is *derived*: draw an edge from one step to
+another whenever a name leaves the first and enters the second. That is the
+whole algorithm, and it produces the causal graph of a run without anyone ever
+authoring a causal link. Nothing in it requires linear logic as a substrate.
+It requires only that a rule application record its inputs and outputs, which
+is a property of how facts are committed, not of the logic they are written
+in.
+
+**Independence, and why a fabula is a partial order.** Two steps are
+interchangeable exactly when neither uses a name the other introduced. So a
+trace is not a sequence — it is a *partial order*, and the two readings of
+that structure are the same computation: what is ordered is causality, and
+what is unordered is concurrency. In the source's worked folktale, three
+characters building three houses are provably independent, so the order in
+which those are told is arbitrary; the antagonist, threaded as a single
+resource through every confrontation, forces those confrontations into a
+strict line. Nobody declared either fact. Both were read off the threading.
+
+**What this does to the telling.** The [Teller](#the-teller--narrative-discourse-as-a-layer-of-its-own)
+argues that an order of telling needs an ordered tree. This supplies the layer
+beneath it: the simulation determines a DAG, and a telling is a *linearization*
+of that DAG. Anachrony becomes a choice of which linearization, and where to
+embed it. The consequence that matters is a check rather than a feature — the
+set of legal tellings is *bounded* by the partial order, so a telling that
+places a consequence before its cause has not chosen an unusual style, it has
+lied. That is a mechanically checkable property, which is rarer in this
+territory than it sounds.
+
+**Reading modes fall out of the graph.** The sharpest is *follow the
+resource*: re-interpret simultaneity as alternation, and at each event offer
+the choice of which thread to follow to its next use. Follow the water;
+follow the tribute; follow this lineage. It is navigation over the causal
+graph rather than over space, and it is the cheapest real use of the graph
+once the graph exists. The [anti-phenomenon](#the-anti-phenomenon--meaningful-absence-as-an-observable)
+sharpens in the same move: an absence backed by a causal graph can say what
+failed to happen *because* of what, rather than merely noting a gap.
+
+**The tension worth naming: linear versus persistent.** Our ledger is
+append-only and contradiction-checked — monotonic, which in this vocabulary is
+the *persistent* modality. Linear logic's premise is the opposite: a resource
+is consumed by being used. Two things survive translation even if the
+formalism never arrives. Conservation becomes *structural* rather than
+asserted — "this moves from here to there" is a single rule, and nothing can
+leak, so conservation stops being a property one has to remember to test.
+And multiplicity becomes expressible without indexing propositions by an
+integer, which planning formalisms cannot manage; in a resource logic one
+cannot even write a rule that deletes a fact, because other copies of that
+fact may exist. Whether any domain here should be *written* this way is
+genuinely open. That several of them are *about* conserved quantities is not.
+
+**Generative invariants, and the honest bound on them.** A generative
+signature is a grammar that generates every permissible state — the dual of a
+description that tears a state down — and a rule preserves the invariant
+exactly when it maps generated states to generated states. The appeal against
+a laboratory that samples is immediate: a census reports that two thousand
+worlds satisfied a property, where an invariant would say that every reachable
+world does. But the source bounds its own result sharply, and the bounds bite
+precisely here. There is no general algorithm for checking preservation; the
+decidability result covers only the variable-free fragment, by way of an
+arithmetic the author himself calls impractical; and *apartness constraints
+are inexpressible*, so well-formed **graph** properties — no self-loops, no
+multi-edges — are out of reach. Nearly all of this world's state is
+graph-shaped. What survives is the modest half, and it costs a document rather
+than a proof: write the generative signature down *at all* — a grammar of what
+a well-formed world state is, independent of the code that happens to build
+one. Neither it nor its dual exists anywhere in this project today, and even
+unproven it is a specification the laboratory can be checked against.
+
+**What keeps it honest.** A derived causal graph is only as true as the
+recording is complete. A rule that quietly reads a fact it does not declare
+produces an edge that does not exist, and the graph will look authoritative
+either way — the failure mode is a confident wrong explanation, which is worse
+than the missing one we have now. So the test is not that the graph renders;
+it is that a fact's recorded antecedents are exactly what its derivation
+touched, which wants a mechanical check rather than a reviewer's attention.
+
+**Sequencing.** The causal edges come first, because everything else here is
+downstream of them. The reading modes follow the graph. The generative
+signature is independent of both and is a writing task before it is an
+engineering one.
+
+---
+
 ## The social graph — a derived, self-balancing relational layer
 
 *(High confidence in the architecture and the balance dynamic; medium on the
@@ -3456,6 +3661,12 @@ the ideonomy monographs, via Grace Kind's synthesis essays at gracekind.net
 organons, dimensions — over captured ideas); Rune Skovbo Johansen, "Fast and
 Gorgeous Erosion Filter" (2026) (gradient-aligned procedural erosion as a
 pointwise filter rather than a simulation — the technique the material-buffer
-readout above is argued against).
+readout above is argued against); Gérard Genette, *Narrative Discourse*, with
+Hans Reichenbach, *Elements of Symbolic Logic*, via Nick Montfort's Curveship
+(narrative order as generating algorithms over an ordered tree, and tense
+computed from speech, reference, and event times rather than authored); Chris
+Martens, *Programming Interactive Worlds with Linear Logic* (causality derived
+from resource-threading, a trace as a partial order rather than a sequence,
+and generative signatures as grammars over well-formed state).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
