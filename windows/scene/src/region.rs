@@ -227,7 +227,7 @@ fn interp(
 /// JSON key order and is contract. Per-node layers are `(samples+1)²`,
 /// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
 /// discrete layers (`ocean`, `biome`, `plate`) are nearest-cell.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: precip_mm_yr)
 #[derive(Debug, Serialize)]
 pub struct RegionScene {
     /// Always `scene/tiles-region/v1`.
@@ -292,6 +292,32 @@ pub struct RegionScene {
     /// watercourses crossing a scarp. Appended per the schema stability
     /// contract.
     pub waterfalls: Vec<WaterfallPoint>,
+    /// Diurnal (day/night) temperature half-amplitude per node, °C
+    /// (barycentric; 0 on a locked world, which has no diurnal cycle).
+    /// Appended per the schema stability contract.
+    ///
+    /// Present so a client's temperature lens can evaluate a patch-backed
+    /// tile at all: it reconstructs `t_mean_c + t_swing_c·sin(…)` plus
+    /// `t_diurnal_amp_c · diurnalWaveform(…)`, and without this it had only
+    /// the tiles export's grid to read — which a region node is not on.
+    ///
+    /// Note this is the AMPLITUDE, interpolated per node. It is not the same
+    /// quantity [`temperature_grid_region`] interpolates, which is the whole
+    /// diurnal ANOMALY (amplitude × waveform evaluated at each cell's own
+    /// longitude). A client multiplying this amplitude by a waveform at the
+    /// NODE's longitude will therefore not reproduce that function to the
+    /// last ULP; the two agree in the limit of a fine grid, not exactly.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_diurnal_amp_c: Vec<f64>,
+    /// Annual precipitation per node, mm/yr (barycentric). Appended per the
+    /// schema stability contract.
+    ///
+    /// Interpolated as PRECIPITATION, not derived from the interpolated
+    /// `moisture`: [`hornvale_climate::precip_mm_yr`] is nonlinear, so
+    /// `precip(interp(moisture))` ≠ `interp(precip(moisture))`, and only the
+    /// latter matches the per-cell values the tiles export ships.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub precip_mm_yr: Vec<f64>,
 }
 
 /// Build the `scene/tiles-region/v1` scene for one tile address, deriving a
@@ -366,7 +392,9 @@ pub fn tiles_region_scene_in(
     let mut unrest = Vec::with_capacity(units.len());
     let mut t_mean_c = Vec::with_capacity(units.len());
     let mut t_swing_c = Vec::with_capacity(units.len());
+    let mut t_diurnal_amp_c = Vec::with_capacity(units.len());
     let mut moisture = Vec::with_capacity(units.len());
+    let mut precip_mm_yr = Vec::with_capacity(units.len());
     let mut water = Vec::with_capacity(units.len());
     let mut drainage = Vec::with_capacity(units.len());
     for s in &units {
@@ -393,12 +421,19 @@ pub fn tiles_region_scene_in(
             climate.mean_temperature_at(c).get()
         }));
         t_swing_c.push(interp(cg, c_index, *s, |c| climate.seasonal_swing_at(c)));
+        t_diurnal_amp_c.push(interp(cg, c_index, *s, |c| climate.diurnal_amp_at(c)));
         // Barycentric interpolation is a convex combination in theory, but
         // when several sampled cells sit exactly at the moisture domain's
         // boundary (`1.0` — common now that ocean cells clamp there),
         // floating-point summation can overshoot by an ULP or two; clamp
         // back into the declared `[0, 1]` domain.
         moisture.push(interp(cg, c_index, *s, |c| climate.moisture_at(c)).clamp(0.0, 1.0));
+        // Interpolate the PRECIPITATION, not the moisture it derives from:
+        // `precip_mm_yr` is a nonlinear function of moisture, so applying it
+        // to an interpolated moisture would not equal the interpolation of
+        // the per-cell precipitation the tiles export ships, and the two
+        // documents would disagree wherever a client shows both.
+        precip_mm_yr.push(interp(cg, c_index, *s, |c| climate.precip_at(c).get()));
     }
     let waterfalls = terrain
         .waterfalls()
@@ -439,6 +474,8 @@ pub fn tiles_region_scene_in(
             .collect(),
         drainage,
         waterfalls,
+        t_diurnal_amp_c,
+        precip_mm_yr,
     })
 }
 
