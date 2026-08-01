@@ -239,6 +239,16 @@ Frozen before the code that would move them (decision 0016; a study JSON has no
 hypothesis field, so the freeze lives here). Scored against
 `docs/audits/trope-coverage.md` at close.
 
+**Two tiers, and the distinction is load-bearing.** P1, P3 and P4 below are
+**verification**, not prediction: registering three predicates *must* remove the
+bundle from Leverage, *must* leave 30 rows, *must* promote `intent` to the top.
+They cannot fail unless the implementation is wrong, which is worth checking and
+is not a hypothesis. Presenting them as predictions would be the same
+cannot-fail defect a reviewer caught in The Repertoire's ratchet.
+
+**P2, P6 and P7 are the actual predictions** — each could plausibly come out the
+other way, and P6 most of all.
+
 - **P1 — `bundle:individual-persons` leaves the Leverage table**, because all
   three unregistered tokens become registered (the fourth, `concept:person`, is
   already held — D4a). The table goes from **31 rows to 30**.
