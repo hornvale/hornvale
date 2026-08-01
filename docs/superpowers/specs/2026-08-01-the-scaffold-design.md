@@ -17,7 +17,11 @@ Three things stand in the way, and each is worth removing on its own merits.
 
 ## 2. What is wrong
 
-**`EntityId` is doing double duty.** `windows/worldgen/src/history_bake.rs:811`
+**`EntityId` is doing double duty — a lifetime mismatch expressed as type
+reuse.** Bake handles live for the duration of one function call; `EntityId`s
+live forever, in every saved world. Sharing a type across that gap is why the fix
+is a type split rather than a rename.
+`windows/worldgen/src/history_bake.rs:811`
 holds a private `next_id: u64`, and `Bake::mint` (`:948`) hands out
 `EntityId`-typed values from it that never touch the ledger. They are remapped at
 emit through `bake_to_ledger` (`history_emit.rs:119`). So the ledger's primary key
@@ -90,12 +94,18 @@ properties**, and that is a fact about the world rather than a defect in the
 comparator — these are genuinely distinct histories that converged on identical
 outcomes.
 
-`founded_from` is therefore the semantically correct final key today, and it
-becomes structurally correct once The Signet makes ancestry non-positional. Note
-the honest consequence: for those ~6 records per world the order still depends on
-a mint-order id, so The Signet *will* reorder them. That is a reduction from 239
-mint-order-dependent pairs to six, with the residual explainable rather than
-silent.
+**`founded_from` is a material fact currently wearing a positional
+representation.** Who founded a settlement is a fact about the world; that the
+fact is presently *encoded* as a mint index is a defect in the encoding, not in
+the comparator. Ordering the lattice of candidate comparators over **facts**
+rather than over representations puts `(founded, ended, peak, founded_from)` at
+the finest *material* order — and everything above it, reachable only by
+consulting an artifact of write order, is fabrication.
+
+So this campaign reaches the material ceiling. The Signet then fixes the
+encoding, not the comparator. The practical consequence is unchanged — The Signet
+will reorder those ~6 records per world — but the reason is that one fact's
+representation improves, not that a residual defect persists here.
 
 **D5 — No committed fact changes.** The tie-breaks live in read helpers.
 `vestige.rs` states it of itself — "no live mutation, no committed facts" — and
@@ -111,21 +121,24 @@ occupation's own entity, and becomes `r.id` under D3.
 ## 4. Preregistered
 
 Frozen before the code (decision 0016). **Two of these are verification and one is
-a prediction**; the distinction is stated because a previous campaign shipped
-three checks dressed as hypotheses.
+a measurement — none is a prediction**, and saying so is the point. A previous
+campaign shipped three checks dressed as hypotheses; this one has no hypothesis
+worth the name, and inventing one would be the same error.
 
 - **V1 (verification) — `cli/tests/fixtures/world-seed-42.json` is byte-identical.**
   Cannot fail unless D5 is wrong, which would itself be the finding.
 - **V2 (verification) — the `.community` field no longer exists on the
   reconstructed type**, and the workspace compiles. A grep for it outside the bake
   returns only `r.id`.
-- **P1 (prediction) — the reordering is visible but small.** Between 5% and 25% of
-  sites with more than one occupation change their layer order under D4. Below 5%
-  would mean mint order already matched the semantic order closely enough that
-  The Signet's risk was overstated; above 25% would mean the almanac's
-  stratigraphy prose has been substantially arbitrary. **I do not know which, and
-  the number is worth having** — it is the first direct measurement of how much
-  mint order was silently deciding.
+- **M1 (measurement, not prediction) — what fraction of multi-occupation sites
+  change layer order under D4?** An earlier draft preregistered "between 5% and
+  25%." That band had no basis: it was a guess wearing a prediction's clothes, and
+  a preregistered range I cannot justify is weaker than an honest unknown. So it is
+  recorded as a **measurement to report**, with no predicted value.
+
+  It may be this campaign's most valuable output. Nobody has ever measured how much
+  of the palimpsest's order the mint index was silently deciding, and the number
+  bears directly on how much The Signet will move.
 
 ## 5. Non-goals
 
@@ -150,28 +163,44 @@ waits on `SOC-self-conquest`. Anything about `Ledger::mint_entity`. Emitting
 
 ## 7. Definition of Done
 
-P1 scored with the measured number. Gallery artifacts regenerated with the prose
+M1 reported with the measured number and no retrofitted expectation. Gallery artifacts regenerated with the prose
 diff reviewed. A chronicle entry and a retrospective. `SOC-self-conquest` and the
 other registry rows this brainstorm minted left in place for their own campaigns.
 A book freshness sweep, re-scoring any Confidence Gradient bet this moves.
 
 ## 8. Flagged for review
 
-**The comparator needs a positional key, and I could not avoid it.** This section
-originally flagged the totality question as unmeasured; measuring it found that
-`(founded, ended, peak)` really does tie — 6 records in seed 42, 4 in seed 7 —
-and that **no non-positional field separates them**. D4 therefore ends on
-`founded_from`, an `EntityId`.
+**The comparator reaches the material ceiling; one of its facts is badly
+encoded.** This section first flagged the totality question as unmeasured, then —
+after measuring — as an unavoidable positional key. Both framings were wrong in
+the same way: they ranked *representations* instead of *facts*. Who founded a
+settlement is material. That it is stored as a mint index is The Signet's problem.
 
-That is defensible: ancestry is what genuinely distinguishes those records, and
-The Signet makes it non-positional. But it means this campaign does **not** fully
-remove the mint-order dependency it exists to remove — it reduces it by roughly
-40×, and converts the residual from invisible to explainable. Worth stating
-plainly rather than claiming a clean sweep.
+What measuring did establish: `(founded, ended, peak)` genuinely ties — 6 records
+in seed 42, 4 in seed 7, 0 in seed 1000 — and no other non-entity field separates
+them (same `cause`, `tech`, `function`, `notability`, `people` across all five
+pairs). Those six are independent evidence that **ancestry is the right basis for
+The Signet's community key**, since the world offers nothing else to tell them
+apart.
 
-One consequence for sequencing: those six records are also evidence that
-ancestry-based identity is the right answer for The Signet's community key, since
-the world itself offers nothing else to tell them apart.
+**A stratigraphy is a partial order, and this campaign still returns a total
+one.** Archaeology's Harris matrix records stratigraphic relations as a partial
+order and leaves unrelatable contexts unrelated rather than inventing a sequence;
+distributed systems reach the same answer with vector clocks, where concurrency is
+a first-class result rather than an error. Hornvale's `occupations_at` returns a
+`Vec`, which cannot say "these two are simultaneous."
+
+Changing that return type is **out of scope** — it would ripple through every
+consumer for a property only ~6 records per world exercise. But the *prose* should
+not imply sequence where none exists: where two layers tie on every material fact
+but ancestry, "two settlements held this site in the same generation" is truer
+than describing one before the other. Recorded here rather than specced, as a
+candidate for whichever campaign next touches the almanac's history rendering.
+
+**Everything here is measured at one world size.** ~1,800 occupations across ~400
+sites. Tie counts and ancestry chain depth both grow with world size, and
+`SOC-species-scale-mechanism` would grow it deliberately. The design is sound at
+the scale we have and unmeasured beyond it.
 
 **The public type keeps its name while changing its shape.** `OccupationRecord`
 loses two fields. Any out-of-crate consumer breaks at compile time rather than
