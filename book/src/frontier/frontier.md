@@ -2263,6 +2263,17 @@ are code*. The payoff is not expressive so much as evidentiary. A telling
 becomes a seed-stable, drift-checked artifact like every other committed
 output, so a change in voice reddens a gate instead of going unnoticed.
 
+A spin need not be *chosen*, either. A later system in the same lineage adds a
+third source: **infer it from the material**. A genre-detecting subsystem reads
+the story so far, decides what kind of story it already is, and sets the
+telling parameters accordingly — for a confession, it makes the sinner the
+narrator, drops the narratee, sets the narrating time to *after*, and selects a
+hesitant style. Its authors note this is backwards from human practice, where
+one picks a genre and then writes into it. For a simulation that generates its
+history first and narrates it second, backwards is the right way round: a spin
+inferred from a committed ledger is a pure function of it, so this third source
+costs no epoch and stays as reproducible as the world it reads.
+
 **The authoring middle.** Montfort's string-with-slots template — `[*/s]
 [are/v] inside _a_building, _a_well_house for _a_large_spring` — is argued as
 a deliberate compromise, on the grounds that abstract syntax representations
@@ -2274,6 +2285,19 @@ Underscored noun phrases shift from indefinite to definite on second mention —
 "you are inside a building" becomes "the building" — which the clause layer
 can already express and the focalizer cannot, because nothing tracks what the
 prose has already said.
+
+**Disnarration — the absence that must never become a fact.** A telling can
+report not only what happened but *what did not*: she did not turn back, no one
+came to the door. The structural finding in the source is the useful half —
+disnarration "is not the representation of action," so it cannot live in the
+list of actions and must be handled in the spin instead. That makes a third
+kind of meaningful nothing, and the three sit in three different places: the
+[anti-phenomenon](#the-anti-phenomenon--meaningful-absence-as-an-observable) is
+a gap the *world* has, explicit ellipsis is a gap the *telling* has, and a
+disnarration is a non-event the telling asserts. Only the first is ever a fact.
+The other two are constructs of the discourse, and a disnarration committed to
+the ledger as a negative fact would quietly corrupt what the ledger means —
+which is exactly the mistake the placement rule exists to prevent.
 
 **Refusal is not failure — and it is not narration either.** An action *fails*
 when its preconditions were met and its postcondition does not hold; it is
@@ -2410,7 +2434,7 @@ it is that a fact's recorded antecedents are exactly what its derivation
 touched, which wants a mechanical check rather than a reviewer's attention.
 
 **A generative system admits output that is not worth having.** This deserves
-recording on its own, because four independent sources now agree on it. The thesis
+recording on its own, because five independent sources now agree on it. The thesis
 behind this essay derives a perfectly valid proof in which the antagonist visits the
 last house first, nothing is contested, and two characters never act again — an
 outcome it concedes "can hardly be argued to have any conflict." A choice-generation
@@ -2423,7 +2447,17 @@ campaigns ran aground on simulations that admitted consistent, degenerate outcom
 The shape is constant: consistency is cheap, sense is checkable, and *interest* is
 neither — it is a separate class of constraint that no amount of correctness supplies,
 and a system that does not name it will keep rediscovering it one campaign at a time.
-Naming it is not the same as solving it; the useful move is to stop being surprised.
+
+The fifth source is also the only one that answers it with a **mechanism**
+rather than a bucket. A plot generator in a story-generation blackboard
+alternates two phases: *engagement*, which generates freely under content and
+rhetorical constraints while deliberately **avoiding explicit goals**, and
+*reflection*, which evaluates the material for novelty and interestingness and
+verifies its coherence. Filtering says "discard the dull." A cycle says
+generate goal-blind so the generator can surprise the evaluator, then prune,
+then generate again from the pruned state. The goal-blindness is the load-
+bearing part and the part a filter cannot supply: a generator steered by the
+interest criterion can only produce what the criterion already knows to want.
 
 **Sequencing.** The causal edges come first, because everything else here is
 downstream of them. The reading modes follow the graph. The generative
@@ -3969,6 +4003,10 @@ naming game (a population converging on shared signs by accepting whatever
 better explains each hearer's own evidence — decentralized inference over a
 latent variable nobody infers alone); Dov Monderer and Lloyd Shapley on
 potential games, via Diehl et al. (an N-agent equilibrium collapsing to a
-single optimization when pairwise coupling is symmetric).
+single optimization when pairwise coupling is symmetric); Gerald Prince on
+*disnarration* and Rafael Pérez y Pérez on the engagement–reflection cycle,
+both via Slant (the narrated non-event as a construct of discourse rather than
+of world; and goal-blind generation alternating with evaluative pruning, as the
+one mechanism offered against consistent-but-uninteresting output).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
