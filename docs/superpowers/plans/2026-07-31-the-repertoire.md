@@ -644,6 +644,39 @@ coverage number is Goodhart-gameable by registering predicates nothing uses,
 and the supply scan is what catches that (spec D5)."
 ```
 
+#### Task 3 review amendments (fix round 1)
+
+The Task 3 review found one Critical and four Important defects, all of them
+in the plan text above rather than in its transcription. The authoritative
+statement of the fixes is
+`.superpowers/sdd/2026-07-31-the-repertoire/task-3-fixes.md`; where it and the
+code listings above disagree, that file governs. In summary:
+
+- **The Leverage table ranked bundles the world already holds.** The fan-in
+  loop gated on the *situation* being blocked, so a blocked situation
+  contributed every bundle it requires, satisfied ones included — seven of
+  them, under a heading reading "Missing bundles by fan-in". The backlog
+  ordering is this campaign's deliverable (spec D3, P1), so the ranking now
+  also requires the bundle to have an unheld token. 38 rows become 31.
+- **"Unlocks" was a false causal claim** — every blocked situation is missing
+  several bundles, so no row unlocks anything. Renamed to fan-in, with the
+  computed distance-to-stageable stated beside it.
+- **Leverage and Supply used different situation populations silently.**
+  Leverage excludes the inapplicable situation, Supply counts it. Both are
+  defensible; the document now says so, and a corpus-wide column makes the
+  35-vs-36 gap visible rather than left to inference. That gap otherwise
+  re-implied the "one situation is community-grain" claim Task 1 retracted.
+- **Supply's Goodhart sentence overclaimed.** Spec §4 L2.4 asks for tokens no
+  situation requires *and no readout consumes*; only the first half is
+  implemented, so the list includes tokens the Book and the almanac do read.
+  The section now says what it measured. Implementing the second half needs a
+  per-window token-consumption scan and is out of scope.
+- **`Situation::actants` was removed and is restored with a job.** Deleting
+  the dead-code allow surfaced the field as unread and it was removed on my
+  instruction. That silently dropped serde's validation of a block the spec
+  makes load-bearing and through which Task 1 found a real defect. It is now
+  rendered in the Demand table and covered by a role-vocabulary test.
+
 ---
 
 ### Task 4: The ratchet, the gate, and regeneration
@@ -662,10 +695,18 @@ and the supply scan is what catches that (spec D5)."
 
 ```rust
 //! The Repertoire's ratchet. `docs/audits/trope-coverage.md` is a committed
-//! artifact; this fails when the live report diverges from it. A per-situation
-//! regression — a situation that was stageable becoming blocked — is the case
-//! this exists to catch, and it means a predicate the corpus depends on was
-//! removed. Regenerate deliberately with `make rebaseline` and review the diff.
+//! artifact; this fails when the live report diverges from it by a single
+//! byte.
+//!
+//! Spec D7 asks for a PER-SITUATION ratchet — "no situation that was
+//! stageable becomes unstageable" — because an aggregate percentage lets a
+//! corpus pruning read as an improvement. This test is a whole-file byte
+//! comparison, which is strictly STRONGER than D7's rule: it cannot admit the
+//! failure D7 names, since a situation changing verdict changes bytes. What
+//! it gives up is diagnosis. A red result says the report moved, not which
+//! situation moved or in which direction, so read the diff before deciding
+//! whether the movement was intended. Regenerate deliberately with
+//! `make rebaseline`.
 
 use std::process::Command;
 
