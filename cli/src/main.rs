@@ -8,6 +8,7 @@ mod phonology;
 mod proto;
 mod repl;
 mod streams;
+mod tropes;
 
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
