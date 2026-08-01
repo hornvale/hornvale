@@ -38,6 +38,15 @@ roughly doubles its wall time (16.0 s) while the thing it measures got about
 eleven times cheaper. The campaign's number is the ratio the run *prints*, not
 the wall time of the run.
 
+One `gate` row on `campaign/the-repertoire` (2026-08-01, wall 263.699s) was
+not a deliberate milestone run: composing a commit message with a heredoc
+containing backticks let the shell expand them as command substitution,
+which executed a real `make gate` as a side effect. It is kept rather than
+deleted — it agrees with the same branch's deliberate `gate` row to within
+one percent, so it is a genuine measurement, and quietly dropping a real
+result would be the less honest edit. Read it as an accidental but valid
+sample, not as a second deliberate run.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -100,3 +109,4 @@ the wall time of the run.
 | 2026-08-01T05:26:36Z | gate | 263.699 | 2725.541 | 46.732 | 10.51 | 0 | 50e13e8f | campaign/the-repertoire | ambrose | 12 |
 | 2026-08-01T05:32:06Z | rebaseline | 97.246 | 114.146 | 2.506 | 1.20 | 0 | 88b11b45 | campaign/the-repertoire | ambrose | 12 |
 | 2026-08-01T05:37:03Z | gate | 266.087 | 2779.809 | 45.562 | 10.62 | 0 | 61fcc2f7 | campaign/the-repertoire | ambrose | 12 |
+| 2026-08-01T05:58:21Z | rebaseline | 95.951 | 113.646 | 2.623 | 1.21 | 0 | d627db62 | campaign/the-repertoire | ambrose | 12 |
