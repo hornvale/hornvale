@@ -126,6 +126,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 *(no seed-derivation streams)*
 
+### hornvale-person
+
+*(no seed-derivation streams)*
+
 ### hornvale-religion
 
 *(no seed-derivation streams)*

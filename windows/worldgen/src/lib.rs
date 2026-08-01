@@ -298,6 +298,7 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // seed labels, so its predicates must be registered and its stream labels
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
+    &hornvale_person::Person,
 ];
 
 /// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
@@ -10211,7 +10212,7 @@ mod tests {
     #[test]
     fn domains_roster_crate_names_are_unique_and_nonempty() {
         let mut names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
-        assert_eq!(names.len(), 10, "expected ten domains in the roster");
+        assert_eq!(names.len(), 11, "expected eleven domains in the roster");
         assert!(names.iter().all(|n| !n.is_empty()));
         let before = names.len();
         names.sort_unstable();
