@@ -99,7 +99,7 @@ fn the_toponymic_concepts_are_registered_and_accessioned() {
 }
 
 /// The Wearing (Task 4 review, Important 5): every toponymic concept that
-/// can ever win a `Root` in `windows/worldgen::exposure_of` must be core —
+/// can ever win a `Root` in `windows/worldgen::exposure_from` must be core —
 /// a periphery concept sorts after core inside its shared accession epoch
 /// and takes a longer form, which for `hill` and `river` (the
 /// highest-frequency morphemes in the name corpus) is exactly backwards.

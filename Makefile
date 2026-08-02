@@ -22,7 +22,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -31,7 +31,17 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit ## Cheap half of the gate (fmt-check + clippy + type-audit)
 
-gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
+
+# The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`
+# and `ci-run` use. Until this split, docs/timings.md carried ZERO rows
+# labelled `gate` (0086's amendment): the ledger built to catch a suite
+# creeping "65s -> 43.5 min" was never wired to the most-run expensive command
+# in the repo, so a 4-minute budget drifting to 15+ was never observable.
+# Read them filtered — `scripts/timed.sh report gate` — because gates are
+# frequent and will dominate the ledger by row count.
+gate-run: fmt-check clippy type-audit test
 	@bash scripts/census-advisory.sh || true
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
@@ -261,9 +271,39 @@ vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/c
 	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 	node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
 
+# The wasm features this binary actually uses. wasm-opt VALIDATES before it
+# optimizes, so a feature rustc emitted but binaryen was not told to accept
+# makes it refuse the input outright rather than produce a worse result. All
+# four are required: dropping any one fails validation.
+#
+# Deliberately long-established flags only. An earlier attempt also passed
+# --enable-bulk-memory-opt, which Homebrew's binaryen 131 accepts and the
+# binaryen in Ubuntu's apt repo does not — the release job failed with
+# "Unknown option" while the local gate was green. It bought nothing (byte-
+# identical output at 883473 either way), so it is gone. Prefer flags old
+# enough that a distro package has them over squeezing the last byte.
+WASM_OPT_FEATURES := --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals
+
 wasm-world: ## Build the world catalog wasm (external clients consume this; never committed)
 	rustup target add wasm32-unknown-unknown 2>/dev/null || true
 	cargo build --manifest-path clients/world-wasm/Cargo.toml --release --target wasm32-unknown-unknown
+	@# wasm-opt in place, so everything downstream — the byte-identity smoke,
+	@# the size gate, and the released asset — sees the binary we actually
+	@# ship rather than the raw cargo output. Measured -11.0% raw / -3.5%
+	@# gzip at world-wasm-v14; -O3 came out LARGER than -Oz on this input, so
+	@# do not "upgrade" the flag without measuring. Optional on a dev box:
+	@# skipped with a warning when binaryen is absent, since the size gate
+	@# below still holds and CI installs it.
+	@if command -v wasm-opt >/dev/null 2>&1; then \
+	  wasm-opt -Oz $(WASM_OPT_FEATURES) \
+	    clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
+	    -o clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm.opt \
+	  && mv clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm.opt \
+	        clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
+	  && echo "wasm-opt -Oz applied"; \
+	else \
+	  echo "WARNING: wasm-opt not found (brew install binaryen) — shipping unoptimized; CI will optimize"; \
+	fi
 
 world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity smoke + size gate
 	cargo fmt --check --manifest-path clients/world-wasm/Cargo.toml
@@ -277,6 +317,22 @@ world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity
 	node clients/world-wasm/drive.mjs \
 	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
 	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json
-	@size=$$(wc -c < clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm); \
-	  echo "world wasm size: $$size bytes"; \
-	  [ $$size -le 1048576 ] || { echo "SIZE GATE FAILED: > 1 MiB"; exit 1; }
+	@# The gate is denominated in COMPRESSED bytes, because that is what a
+	@# visitor actually downloads: GitHub Pages serves the catalog gzipped
+	@# (brotli where the client offers it), so the raw figure overstates the
+	@# real cost by ~2.8x. The old 1 MiB raw ceiling was measuring the wrong
+	@# quantity, and it was doing real harm: it is what pins the release
+	@# profile to opt-level = "z" on a binary whose dominant cost is compute
+	@# (hw_new is ~55% of the orrery's cold start). Re-denominating keeps the
+	@# job the gate exists for — catching unbounded growth — while trading in
+	@# the units that bind.
+	@#
+	@# 512 KiB compressed against 337 KiB today leaves ~34% headroom. Do not raise
+	@# it to buy room for one more field; that discards the growth signal. The
+	@# levers when it binds, cheapest first: serde_json is the only external
+	@# dependency and JSON is already 72% of the export's own cost, so a
+	@# binary payload attacks size and speed together.
+	@raw=$$(wc -c < clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm); \
+	  gz=$$(gzip -9 -c clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm | wc -c); \
+	  echo "world wasm size: $$gz bytes gzipped ($$raw raw)"; \
+	  [ $$gz -le 524288 ] || { echo "SIZE GATE FAILED: > 512 KiB gzipped"; exit 1; }

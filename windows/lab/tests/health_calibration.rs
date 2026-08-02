@@ -116,7 +116,23 @@ fn the_null_control_reads_no_chronic_distress() {
 }
 
 #[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_null_control_holds_across_a_seed_sweep() {
+    // TIER SPLIT (the-waymark, campaign ledger #1; decision-0093-adjacent):
+    // this sweep used to run all five seeds, including seed 42, on every
+    // commit gate. The gate's per-commit arm is now `seed 42 alone`, already
+    // separate as `the_null_control_reads_no_chronic_distress` above, plus the
+    // synthetic sensitivity scenarios below it in this file — that pairing
+    // matches the clinical-QC cadence this campaign settled on: a cheap,
+    // always-run spot check (the flagship control) on every commit, and a
+    // wider breadth sweep on a slower cadence (`make gate-full`), the same
+    // split a clinic runs a daily vital sign versus a periodic full panel.
+    // This test is that full panel: it drops seed 42 (the gate's own arm, so
+    // keeping it here would just re-run the same world twice) and keeps
+    // 0/1/2/7 as the breadth check that the zero is not a seed-42 accident.
+    // Solo cost measured at ~280s (4 seeds, this worktree) — too slow for the
+    // commit gate's cost budget, cheap enough for gate-full.
+    //
     // Over a small sweep of real worlds, no population reads STUCK distress —
     // the zero is not a seed-42 accident. (Genuine blocked-distress needs a
     // creature boxed in or knowing-but-blocked, which condensed on-water
@@ -136,7 +152,7 @@ fn the_null_control_holds_across_a_seed_sweep() {
     // nobody to read" — so the population's non-emptiness and its recovery are
     // asserted too, matching the seed-42 control beside this one.
     let mut report = Vec::new();
-    for seed in [0u64, 1, 2, 7, 42] {
+    for seed in [0u64, 1, 2, 7] {
         let traces = simulate_world(&world(seed));
         assert!(
             !traces.is_empty(),

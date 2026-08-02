@@ -16,6 +16,12 @@
 # See Addendum A of the PROC-12 spec below.
 book/src/SUMMARY.md merge=union
 book/src/frontier/idea-registry.md merge=union
+# docs/timings.md is the most-appended file in the repo — every census,
+# rebaseline, ci run and (since gate timings landed) every gate adds a row,
+# from whichever session and machine ran it. Rows are historical records that
+# are never rewritten, so union's caveat above does not bite: there is no edit
+# to resolve, only two sides' appends to keep. Missed when PROC-12 shipped.
+docs/timings.md merge=union
 
 # Tier B — fully re-derived documents (scripts/merge-regenerate.sh,
 # registered via `make install-hooks`; safely falls back to a normal

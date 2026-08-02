@@ -29,6 +29,9 @@ commands:
 ";
 
 /// Run the REPL over a world until `quit` or EOF.
+// Named construction site (decision 0092): a CLI handler — each command
+// arm sculpts/fits its own reconstruction to render its answer.
+#[allow(clippy::disallowed_methods)]
 pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::io::Result<()> {
     writeln!(
         output,
@@ -332,27 +335,39 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                         writeln!(output, "unknown concept '{concept}'")?;
                     } else {
                         // Speaker-only: plain fauna never speaks, so
-                        // `lexicon_of` is undefined for it; the articulation
+                        // `lexicon_from` is undefined for it; the articulation
                         // registry is keyed by exactly the speakers — the four
                         // peoples and, since The Solitary Tongue, the three
-                        // dragons.
-                        for species in hornvale_language::articulation_registry()
-                            .ids()
-                            .map(|k| k.0)
-                        {
-                            match world_builder::lexicon_of(world, species) {
-                                Ok(lexicon) => match lexicon.entry(concept) {
-                                    Some(entry) => writeln!(
-                                        output,
-                                        "{species}: {}",
-                                        crate::dictionary::word_line(entry)
-                                    )?,
-                                    None => {
-                                        writeln!(output, "{species}: no entry for '{concept}'")?
+                        // dragons. Sculpt terrain/climate once for the whole
+                        // command rather than once per species.
+                        match world_builder::terrain_of(world).and_then(|terrain| {
+                            world_builder::climate_from(world, &terrain)
+                                .map(|climate| (terrain, climate))
+                        }) {
+                            Ok((terrain, climate)) => {
+                                for species in hornvale_language::articulation_registry()
+                                    .ids()
+                                    .map(|k| k.0)
+                                {
+                                    match world_builder::lexicon_from(
+                                        world, species, &terrain, &climate,
+                                    ) {
+                                        Ok(lexicon) => match lexicon.entry(concept) {
+                                            Some(entry) => writeln!(
+                                                output,
+                                                "{species}: {}",
+                                                crate::dictionary::word_line(entry)
+                                            )?,
+                                            None => writeln!(
+                                                output,
+                                                "{species}: no entry for '{concept}'"
+                                            )?,
+                                        },
+                                        Err(e) => writeln!(output, "{species}: error: {e}")?,
                                     }
-                                },
-                                Err(e) => writeln!(output, "{species}: error: {e}")?,
+                                }
                             }
+                            Err(e) => writeln!(output, "error: {e}")?,
                         }
                     }
                 }

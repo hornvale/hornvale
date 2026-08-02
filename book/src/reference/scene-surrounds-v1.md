@@ -127,8 +127,11 @@ possession and therefore knows where its observer has walked. The schema
 carries the vocabulary so that both producers speak it, not because every
 producer can use all of it. (Unlike `scene/tiles/v1` and
 `scene/tiles-region/v1`, `clients/world-wasm` does not export a surrounds
-query today — `hw_scene_tiles` and `hw_scene_tiles_region` are its only
-scene exports. A browser client that wants a session-owning `remembered`
+query today. Its scene exports are the four astronomical documents
+(`hw_scene_system`, `hw_scene_moons`, `hw_scene_neighbors`,
+`hw_scene_eclipses`) and the three terrain-facing ones (`hw_scene_tiles`,
+`hw_scene_tiles_selected`, `hw_scene_tiles_region`); none of them is a
+surrounds query. A browser client that wants a session-owning `remembered`
 overlay would need a new wasm export; the schema's vocabulary is ready for
 that even though no producer offers it yet.)
 

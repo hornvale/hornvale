@@ -1,0 +1,861 @@
+{
+  "corpus": "polti-1895",
+  "provenance": "Georges Polti, Les 36 situations dramatiques (1895). French dramaturgical taxonomy of European theatre. An instrument with known bias, not a standard: coverage measures reach against this catalogue only. Role vocabulary for the decomposition is Greimas' actantial model (subject, object, sender, receiver, helper, opponent).",
+  "frozen": "before first measurement, The Repertoire",
+  "bundles": {
+    "act-chronology": [
+      "predicate:act-occurred-on",
+      "predicate:act-precedes",
+      "predicate:deed-of",
+      "predicate:history-now"
+    ],
+    "agent-knowledge": [
+      "predicate:believes-falsely",
+      "predicate:ignorant-of",
+      "predicate:knows-that"
+    ],
+    "captivity-and-guardianship": [
+      "predicate:guarded-by",
+      "predicate:held-captive-by",
+      "predicate:released-by"
+    ],
+    "celestial-portent": [
+      "phenomenon:eclipse",
+      "phenomenon:heliacal-rising",
+      "phenomenon:night-star",
+      "phenomenon:wandering-star",
+      "predicate:derived-from-phenomenon"
+    ],
+    "coercive-threat": [
+      "predicate:compels",
+      "predicate:pays-tribute-to",
+      "predicate:threatens"
+    ],
+    "collective-conflict": [
+      "predicate:at-war-with",
+      "predicate:conflict-outcome",
+      "predicate:occ-ended-by",
+      "predicate:pays-tribute-to"
+    ],
+    "community-as-actor": [
+      "predicate:is-settlement",
+      "predicate:name",
+      "predicate:occ-people",
+      "predicate:peopled-by",
+      "predicate:population"
+    ],
+    "community-chronology": [
+      "predicate:history-now",
+      "predicate:occ-ended",
+      "predicate:occ-founded"
+    ],
+    "community-downfall": [
+      "predicate:is-ruin",
+      "predicate:occ-cause",
+      "predicate:occ-ended",
+      "predicate:occ-ended-by"
+    ],
+    "community-subordination": [
+      "predicate:has-caste",
+      "predicate:pays-tribute-to"
+    ],
+    "consanguineal-kin": [
+      "concept:child",
+      "concept:parent",
+      "concept:sibling",
+      "predicate:kin-of",
+      "predicate:parent-of"
+    ],
+    "conspiracy": [
+      "predicate:conspires-with",
+      "predicate:plot-against"
+    ],
+    "deception": [
+      "predicate:asserted-falsely",
+      "predicate:deceives",
+      "predicate:evidence-forged-by"
+    ],
+    "divine-agency": [
+      "predicate:deity-acts",
+      "predicate:divine-will"
+    ],
+    "environmental-adversity": [
+      "phenomenon:cold",
+      "phenomenon:heat",
+      "predicate:glacial-maximum-era",
+      "predicate:max-ice-fraction",
+      "predicate:refugium"
+    ],
+    "erotic-desire": [
+      "predicate:desire-requited",
+      "predicate:desires"
+    ],
+    "felt-affect": [
+      "predicate:affect-intensity",
+      "predicate:affect-kind",
+      "predicate:feels-toward"
+    ],
+    "flight-and-pursuit": [
+      "concept:move",
+      "predicate:flees-from",
+      "predicate:pursues"
+    ],
+    "identity-and-recognition": [
+      "predicate:presents-as",
+      "predicate:recognized-as",
+      "predicate:unrecognized-by"
+    ],
+    "impaired-reason": [
+      "predicate:affliction-of",
+      "predicate:reason-impaired"
+    ],
+    "individual-persons": [
+      "concept:person",
+      "predicate:is-person",
+      "predicate:person-born",
+      "predicate:person-died"
+    ],
+    "intent": [
+      "predicate:acts-to-bring-about",
+      "predicate:intends"
+    ],
+    "interpersonal-violence": [
+      "concept:die",
+      "predicate:slain-by",
+      "predicate:struck-by"
+    ],
+    "judgement-and-sanction": [
+      "predicate:executioner-of",
+      "predicate:judged-by",
+      "predicate:sanctioned-with",
+      "predicate:verdict"
+    ],
+    "named-pantheon": [
+      "concept:god",
+      "concept:spirit",
+      "predicate:cult-form",
+      "predicate:deity-name",
+      "predicate:held-by",
+      "predicate:high-god",
+      "predicate:is-belief"
+    ],
+    "norm-and-transgression": [
+      "predicate:norm-holds-in",
+      "predicate:transgresses",
+      "predicate:transgression-class"
+    ],
+    "office-and-authority": [
+      "predicate:holds-office",
+      "predicate:office-over",
+      "predicate:office-rank"
+    ],
+    "pair-bond": [
+      "predicate:bond-dissolved",
+      "predicate:bond-recognized-by",
+      "predicate:bonded-to"
+    ],
+    "personal-property": [
+      "predicate:coveted-by",
+      "predicate:held-by-person",
+      "predicate:is-holding"
+    ],
+    "personal-rank": [
+      "predicate:caste-of-person",
+      "predicate:outranks",
+      "predicate:subordinate-to"
+    ],
+    "relinquishment": [
+      "predicate:relinquished-for",
+      "predicate:relinquishes"
+    ],
+    "reputation-and-dishonour": [
+      "predicate:dishonoured-by",
+      "predicate:has-caste",
+      "predicate:species-status-basis",
+      "predicate:standing-of"
+    ],
+    "revelation": [
+      "predicate:revealed-to",
+      "predicate:revealer-of"
+    ],
+    "search-and-finding": [
+      "predicate:found-by",
+      "predicate:seeks",
+      "predicate:whereabouts-unknown"
+    ],
+    "self-judgement": [
+      "predicate:regrets",
+      "predicate:self-reproach-for"
+    ],
+    "speech-act": [
+      "predicate:utterance-force",
+      "predicate:uttered-to"
+    ],
+    "succession": [
+      "predicate:heir-of",
+      "predicate:office-vacant",
+      "predicate:succeeded-by"
+    ],
+    "sworn-obligation": [
+      "predicate:sworn-to",
+      "predicate:vow-binds",
+      "predicate:vow-broken"
+    ],
+    "traversable-geography": [
+      "predicate:biome",
+      "predicate:cell-id",
+      "predicate:is-place",
+      "predicate:latitude",
+      "predicate:longitude"
+    ],
+    "witnessing": [
+      "predicate:present-at",
+      "predicate:witnessed"
+    ]
+  },
+  "situations": [
+    {
+      "id": "polti-01-supplication",
+      "name": "Supplication",
+      "actants": {
+        "opponent": "the persecutor",
+        "receiver": "the power in authority",
+        "subject": "the suppliant"
+      },
+      "requires": [
+        "bundle:coercive-threat",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:office-and-authority",
+        "bundle:speech-act"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-02-deliverance",
+      "name": "Deliverance",
+      "actants": {
+        "object": "the unfortunate",
+        "opponent": "the threatener",
+        "subject": "the rescuer"
+      },
+      "requires": [
+        "bundle:captivity-and-guardianship",
+        "bundle:coercive-threat",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:judgement-and-sanction"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-03-crime-pursued-by-vengeance",
+      "name": "Crime Pursued by Vengeance",
+      "actants": {
+        "opponent": "the criminal",
+        "subject": "the avenger"
+      },
+      "requires": [
+        "bundle:act-chronology",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:interpersonal-violence",
+        "bundle:norm-and-transgression"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-04-vengeance-for-kin-upon-kin",
+      "name": "Vengeance Taken for Kindred upon Kindred",
+      "actants": {
+        "object": "the remembered victim",
+        "opponent": "the guilty kinsman",
+        "subject": "the avenging kinsman"
+      },
+      "requires": [
+        "bundle:act-chronology",
+        "bundle:consanguineal-kin",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:interpersonal-violence",
+        "bundle:norm-and-transgression"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-05-pursuit",
+      "name": "Pursuit",
+      "actants": {
+        "opponent": "the pursuer",
+        "subject": "the fugitive"
+      },
+      "requires": [
+        "bundle:flight-and-pursuit",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:judgement-and-sanction",
+        "bundle:traversable-geography"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-06-disaster",
+      "name": "Disaster",
+      "actants": {
+        "opponent": "the victorious enemy",
+        "sender": "the messenger",
+        "subject": "the vanquished power"
+      },
+      "requires": [
+        "bundle:collective-conflict",
+        "bundle:community-as-actor",
+        "bundle:community-chronology",
+        "bundle:community-downfall",
+        "bundle:community-subordination",
+        "bundle:environmental-adversity",
+        "bundle:individual-persons",
+        "bundle:speech-act",
+        "bundle:witnessing"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-07-falling-prey-to-cruelty-or-misfortune",
+      "name": "Falling Prey to Cruelty or Misfortune",
+      "actants": {
+        "opponent": "the master, or the misfortune itself",
+        "subject": "the unfortunate"
+      },
+      "requires": [
+        "bundle:coercive-threat",
+        "bundle:community-downfall",
+        "bundle:environmental-adversity",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:personal-rank"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-08-revolt",
+      "name": "Revolt",
+      "actants": {
+        "opponent": "the tyrant",
+        "subject": "the conspirator"
+      },
+      "requires": [
+        "bundle:collective-conflict",
+        "bundle:community-as-actor",
+        "bundle:community-subordination",
+        "bundle:conspiracy",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:office-and-authority",
+        "bundle:personal-rank",
+        "bundle:succession"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-09-daring-enterprise",
+      "name": "Daring Enterprise",
+      "actants": {
+        "helper": "the band",
+        "object": "the thing seized",
+        "opponent": "the adversary",
+        "subject": "the bold leader"
+      },
+      "requires": [
+        "bundle:conspiracy",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:interpersonal-violence",
+        "bundle:personal-property",
+        "bundle:traversable-geography"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-10-abduction",
+      "name": "Abduction",
+      "actants": {
+        "object": "the abducted",
+        "opponent": "the guardian",
+        "subject": "the abductor"
+      },
+      "requires": [
+        "bundle:captivity-and-guardianship",
+        "bundle:felt-affect",
+        "bundle:flight-and-pursuit",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:interpersonal-violence",
+        "bundle:traversable-geography"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-11-the-enigma",
+      "name": "The Enigma",
+      "actants": {
+        "object": "the problem",
+        "opponent": "the interrogator",
+        "subject": "the seeker"
+      },
+      "requires": [
+        "bundle:agent-knowledge",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:revelation",
+        "bundle:search-and-finding",
+        "bundle:speech-act"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-12-obtaining",
+      "name": "Obtaining",
+      "actants": {
+        "opponent": "the adversary who refuses",
+        "receiver": "the arbitrator",
+        "subject": "the solicitor"
+      },
+      "requires": [
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:office-and-authority",
+        "bundle:personal-property",
+        "bundle:speech-act"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-13-enmity-of-kinsmen",
+      "name": "Enmity of Kinsmen",
+      "actants": {
+        "opponent": "the hated kinsman",
+        "subject": "the malevolent kinsman"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:intent"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-14-rivalry-of-kinsmen",
+      "name": "Rivalry of Kinsmen",
+      "actants": {
+        "object": "the thing or person contested",
+        "opponent": "the preferred kinsman",
+        "subject": "the rejected kinsman"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:erotic-desire",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:personal-property"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-15-murderous-adultery",
+      "name": "Murderous Adultery",
+      "actants": {
+        "helper": "the second adulterer",
+        "object": "the betrayed spouse",
+        "subject": "the adulterer"
+      },
+      "requires": [
+        "bundle:conspiracy",
+        "bundle:deception",
+        "bundle:erotic-desire",
+        "bundle:individual-persons",
+        "bundle:interpersonal-violence",
+        "bundle:norm-and-transgression",
+        "bundle:pair-bond"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-16-madness",
+      "name": "Madness",
+      "actants": {
+        "object": "the victim",
+        "subject": "the madman"
+      },
+      "requires": [
+        "bundle:felt-affect",
+        "bundle:impaired-reason",
+        "bundle:individual-persons",
+        "bundle:interpersonal-violence",
+        "bundle:self-judgement"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-17-fatal-imprudence",
+      "name": "Fatal Imprudence",
+      "actants": {
+        "object": "the victim or thing lost",
+        "subject": "the imprudent one"
+      },
+      "requires": [
+        "bundle:act-chronology",
+        "bundle:agent-knowledge",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:personal-property",
+        "bundle:self-judgement"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-18-involuntary-crimes-of-love",
+      "name": "Involuntary Crimes of Love",
+      "actants": {
+        "object": "the beloved",
+        "sender": "the revealer",
+        "subject": "the lover"
+      },
+      "requires": [
+        "bundle:agent-knowledge",
+        "bundle:consanguineal-kin",
+        "bundle:erotic-desire",
+        "bundle:individual-persons",
+        "bundle:norm-and-transgression",
+        "bundle:revelation",
+        "bundle:self-judgement"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-19-slaying-of-a-kinsman-unrecognized",
+      "name": "Slaying of a Kinsman Unrecognized",
+      "actants": {
+        "object": "the unrecognized victim",
+        "sender": "the revealer",
+        "subject": "the slayer"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:identity-and-recognition",
+        "bundle:individual-persons",
+        "bundle:interpersonal-violence",
+        "bundle:revelation",
+        "bundle:self-judgement",
+        "bundle:witnessing"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-20-self-sacrifice-for-an-ideal",
+      "name": "Self-Sacrificing for an Ideal",
+      "actants": {
+        "object": "the thing sacrificed",
+        "sender": "the ideal",
+        "subject": "the hero"
+      },
+      "requires": [
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:named-pantheon",
+        "bundle:relinquishment",
+        "bundle:sworn-obligation"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-21-self-sacrifice-for-kindred",
+      "name": "Self-Sacrifice for Kindred",
+      "actants": {
+        "object": "the thing sacrificed",
+        "receiver": "the kinsman",
+        "subject": "the hero"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:relinquishment"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-22-all-sacrificed-for-a-passion",
+      "name": "All Sacrificed for a Passion",
+      "actants": {
+        "object": "the object of the fatal passion",
+        "opponent": "what is given up for it",
+        "subject": "the lover"
+      },
+      "requires": [
+        "bundle:erotic-desire",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:relinquishment",
+        "bundle:reputation-and-dishonour"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-23-necessity-of-sacrificing-loved-ones",
+      "name": "Necessity of Sacrificing Loved Ones",
+      "actants": {
+        "object": "the beloved victim",
+        "sender": "the necessity",
+        "subject": "the hero"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:interpersonal-violence",
+        "bundle:relinquishment",
+        "bundle:sworn-obligation"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-24-rivalry-of-superior-and-inferior",
+      "name": "Rivalry of Superior and Inferior",
+      "actants": {
+        "object": "the thing or person contested",
+        "opponent": "the superior rival",
+        "subject": "the inferior rival"
+      },
+      "requires": [
+        "bundle:erotic-desire",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:office-and-authority",
+        "bundle:personal-rank",
+        "bundle:reputation-and-dishonour"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-25-adultery",
+      "name": "Adultery",
+      "actants": {
+        "helper": "the second adulterer",
+        "object": "the deceived spouse",
+        "subject": "the adulterer"
+      },
+      "requires": [
+        "bundle:agent-knowledge",
+        "bundle:deception",
+        "bundle:erotic-desire",
+        "bundle:individual-persons",
+        "bundle:norm-and-transgression",
+        "bundle:pair-bond"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-26-crimes-of-love",
+      "name": "Crimes of Love",
+      "actants": {
+        "object": "the beloved",
+        "subject": "the lover"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:erotic-desire",
+        "bundle:individual-persons",
+        "bundle:norm-and-transgression",
+        "bundle:reputation-and-dishonour"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-27-discovery-of-the-dishonour-of-a-loved-one",
+      "name": "Discovery of the Dishonour of a Loved One",
+      "actants": {
+        "object": "the guilty one",
+        "subject": "the discoverer"
+      },
+      "requires": [
+        "bundle:agent-knowledge",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:reputation-and-dishonour",
+        "bundle:revelation",
+        "bundle:self-judgement",
+        "bundle:witnessing"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-28-obstacles-to-love",
+      "name": "Obstacles to Love",
+      "actants": {
+        "object": "the beloved",
+        "opponent": "the obstacle",
+        "subject": "the lover"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:erotic-desire",
+        "bundle:individual-persons",
+        "bundle:pair-bond",
+        "bundle:personal-rank"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-29-an-enemy-loved",
+      "name": "An Enemy Loved",
+      "actants": {
+        "object": "the beloved enemy",
+        "opponent": "the hater",
+        "subject": "the lover"
+      },
+      "requires": [
+        "bundle:collective-conflict",
+        "bundle:community-as-actor",
+        "bundle:consanguineal-kin",
+        "bundle:erotic-desire",
+        "bundle:felt-affect",
+        "bundle:individual-persons"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-30-ambition",
+      "name": "Ambition",
+      "actants": {
+        "object": "the thing coveted",
+        "opponent": "the thwarter",
+        "subject": "the ambitious one"
+      },
+      "requires": [
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:office-and-authority",
+        "bundle:personal-rank",
+        "bundle:reputation-and-dishonour",
+        "bundle:succession"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-31-conflict-with-a-god",
+      "name": "Conflict with a God",
+      "actants": {
+        "opponent": "the immortal",
+        "subject": "the mortal"
+      },
+      "requires": [
+        "bundle:celestial-portent",
+        "bundle:divine-agency",
+        "bundle:individual-persons",
+        "bundle:intent",
+        "bundle:named-pantheon"
+      ],
+      "excluded_by": [
+        "design:deities-are-mythologizations-not-agents — Hornvale's religion domain derives every deity from a salient phenomenon and commits the provenance (predicate:derived-from-phenomenon); a god is a community's account of the sky or the weather, and the causal chain terminates in astronomy and climate. A mortal contending with an immortal antagonist presupposes a supernatural agent with will, which the world deliberately does not contain (Constitution §1, sim first). Different, not deficient."
+      ]
+    },
+    {
+      "id": "polti-32-mistaken-jealousy",
+      "name": "Mistaken Jealousy",
+      "actants": {
+        "object": "the object of jealousy",
+        "opponent": "the supposed accomplice",
+        "sender": "the author of the mistake",
+        "subject": "the jealous one"
+      },
+      "requires": [
+        "bundle:agent-knowledge",
+        "bundle:deception",
+        "bundle:erotic-desire",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:pair-bond",
+        "bundle:witnessing"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-33-erroneous-judgement",
+      "name": "Erroneous Judgement",
+      "actants": {
+        "object": "the victim of the mistake",
+        "opponent": "the guilty person",
+        "sender": "the author of the mistake",
+        "subject": "the mistaken one"
+      },
+      "requires": [
+        "bundle:agent-knowledge",
+        "bundle:deception",
+        "bundle:individual-persons",
+        "bundle:judgement-and-sanction",
+        "bundle:norm-and-transgression",
+        "bundle:revelation",
+        "bundle:witnessing"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-34-remorse",
+      "name": "Remorse",
+      "actants": {
+        "object": "the victim or the sin",
+        "opponent": "the interrogator",
+        "subject": "the culprit"
+      },
+      "requires": [
+        "bundle:act-chronology",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:norm-and-transgression",
+        "bundle:self-judgement",
+        "bundle:speech-act"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-35-recovery-of-a-lost-one",
+      "name": "Recovery of a Lost One",
+      "actants": {
+        "object": "the one found",
+        "subject": "the seeker"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:felt-affect",
+        "bundle:identity-and-recognition",
+        "bundle:individual-persons",
+        "bundle:search-and-finding",
+        "bundle:traversable-geography"
+      ],
+      "excluded_by": []
+    },
+    {
+      "id": "polti-36-loss-of-loved-ones",
+      "name": "Loss of Loved Ones",
+      "actants": {
+        "object": "the kinsman slain",
+        "opponent": "the executioner",
+        "subject": "the kinsman spectator"
+      },
+      "requires": [
+        "bundle:consanguineal-kin",
+        "bundle:felt-affect",
+        "bundle:individual-persons",
+        "bundle:interpersonal-violence",
+        "bundle:judgement-and-sanction",
+        "bundle:witnessing"
+      ],
+      "excluded_by": []
+    }
+  ]
+}

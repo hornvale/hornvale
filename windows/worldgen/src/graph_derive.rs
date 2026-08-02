@@ -136,6 +136,9 @@ pub fn connection_graph_at(
 /// (true of any world `build_world`/`build_world_to` returned at that depth
 /// or deeper): panics if terrain or climate fails to reconstruct, or if any
 /// committed settlement lacks its `cell-id` fact.
+// Named construction site (decision 0092): sculpts/fits once for its own
+// connection-graph readout.
+#[allow(clippy::disallowed_methods)]
 pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph {
     let terrain = crate::terrain_of(world)
         .expect("world was built with terrain (BuildDepth::Terrain or deeper)");

@@ -39,7 +39,7 @@ decision_count=$(find docs/decisions -name '*.md' ! -name 'README.md' | wc -l | 
 echo "  - docs/README.md — what knowledge lives where and how ideas flow"
 echo "  - docs/decisions/ — ${decision_count} ratified records (append-only; grep before relitigating)"
 echo "  - book/src/frontier/idea-registry.md — the idea registry (check before proposing anything)"
-echo "  - WORKFLOW_IMPROVEMENTS_PLAN.md — the workflow/tooling backlog and its stages"
+echo "      TOOL-*/PROC-* rows ARE the workflow/tooling backlog; a shipped row's Where cell records any deferred half"
 
 section "Live state"
 echo "  branch: $(git branch --show-current)   dirty files: $(git status --porcelain | wc -l | tr -d ' ')"

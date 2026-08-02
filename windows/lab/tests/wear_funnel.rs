@@ -285,7 +285,9 @@ fn the_wear_funnel_is_reproducible() {
                 continue;
             };
             let mut vocab: BTreeSet<&str> = hornvale_worldgen::settlement_site_concepts(
+                world,
                 &world.seed,
+                &species,
                 CellId(*cell as u32),
                 terrain,
                 climate,

@@ -125,7 +125,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// That class is narrow and specific. Two rows are blocked on ONE diagnosed
 /// defect: `windows/lab/src/metrics.rs::independently_steeped_concepts` is a
 /// deliberate hand-maintained duplicate of
-/// `hornvale_worldgen::exposure_of`'s Steeped rules — duplicated on purpose,
+/// `hornvale_worldgen::exposure_from`'s Steeped rules — duplicated on purpose,
 /// since a check that called the code under test would assert nothing — and it
 /// has not learned The Watershed's staple rules. So `exposure-sound-*` reads
 /// false on every world where a people is placed. The census is CURRENT; the
@@ -147,13 +147,15 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 15] = [
+const EXPECTED_UNTOKENISED: [&str; 18] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "TODO: re-enable once the number settles",
     "compiles the workspace in release; CI runs it with -- --ignored",
     "failing — investigate later",
     "flaky after the refactor",
+    "measurement: builds eight full worlds; run explicitly with --ignored",
+    "measurement: builds one full world; run explicitly with --ignored",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
     "probe: measurement only, run explicitly",
     "readout: chronicle evidence, run manually with --nocapture",
@@ -161,44 +163,10 @@ const EXPECTED_UNTOKENISED: [&str; 15] = [
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",
+    "search: re-derives the wear fixture's seed; run explicitly with --ignored",
     "superseded by decision 0016; kept for one release",
     "timekeeper: reads the run.json `make ci` writes; not a standalone test",
 ];
-
-const STALE_SECOND_OPINION: [&str; 2] = [
-    "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not \
-     learned The Watershed's staple Steeped rules, so exposure-sound reads false on every \
-     world where a species is placed. The census is current; the metric is not. Repair owes \
-     a regen — see the doc comment",
-    "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not \
-     learned The Watershed's staple Steeped rules, so this mutation test's Flag(true) \
-     baseline is false and the mutation would prove nothing. Repair owes a regen — see the \
-     doc comment",
-];
-
-#[test]
-fn stale_second_opinion_reason_strings_are_canonical() {
-    let reasons = ignore_reasons();
-    let stale: Vec<&String> = reasons
-        .iter()
-        .filter(|r| r.contains("stale-second-opinion:"))
-        .collect();
-    assert!(
-        !stale.is_empty(),
-        "expected at least one stale-second-opinion #[ignore] test; found none. If \
-         `independently_steeped_concepts` has been taught The Watershed's staple rules, \
-         the census regenerated and both rows re-derived, delete this test and its \
-         constant along with the last ignore — do not leave a guard standing over an \
-         empty set."
-    );
-    for r in &stale {
-        assert!(
-            STALE_SECOND_OPINION.contains(&r.as_str()),
-            "stale-second-opinion ignore reason must be one of the two canonical \
-             strings verbatim; found: {r:?}"
-        );
-    }
-}
 
 /// The other direction the two token guards do not cover, added at the F11
 /// discharge (2026-07-30).

@@ -21,9 +21,14 @@
 //!   guarding the `Settled -> CascadeRegime::SETTLED` byte-identity Tasks
 //!   1-2 already prove at the unit level, now locked at the full worldgen/
 //!   seed-42 level against any future regression.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 use hornvale_kernel::{Seed, World};
 use hornvale_language::{CascadeRegime, LexEntry, Lexicon, Segment};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, lexicon_of};
+use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, lexicon_from};
 
 /// The three chromatic dragons The Solitary Tongue gave a Draconic tongue
 /// (Task 3), sharing one family (`"draconic"`) and one frozen regime.
@@ -44,7 +49,7 @@ const REFERENCE_SEED: u64 = 42;
 /// A real, fully generated world at [`REFERENCE_SEED`] — settlement genesis
 /// included, not the bare registry-only world `proto_goblinoid_golden.rs`
 /// uses (that file only needs the seed and the concept universe; this file
-/// needs actual placement so `lexicon_of`'s exposure classification reflects
+/// needs actual placement so `lexicon_from`'s exposure classification reflects
 /// a lived-in world, per the plan's "a real derived world" instruction).
 fn generated_world(seed: u64) -> World {
     build_world(
@@ -96,9 +101,13 @@ fn segment_distance(a: &[Segment], b: &[Segment]) -> usize {
 /// seed 42, the wrong direction; length-normalized draconic mean 0.25 <
 /// goblinoid mean 0.32, the campaign's actual claim).
 fn mean_inter_daughter_distance(world: &World, species: &[&str; 3]) -> f64 {
+    let terrain = hornvale_worldgen::terrain_of(world).unwrap();
+    let climate = hornvale_worldgen::climate_from(world, &terrain).unwrap();
     let lexes: Vec<Lexicon> = species
         .iter()
-        .map(|s| lexicon_of(world, s).unwrap_or_else(|e| panic!("{s}: {e:?}")))
+        .map(|s| {
+            lexicon_from(world, s, &terrain, &climate).unwrap_or_else(|e| panic!("{s}: {e:?}"))
+        })
         .collect();
     let (first, rest) = lexes.split_first().expect("3-element array");
     let shared: Vec<&str> = root_concepts(first)
@@ -151,10 +160,12 @@ fn mean_inter_daughter_distance(world: &World, species: &[&str; 3]) -> f64 {
 #[test]
 fn dragon_cascades_stay_within_the_frozen_regime_at_seed_42() {
     let world = generated_world(REFERENCE_SEED);
+    let terrain = hornvale_worldgen::terrain_of(&world).unwrap();
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).unwrap();
     let frozen = CascadeRegime::new(0, 1);
     let mut any_nonempty_cascade = false;
     for dragon in CHROMATIC_DRAGONS {
-        let lex = lexicon_of(&world, dragon)
+        let lex = lexicon_from(&world, dragon, &terrain, &climate)
             .unwrap_or_else(|e| panic!("{dragon} must carry a lexicon (Task 3): {e:?}"));
         let mut root_count = 0usize;
         for (concept, entry) in lex.entries() {
@@ -388,15 +399,43 @@ const PEOPLES: [&str; 5] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll"]
 /// exactly: 6 of 304 entries moved, all exposure-shaped, and all 188 words
 /// present in both versions byte-identical.)
 ///
+/// 3. **A deliberate, global phonology epoch** -- every surviving word may
+///    render differently, at once, because the phonology the assignment
+///    algorithm draws FROM has deliberately changed. Added 2026-07-30 (The
+///    Watershed, Item 0: sonority sequencing reorders every drawn onset and
+///    coda template, so the same draws mint different words).
+///
+///    This reads as case 1 on the discriminator above -- surviving words
+///    render differently -- and the case-1 instruction ("do NOT rebaseline;
+///    find the bug") is WRONG for it. The two are told apart not by the
+///    golden but by the change that caused it:
+///
+///    - Case 1 is a *regime* fault: a wrong `CascadeRegime` threaded into a
+///      people's lexicon. It is narrow and nobody meant it.
+///    - Case 3 changes `draw_phonotactics`/`phoneme` and touches no regime
+///      threading at all, so it is global and deliberate.
+///
+///    Check it mechanically before accepting: `git show <commit> --stat`
+///    should name only phonology sources, and the commit must add no line
+///    mentioning `CascadeRegime` (it was 0 for the sonority merge). A drift
+///    that is global AND touches regime threading is still case 1 -- the
+///    breadth is what makes a regime fault dangerous, not what excuses it.
+///
+///    Accepting a case 3 is a campaign-level decision with an artifact
+///    re-pin behind it, not a routine rebaseline.
+///
 /// See `hornvale_kernel::golden`'s module docs for the accept path
 /// (REBASELINE=1), appropriate for case 2 only, and only after confirming
 /// the drift is deliberate and in scope.
 #[test]
 fn peoples_lexicons_are_unchanged_from_the_pre_campaign_golden() {
     let world = generated_world(REFERENCE_SEED);
+    let terrain = hornvale_worldgen::terrain_of(&world).unwrap();
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).unwrap();
     let mut snapshot = String::new();
     for people in PEOPLES {
-        let lex = lexicon_of(&world, people).expect("every people always carries a lexicon");
+        let lex = lexicon_from(&world, people, &terrain, &climate)
+            .expect("every people always carries a lexicon");
         snapshot.push_str(&render_lexicon_snapshot(&lex));
         snapshot.push('\n');
     }

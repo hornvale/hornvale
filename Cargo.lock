@@ -26,6 +26,7 @@ dependencies = [
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",
+ "serde",
  "serde_json",
 ]
 
@@ -64,6 +65,7 @@ name = "hornvale-book"
 version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
+ "hornvale-climate",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-terrain",

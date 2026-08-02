@@ -11,8 +11,9 @@ use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
 use hornvale_kernel::{
-    ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
-    ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
+    ANIMAL_PREY, AStarSolver, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE,
+    PLANT_FORAGE, ResourceVector, RoomAddr, RoomId, RoomMeshMemo, SearchSpace, Solver, TickSystem,
+    Value, World, WorldTime, astar,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, MetabolicClass};
@@ -265,7 +266,7 @@ pub struct Hazards {
     /// COLD — how far below.
     pub cold: f64,
     /// PREDATOR — the ambient density of carnivores (The Quarry, the first
-    /// BIOTIC hazard: `worldgen::predator_pressure`, injected into
+    /// BIOTIC hazard: `worldgen::predator_pressure_from`, injected into
     /// `LocaleTerrain`). `0` where no predators range.
     pub predator: f64,
 }
@@ -480,13 +481,13 @@ pub trait Terrain {
 
     /// The cell's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
     /// prey-base biomass a HUNTER can eat there, the anti-symmetric dual of the
-    /// predator hazard (`worldgen::prey_pressure`). A creature's `food_value`
-    /// dots this against its `ANIMAL_PREY` diet weight, so a carnivore is drawn
-    /// up the prey gradient. The DEFAULT is `0.0` (a prey-empty cell) — so
-    /// planted/synthetic test terrains have no prey field and a carnivore reads
-    /// only the ordinary productivity unless a scenario plants prey; a live
-    /// `LocaleTerrain` OVERRIDES it with the injected `prey_pressure` field. A
-    /// slow field, so it takes no `day`.
+    /// predator hazard (`worldgen::prey_pressure_from`). A creature's
+    /// `food_value` dots this against its `ANIMAL_PREY` diet weight, so a
+    /// carnivore is drawn up the prey gradient. The DEFAULT is `0.0` (a
+    /// prey-empty cell) — so planted/synthetic test terrains have no prey
+    /// field and a carnivore reads only the ordinary productivity unless a
+    /// scenario plants prey; a live `LocaleTerrain` OVERRIDES it with the
+    /// injected prey-pressure field. A slow field, so it takes no `day`.
     /// type-audit: bare-ok(ratio: return)
     fn prey_value(&self, _room: &RoomAddr) -> f64 {
         0.0
@@ -522,7 +523,7 @@ pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
 /// The single steepest-descent neighbour ("water lies low" — the prior an
 /// ignorant agent explores along). `total_cmp` with an ascending-`RoomAddr`
 /// tie-break (the constitutional no-native-float-cmp rule), the same rule
-/// `nearest_water`'s BFS and `lowest_unvisited_neighbor` use. Always a
+/// `nearest_water`'s BFS and `lowest_unvisited_neighbor_memo` use. Always a
 /// neighbour (never `from` itself).
 pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
     let mut best: Option<(RoomAddr, f64)> = None;
@@ -586,13 +587,13 @@ pub struct LocaleTerrain<'a> {
     /// `None` falls back to the fractional-day sun.
     calendar: Option<&'a hornvale_astronomy::Calendar>,
     /// The world's predator-pressure field (The Quarry — `worldgen::
-    /// predator_pressure`), injected here (a domain/window can't reach up to
-    /// demography); `None` → no PREDATOR hazard (throwaway reads / no field).
+    /// predator_pressure_from`), injected here (a domain/window can't reach up
+    /// to demography); `None` → no PREDATOR hazard (throwaway reads / no field).
     predator: Option<&'a hornvale_kernel::CellMap<f64>>,
-    /// The world's prey-pressure field (The Teeth — `worldgen::prey_pressure`),
-    /// the dual of `predator`, injected the same way; `None` → no prey draw
-    /// (throwaway reads / no field), so a carnivore reads only ordinary
-    /// productivity.
+    /// The world's prey-pressure field (The Teeth — `worldgen::
+    /// prey_pressure_from`), the dual of `predator`, injected the same way;
+    /// `None` → no prey draw (throwaway reads / no field), so a carnivore
+    /// reads only ordinary productivity.
     prey: Option<&'a hornvale_kernel::CellMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
     /// `built_rooms`), injected the same way (a domain/window can't reach up
@@ -600,11 +601,27 @@ pub struct LocaleTerrain<'a> {
     /// throwaway read with no world), the same fail-safe-to-wilderness
     /// posture `Terrain::is_built`'s own default takes.
     built: Option<&'a std::collections::BTreeSet<RoomId>>,
+    /// A PREFILLED, READ-ONLY [`hornvale_kernel::RoomMeshMemo`] (the-waymark
+    /// fix round, Finding 1): every `corner_weights`-backed read below
+    /// consults it first, falling through to a fresh recompute on a miss.
+    /// `None` (every non-`with_fields` constructor) is byte-identical to the
+    /// pre-Finding-1 behaviour — always a miss. This field is set ONCE, here,
+    /// at construction, and never mutated: the cache is filled by the
+    /// CALLER, under `&mut`, before any `LocaleTerrain` (and so before any
+    /// drive) exists — see `windows/vessel/src/session.rs`'s `wait` and
+    /// `windows/lab/src/health.rs`'s `simulate_world` for the fill sites.
+    /// Reading it here needs no `&mut self`, which is what lets `Terrain`'s
+    /// trait methods stay `&self` (they must: `decide_step` holds
+    /// `Thermal`/`Hunger`/`Danger`'s `&dyn Terrain` copies alive
+    /// SIMULTANEOUSLY in one `Vec<&dyn Drive>`, so a `&mut self` receiver
+    /// here is not merely undesired but borrow-checker-infeasible without
+    /// restructuring `arbitrate` — see the-waymark Task 3's report).
+    cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
 }
 impl<'a> LocaleTerrain<'a> {
     /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
     /// predator field — for throwaway reads (water/elevation) that never consult
-    /// the wake cycle or the danger drive.
+    /// the wake cycle or the danger drive. No prefilled cache.
     pub fn new(ctx: &'a LocaleContext) -> Self {
         Self {
             ctx,
@@ -612,13 +629,14 @@ impl<'a> LocaleTerrain<'a> {
             predator: None,
             prey: None,
             built: None,
+            cache: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
     /// the wake cycle) follows the REAL sun — latitude × season × the terminator
     /// (Tier-1). `None` falls back to the fractional-day sun. No predator field
     /// (use [`with_calendar_and_predators`](Self::with_calendar_and_predators) for
-    /// the full drive read).
+    /// the full drive read). No prefilled cache.
     pub fn with_calendar(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
@@ -629,19 +647,20 @@ impl<'a> LocaleTerrain<'a> {
             predator: None,
             prey: None,
             built: None,
+            cache: None,
         }
     }
     /// Build with the world's `calendar` AND its predator-pressure field (The
-    /// Quarry) — no prey field, no settlement-territory set. Retained for
-    /// callers that read danger but not the hunt; delegates to
-    /// [`with_fields`](Self::with_fields).
+    /// Quarry) — no prey field, no settlement-territory set, no prefilled
+    /// cache. Retained for callers that read danger but not the hunt;
+    /// delegates to [`with_fields`](Self::with_fields).
     /// type-audit: bare-ok(ratio: predator)
     pub fn with_calendar_and_predators(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
     ) -> Self {
-        Self::with_fields(ctx, calendar, predator, None, None)
+        Self::with_fields(ctx, calendar, predator, None, None, None)
     }
     /// Build with the world's `calendar`, predator-pressure field (The Quarry),
     /// prey-pressure field (The Teeth), AND settlement-territory set (The
@@ -649,7 +668,10 @@ impl<'a> LocaleTerrain<'a> {
     /// senses carnivore territory, a carnivore's hunger senses prey, and a
     /// creature's thermal drive can find a real hearth. `built` is `None` for
     /// every caller with no world to read one from (the throwaway/no-field
-    /// case `Terrain::is_built`'s own default already covers).
+    /// case `Terrain::is_built`'s own default already covers). `cache` is the
+    /// prefilled, read-only [`hornvale_kernel::RoomMeshMemo`] (the-waymark
+    /// fix round, Finding 1) — `None` for a caller with nothing prefilled
+    /// (byte-identical to the pre-Finding-1 behaviour).
     /// type-audit: bare-ok(ratio: predator), bare-ok(ratio: prey)
     pub fn with_fields(
         ctx: &'a LocaleContext,
@@ -657,6 +679,7 @@ impl<'a> LocaleTerrain<'a> {
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
         prey: Option<&'a hornvale_kernel::CellMap<f64>>,
         built: Option<&'a std::collections::BTreeSet<RoomId>>,
+        cache: Option<&'a hornvale_kernel::RoomMeshMemo>,
     ) -> Self {
         Self {
             ctx,
@@ -664,19 +687,20 @@ impl<'a> LocaleTerrain<'a> {
             predator,
             prey,
             built,
+            cache,
         }
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
     fn elevation(&self, room: &RoomAddr) -> f64 {
         self.ctx
-            .describe(room, WorldTime { day: 0.0 })
+            .describe_at_cached(room, WorldTime { day: 0.0 }, None, self.cache)
             .map(|l| l.fields.elevation_m)
             .unwrap_or(f64::INFINITY)
     }
     fn is_fresh_water(&self, room: &RoomAddr) -> bool {
         self.ctx
-            .describe(room, WorldTime { day: 0.0 })
+            .describe_at_cached(room, WorldTime { day: 0.0 }, None, self.cache)
             .map(|l| l.fields.water.is_fresh())
             .unwrap_or(false)
     }
@@ -685,12 +709,15 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // annual-mean `temperature_c` — so the drive gets a diurnal/seasonal
         // swing while the render path stays byte-identical. INFINITY for an
         // undescribable room (never chosen as a comfort target).
-        self.ctx.temperature_at(room, day).unwrap_or(f64::INFINITY)
+        self.ctx
+            .temperature_at_cached(room, day, self.cache)
+            .unwrap_or(f64::INFINITY)
     }
     fn solar_altitude(&self, room: &RoomAddr, day: WorldTime) -> Option<f64> {
         // The real sun where the world carries a calendar (latitude from the
         // room's centroid; `None` on a locked world → no cycle); else the
-        // fractional-day fallback.
+        // fractional-day fallback. No `corner_weights` read here (a pure
+        // astronomy calc over the room's centroid), so no cache to consult.
         match self.calendar {
             Some(cal) => hornvale_astronomy::StdDays::new(day.day)
                 .ok()
@@ -702,19 +729,24 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // The real climate's net-primary-productivity proxy (The Provender);
         // an undescribable/above-grid room reads 0 (no food), the never-fed
         // fallback (the dual of `temperature`'s never-chosen INFINITY).
-        self.ctx.productivity_at(room).unwrap_or(0.0)
+        self.ctx
+            .productivity_at_cached(room, self.cache)
+            .unwrap_or(0.0)
     }
     fn hazards(&self, room: &RoomAddr) -> Hazards {
         // The real climate's per-axis hazard field (The Bane: the uncanny plus
         // graded heat/cold); an undescribable/above-grid room reads all-zero
         // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
-        let (uncanny, heat, cold) = self.ctx.hazards_at(room).unwrap_or((0.0, 0.0, 0.0));
+        let (uncanny, heat, cold) = self
+            .ctx
+            .hazards_at_cached(room, self.cache)
+            .unwrap_or((0.0, 0.0, 0.0));
         // The PREDATOR axis (The Quarry): the injected carnivore-pressure field,
         // corner-blended per room; `0` where no field is injected or the room is
         // above the grid.
         let predator = self
             .predator
-            .and_then(|field| self.ctx.blend_at(room, field))
+            .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
             .unwrap_or(0.0);
         Hazards {
             uncanny,
@@ -729,7 +761,7 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // field is injected or the room is above the grid — the prey-empty
         // fallback, so a carnivore there reads only ordinary productivity.
         self.prey
-            .and_then(|field| self.ctx.blend_at(room, field))
+            .and_then(|field| self.ctx.blend_at_cached(room, field, self.cache))
             .unwrap_or(0.0)
     }
     fn is_built(&self, room: &RoomAddr) -> bool {
@@ -738,7 +770,8 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // `None` (no set injected — a throwaway read with no world) or a pack
         // failure (only possible past `MAX_DEPTH`, never reached here) both
         // read as unbuilt, the same fail-safe-to-wilderness posture
-        // `Terrain::is_built`'s own default already takes.
+        // `Terrain::is_built`'s own default already takes. No `corner_weights`
+        // read here, so no cache to consult.
         self.built
             .zip(room.pack().ok())
             .is_some_and(|(set, id)| set.contains(&id))
@@ -1479,8 +1512,29 @@ pub trait Drive {
     /// or `Drink` at water), else `0.0`. For thermal: the drop in thermal
     /// urgency at the neighbour (`0.0` if it doesn't improve comfort, and `0.0`
     /// for `Drink` — a flow drive has no consume).
+    ///
+    /// `affordance` is `arbitrate`'s caller-owned, per-call lazy cache
+    /// (the-waymark, ledger #9): calling it returns this drive's own
+    /// [`affordance`](Drive::affordance) for the view/budget fixed across
+    /// the whole `arbitrate` call, computed at most ONCE no matter how many
+    /// candidate actions `serviceability` is asked about (`arbitrate`'s
+    /// `grab_utility`/`utility` fold calls this once per candidate, always
+    /// against the same view). An implementation whose formula doesn't need
+    /// its own affordance (thermal/fatigue/danger/social all score a
+    /// candidate directly) simply never calls it, so it costs those drives
+    /// nothing — the closure is a THUNK, not an eager value: laziness is
+    /// decided per-drive, by whether this body calls it at all, never by the
+    /// caller. `Drive` stays `&self`-only and holds no cache of its own; the
+    /// constraint this satisfies (no interior mutability inside a drive) is
+    /// ledger #9's ruling on Task 6b's earlier `RefCell`-per-drive design.
     /// type-audit: bare-ok(ratio: return), bare-ok(count: budget)
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64;
+    fn serviceability(
+        &self,
+        action: &Action,
+        view: &Perceived,
+        budget: usize,
+        affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64;
 
     /// Whether this drive is pursued WHILE ASLEEP — the off-phase (The Slumber,
     /// spec §3). The default is `false`: thirst and thermal are wake-gated (a
@@ -1648,12 +1702,22 @@ impl Drive for Thirst {
         // Survival: thirst can reach full urgency (nothing beats dying of it).
         1.0
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // A stock drive serves exactly the ONE step its affordance would take
         // (the A*/explore first move, or `Drink` at water) — an indicator, so
         // the single-drive `argmax` is precisely `affordance` and the thirst-
-        // only decision is byte-identical to Stage 0.
-        match self.affordance(view, budget) {
+        // only decision is byte-identical to Stage 0. `affordance` is
+        // `arbitrate`'s caller-owned, per-call lazy cache (the-waymark,
+        // ledger #9) — this drive is exactly the reason it exists (this call
+        // is repeated once per candidate action, always against the same
+        // view/budget), but the drive itself holds no cache of its own.
+        match affordance() {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
@@ -1930,10 +1994,18 @@ impl<'a> Drive for Thermal<'a> {
     fn urgency_ceiling(&self) -> f64 {
         THERMAL_CEIL
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        view: &Perceived,
+        budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // A flow drive is served by PRESENCE in a kinder cell: the reduction in
         // thermal urgency at the destination (0 if the step doesn't improve
-        // comfort). No consume — `Drink` serves it not at all.
+        // comfort). No consume — `Drink` serves it not at all. Scores each
+        // candidate DIRECTLY (never via `affordance`), so the ledger #9 cache
+        // costs this drive nothing — `_affordance` is never called.
         match action {
             Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
             // THE THRESHOLD'S CROSSING: the within-room twin of the `MoveTo`
@@ -2189,8 +2261,15 @@ impl Drive for Fatigue {
     fn urgency_ceiling(&self) -> f64 {
         FATIGUE_CEIL
     }
-    fn serviceability(&self, action: &Action, _view: &Perceived, _budget: usize) -> f64 {
-        // Served by resting in place; nothing else eases fatigue.
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
+        // Served by resting in place; nothing else eases fatigue. Never
+        // calls `_affordance` (ledger #9's cache costs this drive nothing).
         match action {
             Action::Rest => 1.0,
             _ => 0.0,
@@ -2228,7 +2307,7 @@ const HUNGER: DriveParams = DriveParams {
 const EAT_THRESHOLD: f64 = 0.15;
 
 /// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
-/// strongly a carnivore is drawn up the `prey_pressure` gradient, per unit of
+/// strongly a carnivore is drawn up the prey-pressure gradient, per unit of
 /// `ANIMAL_PREY` diet weight. The prey term is ADDITIVE (it only raises
 /// `food_value`), so a creature that already eats where it stands keeps doing so
 /// — the current settled peoples are byte-identical regardless of this value
@@ -2401,11 +2480,18 @@ impl<'a> Drive for Hunger<'a> {
         // Survival: starving reaches full urgency (like thirst).
         1.0
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // A stock drive serves exactly the ONE step its affordance would take
         // (Eat here, or the forage step) — an indicator, so the single-drive
-        // argmax is precisely `affordance` (mirrors thirst).
-        match self.affordance(view, budget) {
+        // argmax is precisely `affordance` (mirrors thirst). `affordance` is
+        // `arbitrate`'s caller-owned, per-call lazy cache (ledger #9).
+        match affordance() {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
@@ -2653,7 +2739,13 @@ impl<'a> Drive for Danger<'a> {
         // Survival: a lethal hazard reaches full urgency (like thirst/hunger).
         1.0
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, _budget: usize) -> f64 {
+    fn serviceability(
+        &self,
+        action: &Action,
+        view: &Perceived,
+        _budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
         // SIGNED (unclamped, unlike thermal): the DROP in the creature's own felt
         // threat at the neighbour it would step to — positive toward safety,
         // NEGATIVE into worse danger, so a move that serves another drive but
@@ -2661,7 +2753,8 @@ impl<'a> Drive for Danger<'a> {
         // No consume — Drink/Rest/Eat do not ease fear.
         // The gradient is over FELT threat (terrain PLUS remembered dread, The
         // Shudder), so a creature standing on now-safe ground it only REMEMBERS
-        // as frightening is served by stepping off it.
+        // as frightening is served by stepping off it. Never calls
+        // `_affordance` (ledger #9's cache costs this drive nothing).
         match action {
             Action::MoveTo(n) => self.felt_threat_at(&view.position) - self.felt_threat_at(n),
             // Fine movement is not yet wired into any drive's plan (The
@@ -2744,9 +2837,14 @@ const SOCIAL_CEIL: f64 = 0.6;
 /// creature's thirst/other distress unmasked (social dormant). Computed ONCE per
 /// drive construction (the plan is reused for the affordance), so the drive's
 /// `urgency` stays O(1).
-fn loneliness_from_plan(plan_home: &Option<Vec<Action>>) -> f64 {
-    match plan_home {
-        Some(p) => (p.len() as f64 / LONELY_SCALE_HOPS).clamp(0.0, 1.0),
+///
+/// Takes the plan's hop count directly (the-waymark, Task 4: both callers —
+/// `decide_step` and `affect_of_memo_occupied` — now read this off a
+/// [`HomeNavFeature`] rather than a full `Option<Vec<Action>>`, so this
+/// shares the one formula between them instead of duplicating it).
+fn loneliness_from_distance(distance: Option<usize>) -> f64 {
+    match distance {
+        Some(hops) => (hops as f64 / LONELY_SCALE_HOPS).clamp(0.0, 1.0),
         None => 0.0,
     }
 }
@@ -2767,7 +2865,7 @@ fn loneliness_from_plan(plan_home: &Option<Vec<Action>>) -> f64 {
 /// sociality niche (solitary ↔ eusocial, the sign-flip at solitary) is reserved.
 /// type-audit: bare-ok(ratio: loneliness)
 pub struct Social {
-    /// The precomputed loneliness (`loneliness_from_plan`) in `[0, 1]` — the
+    /// The precomputed loneliness (`loneliness_from_distance`) in `[0, 1]` — the
     /// felt isolation, carried here rather than recomputed per call.
     pub loneliness: f64,
     /// The precomputed first step of the A* plan home (`None` at home, or when
@@ -2792,12 +2890,164 @@ impl Drive for Social {
     fn urgency_ceiling(&self) -> f64 {
         SOCIAL_CEIL
     }
-    fn serviceability(&self, action: &Action, _view: &Perceived, _budget: usize) -> f64 {
-        // Served by the ONE step toward home (an indicator, like thirst/fatigue).
+    fn serviceability(
+        &self,
+        action: &Action,
+        _view: &Perceived,
+        _budget: usize,
+        _affordance: &mut dyn FnMut() -> Option<Action>,
+    ) -> f64 {
+        // Served by the ONE step toward home (an indicator, like thirst/fatigue)
+        // — already precomputed at construction (Task 4), so this never calls
+        // `_affordance` either (ledger #9's cache costs this drive nothing).
         match &self.home_step {
             Some(a) if a == action => 1.0,
             _ => 0.0,
         }
+    }
+}
+
+/// The feature [`decide_step`] (and [`affect_of_memo_occupied`]) actually
+/// consume from a home plan — never the full path (the-waymark, Task 4; the
+/// campaign spec's own ideonomy refinement: "cache the consumed feature, not
+/// the full plan"). Mirrors exactly what [`loneliness_from_distance`] and the
+/// `Social::home_step` construction already read off an `Option<Vec<Action>>`:
+/// `distance` is `Some(p.len())` if `home` is reachable within budget, `None`
+/// if not (`plan_to_room`'s own `None`); `first_step` is the plan's first
+/// action, `None` either when unreachable OR when the plan is the empty
+/// vec — already standing at `home` — which is `loneliness_from_distance`'s own
+/// `Some(0)`-but-`home_step: None` case, preserved here rather than collapsed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct HomeNavFeature {
+    /// The plan's hop count, or `None` if `home` is unreachable within budget.
+    distance: Option<usize>,
+    /// The plan's first action, or `None` if unreachable or already home.
+    first_step: Option<Action>,
+}
+
+/// One entity's [`HomeNavCache`] bookkeeping: its avoid-epoch state (see the
+/// cache's own doc) plus whatever feature was last computed and at which
+/// `(pos, epoch)`.
+struct HomeNavState {
+    /// Bumped whenever a `home_nav` call's `avoid` set differs from
+    /// `last_avoid` — a per-entity counter, never global (a global epoch
+    /// would stampede every entity's cache on any ONE creature's belief
+    /// change).
+    avoid_epoch: u64,
+    /// The avoid set as of the most recent `home_nav` call, compared against
+    /// on the NEXT call to detect a belief change.
+    last_avoid: std::collections::BTreeSet<RoomAddr>,
+    /// `(pos, home, budget, avoid_epoch, feature)` as of the last real search
+    /// for this entity — `None` before its first `home_nav` call. `home`/
+    /// `budget` are part of the key (Task 4 fix round, key hardening): they
+    /// determine the answer exactly as much as `pos`/`avoid` do, and today's
+    /// one production call site per consumer passes a stable `(npc.home,
+    /// PLAN_BUDGET)` pair — but nothing enforces that structurally, so a
+    /// future caller asking about a DIFFERENT home or budget for the same
+    /// entity must miss the cache, not silently read a stale answer computed
+    /// for a different question.
+    cached: Option<(RoomAddr, RoomAddr, usize, u64, HomeNavFeature)>,
+}
+
+/// `home_nav`'s cross-tick, per-entity backing (the-waymark, Task 4 — the
+/// campaign's dominant lever): [`decide_step`] used to call `plan_to_room` —
+/// a budget-1000 Dijkstra-mode `astar` search — UNCONDITIONALLY on every
+/// decision, even for a creature standing exactly where it stood last tick
+/// with an unchanged believed-hazard set. The campaign spec's Stage 3 licenses
+/// a cache scoped to exactly the two events that can actually change the
+/// answer: the entity's `pos` (a `Step` resolution) and its believed-hazard
+/// avoid set (`HazardMemory::shunned`). Verified at plan time (see the task
+/// report): `HazardMemory` is a fold over the FROZEN pre-tick ledger, computed
+/// ONCE per creature per tick (`step_with_occupancy`'s setup loop) and never
+/// mutated again that tick, so it never changes mid-tick — the avoid-epoch
+/// check below, run on every `home_nav` call, is therefore a cheap
+/// confirmation (`BTreeSet` equality against an unchanged value) on every
+/// call but the one where the belief genuinely moved, where it is the belief
+/// update's own write point.
+///
+/// Lives with the NPC's sim state, in the SAME session-lived scope
+/// [`hornvale_kernel::RoomMeshMemo`] does (a `Session` field;
+/// `run_simulation`'s own local) — NOT per-tick — because the whole point is
+/// that a stationary, unchanged-belief creature pays ZERO searches on ticks
+/// after its first, which a tick-scoped memo could never show (The Waymark
+/// spec, "the scaling stake").
+///
+/// Also gates the search itself, not only its cache: `decide_step` only calls
+/// `home_nav` for a non-`Ametabolic` creature (plan-time verification (a) —
+/// the Social drive, the plan's only consumer, is never pushed onto an
+/// ametabolic creature's `drives` vec — "lazy AND cached" per the campaign
+/// spec's Stage 3 clause).
+#[derive(Default)]
+pub struct HomeNavCache {
+    /// Per-entity state (avoid-epoch bookkeeping and the cached feature).
+    entries: std::collections::BTreeMap<EntityId, HomeNavState>,
+    /// How many real `plan_to_room` searches `home_nav` has run, ever — the
+    /// scaling property's own deterministic witness (the search-count pins),
+    /// never a wall-clock proxy. `pub(crate)` (Task 4 fix round, rider d):
+    /// test-visible within this crate only — no drive, and no OTHER crate,
+    /// ever reads it.
+    pub(crate) searches: u64,
+}
+
+impl HomeNavCache {
+    /// An empty cache — one per session-lived scope (see the type doc).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `home_nav(entity) → (distance, first_step)`: the seam [`decide_step`]
+    /// (and [`affect_of_memo_occupied`]) read instead of ever calling
+    /// `plan_to_room` directly. A cache hit — `pos`, `home`, and `budget` all
+    /// unchanged, and `avoid` unchanged since the last call for this entity —
+    /// costs one `BTreeMap` lookup and a handful of cheap equality checks,
+    /// never a search; a miss (including one caused solely by a different
+    /// `home`/`budget` — the key-hardening rider, Task 4 fix round) runs the
+    /// real search (costing exactly what every caller always paid) and
+    /// counts it in `searches`. `mesh_memo` (the-waymark, Task 6 — ledger #7's
+    /// re-plan) is threaded straight through to a real search's
+    /// [`plan_to_room_memo`] call, so a MISS no longer recomputes
+    /// `RoomAddr::neighbors` from scratch on every `astar` expansion when the
+    /// caller has a session-lived [`RoomMeshMemo`] to share — a cache HIT
+    /// above never touches it at all.
+    #[allow(clippy::too_many_arguments)]
+    fn home_nav(
+        &mut self,
+        entity: EntityId,
+        pos: &RoomAddr,
+        home: &RoomAddr,
+        avoid: &std::collections::BTreeSet<RoomAddr>,
+        budget: usize,
+        mesh_memo: &mut RoomMeshMemo,
+    ) -> HomeNavFeature {
+        let state = self.entries.entry(entity).or_insert_with(|| HomeNavState {
+            avoid_epoch: 0,
+            last_avoid: avoid.clone(),
+            cached: None,
+        });
+        // The belief's write point: bump iff the avoid set genuinely
+        // changed since we last saw this entity (never global — see the
+        // type doc).
+        if &state.last_avoid != avoid {
+            state.avoid_epoch += 1;
+            state.last_avoid = avoid.clone();
+        }
+        let epoch = state.avoid_epoch;
+        if let Some((cached_pos, cached_home, cached_budget, cached_epoch, feature)) = &state.cached
+            && cached_pos == pos
+            && cached_home == home
+            && *cached_budget == budget
+            && *cached_epoch == epoch
+        {
+            return feature.clone();
+        }
+        self.searches += 1;
+        let plan = plan_to_room_memo(pos, home, budget, avoid, Some(mesh_memo));
+        let feature = HomeNavFeature {
+            distance: plan.as_ref().map(|p| p.len()),
+            first_step: plan.and_then(|p| p.into_iter().next()),
+        };
+        state.cached = Some((pos.clone(), home.clone(), budget, epoch, feature.clone()));
+        feature
     }
 }
 
@@ -2810,6 +3060,14 @@ impl Drive for Social {
 /// the max-utility action IS its [`affordance`](Drive::affordance) and the
 /// grab/weigh latency is irrelevant. A fresh `Idle` mode per call keeps it
 /// stateless, as before. `arbitrate` is the multi-drive live path.
+///
+/// Stage-0 carries no creature identity at all (no `Npc`/`EntityId`
+/// parameter), so `arbitrate`'s `home_nav` seam (the-waymark, Task 4 fix
+/// round) is given a throwaway, single-call [`HomeNavCache`] and a fixed
+/// placeholder entity — this function is already documented stateless
+/// ("a fresh `Idle` mode per call"), so a cache that cannot outlive the call
+/// costs nothing beyond what this seam always paid. Likewise builds a
+/// throwaway [`RoomMeshMemo`] (the-waymark, Task 6) for the same reason.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
@@ -2822,7 +3080,20 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
         helpless: false,
         awake: true,
     };
-    arbitrate(view, home, &drives, &disposition, Mode::Idle, budget).intent
+    let mut home_nav_cache = HomeNavCache::new();
+    let mut mesh_memo = RoomMeshMemo::new();
+    arbitrate(
+        view,
+        home,
+        &drives,
+        &disposition,
+        Mode::Idle,
+        budget,
+        EntityId::new(1).expect("1 is a valid nonzero entity id"),
+        &mut home_nav_cache,
+        &mut mesh_memo,
+    )
+    .intent
 }
 
 /// How a creature is disposed to decide right now — the psychology dials that
@@ -2875,7 +3146,103 @@ pub struct Disposition {
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
+/// `entity`/`home_nav_cache` (the-waymark, Task 4 fix round): the no-active-
+/// drive fallback below reads the SAME `(pos, home, avoid, budget)` home-plan
+/// [`HomeNavCache::home_nav`] already caches for the `Social` drive — an
+/// AMETABOLIC creature (empty `drives`, so this branch is its ONLY path,
+/// every tick) never builds a `Social` at all, so without this it paid a
+/// full, uncached `plan_to_room` search here regardless of Task 4's cache.
+/// Sharing the cache is safe by construction (a hit requires an exact
+/// `(pos, avoid, epoch)` match): a non-ametabolic creature that also happens
+/// to have no active drive this tick just re-reads the entry its own
+/// `Social` construction already warmed.
+///
+/// `mesh_memo` (the-waymark, Task 6 — ledger #7's re-plan) is threaded
+/// straight through to the fallback's own `home_nav_cache.home_nav` call —
+/// the SAME session-lived [`RoomMeshMemo`] `decide_step`'s own
+/// `lowest_unvisited_neighbor_memo` read already shares, not a second one.
+/// This is a SIGNATURE GROWTH (a new trailing parameter) on an already-`pub`
+/// function: `grep -rn "vessel::liveness::arbitrate\|liveness::arbitrate"`
+/// outside this crate turns up nothing, and `cli/tests/architecture.rs`'s
+/// dependency-direction check would catch a downstream break at compile
+/// time regardless (nothing above `windows/vessel` in the layering calls
+/// it) — but no external caller has actually been verified beyond that grep,
+/// so this is noted rather than asserted.
+///
+/// `arbitrate`'s own caller-owned, per-call lazy affordance cache (the-
+/// waymark, ledger #9 — the caller-owned reshape of Task 6b's `RefCell`-per-
+/// drive design, which the review ruled crossed the Constitution's no-
+/// interior-mutability constraint). `cache[i]` holds drive `i`'s own
+/// [`Drive::affordance`] answer for THIS `arbitrate` call's `view`/`budget`
+/// once it has been asked for at least once, `None` until then.
+///
+/// The laziness is exact and per-drive, not per-call: `serviceability`
+/// receives the affordance as a THUNK (`&mut dyn FnMut() -> Option<Action>`)
+/// rather than an already-resolved value, so a drive whose own formula never
+/// needs its affordance (thermal/fatigue/danger/social all score a candidate
+/// directly — see each one's own `serviceability` doc) simply never calls
+/// the thunk, and `cache[i]` is never populated for it — no drive pays for a
+/// search it doesn't ask for, exactly as before this cache existed. A drive
+/// that DOES call it (thirst, hunger) pays for the real search (an uncached
+/// `plan_to_water`/`forage_step`) at most ONCE per `arbitrate` call, no
+/// matter how many times `grab_utility`/`utility` ask about it across every
+/// candidate action — this is the actual saving (ledger #8's measured ~41
+/// real `plan_to_water` searches/tick collapsing toward ~1/creature-tick).
+///
+/// No key is stored or compared: `view`/`budget` are the same bound
+/// variables for every call within one `arbitrate` invocation (never
+/// re-derived), so positional identity (`cache[i]`, filled once, read
+/// thereafter) is already a complete and correct key — there is no way for
+/// a stale answer to reach a different view from inside this function.
+///
+/// **No production recompute-and-assert guard (controller correction,
+/// ledger #9 round 2).** An earlier version of this cache recomputed
+/// `Drive::affordance` and `debug_assert_eq!`'d it against the cached value
+/// on EVERY cache hit, gated on `#[cfg(debug_assertions)]`. That traded
+/// away the entire point of the cache under the exact profile that matters:
+/// `debug_assertions` is on by default in the `dev`/`test` Cargo profiles,
+/// which is what plain `cargo test` and (critically) `make gate`/`make ci`
+/// both build under — neither passes `--release`. So every one of those
+/// "free in release" recomputes was a REAL, uncached `plan_to_water`/
+/// `forage_step` call on every single candidate action, in every test run
+/// this campaign's own gate performs — the water-search count measured
+/// right back at the pre-optimization baseline (1632/40 ticks) under the
+/// one profile the fix was meant to speed up. The named test
+/// `arbitrates_affordance_cache_matches_a_fresh_recompute` already pins
+/// "cached answer == fresh recompute" for the real production path,
+/// unconditionally (not gated on `debug_assertions`, so it holds in every
+/// build), and pays for exactly ONE extra recompute total — not one per
+/// candidate action per drive per `arbitrate` call. A per-call "assert only
+/// on the first hit" residual guard was considered and rejected: it would
+/// still force one extra real search per (creature, tick, call site) that
+/// ever reaches a second candidate query — multiplying the water count back
+/// toward ~2× its collapsed value for a correctness guarantee the named
+/// test already gives for free, once, campaign-wide. The cache is trusted
+/// on positional identity alone; the named test is the whole guard.
+fn cached_serviceability(
+    drives: &[&dyn Drive],
+    view: &Perceived,
+    budget: usize,
+    cache: &mut [Option<Option<Action>>],
+    i: usize,
+    action: &Action,
+) -> f64 {
+    let slot = &mut cache[i];
+    let mut affordance = || -> Option<Action> {
+        match slot {
+            Some(cached) => cached.clone(),
+            None => {
+                let value = drives[i].affordance(view, budget);
+                *slot = Some(value.clone());
+                value
+            }
+        }
+    };
+    drives[i].serviceability(action, view, budget, &mut affordance)
+}
+
 /// type-audit: bare-ok(count: budget)
+#[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
@@ -2883,6 +3250,9 @@ pub fn arbitrate(
     disposition: &Disposition,
     incoming: Mode,
     budget: usize,
+    entity: EntityId,
+    home_nav_cache: &mut HomeNavCache,
+    mesh_memo: &mut RoomMeshMemo,
 ) -> Resolution {
     let Disposition {
         latency,
@@ -2967,10 +3337,16 @@ pub fn arbitrate(
             object: None,
         };
         if view.position != *home {
-            let step = plan_to_room(&view.position, home, budget, &view.believed_hazard)
-                .and_then(|pl| pl.into_iter().next());
+            let feature = home_nav_cache.home_nav(
+                entity,
+                &view.position,
+                home,
+                &view.believed_hazard,
+                budget,
+                mesh_memo,
+            );
             return Resolution {
-                intent: step.map(Intent::Do).unwrap_or(Intent::Hold),
+                intent: feature.first_step.map(Intent::Do).unwrap_or(Intent::Hold),
                 mode: Mode::Homing,
                 affect,
             };
@@ -3006,12 +3382,17 @@ pub fn arbitrate(
         candidates.extend(d.candidate_actions(view, budget));
     }
 
+    // `arbitrate`'s own per-call lazy affordance cache (ledger #9) — see
+    // `cached_serviceability`'s own doc. One slot per drive, all empty until
+    // (if ever) a drive's `serviceability` asks for its own affordance.
+    let mut affordance_cache: Vec<Option<Option<Action>>> = vec![None; drives.len()];
+
     // A drive's best single-drive (grab-style) utility over the candidates —
     // the score the commitment switch compares incumbent vs challenger on.
-    let grab_utility = |i: usize| -> f64 {
+    let grab_utility = |cache: &mut Vec<Option<Option<Action>>>, i: usize| -> f64 {
         candidates
             .iter()
-            .map(|a| capped(i) * drives[i].serviceability(a, view, budget))
+            .map(|a| capped(i) * cached_serviceability(drives, view, budget, cache, i, a))
             .fold(0.0_f64, f64::max)
     };
 
@@ -3020,7 +3401,7 @@ pub fn arbitrate(
     let loudest = (0..drives.len())
         .filter(|&i| active[i])
         .fold(None::<(usize, f64)>, |best, i| {
-            let u = grab_utility(i);
+            let u = grab_utility(&mut affordance_cache, i);
             match best {
                 Some((_, bu)) if u.total_cmp(&bu).is_le() => best,
                 _ => Some((i, u)),
@@ -3040,8 +3421,8 @@ pub fn arbitrate(
         {
             let inc = drives.iter().position(|d| d.kind() == k).unwrap();
             if loudest != inc
-                && grab_utility(loudest)
-                    .total_cmp(&(grab_utility(inc) + SWITCH_MARGIN))
+                && grab_utility(&mut affordance_cache, loudest)
+                    .total_cmp(&(grab_utility(&mut affordance_cache, inc) + SWITCH_MARGIN))
                     .is_gt()
             {
                 loudest
@@ -3055,7 +3436,7 @@ pub fn arbitrate(
 
     // Weight each active drive: the pursued drive at 1, every other active
     // drive at `latency` (grab 0 ↔ weigh 1). Then utility = weighted sum.
-    let utility = |a: &Action| -> f64 {
+    let utility = |cache: &mut Vec<Option<Option<Action>>>, a: &Action| -> f64 {
         (0..drives.len())
             .filter(|&i| active[i])
             .map(|i| {
@@ -3064,16 +3445,16 @@ pub fn arbitrate(
                 } else {
                     latency
                 };
-                weight * capped(i) * drives[i].serviceability(a, view, budget)
+                weight * capped(i) * cached_serviceability(drives, view, budget, cache, i, a)
             })
             .sum()
     };
 
     // The max-utility action, earliest-on-ties (ascending RoomAddr, Drink last).
     let mut best_i = 0usize;
-    let mut best_u = utility(&candidates[0]);
+    let mut best_u = utility(&mut affordance_cache, &candidates[0]);
     for (i, a) in candidates.iter().enumerate().skip(1) {
-        let u = utility(a);
+        let u = utility(&mut affordance_cache, a);
         if u.total_cmp(&best_u).is_gt() {
             best_u = u;
             best_i = i;
@@ -3170,7 +3551,8 @@ pub fn affect_of(
     terrain: &dyn Terrain,
 ) -> Affect {
     let mut memo = PrimaryAfraidMemo::new();
-    affect_of_memo(frozen, npc, band, day, terrain, &mut memo)
+    let mut mesh_memo = RoomMeshMemo::new();
+    affect_of_memo(frozen, npc, band, day, terrain, &mut memo, &mut mesh_memo)
 }
 
 /// [`affect_of`] sharing a caller-owned [`PrimaryAfraidMemo`] — for the lab's
@@ -3179,6 +3561,16 @@ pub fn affect_of(
 /// re-derivations to one `affect_of` per `(emitter, day)`. Reads interior
 /// warmth at the room's landing anchor only — see [`affect_of_memo_occupied`]
 /// for the occupancy-aware sibling this delegates to with `occupancy: None`.
+/// `mesh_memo` (the-waymark fix round, rider (b)) is the caller-owned
+/// [`RoomMeshMemo`] this call's own `lowest_unvisited_neighbor_memo` read
+/// shares — see [`affect_of_memo_occupied`]'s own doc. This function's own
+/// public signature stays exactly as every existing caller expects it (no
+/// `HomeNavCache` parameter): it builds a throwaway one internally for
+/// [`affect_of_memo_occupied`]'s Task 4 `home_nav` read, exactly the
+/// `RoomMeshMemo` throwaway [`DriveMovements::step`] already builds for its
+/// own kernel-fixed signature — a caller that DOES have a session-lived
+/// scope to share (`run_simulation`) calls [`affect_of_memo_occupied`]
+/// directly instead, precisely as it already does for `mesh_memo`.
 pub fn affect_of_memo(
     frozen: &Ledger,
     npc: &Npc,
@@ -3186,8 +3578,20 @@ pub fn affect_of_memo(
     day: WorldTime,
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
+    mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
-    affect_of_memo_occupied(frozen, npc, band, day, terrain, memo, None)
+    let mut home_nav_cache = HomeNavCache::new();
+    affect_of_memo_occupied(
+        frozen,
+        npc,
+        band,
+        day,
+        terrain,
+        memo,
+        None,
+        mesh_memo,
+        &mut home_nav_cache,
+    )
 }
 
 /// [`affect_of_memo`], but given a caller-owned [`Occupancy`] to read the
@@ -3223,6 +3627,28 @@ pub fn affect_of_memo(
 /// never a foreign `AnchorId` read against a room's freshly-derived
 /// `Interior`, which [`crate::interior::warmth_at`] has no bounds check
 /// against.
+///
+/// `mesh_memo` (the-waymark fix round, rider (b)): this function used to
+/// build its OWN throwaway [`RoomMeshMemo`] inline for the
+/// `lowest_unvisited_neighbor_memo` read below — the same shape
+/// [`PrimaryAfraidMemo`] would have had if it were not already an explicit,
+/// caller-supplied parameter. It is now threaded the same way `memo` already
+/// is: a caller
+/// that owns a session/battery-scoped memo (`windows/lab`'s `run_simulation`)
+/// shares it here too; a caller that only has `&self` (`Session::snapshot`/
+/// `needs`) supplies a local throwaway, exactly as it already does for cases
+/// where session-scoping isn't reachable.
+///
+/// `home_nav_cache` (the-waymark, Task 4): this function used to call
+/// `plan_to_room` UNCONDITIONALLY, same as `decide_step` did — a SEPARATE
+/// budget-1000 search from `decide_step`'s own, since this is a stateless
+/// re-derivation of felt state, not the live decision. Reads the Social
+/// drive's feature from the caller-owned cache instead, gated on
+/// non-`Ametabolic` exactly as `decide_step`'s own gate is (see that
+/// function's doc). Sharing IS safe across the two consumers: a cache hit
+/// requires an EXACT `(pos, avoid)` match regardless of who asked, so this
+/// can only ever save a search, never answer one incorrectly.
+#[allow(clippy::too_many_arguments)]
 pub fn affect_of_memo_occupied(
     frozen: &Ledger,
     npc: &Npc,
@@ -3231,6 +3657,8 @@ pub fn affect_of_memo_occupied(
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
     occupancy: Option<&Occupancy>,
+    mesh_memo: &mut RoomMeshMemo,
+    home_nav_cache: &mut HomeNavCache,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
@@ -3249,7 +3677,7 @@ pub fn affect_of_memo_occupied(
         npc.metabolic_class,
     );
     let visited = std::collections::BTreeSet::new();
-    let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
+    let explore_step = lowest_unvisited_neighbor_memo(&pos, &visited, terrain, mesh_memo);
     let fatigue = fatigue_at(frozen, npc.entity, day);
     // The Haunt + The Phantom: the ground this creature remembers being
     // frightened on — a fold over its committed history (empty for a never-
@@ -3322,18 +3750,6 @@ pub fn affect_of_memo_occupied(
         // bandless replay — gives termination, byte-identity, and no contagion.
         dread: Some(&memory.dread),
     };
-    // Affiliation (The Belonging): loneliness + the home-step, precomputed once
-    // from a single plan home (reused, so the drive's urgency is O(1)).
-    let plan_home = plan_to_room(
-        &view.position,
-        &npc.home,
-        PLAN_BUDGET,
-        &view.believed_hazard,
-    );
-    let social = Social {
-        loneliness: loneliness_from_plan(&plan_home),
-        home_step: plan_home.and_then(|p| p.into_iter().next()),
-    };
     // The metabolism gate (The Kindling): an Ametabolic creature has no
     // homeostatic drives at all — it neither thirsts, thermoregulates, tires
     // (The Slumber), hungers (The Provender), fears (The Dread — a construct
@@ -3341,7 +3757,34 @@ pub fn affect_of_memo_occupied(
     // Content, never distress. The NICHE gate (The Provender, spec §2): hunger
     // is carried only by a creature whose diet niche weights SOMETHING — an
     // empty niche means "no food drive" (no axis, so no source serves it).
+    //
+    // Read early (the-waymark, Task 4): the Social drive built below is the
+    // ONLY consumer of a home plan, and it is never pushed onto `drives` for
+    // an ametabolic creature — see `decide_step`'s identical gate for the
+    // full rationale.
     let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    // Affiliation (The Belonging): loneliness + the home-step, read from the
+    // cross-tick cache instead of an unconditional `plan_to_room` (the-waymark,
+    // Task 4) — precomputed once so the drive's urgency stays O(1) either way.
+    let social = if ametabolic {
+        Social {
+            loneliness: 0.0,
+            home_step: None,
+        }
+    } else {
+        let feature = home_nav_cache.home_nav(
+            npc.entity,
+            &view.position,
+            &npc.home,
+            &view.believed_hazard,
+            PLAN_BUDGET,
+            mesh_memo,
+        );
+        Social {
+            loneliness: loneliness_from_distance(feature.distance),
+            home_step: feature.first_step,
+        }
+    };
     let mut drives: Vec<&dyn Drive> = Vec::new();
     if !ametabolic {
         drives.push(&thirst);
@@ -3367,13 +3810,16 @@ pub fn affect_of_memo_occupied(
         &disposition,
         Mode::Idle,
         PLAN_BUDGET,
+        npc.entity,
+        home_nav_cache,
+        mesh_memo,
     )
     .affect
 }
 
 /// The per-tick ALARM field (The Alarm) — fear-contagion as a derived,
 /// order-independent field over the frozen population, the vessel's dynamic
-/// sibling of `worldgen::predator_pressure`. For each creature that is
+/// sibling of `worldgen::predator_pressure_from`. For each creature that is
 /// **primary-afraid** (its own Danger drive is active — `affect_of` reads
 /// `object == Some(Danger)` with `arousal ≥ DANGER_ACT`), it stamps the
 /// emitter's felt-threat magnitude onto its cell and each `neighbors()` cell
@@ -3752,6 +4198,20 @@ fn hold_step(
 /// from it is assembled, and catch-up's own replayed steps must see that
 /// update too or a creature that wades through water mid-catch-up would
 /// forget it.
+///
+/// `mesh_memo` (the-waymark, Task 3) is the caller-owned [`RoomMeshMemo`] this
+/// step's own [`lowest_unvisited_neighbor_memo`] read shares — one memo per
+/// [`DriveMovements::step_with_occupancy`] call (the `PrimaryAfraidMemo`
+/// per-tick scope), so a neighbourhood already visited by an earlier
+/// creature, or an earlier tick-iteration of THIS creature's walk, is not
+/// recomputed.
+///
+/// `home_nav_cache` (the-waymark, Task 4) is the caller-owned
+/// [`HomeNavCache`] the Social drive's own home-plan feature is read from
+/// (`HomeNavCache::home_nav`) instead of an unconditional `plan_to_room` —
+/// session-lived like `mesh_memo`, but cross-tick rather than per-tick (see
+/// the cache's own doc for why a stationary, unchanged-belief creature must
+/// reach zero searches across ticks, not merely within one).
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: f64,
@@ -3771,6 +4231,8 @@ fn decide_step(
     budget: usize,
     frozen: &Ledger,
     out: &[Fact],
+    mesh_memo: &mut RoomMeshMemo,
+    home_nav_cache: &mut HomeNavCache,
 ) -> (Resolution, f64) {
     // Standing in water forms/updates belief (nearest-to-home wins) — the
     // live walk's own first step of every iteration.
@@ -3810,7 +4272,7 @@ fn decide_step(
         npc.metabolic_class,
         &HUNGER,
     );
-    let explore_step = lowest_unvisited_neighbor(pos, visited, terrain);
+    let explore_step = lowest_unvisited_neighbor_memo(pos, visited, terrain, mesh_memo);
     let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
     let view = Perceived {
         position: pos.clone(),
@@ -3843,12 +4305,33 @@ fn decide_step(
         alarm: Some(alarm),
         dread: Some(&hazard.dread),
     };
-    let plan_home = plan_to_room(pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
-    let social = Social {
-        loneliness: loneliness_from_plan(&plan_home),
-        home_step: plan_home.and_then(|p| p.into_iter().next()),
-    };
+    // The metabolism gate, read early (the-waymark, Task 4 — plan-time
+    // verification (a)): the Social drive below is the plan's ONLY consumer,
+    // and it is never pushed onto `drives` for an ametabolic creature, so
+    // computing the plan for one was always pure waste. Gating the `home_nav`
+    // call itself (not merely caching its result) is the "lazy AND cached"
+    // half of the campaign spec's Stage 3 clause — an ametabolic creature now
+    // never even touches the cache, let alone runs a search.
     let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let social = if ametabolic {
+        Social {
+            loneliness: 0.0,
+            home_step: None,
+        }
+    } else {
+        let feature = home_nav_cache.home_nav(
+            npc.entity,
+            pos,
+            &npc.home,
+            &view.believed_hazard,
+            PLAN_BUDGET,
+            mesh_memo,
+        );
+        Social {
+            loneliness: loneliness_from_distance(feature.distance),
+            home_step: feature.first_step,
+        }
+    };
     let mut drives: Vec<&dyn Drive> = Vec::new();
     if !ametabolic {
         drives.push(&thirst);
@@ -3867,7 +4350,17 @@ fn decide_step(
         helpless,
         awake: is_awake(npc.activity, terrain, pos, WorldTime { day }),
     };
-    let resolution = arbitrate(&view, &npc.home, &drives, &disposition, mode, budget);
+    let resolution = arbitrate(
+        &view,
+        &npc.home,
+        &drives,
+        &disposition,
+        mode,
+        budget,
+        npc.entity,
+        home_nav_cache,
+        mesh_memo,
+    );
     (resolution, drive)
 }
 
@@ -3916,12 +4409,21 @@ fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId
 /// crossover test needs to sit at. The cap's role in the loop is a property
 /// of its STRUCTURE, not of `CATCH_UP_STEP_CAP`'s particular value.
 ///
-/// Commits nothing: every argument other than `occupancy`/`believed`/`mode`
-/// is a shared reference or a plain value, `decide_step` only ever reads
-/// `frozen`, and neither this function nor anything it calls ever touches a
-/// `Ledger` mutably or pushes a `Fact` anywhere — there is no `out: &mut
-/// Vec<Fact>` in this call graph at all for catch-up to write into even by
-/// accident.
+/// Commits nothing: every argument other than `occupancy`/`believed`/`mode`/
+/// `mesh_memo` is a shared reference or a plain value, `decide_step` only
+/// ever reads `frozen`, and neither this function nor anything it calls ever
+/// touches a `Ledger` mutably or pushes a `Fact` anywhere — there is no
+/// `out: &mut Vec<Fact>` in this call graph at all for catch-up to write into
+/// even by accident. `mesh_memo` (the-waymark, Task 3) is a pure-function
+/// cache (see [`RoomMeshMemo`]'s own doc) threaded through to
+/// [`decide_step`]'s own `lowest_unvisited_neighbor_memo` read — mutating it
+/// changes nothing this function's callers can observe except speed.
+/// `home_nav_cache` (the-waymark, Task 4) is the same kind of pure-function
+/// cache, threaded through to `decide_step`'s own `HomeNavCache::home_nav`
+/// read for exactly the same reason — every one of this loop's iterations
+/// shares the SAME `hazard`/`pos` pairing the caller already fixed, so a
+/// replay that revisits a position already asked about this call answers
+/// from cache.
 #[allow(clippy::too_many_arguments)]
 fn catch_up(
     entry_day: f64,
@@ -3942,6 +4444,8 @@ fn catch_up(
     out: &[Fact],
     cap: usize,
     day_length_std: Option<f64>,
+    mesh_memo: &mut RoomMeshMemo,
+    home_nav_cache: &mut HomeNavCache,
 ) -> Mode {
     let mut day = entry_day;
     let mut steps = 0usize;
@@ -3983,6 +4487,8 @@ fn catch_up(
             budget,
             frozen,
             out,
+            mesh_memo,
+            home_nav_cache,
         );
         mode = resolution.mode;
         match resolution.intent {
@@ -4063,7 +4569,29 @@ impl<'a> DriveMovements<'a> {
     /// sampler needs to read warmth where a creature actually walked to
     /// rather than always at its room's landing anchor. See
     /// [`affect_of_memo_occupied`] for the read this occupancy feeds.
-    pub fn step_with_occupancy(&self, frozen: &Ledger) -> (Vec<Fact>, Occupancy) {
+    ///
+    /// `mesh_memo` (the-waymark fix round, Finding 2) is a caller-owned
+    /// [`RoomMeshMemo`], threaded `&mut` rather than built fresh here: the
+    /// PREVIOUS shape (`let mut mesh_memo = RoomMeshMemo::new()` local to
+    /// this function) discarded a tick's worth of `neighbors()` reuse every
+    /// single call — the lab's health battery alone calls this once per tick
+    /// for 40 ticks, so the old shape rebuilt (and threw away) the memo 40
+    /// times over a single run. The caller now owns it for as long as ITS
+    /// own scope lasts (a `Session`'s whole possession; `run_simulation`'s
+    /// whole 40-tick sweep), so cross-tick reuse is the point, not per-tick
+    /// accident.
+    ///
+    /// `home_nav_cache` (the-waymark, Task 4) is likewise caller-owned, but
+    /// CROSS-tick rather than per-tick by design — see [`HomeNavCache`]'s own
+    /// doc for why the campaign's scaling bar needs a cache that survives
+    /// across calls to this very function, not merely across one call's own
+    /// creatures/pops.
+    pub fn step_with_occupancy(
+        &self,
+        frozen: &Ledger,
+        mesh_memo: &mut RoomMeshMemo,
+        home_nav_cache: &mut HomeNavCache,
+    ) -> (Vec<Fact>, Occupancy) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
         // stands at, tracked across this tick's own walk. Shared across
@@ -4200,6 +4728,8 @@ impl<'a> DriveMovements<'a> {
                 &out,
                 CATCH_UP_STEP_CAP,
                 self.day_length_std,
+                mesh_memo,
+                home_nav_cache,
             );
 
             queue.insert((from_ticks, npc.entity));
@@ -4212,7 +4742,17 @@ impl<'a> DriveMovements<'a> {
             };
             let npc = npc.clone();
             let memory = memory.clone();
-            if !self.advance_one(frozen, &npc, st, &mut occupancy, &alarm, &memory, &mut out) {
+            if !self.advance_one(
+                frozen,
+                &npc,
+                st,
+                &mut occupancy,
+                &alarm,
+                &memory,
+                &mut out,
+                mesh_memo,
+                home_nav_cache,
+            ) {
                 // This creature's walk is over — past `to`, out of `MAX_STEPS`,
                 // or halted by an arm's own stop condition. It is not requeued.
                 continue;
@@ -4238,7 +4778,20 @@ impl<'a> TickSystem for DriveMovements<'a> {
         "drive-movements"
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
-        self.step_with_occupancy(frozen).0
+        // `TickSystem::step`'s signature is fixed by the kernel's scheduler
+        // (`tick()` dispatches every registered system through it generically,
+        // so it cannot carry a `RoomMeshMemo` parameter without a kernel-trait
+        // change — out of the-waymark's scope). This path therefore cannot
+        // share a caller-owned memo the way the direct `step_with_occupancy`
+        // call (`Session::wait`, `run_simulation`) does; a throwaway one costs
+        // nothing beyond what the pre-Finding-2 code already paid every call.
+        // `throwaway_nav` (Task 4) carries the identical carve-out: this path
+        // pays a fresh `plan_to_room` per creature per pop, exactly what
+        // EVERY call paid before this task.
+        let mut throwaway = RoomMeshMemo::new();
+        let mut throwaway_nav = HomeNavCache::new();
+        self.step_with_occupancy(frozen, &mut throwaway, &mut throwaway_nav)
+            .0
     }
 }
 
@@ -4369,6 +4922,14 @@ impl<'a> DriveMovements<'a> {
     /// population-wide state, keyed by `EntityId`, so it cannot live in the
     /// per-creature `WalkState` the way the other nine pieces do — the same
     /// reason `decide_step` and `catch_up` carry the allow below.
+    ///
+    /// `mesh_memo` (the-waymark, Task 3) is likewise population-wide, tick-
+    /// scoped state: [`step_with_occupancy`](Self::step_with_occupancy) builds
+    /// ONE [`RoomMeshMemo`] and threads it through every creature's every
+    /// `advance_one`/`decide_step`, so the same neighbourhood recurring across
+    /// creatures or across this walk's own repeated pops is not recomputed.
+    /// `home_nav_cache` (the-waymark, Task 4) is `step_with_occupancy`'s own
+    /// CROSS-tick [`HomeNavCache`], threaded the same way.
     #[allow(clippy::too_many_arguments)]
     fn advance_one(
         &self,
@@ -4379,6 +4940,8 @@ impl<'a> DriveMovements<'a> {
         alarm: &std::collections::BTreeMap<RoomAddr, f64>,
         memory: &HazardMemory,
         out: &mut Vec<Fact>,
+        mesh_memo: &mut RoomMeshMemo,
+        home_nav_cache: &mut HomeNavCache,
     ) -> bool {
         if st.day > self.to.day || st.steps >= MAX_STEPS {
             return false;
@@ -4416,6 +4979,8 @@ impl<'a> DriveMovements<'a> {
             PLAN_BUDGET,
             frozen,
             &*out,
+            mesh_memo,
+            home_nav_cache,
         );
         st.mode = resolution.mode;
         // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
@@ -4595,15 +5160,23 @@ fn nearer_to_home(
 }
 
 /// The lowest-elevation neighbour not yet visited this walk (the directed-
-/// exploration step), or `None` if every neighbour is visited. Terminating: the
-/// visited set only grows.
-fn lowest_unvisited_neighbor(
+/// exploration step), or `None` if every neighbour is visited. Terminating:
+/// the visited set only grows. Consults/fills a caller-owned [`RoomMeshMemo`]
+/// for the `neighbors()` read instead of recomputing the icosphere
+/// lattice/edge-crossing arithmetic every call (the-waymark, Task 3). Two hot
+/// callers share it: the live walk's `decide_step` (via
+/// `DriveMovements::step_with_occupancy`'s session-owned memo, the-waymark
+/// fix round, Finding 2) and the stateless health-sampler read
+/// [`affect_of_memo_occupied`] (rider (b)) — both thread whatever memo THEIR
+/// own caller supplies, never build one silently inline.
+fn lowest_unvisited_neighbor_memo(
     from: &RoomAddr,
     visited: &std::collections::BTreeSet<RoomAddr>,
     terrain: &dyn Terrain,
+    memo: &mut RoomMeshMemo,
 ) -> Option<RoomAddr> {
     let mut best: Option<(RoomAddr, f64)> = None;
-    for n in from.neighbors() {
+    for n in from.neighbors_memo(memo) {
         if visited.contains(&n) {
             continue;
         }
@@ -4756,24 +5329,29 @@ pub fn derive_npcs(
         .collect()
 }
 
-/// Derive up to `k` WILD NPCs (The Wilding) — beast agents, one per distinct
-/// mobile-beast concentration (`worldgen::wild_concentrations`: a herd, a lair).
-/// A wild NPC is the same `Npc` a settlement produces — its home is the
-/// concentration's cell, its traits its biosphere's, its psyche the DEFAULT
-/// (beasts carry no `psyche_registry` entry, so the `.unwrap_or` fallbacks apply,
-/// exactly as they already do for a settlement of a non-peopled species). The
-/// threat niche derives (The Bane/Quarry) with LIVE predator dread, so a
-/// herbivore beast finally FEARS predator ground — The Quarry, waking. Appended
-/// to the peopled `derive_npcs` output; genesis untouched (the session's ledger
-/// clone only, like `derive_npcs`).
-/// type-audit: bare-ok(count: k)
+/// Derive WILD NPCs (The Wilding) — beast agents, one per distinct
+/// mobile-beast `concentrations` entry (`worldgen::wild_concentrations_from`:
+/// a herd, a lair). A wild NPC is the same `Npc` a settlement produces — its
+/// home is the concentration's cell, its traits its biosphere's, its psyche
+/// the DEFAULT (beasts carry no `psyche_registry` entry, so the `.unwrap_or`
+/// fallbacks apply, exactly as they already do for a settlement of a
+/// non-peopled species). The threat niche derives (The Bane/Quarry) with LIVE
+/// predator dread, so a herbivore beast finally FEARS predator ground — The
+/// Quarry, waking. Appended to the peopled `derive_npcs` output; genesis
+/// untouched (the session's ledger clone only, like `derive_npcs`).
+///
+/// Takes the already-fit `concentrations` (a caller's
+/// `wild_concentrations_from(wc, report, k)`) rather than fitting the
+/// coexistence stack itself — since The Weir (Stage 1b), the caller shares
+/// ONE demography report across the predator/prey/wild fields instead of
+/// this minting step re-running its own fourth fit.
+/// type-audit: bare-ok(identifier-text: concentrations)
 pub fn derive_wild_npcs(
     world: &World,
     ctx: &LocaleContext,
     ledger: &mut Ledger,
-    k: usize,
+    concentrations: Vec<(String, [f64; 3])>,
 ) -> Vec<Npc> {
-    let concentrations = hornvale_worldgen::wild_concentrations(world, k).unwrap_or_default();
     let biosphere = hornvale_species::biosphere_registry();
     let psyche = hornvale_species::psyche_registry();
     concentrations
@@ -5181,17 +5759,50 @@ struct NavSpace<'a> {
     /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
     avoid: &'a std::collections::BTreeSet<RoomAddr>,
 }
-impl<'a> SearchSpace for NavSpace<'a> {
-    type State = RoomAddr;
-    type Action = Action;
-    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
-        s.neighbors()
+impl<'a> NavSpace<'a> {
+    /// The `move_cost`/`avoid` edge-building rule, shared verbatim by
+    /// [`SearchSpace::successors`] and [`SearchSpace::successors_memo`]
+    /// below (the-waymark, Task 6) so memoizing the raw neighbor lookup can
+    /// never accidentally also change how an edge's cost is computed — the
+    /// memo boundary is `neighbors`/`neighbors_memo` ALONE, never the
+    /// successor list this builds from it.
+    fn edges_from(&self, neighbors: [RoomAddr; 3]) -> Vec<(Action, RoomAddr, u64)> {
+        neighbors
             .into_iter()
             .map(|n| {
                 let cost = move_cost(&n, self.avoid);
                 (Action::MoveTo(n.clone()), n, cost)
             })
             .collect()
+    }
+}
+impl<'a> SearchSpace for NavSpace<'a> {
+    type State = RoomAddr;
+    type Action = Action;
+    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
+        self.edges_from(s.neighbors())
+    }
+    /// Ledger #7's re-plan (the-waymark, Task 6): consults a caller-owned
+    /// [`RoomMeshMemo`] for the neighbor lookup instead of recomputing the
+    /// icosphere lattice arithmetic on every `astar` expansion — this is the
+    /// specific hot path (`RoomAddr::neighbors` inside `NavSpace::successors`
+    /// → `astar` expansions) Task 3's memo was built for but could not reach,
+    /// because `SearchSpace::successors(&self, ...)` alone had no way to
+    /// thread a caller's memo down into it. Byte-identical to `successors`
+    /// either way ([`RoomAddr::neighbors_memo`] is a cache of the same pure
+    /// function `neighbors` computes), and the `edges_from` cost rule is
+    /// untouched — only which of `neighbors`/`neighbors_memo` supplies the
+    /// three rooms it costs.
+    fn successors_memo(
+        &self,
+        s: &RoomAddr,
+        memo: Option<&mut RoomMeshMemo>,
+    ) -> Vec<(Action, RoomAddr, u64)> {
+        let neighbors = match memo {
+            Some(m) => s.neighbors_memo(m),
+            None => s.neighbors(),
+        };
+        self.edges_from(neighbors)
     }
     fn goal(&self, s: &RoomAddr) -> bool {
         *s == self.dest
@@ -5201,9 +5812,40 @@ impl<'a> SearchSpace for NavSpace<'a> {
     }
 }
 
+/// [`plan_to_room`], threading a caller-owned [`RoomMeshMemo`] through the
+/// underlying [`AStarSolver`] search instead of recomputing `RoomAddr::
+/// neighbors` on every expansion (the-waymark, Task 6 — ledger #7's
+/// re-plan). `mesh_memo: None` is exactly `plan_to_room`'s own behavior
+/// (`NavSpace::successors_memo`'s default-free override still falls back to
+/// plain `neighbors`); `Some(memo)` is byte-identical too, by construction —
+/// see `NavSpace::successors_memo`'s own doc. `pub(crate)`: today's one
+/// caller worth the memo is [`HomeNavCache::home_nav`], which already sits
+/// in this module; a future external caller can widen this if it ever needs
+/// to.
+pub(crate) fn plan_to_room_memo(
+    from: &RoomAddr,
+    dest: &RoomAddr,
+    budget: usize,
+    avoid: &std::collections::BTreeSet<RoomAddr>,
+    mesh_memo: Option<&mut RoomMeshMemo>,
+) -> Option<Vec<Action>> {
+    AStarSolver.solve(
+        &NavSpace {
+            dest: dest.clone(),
+            avoid,
+        },
+        from.clone(),
+        budget,
+        mesh_memo,
+    )
+}
+
 /// Plan a pure navigation path to `dest` (the home-return goal), or `None`.
 /// `avoid` is the remembered-danger set the A* routes around (The Haunt); pass
-/// an empty set for the memory-less path.
+/// an empty set for the memory-less path. A thin delegator to
+/// [`plan_to_room_memo`] with `mesh_memo: None` (the-waymark, Task 6) — every
+/// existing caller (there is no session memo in scope at most of them) is
+/// unchanged.
 /// type-audit: bare-ok(count: budget)
 pub fn plan_to_room(
     from: &RoomAddr,
@@ -5211,14 +5853,7 @@ pub fn plan_to_room(
     budget: usize,
     avoid: &std::collections::BTreeSet<RoomAddr>,
 ) -> Option<Vec<Action>> {
-    astar(
-        &NavSpace {
-            dest: dest.clone(),
-            avoid,
-        },
-        from.clone(),
-        budget,
-    )
+    plan_to_room_memo(from, dest, budget, avoid, None)
 }
 
 /// Which anchor each creature stands at, inside the presence bubble.
@@ -5361,8 +5996,24 @@ impl Occupancy {
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
     use hornvale_kernel::{ConceptRegistry, Seed};
+
+    /// Test-only helper: fits the coexistence stack once and reads the `k`
+    /// densest wild concentrations — the prelude `derive_wild_npcs` used to
+    /// run internally (The Weir, Stage 1b), now the caller's job.
+    fn wild_concentrations_of(world: &World, k: usize) -> Vec<(String, [f64; 3])> {
+        let wc = hornvale_worldgen::WorldComponents::assemble().unwrap();
+        let terrain = hornvale_worldgen::terrain_of(world).unwrap();
+        let climate = hornvale_worldgen::climate_from(world, &terrain).unwrap();
+        let report =
+            hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate).unwrap();
+        hornvale_worldgen::wild_concentrations_from(&wc, &report, k)
+    }
 
     /// A thin positional adapter over [`arbitrate`] for the tests (The
     /// Disposition): it packs the four loose disposition scalars into a
@@ -5370,6 +6021,13 @@ mod tests {
     /// per-argument values without each rebuilding the struct. Production
     /// callers (`decide`/`affect_of`/the tick) construct `Disposition` directly;
     /// only the tests, which vary these values case by case, go through this.
+    ///
+    /// Builds its own throwaway [`HomeNavCache`] and a fixed placeholder
+    /// entity (the-waymark, Task 4 fix round): none of the ~20 call sites
+    /// this adapts vary a creature identity, so a per-call cache costs
+    /// nothing beyond what `arbitrate`'s `home_nav` seam always paid before
+    /// Task 4, and none of them need cross-call cache reuse to make their
+    /// point.
     #[allow(clippy::too_many_arguments)]
     fn arb(
         view: &Perceived,
@@ -5382,6 +6040,8 @@ mod tests {
         incoming: Mode,
         budget: usize,
     ) -> Resolution {
+        let mut home_nav_cache = HomeNavCache::new();
+        let mut mesh_memo = RoomMeshMemo::new();
         arbitrate(
             view,
             home,
@@ -5394,6 +6054,9 @@ mod tests {
             },
             incoming,
             budget,
+            EntityId::new(1).expect("1 is a valid nonzero entity id"),
+            &mut home_nav_cache,
+            &mut mesh_memo,
         )
     }
 
@@ -6941,7 +7604,7 @@ mod tests {
     fn derive_wild_npcs_mint_beast_agents_with_defaulted_psyche() {
         // THE WILDING: the wild roster is minted from the world's beast
         // concentrations, NOT its peoples. A beast is, by construction, a
-        // species whose `social_form` is not `Settled` (`wild_concentrations`'s
+        // species whose `social_form` is not `Settled` (`wild_concentrations_from`'s
         // `is_mobile_beast`). On today's seed-42 roster every such wild kind
         // also carries no `psyche_registry` entry, so every wild NPC takes the
         // DEFAULT psyche dials — steady boldness, mid latency/horizon — while
@@ -6962,7 +7625,8 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, 4);
+        let concentrations = wild_concentrations_of(&world, 4);
+        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, concentrations);
         assert!(
             !wild.is_empty() && wild.len() <= 4,
             "seed 42 mints between 1 and 4 wild beasts, got {}",
@@ -7012,7 +7676,8 @@ mod tests {
         );
         // Deterministic: the same world mints the same beast roster.
         let mut ledger2 = world.ledger.clone();
-        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, 4);
+        let concentrations2 = wild_concentrations_of(&world, 4);
+        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, concentrations2);
         let species: Vec<&str> = wild.iter().map(|n| n.species.as_str()).collect();
         let species2: Vec<&str> = wild2.iter().map(|n| n.species.as_str()).collect();
         assert_eq!(species, species2, "the wild roster is deterministic");
@@ -7039,7 +7704,8 @@ mod tests {
         let mut ledger = world.ledger.clone();
         let home = hornvale_settlement::village_info(&world).unwrap().id;
         let mut npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
-        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, 4));
+        let concentrations = wild_concentrations_of(&world, 4);
+        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, concentrations));
         assert!(!npcs.is_empty(), "the probe world derives a population");
         for n in &npcs {
             assert!(
@@ -7267,7 +7933,7 @@ mod tests {
             !built.is_empty(),
             "seed 42's flagship settlement must contribute at least one built room"
         );
-        let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built));
+        let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built), None);
         assert!(
             terrain.is_built(&home),
             "the settlement's own room must read as built"
@@ -9373,7 +10039,7 @@ mod tests {
         };
         assert!(here.neighbors().contains(&to), "it steps to a neighbour");
         assert!(
-            danger.serviceability(&Action::MoveTo(to), &view, PLAN_BUDGET) > 0.0,
+            danger.serviceability(&Action::MoveTo(to), &view, PLAN_BUDGET, &mut || None) > 0.0,
             "stepping off the dreaded cell positively serves the drive"
         );
     }
@@ -9467,12 +10133,12 @@ mod tests {
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
         assert!(
-            danger.serviceability(&Action::MoveTo(safer), &view, PLAN_BUDGET) > 0.0,
+            danger.serviceability(&Action::MoveTo(safer), &view, PLAN_BUDGET, &mut || None) > 0.0,
             "a step toward safety is served"
         );
         // Into worse danger: NEGATIVE (0.5 − 0.9) — the unclamped modulation.
         assert!(
-            danger.serviceability(&Action::MoveTo(worse), &view, PLAN_BUDGET) < 0.0,
+            danger.serviceability(&Action::MoveTo(worse), &view, PLAN_BUDGET, &mut || None) < 0.0,
             "a step into worse danger is penalised (signed serviceability)"
         );
     }
@@ -10177,20 +10843,22 @@ mod tests {
 
     #[test]
     fn loneliness_is_zero_at_home_rises_with_distance_and_lapses_when_unreachable() {
-        // The three regimes of the social pull (The Belonging).
+        // The three regimes of the social pull (The Belonging). Takes the hop
+        // count directly (the-waymark, Task 4: `loneliness_from_distance` is
+        // `loneliness_from_plan`'s successor, reading a `HomeNavFeature`'s
+        // `distance` rather than a full plan — see its own doc).
         assert_eq!(
-            loneliness_from_plan(&Some(vec![])),
+            loneliness_from_distance(Some(0)),
             0.0,
-            "at home (empty plan) → not lonely"
+            "at home (zero hops) → not lonely"
         );
-        let ten: Vec<Action> = std::iter::repeat_n(Action::Drink, 10).collect();
         assert_eq!(
-            loneliness_from_plan(&Some(ten)),
+            loneliness_from_distance(Some(10)),
             10.0 / LONELY_SCALE_HOPS,
             "loneliness rises with the hop-distance home"
         );
         assert_eq!(
-            loneliness_from_plan(&None),
+            loneliness_from_distance(None),
             0.0,
             "home beyond reach → DORMANT (0), not distress — social is comfort, \
              an unreachable home is a relocation"
@@ -10212,12 +10880,12 @@ mod tests {
             "the affordance is the precomputed step home"
         );
         assert_eq!(
-            social.serviceability(&Action::MoveTo(step), &view, PLAN_BUDGET),
+            social.serviceability(&Action::MoveTo(step), &view, PLAN_BUDGET, &mut || None),
             1.0,
             "the home-step is served"
         );
         assert_eq!(
-            social.serviceability(&Action::Drink, &view, PLAN_BUDGET),
+            social.serviceability(&Action::Drink, &view, PLAN_BUDGET, &mut || None),
             0.0,
             "nothing else eases loneliness"
         );
@@ -10881,6 +11549,76 @@ mod tests {
                 explore_step: None,
             }),
             AffectLabel::Lost,
+        );
+    }
+
+    #[test]
+    fn arbitrates_affordance_cache_matches_a_fresh_recompute() {
+        // Names the mechanism (the-waymark, ledger #9): `arbitrate` computes
+        // each drive's own `Drive::affordance` lazily, at most ONCE per
+        // call, and reuses it across every candidate action
+        // `grab_utility`/`utility` ask about (`cached_serviceability`, in
+        // `arbitrate`'s own body — grep for it). This pins that the cached
+        // answer `arbitrate` actually ACTS on is exactly what a fresh,
+        // standalone `Thirst::affordance` call on the SAME view/budget
+        // produces — the memoized == recomputed bar.
+        //
+        // In this caller-owned shape the "key" is just positional identity:
+        // `view`/`budget` are the same bound variables for the WHOLE
+        // `arbitrate` call, never re-derived, so there is no separate
+        // key-equality branch to exercise from outside `arbitrate` (unlike
+        // Task 6b's `RefCell`-per-drive design, which validated an explicit
+        // key on every read because the memo could outlive one view).
+        //
+        // Controller correction (ledger #9 round 2): this test used to share
+        // the guard with a `debug_assert_eq!` twin recomputed on every cache
+        // HIT inside `cached_serviceability` itself — but that recompute ran
+        // under `debug_assertions`, which is exactly the profile plain
+        // `cargo test`/`make gate` build under, so it silently paid for a
+        // real search on every candidate action and erased the whole point
+        // of the cache in the one place (the gate) this fix exists to speed
+        // up. The twin is gone; THIS test — asserting the resolved `Intent`
+        // equals a fresh, standalone recompute — is now the WHOLE guard,
+        // unconditional (not gated on `debug_assertions`) and paid for
+        // exactly once, not once per candidate per drive per `arbitrate`
+        // call.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let water = ns[0].clone();
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.95, // parched: thirst is active AND the loudest/pursued drive
+            fatigue: 0.0,
+            believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
+            explore_step: None,
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        // A fresh, standalone recompute on the SAME view/budget `arbitrate`
+        // below is given — the answer the cache must reproduce.
+        let fresh = thirst
+            .affordance(&view, PLAN_BUDGET)
+            .expect("water is known and reachable from home");
+        let drives: [&dyn Drive; 1] = [&thirst];
+        // Six fixed candidates (three neighbours + Drink/Rest/Eat) means
+        // `cached_serviceability` is asked about thirst's affordance six
+        // times over in `grab_utility` alone, and again in `utility` — a
+        // real cache hit, not just a single-shot compute.
+        let resolution = arb(
+            &view,
+            &home,
+            &drives,
+            0.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            resolution.intent,
+            Intent::Do(fresh),
+            "arbitrate must act on exactly what a fresh, standalone affordance recompute gives"
         );
     }
 
@@ -12241,12 +12979,14 @@ mod tests {
             interior: Some((&interior, door)),
         };
 
-        let toward_the_fire = drive.serviceability(&Action::MoveWithin(hearth), &view, 64);
+        let toward_the_fire =
+            drive.serviceability(&Action::MoveWithin(hearth), &view, 64, &mut || None);
         assert!(
             toward_the_fire > 0.0,
             "stepping to the strictly-warmer hearth must serve the drive: {toward_the_fire}"
         );
-        let toward_itself = drive.serviceability(&Action::MoveWithin(door), &view, 64);
+        let toward_itself =
+            drive.serviceability(&Action::MoveWithin(door), &view, 64, &mut || None);
         assert_eq!(
             toward_itself, 0.0,
             "a step that changes nothing serves the drive not at all"
@@ -12262,7 +13002,7 @@ mod tests {
             interior: None,
         };
         assert_eq!(
-            no_interior.serviceability(&Action::MoveWithin(hearth), &view, 64),
+            no_interior.serviceability(&Action::MoveWithin(hearth), &view, 64, &mut || None),
             0.0
         );
     }
@@ -12437,7 +13177,8 @@ mod tests {
             day_length_std: None,
             terrain: &hearth_terrain,
         };
-        let (_facts, occ) = sys.step_with_occupancy(&ledger);
+        let (_facts, occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
         let hearth_id = interior
@@ -12483,7 +13224,8 @@ mod tests {
             day_length_std: None,
             terrain: &wild_terrain,
         };
-        let (_facts2, occ2) = sys2.step_with_occupancy(&ledger2);
+        let (_facts2, occ2) =
+            sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
         assert_eq!(
@@ -12875,7 +13617,8 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (facts, occ) = sys.step_with_occupancy(&ledger);
+        let (facts, occ) =
+            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
         assert!(
             facts.is_empty(),
             "an instantaneous tick (from == to) leaves the live walk nothing \
@@ -12967,6 +13710,8 @@ mod tests {
             PLAN_BUDGET,
             &ledger,
             &[],
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
         );
         assert!(
             correct_thirst > 0.0,
@@ -13004,6 +13749,8 @@ mod tests {
             PLAN_BUDGET,
             &ledger,
             &[],
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
         );
         assert_eq!(
             buggy_thirst, 0.0,
@@ -13077,6 +13824,8 @@ mod tests {
             &[],
             CATCH_UP_STEP_CAP,
             None,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
         );
         let after = ledger.len();
 
@@ -13141,7 +13890,11 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (_f1, occ_forward) = forward.step_with_occupancy(&ledger);
+        let (_f1, occ_forward) = forward.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+        );
 
         let reversed = DriveMovements {
             npcs: vec![
@@ -13154,7 +13907,11 @@ mod tests {
             day_length_std: None,
             terrain: &terrain,
         };
-        let (_f2, occ_reversed) = reversed.step_with_occupancy(&ledger);
+        let (_f2, occ_reversed) = reversed.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+        );
 
         assert_eq!(
             occ_forward.at(a),
@@ -13282,6 +14039,8 @@ mod tests {
                 &[],
                 CAP,
                 None,
+                &mut RoomMeshMemo::new(),
+                &mut HomeNavCache::new(),
             );
             occ.at(npc.entity)
         };
@@ -13313,6 +14072,410 @@ mod tests {
             "over the cap, catch-up is APPROXIMATE: it must give up hopping \
              and place the creature directly at its drive-preferred anchor \
              (the hearth), not merely stop CAP hops down the corridor"
+        );
+    }
+
+    // --- HomeNavCache (the-waymark, Task 4): the search-count pins and the
+    // adversarial staleness test. Driven directly against `HomeNavCache::
+    // home_nav` rather than through the whole `decide_step`/`step_with_
+    // occupancy` machinery — the cache's own contract (zero searches for a
+    // stationary, unchanged-belief entity; exactly one on a `pos` or avoid-
+    // set change) is what these pin, and testing it directly keeps the
+    // search counter's arithmetic legible instead of buried in a full walk.
+
+    #[test]
+    fn home_nav_pays_zero_searches_for_a_stationary_unchanged_belief_entity_after_warmup() {
+        let start = raddr(1.0);
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
+        let e = npc_id(1);
+
+        let first = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            cache.searches, 1,
+            "the very first call is necessarily a cold miss"
+        );
+
+        // The scaling bar itself (The Waymark spec's "scaling stake"): repeat
+        // the IDENTICAL query (same pos, same avoid) several times, as a
+        // stationary creature's every subsequent tick would.
+        for _ in 0..5 {
+            let again = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+            assert_eq!(
+                again, first,
+                "a cache hit must return the identical feature every time"
+            );
+        }
+        assert_eq!(
+            cache.searches, 1,
+            "a stationary, unchanged-belief entity must pay ZERO searches on \
+             every call after its first (the campaign's own scaling bar) — \
+             got {} total searches for 6 identical queries",
+            cache.searches
+        );
+    }
+
+    #[test]
+    fn home_nav_moving_triggers_exactly_one_new_search() {
+        let start = raddr(1.0);
+        let elsewhere = start.neighbors()[1].clone();
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
+        let e = npc_id(1);
+
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(cache.searches, 1, "warm-up search");
+
+        // Repeat at the SAME position a few times first, to prove the
+        // subsequent count bump is attributable to the move, not to noise.
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        }
+        assert_eq!(cache.searches, 1, "still warm before the move");
+
+        let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            cache.searches, 2,
+            "a moved entity (a Step resolution changing `pos`) must trigger \
+             EXACTLY one new search, not zero (stale) and not more than one"
+        );
+
+        // And it goes cold again at the new position.
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &elsewhere, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        }
+        assert_eq!(
+            cache.searches, 2,
+            "warm again at the new position — no further searches"
+        );
+    }
+
+    #[test]
+    fn home_nav_a_belief_change_triggers_exactly_one_new_search() {
+        let start = raddr(1.0);
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let mut avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
+        let e = npc_id(1);
+
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(cache.searches, 1, "warm-up search");
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        }
+        assert_eq!(cache.searches, 1, "still warm before the belief changes");
+
+        // The believed-hazard set changes (the entity stood on ground that
+        // frightened it): the avoid-epoch write point.
+        avoid.insert(start.neighbors()[1].clone());
+        let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            cache.searches, 2,
+            "a believed-hazard change must trigger EXACTLY one new search"
+        );
+
+        for _ in 0..3 {
+            let _ = cache.home_nav(e, &start, &home, &avoid, PLAN_BUDGET, &mut mesh);
+        }
+        assert_eq!(
+            cache.searches, 2,
+            "warm again under the NEW belief — no further searches"
+        );
+    }
+
+    #[test]
+    fn home_nav_cache_is_per_entity_never_global() {
+        // A global epoch would stampede every entity's cache on ANY one
+        // creature's belief change (the campaign spec's own refinement,
+        // folded into `HomeNavCache`'s doc) — pinned here directly: entity
+        // A's belief changes; entity B, unchanged, must still hit its cache.
+        let start = raddr(1.0);
+        let home = start.neighbors()[0].neighbors()[0].clone();
+        let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
+        let (a, b) = (npc_id(1), npc_id(2));
+        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+
+        let _ = cache.home_nav(a, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
+        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
+        assert_eq!(cache.searches, 2, "both entities warm up independently");
+
+        let mut a_avoid = empty.clone();
+        a_avoid.insert(start.neighbors()[1].clone());
+        let _ = cache.home_nav(a, &start, &home, &a_avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            cache.searches, 3,
+            "A's own belief change costs A one search"
+        );
+
+        let _ = cache.home_nav(b, &start, &home, &empty, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            cache.searches, 3,
+            "B's cache must be UNAFFECTED by A's belief change — a global \
+             epoch would have stampeded it into a third search here"
+        );
+    }
+
+    #[test]
+    fn home_nav_cache_changes_the_plan_when_the_avoid_set_changes() {
+        // THE ADVERSARIAL STALENESS TEST (the-waymark, Task 4 — the
+        // campaign's one real correctness risk, spec §6): mirrors
+        // `planner_routes_around_a_remembered_cell`'s topology (a two-hop
+        // destination reached via a single "via" room on the straight path),
+        // so avoiding `via` provably forces the plan onto a different first
+        // step. Red-run-proven: see the task report for the paired run with
+        // the cache's own invalidation check disabled, which fails this
+        // exact assertion.
+        let start = raddr(1.0);
+        let via = start.neighbors()[0].clone();
+        let dest = via
+            .neighbors()
+            .iter()
+            .find(|n| **n != start)
+            .unwrap()
+            .clone();
+        let empty: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
+        let e = npc_id(1);
+
+        let before = cache.home_nav(e, &start, &dest, &empty, 10_000, &mut mesh);
+        assert_eq!(
+            before.first_step,
+            Some(Action::MoveTo(via.clone())),
+            "sanity: the straight plan's first step is the direct neighbor"
+        );
+
+        let mut avoid = empty.clone();
+        avoid.insert(via.clone());
+        let after = cache.home_nav(e, &start, &dest, &avoid, 10_000, &mut mesh);
+        assert_ne!(
+            after.first_step, before.first_step,
+            "an avoid-set change MUST change the cached plan feature — a \
+             stale first_step surviving a belief change is exactly the \
+             staleness bug this cache exists to prevent"
+        );
+        assert_ne!(
+            after.first_step,
+            Some(Action::MoveTo(via.clone())),
+            "the new plan must not still route through the now-avoided cell"
+        );
+    }
+
+    #[test]
+    fn home_nav_cache_is_keyed_by_home_and_budget_not_only_pos_and_avoid() {
+        // KEY HARDENING (the-waymark, Task 4 fix round, review item 2):
+        // `home` and `budget` determine the answer exactly as much as
+        // `pos`/`avoid` do. Before this fix the cached tuple omitted both, so
+        // a second call for a DIFFERENT home (same pos/avoid/epoch) would
+        // have silently returned the FIRST home's stale `first_step` — a
+        // cache hit on the wrong question. Two distinct one-hop-away
+        // destinations from the same `pos`, so their correct first steps
+        // provably differ.
+        let start = raddr(1.0);
+        let home_a = start.neighbors()[0].clone();
+        let home_b = start.neighbors()[1].clone();
+        assert_ne!(home_a, home_b, "sanity: two distinct neighbor destinations");
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut cache = HomeNavCache::new();
+        let mut mesh = RoomMeshMemo::new();
+        let e = npc_id(1);
+
+        let feature_a = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            feature_a.first_step,
+            Some(Action::MoveTo(home_a.clone())),
+            "sanity: home_a is one hop away, straight there"
+        );
+        assert_eq!(cache.searches, 1, "warm-up search for home_a");
+
+        let feature_b = cache.home_nav(e, &start, &home_b, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            feature_b.first_step,
+            Some(Action::MoveTo(home_b.clone())),
+            "a DIFFERENT home must yield ITS OWN correct first_step, not \
+             home_a's stale one — the key-hardening bug this test pins"
+        );
+        assert_eq!(
+            cache.searches, 2,
+            "a home change (pos/avoid/epoch all unchanged) must still cost \
+             a real search, not a silent hit on the wrong destination"
+        );
+
+        // Asking about home_a again costs a search too (the cache holds one
+        // entry per ENTITY, not one per (entity, home) pair) — but it must
+        // still reproduce home_a's own correct feature, never home_b's.
+        let feature_a_again = cache.home_nav(e, &start, &home_a, &avoid, PLAN_BUDGET, &mut mesh);
+        assert_eq!(
+            feature_a_again, feature_a,
+            "re-asking about home_a must reproduce its own correct feature"
+        );
+        assert_eq!(
+            cache.searches, 3,
+            "switching back to home_a costs a search too"
+        );
+    }
+
+    // --- Stage 3b (the-waymark, Task 5): the shared reverse field,
+    // equivalence-gated. `ReverseField`/`build_reverse_field` are TEST-ONLY
+    // scaffolding — see the property test immediately below for why this
+    // never left the test module (the property the campaign spec licenses
+    // as a legitimate failure mode).
+
+    /// A single reverse Dijkstra rooted at `home`, mirroring `astar`'s own
+    /// frontier discipline by hand (the same `(f, g, state)` `BTreeSet`
+    /// order, `heuristic() == 0` — Dijkstra mode, matching [`NavSpace`] —
+    /// and the same first-strict-improvement-wins relaxation `astar` itself
+    /// uses) rather than through `SearchSpace` (there is no goal state to
+    /// hand it — the point is reaching everything within budget). Valid
+    /// ONLY for empty-avoid queries: [`move_cost`] with an empty set is `1`
+    /// uniformly, so every edge is symmetric and a room's distance FROM
+    /// `home` equals its distance TO `home`.
+    struct ReverseField {
+        /// Every room reached within the build budget: `(distance-to-home,
+        /// next-hop-toward-home)`. `home` itself maps to `(0, None)`.
+        nodes: std::collections::BTreeMap<RoomAddr, (usize, Option<RoomAddr>)>,
+    }
+
+    impl ReverseField {
+        /// `(distance, first_step)` for `room`, matching [`HomeNavFeature`]'s
+        /// own shape — both `None` if `room` was not reached within budget
+        /// (mirrors `plan_to_room`'s budget-exhaustion `None`); `first_step`
+        /// is `None` exactly at `home` itself (mirrors the empty-plan case).
+        fn feature(&self, room: &RoomAddr) -> HomeNavFeature {
+            match self.nodes.get(room) {
+                None => HomeNavFeature {
+                    distance: None,
+                    first_step: None,
+                },
+                Some((dist, parent)) => HomeNavFeature {
+                    distance: Some(*dist),
+                    first_step: parent.clone().map(Action::MoveTo),
+                },
+            }
+        }
+    }
+
+    /// Build a [`ReverseField`] rooted at `home`, expanding up to `budget`
+    /// nodes — a full single-source search with no goal test.
+    fn build_reverse_field(home: &RoomAddr, budget: usize) -> ReverseField {
+        use std::collections::{BTreeMap, BTreeSet};
+        let mut frontier: BTreeSet<(u64, u64, RoomAddr)> = BTreeSet::new();
+        let mut best_g: BTreeMap<RoomAddr, u64> = BTreeMap::new();
+        let mut came_from: BTreeMap<RoomAddr, RoomAddr> = BTreeMap::new();
+
+        frontier.insert((0, 0, home.clone()));
+        best_g.insert(home.clone(), 0);
+
+        let mut expansions = 0usize;
+        while let Some(&(_f, g, ref state)) = frontier.iter().next() {
+            let (f, g, state) = (_f, g, state.clone());
+            frontier.remove(&(f, g, state.clone()));
+            if best_g.get(&state).is_some_and(|&bg| bg < g) {
+                continue;
+            }
+            expansions += 1;
+            if expansions > budget {
+                break;
+            }
+            for n in state.neighbors() {
+                let ng = g + 1; // move_cost is 1 uniformly — empty-avoid only
+                if best_g.get(&n).is_none_or(|&bg| ng < bg) {
+                    best_g.insert(n.clone(), ng);
+                    came_from.insert(n.clone(), state.clone());
+                    frontier.insert((ng, ng, n));
+                }
+            }
+        }
+
+        let nodes = best_g
+            .into_iter()
+            .map(|(room, dist)| {
+                let parent = came_from.get(&room).cloned();
+                (room, (dist as usize, parent))
+            })
+            .collect();
+        ReverseField { nodes }
+    }
+
+    /// **THE PROPERTY TEST — decides Task 5's whole outcome.** For every
+    /// empty-avoid room the field reaches within budget, does
+    /// `field.feature(room)` match what a genuinely independent forward
+    /// search (`plan_to_room`, exactly what `home_nav` calls today) returns,
+    /// byte-for-byte in both `distance` and `first_step`? If yes for every
+    /// room, Stage 3b's field is a safe drop-in for `home_nav`'s empty-avoid
+    /// path. If not, the campaign spec licenses shipping this test
+    /// `#[ignore]`d as documentation of the failure mode, field disabled.
+    ///
+    /// **Result (the-waymark, Task 5): the property FAILS.** 52 of 346
+    /// reached rooms (~15%) — a substantial fraction, not a rare edge case —
+    /// disagree with forward search in `first_step`. `distance` never
+    /// mismatches for any of the 52 (confirmed separately) — expected,
+    /// since distance is symmetric for empty-avoid (uniform edge cost) and
+    /// root-independent; only the CHOICE OF PATH among equal-length
+    /// alternatives is root-dependent. This is real, not a bug in the
+    /// field: `home`-rooted and `s`-rooted BTreeSet relaxation break ties
+    /// independently (see `ReverseField`'s own doc for the induction
+    /// argument, and this task's report for a concrete diverging pair).
+    /// Field ships disabled; the per-entity `HomeNavCache` (Task 4) remains
+    /// the sole nav-answering path. Left `#[ignore]`d rather than deleted,
+    /// per the spec's own licensed exit, so a future attempt at a smarter
+    /// tie-break rule has a ready-made falsifier.
+    #[ignore = "documents a DISPROVEN hypothesis (the-waymark, Task 5): the \
+                field/forward tie-break equivalence fails for ~15% of rooms \
+                (52/346, seed-independent mesh property); field ships \
+                disabled, HomeNavCache (Task 4) carries alone; kept as a \
+                falsifier for any future field construction attempt"]
+    #[test]
+    fn reverse_field_matches_forward_search_for_every_empty_avoid_room() {
+        let home = raddr(1.0);
+        let avoid: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        // A modest budget: large enough to reach several hundred rooms
+        // (well past the health population's actual walking radius) while
+        // keeping the O(field_size) forward re-searches below it fast.
+        let budget = 300;
+        let field = build_reverse_field(&home, budget);
+        assert!(
+            field.nodes.len() > 50,
+            "sanity: the field must reach a nontrivial neighborhood, got {}",
+            field.nodes.len()
+        );
+
+        let mut mismatches: Vec<(RoomAddr, HomeNavFeature, HomeNavFeature)> = Vec::new();
+        for room in field.nodes.keys() {
+            if *room == home {
+                continue;
+            }
+            let field_feature = field.feature(room);
+            let forward_plan = plan_to_room(room, &home, PLAN_BUDGET, &avoid);
+            let forward_feature = HomeNavFeature {
+                distance: forward_plan.as_ref().map(|p| p.len()),
+                first_step: forward_plan.and_then(|p| p.into_iter().next()),
+            };
+            if field_feature != forward_feature {
+                mismatches.push((room.clone(), field_feature, forward_feature));
+            }
+        }
+
+        assert!(
+            mismatches.is_empty(),
+            "the field/forward equivalence FAILED for {} of {} rooms (showing \
+             up to 5): {:#?}\n\
+             This is the tie-break-root-dependence failure mode the campaign \
+             spec names as a legitimate exit: astar's smallest-RoomAddr \
+             relaxation winner is root-relative (see ReverseField's own \
+             doc), so a field rooted at `home` need not agree with a forward \
+             search rooted at each individual query room whenever a room has \
+             two structurally different equal-length predecessor branches \
+             (any 4-cycle in the triangulated mesh).",
+            mismatches.len(),
+            field.nodes.len(),
+            &mismatches[..mismatches.len().min(5)]
         );
     }
 }

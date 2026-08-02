@@ -279,8 +279,17 @@
 - [The Wearing](./chronicle/the-wearing.md)
 - [The Cistern](./chronicle/the-cistern.md)
 - [The Toponym](./chronicle/the-toponym.md)
+- [The Winnowing](./chronicle/the-winnowing.md)
 - [The Siding](./chronicle/the-siding.md)
 - [The Timekeeper](./chronicle/the-timekeeper.md)
+- [The Pyx](./chronicle/the-pyx.md)
+- [The Twin](./chronicle/the-twin.md)
+- [The Shuttle](./chronicle/the-shuttle.md)
+- [The Weir](./chronicle/the-weir.md)
+- [The Watershed](./chronicle/the-watershed.md)
+- [The Waymark](./chronicle/the-waymark.md)
+- [The Repertoire](./chronicle/the-repertoire.md)
+- [The Scaffold](./chronicle/the-scaffold.md)
 
 # Appendix: The Frontier
 

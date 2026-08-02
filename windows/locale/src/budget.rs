@@ -251,6 +251,10 @@ fn within_repulsion(accepted: &[CellId], c: CellId, geo: &hornvale_kernel::Geosp
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
     use hornvale_kernel::{Seed, World};
     use hornvale_worldgen::{climate_of, terrain_of};

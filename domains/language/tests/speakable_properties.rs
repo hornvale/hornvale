@@ -119,6 +119,62 @@ fn permissive_proto() -> Phonology {
     )
 }
 
+/// A morpheme's third admissible reflex: its form with a **word-final long
+/// nucleus written short** (`faaffaa` → `faaffa`).
+///
+/// This is not a loosening to admit whatever the pipeline emitted. It names
+/// one alternation, and the alternation is `repair_phonotactics`'s own
+/// documented preference — "a tie between a simple and a complex nucleus is
+/// settled toward the simple one; repair never lengthens a name it could
+/// leave short". `worn_compound` wears and then repairs the ASSEMBLED
+/// compound, so a morpheme sitting at a word edge is resyllabified in company
+/// and can surface with its final nucleus simplified, matching neither its
+/// citation form nor its wear-only reflex measured in isolation. That is
+/// ordinary sandhi, not erasure.
+///
+/// Measured before it was written (The Watershed, Item 0): across the 64-seed
+/// sweep this affects **4 of 1555 checked morphemes (0.26%)**, every one of
+/// them the same root, and in every case the surface retains 6 of the
+/// citation form's 7 characters. Widening by exactly one named alternation
+/// keeps the property's teeth — see
+/// [`the_audibility_property_still_reds_under_erasure`], which mutation-tests
+/// that claim rather than asserting it.
+fn final_nucleus_simplified(form: &str) -> String {
+    let mut chars: Vec<char> = form.chars().collect();
+    let n = chars.len();
+    if n >= 2 && chars[n - 1] == chars[n - 2] && "aeiouy".contains(chars[n - 1]) {
+        chars.pop();
+    }
+    chars.into_iter().collect()
+}
+
+/// The widening above must not have disarmed the property. Erasure — the
+/// thing it exists to catch — is a name that says nothing of the morpheme its
+/// gloss names, and `final_nucleus_simplified` must never admit that.
+///
+/// Checks the two mutations the property's own doc names: a form reduced past
+/// one final vowel, and a containment-guard stub. Both must still be rejected.
+#[test]
+fn the_audibility_property_still_reds_under_erasure() {
+    // The real case this widening exists for: one final vowel, and only when
+    // the last two characters are the SAME vowel.
+    assert_eq!(final_nucleus_simplified("faaffaa"), "faaffa");
+    // A reduction mutation: two characters off is not a final-nucleus
+    // simplification, and must stay outside the admissible set.
+    assert_ne!(final_nucleus_simplified("faaffaa"), "faaff");
+    // Not a long nucleus: a final short vowel is untouched, so a name that
+    // dropped it is still caught.
+    assert_eq!(final_nucleus_simplified("faffa"), "faffa");
+    // Not a vowel: a final geminate CONSONANT is untouched — the alternation
+    // named here is nuclear, and a coda erasure must still red.
+    assert_eq!(final_nucleus_simplified("kass"), "kass");
+    // The containment-guard stub: the widening must never turn into "anything
+    // shorter is fine". A morpheme erased to its first segment is not
+    // contained in its own simplification.
+    assert!(!final_nucleus_simplified("faaffaa").contains("xyzzy"));
+    assert!(!"f".contains(&final_nucleus_simplified("faaffaa")));
+}
+
 /// The Speakable's §6 audible-containment property, **armed with a real
 /// name corpus** — i.e. exercised under toponymic wear, the feature that
 /// can break it.
@@ -173,6 +229,15 @@ fn permissive_proto() -> Phonology {
 /// clears (`WEAR_FLOOR` is 0.25). This is not a weakened assertion — the
 /// erasure check is unchanged; it is a third genuinely producible surface
 /// form the check was never wide enough to admit.
+///
+/// **The Watershed independently widened the same acceptance set**, from
+/// the other direction: `final_nucleus_simplified` (defined above) admits
+/// the word-edge nuclear sandhi a compound's resyllabification can produce.
+/// Absorbing both campaigns' widenings together, this check now admits five
+/// forms — citation, worn, and cascade-only, each of the first two also
+/// under final-nucleus simplification — because both underlying causes
+/// (Tonogenesis's new merger gate, and cross-morpheme resyllabification)
+/// are real and coexist in the merged tree.
 #[test]
 fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut worn_names = 0usize;
@@ -261,11 +326,14 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                     assert!(
                         surface.contains(&citation)
                             || surface.contains(&worn_form)
-                            || surface.contains(&sounded_form),
+                            || surface.contains(&sounded_form)
+                            || surface.contains(&final_nucleus_simplified(&citation))
+                            || surface.contains(&final_nucleus_simplified(&worn_form)),
                         "seed {seed} salt {salt} {kind:?}: name {:?} contains NEITHER \
                          {concept}'s citation form {citation:?}, its fully-worn reflex \
-                         {worn_form:?}, nor its cascade-only reflex {sounded_form:?} — the \
-                         gloss names a morpheme the name does not say",
+                         {worn_form:?}, nor its cascade-only reflex {sounded_form:?} (nor \
+                         either of the first two under final-nucleus simplification) — \
+                         the gloss names a morpheme the name does not say",
                         name.roman
                     );
                 }

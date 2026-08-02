@@ -5,8 +5,8 @@
 //! contract change.
 
 use hornvale_scene::{
-    region_json, render_surrounds_ascii, scene_json, surrounds_json, surrounds_scene,
-    tiles_region_scene, tiles_scene,
+    TileFields, region_json, render_surrounds_ascii, scene_json, scene_json_selected,
+    surrounds_json, surrounds_scene, tiles_region_scene, tiles_scene,
 };
 
 // Integration tests can't see #[cfg(test)] helpers, and the public API
@@ -37,6 +37,94 @@ fn v1_bytes_are_pinned() {
         &seed_1_json(),
         "scene/tiles/v1 bytes moved — this is the epoch decision point (scene-protocol \
          spec §2); accept deliberately and review the diff as a contract change",
+    );
+}
+
+// The projection's own pin (The Winnowing; scene-protocol spec §3 item 4).
+// The two lib tests either side of it check the projection at `all()` and
+// check that an EMITTED field's bytes are unchanged — neither can observe an
+// OVER-emission, so with only those a `TileFields::contains` that always
+// returned `true` passed the whole suite while defeating the feature. What
+// needs pinning is the composed shape: braces, commas, and key order with
+// holes in it. A golden does that as bytes rather than as reasoning.
+//
+// The five selected layers are chosen to put a hole everywhere a hole can go:
+// `plate`/`unrest` dropped between the metadata `biome_legend` and `features`,
+// the four temperature/current layers dropped before `season_period_days`,
+// `moisture` dropped between `circulation_bands` and `locked`, and `drainage`
+// dropped between `water_legend` and the trailing `waterfalls`. So the fixture
+// covers a hole at the head, in the middle, adjacent to metadata on both
+// sides, and at the tail. Seed 1 at width 16 is 128 tiles — gate-cheap.
+const PINNED_FIELDS: &[&str] = &["elevation_m", "ocean", "biome", "t_mean_c", "water"];
+
+fn projected_seed_1_json() -> String {
+    let scene = tiles_scene(&world(), 16).unwrap();
+    let fields = TileFields::only(PINNED_FIELDS).expect("the pinned names are all known layers");
+    scene_json_selected(&scene, &fields)
+}
+
+#[test]
+fn projected_v1_bytes_are_pinned() {
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/tiles-seed-1-w16-projected.json"
+        )),
+        &projected_seed_1_json(),
+        "the projected scene/tiles/v1 bytes moved — this pins the composed shape of a \
+         partial document (key order with holes in it); if the unselected layers came \
+         BACK, the projection has stopped projecting. Accept deliberately, re-run with \
+         REBASELINE=1, and review the diff as a contract change",
+    );
+}
+
+// The golden above would catch an over-emission, but only as "bytes moved".
+// This says the property out loud and names the offending layer, so a failure
+// is diagnosable without reading a fixture diff.
+#[test]
+fn the_projection_omits_unselected_layers() {
+    let doc = projected_seed_1_json();
+    for name in TileFields::ALL_NAMES {
+        let key = format!("\"{name}\":");
+        let selected = PINNED_FIELDS.contains(name);
+        assert_eq!(
+            doc.contains(&key),
+            selected,
+            "layer {name} is {} in the projected document but {} in the selection",
+            if doc.contains(&key) {
+                "present"
+            } else {
+                "absent"
+            },
+            if selected { "selected" } else { "unselected" }
+        );
+    }
+    // Document metadata is never selectable and must survive the projection.
+    for key in [
+        "\"schema\":",
+        "\"seed\":",
+        "\"width\":",
+        "\"height\":",
+        "\"sea_level_m\":",
+        "\"biome_legend\":",
+        "\"features\":",
+        "\"season_period_days\":",
+        "\"locked\":",
+        "\"water_legend\":",
+        "\"waterfalls\":",
+    ] {
+        assert!(
+            doc.contains(key),
+            "metadata {key} was dropped by projection"
+        );
+    }
+    // And the projection must actually save bytes — the point of the campaign.
+    let full = scene_json(&tiles_scene(&world(), 16).unwrap());
+    assert!(
+        doc.len() < full.len(),
+        "the projected document ({} bytes) is not smaller than the full one ({} bytes)",
+        doc.len(),
+        full.len()
     );
 }
 

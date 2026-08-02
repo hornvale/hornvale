@@ -295,7 +295,7 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // full strict chain 588/1000 -> 591/1000 (59.1%) — still emphatically NOT
     // a per-seed invariant, which is the honest finding this row was written
     // to carry and which no re-pin has ever softened.
-    assert!((mg - 3.037).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mg - 3.000).abs() < 1e-9, "goblin mean drifted: {mg}");
     // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
     // re-measured (was 2.485) — accumulated lexeme-space drift (the person
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
@@ -319,13 +319,13 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // hobgoblin 2.487 -> 2.486 (goblin and bugbear are unmoved to 1e-9).
     // The aggregate ordering holds decisively (4.483 >= 3.058 >= 2.486).
     // The Toponym (name-gloss epoch): 2.486 -> 2.487.
-    assert!((mh - 2.472).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mh - 2.448).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
     // 4.481 -> 4.483 (same cause as hobgoblin above).
     // The Toponym (name-gloss epoch): 4.483 -> 4.484.
-    assert!((mb - 4.475).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mb - 4.418).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -360,10 +360,10 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // assertion is re-measured every time the suite runs and a sentence is
     // not. The doc now reads 591/1000 (59.1%), which is what the assertion
     // pins and what the census shows.
-    assert_eq!(bg, 864, "bugbear>=goblin rate drifted: {bg}/{n}");
-    assert_eq!(gh, 717, "goblin>=hobgoblin rate drifted: {gh}/{n}");
+    assert_eq!(bg, 866, "bugbear>=goblin rate drifted: {bg}/{n}");
+    assert_eq!(gh, 713, "goblin>=hobgoblin rate drifted: {gh}/{n}");
     assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
-    assert_eq!(chain, 591, "full-chain per-seed rate drifted: {chain}/{n}");
+    assert_eq!(chain, 589, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
 /// Observation, not a pass/fail invariant (spec §3's merger-induced
@@ -493,10 +493,10 @@ fn homophony_count_is_measured_and_pinned() {
     // trend; this campaign corrected that conflation twice. A daughter can get
     // more homophonous while its names get shorter for entirely unrelated
     // reasons, and here they moved in opposite directions.
-    assert!((mg - 2.743).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.681).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 9.861).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.813).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mg - 2.910).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 2.755).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 10.571).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.725).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

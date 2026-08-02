@@ -878,7 +878,16 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 /// committed `Ffapwbob` against `Wboab` and the affix comes straight back as
 /// `ffap`. The affix is right there; the second morpheme's presence in the
 /// reference is the entire reason it could not be seen.
-const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 1] = [400];
+/// **The Watershed (2026-07-31): the roster is now EMPTY — zero blind worlds
+/// in a thousand, down from one and before that two.** Seed 400's blindness
+/// was a front-divergence artifact of wear-then-repair: the committed form and
+/// the honorific-free reference had landed on different rungs of that ladder,
+/// so no offset aligned. Sonority sequencing (Item 0) orders every drawn onset
+/// and coda template, which makes repair markedly more predictable, and the
+/// two derivations now land on the same rung. The diagnosis above is kept
+/// rather than deleted: it records WHY the detector can go blind, and the
+/// mechanism can return the next time repair moves.
+const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 0] = [];
 
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
@@ -972,7 +981,7 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // to guard is untouched.
     assert_eq!(
         (g_true, g_absent),
-        (766, 233),
+        (767, 233),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
@@ -1081,7 +1090,7 @@ fn lexicon_is_regular_for_both_species() {
 /// The worlds are fine. The SECOND OPINION is stale. `exposure_sound` asks
 /// whether any `Root` stands at a concept `independently_steeped_concepts`
 /// (windows/lab/src/metrics.rs) does not steep, and that function is a
-/// deliberate duplicate of `hornvale_worldgen::exposure_of`'s Steeped rules —
+/// deliberate duplicate of `hornvale_worldgen::exposure_from`'s Steeped rules —
 /// duplicated on purpose, because a check that called the code it is checking
 /// would assert nothing. The cost of that design is that every new Steeped
 /// rule in worldgen must be taught to the duplicate, and **The Watershed's
@@ -1093,7 +1102,7 @@ fn lexicon_is_regular_for_both_species() {
 /// Steeped rules and the duplicate did not learn them (Task 11a diagnosed,
 /// Task 11c repaired, 252/1000 false). The Watershed added the staple rules
 /// and the duplicate did not learn them either (767/1000 false). The pattern
-/// is not carelessness, it is the architecture: `exposure_of` and
+/// is not carelessness, it is the architecture: `exposure_from` and
 /// `independently_steeped_concepts` are two hand-maintained copies of one
 /// rule set with nothing structural holding them in step, so they drift apart
 /// every time a campaign touches the original. Repairing this occurrence
@@ -1118,7 +1127,6 @@ fn lexicon_is_regular_for_both_species() {
 /// world is misclassifying anything. Only the lab's copy of the rulebook is
 /// out of date.
 #[test]
-#[ignore = "stale-second-opinion: the lab's independently_steeped_concepts duplicate has not learned The Watershed's staple Steeped rules, so exposure-sound reads false on every world where a species is placed. The census is current; the metric is not. Repair owes a regen — see the doc comment"]
 fn lexicon_is_exposure_sound_for_both_species() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -1325,8 +1333,8 @@ fn name_collision_rate_is_measured_and_pinned() {
     // reuse. And the roster of things to name kept GROWING, so each world
     // draws more names from the same narrowed space. Both movements are
     // recorded at their own pin sites; this row records their product.
-    assert_eq!(zero, 1, "zero-collision world count drifted");
-    assert_eq!(nonzero, 769, "nonzero-collision world count drifted");
+    assert_eq!(zero, 2, "zero-collision world count drifted");
+    assert_eq!(nonzero, 768, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1380,11 +1388,11 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Toponym (name-gloss epoch): 0.138_343_210_536_363_64 ->
         // 0.126_857_511_090_779.
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
-        // 0.126_857_511_090_779 -> 0.568_773_210_602_597_8. The largest single
+        // 0.126_857_511_090_779 -> 0.564_509_597_998_702_8. The largest single
         // movement this row has ever recorded, and it is sanctioned — see the
         // decision-0024 note above the zero/nonzero pins, which a reader who
         // arrived here from a red assertion has probably not read yet.
-        (mean - 0.568_773_210_602_597_8).abs() < 1e-6,
+        (mean - 0.564_509_597_998_702_8).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1535,12 +1543,12 @@ fn name_length_distributions_are_measured_and_pinned() {
         // settlement name glosses, so every name in every world is redrawn.
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): the
         // present count holds at 767, the mean falls 13.665_297_457_235_99 ->
-        // 9.140_832_142_242_502. A 4.5-character drop is the largest this row
+        // 8.784_123_816_558_010. A 4.5-character drop is the largest this row
         // has recorded, and the direction is the one spec §8 criterion 1 asks
         // for — names got shorter as naming moved onto short site-derived
         // compounds. Recorded as measured; the row is a drift witness, not a
         // bound, so nothing here is loosened to admit it.
-        ("goblin", 767u32, 9.140832142242502),
+        ("goblin", 767u32, 8.784_123_816_558_01),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1573,12 +1581,12 @@ fn name_length_distributions_are_measured_and_pinned() {
         // and in the same direction: the bigger surviving roster seats
         // flagships on materially different sites.
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): present
-        // holds at 760, mean 15.548_879_020_789_471 -> 7.673_908_980_657_894.
+        // holds at 760, mean 15.548_879_020_789_471 -> 7.403_195_966_315_787.
         // Kobold moves nearly twice as far as goblin, as it has at every regen
         // since The Tumult — its flagships reseat onto materially different
         // sites, so its site-derived compounds are drawn from a different part
         // of its lexicon.
-        ("kobold", 760u32, 7.673908980657894),
+        ("kobold", 760u32, 7.403195966315787),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1650,8 +1658,8 @@ fn name_syllable_distributions_are_measured_and_pinned() {
     for (species, expected_present, expected_mean) in [
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`): goblin
         // 766 -> 767 present, mean 2.853_548_007_963_447_7 ->
-        // 2.724_948_034_028_684; kobold 762 -> 760 present, mean
-        // 2.278_410_790_682_414_3 -> 2.250_537_518_552_632.
+        // 2.761_284_613_820_079; kobold 762 -> 760 present, mean
+        // 2.278_410_790_682_414_3 -> 2.316_698_345_263_158.
         //
         // The present counts now agree with `name_length_distributions_are_
         // measured_and_pinned`'s (767 / 760), which they had NOT since The
@@ -1664,8 +1672,8 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // The claim this row carries — spec §8 criterion 2, mean syllable
         // count in the 2-3 range — HOLDS at both species and is not what the
         // re-pin touched.
-        ("goblin", 767u32, 2.724948034028684),
-        ("kobold", 760u32, 2.250537518552632),
+        ("goblin", 767u32, 2.761284613820079),
+        ("kobold", 760u32, 2.316698345263158),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1769,9 +1777,9 @@ fn name_transparency_is_measured_and_pinned() {
     let mean = sum / f64::from(present);
     assert!(
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
-        // 0.826_729_134_389_610_3 -> 0.816_024_344_246_753_3, present/absent
+        // 0.826_729_134_389_610_3 -> 0.793_035_961_411_688_3, present/absent
         // unmoved at 770/230.
-        (mean - 0.8160243442467533).abs() < 1e-9,
+        (mean - 0.793035961411688).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -1779,12 +1787,12 @@ fn name_transparency_is_measured_and_pinned() {
     // uniformity defect in a new costume. Pinned exactly.
     assert!(
         // F11 discharge re-pin (2026-07-30): the floor drops
-        // 0.247_058_82 -> 0.153_846_15 while the ceiling stays pegged at 1.0,
+        // 0.247_058_82 -> 0.076_923_077 while the ceiling stays pegged at 1.0,
         // so the spread WIDENS even as the mean edges down — which is the
         // reading this row exists to preserve. A mean of 0.816 with a floor of
         // 0.154 and a ceiling of 1.0 is a real distribution over worlds, not
         // the uniformity defect in a new costume.
-        (min - 0.15384615).abs() < 1e-8,
+        (min - 0.076923077).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2092,7 +2100,7 @@ fn null_control_name_length_smd_is_pinned() {
         // names. Still ~39x inside the ±0.2 sampling-theory bound
         // `null_control_distributions_are_within_the_sampling_bound` asserts,
         // which is the assertion that would actually catch a broken control.
-        (namelen - 0.005_126_221_321_487_987).abs() < 1e-9,
+        (namelen - -0.025_217_538_228_395_453).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

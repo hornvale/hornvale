@@ -13,12 +13,12 @@
 //! valence regions count as distress (spec §8). Deterministic: a pure function
 //! of the world, the same session-sandboxed tick run headless.
 
-use hornvale_kernel::{Ledger, World, WorldTime, tick};
+use hornvale_kernel::{Ledger, RoomMeshMemo, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
-    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied, built_rooms,
-    derive_npcs, waking_offset,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
+    LocaleTerrain, Npc, PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied,
+    agent_position, built_rooms, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -98,6 +98,26 @@ pub fn run_simulation(
     let mut ledger = seed_ledger.clone();
     let mut traces: Vec<Vec<Affect>> = vec![Vec::new(); npcs.len()];
     let mut day = 0.0_f64;
+    // The session-lived geometry memo (the-waymark fix round, Finding 2):
+    // owned HERE, above the tick loop, rather than rebuilt (and discarded)
+    // inside `step_with_occupancy` every one of the `ticks` iterations —
+    // `run_simulation` IS the "struct/scope that owns the sim loop" for a
+    // lab run (one `RoomMeshMemo` per process; `windows/lab/CLAUDE.md`:
+    // nextest runs each test in its own process, so this is exactly as
+    // session-lived as a lab run can be). `terrain`'s OWN prefilled
+    // `corner_weights` cache (Finding 1) is a SEPARATE, independent memo —
+    // see `simulate_world`'s own comment for why it can't be this same
+    // instance (it must be embedded, read-only, in `terrain` for the WHOLE
+    // sweep, while this one needs `&mut` access every tick for `neighbors`).
+    let mut mesh_memo = RoomMeshMemo::new();
+    // The session-lived, CROSS-tick home-plan cache (the-waymark, Task 4):
+    // `run_simulation` IS the "struct/scope that owns the sim loop" for a lab
+    // run (see `mesh_memo`'s own comment above), so this cache — unlike
+    // `mesh_memo`, it must survive ACROSS calls to `step_with_occupancy`, not
+    // merely across one call's own creatures/pops, to show the campaign's
+    // scaling bar (a stationary, unchanged-belief creature pays zero searches
+    // after its first tick) — lives here too, one per run.
+    let mut home_nav_cache = HomeNavCache::new();
     for _ in 0..ticks {
         let sys = DriveMovements {
             npcs: npcs.to_vec(),
@@ -114,9 +134,14 @@ pub fn run_simulation(
         // calls read the identical frozen `ledger`, so this changes nothing
         // about how the world evolves — only what the affect sample below
         // gets to see.
-        let (_facts, occupancy) = sys.step_with_occupancy(&ledger);
+        let (_facts, occupancy) =
+            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
         // The kernel tick applies the drive-movement facts; the same headless
-        // step `Session::wait` runs, minus the player.
+        // step `Session::wait` runs, minus the player. This path goes through
+        // `TickSystem::step`, whose signature is kernel-fixed and so cannot
+        // carry `mesh_memo` — it pays full `neighbors()` cost internally
+        // (see `DriveMovements::step`'s own comment). Only the occupancy
+        // recovery above, and the affect reads below, share this run's memo.
         ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
             Ok(next) => next,
             Err(_) => break,
@@ -143,6 +168,102 @@ pub fn run_simulation(
                 terrain,
                 &mut afraid_memo,
                 Some(&occupancy),
+                &mut mesh_memo,
+                &mut home_nav_cache,
+            ));
+        }
+    }
+    traces
+}
+
+/// [`run_simulation`]'s twin for a REAL, `LocaleContext`-backed world (the-waymark
+/// fix round, Finding 1): where `run_simulation` is handed one fixed `&dyn Terrain`
+/// for its whole run (so it stays provider-agnostic — `synthetic.rs`'s planted-
+/// terrain scenarios and `hearth_population_calibration.rs` both rely on that),
+/// this one owns the concrete `ctx`/`calendar`/`predator`/`prey`/`built`
+/// ingredients and rebuilds `LocaleTerrain` FRESH every tick, prefilling its
+/// read-only geometry cache for each NPC's CURRENT position (read from the
+/// evolving `ledger`, exactly the way `windows/vessel`'s `Session::wait` does
+/// every real tick) rather than only the FIRST tick's starting position the
+/// way a single fixed `terrain` built once could. This is
+/// the ONLY caller that can do this (it alone has a real `LocaleContext` to
+/// rebuild from), so it is a separate function rather than a `run_simulation`
+/// parameter that every other caller would have to thread `None` through.
+/// type-audit: bare-ok(count: ticks), bare-ok(ratio: day_length_std), bare-ok(ratio: predator), bare-ok(ratio: prey)
+#[allow(clippy::too_many_arguments)]
+pub fn run_simulation_with_locale(
+    seed_ledger: &Ledger,
+    registry: &hornvale_kernel::ConceptRegistry,
+    npcs: &[Npc],
+    ctx: &LocaleContext,
+    calendar: Option<&hornvale_astronomy::Calendar>,
+    predator: Option<&hornvale_kernel::CellMap<f64>>,
+    prey: Option<&hornvale_kernel::CellMap<f64>>,
+    built: Option<&std::collections::BTreeSet<hornvale_kernel::RoomId>>,
+    ticks: usize,
+    day_length_std: Option<f64>,
+) -> Vec<Vec<Affect>> {
+    let mut ledger = seed_ledger.clone();
+    let mut traces: Vec<Vec<Affect>> = vec![Vec::new(); npcs.len()];
+    let mut day = 0.0_f64;
+    // Session-lived across the WHOLE run (Finding 2), same as
+    // `run_simulation`'s own `mesh_memo` — but here it ALSO backs each
+    // tick's `LocaleTerrain` cache (via a per-tick snapshot clone below), so
+    // a room read on tick N stays warm for tick N+1 even if no creature is
+    // standing there right now.
+    let mut mesh_memo = RoomMeshMemo::new();
+    // Cross-tick, one per run — see `run_simulation`'s identical comment.
+    let mut home_nav_cache = HomeNavCache::new();
+    let geo = ctx.climate().geosphere();
+    let index = ctx.nearest_index();
+    for _ in 0..ticks {
+        // Prefill THIS tick's geometry cache for every NPC's CURRENT
+        // position and its three neighbours (Finding 1) — under `&mut`,
+        // strictly before the `LocaleTerrain`/drives built from it exist.
+        // Mirrors `Session::wait`'s per-tick `before` prefill exactly.
+        for npc in npcs {
+            let pos = agent_position(&ledger, npc, WorldTime { day });
+            pos.corner_weights_memo(geo, index, &mut mesh_memo);
+            for n in pos.neighbors_memo(&mut mesh_memo) {
+                n.corner_weights_memo(geo, index, &mut mesh_memo);
+            }
+        }
+        // A read-only snapshot for `LocaleTerrain`, so `mesh_memo` stays
+        // independently `&mut`-able below (`step_with_occupancy`'s
+        // `neighbors` threading) — see `Session::wait`'s identical comment.
+        let mesh_snapshot = mesh_memo.clone();
+        let terrain =
+            LocaleTerrain::with_fields(ctx, calendar, predator, prey, built, Some(&mesh_snapshot));
+        let sys = DriveMovements {
+            npcs: npcs.to_vec(),
+            from: WorldTime { day },
+            to: WorldTime { day: day + 1.0 },
+            params: SUSTENANCE,
+            day_length_std,
+            terrain: &terrain,
+        };
+        let (_facts, occupancy) =
+            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
+            Ok(next) => next,
+            Err(_) => break,
+        };
+        day += 1.0;
+        let mut afraid_memo = PrimaryAfraidMemo::new();
+        for (i, npc) in npcs.iter().enumerate() {
+            let now = WorldTime {
+                day: (day - 1.0) + waking_offset(npc.activity),
+            };
+            traces[i].push(affect_of_memo_occupied(
+                &ledger,
+                npc,
+                npcs,
+                now,
+                &terrain,
+                &mut afraid_memo,
+                Some(&occupancy),
+                &mut mesh_memo,
+                &mut home_nav_cache,
             ));
         }
     }
@@ -151,10 +272,23 @@ pub fn run_simulation(
 
 /// Simulate a real world's derived population and return each creature's affect
 /// trace. `None` if the world has no locale or no settlement to derive from.
+// Named construction site (decision 0092): sculpts/fits exactly ONCE per
+// sweep (The Weir, Stage 2), mirroring `Session::start`.
+#[allow(clippy::disallowed_methods)]
 pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
-    let Ok(ctx) = LocaleContext::build(world) else {
+    // ONE derivation block (The Weir, Stage 2): terrain, climate, and the
+    // locale context are each derived EXACTLY ONCE here, then threaded into
+    // `LocaleContext::build_from`, the demography fit, and the predator/prey
+    // pressures below — mirrors `Session::start`, so `ctx` no longer
+    // quietly re-sculpts its own copy underneath the sweep's own terrain/
+    // climate derivation.
+    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
         return Vec::new();
     };
+    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else {
+        return Vec::new();
+    };
+    let ctx = LocaleContext::build_from(world, &terrain, &climate);
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();
     // The two session-only predicates the drive tick commits — registered on
@@ -168,36 +302,68 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         None => return Vec::new(),
     };
     let mut npcs = derive_npcs(world, &ctx, &mut ledger, HEALTH_NPCS, home);
+    // The species roster and the demography report — assembled/fit ONCE per
+    // sweep (The Weir, Stage 1b/2) and shared below by the wild-NPC
+    // derivation and the predator/prey fields, instead of each
+    // independently re-running the coexistence-stack fit over the same
+    // `(world, wc, terrain, climate)`. `None` on any failure (the
+    // dependents simply lose their demography-derived axis, same posture as
+    // `calendar`/`predator`/`prey` below).
+    let wc = hornvale_worldgen::WorldComponents::assemble().ok();
+    // Wrapped in `Some` from here on: both derivations above already
+    // succeeded (the early returns), so this `Option` is the same
+    // defensive-field posture `Session::terrain`/`Session::climate` carry,
+    // never a second independent derivation that could fail where this one
+    // didn't.
+    let terrain = Some(terrain);
+    let climate = Some(climate);
+    let report = match (wc.as_ref(), terrain.as_ref(), climate.as_ref()) {
+        (Some(wc), Some(terrain), Some(climate)) => {
+            hornvale_worldgen::demography_report_from(world, wc, terrain, climate).ok()
+        }
+        _ => None,
+    };
     // The Wilding: the world's health includes its fauna — append a few wild
     // beast agents, so a herbivore's live predator-fear is measured too.
+    let concentrations = match (wc.as_ref(), report.as_ref()) {
+        (Some(wc), Some(report)) => {
+            hornvale_worldgen::wild_concentrations_from(wc, report, HEALTH_WILD)
+        }
+        _ => Vec::new(),
+    };
     npcs.extend(hornvale_vessel::liveness::derive_wild_npcs(
         world,
         &ctx,
         &mut ledger,
-        HEALTH_WILD,
+        concentrations,
     ));
     // The world's calendar, so the wake cycle reads the real sun (Tier-1).
     let calendar = hornvale_worldgen::sky_of(world)
         .ok()
         .and_then(|sky| sky.calendar().cloned());
     // The predator-pressure field (The Quarry), so danger senses carnivore
-    // territory. A demography fit — bounded to the ~5 null-control seeds.
-    let predator = hornvale_worldgen::predator_pressure(world).ok();
-    // The prey-pressure field (The Teeth), so a carnivore's hunger senses prey.
-    let prey = hornvale_worldgen::prey_pressure(world).ok();
+    // territory — from the shared `report` above (The Weir, Stage 1b)
+    // rather than its own fit.
+    let predator = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+        (Some(wc), Some(terrain), Some(report)) => Some(hornvale_worldgen::predator_pressure_from(
+            wc, terrain, report,
+        )),
+        _ => None,
+    };
+    // The prey-pressure field (The Teeth), so a carnivore's hunger senses
+    // prey — the dual of the predator field, same shared fit.
+    let prey = match (wc.as_ref(), terrain.as_ref(), report.as_ref()) {
+        (Some(wc), Some(terrain), Some(report)) => {
+            Some(hornvale_worldgen::prey_pressure_from(wc, terrain, report))
+        }
+        _ => None,
+    };
     // The settlement-territory set (The Threshold, task 5b) — this sweep is a
     // real world with real settlements, so it is the other construction site
     // that has a world to read one from (`session.rs`'s live session is the
     // other); a room a settlement occupies can now draw a real hearth here
     // too, the same way it does mid-possession.
     let built = built_rooms(world, &ctx);
-    let terrain = LocaleTerrain::with_fields(
-        &ctx,
-        calendar.as_ref(),
-        predator.as_ref(),
-        prey.as_ref(),
-        Some(&built),
-    );
     // The rotation period the action clock divides (spec §4.1) — the same
     // calendar the wake cycle already reads; `None` if the world is
     // tidally-locked or has no derivable sky.
@@ -205,11 +371,21 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         .as_ref()
         .and_then(|c| c.day_length())
         .map(|d| d.get());
-    let traces = run_simulation(
+    // `run_simulation_with_locale` (the-waymark fix round, Finding 1): rebuilds
+    // `LocaleTerrain` fresh EVERY tick with a per-tick geometry prefill for each
+    // NPC's CURRENT position, rather than one `LocaleTerrain` fixed for the
+    // whole 40-tick run whose prefill could only ever cover tick 1's starting
+    // rooms. See that function's own doc for why this sweep gets its own twin
+    // of `run_simulation` instead of a shared, generic path.
+    let traces = run_simulation_with_locale(
         &ledger,
         &registry,
         &npcs,
-        &terrain,
+        &ctx,
+        calendar.as_ref(),
+        predator.as_ref(),
+        prey.as_ref(),
+        Some(&built),
         HEALTH_TICKS,
         day_length_std,
     );
