@@ -33,6 +33,11 @@ editing:
   footgun.
 - `scripts/` — the gate ladder, `regenerate-artifacts.sh`, `census-run.sh`,
   the (abandoned) AWS remote gate.
+- `tropes/` — frozen, provenance-stamped corpora of dramatic situations, read
+  backwards as capability probes. The corpus is **data** and the resolver is
+  **code** (the studies-are-data rule, decision 0011); a corpus is frozen
+  before measurement and its situation count is asserted, so changing it is a
+  deliberate act.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact
@@ -184,6 +189,7 @@ cargo run -p hornvale -- almanac --world world.json
 cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
 cargo run -p hornvale -- streams         # stream manifest (book reference page)
+cargo run -p hornvale -- tropes report   # trope coverage -> docs/audits/ (`check` = ratchet)
 cargo run -p hornvale -- lab run studies/the-census.study.json
 cargo run -p hornvale -- lab list-metrics
 
@@ -251,8 +257,13 @@ Cross-domain communication uses only the kernel's trace protocol:
 - **Facts** — subject/predicate/object envelope, append-only, contradiction-
   checked against the concept registry (predicates registered per domain;
   naming conventions are in the book's concept-registry chapter).
-- **Phenomena** — the universal read: salience-ranked observations. Consumers
-  (e.g. religion) must never learn which system produced a phenomenon.
+- **Phenomena** — the universal read: salience-ranked observations. The
+  channel does not carry a producer, so a consumer (religion, say)
+  receives *appearances*, never sources — decision 0003 states this as a
+  cost it accepts ("a consumer **may** never learn which system produced a
+  given observation"), not as a prohibition. The distinction matters: a
+  consumer must not be *handed* a source, but a future campaign is free to
+  let an observer **achieve** an identification and be wrong about it.
 - **Fields** — typed functions over (space × time), the statistical prior.
 
 **Provider tiers coexist:** the tier-0 `ConstantSun` and the generated star
@@ -406,7 +417,15 @@ cites a decision number. A falsified prediction is a finding, not a failure — 
 campaigns ship the null as the headline. Don't retune a constant to rescue a
 prediction after unblinding without saying so in the chronicle.
 
-**The tooling/process backlog is `WORKFLOW_IMPROVEMENTS_PLAN.md`** (TOOL-*
-and PROC-* registry rows, staged). Per-campaign process lessons land in
-`docs/retrospectives/`; settled choices land in `docs/decisions/` (90
-records, append-only — grep before relitigating).
+**The tooling/process backlog is the idea registry's `TOOL-*` and `PROC-*`
+rows** — there is no separate plan file. `WORKFLOW_IMPROVEMENTS_PLAN.md` was
+retired once every stage in it read `Complete` and all that remained was a
+backlog list duplicating the registry, a residue already carried in the rows'
+**Where** cells, and one sequencing fact now held by `PROC-ci-topology-block`.
+The duplication was not harmless: reading that stale list is what minted a
+duplicate `TOOL-24`, which then travelled through a spec, a plan, a study JSON
+and a decision (`docs/retrospectives/the-pyx.md`). Treat a `shipped` row's
+**Where** cell as the place a deferred half is recorded. Per-campaign process
+lessons land in `docs/retrospectives/`; settled choices land in
+`docs/decisions/` (append-only — `make doctor` counts them; grep before
+relitigating).

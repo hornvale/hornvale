@@ -8,6 +8,7 @@ mod phonology;
 mod proto;
 mod repl;
 mod streams;
+mod tropes;
 
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
@@ -54,9 +55,13 @@ usage:
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
   hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
-                            [--render json|ascii]
+                            [--render json|ascii] [--lens terrain|colour]
                                                       emit scene/surrounds/v1 JSON to stdout, or
-                                                      (--render ascii) the terrain-lens chart
+                                                      (--render ascii) the chart through a lens
+                                                      (--lens colour tints each glyph with the
+                                                      bedrock's colour, and withholds the tint from
+                                                      water, marks and you — the caption says how
+                                                      many it withheld)
                                                       (--room and --depth are mutually exclusive —
                                                       a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
@@ -74,6 +79,10 @@ usage:
   hornvale concepts [--manifest]           dump the concept registry as markdown
                           (--manifest: the correspondence ledger — per-concept
                           lexeme/percept/cognition coverage + trial balance)
+  hornvale tropes [report|check] [--corpus <PATH>]
+                          score the frozen dramatic-situation corpus against the live
+                          registry (report: render to stdout; check: diff against the
+                          committed artifact; default corpus: tropes/polti.trope.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -133,6 +142,7 @@ fn main() -> ExitCode {
         Some("connections") => cmd_connections(&args),
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
+        Some("tropes") => cmd_tropes(&args),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
@@ -528,6 +538,9 @@ const PLATFORM_LOCAL_RENDER_NOTE: &str = "> Rendered view — this raster's exac
 depend on the host math library) and are not cross-platform byte-checked; the \
 page above is deterministic.\n\n";
 
+// Named construction site (decision 0092): a CLI handler — sculpts once
+// to render its own map.
+#[allow(clippy::disallowed_methods)]
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let field = flag_value(args, "--field").unwrap_or("elevation");
     if !matches!(
@@ -613,6 +626,9 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
 /// Render the world's deep-time strata: a markdown page (title, deep-time
 /// lines, ASCII strata map) to stdout and, with `--out`, the PNG to disk. Both
 /// deterministic; CI drift-checks the committed copies.
+// Named construction site (decision 0092): a CLI handler — sculpts once
+// to render its own deep-time page.
+#[allow(clippy::disallowed_methods)]
 fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
@@ -809,6 +825,62 @@ fn cmd_concepts(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// The Repertoire: score the frozen corpus against the live registry.
+/// Seed 0 as in `cmd_concepts` — the registry is identical for any seed
+/// because every predicate registers up front; this exercises the fuller
+/// pipeline as a smoke test.
+fn cmd_tropes(args: &[String]) -> Result<(), String> {
+    let path = flag_value(args, "--corpus").unwrap_or("tropes/polti.trope.json");
+    let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = tropes::load(&json)?;
+    let world = world_builder::build_world(
+        Seed(0),
+        &SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    let outcomes = tropes::resolve(&corpus, &world.registry);
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `tropes` has no valueless flags. It is not a property of
+    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
+    // adding an equivalent here would resurrect the bug above. If `tropes`
+    // ever gains a valueless flag, this loop must learn which flags take
+    // values.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    match mode {
+        Some("report") | None => {
+            print!("{}", tropes::render(&corpus, &outcomes, &world.registry));
+            Ok(())
+        }
+        Some("check") => {
+            let live = tropes::render(&corpus, &outcomes, &world.registry);
+            let committed = std::fs::read_to_string("docs/audits/trope-coverage.md")
+                .map_err(|e| format!("docs/audits/trope-coverage.md: {e}"))?;
+            if live == committed {
+                Ok(())
+            } else {
+                Err("trope coverage drifted; run `make rebaseline` and review the diff".into())
+            }
+        }
+        Some(other) => Err(format!("tropes: unknown mode '{other}' (report|check)")),
+    }
+}
+
 fn cmd_streams() -> Result<(), String> {
     print!("{}", streams::render_streams());
     Ok(())
@@ -858,15 +930,30 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
     let mut out = String::from("# The Book\n");
     let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
     for seed in [1u64, 2, 3] {
-        let world = world_builder::build_world(
+        // Build once, threaded (The Shuttle): `build_world_to_with_artifacts`
+        // hands back the terrain/climate the build already sculpted — at
+        // `BuildDepth::Full` both are `Some` — so the three renders below
+        // reuse them via the `_from` entry points instead of each
+        // re-sculpting the globe (`terrain_of`/`climate_from`) on its own.
+        let wc = world_builder::WorldComponents::assemble().map_err(|e| e.to_string())?;
+        let world_builder::BuildArtifacts {
+            world,
+            terrain,
+            climate,
+        } = world_builder::build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
             world_builder::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
+            &wc,
+            world_builder::BuildDepth::Full,
         )
         .map_err(|e| e.to_string())?;
-        let vol = hornvale_book::render_volume(&world);
+        let vol = match (terrain.as_ref(), climate.as_ref()) {
+            (Some(t), Some(c)) => hornvale_book::render_volume_from(&world, t, c),
+            _ => hornvale_book::render_volume(&world),
+        };
         let title = world_builder::planet_entity(&world)
             .and_then(|p| world.ledger.text_of(p, hornvale_kernel::NAME))
             .map(str::to_string)
@@ -934,7 +1021,11 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
             Some(day) => {
                 let at_days =
                     hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
-                vec![hornvale_book::reckoning_at(&world, at_days)]
+                let epoch = match (terrain.as_ref(), climate.as_ref()) {
+                    (Some(t), Some(c)) => hornvale_book::reckoning_at_from(&world, at_days, t, c),
+                    _ => hornvale_book::reckoning_at(&world, at_days),
+                };
+                vec![epoch]
             }
             None => vol.reckoning,
         };
@@ -966,7 +1057,10 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
                     .into_iter()
                     .map(|f| (f.subject, f.predicate))
                     .collect();
-            let initiated = hornvale_book::esoteric_lines(&world, &reader);
+            let initiated = match (terrain.as_ref(), climate.as_ref()) {
+                (Some(t), Some(c)) => hornvale_book::esoteric_lines_from(&world, &reader, t, c),
+                _ => hornvale_book::esoteric_lines(&world, &reader),
+            };
             if !initiated.is_empty() {
                 out.push_str("\n### To the initiated\n\n");
                 for line in &initiated {
@@ -1202,9 +1296,10 @@ fn cmd_ci_record() -> Result<(), String> {
 /// eclipses` renders dated eclipse events over a closed `[from, until]` day window
 /// (scene/eclipses/v1), and `scene surrounds` renders the situated chart around
 /// an observer's room (scene/surrounds/v1) — JSON by default, or (`--render
-/// ascii`) the same `terrain`-lens picture the possession's own `map` verb
-/// draws, via `hornvale_scene::render_surrounds_ascii`. Deterministic; CI
-/// drift-checks the committed example scene.
+/// ascii`) the same picture the possession's own `map` verb draws, via
+/// `hornvale_scene::render_surrounds_ascii` — through the `terrain` lens by
+/// default, or `--lens colour` to tint it. Deterministic; CI drift-checks the
+/// committed example scene, which is rendered through `terrain`.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -1295,6 +1390,16 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     "unknown --render mode '{render_mode}'; known modes: json, ascii"
                 ));
             }
+            // Same discipline: validate against the renderer's own registry
+            // rather than a second list here, so a lens added there is
+            // spellable here the same day.
+            let lens = flag_value(args, "--lens").unwrap_or("terrain");
+            if !hornvale_scene::SURROUNDS_LENSES.contains(&lens) {
+                return Err(format!(
+                    "unknown --lens '{lens}'; registered lenses: {}",
+                    hornvale_scene::SURROUNDS_LENSES.join(", ")
+                ));
+            }
             let world = load_world(args)?;
             let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
             let depth = match flag_value(args, "--depth") {
@@ -1327,8 +1432,24 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     settlement_room(&world, v.id, depth)?
                 }
             };
-            let scene = hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day })
-                .map_err(|e| e.to_string())?;
+            // `ctx` is already in hand, so build through the `_in` variants:
+            // `surrounds_scene` would build a second `LocaleContext` (~1.2 s
+            // in release) identical to this one. The colour path needs a
+            // context anyway, and taking the same route for both keeps the
+            // two lenses reading the same document.
+            let scene = if lens == "colour" {
+                hornvale_scene::surrounds_scene_colored_in(
+                    &world,
+                    &ctx,
+                    &room,
+                    radius,
+                    WorldTime { day },
+                    &hornvale_kernel::color::standard_observer(),
+                )
+            } else {
+                hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime { day })
+            }
+            .map_err(|e| e.to_string())?;
             if render_mode == "ascii" {
                 // The footer names the observer room's own lateral exits,
                 // the same source the possession's `map` verb reads
@@ -1352,7 +1473,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     .collect();
                 print!(
                     "{}",
-                    hornvale_scene::render_surrounds_ascii(&scene, "terrain", &ways)
+                    hornvale_scene::render_surrounds_ascii(&scene, lens, &ways)
                 );
             } else {
                 println!("{}", hornvale_scene::surrounds_json(&scene));

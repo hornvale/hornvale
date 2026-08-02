@@ -6,8 +6,8 @@
 //! For each β in [`BETAS`] and each seed in [`SEEDS`], this builds a world's
 //! terrain+climate ONCE (β does not affect the geography, only the
 //! competition-share packer that reads it), then packs the coexistence
-//! stack — via [`hornvale_demography::report`], the SAME pure function
-//! `hornvale_worldgen::demography_report_with_beta` calls internally — at
+//! stack — via [`hornvale_demography::report`], the same coexistence-pack
+//! pipeline `hornvale_worldgen::demography_report_with_beta_from` mirrors — at
 //! every β without regenerating the world. Three statistics are recorded per
 //! (seed, β) and averaged across seeds:
 //!
@@ -47,6 +47,11 @@
 //! whether β actually moves the packer's own coexistence share (it does,
 //! mildly, for this roster's near-tied carrying capacities) from that
 //! downstream, β-independent collapse.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellMap, Mass, ResourceVector, Seed};
@@ -72,11 +77,10 @@ const SEEDS: [u64; 13] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 42];
 /// One seed's precomputed, β-independent inputs: the geography and per-
 /// species carrying-capacity fields the packer reads. Building this ONCE per
 /// seed (rather than once per (seed, β) pair) avoids re-running terrain
-/// genesis 10x per seed — [`hornvale_worldgen::demography_report_with_beta`]
-/// itself reconstructs terrain+climate on every call (the `terrain_of`/
-/// `climate_of` "reconstruct, never store" pattern), which is the right
-/// design for a single-shot Lab metric but wasteful for a β-sweep that holds
-/// geography fixed and varies only β.
+/// genesis 10x per seed — a fresh `terrain_of`/`climate_of` reconstruction per
+/// call (the "reconstruct, never store" pattern worldgen's `_from` family is
+/// built on) is the right design for a single-shot Lab metric but wasteful
+/// for a β-sweep that holds geography fixed and varies only β.
 struct SeedFixture {
     geo: hornvale_kernel::Geosphere,
     per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)>,
@@ -189,7 +193,8 @@ struct SeedBetaStats {
 
 /// Measure one (fixture, β) pair: pack the coexistence stack at `beta` (via
 /// [`hornvale_demography::report`], the same pure computation
-/// `demography_report_with_beta` wraps) and reduce it to [`SeedBetaStats`].
+/// `demography_report_with_beta_from` wraps) and reduce it to
+/// [`SeedBetaStats`].
 fn measure(fixture: &SeedFixture, beta: f64) -> SeedBetaStats {
     let report = hornvale_demography::report(
         &fixture.geo,

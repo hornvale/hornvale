@@ -256,13 +256,13 @@ fn the_hearths_effect_on_seed_13s_cold_dominated_population_stays_small_and_neve
 
     let built = built_rooms(&w, &ctx);
     // "Hearth live": the real arming this campaign wired (Task 5/5b).
-    let terrain_live = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built));
+    let terrain_live = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built), None);
     // "Hearth forced inert": every room reads unbuilt, so `interior_of` never
     // composes a hearth anywhere — the pre-Task-5b state, on the identical
     // world/npcs/ledger. Not a threshold or constant change (`built` is an
     // `Option` the campaign's own `with_fields` already exposes for exactly
     // this A/B, per the plan's own Task 8).
-    let terrain_inert = LocaleTerrain::with_fields(&ctx, None, None, None, None);
+    let terrain_inert = LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
 
     let (npcs, cold_idx, warm_idx) = cold_and_warm_built_npcs(&w, &ctx, &terrain_live, &mut ledger);
     // Preconditions on the POPULATION, not on its exact size. An earlier
@@ -423,7 +423,7 @@ fn the_landing_anchors_warmth_is_small_next_to_real_cold_built_deviations() {
     let w = world(13);
     let ctx = LocaleContext::build(&w).expect("seed 13 has a locale");
     let built = built_rooms(&w, &ctx);
-    let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built));
+    let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built), None);
 
     let mut ledger = w.ledger.clone();
     let settlements = hornvale_settlement::all_settlements(&w);

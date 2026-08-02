@@ -7,21 +7,32 @@
 use crate::SurroundsScene;
 use std::collections::BTreeMap;
 
-/// The registered lenses. v1 ships one; a second is purely additive.
+/// The registered lenses. `terrain` draws the chart; `colour` draws the same
+/// chart and tints it. Adding one is purely additive: the three committed
+/// gallery charts render through `terrain` and cannot move.
 /// type-audit: bare-ok(identifier-text)
-pub const SURROUNDS_LENSES: [&str; 1] = ["terrain"];
+pub const SURROUNDS_LENSES: [&str; 2] = ["terrain", "colour"];
 
-/// The glyph a cell draws under the `terrain` lens, before fading.
-fn terrain_glyph(scene: &SurroundsScene, cell: &crate::SurroundsCell) -> char {
+/// The glyph a cell draws under the `terrain` lens, before fading, paired
+/// with whether that glyph is drawing the **ground itself**.
+///
+/// The pairing is what keeps the `colour` lens honest. `SurroundsCell.color`
+/// is the reflectance of the cell's *bedrock*, so it is a truthful claim
+/// about the thing drawn only when the thing drawn is that ground. Where the
+/// glyph has been overridden to name something else — the observer, a mark
+/// standing on the cell, or the water covering it — the bedrock colour
+/// describes something the reader cannot see, and the `colour` lens withholds
+/// it rather than tinting a river with the colour of the rock beneath it.
+fn terrain_glyph(scene: &SurroundsScene, cell: &crate::SurroundsCell) -> (char, bool) {
     if cell.state == "here" {
-        return '@';
+        return ('@', false);
     }
     if let Some(m) = cell
         .marks
         .iter()
         .min_by(|a, b| a.salience.cmp(&b.salience).then(a.noun.cmp(&b.noun)))
     {
-        return if m.kind == "agent" { '&' } else { '#' };
+        return (if m.kind == "agent" { '&' } else { '#' }, false);
     }
     let water = scene
         .water_legend
@@ -29,17 +40,45 @@ fn terrain_glyph(scene: &SurroundsScene, cell: &crate::SurroundsCell) -> char {
         .map(String::as_str)
         .unwrap_or("dry-land");
     match water {
-        "ocean" => '~',
-        "salt-basin" => '=',
-        "river" => '+',
-        _ => match cell.relief {
-            0 | 1 => '_',
-            2 => '.',
-            3 => ':',
-            4 => '^',
-            _ => 'A',
-        },
+        "ocean" => ('~', false),
+        "salt-basin" => ('=', false),
+        "river" => ('+', false),
+        _ => (
+            match cell.relief {
+                0 | 1 => '_',
+                2 => '.',
+                3 => ':',
+                4 => '^',
+                _ => 'A',
+            },
+            true,
+        ),
     }
+}
+
+/// One placed glyph: what to draw, the colour its cell carries (if any), and
+/// whether the glyph is drawing the ground that colour describes.
+struct Placed {
+    /// The character drawn at this position, already faded if remembered.
+    glyph: char,
+    /// The cell's `color`, straight from the document; `None` when the
+    /// scene was built through an uncoloured path.
+    color: Option<[u8; 3]>,
+    /// Whether `glyph` draws the bedrock `color` describes — see
+    /// [`terrain_glyph`].
+    ground: bool,
+}
+
+/// Wrap `glyph` in a 24-bit foreground colour and a reset.
+///
+/// Truecolor rather than the 256-colour cube: a terminal that does not
+/// understand it degrades to an uncoloured glyph rather than a wrong one,
+/// and the sim has no business probing the terminal's capabilities.
+fn colored(glyph: char, rgb: [u8; 3]) -> String {
+    format!(
+        "\u{1b}[38;2;{};{};{}m{glyph}\u{1b}[0m",
+        rgb[0], rgb[1], rgb[2]
+    )
 }
 
 /// A glyph's memory twin — what a `remembered` cell draws instead.
@@ -74,7 +113,7 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
     // formula) would otherwise land down-and-to-the-right instead of
     // directly below, drawing a breadth-first ball as a right-leaning
     // parallelogram rather than the symmetric hexagon it actually is.
-    let mut placed: BTreeMap<(i64, i64), char> = BTreeMap::new();
+    let mut placed: BTreeMap<(i64, i64), Placed> = BTreeMap::new();
     let mut seams = 0usize;
     for c in &scene.cells {
         let (Some(v), Some(w), Some(up)) = (c.v, c.w, c.up) else {
@@ -83,9 +122,16 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         };
         let row = -w;
         let col = 2 * v + i64::from(!up) + w;
-        let g = terrain_glyph(scene, c);
+        let (g, ground) = terrain_glyph(scene, c);
         let g = if c.state == "remembered" { faded(g) } else { g };
-        placed.insert((row, col), g);
+        placed.insert(
+            (row, col),
+            Placed {
+                glyph: g,
+                color: c.color,
+                ground,
+            },
+        );
     }
 
     let mut out = String::new();
@@ -97,6 +143,30 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         scene.depth, scene.radius
     ));
 
+    // The colour lens's own disclosure, and the reason it is a caption line
+    // rather than a footnote: the tint is BEDROCK, and the chart draws plenty
+    // of glyphs that are not bedrock. Rather than let the picture claim a
+    // river is granite-coloured and retract it underneath, the lens withholds
+    // the tint from every non-ground glyph and says how many it withheld. The
+    // three counts partition the placed cells, so a reader can check the
+    // sentence against the picture instead of trusting it.
+    if lens == "colour" {
+        let tinted = placed
+            .values()
+            .filter(|p| p.ground && p.color.is_some())
+            .count();
+        let withheld = placed
+            .values()
+            .filter(|p| !p.ground && p.color.is_some())
+            .count();
+        let bare = placed.values().filter(|p| p.color.is_none()).count();
+        out.push_str(&format!(
+            "  colour: each cell's bedrock, tinted only where the glyph draws that ground — \
+             {tinted} tinted, {withheld} withheld (water, a mark, or you), \
+             {bare} carrying no colour.\n"
+        ));
+    }
+
     if placed.is_empty() {
         out.push_str("  (nothing placeable in view)\n");
     } else {
@@ -105,11 +175,26 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         let (r0, r1) = (*rows.iter().min().unwrap(), *rows.iter().max().unwrap());
         let (c0, c1) = (*cols.iter().min().unwrap(), *cols.iter().max().unwrap());
         for r in r0..=r1 {
+            // `trailing_blanks` replaces the old `line.trim_end()`: trimming
+            // a string that holds escape sequences would cut inside one.
+            // Buffering the gaps and flushing them only before a real glyph
+            // produces the identical trimmed line for the terrain lens.
             let mut line = String::new();
+            let mut trailing_blanks = String::new();
             for c in c0..=c1 {
-                line.push(*placed.get(&(r, c)).unwrap_or(&' '));
+                match placed.get(&(r, c)) {
+                    None => trailing_blanks.push(' '),
+                    Some(p) => {
+                        line.push_str(&trailing_blanks);
+                        trailing_blanks.clear();
+                        match (lens, p.color, p.ground) {
+                            ("colour", Some(rgb), true) => line.push_str(&colored(p.glyph, rgb)),
+                            _ => line.push(p.glyph),
+                        }
+                    }
+                }
             }
-            out.push_str(line.trim_end());
+            out.push_str(&line);
             out.push('\n');
         }
     }
@@ -135,7 +220,7 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SurroundsCell, SurroundsObserver, SurroundsScene};
+    use crate::{Mark, SurroundsCell, SurroundsObserver, SurroundsScene};
 
     fn cell(u: i64, v: i64, w: i64, up: bool, state: &str, relief: u32) -> SurroundsCell {
         SurroundsCell {
@@ -153,6 +238,7 @@ mod tests {
             temperature_c: None,
             moisture: None,
             elevation_m: None,
+            color: None,
             marks: vec![],
         }
     }
@@ -286,5 +372,172 @@ mod tests {
             render_surrounds_ascii(&s, "terrain", &[]),
             render_surrounds_ascii(&s, "terrain", &[])
         );
+    }
+
+    #[test]
+    fn the_colour_lens_is_registered() {
+        assert!(SURROUNDS_LENSES.contains(&"colour"));
+    }
+
+    #[test]
+    fn the_terrain_lens_emits_no_escape_sequences() {
+        // The three committed gallery charts render through this lens.
+        // An escape here moves all of them.
+        let scene = colored_test_scene();
+        let out = render_surrounds_ascii(&scene, "terrain", &[]);
+        assert!(
+            !out.contains('\u{1b}'),
+            "the terrain lens emitted an escape"
+        );
+    }
+
+    #[test]
+    fn the_colour_lens_emits_escapes_and_resets_them() {
+        let scene = colored_test_scene();
+        let out = render_surrounds_ascii(&scene, "colour", &[]);
+        assert!(out.contains('\u{1b}'), "the colour lens emitted no escape");
+        assert!(out.ends_with('\n'));
+        // Every colour set must be followed by a reset before the string
+        // ends, or the user's terminal stays tinted after the chart.
+        let sets = out.matches("\u{1b}[38;2;").count();
+        let resets = out.matches("\u{1b}[0m").count();
+        assert_eq!(sets, resets, "{sets} colour sets but {resets} resets");
+    }
+
+    #[test]
+    fn the_colour_lens_degrades_to_plain_glyphs_when_no_cell_has_a_colour() {
+        // An uncoloured scene rendered through the colour lens must still
+        // be readable rather than blank or escaped.
+        let scene = uncolored_test_scene();
+        let out = render_surrounds_ascii(&scene, "colour", &[]);
+        assert!(
+            !out.contains('\u{1b}'),
+            "escapes emitted for an uncoloured scene"
+        );
+        assert!(
+            out.contains("[lens: colour"),
+            "the caption must still name the lens"
+        );
+    }
+
+    #[test]
+    fn the_two_lenses_draw_the_same_glyphs() {
+        // Colour is a second channel over the same chart, not a different
+        // chart. Stripping the escapes must recover the terrain render,
+        // caption block aside — the caption is the one part that MUST
+        // differ, since it names the lens and declares what colour did.
+        let scene = colored_test_scene();
+        let plain = render_surrounds_ascii(&scene, "terrain", &[]);
+        let colored = render_surrounds_ascii(&scene, "colour", &[]);
+        assert_eq!(chart_body(&strip_escapes(&colored)), chart_body(&plain));
+    }
+
+    #[test]
+    fn the_colour_lens_withholds_the_bedrock_tint_from_water_a_mark_and_you() {
+        // The colour a cell carries is the reflectance of its BEDROCK.
+        // Tinting a river glyph with the colour of the granite under it
+        // would have the picture assert something the reader cannot see —
+        // precisely what RENDER-9's caption rule exists to prevent — and
+        // water colour is a deferred registry row, so the honest move is
+        // to withhold rather than to invent. The same reasoning covers a
+        // mark (the glyph names a settlement, not the rock it stands on)
+        // and the observer's own '@'.
+        let mut s = uncolored_test_scene();
+        s.cells[1].water = 2; // river
+        let mut marked = cell(3, 2, 0, false, "sensed", 3);
+        marked.marks = vec![Mark {
+            noun: "Ka".to_string(),
+            kind: "settlement".to_string(),
+            datum: "A settlement of this world.".to_string(),
+            salience: 20,
+        }];
+        s.cells.push(marked);
+        for c in s.cells.iter_mut() {
+            c.color = Some([200, 30, 30]);
+        }
+        let out = render_surrounds_ascii(&s, "colour", &[]);
+        // Four placed cells; only the dry-land, unmarked, non-observer one
+        // is drawing the ground its colour describes.
+        assert_eq!(
+            out.matches("\u{1b}[38;2;").count(),
+            1,
+            "only a ground glyph may be tinted: {out}"
+        );
+        assert!(
+            out.contains("1 tinted, 3 withheld"),
+            "the caption must state what it withheld: {out}"
+        );
+        // The withheld glyphs are still drawn, just untinted.
+        assert!(
+            out.contains('+') && out.contains('@') && out.contains('#'),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn the_colour_captions_counts_account_for_every_placed_cell() {
+        // The caption is checkable only if its numbers add up to the chart
+        // in front of the reader.
+        let mut s = colored_test_scene();
+        s.cells[2].color = None;
+        let out = render_surrounds_ascii(&s, "colour", &[]);
+        assert!(
+            out.contains("1 tinted, 1 withheld"),
+            "one ground cell tinted, the observer withheld: {out}"
+        );
+        assert!(
+            out.contains("1 carrying no colour"),
+            "the cell with no colour is its own category: {out}"
+        );
+    }
+
+    /// Remove every CSI sequence from `s`.
+    fn strip_escapes(s: &str) -> String {
+        let mut out = String::new();
+        let mut chars = s.chars();
+        while let Some(c) = chars.next() {
+            if c == '\u{1b}' {
+                for c in chars.by_ref() {
+                    if c == 'm' {
+                        break;
+                    }
+                }
+            } else {
+                out.push(c);
+            }
+        }
+        out
+    }
+
+    /// Everything but the caption block: the grid and the footers. The
+    /// caption line opens with '[' and the colour disclosure with `colour:`;
+    /// no grid row can begin with either, since every glyph is drawn from
+    /// the terrain alphabet.
+    fn chart_body(s: &str) -> String {
+        s.lines()
+            .filter(|l| !l.starts_with('[') && !l.trim_start().starts_with("colour:"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// Built on this module's own fixtures: `cell(u, v, w, up, state,
+    /// relief)` and `scene(cells)`. `cell` sets `color: None`, so the
+    /// coloured fixture assigns afterwards rather than changing that
+    /// helper's signature — every existing test keeps compiling untouched.
+    fn uncolored_test_scene() -> SurroundsScene {
+        scene(vec![
+            cell(0, 0, 0, true, "here", 2),
+            cell(1, 0, 0, false, "sensed", 3),
+            cell(0, 1, 0, false, "sensed", 4),
+        ])
+    }
+
+    fn colored_test_scene() -> SurroundsScene {
+        let mut s = uncolored_test_scene();
+        let palette = [[180, 90, 60], [120, 130, 110], [200, 190, 150]];
+        for (cell, rgb) in s.cells.iter_mut().zip(palette) {
+            cell.color = Some(rgb);
+        }
+        s
     }
 }

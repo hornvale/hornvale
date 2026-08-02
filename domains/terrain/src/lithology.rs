@@ -32,6 +32,7 @@
 use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
 use crate::plates::{Plate, dot, normalize, sub, velocity_at};
+use hornvale_kernel::color::{Mixture, Reflectance};
 use hornvale_kernel::{CellId, CellMap, Geosphere, math, noise::fbm_2d};
 
 /// Regolith thickness in metres.
@@ -271,13 +272,24 @@ pub fn classify_rock(
 }
 
 /// Hydrogeologic behavior (spec §3, round 2 rock×water).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Hydro {
     /// Porous, holds water: wells, oases.
     Aquifer,
     /// Impermeable: perched water, seeps.
     Aquitard,
-    /// Where an aquifer meets the surface with flow.
+    /// Where an aquifer meets the surface with flow. Never produced by
+    /// [`hydrogeology`] itself (The Witness, Task 5b) — `hydrogeology` is a
+    /// pointwise matrix-petrophysics read and a spring is not a property of
+    /// a single cell's rock, it is a property of a *contact*: water flowing
+    /// over from an `Aquifer` cell was the shipped model at F5, but land
+    /// drainage at production resolution (L6) maxes at 219 against the old
+    /// 500 threshold, so that gate was unreachable regardless. `Spring` is
+    /// promoted from `Aquifer` by `GeneratedTerrain::hydro_at` (decision
+    /// 0085's precedent: the pointwise petrophysics is the durable signal,
+    /// the geometric promotion is derived from it), when some neighbouring
+    /// cell is not itself an `Aquifer` and sits lower — the descending
+    /// contact a spring geologically is.
     Spring,
     /// Sheds water: thin-soil runoff.
     Runoff,
@@ -285,31 +297,124 @@ pub enum Hydro {
     Karst,
 }
 
-/// Classify hydrogeology from porosity/carbonate × drainage (spec §3).
-/// type-audit: bare-ok(count: drainage), bare-ok(flag: ocean)
-pub fn hydrogeology(buf: &MaterialBuffer, drainage: f64, ocean: bool) -> Hydro {
+impl Hydro {
+    /// Every variant, so a witness test (`domains/terrain/tests/
+    /// hydro_witness.rs`, The Witness Task 6) derives its checklist from the
+    /// type rather than from an author re-typing the enum's members by hand.
+    /// `Hydro::Spring`/`Hydro::Aquifer` were unreachable from the real
+    /// derivation on every seed for this model's entire life (F5) and no
+    /// hand-built checklist would have caught that on its own — adding a
+    /// variant here enrolls it in the guard automatically, which is the
+    /// property a hand-maintained list cannot offer. `PartialOrd`/`Ord`
+    /// (declaration order, derived above) exist only so the guard can
+    /// collect witnessed variants into a `BTreeSet` (the project bans
+    /// `HashSet`) — as with `RockClass`, there is no meaningful ranking
+    /// between hydrogeologic classes.
+    pub const ALL: [Hydro; 5] = [
+        Hydro::Aquifer,
+        Hydro::Aquitard,
+        Hydro::Spring,
+        Hydro::Runoff,
+        Hydro::Karst,
+    ];
+}
+
+/// Classify hydrogeology from porosity/carbonate (spec §3). Pointwise matrix
+/// petrophysics only — `Aquifer`/`Aquitard`/`Runoff`/`Karst`, never
+/// `Spring` (The Witness, Task 5b): `Spring` is a property of a contact
+/// between cells, not of one cell's rock, and is promoted separately by
+/// `GeneratedTerrain::hydro_at`. No longer takes a `drainage` argument —
+/// its only use was the retired flowing-vs-still split below.
+/// type-audit: bare-ok(flag: ocean)
+pub fn hydrogeology(buf: &MaterialBuffer, ocean: bool) -> Hydro {
     if ocean {
         return Hydro::Aquitard;
     }
-    if buf.carbonate > 0.5 && buf.porosity > 0.4 {
+    if buf.carbonate > 0.5 && buf.porosity > KARST_MIN_POROSITY {
         return Hydro::Karst;
     }
-    if buf.porosity < 0.15 {
+    if buf.porosity < AQUITARD_MAX_POROSITY {
         return Hydro::Aquitard;
     }
-    if buf.porosity > 0.5 {
-        return if drainage > SPRING_DRAINAGE_THRESHOLD {
-            Hydro::Spring
-        } else {
-            Hydro::Aquifer
-        };
+    if buf.porosity > CLASTIC_AQUIFER_MIN_POROSITY {
+        return Hydro::Aquifer;
     }
     Hydro::Runoff
 }
 
-/// Drainage above which a porous cell expresses as a flowing `Spring` rather
-/// than a still `Aquifer`. Shares scale with `cave_proneness`'s wetting term.
-const SPRING_DRAINAGE_THRESHOLD: f64 = 500.0;
+/// Porosity above which carbonate rock (`carbonate > 0.5`) reads as `Karst`
+/// rather than falling through to the branches below — the CARBONATE scale.
+/// Measured against 8 seeds of continental land cells (The Witness, F5): the
+/// carbonate class runs `n=1095 min=0.350 p50=0.425 p75=0.575 max=0.650`, so
+/// `0.4` sits just above the class floor and inside its normal range — most
+/// carbonate cells clear it. Unchanged by F5; this constant only gained a
+/// name and its calibration record.
+const KARST_MIN_POROSITY: f64 = 0.4;
+
+/// Porosity below which any rock (carbonate or clastic) reads as
+/// impermeable `Aquitard`. Measured against the same 8-seed sweep: the
+/// clastic (non-carbonate) class runs `n=4666 min=0.025 p50=0.100
+/// p75=0.250 p95=0.325 max=0.325`, quantised in ~0.075 steps (0.025, 0.100,
+/// 0.175, 0.250, 0.325) — `0.15` falls between the two lowest bands, so it
+/// selects roughly the bottom fifth to two-fifths of clastic cells
+/// (`0.025`, and about half of `0.100`) as `Aquitard`. Unchanged by F5.
+const AQUITARD_MAX_POROSITY: f64 = 0.15;
+
+/// Porosity above which non-carbonate (clastic) rock reads as `Aquifer` —
+/// the CLASTIC scale, distinct from [`KARST_MIN_POROSITY`]'s carbonate
+/// scale. **Task 5's `0.25` was itself mismeasured** (The Witness, Task
+/// 5b): it was pinned to a p75 measured at `Geosphere::new(4)` filtered by
+/// `basement == Continental`, but the model runs at `Geosphere::new(6)` and
+/// classifies on `elevation > sea_level`. Re-measured on the correct
+/// population *before* the grain term existed, clastic land porosity was
+/// one value end to end (`p25..=p95 == 0.325`, `n=52207`) because
+/// `carbonate` is binary and `metamorphic_grade` is 0 outside an orogen —
+/// no threshold could partition it, and `0.25` shipped **69.64% of land as
+/// Aquifer**.
+///
+/// With [`GRAIN_POROSITY_GAIN`] added, clastic land porosity becomes a
+/// continuous function of crust age spanning the band `[0.416, 0.494]`
+/// (measured, `k_g = 0.40`, level 6, 4 seeds). A joint sweep of `k_g` and
+/// this threshold found `k_g = 0.40` gives the *widest* such band
+/// (`0.078`, vs. `0.059` at `k_g = 0.30` and a ceiling-hugging `0.039` at
+/// `k_g = 0.20`), so a threshold placed inside it is farthest from
+/// flipping to select everything or nothing on the next terrain change —
+/// the failure mode this whole campaign is about. `0.46` sits at **56% of
+/// that band** (mid-band, not the tidier `k_g=0.30 / thr=0.44`, which gives
+/// a cleaner-looking 8.7%/1.98% aquifer/spring split but sits at 80% of a
+/// narrower `0.059`-wide band — two hundredths of porosity from reading
+/// zero, the same edge-hugging mistake Task 4 made with `0.42` over
+/// `0.45`). Measured aquifer share at `0.46`: **16.4% of land**, a notable
+/// but non-dominant feature, with the promoted `Spring` contact (see
+/// [`Hydro::Spring`]) at 3.69%, forming lines along aquifer margins — what
+/// a spring line geologically is.
+const CLASTIC_AQUIFER_MIN_POROSITY: f64 = 0.46;
+
+/// How much loose, uncemented coarse grain contributes to `porosity` (in
+/// `assemble_material`), via `GRAIN_POROSITY_GAIN * grain * (1 -
+/// induration)`. Exists for **dynamic range, not to cross a gate**: without
+/// it, clastic land porosity is a single value (0.325) on ~90% of land, so
+/// no threshold on [`CLASTIC_AQUIFER_MIN_POROSITY`] could ever partition
+/// it. With it, porosity spans `[0.416, 0.494]` as a continuous function of
+/// crust age. Calibrated by sweep (The Witness, Task 5b) against the
+/// *width* of that band across `k_g ∈ {0.20, 0.30, 0.40}`: `0.40` gives the
+/// widest band (`0.078`), so [`CLASTIC_AQUIFER_MIN_POROSITY`] has the most
+/// room before a terrain change flips it to select everything or nothing —
+/// a retune of this value is a retune, not a cleanup (decision 0057).
+const GRAIN_POROSITY_GAIN: f64 = 0.40;
+
+/// Drainage scale for [`cave_proneness`]'s wetting term. Formerly shared
+/// with `hydrogeology`'s flowing-vs-still `Spring` gate (named
+/// `SPRING_DRAINAGE_THRESHOLD`); that gate is retired (The Witness, Task
+/// 5b) — `drainage` measures water flowing *over* a cell, but a spring is
+/// water emerging *from* one, so `hydrogeology` never needed `drainage` in
+/// the first place, and the retired gate was unreachable regardless (land
+/// drainage at production `GLOBE_LEVEL` (6) maxes at 219 against this
+/// value of 500). `Spring` is now a geometric contact promoted by
+/// `GeneratedTerrain::hydro_at`, entirely independent of this constant.
+/// This constant's sole remaining consumer is the wetting term below;
+/// value unchanged, only the name and the surviving justification.
+const CAVE_WETNESS_DRAINAGE_SCALE: f64 = 500.0;
 
 /// Void-proneness (caves/sinkholes), `[0,1]` (spec §3, negation "solid → void").
 /// Dominated by the carbonate/porosity product (dissolution needs both
@@ -318,7 +423,7 @@ const SPRING_DRAINAGE_THRESHOLD: f64 = 500.0;
 /// gates the base rate.
 /// type-audit: bare-ok(ratio: return), bare-ok(count: drainage)
 pub fn cave_proneness(buf: &MaterialBuffer, drainage: f64) -> f64 {
-    let wetting = (drainage / SPRING_DRAINAGE_THRESHOLD).min(1.0);
+    let wetting = (drainage / CAVE_WETNESS_DRAINAGE_SCALE).min(1.0);
     (buf.carbonate * buf.porosity * (0.85 + 0.15 * wetting)).clamp(0.0, 1.0)
 }
 
@@ -441,8 +546,23 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         // of elevation (the Sculpting/Ground seam) — kept identical here so
         // the buffer's axis and the globe's standalone field never diverge.
         let induration = induration_at(age, continental, boundary.map(|b| b.kind), hops);
-        // Porosity: high in carbonate (karst) and young oceanic basalt, low in shale/gneiss.
-        let porosity = (0.5 * carbonate + 0.3 * (1.0 - metamorphic_grade)).clamp(0.0, 1.0);
+        // Porosity: dissolution in carbonate (karst), packing in loose coarse
+        // grain, and recrystallisation closing pores in metamorphics. The
+        // grain term (The Witness, Task 5b) exists to give the axis DYNAMIC
+        // RANGE, not to cross any particular gate: without it, `carbonate`
+        // is binary (0.05 or 0.7-0.9) and `metamorphic_grade` is 0 outside
+        // an orogen, so clastic land porosity is *exactly* 0.325 on ~90% of
+        // land (measured at production L6: p25 through p95 all 0.325) — the
+        // axis carries almost no information and no threshold can partition
+        // it. With `GRAIN_POROSITY_GAIN * grain * (1 - induration)` added,
+        // porosity becomes a continuous function of crust age, spanning
+        // `[0.416, 0.494]` on clastic land (measured, k_g=0.40) — a
+        // threshold placed inside that band then selects old, coarse,
+        // weakly-cemented crust, which is what an aquifer geologically is.
+        let porosity = (0.5 * carbonate
+            + GRAIN_POROSITY_GAIN * grain * (1.0 - induration)
+            + 0.3 * (1.0 - metamorphic_grade))
+            .clamp(0.0, 1.0);
 
         let sediment_m = *globe.sediment_thickness.get(cell);
         let soil_depth = soil_depth_at(geo, globe, cell, sediment_m);
@@ -662,6 +782,91 @@ pub fn appearance(buf: &MaterialBuffer, rock: RockClass) -> Appearance {
     }
 }
 
+/// Mineral endmember reflectances on the kernel's band grid.
+///
+/// Four curves stand in for the mineralogy the buffer already tracks:
+/// felsic (quartz and feldspar — bright, faintly warm), mafic (pyroxene and
+/// olivine — dark and flat), carbonate (bright and flat), and iron oxide
+/// (dark in the short bands, strongly reflective in the long ones, which is
+/// the entire visual signature of rust and ochre).
+///
+/// Declared approximations. They are the reason a granite reads pale and a
+/// basalt reads dark, and the campaign's claims rest on those relations
+/// rather than on laboratory accuracy.
+mod endmembers {
+    use hornvale_kernel::color::BANDS;
+
+    /// Quartz and feldspar.
+    /// type-audit: bare-ok(ratio)
+    pub const FELSIC: [f64; BANDS] = [0.38, 0.45, 0.52, 0.56, 0.58, 0.60, 0.62, 0.63, 0.64, 0.64];
+    /// Pyroxene and olivine.
+    /// type-audit: bare-ok(ratio)
+    pub const MAFIC: [f64; BANDS] = [0.05, 0.06, 0.08, 0.09, 0.10, 0.11, 0.12, 0.12, 0.13, 0.13];
+    /// Calcite and dolomite.
+    /// type-audit: bare-ok(ratio)
+    pub const CARBONATE: [f64; BANDS] =
+        [0.55, 0.68, 0.76, 0.80, 0.82, 0.83, 0.84, 0.84, 0.85, 0.85];
+    /// Hematite and goethite — the red one.
+    /// type-audit: bare-ok(ratio)
+    pub const IRON_OXIDE: [f64; BANDS] =
+        [0.03, 0.04, 0.05, 0.06, 0.09, 0.16, 0.42, 0.58, 0.63, 0.65];
+}
+
+/// Rock classes whose iron oxide dominates their appearance. Mirrors the
+/// structure of [`appearance`]'s own `hue` match, so the two projections of
+/// the buffer cannot disagree about which rocks read red.
+fn is_iron_rich(rock: RockClass) -> bool {
+    matches!(rock, RockClass::Ironstone)
+}
+
+/// Rock classes whose appearance is dominated by dark mafic minerals
+/// regardless of the buffer's silica term. Mirrors [`appearance`]'s `hue`
+/// match for the same reason as [`is_iron_rich`].
+fn is_mafic_dominated(rock: RockClass) -> bool {
+    matches!(rock, RockClass::Basalt | RockClass::Gabbro)
+}
+
+/// Project the material buffer to a reflectance **mixture** — the second
+/// projection of the same axes [`appearance`] projects (spec "The Pigment"
+/// §5.1). No new data: `silica`, `carbonate` and the rock class are all
+/// already stored.
+///
+/// Returns a [`Mixture`] rather than a [`Reflectance`] so a later texture
+/// layer can arrange the components spatially instead of re-deriving them.
+/// Call [`Mixture::integrate`] for the single reflectance.
+pub fn reflectance(buf: &MaterialBuffer, rock: RockClass) -> Mixture {
+    let carbonate = buf.carbonate.clamp(0.0, 1.0);
+    let silicate_share = 1.0 - carbonate;
+
+    // Within the silicate fraction, silica splits felsic from mafic —
+    // except where the rock class says the mafic minerals dominate anyway.
+    let felsic_fraction = if is_mafic_dominated(rock) {
+        0.1
+    } else {
+        buf.silica.clamp(0.0, 1.0)
+    };
+
+    let iron = if is_iron_rich(rock) { 0.55 } else { 0.03 };
+    let remaining = silicate_share * (1.0 - iron);
+
+    let components = vec![
+        Reflectance::new(endmembers::FELSIC).expect("authored endmember is within [0, 1]"),
+        Reflectance::new(endmembers::MAFIC).expect("authored endmember is within [0, 1]"),
+        Reflectance::new(endmembers::CARBONATE).expect("authored endmember is within [0, 1]"),
+        Reflectance::new(endmembers::IRON_OXIDE).expect("authored endmember is within [0, 1]"),
+    ];
+    let weights = vec![
+        remaining * felsic_fraction,
+        remaining * (1.0 - felsic_fraction),
+        carbonate,
+        silicate_share * iron,
+    ];
+    // Every weight is non-negative and, since `carbonate` and
+    // `silicate_share` sum to 1 with `iron < 1`, the total is strictly
+    // positive for every buffer.
+    Mixture::new(components, weights).expect("weights are non-negative with a positive total")
+}
+
 /// Mineral prospectivity (spec §3, round 1 distribution). The deposits
 /// campaign turns this field into point bodies; here it is a probability.
 /// type-audit: bare-ok(ratio: return), bare-ok(ratio: unrest)
@@ -699,6 +904,7 @@ mod tests {
     use super::*;
     use crate::globe::generate;
     use crate::pins::TerrainPins;
+    use hornvale_kernel::color::BANDS;
     use hornvale_kernel::{Geosphere, Seed};
 
     /// A mid-valued buffer for exercising `classify_rock` in isolation.
@@ -928,32 +1134,80 @@ mod tests {
 
     #[test]
     fn hydrogeology_reads_porosity_and_carbonate() {
+        // NOTE: this buffer is hand-built and synthetic — it does not
+        // certify that the real derivation can reach these branches (that
+        // was F5's defect: the branches below were unreachable from
+        // `assemble_material` for a thousand census seeds even though these
+        // pure-function tests were green). See
+        // `a_real_world_produces_a_porous_non_carbonate_cell` for the
+        // world-derived check, and `hydro_witness.rs` (Task 6) for the
+        // cross-seed reachability guard. `hydrogeology` is pointwise matrix
+        // petrophysics only (The Witness, Task 5b) — it never returns
+        // `Spring`; that promotion is a geometric contact tested in
+        // `provider.rs`'s `promote_to_spring_only_touches_aquifer_with_a_lower_non_aquifer_neighbor`.
         // High carbonate + porosity -> karst; cave-proneness high.
         let mut b = flat_buffer();
         b.carbonate = 0.8;
         b.porosity = 0.8;
-        assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Karst);
+        assert_eq!(hydrogeology(&b, false), Hydro::Karst);
         assert!(cave_proneness(&b, 10.0) > 0.5);
-        // Porous non-carbonate + flow -> aquifer.
+        // Porous non-carbonate -> aquifer.
         let mut b = flat_buffer();
         b.porosity = 0.7;
         b.carbonate = 0.05;
-        assert_eq!(hydrogeology(&b, 200.0, false), Hydro::Aquifer);
+        assert_eq!(hydrogeology(&b, false), Hydro::Aquifer);
         // Impermeable -> aquitard, near-zero cave-proneness.
         let mut b = flat_buffer();
         b.porosity = 0.05;
-        assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Aquitard);
+        assert_eq!(hydrogeology(&b, false), Hydro::Aquitard);
         assert!(cave_proneness(&b, 10.0) < 0.1);
     }
 
     #[test]
-    fn high_porosity_with_flow_and_low_carbonate_reads_as_spring() {
-        // Porous, non-carbonate (so not Karst), with drainage above the
-        // spring threshold -> Spring rather than the still-water Aquifer.
-        let mut b = flat_buffer();
-        b.porosity = 0.7;
-        b.carbonate = 0.05;
-        assert_eq!(hydrogeology(&b, 600.0, false), Hydro::Spring);
+    fn a_real_world_produces_a_porous_non_carbonate_cell_in_bounded_shares() {
+        // The defect this closes has two halves, and Task 5 shipped only a
+        // fix for the first: `hydrogeology_reads_porosity_and_carbonate`
+        // passed on hand-built `MaterialBuffer`s the real derivation could
+        // not emit — `porosity` was gated at a carbonate-scale `0.5`, but
+        // the derivation's clastic (non-carbonate) porosity maxed at 0.325
+        // (The Witness, F5), so no land cell on any seed could ever clear
+        // it. Fixing that (a floor: `Aquifer`/`Spring` become reachable) is
+        // NOT sufficient — Task 5's own fix, measured on the wrong
+        // population, made 69.64% of land Aquifer, and a floor-only test
+        // ("found >= 1") is exactly as green on that world as on this one.
+        // The MISSING CEILING is why 69.64% shipped without reddening
+        // anything (The Witness, Task 5b). This test therefore asserts a
+        // floor AND a ceiling on both variants, at the production mesh
+        // level (`GLOBE_LEVEL`, 6) real worlds actually build at — not a
+        // golden (the exact share moves with terrain, seed, and mesh), but
+        // a band wide enough to hold and tight enough to catch "ate the
+        // world" or "regressed to unreachable." Measured at k_g=0.40,
+        // thr=0.46 (The Witness, Task 5b): aquifer ~16.4% of land, spring
+        // ~3.69% of land, forming lines along aquifer margins.
+        let geo = Geosphere::new(6);
+        let outcome = generate(Seed(0), &geo, &TerrainPins::default()).unwrap();
+        let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
+        let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        let land_count = land.len() as f64;
+        let aquifer = land
+            .iter()
+            .filter(|&&c| terrain.hydro_at(c) == Hydro::Aquifer)
+            .count() as f64;
+        let spring = land
+            .iter()
+            .filter(|&&c| terrain.hydro_at(c) == Hydro::Spring)
+            .count() as f64;
+        let aquifer_share = aquifer / land_count;
+        let spring_share = spring / land_count;
+        assert!(
+            (0.05..=0.35).contains(&aquifer_share),
+            "aquifer share {aquifer_share:.4} outside the loose band [0.05, 0.35] \
+             (0 means the branch regressed to unreachable; near 1 means it ate the world)"
+        );
+        assert!(
+            (0.005..=0.08).contains(&spring_share),
+            "spring share {spring_share:.4} outside the loose band [0.005, 0.08]"
+        );
     }
 
     #[test]
@@ -1003,5 +1257,131 @@ mod tests {
             geo.cells()
                 .any(|c| lith.get(c).margin != MarginPolarity::Oceanic)
         );
+    }
+
+    // --- The reflectance projection (spec "The Pigment" §5.1) ---
+    //
+    // These reuse `flat_buffer()` above. `MaterialBuffer` is `Copy` and does
+    // NOT derive `Default`, so struct-update syntax against `flat_buffer()`
+    // is the only construction that compiles.
+
+    #[test]
+    fn a_felsic_rock_is_brighter_than_a_mafic_one() {
+        let felsic = MaterialBuffer {
+            silica: 0.95,
+            ..flat_buffer()
+        };
+        let mafic = MaterialBuffer {
+            silica: 0.05,
+            ..flat_buffer()
+        };
+        let f = reflectance(&felsic, RockClass::Granite).integrate();
+        let m = reflectance(&mafic, RockClass::Basalt).integrate();
+        let f_mean: f64 = f.get().iter().sum::<f64>() / BANDS as f64;
+        let m_mean: f64 = m.get().iter().sum::<f64>() / BANDS as f64;
+        assert!(
+            f_mean > m_mean,
+            "felsic {f_mean} was not brighter than mafic {m_mean}"
+        );
+    }
+
+    #[test]
+    fn silica_alone_brightens_the_rock() {
+        // The companion to the test above, holding the rock class FIXED so
+        // the buffer's silica axis is the only thing that moved. Without
+        // this, `a_felsic_rock_is_brighter_than_a_mafic_one` can be
+        // satisfied entirely by `is_mafic_dominated` and the projection
+        // could ignore `buf.silica` outright.
+        let quartz_rich = MaterialBuffer {
+            silica: 0.95,
+            ..flat_buffer()
+        };
+        let quartz_poor = MaterialBuffer {
+            silica: 0.05,
+            ..flat_buffer()
+        };
+        let hi = reflectance(&quartz_rich, RockClass::Granite).integrate();
+        let lo = reflectance(&quartz_poor, RockClass::Granite).integrate();
+        let hi_mean: f64 = hi.get().iter().sum::<f64>() / BANDS as f64;
+        let lo_mean: f64 = lo.get().iter().sum::<f64>() / BANDS as f64;
+        assert!(
+            hi_mean > lo_mean,
+            "silica 0.95 gave {hi_mean}, silica 0.05 gave {lo_mean}"
+        );
+    }
+
+    #[test]
+    fn ironstone_leans_long_wavelength() {
+        let buf = flat_buffer();
+        let iron = reflectance(&buf, RockClass::Ironstone).integrate();
+        let plain = reflectance(&buf, RockClass::Sandstone).integrate();
+        // Long band over short band: iron oxide's whole visual signature.
+        let iron_ratio = iron.get()[8] / iron.get()[2];
+        let plain_ratio = plain.get()[8] / plain.get()[2];
+        assert!(
+            iron_ratio > plain_ratio,
+            "ironstone long/short = {iron_ratio}, sandstone = {plain_ratio}"
+        );
+    }
+
+    #[test]
+    fn carbonate_brightens_the_whole_curve() {
+        let none = MaterialBuffer {
+            carbonate: 0.0,
+            ..flat_buffer()
+        };
+        let lots = MaterialBuffer {
+            carbonate: 0.9,
+            ..flat_buffer()
+        };
+        let a = reflectance(&none, RockClass::Sandstone).integrate();
+        let b = reflectance(&lots, RockClass::ReefLimestone).integrate();
+        for band in 0..BANDS {
+            assert!(
+                b.get()[band] >= a.get()[band],
+                "band {band}: carbonate darkened the rock"
+            );
+        }
+    }
+
+    #[test]
+    fn every_reflectance_is_physically_valid_across_the_buffer_space() {
+        // Reflectance::new rejects out-of-range bands, so a panic here is a
+        // real energy-conservation break, not a test artifact.
+        for silica in [0.0, 0.5, 1.0] {
+            for carbonate in [0.0, 0.5, 1.0] {
+                for rock in [RockClass::Granite, RockClass::Basalt, RockClass::Ironstone] {
+                    let buf = MaterialBuffer {
+                        silica,
+                        carbonate,
+                        ..flat_buffer()
+                    };
+                    let r = reflectance(&buf, rock).integrate();
+                    for band in 0..BANDS {
+                        assert!((0.0..=1.0).contains(&r.get()[band]));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_mixture_keeps_its_components_for_the_texture_layer() {
+        // The producer must not collapse early: a later texture layer needs
+        // the components to arrange them spatially. So assert on the
+        // components themselves, not on the integrated result — an
+        // integrate-only assertion would pass for a `Mixture` that had
+        // already thrown its endmembers away.
+        let m = reflectance(&flat_buffer(), RockClass::Granite);
+        assert_eq!(m.components().len(), 4, "the four mineral endmembers");
+        assert_eq!(m.weights().len(), m.components().len());
+        // Weights come back unnormalized, and a flat buffer with no
+        // carbonate leaves the two silicate endmembers carrying the rock.
+        assert!(
+            m.weights()[0] > 0.0 && m.weights()[1] > 0.0,
+            "felsic and mafic both present: {:?}",
+            m.weights()
+        );
+        assert_eq!(m.weights()[2], 0.0, "flat_buffer has no carbonate");
     }
 }

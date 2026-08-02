@@ -1,21 +1,21 @@
 # The Peoples of Seed 42
 
-The land holds 250 settlement(s).
-The chief bugbear settlement, Gootoo, holds 110 souls amid tropical-rainforest.
-The chief gnoll settlement, Pzofdzhaxnshavnsa, holds 112 souls amid tropical-seasonal-forest.
-The chief goblin settlement, Beobee, holds 88 souls amid tropical-seasonal-forest.
+The land holds 278 settlement(s).
+The chief bugbear settlement, Goodo, holds 110 souls amid tropical-rainforest.
+The chief gnoll settlement, Pzopdzhaxzngavsma, holds 112 souls amid tropical-seasonal-forest.
+The chief goblin settlement, Beobee, holds 89 souls amid tropical-seasonal-forest.
 The chief hobgoblin settlement, Geoge, holds 82 souls amid tropical-seasonal-forest.
-The chief kobold settlement, Rororororro, holds 117 souls amid tropical-rainforest.
+The chief kobold settlement, Raxarora, holds 117 souls amid tropical-rainforest.
 
 ```text
                                                                         
-                   oooooooooo                  oooo                     
-                         ooooo             ooooo@o                      
+                    ooooooooo                                           
+                         ooooo               o o@                       
                                                                         
                                                                         
+                                                    o                   
                                                    oo                   
-                                                  ooo                   
-                                                  ooo                   
+                                                   oo                   
                                                                         
                                                                         
                                                                         
@@ -23,13 +23,13 @@ The chief kobold settlement, Rororororro, holds 117 souls amid tropical-rainfore
                                                                         
                                                                         
                    oo                                                   
-                   oo                                                   
+                   ooo                                                  
                                                  o                      
-                                                 oo                     
+                                                                        
                                                                         
                    ooooo                                                
-                   ooo     o                                            
-                                                                        
+                    ooo ooooo                                           
+                       ooooo                                            
                                                                         
                                                                         
 ```

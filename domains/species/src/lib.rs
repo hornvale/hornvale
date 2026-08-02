@@ -2213,6 +2213,71 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 /// Like climate's biome classes, these are taxonomic class labels no language
 /// pack names yet, so each lexeme edge is a `Gap`; species emits no phenomenon
 /// kind for them, so the percept edge is a `Gap`; and cognition voids to the
+/// Every `*-kind` concept the registry holds, as `(concept id, gloss)`.
+///
+/// A `const` rather than literals inside the registration loop so that
+/// [`kind_concept`] and [`register_concepts`] read the SAME roster — a lookup
+/// built from its own copy of this list would silently answer for a kind the
+/// registry never registered, which is the one failure an authored table has
+/// (`cli/tests/accession.rs` makes the same argument for `EPOCH_COHORTS`).
+///
+/// Glosses are authored, not derived from the id, so `giant-elk` reads as
+/// "a giant elk" and not as its own key.
+/// type-audit: bare-ok(identifier-text)
+pub const KIND_CONCEPTS: &[(&str, &str)] = &[
+    ("goblin-kind", "a goblin"),
+    ("kobold-kind", "a kobold"),
+    ("hobgoblin-kind", "a hobgoblin"),
+    ("bugbear-kind", "a bugbear"),
+    ("treant-kind", "a treant"),
+    ("twig-blight-kind", "a twig blight"),
+    ("giant-elk-kind", "a giant elk"),
+    ("woolly-mammoth-kind", "a woolly mammoth"),
+    ("giant-goat-kind", "a giant goat"),
+    ("otyugh-kind", "an otyugh"),
+    ("xorn-kind", "a xorn"),
+    ("rust-monster-kind", "a rust monster"),
+    ("white-dragon-kind", "a white dragon"),
+    ("red-dragon-kind", "a red dragon"),
+    ("black-dragon-kind", "a black dragon"),
+    ("owlbear-kind", "an owlbear"),
+    // The Vacancy's thirteen. The Actants' rule — every kind the biosphere
+    // registry holds owes a name, not only the speaking peoples — is what
+    // makes these mandatory rather than optional, and the two campaigns
+    // arrived at the same seam from opposite directions within a week.
+    // Glosses are authored, not derived from the id, so `giant-scorpion`
+    // reads as "a giant scorpion" and not as its own key.
+    ("gnoll-kind", "a gnoll"),
+    ("giant-scorpion-kind", "a giant scorpion"),
+    ("giant-hyena-kind", "a giant hyena"),
+    ("dire-wolf-kind", "a dire wolf"),
+    ("rhinoceros-kind", "a rhinoceros"),
+    ("giant-constrictor-snake-kind", "a giant constrictor snake"),
+    ("carrion-crawler-kind", "a carrion crawler"),
+    ("shrieker-kind", "a shrieker"),
+    ("reef-shark-kind", "a reef shark"),
+    ("giant-octopus-kind", "a giant octopus"),
+    ("killer-whale-kind", "a killer whale"),
+    ("giant-squid-kind", "a giant squid"),
+    ("giant-crocodile-kind", "a giant crocodile"),
+];
+
+/// The `*-kind` concept naming `species`, or `None` when the species has no
+/// registered kind concept.
+///
+/// The Watershed, Item 5: a settlement raised on another people's ruin is
+/// named for THEM, so the namer needs a people's concept as a
+/// `&'static str` — `settlement_site_concepts` returns `Vec<&'static str>`
+/// and cannot mint one. Reads [`KIND_CONCEPTS`], so it can only ever return a
+/// concept the registry actually registered.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: return)
+pub fn kind_concept(species: &str) -> Option<&'static str> {
+    KIND_CONCEPTS
+        .iter()
+        .find(|(id, _)| id.strip_suffix("-kind") == Some(species))
+        .map(|(id, _)| *id)
+}
+
 /// future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(SPECIES_NAME, true, "a species entity's name")?;
@@ -2259,43 +2324,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     // The Menagerie's twelve fauna went four campaigns unnamed. Glosses are
     // authored rather than derived from the id, so a `giant-elk` reads as "a
     // giant elk" and not as its own key.
-    for (name, doc) in [
-        ("goblin-kind", "a goblin"),
-        ("kobold-kind", "a kobold"),
-        ("hobgoblin-kind", "a hobgoblin"),
-        ("bugbear-kind", "a bugbear"),
-        ("treant-kind", "a treant"),
-        ("twig-blight-kind", "a twig blight"),
-        ("giant-elk-kind", "a giant elk"),
-        ("woolly-mammoth-kind", "a woolly mammoth"),
-        ("giant-goat-kind", "a giant goat"),
-        ("otyugh-kind", "an otyugh"),
-        ("xorn-kind", "a xorn"),
-        ("rust-monster-kind", "a rust monster"),
-        ("white-dragon-kind", "a white dragon"),
-        ("red-dragon-kind", "a red dragon"),
-        ("black-dragon-kind", "a black dragon"),
-        ("owlbear-kind", "an owlbear"),
-        // The Vacancy's thirteen. The Actants' rule — every kind the biosphere
-        // registry holds owes a name, not only the speaking peoples — is what
-        // makes these mandatory rather than optional, and the two campaigns
-        // arrived at the same seam from opposite directions within a week.
-        // Glosses are authored, not derived from the id, so `giant-scorpion`
-        // reads as "a giant scorpion" and not as its own key.
-        ("gnoll-kind", "a gnoll"),
-        ("giant-scorpion-kind", "a giant scorpion"),
-        ("giant-hyena-kind", "a giant hyena"),
-        ("dire-wolf-kind", "a dire wolf"),
-        ("rhinoceros-kind", "a rhinoceros"),
-        ("giant-constrictor-snake-kind", "a giant constrictor snake"),
-        ("carrion-crawler-kind", "a carrion crawler"),
-        ("shrieker-kind", "a shrieker"),
-        ("reef-shark-kind", "a reef shark"),
-        ("giant-octopus-kind", "a giant octopus"),
-        ("killer-whale-kind", "a killer whale"),
-        ("giant-squid-kind", "a giant squid"),
-        ("giant-crocodile-kind", "a giant crocodile"),
-    ] {
+    for (name, doc) in KIND_CONCEPTS {
         registry.register_manifest(Manifest {
             concept: ConceptDef {
                 name: name.to_string(),

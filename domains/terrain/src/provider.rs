@@ -41,6 +41,33 @@ const PREHUMAN_SCAR_OCTAVES: u32 = 4;
 /// type-audit: bare-ok(ratio)
 const PREHUMAN_SCAR_THRESHOLD: f64 = 0.30;
 
+/// Promote a pointwise `Aquifer` reading to `Spring`: `hydrogeology`
+/// classifies one cell's rock, but a spring is not a property of a single
+/// cell, it is a property of a *contact* — "where an aquifer meets the
+/// surface with flow" (The Witness, Task 5b; decision 0085's precedent for
+/// splitting durable pointwise petrophysics from derived geometry). Any
+/// other pointwise reading passes through unchanged. Free of `Geosphere`/
+/// `TectonicGlobe` so it is unit-testable on a hand-built neighbourhood,
+/// mirroring the pattern `hydrogeology` itself already uses.
+fn promote_to_spring(
+    base: crate::lithology::Hydro,
+    cell_elevation: ReferenceElevation,
+    neighbors: impl Iterator<Item = (crate::lithology::Hydro, ReferenceElevation)>,
+) -> crate::lithology::Hydro {
+    if base != crate::lithology::Hydro::Aquifer {
+        return base;
+    }
+    let descending_contact = neighbors.into_iter().any(|(nb_hydro, nb_elevation)| {
+        nb_hydro != crate::lithology::Hydro::Aquifer
+            && nb_elevation.total_cmp(cell_elevation) == std::cmp::Ordering::Less
+    });
+    if descending_contact {
+        crate::lithology::Hydro::Spring
+    } else {
+        crate::lithology::Hydro::Aquifer
+    }
+}
+
 impl GeneratedTerrain {
     /// Wrap a genesis outcome with the Geosphere it was generated over.
     /// Panics (fail fast) if the mesh and the globe disagree on cell count —
@@ -210,13 +237,21 @@ impl GeneratedTerrain {
         *self.globe.carve_delta_m.get(id)
     }
 
-    /// The hydrogeologic class at a cell (The Ground, spec §3).
+    /// The hydrogeologic class at a cell (The Ground, spec §3). `hydrogeology`
+    /// itself is pointwise matrix petrophysics and never returns `Spring`
+    /// (The Witness, Task 5b); this is the one place that promotes an
+    /// `Aquifer` reading to `Spring` when the cell sits at a descending
+    /// contact — see [`promote_to_spring`] and decision 0085 (pointwise
+    /// petrophysics is the durable signal, geometric promotion is derived
+    /// from it, computed here where the geosphere is in hand).
     pub fn hydro_at(&self, id: CellId) -> crate::lithology::Hydro {
-        crate::lithology::hydrogeology(
-            &self.material_at(id),
-            self.drainage_at(id),
-            self.is_ocean(id),
-        )
+        let base = crate::lithology::hydrogeology(&self.material_at(id), self.is_ocean(id));
+        let cell_elevation = self.elevation_at(id);
+        let neighbors = self.geosphere.neighbors(id).iter().map(|&nb| {
+            let nb_hydro = crate::lithology::hydrogeology(&self.material_at(nb), self.is_ocean(nb));
+            (nb_hydro, self.elevation_at(nb))
+        });
+        promote_to_spring(base, cell_elevation, neighbors)
     }
 
     /// Cave/karst void-proneness at a cell, `[0,1]` (The Ground, spec §3).
@@ -576,5 +611,50 @@ mod tests {
                 "cell {cell:?} disagrees with the direct ancient-crust + noise gate"
             );
         }
+    }
+
+    #[test]
+    fn promote_to_spring_only_touches_aquifer_with_a_lower_non_aquifer_neighbor() {
+        use crate::lithology::Hydro;
+        let hi = ReferenceElevation::new(100.0).unwrap();
+        let lo = ReferenceElevation::new(50.0).unwrap();
+
+        // Not an Aquifer to begin with -> passed through unchanged,
+        // regardless of the neighborhood.
+        assert_eq!(
+            promote_to_spring(Hydro::Karst, hi, [(Hydro::Runoff, lo)].into_iter()),
+            Hydro::Karst
+        );
+
+        // Aquifer with no neighbors at all -> stays Aquifer (still water).
+        assert_eq!(
+            promote_to_spring(Hydro::Aquifer, hi, std::iter::empty()),
+            Hydro::Aquifer
+        );
+
+        // Aquifer surrounded only by higher or equal non-aquifer neighbors
+        // -> no descending contact, stays Aquifer.
+        assert_eq!(
+            promote_to_spring(
+                Hydro::Aquifer,
+                hi,
+                [(Hydro::Runoff, hi), (Hydro::Aquitard, hi)].into_iter()
+            ),
+            Hydro::Aquifer
+        );
+
+        // Aquifer with a LOWER Aquifer neighbor only -> not a contact
+        // (both sides are the same rock type), stays Aquifer.
+        assert_eq!(
+            promote_to_spring(Hydro::Aquifer, hi, [(Hydro::Aquifer, lo)].into_iter()),
+            Hydro::Aquifer
+        );
+
+        // Aquifer with a lower NON-aquifer neighbor -> the descending
+        // contact a spring geologically is.
+        assert_eq!(
+            promote_to_spring(Hydro::Aquifer, hi, [(Hydro::Runoff, lo)].into_iter()),
+            Hydro::Spring
+        );
     }
 }

@@ -509,7 +509,7 @@ fn every_standing_relation_names_two_living_communities() {
     let alive: BTreeMap<_, _> = h
         .records
         .iter()
-        .map(|r| (r.community, r.is_alive()))
+        .map(|r| (r.community, r.core.is_alive()))
         .collect();
     assert!(
         h.tribute.len() >= MIN_STANDING_RELATIONS,
@@ -740,7 +740,11 @@ fn the_strategy_family_is_various() {
     let mut ages: BTreeMap<KindId, Vec<f64>> = BTreeMap::new();
     for s in SHAPE_SAMPLE {
         let h = history(s);
-        let people: BTreeMap<_, _> = h.records.iter().map(|r| (r.community, r.people)).collect();
+        let people: BTreeMap<_, _> = h
+            .records
+            .iter()
+            .map(|r| (r.community, r.core.people))
+            .collect();
         for t in &h.tribute {
             let p = *people.get(&t.patron).expect("a patron has a record");
             ages.entry(p).or_default().push(h.now - t.since);

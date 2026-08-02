@@ -3,7 +3,7 @@
 //! its gloss, its modern word (roman + IPA), its proto-form, and a one-line
 //! derivation; or, for a concept with no word, the gap and its recountable
 //! reason. Sibling of `phonology`, but over a world's own lexicon
-//! ([`hornvale_worldgen::lexicon_of`]) rather than a fixed reference seed:
+//! ([`hornvale_worldgen::lexicon_from`]) rather than a fixed reference seed:
 //! exposure (and so every gap) depends on what a world actually settled.
 #![warn(missing_docs)]
 
@@ -16,9 +16,14 @@ use std::collections::BTreeMap;
 /// reference section, over `world`'s own generated lexicon (one row per
 /// registered concept, so this stays exhaustive as the concept inventory
 /// grows). Errors when `world` can't rebuild a species' phonology or
-/// exposure (the same failure modes [`world_builder::lexicon_of`] surfaces).
+/// exposure (the same failure modes [`world_builder::lexicon_from`] surfaces).
 /// type-audit: bare-ok(artifact: return)
+// Named construction site (decision 0092): a CLI handler entry point —
+// sculpts/fits once for its own report.
+#[allow(clippy::disallowed_methods)]
 pub fn render_dictionary(world: &World) -> Result<String, String> {
+    let terrain = world_builder::terrain_of(world).map_err(|e| e.to_string())?;
+    let climate = world_builder::climate_from(world, &terrain).map_err(|e| e.to_string())?;
     let mut doc = String::new();
     doc.push_str(
         "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale dictionary --world <PATH>`. -->\n\n",
@@ -36,10 +41,11 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
     // Lexicons are a speaking-peoples concept: iterate the articulation
     // registry, keyed by exactly the speaking peoples. Since The Eremite the
     // psyche registry is a SUPERSET (the dragons carry a mind but no speech),
-    // so articulation — not psyche — is the speaker boundary before `lexicon_of`.
+    // so articulation — not psyche — is the speaker boundary before `lexicon_from`.
     let mut lexicons: BTreeMap<&str, Lexicon> = BTreeMap::new();
     for species in hornvale_language::articulation_registry().ids() {
-        let lexicon = world_builder::lexicon_of(world, species.0).map_err(|e| e.to_string())?;
+        let lexicon = world_builder::lexicon_from(world, species.0, &terrain, &climate)
+            .map_err(|e| e.to_string())?;
         lexicons.insert(species.0, lexicon);
     }
 
@@ -278,6 +284,10 @@ fn capitalize(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    // Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    // points directly to build its own world state, once per test — the
+    // sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
@@ -300,14 +310,16 @@ mod tests {
         let doc = render_dictionary(&world).unwrap();
         assert!(doc.contains("<!-- GENERATED FILE"));
         assert!(doc.contains("| Concept | Gloss | Word | IPA | Proto | Derivation |"));
-        // peopled-only: fauna never speak, so `lexicon_of` is undefined for
+        let terrain = world_builder::terrain_of(&world).unwrap();
+        let climate = world_builder::climate_from(&world, &terrain).unwrap();
+        // peopled-only: fauna never speak, so `lexicon_from` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
         for species in hornvale_language::articulation_registry()
             .ids()
             .map(|k| k.0)
         {
             assert!(doc.contains(&capitalize(species)), "missing {species}");
-            let lexicon = world_builder::lexicon_of(&world, species).unwrap();
+            let lexicon = world_builder::lexicon_from(&world, species, &terrain, &climate).unwrap();
             for (concept, _) in lexicon.entries() {
                 assert!(
                     doc.contains(&format!("`{concept}`")),
@@ -323,13 +335,15 @@ mod tests {
         let mut saw_root = false;
         let mut saw_compound = false;
         let mut saw_gap = false;
-        // peopled-only: fauna never speak, so `lexicon_of` is undefined for
+        let terrain = world_builder::terrain_of(&world).unwrap();
+        let climate = world_builder::climate_from(&world, &terrain).unwrap();
+        // peopled-only: fauna never speak, so `lexicon_from` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
         for species in hornvale_language::articulation_registry()
             .ids()
             .map(|k| k.0)
         {
-            let lexicon = world_builder::lexicon_of(&world, species).unwrap();
+            let lexicon = world_builder::lexicon_from(&world, species, &terrain, &climate).unwrap();
             for (_, entry) in lexicon.entries() {
                 match entry {
                     LexEntry::Root { .. } => saw_root = true,
@@ -373,9 +387,12 @@ mod tests {
             "missing the goblinoid family subsection"
         );
 
-        let goblin = world_builder::lexicon_of(&world, "goblin").unwrap();
-        let hobgoblin = world_builder::lexicon_of(&world, "hobgoblin").unwrap();
-        let bugbear = world_builder::lexicon_of(&world, "bugbear").unwrap();
+        let terrain = world_builder::terrain_of(&world).unwrap();
+        let climate = world_builder::climate_from(&world, &terrain).unwrap();
+        let goblin = world_builder::lexicon_from(&world, "goblin", &terrain, &climate).unwrap();
+        let hobgoblin =
+            world_builder::lexicon_from(&world, "hobgoblin", &terrain, &climate).unwrap();
+        let bugbear = world_builder::lexicon_from(&world, "bugbear", &terrain, &climate).unwrap();
         let shared_root = goblin
             .entries()
             .find(|(concept, entry)| {
@@ -408,13 +425,15 @@ mod tests {
     #[test]
     fn word_line_reads_the_same_as_the_dictionary_row_for_every_kind_of_entry() {
         let world = reference_world();
-        // peopled-only: fauna never speak, so `lexicon_of` is undefined for
+        let terrain = world_builder::terrain_of(&world).unwrap();
+        let climate = world_builder::climate_from(&world, &terrain).unwrap();
+        // peopled-only: fauna never speak, so `lexicon_from` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
         for species in hornvale_language::articulation_registry()
             .ids()
             .map(|k| k.0)
         {
-            let lexicon = world_builder::lexicon_of(&world, species).unwrap();
+            let lexicon = world_builder::lexicon_from(&world, species, &terrain, &climate).unwrap();
             for (_, entry) in lexicon.entries() {
                 let line = word_line(entry);
                 match entry {

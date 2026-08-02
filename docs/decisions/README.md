@@ -129,6 +129,11 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0087](0087-a-benchmarks-timings-are-a-record-not-a-golden.md) | A benchmark's timings are a record, not a golden | Accepted |
 | [0088](0088-the-suite-watches-its-own-clock.md) | The suite watches its own clock — a failing test, not a dashboard | Accepted |
 | [0089](0089-an-epoch-freezes-when-it-can-be-stamped-on-a-saved-world.md) | An epoch freezes when a world saved from `main` can carry it (refines 0006) | Accepted |
-| [0090](0090-the-canonical-host-is-audited-not-assumed.md) | The canonical host is audited, not assumed | Accepted |
-| [0091](0091-diversity-is-terminal-and-rubberbanding-is-multi-axis.md) | Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap | Accepted |
-| [0092](0092-assert-the-robust-half-measure-the-fragile-half.md) | Assert the robust half in the gate; measure the fragile half in the census | Accepted |
+| [0090](0090-the-canonical-host-is-audited-not-assumed.md) | The canonical host is audited, not assumed — and the audit came back clean | Accepted |
+| [0091](0091-glibc-does-not-explain-it-and-the-machine-does-not-matter.md) | glibc does not explain 0063, and the machine does not matter | Accepted |
+| [0092](0092-derivation-at-named-sites.md) | Derivation happens at named construction sites; readouts take artifacts | Accepted |
+| [0093](0093-seed-hunting-is-not-a-test-mechanism.md) | Seed-hunting is not a test mechanism | Accepted |
+| [0094](0094-a-deliberate-duplicate-shares-its-roster-never-its-derivation.md) | A deliberate duplicate shares its *roster*, never its *derivation* | Accepted |
+| [0095](0095-a-corpus-is-an-instrument-never-a-standard.md) | A trope corpus is a provenance-stamped instrument, never a standard | Accepted |
+| [0096](0096-diversity-is-terminal-and-rubberbanding-is-multi-axis.md) | Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap | Accepted |
+| [0097](0097-assert-the-robust-half-measure-the-fragile-half.md) | Assert the robust half in the gate; measure the fragile half in the census | Accepted |

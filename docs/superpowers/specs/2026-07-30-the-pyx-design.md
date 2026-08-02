@@ -307,6 +307,13 @@ extension, are wrong about what that rebuild can establish — see §7.
   representable, so the hypothesis requires a *non-conforming* libm and was
   always the best-localized story rather than a likely one.
 
+  **Settled 2026-07-30 by The Twin (decision 0091): the hypothesis is
+  FALSIFIED.** The requirement named above — two x86_64 Linux *hosts* — was
+  itself wrong; it needed two x86_64 Linux *glibcs*, and `rust:1.96.1` carries
+  2.41 against lefford's 2.36, so one machine sufficed and no cluster was
+  involved. With the flag off (verified: 147 `roundsd` with it, 0 without),
+  both glibcs produced byte-identical worlds.
+
 ## 8. Definition of Done
 
 - [ ] L0, L1, L2 run; all evidence files retained.

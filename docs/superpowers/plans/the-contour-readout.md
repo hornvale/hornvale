@@ -264,7 +264,7 @@ re-adjudication.
 > If M3 does not move and M2 does not move, the conclusion on the record
 > is: a second contest axis, uncorrelated with the first and entering at
 > the decision point, is not sufficient to hold diversity open in this
-> world. That is a real finding about 0091 clause 1's chosen mechanism, and
+> world. That is a real finding about 0096 clause 1's chosen mechanism, and
 > it would send the sequence back to design rather than forward to The
 > Appraisal. It is not a reason to add a third mechanism inside this
 > campaign.
@@ -276,7 +276,7 @@ percent of baseline, no consistent tail-heaviness signal). **§4.3's null
 therefore obtains, and its stated conclusion is this readout's headline: a
 second contest axis, uncorrelated with the first and entering at the
 decision point, is not sufficient to hold diversity open in this world.**
-This is a finding about decision 0091 clause 1's chosen mechanism, sends
+This is a finding about decision 0096 clause 1's chosen mechanism, sends
 the sequence back to design rather than forward to The Appraisal, and is
 not a reason to add a third mechanism inside this campaign.
 
@@ -401,7 +401,7 @@ Only the count was registered. The effective-diversity half was never built —
 though `domains/demography/src/byproducts.rs::strife` already computes exactly
 that reading, and `coexist.rs` documents it at ≈2.4 in space at β = 2.0.
 
-**A count measures presence; decision 0091 is about diversity.** A world with
+**A count measures presence; decision 0096 is about diversity.** A world with
 five peoples where one holds 95% of everything is monoculture with survivors,
 and no count can tell those apart. The metric with headroom was specified,
 exists in the codebase, and was not wired up — and neither the Task 4 brief nor

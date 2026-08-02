@@ -32,9 +32,12 @@ fn world() -> hornvale_kernel::World {
 /// A stale label here fails LOUDLY BUT MISLEADINGLY: `provoke` finds no such
 /// NPC, so nothing fires and every downstream count reads 0, which looks like
 /// a behavioural regression rather than a renamed target. It has now done so
-/// twice. If these tests fail with `marks 0 vs 3` or `hostility 0 vs 1`,
-/// check this constant against `npcs` BEFORE suspecting the grievance fold.
-const GRIEVANCE_NPC: &str = "bugbear of Gootoogotoodaoka";
+/// three times — most recently at F7 (The Witness, 2026-07-30), which gates
+/// `Tonogenesis` on a prior merger and so reseeds every cascade:
+/// `Gootoogotoodaoka` -> `Goodogododaga`. If these tests fail with `marks 0
+/// vs 3` or `hostility 0 vs 1`, check this constant against `npcs` BEFORE
+/// suspecting the grievance fold.
+const GRIEVANCE_NPC: &str = "bugbear of Goodogododaga";
 
 fn out_text(t: Turn) -> String {
     match t {

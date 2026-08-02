@@ -181,6 +181,14 @@ diverged in the first place. Either the cause lies elsewhere, or one of those
 two machines was doing something it should not have been. The observation of
 19 July stands as an observation, and its cause is still unknown.
 
+*(Settled the same day by [The Twin](the-twin.md): the reason to hold it
+loosely was the right one. The requirement named above — two x86-64 Linux
+hosts — was itself wrong; two x86-64 Linux **libraries** suffice, and a
+container carries a second one, so the experiment needed neither a second
+machine nor a cluster. Run, it falsified the hypothesis outright: with the
+flag off, two different system libraries produce byte-identical worlds. The
+cause of 19 July is still unknown, but it is no longer this.)*
+
 A mint that assays itself and passes has not proven its dies will never wear.
 It has established that today they have not, and that it owns an instrument
 capable of telling it when they do.

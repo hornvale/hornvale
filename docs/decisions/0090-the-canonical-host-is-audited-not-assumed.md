@@ -182,3 +182,30 @@ sitting green as the real one broke. The load-bearing property is that
 production code embeds no *new* absolute build paths, which is greppable —
 see `cli/tests/build_path_embedding.rs` and its frozen list of the two
 existing sites.
+
+## Amendment 3 (2026-07-30, after merge) — the §2 hypothesis is dead
+
+Superseded on this point by
+[0091](0091-glibc-does-not-explain-it-and-the-machine-does-not-matter.md);
+recorded here so a reader of this decision alone is not left with a live
+hypothesis that has since been falsified.
+
+This decision, and amendment 1, describe the codegen-baseline story as
+"consistent but unproven" and say testing it needs two x86_64 Linux **hosts**
+with different glibc. **The requirement was two x86_64 Linux _glibcs_, which
+is a much weaker condition** — the upstream `rust:1.96.1` image carries glibc
+2.41 against lefford's host 2.36, so one machine holds both and no second host
+is needed.
+
+The Twin ran it. With the codegen flag off — verified by disassembly, 147
+`roundsd` with it and 0 without — builds against glibc 2.36 and glibc 2.41
+produced **byte-identical** probe output, matching this campaign's own results
+on two further platforms. **The hypothesis is falsified**, for the reason it
+always carried as a caveat: IEEE-754 `floor` is exactly representable and both
+libraries conform.
+
+0091 also eliminates the bare machine as a cause (lefford and velaryon produce
+identical binaries once toolchain, libc, and build path are fixed), and names
+a better surviving candidate — a rustc pin that applies only inside the
+working tree. 0063's divergence remains unexplained; the space it hides in is
+now much smaller.

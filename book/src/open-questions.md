@@ -60,6 +60,20 @@ its specification cannot catch a specification that disagrees with itself, and
 one of these did: the contention guard was wired backwards against a rationale
 written three lines above it, and passed review as faithful to the plan.
 
+A third campaign extends the tally in a way that narrows the diagnosis. The
+Repertoire (2026-07-31) built a capability probe that touches no world state,
+draws no seed and commits no fact — and produced the same family anyway, from
+its own plan text: a coverage ratchet that read `REBASELINE=0` and an empty
+`REBASELINE=` as permission to rewrite the artifact it was guarding, and a
+resolver whose unknown-requirement branch returned *satisfied* rather than
+*blocked*, inverting the default-deny posture its own spec had set. Both were
+found by mutation — tamper with the input, require the red — and neither by
+reading. So the pattern is not a property of measurement code, or of
+determinism-critical paths, or of instruments that watch themselves. It is a
+property of **plans written as literal code listings**, which get reviewed for
+faithful transcription and not for whether the predicate they contain is the
+one the spec asked for.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -97,7 +111,14 @@ authored parameter vectors grew different languages and religions, verified by
 a 500/500 null control and a blind-attribution metric pinned honest at 0.875
 ([The Meeting](./chronicle/18-the-meeting.md)). This is no longer *the actual
 research*; it is how the research checks itself, and it is applied afresh to
-every new layer.
+every new layer. [The Pigment](./chronicle/the-pigment.md) applied it to
+colour and got the sharpest instance yet, because the observer parameter is a
+single scalar: two peoples differing only in night vision descend Berlin &
+Kay's ladder to different depths, so the same iron-rich outcrop under the
+same light is *yellow* to a goblin and *red* to a kobold — neither holding
+the word *brown* that is actually nearest. Self-scorable, and already scored:
+the census pins mean hue-depth at 4 and 2 respectively, and flattening the
+derivation reddens the claim.
 
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no
@@ -486,6 +507,24 @@ turned on the ledger's own author — a claim verified on one apparatus is a
 fact about that apparatus, and the campaign that had just finished saying so
 in prose went on to forget it in a decision record within the hour.
 
+[The Twin](./chronicle/the-twin.md) closes that correction and sharpens the
+bet itself. Holding the compiler, the system library, and the build directory
+fixed, two machines that share almost nothing else — different processors,
+kernels, and operating systems, one of them an appliance that cannot be logged
+into — produced the same binary to the byte; and two *different* system
+libraries produced the same forty worlds, even compiled the old way, where the
+operation everyone suspected leaves the program and enters the library. So the
+long-standing explanation for the one recorded cross-machine disagreement is
+eliminated, and with it the machine itself. **What determines the output is
+the environment, not the host** — which is the strongest form this bet has
+been stated in, and the first version of it supported by a comparison in which
+only one thing varied. Every earlier cross-machine check in this project moved
+five things at once, which is why the disagreement of nineteen July was
+observable for four months and diagnosable for none of them. It is still
+unexplained. The space it can hide in is now small enough to name: how a build
+chooses its compiler, given that this project's pin is silently conditional on
+the directory you invoke it from.
+
 **Re-scored by [The Blocking](./chronicle/the-blocking.md) (2026-07-28): one
 entry on that ledger is now mechanized, and the move that mechanized it is
 worth more than the check.** The entries above are all forms of *the drawn thing
@@ -748,6 +787,27 @@ its honest size.
    unchanged. The complementary lesson is a caution for the whole gradient: an
    instrument only scores a bet if something reads it. This one existed,
    drift-checked green, and measured a failure nobody was told about.
+
+   **The Watershed sharpened that caution into its harder form (2026-07-31).**
+   There, the instrument was read constantly — and was *wrong*.
+   `exposure-sound` reported false on roughly three quarters of all worlds
+   because the Laboratory's deliberately hand-maintained duplicate of the
+   exposure rules had not learned a rule an earlier commit added. The worlds
+   were correct throughout. It was the second such lapse in eleven days, and
+   the campaign least able to notice was the one whose central mechanism the
+   metric measures. So the caution generalizes: *an instrument scores a bet
+   only if something reads it AND the instrument is itself current*, and
+   nothing in this repo reddens when a deliberate duplicate falls behind.
+
+   That campaign also moved the self-scorable half in both directions at once.
+   Sonority sequencing made pronounceability a property held **by
+   construction** rather than measured after the fact — reverse-sonority
+   onsets no language uses are no longer drawable, at zero entropy cost, since
+   ordering a template consumes the same draws as picking one. But the
+   transparency witness *fell* over 1000 worlds (0.816 → 0.793) while rising
+   at the reference seed, which is the distribution witness earning its keep:
+   a single-world reading would have recorded the opposite. Neither movement
+   touches the taste half, which is unchanged.
 
 2. **Emergent economics that don't degenerate.** The mermaid-bone-farm
    problem: static value tables meeting exploitable production collapse into
@@ -1019,7 +1079,7 @@ about a distribution the Laboratory can compute over seeds rather than about a
 scaling exponent that needs 1.5 decades of support to be well-posed at all.
 
 It also carries a structural requirement the previous framing never surfaced,
-recorded as [decision 0091](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0091-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+recorded as [decision 0096](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0096-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
 clause 3: rare extremes need **asymptotes, not clamps**. Hornvale's saturating
 bounds are presently clamps — population against capacity, `tech_weight` against
 3.0, `coexist.rs`'s viability `FLOOR` — and the probability of exceeding a clamp
@@ -1033,7 +1093,7 @@ claim that per-world conditions vary widely enough to reach either tail is
 one thing it does now assert with the same confidence as the two falsifications
 above it is the diagnosis: **this world's history evaluates every people on a
 single scalar axis, and on one axis weakness is absolute.** That is checkable in
-forty lines of source, it is the standing charge decision 0091 opens, and it is
+forty lines of source, it is the standing charge decision 0096 opens, and it is
 why the third ask is being spent on a second axis rather than on a deeper graph.
 
 One further note the campaign earns a place for, because it bears on how much

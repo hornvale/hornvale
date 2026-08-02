@@ -4,6 +4,24 @@
 //! a `SearchSpace` supplies the semantics. Determinism (the keystone): BTree
 //! frontier + a TOTAL order over (f-cost, g-cost, state) — no HashMap, no RNG —
 //! so the returned path is a pure function of the graph, even with ties.
+//!
+//! The-waymark, Task 6 (the solver seam): the search ALGORITHM is abstracted
+//! behind [`Solver`] the same way the state space already was behind
+//! [`SearchSpace`] — [`AStarSolver`] is the original algorithm unchanged (a
+//! thin wrapper; [`astar`] is now a delegator to it, so every existing caller
+//! is byte-identical by construction), and [`FieldSolver`] is a second,
+//! independently-implemented backend proving the trait is genuinely
+//! substitutable, not a one-impl abstraction. Both take an optional
+//! [`crate::room::RoomMeshMemo`] a memo-aware `SearchSpace` (see
+//! [`SearchSpace::successors_memo`]) can consult instead of recomputing
+//! [`crate::room::RoomAddr::neighbors`] on every expansion — a DELIBERATE,
+//! REVERSIBLE narrowing of "knows nothing of 'time' or 'GOAP'" above: `Solver`
+//! and `successors_memo` are still generic over any `SearchSpace`, but the
+//! memo parameter's TYPE is the one concrete cross-call cache the kernel has
+//! today rather than a generic associated type nothing yet needs. A second
+//! domain wanting a different memo would widen this then, not now (see
+//! `SearchSpace::successors_memo`'s own doc for the full argument).
+use crate::room::RoomMeshMemo;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
@@ -24,59 +42,260 @@ pub trait SearchSpace {
     /// An admissible (never-overestimating) estimate of the remaining cost.
     /// type-audit: bare-ok(count: return)
     fn heuristic(&self, s: &Self::State) -> u64;
+
+    /// [`Self::successors`], given an optional caller-owned
+    /// [`RoomMeshMemo`] a memo-aware space may consult/fill instead of
+    /// recomputing (the-waymark, Task 6). The default simply ignores `memo`
+    /// and delegates to `successors` — every `SearchSpace` impl that has no
+    /// use for the memo (a `CellId`/`AnchorId` state, or a `RoomAddr` state
+    /// with no session memo in scope) is unaffected and needs no change.
+    /// A space that DOES want the memo (e.g. a `RoomAddr` state whose
+    /// `successors` calls `RoomAddr::neighbors`) overrides this to call
+    /// [`crate::room::RoomAddr::neighbors_memo`] instead when `memo` is
+    /// `Some`, while leaving every other edge-cost/avoid-set rule in
+    /// `successors` untouched — the memo boundary is the raw neighbor
+    /// lookup ALONE, never the successor list a caller-specific cost
+    /// function (e.g. a remembered-danger penalty) then builds from it.
+    /// The concrete [`RoomMeshMemo`] type (rather than a generic memo
+    /// parameter) is a deliberate narrowing: it is the one cross-call cache
+    /// the kernel has today, and keeping this monomorphic avoids a generic
+    /// associated type nothing yet needs (the boring solution, not a
+    /// premature abstraction) — a second domain wanting a different memo
+    /// would need this generalized then, not now.
+    /// type-audit: bare-ok(count: return)
+    fn successors_memo(
+        &self,
+        s: &Self::State,
+        _memo: Option<&mut RoomMeshMemo>,
+    ) -> Vec<(Self::Action, Self::State, u64)> {
+        self.successors(s)
+    }
+}
+
+/// A pluggable search ALGORITHM over a fixed [`SearchSpace`] (the-waymark,
+/// Task 6) — the seam that lets [`AStarSolver`] and [`FieldSolver`] answer
+/// the exact same question, `solve(space, start, budget, memo)`, by two
+/// independently-implemented strategies. `memo` is `None` for a caller with
+/// no session-lived [`RoomMeshMemo`] in scope (or a space that ignores it);
+/// `Some` for one that does — see [`SearchSpace::successors_memo`] for what
+/// the memo half actually changes (nothing about the ANSWER, only how many
+/// times the underlying pure function reruns).
+pub trait Solver<S: SearchSpace> {
+    /// The least-cost action sequence from `start` to a goal, or `None` if no
+    /// goal is reachable within `budget` node expansions. An empty `Vec`
+    /// means `start` is already a goal.
+    /// type-audit: bare-ok(count: budget)
+    fn solve(
+        &self,
+        space: &S,
+        start: S::State,
+        budget: usize,
+        memo: Option<&mut RoomMeshMemo>,
+    ) -> Option<Vec<S::Action>>;
+}
+
+/// The original `astar` algorithm, now behind [`Solver`] — zero behavior
+/// change from the free function this module used to export directly (see
+/// [`astar`], which is now a thin delegator to `AStarSolver.solve(..., None)`
+/// so every existing caller stays byte-identical). Frontier: a `BTreeSet`
+/// ordered by `(f_cost, g_cost, state)` — the total order IS the tie-break.
+/// `best_g`: least cost-so-far per state. `came_from`: the `(prev-state,
+/// action)` that reached each state on its best path.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct AStarSolver;
+
+impl<S: SearchSpace> Solver<S> for AStarSolver {
+    fn solve(
+        &self,
+        space: &S,
+        start: S::State,
+        budget: usize,
+        mut memo: Option<&mut RoomMeshMemo>,
+    ) -> Option<Vec<S::Action>> {
+        let mut frontier: BTreeSet<(u64, u64, S::State)> = BTreeSet::new();
+        let mut best_g: BTreeMap<S::State, u64> = BTreeMap::new();
+        let mut came_from: BTreeMap<S::State, (S::State, S::Action)> = BTreeMap::new();
+
+        let h0 = space.heuristic(&start);
+        frontier.insert((h0, 0, start.clone()));
+        best_g.insert(start.clone(), 0);
+
+        let mut expansions = 0usize;
+        while let Some(&(_f, g, ref state)) = frontier.iter().next() {
+            let (f, g, state) = (_f, g, state.clone());
+            frontier.remove(&(f, g, state.clone()));
+            // Skip a stale frontier entry (a better path to `state` was found later).
+            if best_g.get(&state).is_some_and(|&bg| bg < g) {
+                continue;
+            }
+            if space.goal(&state) {
+                // Reconstruct the action path by walking came_from back to start.
+                let mut actions = Vec::new();
+                let mut cur = state;
+                while let Some((prev, act)) = came_from.get(&cur) {
+                    actions.push(act.clone());
+                    cur = prev.clone();
+                }
+                actions.reverse();
+                return Some(actions);
+            }
+            expansions += 1;
+            if expansions > budget {
+                return None;
+            }
+            for (action, next, cost) in space.successors_memo(&state, memo.as_deref_mut()) {
+                let ng = g + cost;
+                if best_g.get(&next).is_none_or(|&bg| ng < bg) {
+                    best_g.insert(next.clone(), ng);
+                    came_from.insert(next.clone(), (state.clone(), action));
+                    let nf = ng + space.heuristic(&next);
+                    frontier.insert((nf, ng, next));
+                }
+            }
+        }
+        None
+    }
 }
 
 /// The least-cost action sequence from `start` to a goal, or `None` if no goal is
 /// reachable within `budget` node expansions. Deterministic: the frontier is
 /// ordered by `(f, g, state)` (a total order), so ties resolve identically every
-/// run. An empty `Vec` means `start` is already a goal.
+/// run. An empty `Vec` means `start` is already a goal. A thin delegator to
+/// [`AStarSolver`] (the-waymark, Task 6) — every existing caller is unchanged.
 /// type-audit: bare-ok(count: budget)
 pub fn astar<S: SearchSpace>(space: &S, start: S::State, budget: usize) -> Option<Vec<S::Action>> {
-    // Frontier: a BTreeSet ordered by (f_cost, g_cost, state) — the total order
-    // IS the tie-break. best_g: least cost-so-far per state. came_from: the
-    // (prev-state, action) that reached each state on its best path.
-    let mut frontier: BTreeSet<(u64, u64, S::State)> = BTreeSet::new();
-    let mut best_g: BTreeMap<S::State, u64> = BTreeMap::new();
-    let mut came_from: BTreeMap<S::State, (S::State, S::Action)> = BTreeMap::new();
+    AStarSolver.solve(space, start, budget, None)
+}
 
-    let h0 = space.heuristic(&start);
-    frontier.insert((h0, 0, start.clone()));
-    best_g.insert(start.clone(), 0);
+/// A budget-bounded, whole-region single-source [`Solver`] (the-waymark, Task
+/// 6) — the promoted form of Task 5's reverse-Dijkstra field builder, which
+/// lived test-only in `windows/vessel::liveness` (`ReverseField`/
+/// `build_reverse_field`) because it had no `SearchSpace`-shaped seam to
+/// implement against. Rather than returning at the FIRST goal state popped
+/// (as [`AStarSolver`] does), it keeps expanding every state reachable
+/// within `budget` — the field characteristic ("reaching everything within
+/// budget", per the original test's own doc) — and only AFTER exploration
+/// ends reconstructs the path to whichever goal state was popped first.
+///
+/// **Substitutability, proven not asserted.** `FieldSolver::solve` returns
+/// the exact SAME action path `AStarSolver::solve` would have returned
+/// early: the first-goal-pop's path is reconstructed from `came_from` and
+/// snapshotted (not the state — the already-materialized `Vec<Action>`) the
+/// instant that pop happens, using the identical `(f, g, state)` total
+/// order and the identical first-strict-improvement-wins relaxation rule up
+/// to that point, mirroring `AStarSolver`'s own at-pop reconstruction
+/// exactly. Exploration then keeps going (the field characteristic) with
+/// `came_from` free to keep mutating for states unrelated to what already
+/// got copied out — but nothing it does afterward can reach back and change
+/// a `Vec` that has already been recorded, so the claim is unconditional by
+/// construction rather than resting on an argument about the heuristic. That
+/// distinction matters here specifically: an earlier revision of this
+/// solver recorded the goal *state* and re-walked `came_from` at
+/// end-of-loop instead, which is equivalent to snapshotting ONLY when no
+/// state on the recorded chain is ever re-relaxed after the goal's pop — true
+/// for every heuristic this module's callers use (`h = 0`, or consistent),
+/// but not a property an admissible-but-unconsistent heuristic guarantees in
+/// general, since consistency (not mere admissibility) is what keeps a
+/// popped node's `came_from` entry from changing later. No in-repo caller
+/// exercises an inconsistent heuristic and `FieldSolver` is unwired, so nothing
+/// observable changed — the point of snapshotting is that the kernel's
+/// contract no longer depends on that being true. The
+/// `field_solver_matches_astar_solver_*` tests below (`kernel::astar::
+/// tests`) pin this across the module's existing fixtures — the least-cost
+/// path, the tie-break keystone (repeated 100×), the unreachable-goal and
+/// start-is-goal edge cases, a tight budget (exercising `FieldSolver`'s own
+/// `break`-not-`return` budget accounting), and a nonzero admissible
+/// heuristic (mirroring `a_nonzero_admissible_heuristic_still_finds_the_
+/// optimum`, since a nonzero `h` is exactly what makes the `(f, g, state)`
+/// order diverge from plain `(g, state)` — the ordering assumption the
+/// substitutability claim above actually rests on).
+///
+/// **This is a DIFFERENT claim than Task 5's own equivalence test.** The
+/// disabled `windows/vessel::liveness` property test
+/// (`reverse_field_matches_forward_search_for_every_empty_avoid_room`)
+/// compared a field ROOTED AT A SHARED DESTINATION against MANY independent
+/// per-room forward searches — a cross-query reuse shape this trait's
+/// single-`start`-per-call signature does not express — and found 52/346
+/// rooms disagree in `first_step` (root-relative tie-breaking; distance
+/// always agreed). Here, `start` is the SAME root a caller would hand
+/// `AStarSolver`, so there is no second root to disagree with, and
+/// therefore none of that risk either — nor, by the same token, its
+/// query-amortization win. This solver exists to give Task 7's bench a
+/// second, independently-implemented backend, not to reproduce the disabled
+/// field's cross-query reuse — home_nav stays on `AStarSolver` alone, per
+/// the equivalence null (see that property test's own doc for the
+/// mechanism).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct FieldSolver;
 
-    let mut expansions = 0usize;
-    while let Some(&(_f, g, ref state)) = frontier.iter().next() {
-        let (f, g, state) = (_f, g, state.clone());
-        frontier.remove(&(f, g, state.clone()));
-        // Skip a stale frontier entry (a better path to `state` was found later).
-        if best_g.get(&state).is_some_and(|&bg| bg < g) {
-            continue;
-        }
-        if space.goal(&state) {
-            // Reconstruct the action path by walking came_from back to start.
-            let mut actions = Vec::new();
-            let mut cur = state;
-            while let Some((prev, act)) = came_from.get(&cur) {
-                actions.push(act.clone());
-                cur = prev.clone();
+impl<S: SearchSpace> Solver<S> for FieldSolver {
+    fn solve(
+        &self,
+        space: &S,
+        start: S::State,
+        budget: usize,
+        mut memo: Option<&mut RoomMeshMemo>,
+    ) -> Option<Vec<S::Action>> {
+        let mut frontier: BTreeSet<(u64, u64, S::State)> = BTreeSet::new();
+        let mut best_g: BTreeMap<S::State, u64> = BTreeMap::new();
+        let mut came_from: BTreeMap<S::State, (S::State, S::Action)> = BTreeMap::new();
+
+        let h0 = space.heuristic(&start);
+        frontier.insert((h0, 0, start.clone()));
+        best_g.insert(start.clone(), 0);
+
+        // The first goal state's action path, in frontier order — snapshotted
+        // (not the state alone) the instant it is popped, exactly as
+        // `AStarSolver` would reconstruct it if it returned right here, so
+        // exploration can keep going (the field characteristic) without any
+        // risk of later mutating what gets returned.
+        let mut found: Option<Vec<S::Action>> = None;
+        let mut expansions = 0usize;
+        while let Some(&(_f, g, ref state)) = frontier.iter().next() {
+            let (f, g, state) = (_f, g, state.clone());
+            frontier.remove(&(f, g, state.clone()));
+            if best_g.get(&state).is_some_and(|&bg| bg < g) {
+                continue;
             }
-            actions.reverse();
-            return Some(actions);
-        }
-        expansions += 1;
-        if expansions > budget {
-            return None;
-        }
-        for (action, next, cost) in space.successors(&state) {
-            let ng = g + cost;
-            if best_g.get(&next).is_none_or(|&bg| ng < bg) {
-                best_g.insert(next.clone(), ng);
-                came_from.insert(next.clone(), (state.clone(), action));
-                let nf = ng + space.heuristic(&next);
-                frontier.insert((nf, ng, next));
+            if found.is_none() && space.goal(&state) {
+                // Mirrors `AStarSolver`'s early return exactly: this pop is
+                // never counted as an expansion (the same is true there —
+                // the `expansions += 1` below is never reached on the pop
+                // that returns), its successors are never generated, AND
+                // the action path is reconstructed right here from
+                // `came_from` as it stands at this exact moment — the same
+                // data `AStarSolver` would read if this were its own
+                // early-return pop. Snapshotting the `Vec` (not the state)
+                // is what makes the equivalence claim above unconditional:
+                // no relaxation after this point, however it mutates
+                // `came_from`, can reach back and change it.
+                let mut actions = Vec::new();
+                let mut cur = state;
+                while let Some((prev, act)) = came_from.get(&cur) {
+                    actions.push(act.clone());
+                    cur = prev.clone();
+                }
+                actions.reverse();
+                found = Some(actions);
+                continue;
+            }
+            expansions += 1;
+            if expansions > budget {
+                break;
+            }
+            for (action, next, cost) in space.successors_memo(&state, memo.as_deref_mut()) {
+                let ng = g + cost;
+                if best_g.get(&next).is_none_or(|&bg| ng < bg) {
+                    best_g.insert(next.clone(), ng);
+                    came_from.insert(next.clone(), (state.clone(), action));
+                    let nf = ng + space.heuristic(&next);
+                    frontier.insert((nf, ng, next));
+                }
             }
         }
+
+        found
     }
-    None
 }
 
 #[cfg(test)]
@@ -196,5 +415,149 @@ mod tests {
             h: BTreeMap::new(),
         };
         assert_eq!(astar(&g, 0, 5), None); // 5 expansions can't reach node 999
+    }
+
+    #[test]
+    fn astar_is_a_thin_delegator_to_astar_solver() {
+        // `astar` and `AStarSolver.solve(..., None)` must be the SAME call
+        // (the-waymark, Task 6) — not merely produce the same answer by
+        // coincidence, but literally be the delegator relationship the
+        // module doc claims.
+        let mut edges = BTreeMap::new();
+        edges.insert(0u32, vec![('a', 1, 1), ('b', 2, 5)]);
+        edges.insert(1u32, vec![('c', 3, 1)]);
+        edges.insert(2u32, vec![('d', 3, 1)]);
+        let g = Graph {
+            edges,
+            goal_node: 3,
+            h: BTreeMap::new(),
+        };
+        assert_eq!(astar(&g, 0, 1000), AStarSolver.solve(&g, 0, 1000, None));
+    }
+
+    // --- FieldSolver substitutability (the-waymark, Task 6): proven, not
+    // merely asserted — see FieldSolver's own doc for the argument. These
+    // pin it byte-for-byte across the least-cost path, the tie-break
+    // keystone, the unreachable/start-is-goal edges, a tight budget, and a
+    // nonzero admissible heuristic (below) — not an exhaustive fixture
+    // sweep, but the specific cases the module already uses to characterize
+    // AStarSolver's own tie-break and ordering behavior.
+
+    #[test]
+    fn field_solver_matches_astar_solver_on_the_least_cost_path() {
+        let mut edges = BTreeMap::new();
+        edges.insert(0u32, vec![('a', 1, 1), ('b', 2, 5)]);
+        edges.insert(1u32, vec![('c', 3, 1)]);
+        edges.insert(2u32, vec![('d', 3, 1)]);
+        let g = Graph {
+            edges,
+            goal_node: 3,
+            h: BTreeMap::new(),
+        };
+        assert_eq!(
+            FieldSolver.solve(&g, 0, 1000, None),
+            AStarSolver.solve(&g, 0, 1000, None)
+        );
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), Some(vec!['a', 'c']));
+    }
+
+    #[test]
+    fn field_solver_matches_astar_solver_on_the_tie_break_keystone() {
+        // Mirrors `equal_cost_paths_break_ties_deterministically` above: two
+        // DISTINCT equal-cost paths, so the total order over (f, g, state)
+        // is the only thing deciding the answer. If FieldSolver picked its
+        // "first goal popped" any differently than AStarSolver, this is
+        // exactly the case that would show it.
+        let mut edges = BTreeMap::new();
+        edges.insert(0u32, vec![('a', 1, 1), ('b', 2, 1)]);
+        edges.insert(1u32, vec![('c', 3, 1)]);
+        edges.insert(2u32, vec![('d', 3, 1)]);
+        let g = Graph {
+            edges,
+            goal_node: 3,
+            h: BTreeMap::new(),
+        };
+        let astar_answer = AStarSolver.solve(&g, 0, 1000, None);
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), astar_answer);
+        for _ in 0..100 {
+            assert_eq!(FieldSolver.solve(&g, 0, 1000, None), astar_answer);
+        }
+    }
+
+    #[test]
+    fn field_solver_matches_astar_solver_when_unreachable() {
+        let mut edges = BTreeMap::new();
+        edges.insert(0u32, vec![('a', 1, 1)]); // 1 is a dead end; goal 9 unreachable
+        let g = Graph {
+            edges,
+            goal_node: 9,
+            h: BTreeMap::new(),
+        };
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), None);
+    }
+
+    #[test]
+    fn field_solver_matches_astar_solver_when_start_is_goal() {
+        let g = Graph {
+            edges: BTreeMap::new(),
+            goal_node: 0,
+            h: BTreeMap::new(),
+        };
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), Some(vec![]));
+    }
+
+    #[test]
+    fn field_solver_matches_astar_solver_under_a_tight_budget() {
+        // A long chain; a tiny budget must return None from BOTH solvers —
+        // exercising FieldSolver's own budget accounting (the `break` path
+        // rather than AStarSolver's `return None`), not just its happy path.
+        let mut edges = BTreeMap::new();
+        for i in 0u32..1000 {
+            edges.insert(i, vec![('n', i + 1, 1)]);
+        }
+        let g = Graph {
+            edges,
+            goal_node: 999,
+            h: BTreeMap::new(),
+        };
+        assert_eq!(FieldSolver.solve(&g, 0, 5, None), None);
+        assert_eq!(
+            FieldSolver.solve(&g, 0, 5, None),
+            AStarSolver.solve(&g, 0, 5, None)
+        );
+        // A budget generous enough to reach the goal: both solvers agree on
+        // the exact path too, not merely on reachability.
+        assert_eq!(
+            FieldSolver.solve(&g, 0, 1000, None),
+            AStarSolver.solve(&g, 0, 1000, None)
+        );
+    }
+
+    #[test]
+    fn field_solver_matches_astar_solver_with_nonzero_admissible_heuristic() {
+        // Mirrors `a_nonzero_admissible_heuristic_still_finds_the_optimum`
+        // above — the fixture that actually exercises the ordering
+        // assumption FieldSolver's substitutability claim rests on: with
+        // `h != 0`, the frontier orders by `(f, g, state)` where `f = g + h`
+        // diverges from plain `(g, state)`, so this is the case that would
+        // show FieldSolver's "first goal popped" disagreeing with
+        // AStarSolver's early return if the two ever read that order
+        // differently. Every OTHER test above uses `h: BTreeMap::new()`
+        // (heuristic always 0, Dijkstra-mode) and so cannot exercise this.
+        let mut edges = BTreeMap::new();
+        edges.insert(0u32, vec![('a', 1, 1), ('b', 2, 5)]);
+        edges.insert(1u32, vec![('c', 3, 1)]);
+        edges.insert(2u32, vec![('d', 3, 1)]);
+        let mut h = BTreeMap::new();
+        h.insert(1u32, 1);
+        h.insert(2u32, 1);
+        let g = Graph {
+            edges,
+            goal_node: 3,
+            h,
+        };
+        let astar_answer = AStarSolver.solve(&g, 0, 1000, None);
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), astar_answer);
+        assert_eq!(FieldSolver.solve(&g, 0, 1000, None), Some(vec!['a', 'c']));
     }
 }

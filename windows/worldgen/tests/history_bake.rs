@@ -319,13 +319,13 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     //     the community that later raided it (mutation-verified — moving the
     //     raider's `open` back onto its own cell must, and does, redden this).
     let conquest = h.records.iter().any(|loser| {
-        loser.cause == Some(CauseOfEnd::Fled)
+        loser.core.cause == Some(CauseOfEnd::Fled)
             && match loser.ended_by {
                 Ended::By(raider) => h.records.iter().any(|seat| {
                     seat.founded_from == Founding::From(raider)
-                        && seat.site == loser.site
+                        && seat.core.site == loser.core.site
                         && seat.community != loser.community
-                        && Some(seat.founded) == loser.ended
+                        && Some(seat.core.founded) == loser.core.ended
                 }),
                 Ended::Nature => false,
             }
@@ -951,7 +951,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
     let cfg = BakeConfig::default_millennia();
     let people = vec![KindId("goblin")];
-    let on_b = |h: &History| h.records.iter().any(|r| b.contains(&r.site));
+    let on_b = |h: &History| h.records.iter().any(|r| b.contains(&r.core.site));
 
     let graphs_no = vec![build_graph(false); eras.len()];
     let no_lane = bake(

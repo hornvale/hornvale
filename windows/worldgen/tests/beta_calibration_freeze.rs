@@ -60,16 +60,22 @@
 //!
 //! Deliberately light for the commit gate: ~5 seeds (not the sweep's 13),
 //! each world built ONCE to [`BuildDepth::Terrain`] (the shallowest rung
-//! `demography_report` needs — settlement/culture/religion facts are
+//! `demography_report_from` needs — settlement/culture/religion facts are
 //! irrelevant to demography), a single β (the frozen constant, read via
 //! `hornvale_demography::report`'s default path). NOT `#[ignore]`d — this is
 //! the preregistered freeze check, meant to run in the commit gate.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, demography_report,
+    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_from,
+    demography_report_from, terrain_of,
 };
 
 /// A handful of seeds (not a census — `HV_CENSUS`/`make rebaseline` stay
@@ -91,7 +97,10 @@ fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
     )
     .expect("seed builds at BuildDepth::Terrain");
 
-    let report = demography_report(&world, wc).expect("demography report reconstructs");
+    let terrain = terrain_of(&world).expect("terrain reconstructs");
+    let climate = climate_from(&world, &terrain).expect("climate reconstructs");
+    let report = demography_report_from(&world, wc, &terrain, &climate)
+        .expect("demography report reconstructs");
 
     let mut sum = 0.0_f64;
     let mut n = 0u32;

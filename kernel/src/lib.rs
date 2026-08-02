@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 
 pub mod astar;
+pub mod color;
 pub mod component;
 pub mod domain;
 pub mod ecology;
@@ -29,7 +30,11 @@ pub mod streams;
 pub mod units;
 pub mod world;
 
-pub use astar::{SearchSpace, astar};
+pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
+pub use color::{
+    BAND_CENTERS_NM, BANDS, Illuminant, Mixture, Observer, Reflectance, Signal, Spectrum,
+    standard_observer,
+};
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
@@ -48,7 +53,9 @@ pub use phenomena::{
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};
 pub use refine::choose_consistent;
 pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, RegistryError};
-pub use room::{FaceLattice, MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
+pub use room::{
+    FaceLattice, MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError, RoomMeshMemo,
+};
 pub use schedule::{CapabilitySchema, ScheduleError, System, TickSystem, tick};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;

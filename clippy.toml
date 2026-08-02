@@ -39,4 +39,14 @@ disallowed-methods = [
     { path = "f64::atanh", reason = "platform libm diverges; use hornvale_kernel::math (add a wrapper)" },
     { path = "f64::cbrt", reason = "platform libm diverges; use hornvale_kernel::math (add a wrapper)" },
     { path = "f64::hypot", reason = "platform libm diverges; use hornvale_kernel::math (add a wrapper)" },
+
+    # The weir (decision 0092): derivation happens at named construction
+    # sites; readouts take artifacts. These three embed a sculpt or a fit
+    # (each costs more than a world build) and must not be called from a
+    # convenience wrapper again. A scoped `#[allow(clippy::disallowed_methods)]`
+    # + one-line justification citing 0092 marks a sanctioned construction
+    # site; the attribute at the site IS the sanctioned-site list, greppable.
+    { path = "hornvale_worldgen::terrain_of", reason = "derivation entry point (decision 0092): sculpts a full tectonic globe; call only from a named construction site with a scoped #[allow] citing 0092" },
+    { path = "hornvale_worldgen::climate_from", reason = "derivation entry point (decision 0092): fits climate over a terrain; call only from a named construction site with a scoped #[allow] citing 0092" },
+    { path = "hornvale_worldgen::demography_report_from", reason = "derivation entry point (decision 0092): fits the coexistence stack, the campaign's motivating cost; call only from a named construction site with a scoped #[allow] citing 0092" },
 ]

@@ -66,6 +66,29 @@ pub const HEADEDNESS: StreamLabel<'static> = StreamLabel::from_static("headednes
 /// Sound-change cascade draw, under lexicon.
 /// type-audit: bare-ok(identifier-text: return)
 pub const CASCADE: StreamLabel<'static> = StreamLabel::from_static("cascade");
+/// The epoch-2 suffix leg for the sound-change cascade, one level below
+/// [`CASCADE`] and above [`WEAR`].
+///
+/// The Witness (2026-07-30) makes the cascade draw position-aware:
+/// [`crate::etymology::RuleKind::Tonogenesis`] is no longer offered at a
+/// position where no merger has been drawn, because `evolve` opens with no
+/// pending conditioning and such a rule is provably the identity. Draw COUNT
+/// is unchanged (`Stream::pick` is one draw at any slice length); the drawn
+/// VALUES move, so every cascade in every world is reseeded. Deliberate
+/// regeneration uses an epoch suffix, never a rename — the save-format
+/// contract — so `v2` reseeds every cascade and v1's forms are gone by
+/// design, regenerated with the world.
+///
+/// **Why this leg and not `name/settlement/v4` or `lexicon/root/v4`.** 0083
+/// puts a label on the algorithm that changed, and the algorithm that changed
+/// is `draw_rule`, which lives here. `Namer::glossed_name` consumes exactly
+/// what it consumed before (`Namer::wear` takes no `&mut Stream` — it draws
+/// nothing), so 0089's freeze on `name/settlement/v3` is not tripped. And
+/// `ROOT_EPOCH` stays at `v3` on 0089's own precedent: a `v4` minted for
+/// exactly this reason — an input to the assignment moving, not the
+/// assignment itself — was withdrawn on 2026-07-29.
+/// type-audit: bare-ok(identifier-text: return)
+pub const CASCADE_V2: StreamLabel<'static> = StreamLabel::from_static("v2");
 /// The toponymic-wear cascade draw, one leg below [`CASCADE`].
 ///
 /// A leg of its own, and that is load-bearing rather than tidy. Drawing the

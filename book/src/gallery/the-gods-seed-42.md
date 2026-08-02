@@ -26,6 +26,15 @@
 > containment showing through: what astronomy touched moved, and what it did
 > not touch did not.
 >
+> **And the words moved (noted 2026-07-31).** [The
+> Watershed](../chronicle/the-watershed.md) ordered every drawn onset and coda
+> by sonority, which re-mints every word in every tongue. So the god names
+> quoted below are superseded a third time, and visibly: this page still reads
+> `Vngoashngooshngooshtoadoo`, a name whose `Vng-` onset the sonority rule now
+> forbids outright. Nothing here needs a number changed for that — the names
+> are simply of an older phonology, which is the least misleading kind of
+> staleness this page carries.
+>
 > The generated almanacs
 > ([spinning](./almanac-seed-42-sky.md), [locked](./almanac-seed-42-locked.md))
 > regenerate with every change and are always current; read them for the

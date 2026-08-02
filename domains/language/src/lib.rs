@@ -20,6 +20,10 @@ pub mod clause;
 /// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
 /// that turns a proto-root into its modern form.
 pub mod etymology;
+/// Canonical exemplar reflectances for the colour lexicon's hue ladder —
+/// what a colour term is compared *against*, stored as a reflectance so it
+/// passes through the same illuminant and the same eye as the sample.
+pub mod exemplars;
 /// A tongue's drawn surface grammar (C3, The Tongues): constituent order,
 /// copula presence and drawn form, and article presence — the floor slice
 /// of LANG-40's grammaticalization-depth vector.
@@ -100,6 +104,7 @@ pub fn assign_proto_roots_with_epoch_for_test(
 ) -> std::collections::BTreeMap<String, Vec<Segment>> {
     etymology::assign_proto_roots_with_epoch(seed, family, proto_ph, concepts, daughters, epoch_of)
 }
+pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
     tongue_grammar,
@@ -575,12 +580,12 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "(retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root",
         ),
         (
-            "language/<species>/lexicon/cascade",
-            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root",
+            "language/<species>/lexicon/cascade/v2",
+            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root. The Witness (2026-07-30) epoch bump: draw_rule is position-aware, offering Tonogenesis only once a prior ClusterSimplify/FinalLoss has been drawn — a leading Tonogenesis is provably the identity (evolve opens with no pending conditioning), so drawing it unconditioned wasted the roster slot on every world. Task 8b (same unreleased v2 epoch, per decision 0089: it lands together, so one suffix is the truthful count) adds a second, orthogonal gate: draw_rule now also checks the SPECIES' OWN drawn phonology (via draw_cascade_with_regime/draw_wear_cascade's new Phonology parameter) and drops Tonogenesis unless the phonology can host a toned vowel, and drops VowelShift unless it admits an adjacent-height vowel pair — a cascade may not draw a rule its phonology cannot host, one level up from Task 7's cannot-condition guard. Draw count is unchanged either way (Stream::pick is one draw at any slice length); only the drawn values move",
         ),
         (
-            "language/<species>/lexicon/cascade/wear",
-            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing)",
+            "language/<species>/lexicon/cascade/v2/wear",
+            "the species' 1-2 rule TOPONYMIC WEAR cascade (The Wearing), run over a name morpheme whose share of this culture's names reaches the wear floor. A leg of its own, deliberately: drawn from lexicon/cascade directly it is a strict PREFIX of the historical cascade above, whose own output the lexicon's modern forms already are, so every rule would re-apply to its own fixpoint (measured on seed 42: 154 of 154 applications changed nothing). Reseeded by the same v2 epoch bump as its parent leg",
         ),
         (
             "language/<species>/lexicon/headedness",
