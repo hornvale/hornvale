@@ -9,9 +9,9 @@
 //! This test fails LOUDLY at one spot with a clear message instead: if
 //! either assertion below breaks, the ancestor moved, and every daughter's
 //! cognate forms moved with it.
-use hornvale_kernel::{Seed, World};
-use hornvale_language::{ipa, proto_root, render_views, romanize};
-use hornvale_worldgen::{proto_phonology_of, register_all};
+use hornvale_kernel::{Correspondent, Seed, Void, World};
+use hornvale_language::{assign_proto_roots, ipa, render_views, romanize};
+use hornvale_worldgen::{WorldComponents, family_daughters, proto_phonology_of, register_all};
 
 /// The family this golden pins — the campaign's only multi-member family.
 const FAMILY: &str = "goblinoid";
@@ -44,18 +44,47 @@ fn render_inventory_snapshot(world: &World) -> String {
     lines.join("\n")
 }
 
-/// The seed-42 proto-root table: every registered concept's proto-root
-/// (`hornvale_language::proto_root`, family-keyed), one `<concept>: <roman>
-/// /<ipa>/` line per concept in concept-id order — the same reduction the
-/// `hornvale proto` reference page renders, reconstructed independently
-/// here so this test never depends on the `cli` crate (layering:
-/// `windows/worldgen` sits below `cli`).
+/// True when `world`'s registry records `concept`'s lexeme edge as
+/// `Correspondent::Absent(Void::Unnamed(..))` — a referent real in the world
+/// that no culture here has any concept to name at all, so no proto-root may
+/// be reserved for it. Mirrors `cli/src/proto.rs`'s `is_unnameable`
+/// (duplicated rather than imported: layering — `windows/worldgen` sits
+/// below `cli`).
+fn is_unnameable(world: &World, concept: &str) -> bool {
+    matches!(
+        world.registry.manifest(concept).map(|m| &m.lexeme),
+        Some(Correspondent::Absent(Void::Unnamed(_)))
+    )
+}
+
+/// The seed-42 proto-root table: every registered concept's proto-root,
+/// assigned via the SAME merger-aware, injective `assign_proto_roots`
+/// (epoch `root/v3`) the `hornvale proto` reference page renders through
+/// (`cli/src/proto.rs::render_proto`) — not the superseded per-concept
+/// `hornvale_language::proto_root`, which draws each concept's root
+/// independently and so can (and on this seed does) collide across
+/// concepts. One `<concept>: <roman> /<ipa>/` line per concept in
+/// concept-id order, excluding any concept the registry itself records as
+/// objectively unnameable (`Void::Unnamed`), same as the page. Reconstructed
+/// independently here (not calling into `cli`) so this test never depends on
+/// the `cli` crate (layering: `windows/worldgen` sits below `cli`).
 fn render_root_table_snapshot(world: &World) -> String {
     let phonology = proto_phonology_of(world, FAMILY);
+    let wc = WorldComponents::assemble().expect("canonical registries");
+    let daughters = family_daughters(world, &wc, FAMILY);
+    let universe: Vec<&str> = world
+        .registry
+        .concepts()
+        .map(|c| c.name.as_str())
+        .filter(|name| !is_unnameable(world, name))
+        .collect();
+    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &daughters);
     let mut lines = Vec::new();
     for concept in world.registry.concepts() {
-        let proto = proto_root(&world.seed, FAMILY, &concept.name, &phonology);
-        let views = render_views(&proto);
+        if is_unnameable(world, &concept.name) {
+            continue;
+        }
+        let views = render_views(&assignment[&concept.name]);
         lines.push(format!("{}: {} /{}/", concept.name, views.roman, views.ipa));
     }
     lines.push(String::new());

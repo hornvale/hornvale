@@ -35,8 +35,12 @@ pub enum Venue {
 ///
 /// Every id here is a **concept-registry key**, never prose: `moon`, not
 /// `"a vast moon"`. Qualifiers are registry keys too, which is load-bearing
-/// rather than tidy — a colour that a culture has not lexicalized under the
-/// Berlin & Kay ladders simply has no key, so it cannot be said.
+/// rather than tidy — every concept a producer can name here already has a
+/// registered key (`blue` included); what varies per culture is whether a
+/// *word* realizes that key at all. An unlexicalized concept never goes
+/// silent: it surfaces as a reasoned gap (`hornvale_language::GapReason`,
+/// e.g. `gap (perceptual): hue rank 4 exceeds depth 2 …` for a Berlin & Kay
+/// rung a species hasn't acquired), not as a missing key.
 /// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: qualifiers)
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Referent {

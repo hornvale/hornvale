@@ -82,3 +82,92 @@ fn no_unnameable_concept_is_ever_lexicalized() {
         "no species produced a lexicon at all — the check ran vacuously"
     );
 }
+
+/// `ConceptRegistry::manifests` is `#[serde(skip)]` (kernel/src/registry.rs)
+/// — a saved world's JSON never carries the lexeme/percept/cognition edges,
+/// only the concept anchors. A naive reload therefore comes back with an
+/// EMPTY manifests map, and both of the exposure classifier's exclusion
+/// sites (`windows/worldgen`'s FINAL/UNCONDITIONAL Unnameable overwrite,
+/// `cli/src/proto.rs`'s `is_unnameable`) read exactly that map — so a
+/// reloaded world silently fell back every `Unnameable` gap to
+/// `Experiential`, and `hornvale dictionary --world w.json` disagreed with
+/// an in-process render of the same seed. `cli`'s `load_world` fixes this by
+/// re-running `register_all` into the freshly loaded registry (a no-op over
+/// the concept/predicate/phenomenon-kind maps, since `register_all` is a
+/// pure function of static domain code and idempotent on identical
+/// redefinition — it only ever repopulates the missing in-memory
+/// manifests). This test proves the round trip preserves the classification
+/// without depending on the CLI binary (which has no `[lib]` target, so
+/// `cli/tests/` cannot call `load_world` directly): it replicates the exact
+/// save → `World::load` → `register_all` sequence and asserts the
+/// classification survives unchanged.
+#[test]
+fn the_unnameable_classification_survives_a_save_load_round_trip() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .unwrap_or_else(|e| panic!("seed 42 builds: {e}"));
+
+    let forbidden = unnameable(&world.registry);
+    assert!(!forbidden.is_empty(), "the fixture must not be vacuous");
+
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain builds");
+    let climate = hornvale_worldgen::climate_of(&world).expect("climate builds");
+    let before = hornvale_worldgen::exposure_from(&world, "goblin", &terrain, &climate)
+        .expect("exposure classifies in-process");
+    for name in &forbidden {
+        assert!(
+            matches!(
+                before.get(name),
+                Some(hornvale_language::ExposureClass::Unknown {
+                    reason: hornvale_language::GapReason::Unnameable(_)
+                })
+            ),
+            "{name}: in-process classification must already be Unnameable (fixture sanity)"
+        );
+    }
+
+    // Round-trip through the exact save format `hornvale dictionary --world
+    // <PATH>` and `hornvale repl --world <PATH>` read.
+    let path = std::env::temp_dir().join(format!(
+        "the-unnameable-round-trip-{}-{:?}.json",
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    world.save(&path).expect("world saves");
+    let mut reloaded = hornvale_kernel::World::load(&path).expect("world reloads");
+    std::fs::remove_file(&path).ok();
+
+    // The fix's seam (`cli::load_world`): re-run `register_all` into the
+    // freshly loaded registry, since `manifests` is `#[serde(skip)]` and
+    // comes back empty otherwise.
+    hornvale_worldgen::register_all(&mut reloaded.registry)
+        .expect("register_all is idempotent over an already-populated registry");
+
+    let after_forbidden = unnameable(&reloaded.registry);
+    assert_eq!(
+        after_forbidden, forbidden,
+        "the unnameable set must survive a save/load round trip unchanged"
+    );
+
+    let reloaded_terrain = hornvale_worldgen::terrain_of(&reloaded).expect("terrain rebuilds");
+    let reloaded_climate = hornvale_worldgen::climate_of(&reloaded).expect("climate rebuilds");
+    let after =
+        hornvale_worldgen::exposure_from(&reloaded, "goblin", &reloaded_terrain, &reloaded_climate)
+            .expect("exposure classifies after reload");
+    for name in &forbidden {
+        assert!(
+            matches!(
+                after.get(name),
+                Some(hornvale_language::ExposureClass::Unknown {
+                    reason: hornvale_language::GapReason::Unnameable(_)
+                })
+            ),
+            "{name}: reloaded classification must still be Unnameable, not fall back to Experiential"
+        );
+    }
+}
