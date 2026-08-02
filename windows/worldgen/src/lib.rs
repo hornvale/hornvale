@@ -7573,7 +7573,11 @@ mod tests {
         assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 48);
         assert_eq!(count("deity-name"), 48);
-        assert_eq!(count("name-gloss"), 362);
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements, moving
+        // the glossed-name count from 362 to 196. The pantheon-size counts
+        // above (48 each) are unmoved — only settlement-derived naming did.
+        assert_eq!(count("name-gloss"), 196);
     }
 
     #[test]

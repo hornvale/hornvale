@@ -6562,9 +6562,12 @@ mod tests {
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements again,
+        // moving goblin from 2.724_637_681_159_420_4 to exactly 2.6.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.724_637_681_159_420_4)
+            MetricValue::Number(2.6)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -6586,9 +6589,14 @@ mod tests {
         // is kobold's own settlement-survival shift under The Contour's
         // re-pin; goblin's count above is untouched by it, consistent with
         // every prior entry in this history.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): 344/137 -> 56/23. The BAKE label bump reseats
+        // settlements again, moving both the syllable total and the
+        // denominator.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(344.0 / 137.0)
+            MetricValue::Number(56.0 / 23.0)
         );
     }
 
@@ -6668,7 +6676,13 @@ mod tests {
         // move (329 -> 324, 5 fewer glossed settlement names) is the same
         // settlement-survival shift The Contour's own re-pin always produces
         // on this seed.
-        assert_eq!(share, 165.0 / 324.0, "seed 42 transparency drifted");
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): 165/324 -> 93/158. The BAKE label bump reseats
+        // settlements again, moving both the glossed-name total and the
+        // denominator. Still strictly between 0 and 1, so the distribution
+        // claim above holds unweakened.
+        assert_eq!(share, 93.0 / 158.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -7158,6 +7172,13 @@ mod tests {
         // actually root toponymic concepts, or the mutation below would
         // pass for the wrong reason (an unbroken flag on a world with
         // nothing to break).
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements, so
+        // seed 7's goblins now root only three of the five ("hill" and
+        // "marsh" drop out). The test still bites — three rooted concepts is
+        // still a nonempty precondition — so the set is re-pinned rather
+        // than the seed swapped.
         let rooted: Vec<&str> = TOPONYMIC
             .iter()
             .copied()
@@ -7165,8 +7186,8 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford", "hill", "marsh", "spring"],
-            "seed 7 goblins must root these five toponymic concepts for this test to bite"
+            vec!["river", "ford", "spring"],
+            "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
             assert!(
@@ -8436,9 +8457,20 @@ mod tests {
 
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
-        let view = FullView::build(Seed(83), &SkyPins::default()).unwrap();
+        // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
+        // on lefford, 0063): the BAKE label bump reseats settlements, and
+        // seed 83's bugbear no longer clears all six staple bands at its new
+        // site — a witness-seed invalidation, not a code regression. Re-swept
+        // seeds 0..150 against every placed people, dynamically read off
+        // `FullView::components().perception` (the same method the prior
+        // witness search used, not a fresh one); (16, bugbear) clears all six
+        // and independently, (16, kobold) clears the same six bands in the
+        // same world — the same same-seed-two-species corroboration the
+        // previous witness had. Bugbear kept for continuity with the prior
+        // witness species.
+        let view = FullView::build(Seed(16), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 83");
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 16");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

@@ -514,10 +514,17 @@ fn homophony_count_is_measured_and_pinned() {
     // 4.026. Bugbear stays highest among the goblinoid daughters by better
     // than 3x (3.49x over goblin, 3.80x over hobgoblin), which is the claim
     // this row guards; these re-pin the witnesses, not the observation.
-    assert!((mg - 3.536).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 3.243).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 12.332).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 4.026).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves every daughter's periphery
+    // homophony draws again — goblin 3.536 -> 3.562, hobgoblin 3.243 ->
+    // 3.268, bugbear 12.332 -> 12.517, kobold 4.026 -> 3.971. Bugbear stays
+    // highest among the goblinoid daughters by better than 3x (3.51x over
+    // goblin, 3.83x over hobgoblin), which is the claim this row guards;
+    // these re-pin the witnesses, not the observation.
+    assert!((mg - 3.562).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 3.268).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 12.517).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 3.971).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

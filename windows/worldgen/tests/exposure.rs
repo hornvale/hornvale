@@ -350,8 +350,16 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_
 /// `marsh_is_a_root_...` were re-measured alongside this one; only `hill`
 /// and `valley` moved (and, as it happens, moved into each other's shape) —
 /// see this file's other two re-pinned tests for the full account.
+///
+/// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+/// lefford, 0063): the BAKE label bump reseats settlements once more, and
+/// NOBODY'S flagship sits on hill's strict local elevation maximum any
+/// longer — `hill` is back to a Gap for every placed people (0/5 Root, 5/5
+/// Gap), the shape it had before The Contour's own re-pin. Renamed to
+/// match; this is a real geographic fact about this derivation of seed 42,
+/// re-measured rather than assumed.
 #[test]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_goblin_which_roots_it() {
+fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -373,15 +381,13 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_goblin_which_roots_it
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "hobgoblin", "kobold"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("goblin", "Nootea".to_string())],
-        "at seed 42 exactly one people roots 'hill' — goblin, whose flagship \
-         sits on a strict local elevation maximum under The Contour's \
-         position-aware conflict"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 no placed people roots 'hill'"
     );
 }
 
@@ -401,8 +407,17 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_goblin_which_roots_it
 /// The Contour absorb (2026-08-02): the partition is unchanged — bugbear
 /// still alone roots `valley` — but main's cascade/v2 reseed moved the
 /// flagship's generated name, `Kodoa` -> `Godoa`.
+///
+/// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+/// lefford, 0063): the BAKE label bump reseats settlements once more, and
+/// NOBODY'S flagship sits on valley's strict local elevation minimum any
+/// longer — `valley` is back to a Gap for every placed people (0/5 Root,
+/// 5/5 Gap), the shape it had before The Contour's own re-pin (the mirror
+/// of `hill`'s move at this same regen). Renamed to match; this is a real
+/// geographic fact about this derivation of seed 42, re-measured rather
+/// than assumed.
 #[test]
-fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_it() {
+fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -420,15 +435,13 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["gnoll", "goblin", "hobgoblin", "kobold"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("bugbear", "Godoa".to_string())],
-        "at seed 42 exactly one people roots 'valley' — bugbear, whose \
-         flagship sits on a strict local elevation minimum under The \
-         Contour's position-aware conflict"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 no placed people roots 'valley'"
     );
 }
 
@@ -447,18 +460,47 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots
 /// `marsh` to discriminate on every seed, only that it is reachable —
 /// which `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
 /// sweep` already proves).
+///
+/// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+/// lefford, 0063): the BAKE label bump reseats settlements again, and
+/// bugbear's flagship no longer has exposure to a marsh cell at seed 42.
+/// `marsh` is no longer a Root for EVERY placed people — it splits 4/5
+/// Root, 1/5 Gap (bugbear). Renamed to match; asserted as an exact
+/// partition, by name, the same discipline `hill`/`valley`/`spring`
+/// already use, for the same reason: the exception is not noise to route
+/// around.
 #[test]
-fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
+fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_bugbear_which_gaps_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let mut gapped: Vec<&str> = Vec::new();
+    let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
         let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("marsh") {
-            Some(LexEntry::Root { .. }) => {}
-            other => panic!("{species}: expected 'marsh' to be a Root at seed 42, got {other:?}"),
+            Some(LexEntry::Gap { .. }) => gapped.push(species),
+            Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
+            other => panic!("{species}: unexpected 'marsh' entry at seed 42: {other:?}"),
         }
     }
+    gapped.sort_unstable();
+    rooted.sort_unstable();
+    assert_eq!(
+        gapped,
+        vec!["bugbear"],
+        "the set of peoples gapping 'marsh' at seed 42 moved"
+    );
+    assert_eq!(
+        rooted,
+        vec![
+            ("gnoll", "Gshoovzngaov".to_string()),
+            ("goblin", "Taneo".to_string()),
+            ("hobgoblin", "Qaneo".to_string()),
+            ("kobold", "Rorora".to_string()),
+        ],
+        "at seed 42 four of the five placed peoples root 'marsh'"
+    );
 }
 
 /// The mirror of [`river_exposure_tracks_real_proximity`] over the whole

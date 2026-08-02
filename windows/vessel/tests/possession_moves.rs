@@ -527,7 +527,12 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// Measured off the session's own `npcs` listing, which returns the same
 /// seven NPCs at the same entity ids (1865-1871) before and after — the NPC
 /// and its co-location are unchanged; only the label moved.
-const GRIEVANCE_NPC: &str = "bugbear of Goodogododaga";
+///
+/// Re-pinned once more at The Contour's epoch v2 (2026-08-02,
+/// `history/bake/v2`): the BAKE label bump re-mints the cascade again,
+/// `Goodogododaga` -> `Godogododaga` (one fewer `o`). Same seven NPCs at the
+/// same entity ids, re-verified from `book/src/gallery/possession-seed-42.md`.
+const GRIEVANCE_NPC: &str = "bugbear of Godogododaga";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

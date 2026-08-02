@@ -286,9 +286,14 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     //
     // The Sundering (moving-sea epoch; lefford regen, 0063): (151, 41) ->
     // (151, 40).
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE stream label bump re-mints every draw on top
+    // of position-aware conflict's own effect, re-seating flagships again:
+    // (149, 39) -> (150, 40).
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (149, 39),
+        (150, 40),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -502,8 +507,12 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // lefford, 0063): position-aware conflict (defensibility as a second
     // contest axis) reshapes raid outcomes and therefore which site condenses
     // a goblin flagship on many worlds: 556 -> 548 coastal, 211 -> 218 inland.
-    assert_eq!(coastal, 548, "coastal flagship count drifted");
-    assert_eq!(inland, 218, "inland flagship count drifted");
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump re-mints every draw, re-seating
+    // flagships again: 548 -> 554 coastal, 218 -> 214 inland.
+    assert_eq!(coastal, 554, "coastal flagship count drifted");
+    assert_eq!(inland, 214, "inland flagship count drifted");
 }
 
 #[test]
@@ -682,12 +691,16 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // lefford, 0063): position-aware conflict changes which worlds field a
     // kobold head, moving the moonless-spinning pool (34 -> 34 solar, 59 ->
     // 60 lunar).
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves the pool again (34 -> 33
+    // solar, 60 -> 62 lunar).
     assert_eq!(
-        moonless_solar, 34,
+        moonless_solar, 33,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 60,
+        moonless_lunar, 62,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -808,8 +821,13 @@ fn blind_attribution_beats_chance_decisively() {
     // attributable pair (758 -> 761) and which side several land on (693 ->
     // 694); accuracy 0.9142 -> 0.9119, still decisively above the 0.75 floor
     // asserted above.
-    assert_eq!(correct, 694, "blind-attribution count drifted");
-    assert_eq!(total, 761, "attributable-pair count drifted");
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves the pool again (761 -> 763
+    // total, 694 -> 697 correct); accuracy 0.9119 -> 0.9135, still
+    // decisively above the 0.75 floor.
+    assert_eq!(correct, 697, "blind-attribution count drifted");
+    assert_eq!(total, 763, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1002,14 +1020,18 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // true/absent, kobold 760/240 -> 763/237 false/absent. The direction this
     // row guards is untouched — the detector still reads true on every goblin
     // world with a pantheon and false on every kobold one.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump reseats settlements again: goblin
+    // 766/234 -> 768/232 true/absent, kobold 763/237 -> 765/235 false/absent.
     assert_eq!(
         (g_true, g_absent),
-        (766, 234),
+        (768, 232),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (763, 237),
+        (765, 235),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1362,8 +1384,12 @@ fn name_collision_rate_is_measured_and_pinned() {
     // them, which reseeds every cascade and therefore every generated name.
     // One world crosses from a nonzero rate to zero; `absent` is unmoved, and
     // 2+768 = 3+767, so the three-way partition still accounts for all 1000.
-    assert_eq!(zero, 3, "zero-collision world count drifted");
-    assert_eq!(nonzero, 767, "nonzero-collision world count drifted");
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump reseats settlements again: 3 -> 4
+    // zero-collision, 767 -> 766 nonzero; absent unmoved at 230.
+    assert_eq!(zero, 4, "zero-collision world count drifted");
+    assert_eq!(nonzero, 766, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1428,7 +1454,11 @@ fn name_collision_rate_is_measured_and_pinned() {
         // on lefford, 0063): position-aware conflict reseats settlements
         // (zero/nonzero/absent unmoved at 3/767/230), nudging the mean down:
         // 0.567_057_788_528_571 -> 0.559_547_123_829_870.
-        (mean - 0.559_547_123_829_870).abs() < 1e-6,
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump nudges the mean up:
+        // 0.559_547_123_829_870 -> 0.560_567_825_485_714_4.
+        (mean - 0.560_567_825_485_714_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1593,7 +1623,11 @@ fn name_length_distributions_are_measured_and_pinned() {
         // on lefford, 0063): position-aware conflict reshapes raid outcomes
         // and therefore which sites carry a goblin flagship; 767 -> 766
         // present, mean 8.639_595_029_986_95 -> 8.660_349_090_208_882.
-        ("goblin", 766u32, 8.660_349_090_208_882),
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats flagships again: 766 ->
+        // 768 present, mean 8.660_349_090_208_882 -> 8.688_230_827_083_34.
+        ("goblin", 768u32, 8.688_230_827_083_34),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1638,7 +1672,11 @@ fn name_length_distributions_are_measured_and_pinned() {
         // on lefford, 0063): 760 -> 763 present, mean 7.228_477_004_342_105 ->
         // 7.219_848_265_006_563. Same position-aware-conflict reseat as the
         // goblin pin above.
-        ("kobold", 763u32, 7.219_848_265_006_563),
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats flagships again: 763 ->
+        // 765 present, mean 7.219_848_265_006_563 -> 7.188_685_503_790_846.
+        ("kobold", 765u32, 7.188_685_503_790_846),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1737,8 +1775,15 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // position-aware-conflict reseat as the name-length pins above; the
         // claim still HOLDS at both species (2.775 and 2.314, both inside
         // 2-3).
-        ("goblin", 766u32, 2.775_172_454_830_285),
-        ("kobold", 763u32, 2.313_806_532_765_403),
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): goblin 766 -> 768 present, mean
+        // 2.775_172_454_830_285 -> 2.787_026_517_317_707_3; kobold 763 -> 765
+        // present, mean 2.313_806_532_765_403 -> 2.306_935_878_954_248_7. The
+        // claim still HOLDS at both species (2.787 and 2.307, both inside
+        // 2-3).
+        ("goblin", 768u32, 2.787_026_517_317_707_3),
+        ("kobold", 765u32, 2.306_935_878_954_248_7),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1856,7 +1901,12 @@ fn name_transparency_is_measured_and_pinned() {
         // on lefford, 0063): position-aware conflict reseats settlements
         // (present/absent unmoved at 770/230), nudging the mean down:
         // 0.803_660_578_424_675 -> 0.807_392_672_749_351.
-        (mean - 0.807_392_672_749_351).abs() < 1e-9,
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump nudges the mean down again
+        // (present/absent unmoved at 770/230):
+        // 0.807_392_672_749_351 -> 0.804_951_365_489_610_2.
+        (mean - 0.804_951_365_489_610_2).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -1959,11 +2009,19 @@ fn null_control_blind_attribution_is_at_chance() {
     // another path-dependent step to the bake (who seizes whom depends on
     // the order sites are evaluated), so one more pair separates: 324 -> 323
     // indistinguishable, 63 -> 64 decided. The pool is unchanged at 387.
-    assert_eq!(indistinguishable, 323, "indistinguishable count drifted");
-    assert_eq!(decided, 64, "decided count drifted");
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump adds another path-dependent step:
+    // 323 -> 322 indistinguishable, 64 -> 65 decided.
+    assert_eq!(indistinguishable, 322, "indistinguishable count drifted");
+    assert_eq!(decided, 65, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): re-measured against the new decided pool of 65 —
+    // 32 of 65 still pick the twin, unmoved from the prior regen.
     assert_eq!(picks_twin, 32, "twin-pick count drifted");
 }
 
@@ -2039,8 +2097,14 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // the path-dependence, separating the two solo builds on a few more
     // seeds — 0.005_167_958_656_330_775 -> 0.007_751_937_984_496_131, still
     // two orders of magnitude inside the ±0.15 bound asserted above.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump deepens the path-dependence
+    // further — 0.007_751_937_984_496_131 -> 0.010_335_917_312_661_49 (the
+    // pool holds at 387: 8 categories now diverge, up from 6), still an
+    // order of magnitude inside the ±0.15 bound.
     assert!(
-        (cult - 0.007_751_937_984_496_131).abs() < 1e-9,
+        (cult - 0.010_335_917_312_661_49).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -2048,8 +2112,13 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // The Tumult (predation) re-pin; lefford regen, 0063: same cause as the
     // cult-form movement above — -0.003_297_896_904_548_732 ->
     // -0.003_956_842_859_287_871, still ~50x inside the ±0.2 bound.
+    //
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves the residual again:
+    // -0.003_956_842_859_287_871 -> -0.003_295_124_196_027_554_4; still
+    // ~60x inside the ±0.2 bound.
     assert!(
-        (size - -0.003_956_842_859_287_871).abs() < 1e-9,
+        (size - -0.003_295_124_196_027_554_4).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -2185,7 +2254,12 @@ fn null_control_name_length_smd_is_pinned() {
         // it — the null hypothesis (INDISTINGUISHABLE FROM ZERO) reads more
         // true after this re-pin than before, and no sign flip occurred. Still
         // comfortably inside the ±0.2 sampling-theory bound above.
-        (namelen - -0.012_055_568_856_886_177).abs() < 1e-9,
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump moves the residual again:
+        // -0.012_055_568_856_886_177 -> -0.017_848_707_186_831_292. Still
+        // roughly 11x inside the ±0.2 sampling-theory bound.
+        (namelen - -0.017_848_707_186_831_292).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
