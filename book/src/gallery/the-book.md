@@ -1,8 +1,8 @@
 # The Book
 
-## Volume 1: Xoaboa
+## Volume 1: Pao
 
-Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.
+Pao is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.
 The Booxo are bugbears.
 The Kabja are gnolls.
 The Woove are goblins.
@@ -12,15 +12,15 @@ The Ngosho are kobolds.
 ### Tongues
 
 Xngatboa Booxo Bobao. (in the bugbear tongue: "The Booxo are bugbears.")
-Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: "Xoaboa is the earth.")
+Xngatboa Pao Xoaboa. (in the bugbear tongue: "Pao is the earth.")
 Kabja Paab Jaadjaajoo. (in the gnoll tongue: "The Kabja are gnolls.")
-Xoaboa Paab Paokaa. (in the gnoll tongue: "Xoaboa is the earth.")
+Pao Paab Paokaa. (in the gnoll tongue: "Pao is the earth.")
 Sa Woowoo Woove. (in the goblin tongue: "The Woove are goblins.")
-Sa Weveawea Xoaboa. (in the goblin tongue: "Xoaboa is the earth.")
+Sa Weveawea Pao. (in the goblin tongue: "Pao is the earth.")
 Boove Beebo Boa Boo. (in the hobgoblin tongue: "The Boove are hobgoblins.")
-Xoaboa Veabea Boa Be. (in the hobgoblin tongue: "Xoaboa is the earth.")
+Pao Veabea Boa Be. (in the hobgoblin tongue: "Pao is the earth.")
 Ngosho Ngod Nga. (in the kobold tongue: "The Ngosho are kobolds.")
-Xoaboa Ngod Ngotngo. (in the kobold tongue: "Xoaboa is the earth.")
+Pao Ngod Ngotngo. (in the kobold tongue: "Pao is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 gnoll: gap — planet (no entry in this lexicon)
@@ -37,28 +37,28 @@ The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
 The Ngosho are kobolds — rivals.
-Xoaboa is the earth with two moons.
+Pao is the earth with two moons.
 The moons cross because they are Boko's kin.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ##### As the priesthood of the Booxo teach it
 
-Xngatbo Xoaboa Xoaboa. ("Xoaboa is the earth — as it is taught.")
+Xngatbo Pao Xoaboa. ("Pao is the earth — as it is taught.")
 
 The Booxo are bugbears — ourselves.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
 The Ngosho are kobolds — rivals.
-Xoaboa is the earth with two moons.
+Pao is the earth with two moons.
 The moons cross because Boko walks the sky, slowly.
 The day returns, as all things return.
 
 — though the folk say The moons cross because they are Boko's kin.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 #### As the Kabja tell it
 
@@ -67,28 +67,28 @@ The Kabja are gnolls — ourselves.
 The Woove are goblins — neighbors.
 The Boove are hobgoblins — neighbors.
 The Ngosho are kobolds — neighbors.
-Xoaboa is the earth with two moons.
+Pao is the earth with two moons.
 The moons cross because they are Ja's kin.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ##### As the priesthood of the Kabja teach it
 
-Xoaboa Paab Paokaa. ("Xoaboa is the earth — as it is taught.")
+Pao Paab Paokaa. ("Pao is the earth — as it is taught.")
 
 The Booxo are bugbears — neighbors.
 The Kabja are gnolls — ourselves.
 The Woove are goblins — neighbors.
 The Boove are hobgoblins — neighbors.
 The Ngosho are kobolds — neighbors.
-Xoaboa is the earth with two moons.
+Pao is the earth with two moons.
 The moons cross because Ja walks the sky, slowly.
 The day returns, as all things return.
 
 — though the folk say The moons cross because they are Ja's kin.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 #### As the Woove tell it
 
@@ -97,26 +97,26 @@ The Kabja are gnolls — neighbors.
 The Woove are goblins — ourselves.
 The Boove are hobgoblins — neighbors.
 The Ngosho are kobolds — neighbors.
-Xoaboa is the earth.
+Pao is the earth.
 The day returns because the sky must be crossed.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ##### As the priesthood of the Woove teach it
 
-Sa Weveawea Xoaboa. ("Xoaboa is the earth — as it is taught.")
+Sa Weveawea Pao. ("Pao is the earth — as it is taught.")
 
 The Booxo are bugbears — neighbors.
 The Kabja are gnolls — neighbors.
 The Woove are goblins — ourselves.
 The Boove are hobgoblins — neighbors.
 The Ngosho are kobolds — neighbors.
-Xoaboa is the earth.
+Pao is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Twoevave strides the sky, slowly.
 The day returns because Vooboo strides the sky, briskly.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 #### As the Boove tell it
 
@@ -125,30 +125,30 @@ The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — ourselves.
 The Ngosho are kobolds — rivals.
-Xoaboa is the earth.
+Pao is the earth.
 The day returns, as all things return.
 
-*In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ##### As the priesthood of the Boove teach it
 
-Xoaboa Veabea Bo Be. ("Xoaboa is the earth — as it is taught.")
+Pao Veabea Bo Be. ("Pao is the earth — as it is taught.")
 
 The Booxo are bugbears — rivals.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — ourselves.
 The Ngosho are kobolds — rivals.
-Xoaboa is the earth.
+Pao is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Daemdam strides the sky, slowly.
 The day returns because Vooboo strides the sky, briskly.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 #### As the Ngosho tell it
 
-Xoaboa is the earth with two moons.
+Pao is the earth with two moons.
 The moons cross because they answer Ngotsa.
 The day returns to keep the balance.
 The Booxo are bugbears — rivals.
@@ -157,13 +157,13 @@ The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
 The Ngosho are kobolds — ourselves.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ##### As the priesthood of the Ngosho teach it
 
-Xoaboa Ngod Ngotngo. ("Xoaboa is the earth — as it is taught.")
+Pao Ngod Ngotngo. ("Pao is the earth — as it is taught.")
 
-Xoaboa is the earth with two moons.
+Pao is the earth with two moons.
 The moons cross because Ngotsa strides the sky, slowly.
 The day returns to keep the balance.
 The Booxo are bugbears — rivals.
@@ -174,7 +174,7 @@ The Ngosho are kobolds — ourselves.
 
 — though the folk say The moons cross because they answer Ngotsa.
 
-*In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ### The Reckoning of Years
 
