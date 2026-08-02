@@ -1107,3 +1107,62 @@ confidence score is only as good as the disclosure attached to the measurement
 under it: the number here is a falsification, which is the direction that
 *cannot* be manufactured by adding mechanisms, and that asymmetry is the reason
 the rescore is trustworthy despite the amendment count.
+
+### The sigmoid's first axis is measured, and the null is in (2026-08-02)
+
+*The Contour* built the cheapest test of the sigmoid wager's own diagnosis —
+a second contest axis, uncorrelated with strength, entering at the raid
+dominance test — deliberately touching no authored species data, so that if
+it moved nothing the two costlier campaigns behind it (*The Appraisal*,
+*The Deviation*) would be worth reconsidering for one campaign's price rather
+than three. It moved nothing. Both of the wager's own preregistered halves
+are now measured, matched against a frozen thirty-seed baseline, and both are
+null:
+
+- **M3 (peoples-alive-at-bake-end) fell, fractionally, rather than rising.**
+  The entire thirty-seed delta is one world losing one people; every other
+  seed's count is byte-identical to baseline, including the exact set of six
+  extinction seeds. The mechanism rescued zero worlds from total extinction
+  and caused zero new ones.
+- **M2 (the entity-size distribution — the sigmoid's own headline variable)
+  stayed geometric.** Mean, median and IQR sit within a few percent of
+  baseline at both thirty and a hundred seeds; the one statistic that moved
+  cleanly (max/median) moves inside the band a single outlier seed produces,
+  not a distributional shift.
+
+Per §4.3 of the spec, both conditions being met is the null the chapter
+above already named as the informative branch: **a second contest axis,
+uncorrelated with the first and entering at the decision point, is not
+sufficient to hold diversity open in this world** — a finding about decision
+0096 clause 1's *chosen mechanism*, not about the axiom, and one that sends
+the sequence back to design rather than forward to *The Appraisal*.
+
+**The null itself decomposes, and the decomposition is the part this chapter
+must not round away.** `peoples-alive-at-bake-end` is discrete and bounded at
+five, the roster's own size, and the baseline sits at that ceiling in 76.7%
+of worlds already. "M3 rises" was close to unfalsifiable *upward*: in
+twenty-three of thirty seeds the metric could not rise, because all five
+peoples were already alive. So the null is really two claims of unequal
+strength. **"Does not rescue worlds from extinction" is strong** — six
+extinction seeds at baseline, six live, the identical seed set, a detectable
+effect measured at exactly zero. **"Does not improve diversity in surviving
+worlds" is untested**, because the instrument is saturated at its ceiling in
+twenty-three of the twenty-four surviving worlds. The spec asked for a second
+half of M3 — the effective-diversity reading `coexist.rs` already computes in
+space, which would have headroom inside an all-five-peoples world that a bare
+count cannot see — and only the count was ever wired up. Building that half
+now, immediately after a disappointing count, would have the *shape* of
+metric-chasing even with clean logic behind it, so it is deliberately
+deferred to whichever campaign answers this chapter next, with its own
+headroom declared in the preregistration before any code exists.
+
+**Rescore.** The sigmoid wager's confidence stays **low**, but the character
+of the "low" has changed, and the gradient should say so precisely: it was
+*unmeasured* when the bet above was struck; it is now *measured on one axis
+and null there*, with the other, headroom-bearing axis still unmeasured
+rather than merely undiscussed. That is a materially weaker position for the
+multi-axis thesis than "unmeasured" was, and a materially stronger one than
+"falsified outright" would be — decision 0096 clause 1 is not itself
+falsified by one mechanism's failure to move one metric, but it has now spent
+its cheapest test and has one clean finding to show for it: position, alone,
+is not the term that holds diversity open here.

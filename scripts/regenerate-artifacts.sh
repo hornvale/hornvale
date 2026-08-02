@@ -153,6 +153,14 @@ rm -f "$possess_ot_tmp"
 # emptied the previously-pinned cell 36918 while its hand-authored paragraph
 # went on describing a lineage that no longer existed there; the drift check
 # passed throughout, since the *generated* half was current.
+#
+# The Contour (position-aware conflict, decision 0096): the same class of
+# drift recurred a second time. The paragraph below IS the hand-authored
+# half, embedded here rather than typed directly into the committed .md —
+# editing the committed file alone (as a merge-reconciliation pass once did)
+# does not survive the next `make rebaseline`, which re-emits this exact
+# text. Fix drift HERE, not in the .md file, or the fix is silently undone by
+# the next regen.
 history_site=28414
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
@@ -164,19 +172,20 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
-    printf 'peoples have failed on it. Every one of them arrived the same way: fleeing\n'
-    printf 'the ice of the clearing at cell 7169, looking for kinder ground. They kept\n'
-    printf 'finding the same ground. Bugbears held it seven times, then hobgoblins\n'
-    printf 'twice, then bugbears three times more, from the year 1175 to the year 1725 —\n'
-    printf 'and what the layers show is not progress but repetition: every steading\n'
-    printf 'arrives classical and ends classical, and every one of the twelve held the\n'
-    printf 'ground for exactly twenty-five years. Nor does the count improve: seven\n'
-    printf 'souls in the deepest layer, then six, five, seven, six, five, six, eight,\n'
-    printf 'six, four, three, and three in the last. Not one of the twelve was taken by\n'
-    printf 'force — every single one was ended by the cold, or by ground that stopped\n'
-    printf 'feeding them. What is left in the grass is potsherds, the low turf-lines of\n'
-    printf 'the dwellings, and a scatter of worked flint.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and fourteen\n' "$history_site"
+    printf 'peoples have failed on it. Most of them arrived the same way: fleeing the\n'
+    printf 'ice of the clearing at cell 7169, looking for kinder ground. They kept\n'
+    printf 'finding the same ground. Hobgoblins held it four times, then kobolds ten\n'
+    printf 'times more, from the year 800 to the year 1750 — and what the layers show\n'
+    printf 'is not progress but repetition: every hobgoblin steading arrives\n'
+    printf 'iron-working and every kobold steading arrives classical, neither ever\n'
+    printf 'advancing past its own tier, and every one of the fourteen held the ground\n'
+    printf 'for exactly twenty-five years. Nor does the count improve: eight souls in\n'
+    printf 'the deepest layer, then six, five, four, eight, six, five, four, three,\n'
+    printf 'three, two, four, three, and three in the last. Not one of the fourteen\n'
+    printf 'was taken by force — every single one was ended by the cold, or by ground\n'
+    printf 'that stopped feeding them. What is left in the grass is potsherds, the low\n'
+    printf 'turf-lines of the dwellings, and a worked pot, chipped at the lip.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
