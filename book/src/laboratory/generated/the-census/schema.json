@@ -2018,6 +2018,47 @@
       "rung": "full"
     },
     {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "M3: how many distinct peoples still hold a live community when the bake ends — the decision-0089 compliance reading",
+      "kind": "numeric",
+      "name": "peoples-alive-at-bake-end",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        0.7
+      ],
+      "doc": "M2: the largest live community's PEAK population as a share of the summed peak population of every community alive at bake end (peak_population is each occupation's historical high-water mark, not a true bake-end census — no end-state population accessor exists today; see task-4-report.md) — the entity-size reading the criticality campaigns never took",
+      "kind": "numeric",
+      "name": "largest-holding-share",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        -0.6,
+        -0.3,
+        0.0,
+        0.3,
+        0.6
+      ],
+      "doc": "M4: Spearman rank correlation between a habitable cell's weakest-point defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY terrain, climate, and connection graph — NOT the bake's own final era, which can differ on a world with real orbital forcing (spec §2.4 amendment 4). Checks §2.2's structural claim that defensible ground is also poor ground, on the geography as it stands today. Ties get average ranks; Absent if fewer than 2 habitable cells, or if either series is constant (no variance, so no correlation is defined)",
+      "kind": "numeric",
+      "name": "defensibility-capacity-rank-corr",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -2027,7 +2068,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xf31440e438cbe2ca"
+    "fnv1a64": "0x820998932532b217"
   },
   "schema_version": 1,
   "study": {
