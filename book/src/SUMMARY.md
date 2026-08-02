@@ -282,6 +282,7 @@
 - [The Winnowing](./chronicle/the-winnowing.md)
 - [The Siding](./chronicle/the-siding.md)
 - [The Timekeeper](./chronicle/the-timekeeper.md)
+- [The Pigment](./chronicle/the-pigment.md)
 - [The Pyx](./chronicle/the-pyx.md)
 - [The Twin](./chronicle/the-twin.md)
 - [The Shuttle](./chronicle/the-shuttle.md)

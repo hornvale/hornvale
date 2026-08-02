@@ -20,6 +20,10 @@ pub mod clause;
 /// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
 /// that turns a proto-root into its modern form.
 pub mod etymology;
+/// Canonical exemplar reflectances for the colour lexicon's hue ladder —
+/// what a colour term is compared *against*, stored as a reflectance so it
+/// passes through the same illuminant and the same eye as the sample.
+pub mod exemplars;
 /// A tongue's drawn surface grammar (C3, The Tongues): constituent order,
 /// copula presence and drawn form, and article presence — the floor slice
 /// of LANG-40's grammaticalization-depth vector.
@@ -100,6 +104,7 @@ pub fn assign_proto_roots_with_epoch_for_test(
 ) -> std::collections::BTreeMap<String, Vec<Segment>> {
     etymology::assign_proto_roots_with_epoch(seed, family, proto_ph, concepts, daughters, epoch_of)
 }
+pub use exemplars::{HUE_CONCEPTS, hue_exemplar};
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
     tongue_grammar,

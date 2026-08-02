@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 
 pub mod astar;
+pub mod color;
 pub mod component;
 pub mod domain;
 pub mod ecology;
@@ -30,6 +31,10 @@ pub mod units;
 pub mod world;
 
 pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
+pub use color::{
+    BAND_CENTERS_NM, BANDS, Illuminant, Mixture, Observer, Reflectance, Signal, Spectrum,
+    standard_observer,
+};
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{

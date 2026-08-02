@@ -322,6 +322,7 @@ mod tests {
                 habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
                     .unwrap(),
                 age: crate::units::Gyr::new(4.5).unwrap(),
+                t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
             },
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
@@ -404,6 +405,7 @@ mod tests {
                 habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
                     .unwrap(),
                 age: crate::units::Gyr::new(4.5).unwrap(),
+                t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
             },
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),

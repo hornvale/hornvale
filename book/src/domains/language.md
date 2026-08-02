@@ -496,16 +496,28 @@ vocabulary grows in a fixed implicational order, dark/light before red,
 red before green-or-yellow, green-or-yellow before blue, and so on — and a
 species descends that ladder only as far as its own eyes carved the
 distinctions. Kobold's night vision sits far above goblin's baseline, so
-its hue ladder halts one rung short of blue: it holds words for dark,
-light, red, and green-or-yellow, and stops. What a species does not spend
+its hue ladder halts at the second rung: it holds words for dark, light,
+and red, and stops there — no green, no yellow, no blue. Goblin, at the
+baseline, reaches blue and stops one rung short of brown. What a species does not spend
 descending the hue ladder it spends instead on a second, orthogonal
 **luminance ladder** — more words for kinds of dark rather than more words
 for kinds of color — and a night-tuned people extends exactly that ladder
 further than a day-tuned one does. The two ladders trade off by
-construction, not by author's whim: a kobold's gap at blue and its
-abundance of words for gloom, shadow, and starlit dark are the same fact,
-read twice. Recountable, the way every gap in this system must be: kobolds
-have no word for blue, because kobold eyes are tuned for the dark. A
+construction, not by author's whim: a kobold's gaps at green, yellow and
+blue and its abundance of words for gloom, shadow, and starlit dark are the
+same fact, read twice. Recountable, the way every gap in this system must
+be: kobolds have no word for blue, because kobold eyes are tuned for the
+dark.
+
+Since The Pigment the ladder is not only a vocabulary but a *decision
+procedure*. Colour is a spectral quantity, and naming runs a surface's
+reflectance and each candidate term's exemplar reflectance through the same
+light and the same eye before comparing — so the word a speaker reaches for
+is the nearest term its own ladder actually owns. An iron-rich outcrop under
+this world's sun is nearest to *brown*, which neither people holds: the
+goblins call it **yellow** and the kobolds call it **red**, each falling back
+to the nearest word it has. The gap is no longer only sayable. It is
+audible in what the two peoples call the same stone. A
 **body pack** ought to key to a body plan the way the color pack keys to a
 perception vector, but no body vector yet exists for it to read — so the
 pack ships now as a shared humanoid core (eye, mouth, hand, foot, blood,

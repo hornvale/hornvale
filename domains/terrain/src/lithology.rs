@@ -32,6 +32,7 @@
 use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
 use crate::plates::{Plate, dot, normalize, sub, velocity_at};
+use hornvale_kernel::color::{Mixture, Reflectance};
 use hornvale_kernel::{CellId, CellMap, Geosphere, math, noise::fbm_2d};
 
 /// Regolith thickness in metres.
@@ -781,6 +782,91 @@ pub fn appearance(buf: &MaterialBuffer, rock: RockClass) -> Appearance {
     }
 }
 
+/// Mineral endmember reflectances on the kernel's band grid.
+///
+/// Four curves stand in for the mineralogy the buffer already tracks:
+/// felsic (quartz and feldspar — bright, faintly warm), mafic (pyroxene and
+/// olivine — dark and flat), carbonate (bright and flat), and iron oxide
+/// (dark in the short bands, strongly reflective in the long ones, which is
+/// the entire visual signature of rust and ochre).
+///
+/// Declared approximations. They are the reason a granite reads pale and a
+/// basalt reads dark, and the campaign's claims rest on those relations
+/// rather than on laboratory accuracy.
+mod endmembers {
+    use hornvale_kernel::color::BANDS;
+
+    /// Quartz and feldspar.
+    /// type-audit: bare-ok(ratio)
+    pub const FELSIC: [f64; BANDS] = [0.38, 0.45, 0.52, 0.56, 0.58, 0.60, 0.62, 0.63, 0.64, 0.64];
+    /// Pyroxene and olivine.
+    /// type-audit: bare-ok(ratio)
+    pub const MAFIC: [f64; BANDS] = [0.05, 0.06, 0.08, 0.09, 0.10, 0.11, 0.12, 0.12, 0.13, 0.13];
+    /// Calcite and dolomite.
+    /// type-audit: bare-ok(ratio)
+    pub const CARBONATE: [f64; BANDS] =
+        [0.55, 0.68, 0.76, 0.80, 0.82, 0.83, 0.84, 0.84, 0.85, 0.85];
+    /// Hematite and goethite — the red one.
+    /// type-audit: bare-ok(ratio)
+    pub const IRON_OXIDE: [f64; BANDS] =
+        [0.03, 0.04, 0.05, 0.06, 0.09, 0.16, 0.42, 0.58, 0.63, 0.65];
+}
+
+/// Rock classes whose iron oxide dominates their appearance. Mirrors the
+/// structure of [`appearance`]'s own `hue` match, so the two projections of
+/// the buffer cannot disagree about which rocks read red.
+fn is_iron_rich(rock: RockClass) -> bool {
+    matches!(rock, RockClass::Ironstone)
+}
+
+/// Rock classes whose appearance is dominated by dark mafic minerals
+/// regardless of the buffer's silica term. Mirrors [`appearance`]'s `hue`
+/// match for the same reason as [`is_iron_rich`].
+fn is_mafic_dominated(rock: RockClass) -> bool {
+    matches!(rock, RockClass::Basalt | RockClass::Gabbro)
+}
+
+/// Project the material buffer to a reflectance **mixture** — the second
+/// projection of the same axes [`appearance`] projects (spec "The Pigment"
+/// §5.1). No new data: `silica`, `carbonate` and the rock class are all
+/// already stored.
+///
+/// Returns a [`Mixture`] rather than a [`Reflectance`] so a later texture
+/// layer can arrange the components spatially instead of re-deriving them.
+/// Call [`Mixture::integrate`] for the single reflectance.
+pub fn reflectance(buf: &MaterialBuffer, rock: RockClass) -> Mixture {
+    let carbonate = buf.carbonate.clamp(0.0, 1.0);
+    let silicate_share = 1.0 - carbonate;
+
+    // Within the silicate fraction, silica splits felsic from mafic —
+    // except where the rock class says the mafic minerals dominate anyway.
+    let felsic_fraction = if is_mafic_dominated(rock) {
+        0.1
+    } else {
+        buf.silica.clamp(0.0, 1.0)
+    };
+
+    let iron = if is_iron_rich(rock) { 0.55 } else { 0.03 };
+    let remaining = silicate_share * (1.0 - iron);
+
+    let components = vec![
+        Reflectance::new(endmembers::FELSIC).expect("authored endmember is within [0, 1]"),
+        Reflectance::new(endmembers::MAFIC).expect("authored endmember is within [0, 1]"),
+        Reflectance::new(endmembers::CARBONATE).expect("authored endmember is within [0, 1]"),
+        Reflectance::new(endmembers::IRON_OXIDE).expect("authored endmember is within [0, 1]"),
+    ];
+    let weights = vec![
+        remaining * felsic_fraction,
+        remaining * (1.0 - felsic_fraction),
+        carbonate,
+        silicate_share * iron,
+    ];
+    // Every weight is non-negative and, since `carbonate` and
+    // `silicate_share` sum to 1 with `iron < 1`, the total is strictly
+    // positive for every buffer.
+    Mixture::new(components, weights).expect("weights are non-negative with a positive total")
+}
+
 /// Mineral prospectivity (spec §3, round 1 distribution). The deposits
 /// campaign turns this field into point bodies; here it is a probability.
 /// type-audit: bare-ok(ratio: return), bare-ok(ratio: unrest)
@@ -818,6 +904,7 @@ mod tests {
     use super::*;
     use crate::globe::generate;
     use crate::pins::TerrainPins;
+    use hornvale_kernel::color::BANDS;
     use hornvale_kernel::{Geosphere, Seed};
 
     /// A mid-valued buffer for exercising `classify_rock` in isolation.
@@ -1170,5 +1257,131 @@ mod tests {
             geo.cells()
                 .any(|c| lith.get(c).margin != MarginPolarity::Oceanic)
         );
+    }
+
+    // --- The reflectance projection (spec "The Pigment" §5.1) ---
+    //
+    // These reuse `flat_buffer()` above. `MaterialBuffer` is `Copy` and does
+    // NOT derive `Default`, so struct-update syntax against `flat_buffer()`
+    // is the only construction that compiles.
+
+    #[test]
+    fn a_felsic_rock_is_brighter_than_a_mafic_one() {
+        let felsic = MaterialBuffer {
+            silica: 0.95,
+            ..flat_buffer()
+        };
+        let mafic = MaterialBuffer {
+            silica: 0.05,
+            ..flat_buffer()
+        };
+        let f = reflectance(&felsic, RockClass::Granite).integrate();
+        let m = reflectance(&mafic, RockClass::Basalt).integrate();
+        let f_mean: f64 = f.get().iter().sum::<f64>() / BANDS as f64;
+        let m_mean: f64 = m.get().iter().sum::<f64>() / BANDS as f64;
+        assert!(
+            f_mean > m_mean,
+            "felsic {f_mean} was not brighter than mafic {m_mean}"
+        );
+    }
+
+    #[test]
+    fn silica_alone_brightens_the_rock() {
+        // The companion to the test above, holding the rock class FIXED so
+        // the buffer's silica axis is the only thing that moved. Without
+        // this, `a_felsic_rock_is_brighter_than_a_mafic_one` can be
+        // satisfied entirely by `is_mafic_dominated` and the projection
+        // could ignore `buf.silica` outright.
+        let quartz_rich = MaterialBuffer {
+            silica: 0.95,
+            ..flat_buffer()
+        };
+        let quartz_poor = MaterialBuffer {
+            silica: 0.05,
+            ..flat_buffer()
+        };
+        let hi = reflectance(&quartz_rich, RockClass::Granite).integrate();
+        let lo = reflectance(&quartz_poor, RockClass::Granite).integrate();
+        let hi_mean: f64 = hi.get().iter().sum::<f64>() / BANDS as f64;
+        let lo_mean: f64 = lo.get().iter().sum::<f64>() / BANDS as f64;
+        assert!(
+            hi_mean > lo_mean,
+            "silica 0.95 gave {hi_mean}, silica 0.05 gave {lo_mean}"
+        );
+    }
+
+    #[test]
+    fn ironstone_leans_long_wavelength() {
+        let buf = flat_buffer();
+        let iron = reflectance(&buf, RockClass::Ironstone).integrate();
+        let plain = reflectance(&buf, RockClass::Sandstone).integrate();
+        // Long band over short band: iron oxide's whole visual signature.
+        let iron_ratio = iron.get()[8] / iron.get()[2];
+        let plain_ratio = plain.get()[8] / plain.get()[2];
+        assert!(
+            iron_ratio > plain_ratio,
+            "ironstone long/short = {iron_ratio}, sandstone = {plain_ratio}"
+        );
+    }
+
+    #[test]
+    fn carbonate_brightens_the_whole_curve() {
+        let none = MaterialBuffer {
+            carbonate: 0.0,
+            ..flat_buffer()
+        };
+        let lots = MaterialBuffer {
+            carbonate: 0.9,
+            ..flat_buffer()
+        };
+        let a = reflectance(&none, RockClass::Sandstone).integrate();
+        let b = reflectance(&lots, RockClass::ReefLimestone).integrate();
+        for band in 0..BANDS {
+            assert!(
+                b.get()[band] >= a.get()[band],
+                "band {band}: carbonate darkened the rock"
+            );
+        }
+    }
+
+    #[test]
+    fn every_reflectance_is_physically_valid_across_the_buffer_space() {
+        // Reflectance::new rejects out-of-range bands, so a panic here is a
+        // real energy-conservation break, not a test artifact.
+        for silica in [0.0, 0.5, 1.0] {
+            for carbonate in [0.0, 0.5, 1.0] {
+                for rock in [RockClass::Granite, RockClass::Basalt, RockClass::Ironstone] {
+                    let buf = MaterialBuffer {
+                        silica,
+                        carbonate,
+                        ..flat_buffer()
+                    };
+                    let r = reflectance(&buf, rock).integrate();
+                    for band in 0..BANDS {
+                        assert!((0.0..=1.0).contains(&r.get()[band]));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_mixture_keeps_its_components_for_the_texture_layer() {
+        // The producer must not collapse early: a later texture layer needs
+        // the components to arrange them spatially. So assert on the
+        // components themselves, not on the integrated result — an
+        // integrate-only assertion would pass for a `Mixture` that had
+        // already thrown its endmembers away.
+        let m = reflectance(&flat_buffer(), RockClass::Granite);
+        assert_eq!(m.components().len(), 4, "the four mineral endmembers");
+        assert_eq!(m.weights().len(), m.components().len());
+        // Weights come back unnormalized, and a flat buffer with no
+        // carbonate leaves the two silicate endmembers carrying the rock.
+        assert!(
+            m.weights()[0] > 0.0 && m.weights()[1] > 0.0,
+            "felsic and mafic both present: {:?}",
+            m.weights()
+        );
+        assert_eq!(m.weights()[2], 0.0, "flat_buffer has no carbonate");
     }
 }
