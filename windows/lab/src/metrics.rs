@@ -4711,17 +4711,25 @@ fn cascade_rules_fired(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     };
     // A BTreeSet, not a HashSet: the workspace bans hashed containers, and
-    // the count must not depend on iteration order anyway.
-    let mut fired: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+    // the count must not depend on iteration order anyway. Keyed on
+    // `RuleKind` (which the fix-round review established `hornvale_language`
+    // already derives `Ord`/`Eq` for), not on step index: `draw_cascade`
+    // samples each of its 2-4 slots independently, so the same `RuleKind`
+    // can be drawn twice at different indices, and "distinct sound rules"
+    // (this fn's own doc string, and `divergence_magnitude`'s established
+    // reading of "distinct" elsewhere in this file) means dedup-by-value,
+    // not dedup-by-position.
+    let mut fired: std::collections::BTreeSet<hornvale_language::RuleKind> =
+        std::collections::BTreeSet::new();
     let mut any_root = false;
     // `Lexicon::entries()` yields (&str, &LexEntry) pairs — it is an
     // iterator, not a map, so there is no `.values()`.
     for (_concept, entry) in lex.entries() {
         if let hornvale_language::LexEntry::Root { derivation, .. } = entry {
             any_root = true;
-            for (i, step) in derivation.steps.iter().enumerate() {
+            for step in &derivation.steps {
                 if step.changed {
-                    fired.insert(i);
+                    fired.insert(step.rule.kind);
                 }
             }
         }

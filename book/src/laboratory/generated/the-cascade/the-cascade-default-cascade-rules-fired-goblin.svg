@@ -19,10 +19,9 @@
 <rect x="347.1" y="106.0" width="80.5" height="130.0" fill="#5b8dd9" rx="2" />
 <text x="387.3" y="102.0" font-size="11" fill="currentColor" text-anchor="middle">65</text>
 <text x="387.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 3)</text>
-<rect x="441.8" y="204.0" width="80.5" height="32.0" fill="#5b8dd9" rx="2" />
-<text x="482.0" y="200.0" font-size="11" fill="currentColor" text-anchor="middle">16</text>
+<rect x="441.8" y="202.0" width="80.5" height="34.0" fill="#5b8dd9" rx="2" />
+<text x="482.0" y="198.0" font-size="11" fill="currentColor" text-anchor="middle">17</text>
 <text x="482.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[3, 4)</text>
-<rect x="536.4" y="234.0" width="80.5" height="2.0" fill="#5b8dd9" rx="2" />
-<text x="576.7" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">1</text>
+<text x="576.7" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="576.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 4</text>
 </svg>
