@@ -262,6 +262,25 @@ the output ergonomic rather than a wall of Sindarin.
 
 ## 4. Determinism and epoch
 
+> **Correction, recorded at the merge review (not a rewrite).** The second
+> bullet below — "No new stream label, so `stream_labels()` and the generated
+> stream manifest do not move" — was **false as shipped**, and is left in
+> place rather than deleted so the record shows what was believed and when.
+> It was written before Task 4 existed. Task 4 added the given-name draw
+> `language/<species>/name/person` (`domains/language/src/lib.rs`), so
+> `stream_labels()` *did* move and `book/src/reference/stream-manifest-
+> generated.md` gained a row (the layering page moved with it). The
+> implementation plan caught this and corrected it; this spec section never
+> was, which is why the chronicle inherited the error too.
+>
+> **What is still true, and is the claim that mattered:** the label was added
+> **additively**. No existing label was renamed or reseeded, no epoch was
+> declared, and no already-saved world's output changed — so the first
+> bullet's "no epoch" and the third bullet's "every shipped world is
+> byte-identical" both stand. See `docs/decisions/0084` (an epoch is declared
+> only when a derivation *moved*), which is the reason a new label needs no
+> epoch suffix.
+
 **No epoch. No save-format change. No new fact, predicate, or concept.**
 
 - Every name is a pure total function of committed facts plus the world seed,

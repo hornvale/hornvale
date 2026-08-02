@@ -6,7 +6,7 @@ use hornvale_kernel::Seed;
 use hornvale_lab::{Extractor, FullView, MetricValue, registry};
 
 #[test]
-fn the_four_namesake_metrics_are_registered() {
+fn the_six_namesake_metrics_are_registered() {
     let names: Vec<&str> = registry().iter().map(|m| m.name).collect();
     for expected in [
         "name-pattern-signatures",
@@ -25,7 +25,7 @@ fn the_four_namesake_metrics_are_registered() {
 }
 
 /// Build `seed` to `Full` depth and read every named metric off the one
-/// view, so a five-metric probe costs one world rather than five. All five
+/// view, so a six-metric probe costs one world rather than six. All six
 /// Namesake metrics are `Full`-rung; a metric of a different rung here is a
 /// test-selection bug, and panicking says so loudly rather than silently
 /// returning `Absent`.

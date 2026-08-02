@@ -109,6 +109,14 @@ pub fn generation_length_of(world: &World, species: &str) -> Option<f64> {
 /// `Sibling`, `Ancestor`, or anything else — reporting "no forebear
 /// derivable" is honest about what is unknown, where guessing a `Kinship`
 /// would not be.
+///
+/// **The returned [`Kinship`] is reserved and currently unconsumed.** The
+/// only non-test caller (the lab's name renderer) binds it as `_kinship` and
+/// uses the handle alone; nothing yet walks the remove back through
+/// [`hornvale_history::descent::ancestor`], which is likewise unwired. So the
+/// element this feeds is a *mother-community founder* citation, not a
+/// patronymic — see the chronicle. Widening that is a design change, not a
+/// fix.
 pub fn forebear_of(world: &World, occupation: EntityId) -> Option<(RoleHandle, Kinship)> {
     let mother = mother_of(world, occupation)?;
     let child_year = founded_year(world, occupation)?;
@@ -140,6 +148,23 @@ pub fn clan_root_of(world: &World, occupation: EntityId) -> EntityId {
     here
 }
 
+/// How wide a people draws "us", as the three-way decision the naming
+/// pattern actually makes on `in_group_radius`.
+///
+/// Private and deliberately not a public axis: it exists to make the
+/// midpoint decision exhaustive at the one place that reads it, so the
+/// insular and expansive cases cannot both fire and neither can be widened
+/// into the other by a one-character edit.
+enum Breadth {
+    /// Below the midpoint — everyone already knows everyone, so the
+    /// outermost citation is dropped.
+    Insular,
+    /// Exactly the midpoint, where `SocietyVector::baseline` sits.
+    Neutral,
+    /// Above the midpoint — a wide "us" needs an extra gloss to disambiguate.
+    Expansive,
+}
+
 /// The naming pattern a culture uses, derived from its society vector.
 ///
 /// **Derived, never authored** (spec §3.3). A per-culture naming table would
@@ -158,6 +183,11 @@ pub fn clan_root_of(world: &World, occupation: EntityId) -> EntityId {
 ///   the deed.
 /// - `in_group_radius` sets how many elements the pattern carries: an
 ///   insular people needs fewer to pick someone out.
+///
+/// `mind` is unused today — the pattern reads only the society vector — but
+/// the parameter keeps the signature stable against a future where a
+/// mind-level trait (deliberation, time horizon) shapes the pattern too, the
+/// same rationale [`generation_length_of`]'s unused `world` carries.
 pub fn name_pattern(
     mind: &hornvale_species::MindVector,
     society: &hornvale_species::SocietyVector,
@@ -181,33 +211,49 @@ pub fn name_pattern(
         }
     }
 
-    // How authority is shaped.
-    match society.sociality {
+    // How authority is shaped. Held rather than pushed: whether this
+    // citation appears at all is the in-group-radius decision below.
+    let sociality_citation = match society.sociality {
         hornvale_species::Sociality::Hierarchic => {
-            elements.push((ElementSource::Relation(Cite::Clan), Author::Kin));
+            (ElementSource::Relation(Cite::Clan), Author::Kin)
         }
         hornvale_species::Sociality::Communal => {
-            elements.push((ElementSource::Relation(Cite::Community), Author::Community));
+            (ElementSource::Relation(Cite::Community), Author::Community)
         }
-    }
+    };
 
     // How wide "us" is drawn decides how much disambiguation a name must
     // carry on its face. The threshold is the midpoint of the [0,1] axis,
-    // the same place `SocietyVector::baseline` sits.
+    // the same place `SocietyVector::baseline` sits — and the roster's most
+    // common value, so the boundary is load-bearing rather than theoretical
+    // (goblin sits exactly on it).
     //
-    // These two arms are mutually exclusive by construction (`> 0.5` and
-    // `< 0.5` never both hold), so the `pop()` below never removes a `Gloss`
-    // element this call just pushed — it always removes whatever was last
-    // on the list *before* this block ran, which is the sociality citation
-    // pushed immediately above (`Clan` or `Community`). That is exactly what
-    // the comment on the `pop()` describes.
-    if society.in_group_radius > 0.5 {
-        elements.push((ElementSource::Gloss(GlossBasis::Bearing), Author::Outsiders));
-    }
-    if society.in_group_radius < 0.5 {
+    // This is one three-way decision that *builds* the tail of the list,
+    // not a push followed by a positional `pop()`. The earlier shape was
+    // correct only by arithmetic accident: two guards comparing the same
+    // literal with strict operators, with `pop()` removing whichever element
+    // happened to be last. Widening either guard by one character, or
+    // inserting any element above this block, would have silently rewritten
+    // a published pattern with no compiler signal. Here the three outcomes
+    // are exhaustive `match` arms and the citation is named, so neither
+    // mistake is expressible.
+    let radius = society.in_group_radius;
+    let breadth = if radius < 0.5 {
+        Breadth::Insular
+    } else if radius > 0.5 {
+        Breadth::Expansive
+    } else {
+        Breadth::Neutral
+    };
+    match breadth {
         // An insular people drops the outermost citation: everyone already
         // knows which clan or community you belong to.
-        elements.pop();
+        Breadth::Insular => {}
+        Breadth::Neutral => elements.push(sociality_citation),
+        Breadth::Expansive => {
+            elements.push(sociality_citation);
+            elements.push((ElementSource::Gloss(GlossBasis::Bearing), Author::Outsiders));
+        }
     }
 
     NamePattern { elements }

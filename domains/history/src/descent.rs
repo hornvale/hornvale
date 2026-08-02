@@ -68,6 +68,12 @@ pub fn kinship(gap_years: f64, generation_length_years: f64) -> Kinship {
 
 /// The handle of the figure `steps` generations before `of`.
 ///
+/// **Reserved and currently unconsumed.** Nothing in the workspace calls this
+/// outside its own tests: The Namesake specified and hardened the lazy walk
+/// but never wired it, so no shipped name resolves through it yet. Recorded
+/// here rather than left to be inferred from a caller search — an unconsumed
+/// public function is indistinguishable from a forgotten one six months on.
+///
 /// A lazy walk: the intermediate ancestors a long remove implies are never
 /// materialised as records, only as handles, exactly as [`RoleHandle`]'s own
 /// documentation intends ("a record can reference many unnamed roles without

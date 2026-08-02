@@ -1,6 +1,6 @@
 //! The per-culture naming pattern, derived from society rather than authored.
 
-use hornvale_language::anthroponym::{Author, Cite, ElementSource};
+use hornvale_language::anthroponym::{Author, Cite, ElementSource, GlossBasis};
 use hornvale_species::{Sociality, SocietyVector, StatusBasis};
 use hornvale_worldgen::name_pattern;
 
@@ -100,6 +100,58 @@ fn an_insular_people_carries_fewer_elements_than_an_expansive_one() {
         insular.elements.len() < expansive.elements.len(),
         "everyone knows everyone in an insular people; a wide 'us' needs more to disambiguate"
     );
+}
+
+#[test]
+fn the_midpoint_radius_keeps_the_sociality_citation_exactly() {
+    // The boundary test the length comparison above cannot make. Goblin sits
+    // at `in_group_radius` exactly 0.5 — `SocietyVector::baseline`'s value
+    // and the roster's most common one — so the midpoint is where a widened
+    // guard (`< 0.5` becoming `<= 0.5`) would land, dropping the clan
+    // citation and rewriting the pattern the chronicle publishes.
+    //
+    // Asserted on element CONTENT, not on a count: a count-only assertion
+    // cannot tell "the clan citation was dropped" from "some other element
+    // was".
+    let p = name_pattern(
+        &mind(),
+        &society(Sociality::Hierarchic, StatusBasis::Rank, 0.5),
+    );
+    assert_eq!(
+        p.elements,
+        vec![
+            (ElementSource::Stem, Author::Kin),
+            (ElementSource::Relation(Cite::Parent), Author::Kin),
+            (ElementSource::Relation(Cite::Clan), Author::Kin),
+        ],
+        "the midpoint keeps the sociality citation and adds no gloss"
+    );
+}
+
+#[test]
+fn the_three_radius_bands_differ_only_in_their_tail() {
+    // The other two arms of the same three-way decision, pinned by content
+    // so that neither boundary can be widened into its neighbour unnoticed.
+    let at = |r| {
+        name_pattern(
+            &mind(),
+            &society(Sociality::Hierarchic, StatusBasis::Rank, r),
+        )
+        .elements
+    };
+    let head = vec![
+        (ElementSource::Stem, Author::Kin),
+        (ElementSource::Relation(Cite::Parent), Author::Kin),
+    ];
+    assert_eq!(at(0.4), head, "below the midpoint drops the clan citation");
+
+    let mut neutral = head.clone();
+    neutral.push((ElementSource::Relation(Cite::Clan), Author::Kin));
+    assert_eq!(at(0.5), neutral, "the midpoint keeps it");
+
+    let mut expansive = neutral.clone();
+    expansive.push((ElementSource::Gloss(GlossBasis::Bearing), Author::Outsiders));
+    assert_eq!(at(0.6), expansive, "above the midpoint adds a gloss");
 }
 
 #[test]

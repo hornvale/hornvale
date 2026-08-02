@@ -180,6 +180,21 @@ bugbear     [Stem, Relation(Parent)]
 gnoll       [Stem, Deed, Relation(Clan), Gloss(Bearing)]
 ```
 
+Four signatures from five peoples, not five, and the reason is a real
+property of the derivation rather than an accident of the roster. The
+in-group radius does not merely add elements — below the midpoint it
+*removes* the sociality citation, on the reasoning that an insular people
+already knows which clan you belong to. Three of the five peoples sit below
+that midpoint (kobold 0.2, hobgoblin 0.3, bugbear 0.3), so for them the
+sociality row of the table above contributes nothing at all: hobgoblin is
+hierarchic and bugbear is communal, and they produce *identical* patterns.
+The table reads as if every dimension always contributes; it does not.
+This is why the roster yields four signatures, and it is also why a figure's
+people is recoverable from name structure for three peoples in five — a
+recoverability of 0.6, not 1.0, which against a chance baseline of one in
+five is the 2.99× the next section reports. Both published numbers rest on
+this one mechanism.
+
 ## The shortest-prefix rule
 
 Rendering takes a name and a scope, and returns the shortest prefix of its
@@ -221,15 +236,35 @@ the shape of its name alone at three times chance.
 The fourth fails, and it fails on the arm that says disambiguation pressure is
 real. The median figure resolves in **one** element at the widest scope the
 world offers. Only four worlds of two hundred reach a median of two. The
-second half of that criterion — fewer than half needing the full stack — holds
-easily at 35.2%, which is the null's other pole saying the names are not
-merely long.
+second half of that criterion — fewer than half needing the full stack —
+holds at a mean of 35.2%, which is the null's other pole saying the names are
+not merely long. "Easily" would overstate it; see the third honesty note
+below.
 
-Two honesty notes belong with those numbers. The two structural criteria are
+Four honesty notes belong with those numbers. The two structural criteria are
 measured on 156 worlds rather than 200, because forty-four worlds place fewer
 than two peoples and the metrics correctly report absence rather than
-inventing a reading. And two worlds sit *exactly* on the recoverability bound
-— a margin of zero, not a comfortable clearance.
+inventing a reading. Two worlds sit *exactly* on the recoverability bound —
+a margin of zero, not a comfortable clearance.
+
+Third: **35.2% is a mean, and the mean hides the tail.** Forty-four of the
+two hundred worlds individually need the full stack for more than half their
+figures, and the worst reaches **86.4%**. The criterion was frozen as a
+per-run reading and the campaign reports it as measured, but "holds easily at
+35.2%" is true of the average world and false of better than one world in
+five.
+
+Fourth: what ships in the `Relation(Parent)` slot is **not a patronymic**,
+and the number above should be read knowing that. The renderer resolves that
+element through `forebear_of`, which returns the founder of the *mother
+community* — a figure a median of two and as many as thirty-two generations
+back. The lazy per-generation walk that would turn a remove into an actual
+parent was specified, built, and hardened, and then never wired: it has no
+callers, and the `Kinship` `forebear_of` returns is discarded at its one
+call site. Both are documented as reserved rather than quietly left to look
+consumed. Wiring them would change what the names mean and therefore what
+these criteria measured, so it belongs to a later campaign and not to this
+one's close.
 
 ## Why the failure is real, and what it means
 
@@ -282,12 +317,20 @@ will start earning its keep without a line of it changing.
 
 ## What it cost
 
-Nothing. No fact is committed, no entity minted, no stream drawn, no seed
-label added, no epoch declared. Every name is a pure total function of facts
-the ledger already carries plus the world seed, and the whole artifact set —
-the gallery, the reference dumps, the laboratory studies — regenerates
-byte-identical. That claim was asserted at the one point in the campaign that
-touched a save-format contract, and again at the close, rather than assumed.
+Almost nothing, and it is worth being exact about the "almost". No fact is
+committed, no entity minted, no epoch declared. **One** new seed label was
+added — the given-name stream, `name/person` — and it was added *additively*:
+no existing label was renamed or reseeded, so no existing world's output
+changed. That is the whole cost. The generated stream manifest gained its one
+row and the layering page moved with it, as any additive label makes them;
+the gallery and the laboratory studies regenerate byte-identical. Those
+claims were asserted at the one point in the campaign that touched a
+save-format contract, and again at the close, rather than assumed.
+
+(An earlier draft of this chapter, and the spec section behind it, said the
+campaign added *no* label at all. That was written before the given-name
+draw existed and is corrected here; the substantive claim — nothing already
+saved moved — survives intact.)
 
 The place where this would stop being true is named and held back: a
 *committed* settlement name citing a *derived* person name binds the

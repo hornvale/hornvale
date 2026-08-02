@@ -47,10 +47,15 @@ fn the_clan_walk_terminates_for_every_occupation() {
     // The committed tree is acyclic, but this walk is pub and must not
     // assume it. Seed 42's deepest chain is 29 links.
     let w = seed42();
-    for o in occupation_records(&w) {
+    // Reconstructed ONCE. The membership check inside the loop used to call
+    // `occupation_records` again, making the test quadratic in the world's
+    // ~1800 occupations (53 s, the longest in this crate). The records do
+    // not change across the loop, so hoisting is behaviour-preserving.
+    let occs = occupation_records(&w);
+    for o in &occs {
         let root = clan_root_of(&w, o.id);
         assert!(
-            occupation_records(&w).iter().any(|x| x.id == root),
+            occs.iter().any(|x| x.id == root),
             "clan root {root:?} is not an occupation in this world"
         );
     }
