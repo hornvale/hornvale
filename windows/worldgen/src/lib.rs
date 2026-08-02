@@ -18,9 +18,10 @@ use hornvale_climate::{
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
-    ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
-    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, Visibility, World, WorldContext, WorldTime, observe,
+    ConceptRegistry, Correspondent, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId,
+    LedgerError, ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
+    RegistryError, Seed, Temperature, Value, Visibility, Void, World, WorldContext, WorldTime,
+    observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{
@@ -3317,7 +3318,8 @@ fn observed_phenomena_at(
 /// `place`'s own committed vantage — its latitude/longitude fact culls the
 /// sky by hemisphere (SEQ-5). This is the per-entity observation glossed
 /// naming is truthful to (spec §9.3: a gloss composes THAT entity's own
-/// site facts), public so the keystone (`cli/tests/words_identity.rs`) and
+/// site facts), public so this crate's own keystone
+/// (`a_settlement_name_gloss_is_truthful_to_its_own_site_facts`, below) and
 /// the lab's `name-gloss-true` metric can re-derive it independently
 /// without importing worldgen's naming internals.
 /// type-audit: bare-ok(identifier-text: species)
@@ -3462,36 +3464,49 @@ fn observe_with_sources(
     ))
 }
 
-/// The concept a phenomenon kind glosses to, for glossed naming (Task 9):
-/// `celestial-body` disambiguates by its description text into whichever
-/// body it actually is (astronomy's only two `celestial-body` producers —
-/// `ConstantSun` and `GeneratedSky`'s sun/moon phenomena — describe
-/// themselves with "sun"/"moon"; "star" is included for forward
-/// compatibility even though no current producer emits it under this kind,
-/// since neighbor stars are their own `night-star` kind instead);
-/// `seasonal-cycle` glosses to `day` (the closest registered concept to
-/// "the annual daylight cycle" — there is no dedicated `season` concept);
-/// `night-star` glosses directly to `star`; climate's `ambient` glosses to
-/// `wind` (the moving-air referent behind its one, always-present
-/// phenomenon). Any other/future kind has no mapping yet (`None`) rather
-/// than guessing. A composition-root judgment call, not a spec table —
-/// adjustable here without touching the language engine.
+/// The phenomenon kinds that gloss — the shared **roster** under decision
+/// 0094, read by this crate's `phenomenon_concept` and independently by
+/// `windows/lab`'s nameability check. It names *which questions must be
+/// answered*, never *what the answers are*: adding a kind here obliges both
+/// sides to account for it, and neither side learns the other's derivation.
+///
+/// Deliberately narrower than the set of phenomena that carry referents.
+/// Eclipses, tides, heat, cold, rain and snow all name real registered
+/// concepts and would gloss if listed — but they never have, so listing them
+/// is a **world change**, not a refactor. Widen only with a spec behind it,
+/// and expect `PRESIDING_CONCEPTS` in `windows/lab/src/metrics.rs` to red
+/// until it is widened to match.
+/// type-audit: bare-ok(identifier-text)
+pub const GLOSSING_KINDS: &[&str] = &[CELESTIAL_BODY, SEASONAL_CYCLE, NIGHT_STAR, AMBIENT];
+
+/// The concept a phenomenon glosses to, for glossed naming (Task 9).
+///
+/// Reads `referent.concept` — never the description. The rostered kinds are
+/// [`GLOSSING_KINDS`]; the closed codomain below is this side's own
+/// derivation, which `windows/lab` does not share (decision 0094).
 fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
-    match phenomenon.kind.as_str() {
-        CELESTIAL_BODY => {
-            if phenomenon.description.contains("moon") {
-                Some("moon")
-            } else if phenomenon.description.contains("star") {
-                Some("star")
-            } else {
-                Some("sun")
-            }
-        }
-        SEASONAL_CYCLE => Some("day"),
-        NIGHT_STAR => Some("star"),
-        AMBIENT => Some("wind"),
+    if !GLOSSING_KINDS.contains(&phenomenon.kind.as_str()) {
+        return None;
+    }
+    // Returned as `&'static str` so callers keep their existing signature:
+    // the codomain is closed, and a referent outside it is a producer bug.
+    match phenomenon.referent.concept.as_str() {
+        "sun" => Some("sun"),
+        "moon" => Some("moon"),
+        "star" => Some("star"),
+        "day" => Some("day"),
+        "wind" => Some("wind"),
         _ => None,
     }
+}
+
+/// The concept a phenomenon glosses to — the public face of the private
+/// [`phenomenon_concept`], exported so the reword-invariance battery in
+/// `cli/tests/prose_is_not_a_contract.rs` can assert the gloss is a function
+/// of the referent alone.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn gloss_concept_of(phenomenon: &Phenomenon) -> Option<&'static str> {
+    phenomenon_concept(phenomenon)
 }
 
 /// The quality concept a belief's [`hornvale_religion::Sentiment`] glosses
@@ -4015,7 +4030,14 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   `<biome>`"); every remaining leftover concept (an unplaced species'
 ///   living-kind, or a social/geographic concept the species hasn't
 ///   settled to reach) gets a generic but still recountable
-///   `GapReason::Experiential`.
+///   `GapReason::Experiential`. **Then, last and unconditionally,** any
+///   concept whose registry lexeme edge is
+///   `Correspondent::Absent(Void::Unnamed(text))` (spec: The Correspondence)
+///   is overwritten to `GapReason::Unnameable(text)` regardless of what any
+///   earlier rule above assigned it: not "this culture never met it" but "no
+///   culture here could ever name it", a claim about the world rather than
+///   the species, so it must never depend on which pack/biome/terrain rule
+///   happened to classify the concept first for a given species.
 ///
 /// Takes ALREADY-BUILT terrain and climate instead of re-sculpting them.
 /// Threaded down the `lexicon_from` chain so the census's ~14 lexicon
@@ -4317,13 +4339,50 @@ fn exposure_of_impl(
         }
     }
 
-    // Unknown: every remaining registered concept.
+    // Unknown: every remaining registered concept, Experiential — the
+    // generic "this species hasn't gotten to it" fallback for anything no
+    // earlier rule claimed.
     for concept in world.registry.concepts() {
         classes
             .entry(concept.name.clone())
             .or_insert_with(|| ExposureClass::Unknown {
                 reason: GapReason::Experiential(experiential_reason(species, &concept.name)),
             });
+    }
+
+    // Unknown/Unnameable: FINAL and UNCONDITIONAL — a concept the registry
+    // itself records as objectively unnameable
+    // (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence)
+    // is Unknown/Unnameable for every species, full stop, overwriting
+    // whatever any earlier rule in this function assigned. That is a claim
+    // about the WORLD ("no culture here has the concept to name this at
+    // all"), not about this species' particular experience, so it must
+    // never depend on which pack/biome/terrain/settlement rule happened to
+    // run first for a given species.
+    //
+    // Deliberately last, not merely hoisted above the pack loop: every rule
+    // above commits via a bare `.insert()` (an unconditional overwrite) or
+    // an `.entry().or_insert()` that yields to whichever rule ran first, so
+    // a check placed anywhere upstream of every other rule could still be
+    // silently overwritten by one that runs after it — making the
+    // classification depend on accidental name collisions and therefore
+    // species-dependent, exactly the bug this closes. Running last and
+    // unconditionally is what makes it registry-derived and
+    // species-independent, matching `cli/src/proto.rs`'s predicate over the
+    // same registry field. Latent today: none of Task 1's nine concepts
+    // collides with a pack/biome/terrain/settlement concept name, so this is
+    // a no-op for the current registry and only guards a future collision.
+    for concept in world.registry.concepts() {
+        if let Some(Correspondent::Absent(Void::Unnamed(text))) =
+            world.registry.manifest(&concept.name).map(|m| &m.lexeme)
+        {
+            classes.insert(
+                concept.name.clone(),
+                ExposureClass::Unknown {
+                    reason: GapReason::Unnameable(text.to_string()),
+                },
+            );
+        }
     }
 
     Ok(classes)
@@ -7390,6 +7449,66 @@ mod tests {
         .expect("seed 42 builds")
     }
 
+    /// The gloss reads the referent, not the prose. Rewording a description
+    /// must not change which concept a phenomenon glosses to — that coupling
+    /// moved 73 committed facts on seed 42 before the referent existed.
+    #[test]
+    fn the_gloss_ignores_the_description() {
+        let moon = |description: &str| hornvale_kernel::Phenomenon {
+            kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
+            referent: hornvale_kernel::Referent::of("moon"),
+            description: description.to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::NightSky,
+        };
+        assert_eq!(phenomenon_concept(&moon("a vast moon")), Some("moon"));
+        assert_eq!(phenomenon_concept(&moon("a vast lunar disc")), Some("moon"));
+        assert_eq!(phenomenon_concept(&moon("")), Some("moon"));
+    }
+
+    /// The codomain is unchanged: kinds that did not gloss before still do
+    /// not, even though they now carry referents.
+    #[test]
+    fn kinds_outside_the_gloss_codomain_stay_silent() {
+        let eclipse = hornvale_kernel::Phenomenon {
+            kind: hornvale_astronomy::ECLIPSE.to_string(),
+            referent: hornvale_kernel::Referent::qualified("eclipse", &["sun"]),
+            description: "the sun is devoured".to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::DaySky,
+        };
+        assert_eq!(phenomenon_concept(&eclipse), None);
+    }
+
+    /// `Referent`'s derived `Eq`/`Ord` discriminate on `concept`: two
+    /// referents that render identical prose but name different concepts do
+    /// not compare equal. There is no phenomenon dedup pass in production
+    /// today (an earlier version of this doc claimed otherwise — see the
+    /// followup register and spec §4's correction) — this pins the property
+    /// any future dedup-by-`Referent` would need, not an existing pass.
+    #[test]
+    fn referent_ord_discriminates_on_concept() {
+        let same_prose = |concept: &str| hornvale_kernel::Phenomenon {
+            kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
+            referent: hornvale_kernel::Referent::of(concept),
+            description: "a light in the sky".to_string(),
+            period_days: None,
+            salience: 1.0,
+            venue: hornvale_kernel::Venue::NightSky,
+        };
+        let mut seen = std::collections::BTreeSet::new();
+        for p in [same_prose("sun"), same_prose("moon")] {
+            seen.insert(p.referent.clone());
+        }
+        assert_eq!(
+            seen.len(),
+            2,
+            "sun and moon referents must not compare equal"
+        );
+    }
+
     /// Decision 0024's remedy on the almanac's Land list — the section that
     /// names every settlement in the world at once, and the one whose
     /// committed gallery page would otherwise publish twenty-one
@@ -8531,7 +8650,7 @@ mod tests {
         )
         .unwrap();
         let ph = observed_phenomena(&locked, 0.0).unwrap();
-        let sees_sun = ph.iter().any(|p| p.description.contains("sun"));
+        let sees_sun = ph.iter().any(|p| p.referent.concept == "sun");
         let sees_night = ph.iter().any(|p| p.kind == hornvale_astronomy::NIGHT_STAR);
         assert!(
             sees_sun ^ sees_night,

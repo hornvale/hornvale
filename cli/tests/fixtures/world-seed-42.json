@@ -693,6 +693,12 @@
         "kind": "Quality",
         "doc": "the color term for blue"
       },
+      "blue-giant": {
+        "name": "blue-giant",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a hot, brilliant, short-lived star"
+      },
       "bone": {
         "name": "bone",
         "domain": "language",
@@ -1269,6 +1275,18 @@
         "kind": "Substance",
         "doc": "Open sunlit water, far from any shore."
       },
+      "orange-dwarf": {
+        "name": "orange-dwarf",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a cooler, dimmer main-sequence star"
+      },
+      "orange-giant": {
+        "name": "orange-giant",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a cooling star swollen off the main sequence"
+      },
       "otyugh-kind": {
         "name": "otyugh-kind",
         "domain": "species",
@@ -1340,6 +1358,18 @@
         "domain": "species",
         "kind": "Living",
         "doc": "a red dragon"
+      },
+      "red-dwarf": {
+        "name": "red-dwarf",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "the commonest and faintest main-sequence star"
+      },
+      "red-giant": {
+        "name": "red-giant",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a cool, vast star late in its life"
       },
       "reef-rubble": {
         "name": "reef-rubble",
@@ -1533,6 +1563,12 @@
         "kind": "Celestial",
         "doc": "the sun"
       },
+      "sun-like-star": {
+        "name": "sun-like-star",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a distant star resembling this world's own sun"
+      },
       "taiga": {
         "name": "taiga",
         "domain": "climate",
@@ -1695,6 +1731,12 @@
         "kind": "Living",
         "doc": "a white dragon"
       },
+      "white-dwarf": {
+        "name": "white-dwarf",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "the dense cinder a spent star leaves"
+      },
       "wind": {
         "name": "wind",
         "domain": "language",
@@ -1730,6 +1772,18 @@
         "domain": "language",
         "kind": "Quality",
         "doc": "the color term for yellow"
+      },
+      "yellow-dwarf": {
+        "name": "yellow-dwarf",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a main-sequence star of the sun's own kind"
+      },
+      "yellow-white-dwarf": {
+        "name": "yellow-white-dwarf",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a hotter, brighter main-sequence star"
       }
     }
   },

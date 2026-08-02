@@ -97,3 +97,59 @@ stack order*. Reordering a stack changes float summation order. The 8-digit
 quantization at `render_csv` will almost certainly absorb it, but "almost
 certainly" is the state of the claim, not a measurement, and the check is
 `make lab-diff STUDY=the-census` whenever the next census runs.
+
+## Handoff — what the next campaign must not rediscover
+
+Promoted out of the campaign's `.superpowers/sdd/` ledger before the worktree
+was torn down, per the scratch-dies-with-the-worktree rule. Everything below
+existed only in scratch until this section was written.
+
+**`campaign/the-particular` will not compile against this `main`, and one break
+is semantic rather than mechanical.** That branch is parked at 19 commits
+awaiting exactly the identity work The Scaffold began.
+
+- `windows/worldgen/src/person_promote.rs:81` reads `r.community` off a
+  *reconstructed* `OccupationRecord` and feeds it to `PersonSeed.community`.
+  The Scaffold deletes that field, because a reconstructed record genuinely
+  does not know its community — the old field held the occupation's **own**
+  identity under a misleading name. **The correct resolution is
+  `r.community` → `r.id`**, which is numerically identical because
+  `reconstruct_occupation` set `community = entity`. It is **not**
+  `founded_from`, and it is **not** a re-derivation. Both of those compile
+  cleanly and silently change which entity the person's facts key on.
+- `domains/history/src/flesh.rs::founder_handle` reads
+  `occ.people` / `site` / `founded` / `ended` / `peak_population` flat and needs
+  `.core.` inserted.
+- Both branches edit `flesh.rs` and `tests/flesh.rs`; expect a textual conflict
+  there on top of the two fixes above.
+
+**The three-campaign sequence this campaign opened.** The Particular was parked
+because promoting 90 persons shifted a vessel session's NPC from entity 1865 to
+1955 and reddened a save-format-class fixture with no content change —
+`EntityId` being a positional identifier doing the job of a stable identity.
+Rather than rebaseline the symptom, the cause gets fixed in three steps:
+**The Scaffold** (done) split the bake's private handles from the ledger's and
+removed mint order from the stratigraphy comparator; **The Salt** decouples
+derived prose from ids; **The Signet** changes the derivation itself, plausibly
+to an ancestry hash. Doing the prerequisites first is what lets The Signet's
+artifact diff contain *only* id changes — otherwise a reviewer cannot
+distinguish "an id moved" from "prose changed because an id moved."
+
+**Two invariants are now load-bearing and documented only in prose.**
+`layer_key`'s totality rests on the bake opening at most one `Genesis`
+occupation per site (`windows/worldgen/src/history_bake.rs`), and the three
+decoders agree on a key tie only because `sort_by_key` is *stable* over the same
+ledger iteration order. Both are stated in `layer_key`'s doc comment; neither is
+enforced by a test. A re-genesis path, or a switch to `sort_unstable_by_key`,
+breaks one of them silently.
+
+**One correction worth carrying, because the reasoning was wrong in an
+instructive way.** During the final review this campaign flagged
+`windows/vessel/src/brief.rs`'s `.find(|o| o.core.ended.is_none())` as depending
+on a one-alive-occupation-per-cell world property, and measured that property to
+hold (0 of 399 cells on seed 42). The measurement was right and the conclusion
+was wrong: `founded` leads **both** the old and the new comparator, so that call
+returns the earliest-founded alive record either way and the campaign could not
+have changed it. The error was checking the property that would make the code
+safe without first checking whether the code was already invariant. No registry
+row was minted.

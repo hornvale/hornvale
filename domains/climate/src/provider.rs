@@ -22,7 +22,7 @@ use crate::weather::{CloudType, WeatherState};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
     CellId, CellMap, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource, Phenomenon,
-    Precipitation, ReferenceElevation, Seed, Temperature, Venue,
+    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -500,6 +500,7 @@ impl PhenomenaSource for GeneratedClimate {
         // refine with the felt structure beneath it.
         let mut out = vec![Phenomenon {
             kind: AMBIENT.to_string(),
+            referent: Referent::of("wind"),
             description: "warm, still, unchanging air".to_string(),
             period_days: None,
             salience: 0.15,
@@ -526,6 +527,7 @@ impl PhenomenaSource for GeneratedClimate {
         if deviation >= TEMP_EMIT_MARGIN_C {
             out.push(Phenomenon {
                 kind: HEAT.to_string(),
+                referent: Referent::of("heat"),
                 description: "oppressive heat".to_string(),
                 period_days: None,
                 salience: temp_salience,
@@ -534,6 +536,7 @@ impl PhenomenaSource for GeneratedClimate {
         } else if deviation <= -TEMP_EMIT_MARGIN_C {
             out.push(Phenomenon {
                 kind: COLD.to_string(),
+                referent: Referent::of("cold"),
                 description: "biting cold".to_string(),
                 period_days: None,
                 salience: temp_salience,
@@ -550,13 +553,14 @@ impl PhenomenaSource for GeneratedClimate {
                 (MOISTURE_SALIENCE_PER_UNIT * (moisture - WET_EMIT_THRESHOLD))
                     .clamp(0.0, MAX_CLIMATE_SALIENCE),
             );
-            let (kind, description) = if mean <= FREEZING_C {
-                (SNOW, "falling snow")
+            let (kind, description, referent) = if mean <= FREEZING_C {
+                (SNOW, "falling snow", Referent::of("snow"))
             } else {
-                (RAIN, "falling rain")
+                (RAIN, "falling rain", Referent::of("rain"))
             };
             out.push(Phenomenon {
                 kind: kind.to_string(),
+                referent,
                 description: description.to_string(),
                 period_days: None,
                 salience,

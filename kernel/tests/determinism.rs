@@ -4,7 +4,7 @@
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConstantField, EntityId, Fact, Field, ObserverContext, PhenomenaSource, Phenomenon, Position,
-    Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
+    Referent, Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
 };
 
 struct MiniSun;
@@ -13,6 +13,7 @@ impl PhenomenaSource for MiniSun {
     fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
         vec![Phenomenon {
             kind: "celestial-body".to_string(),
+            referent: Referent::of("sun"),
             description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,

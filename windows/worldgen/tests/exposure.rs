@@ -684,7 +684,9 @@ fn every_unknown_entrys_reason_is_non_empty() {
         for (concept, class) in &exposures {
             if let ExposureClass::Unknown { reason } = class {
                 let text = match reason {
-                    GapReason::Experiential(s) | GapReason::Perceptual(s) => s,
+                    GapReason::Experiential(s)
+                    | GapReason::Perceptual(s)
+                    | GapReason::Unnameable(s) => s,
                 };
                 assert!(
                     !text.trim().is_empty(),
@@ -745,6 +747,7 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
             let text = match reason {
                 hornvale_language::GapReason::Experiential(s) => s,
                 hornvale_language::GapReason::Perceptual(s) => s,
+                hornvale_language::GapReason::Unnameable(s) => s,
             };
             assert!(
                 !text.is_empty(),

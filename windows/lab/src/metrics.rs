@@ -4432,29 +4432,46 @@ fn name_collision_rate(v: &FullView) -> MetricValue {
     MetricValue::Number(duplicated as f64 / names.len() as f64)
 }
 
-/// The concept a phenomenon kind glosses to (spec §9.3) — mirrors
-/// worldgen's own private `phenomenon_concept` and the independent copy in
-/// `cli/tests/words_identity.rs`'s `phenomenon_concept`. Deliberately
-/// duplicated rather than imported: this is a composition-root judgment
-/// call, not a save-format contract, so re-deriving it here from the same
-/// public phenomenon-kind constants is what makes `name-gloss-true` a real
-/// cross-check rather than an echo of worldgen's own private mapping.
-fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
-    match phenomenon.kind.as_str() {
-        hornvale_astronomy::CELESTIAL_BODY => {
-            if phenomenon.description.contains("moon") {
-                Some("moon")
-            } else if phenomenon.description.contains("star") {
-                Some("star")
-            } else {
-                Some("sun")
-            }
-        }
-        hornvale_astronomy::SEASONAL_CYCLE => Some("day"),
-        hornvale_astronomy::NIGHT_STAR => Some("star"),
-        hornvale_climate::AMBIENT => Some("wind"),
-        _ => None,
-    }
+/// The concept a phenomenon glosses to, read from the shared roster
+/// (`hornvale_worldgen::GLOSSING_KINDS`) and the phenomenon's own referent.
+///
+/// This is a READ, not a derivation — the derivation this crate owns is
+/// [`referent_is_nameable`] below, which answers the same roster from the
+/// concept registry and the lexicon rather than from worldgen's codomain.
+/// Decision 0094: share the roster, never the derivation. Before The
+/// Vernacular this function re-implemented worldgen's mapping by grepping the
+/// phenomenon's English description, which made the gloss a function of
+/// prose.
+fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&str> {
+    hornvale_worldgen::GLOSSING_KINDS
+        .contains(&phenomenon.kind.as_str())
+        .then_some(phenomenon.referent.concept.as_str())
+}
+
+/// This crate's own derivation over the shared roster: is a rostered
+/// phenomenon's referent a concept the world can actually *say*?
+///
+/// Independent of worldgen by construction — it consults the concept
+/// registry and the culture's lexicon, which the gloss path never reads. A
+/// referent that is unregistered, outside the presiding codomain, or a
+/// lexical `Gap` for this culture is a phenomenon whose deity could never be
+/// named after it, which is exactly the defect The Vernacular exists to make
+/// visible. Reserved integration seam: exercised today only by
+/// `every_rostered_referent_is_nameable` below; a metric wiring it into the
+/// registry is a follow-up outside this task's scope. Present in all builds
+/// so that seam is real, not test-only.
+#[allow(dead_code)]
+fn referent_is_nameable(
+    phenomenon: &Phenomenon,
+    registry: &hornvale_kernel::ConceptRegistry,
+    lexicon: &hornvale_language::Lexicon,
+) -> Option<bool> {
+    let concept = phenomenon_concept(phenomenon)?;
+    Some(
+        registry.concept(concept).is_some()
+            && PRESIDING_CONCEPTS.contains(&concept)
+            && !matches!(lexicon.entry(concept), None | Some(LexEntry::Gap { .. })),
+    )
 }
 
 /// This world's `species` lexicon, reusing the view's already-built terrain
@@ -4478,7 +4495,12 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
 /// `NAME_GLOSS` facts and this SAME public site-concept function every
 /// other name-truthfulness consumer (the worldgen keystone test, this
 /// metric) also calls, so all three stay in lockstep by construction
-/// rather than by three hand-kept copies. `None` if the settlement is
+/// rather than by three hand-kept copies — true for every slot
+/// `worldgen_settlement_site_concepts` computes itself. The presiding slot
+/// is the one exception: this function cannot pass it through that
+/// call (see the comment on `presiding` below), so it is appended here
+/// instead, in a position that has to be hand-kept in sync with where
+/// worldgen appends it internally. `None` if the settlement is
 /// missing a cell-id/species fact, which `name_gloss_true` below treats as
 /// an unverifiable (failing) row rather than skipping it silently.
 fn settlement_site_concepts(
@@ -4497,17 +4519,44 @@ fn settlement_site_concepts(
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
-    let presiding = phenomena.first().and_then(phenomenon_concept);
-    let concepts = worldgen_settlement_site_concepts(
+    // `phenomenon_concept` now borrows from the phenomenon's own referent
+    // (decision 0094 stopped this being a `&'static` codomain match), so it
+    // cannot feed `worldgen_settlement_site_concepts`'s `presiding:
+    // Option<&'static str>` parameter directly — `phenomena` doesn't outlive
+    // that call. Own the string instead and pass `None` for `presiding`,
+    // appending it here after the fact.
+    //
+    // This reproduces the exact vector `worldgen_settlement_site_concepts`
+    // would have returned, not merely an order-insensitive equivalent of it:
+    // that function appends `presiding` LAST
+    // (`windows/worldgen/src/lib.rs:4902`, `concepts.extend(presiding)` as
+    // its final line before returning), and appending it last here matches
+    // that exactly. This is now a real assumption this crate hand-keeps
+    // about worldgen's push order, not something decision 0094 lets us
+    // avoid — if that push ever moves,
+    // `settlement_site_concepts_orders_a_real_multi_concept_vector_most_
+    // specific_first` (`windows/worldgen/src/lib.rs:10471`) reds and gets
+    // updated on that side, and this `.extend(presiding)` must move with it
+    // or this crate silently drifts out of the composition it claims to
+    // reproduce.
+    let presiding = phenomena
+        .first()
+        .and_then(phenomenon_concept)
+        .map(str::to_string);
+    let mut concepts: Vec<String> = worldgen_settlement_site_concepts(
         v.world(),
         &v.world().seed,
         &species,
         cell,
         v.terrain(),
         climate,
-        presiding,
-    );
-    Some(concepts.into_iter().map(str::to_string).collect())
+        None,
+    )
+    .into_iter()
+    .map(str::to_string)
+    .collect();
+    concepts.extend(presiding);
+    Some(concepts)
 }
 
 /// Whether `gloss` reads as a truthful composition of `concepts`: it must
@@ -4603,17 +4652,23 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
     MetricValue::Flag(all_true)
 }
 
-/// The exact codomain of [`phenomenon_concept`] — every concept a presiding
-/// phenomenon can contribute to a settlement's site vector, and therefore to
-/// its gloss. Named as a set here because [`name_transparency`] has to READ a
-/// committed gloss back into the concepts it names, and the presiding slot is
-/// the one site concept that cannot be re-derived from terrain and climate
-/// alone (it needs the settlement's own culled sky — `SEQ-5`, the expensive
-/// half of `settlement_site_concepts` above). Taking the whole codomain as
-/// the candidate set instead costs the parse nothing: it is a superset of the
-/// one concept that actually fired, and the segmentation stays unique anyway
-/// (see [`gloss_parses`]). `presiding_concepts_are_phenomenon_concepts_
-/// codomain` pins the two together.
+/// A SUPERSET of [`phenomenon_concept`]'s codomain — every concept a
+/// presiding phenomenon can contribute to a settlement's site vector, and
+/// therefore to its gloss. Not exact: since decision 0094 opened
+/// `phenomenon_concept` to read a phenomenon's own `referent.concept`
+/// verbatim for any rostered kind, its codomain is open (any registered
+/// concept a producer chooses to name), so this list is an upper bound rather
+/// than a codomain pinned exactly to it. Named as a set here because
+/// [`name_transparency`] has to READ a committed gloss back into the concepts
+/// it names, and the presiding slot is the one site concept that cannot be
+/// re-derived from terrain and climate alone (it needs the settlement's own
+/// culled sky — `SEQ-5`, the expensive half of `settlement_site_concepts`
+/// above). Taking the whole list as the candidate set instead costs the parse
+/// nothing: it is a superset of the one concept that actually fired, and the
+/// segmentation stays unique anyway (see [`gloss_parses`]).
+/// `presiding_concepts_cover_seed_42s_rostered_concepts` checks this list
+/// against a real generated world's rostered concepts, rather than pinning
+/// exact codomain equality against hand-written fixtures.
 /// type-audit: bare-ok(identifier-text)
 const PRESIDING_CONCEPTS: &[&str] = &["day", "moon", "star", "sun", "wind"];
 
@@ -5314,6 +5369,7 @@ fn exposure_sound_against(
                 let text = match reason {
                     GapReason::Experiential(s) => s,
                     GapReason::Perceptual(s) => s,
+                    GapReason::Unnameable(s) => s,
                 };
                 if text.is_empty() {
                     sound = false;
@@ -6475,41 +6531,57 @@ mod tests {
         assert!(gloss_parses("hill-marsh", &vocab).is_empty());
     }
 
-    /// `PRESIDING_CONCEPTS` must be exactly `phenomenon_concept`'s codomain.
-    /// If a later campaign teaches a new phenomenon kind to gloss, this reds
-    /// rather than letting `name-transparency` silently fail to parse the
+    /// `PRESIDING_CONCEPTS` covers every concept a REAL seed-42 world's
+    /// rostered phenomena actually gloss to — checked against
+    /// `hornvale_worldgen::observed_phenomena` on a built world, not against
+    /// hand-written fixtures. A hand-typed fixture's `concept` field is
+    /// whatever the test author wrote, so it can only be changed by editing
+    /// the fixture, never by a production change — that shape was found to
+    /// make this test tautological (final fix wave, campaign close review).
+    /// Deriving the cases from a live world instead means a later campaign
+    /// that teaches a new phenomenon kind to gloss, or points an existing
+    /// kind's referent at an unlisted concept, actually reds this test rather
+    /// than leaving `name-transparency` to silently fail to parse the
     /// glosses that carry it.
     #[test]
-    fn presiding_concepts_are_phenomenon_concepts_codomain() {
-        let phenomenon = |kind: &str, description: &str| hornvale_kernel::Phenomenon {
-            kind: kind.to_string(),
-            description: description.to_string(),
-            period_days: None,
-            salience: 1.0,
-            venue: hornvale_kernel::Venue::DaySky,
-        };
-        let cases = [
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the moon rides high"),
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "a wandering star"),
-            phenomenon(hornvale_astronomy::CELESTIAL_BODY, "the disc at noon"),
-            phenomenon(hornvale_astronomy::SEASONAL_CYCLE, "the turning year"),
-            phenomenon(hornvale_astronomy::NIGHT_STAR, "a fixed star"),
-            phenomenon(hornvale_climate::AMBIENT, "the prevailing wind"),
-        ];
-        let mut produced: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
-        for p in &cases {
-            let concept = phenomenon_concept(p).expect("each of these kinds glosses");
-            assert!(
-                PRESIDING_CONCEPTS.contains(&concept),
-                "{concept} is a presiding gloss concept but is missing from PRESIDING_CONCEPTS"
-            );
-            produced.insert(concept);
+    fn presiding_concepts_cover_seed_42s_rostered_concepts() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let phenomena =
+            hornvale_worldgen::observed_phenomena(view.world(), 0.0).expect("phenomena");
+        let mut checked = false;
+        for p in &phenomena {
+            if let Some(concept) = phenomenon_concept(p) {
+                checked = true;
+                assert!(
+                    PRESIDING_CONCEPTS.contains(&concept),
+                    "{concept} is a live presiding gloss concept (phenomenon kind {:?}) but is \
+                     missing from PRESIDING_CONCEPTS",
+                    p.kind
+                );
+            }
         }
-        let listed: std::collections::BTreeSet<&str> = PRESIDING_CONCEPTS.iter().copied().collect();
-        assert_eq!(
-            produced, listed,
-            "PRESIDING_CONCEPTS lists exactly what phenomenon_concept can return"
+        assert!(
+            checked,
+            "seed 42 should carry at least one rostered (glossing) phenomenon"
         );
+    }
+
+    /// Every rostered phenomenon in seed 42 names a concept the world can
+    /// say. The lab's own derivation over the shared roster (decision 0094)
+    /// — it asks the registry and the lexicon, never worldgen's codomain.
+    #[test]
+    fn every_rostered_referent_is_nameable() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let lexicon = lex(&view, "goblin").expect("goblin has a lexicon");
+        for p in hornvale_worldgen::observed_phenomena(view.world(), 0.0).expect("phenomena") {
+            if let Some(nameable) = referent_is_nameable(&p, &view.world().registry, &lexicon) {
+                assert!(
+                    nameable,
+                    "rostered phenomenon {:?} refers to {:?}, which this world cannot name",
+                    p.kind, p.referent.concept
+                );
+            }
+        }
     }
 
     /// Seed 42, pinned. The syllable columns exist to say the campaign's own

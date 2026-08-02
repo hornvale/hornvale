@@ -551,7 +551,7 @@ pub fn render(ctx: &AlmanacContext) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{EntityId, Venue};
+    use hornvale_kernel::{EntityId, Referent, Venue};
     use hornvale_religion::Sentiment;
 
     fn sample_context() -> AlmanacContext {
@@ -567,6 +567,7 @@ mod tests {
             },
             phenomena: vec![Phenomenon {
                 kind: "celestial-body".to_string(),
+                referent: Referent::of("sun"),
                 description: "a golden sun fixed at zenith".to_string(),
                 period_days: None,
                 salience: 1.0,
