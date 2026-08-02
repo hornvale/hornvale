@@ -81,6 +81,7 @@ pub mod alchemy;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
+mod descent;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
@@ -98,6 +99,7 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
+pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of};
 pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
