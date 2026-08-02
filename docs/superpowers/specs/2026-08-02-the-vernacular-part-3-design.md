@@ -139,6 +139,45 @@ Do **not** delete the fact, and do **not** drop `class_name` from
 scene is an out-of-world instrument (decision 0022) and the field is a
 cross-repo contract.
 
+### 5.1 What plan 3a actually contains — three findings from writing it
+
+Writing 3a's plan surfaced three things the section above did not know. All
+three narrow or redirect it; none changes the sequencing rationale.
+
+**(a) The Book already re-centres, and the sentence in question is the
+author's.** `book/src/gallery/the-book.md` renders three registers side by
+side: a culture's account (*"Xoaboa is **the earth** with two moons. The moons
+cross because they are Boko's kin. The day returns, as all things return."*),
+an italicised ground truth (*"In truth, Xoaboa is a planet orbiting a
+yellow-white dwarf (F)…"*), and a priesthood's teaching. **No creature says
+"orbiting."** The vantage is not leaking — §3.1's registers are already visible
+in a committed artifact, which is a stronger demonstration than this campaign
+had realised it owned.
+
+Nathan's ruling: Earth's spectral taxonomy **may** stand in the ground-truth
+register, on the campaign's own line — *units are the author's frame; names are
+the world's*, and an italicised "in truth" is the author speaking. So 3a
+changes the **fact's value** to a concept id and renders it back out as
+"a yellow-white dwarf (F)" from that id. Nothing a creature says changes; the
+ledger stops holding a name.
+
+**(b) The scene and the lab metric are unaffected.**
+`windows/scene/src/lib.rs:941` and `windows/lab/src/metrics.rs:735` both read
+`system.star.class_name` — the **struct field**, not the fact. So no
+`scene/*/v1` schema is touched and no census metric moves. Verified, not
+assumed.
+
+**(c) 3a touches the knowledge/Echo round-trip, which §5 said it would not.**
+`windows/book/src/lib.rs:1992`'s `fact_for` **parses rendered prose back into a
+fact** — `"orbiting a yellow-white dwarf (F)"` → `(STAR_CLASS, Text(...))`.
+That is a backward edge in §2.1's state machine, deliberate and load-bearing
+(The Echo's transfer law). Changing the fact's value breaks the round-trip
+unless `fragment_for` and `fact_for` move together, so **keeping that pair
+inverse is in 3a's scope**: render id → prose, parse prose → id. This is the
+campaign's central defect in its most load-bearing form, and 3a does not remove
+it — it keeps it working while the value underneath becomes honest. Removing
+the backward edge is stage 4's job.
+
 **3b — delete `description`; thread the speaker.** ~10 readers, ~20 producers.
 Renders through `ClauseSpec` + `numeracy`. Includes §4.2's cost measurement and
 §3's named-speaker header.
