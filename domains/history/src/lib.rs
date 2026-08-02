@@ -11,6 +11,7 @@
 //! bake must read terrain, paleoclimate, and demography together.
 #![warn(missing_docs)]
 
+pub mod descent;
 pub mod flesh;
 pub mod record;
 pub mod streams;
