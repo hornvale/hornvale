@@ -493,10 +493,23 @@ fn homophony_count_is_measured_and_pinned() {
     // trend; this campaign corrected that conflation twice. A daughter can get
     // more homophonous while its names get shorter for entirely unrelated
     // reasons, and here they moved in opposite directions.
-    assert!((mg - 2.910).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.755).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 10.571).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.725).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // The Witness (cascade/v2 epoch), 0063: goblin 2.910 -> 3.505, hobgoblin
+    // 2.755 -> 3.219, bugbear 10.571 -> 12.491, kobold 2.725 -> 4.014.
+    // `draw_rule` stopped offering `Tonogenesis`/`VowelShift` to species whose
+    // phonology cannot host them, reseeding every cascade and therefore every
+    // daughter's periphery homophony draws — the same regen that moved the
+    // naming pins in `calibration.rs`. Bugbear stays highest among the
+    // goblinoid daughters by better than 3x (3.56x over goblin, 3.88x over
+    // hobgoblin), which is the claim this row guards; these re-pin the
+    // witnesses, not the observation. Each mean is an exact integer count
+    // over the 1000-seed census divided by 1000 (3505/1000, 3219/1000,
+    // 12491/1000, 4014/1000), which is why all four land on a clean three
+    // decimal digits.
+    assert!((mg - 3.505).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 3.219).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 12.491).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 4.014).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -1333,8 +1333,14 @@ fn name_collision_rate_is_measured_and_pinned() {
     // reuse. And the roster of things to name kept GROWING, so each world
     // draws more names from the same narrowed space. Both movements are
     // recorded at their own pin sites; this row records their product.
-    assert_eq!(zero, 2, "zero-collision world count drifted");
-    assert_eq!(nonzero, 768, "nonzero-collision world count drifted");
+    // The Witness (2026-08-02) re-pin, `language/<species>/lexicon/cascade/v2`:
+    // 2 -> 3 zero-collision, 768 -> 767 nonzero. `draw_rule` stopped offering
+    // `Tonogenesis` and `VowelShift` to species whose phonology cannot host
+    // them, which reseeds every cascade and therefore every generated name.
+    // One world crosses from a nonzero rate to zero; `absent` is unmoved, and
+    // 2+768 = 3+767, so the three-way partition still accounts for all 1000.
+    assert_eq!(zero, 3, "zero-collision world count drifted");
+    assert_eq!(nonzero, 767, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1392,7 +1398,10 @@ fn name_collision_rate_is_measured_and_pinned() {
         // movement this row has ever recorded, and it is sanctioned — see the
         // decision-0024 note above the zero/nonzero pins, which a reader who
         // arrived here from a red assertion has probably not read yet.
-        (mean - 0.564_509_597_998_702_8).abs() < 1e-6,
+        // The Witness (cascade/v2 epoch), 0063: 0.564_509_597_998_702_8 ->
+        // 0.567_057_788_528_571. Same cascade reseed as the zero/nonzero pins
+        // above: every generated name redrawn, nudging the mean up a hair.
+        (mean - 0.567_057_788_528_571).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1548,7 +1557,12 @@ fn name_length_distributions_are_measured_and_pinned() {
         // for — names got shorter as naming moved onto short site-derived
         // compounds. Recorded as measured; the row is a drift witness, not a
         // bound, so nothing here is loosened to admit it.
-        ("goblin", 767u32, 8.784_123_816_558_01),
+        // The Witness (cascade/v2 epoch), 0063: 8.784_123_816_558_01 ->
+        // 8.639_595_029_986_95. Present count holds at 767; `draw_rule`
+        // stopped offering `Tonogenesis`/`VowelShift` to species whose
+        // phonology cannot host them, reseeding every cascade and therefore
+        // every generated name.
+        ("goblin", 767u32, 8.639_595_029_986_95),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1586,7 +1600,10 @@ fn name_length_distributions_are_measured_and_pinned() {
         // since The Tumult — its flagships reseat onto materially different
         // sites, so its site-derived compounds are drawn from a different part
         // of its lexicon.
-        ("kobold", 760u32, 7.403195966315787),
+        // The Witness (cascade/v2 epoch), 0063: 7.403_195_966_315_787 ->
+        // 7.228_477_004_342_105. Present count holds at 760; same cascade
+        // reseed as the goblin pin above.
+        ("kobold", 760u32, 7.228_477_004_342_105),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1672,8 +1689,14 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // The claim this row carries — spec §8 criterion 2, mean syllable
         // count in the 2-3 range — HOLDS at both species and is not what the
         // re-pin touched.
-        ("goblin", 767u32, 2.761284613820079),
-        ("kobold", 760u32, 2.316698345263158),
+        //
+        // The Witness (cascade/v2 epoch), 0063: goblin 2.761_284_613_820_079
+        // -> 2.767_352_168_839_636; kobold 2.316_698_345_263_158 ->
+        // 2.318_080_226_315_786_7. Present counts unmoved (767 / 760); the
+        // claim still HOLDS at both species (2.767 and 2.318, both inside
+        // 2-3).
+        ("goblin", 767u32, 2.767_352_168_839_636),
+        ("kobold", 760u32, 2.318_080_226_315_786_7),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1779,7 +1802,15 @@ fn name_transparency_is_measured_and_pinned() {
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
         // 0.826_729_134_389_610_3 -> 0.793_035_961_411_688_3, present/absent
         // unmoved at 770/230.
-        (mean - 0.793035961411688).abs() < 1e-9,
+        // The Witness (cascade/v2 epoch), 0063: 0.793_035_961_411_688 ->
+        // 0.803_660_578_424_675, present/absent unmoved at 770/230.
+        // Transparency ROSE, and that is the campaign's intent rather than a
+        // regression: the wear cascade now lands real sound changes instead
+        // of spending rule slots on rules a species' phonology could never
+        // fire (`Tonogenesis`/`VowelShift` on atonal/non-vowel-shifting
+        // peoples), so more names still gloss to the source concept they
+        // compound over.
+        (mean - 0.803_660_578_424_675).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2100,7 +2131,15 @@ fn null_control_name_length_smd_is_pinned() {
         // names. Still ~39x inside the ±0.2 sampling-theory bound
         // `null_control_distributions_are_within_the_sampling_bound` asserts,
         // which is the assertion that would actually catch a broken control.
-        (namelen - -0.025_217_538_228_395_453).abs() < 1e-9,
+        // The Witness (cascade/v2 epoch), 0063: -0.025_217_538_228_395_453 ->
+        // -0.012_055_568_856_886_177. This is the null control's own reading,
+        // not a regression: the cascade reseed touched BOTH the goblin and its
+        // deliberately-identical twin alike, and the standardized mean
+        // difference moved roughly HALFWAY toward zero rather than away from
+        // it — the null hypothesis (INDISTINGUISHABLE FROM ZERO) reads more
+        // true after this re-pin than before, and no sign flip occurred. Still
+        // comfortably inside the ±0.2 sampling-theory bound above.
+        (namelen - -0.012_055_568_856_886_177).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
