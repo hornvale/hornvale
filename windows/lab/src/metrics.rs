@@ -735,6 +735,13 @@ pub fn registry() -> Vec<Metric> {
             name: "star-class",
             doc: "Spectral class of the host star",
             summary: SummaryKind::Categorical,
+            // Deliberately reads the in-memory system's `class_name` display
+            // (e.g. "yellow dwarf (G)"), not the ledger's committed
+            // `star-class` concept id (e.g. "yellow-dwarf") — the census is
+            // an author-frame instrument, same justification as the "In
+            // truth" register `windows/book` renders for the ground-truth
+            // line. This is why the census rows didn't move when the ledger
+            // switched from prose to a concept id.
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.star.class_name.clone())
             }),

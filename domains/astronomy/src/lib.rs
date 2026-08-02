@@ -110,7 +110,8 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::STAR_CLASS,
         true,
-        "the host star's descriptive spectral class",
+        "the host star's spectral class, as a registered concept id (Morgan-Keenan \
+         prose is rendered from it at read time by windows/book, never stored)",
     )?;
     registry.register_predicate(
         facts::TIDALLY_LOCKED,

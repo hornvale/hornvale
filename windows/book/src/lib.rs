@@ -2032,6 +2032,22 @@ pub fn fact_for_public(fragment: &str) -> Option<(String, Value)> {
     fact_for(fragment)
 }
 
+/// The public face of the private [`fragment_for`], exported so
+/// `cli/tests/star_class_is_a_concept.rs` can drive its round-trip
+/// assertion from the actual renderer rather than a hand-rolled fragment —
+/// a hand-rolled `"orbiting a {display}"` never exercises which article
+/// [`fragment_for`] actually chooses, so a wrong-article regression there
+/// would go undetected. Returns the fragment's plain text; the
+/// `Modifier`/`Trailing` tag is a Book-internal aggregation detail the
+/// caller has no need of. Do not make `fragment_for` itself public — its
+/// privacy is what keeps the construction table a Book concern.
+/// type-audit: bare-ok(identifier-text: predicate), bare-ok(prose: return)
+pub fn fragment_for_public(predicate: &str, object: &Value) -> Option<String> {
+    match fragment_for(predicate, object)? {
+        Fragment::Modifier(text) | Fragment::Trailing(text) => Some(text),
+    }
+}
+
 /// Apply a listener's numeracy rung to a heard quantity fragment (LANG-44
 /// spec §3.4): recover the fragment's stated surface value exactly as
 /// [`fact_for`] already does, then re-render it at `listener_rung` via
