@@ -202,8 +202,9 @@ pub fn realize_tongue(
         }
         Some(LexEntry::Gap { reason }) => {
             // `GapReason`'s Display is the canonical recountable rendering
-            // ("gap (experiential): ..." / "gap (perceptual): ...") — never
-            // `{reason:?}`; the reason is prose to recount, not debug.
+            // ("gap (experiential): ..." / "gap (perceptual): ..." / "gap
+            // (unnameable): ...") — never `{reason:?}`; the reason is prose
+            // to recount, not debug.
             return Err(TongueGap {
                 concept: clause.complement_concept.clone(),
                 reason: reason.to_string(),

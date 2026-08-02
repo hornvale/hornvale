@@ -4026,12 +4026,14 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   `<biome>`"); every remaining leftover concept (an unplaced species'
 ///   living-kind, or a social/geographic concept the species hasn't
 ///   settled to reach) gets a generic but still recountable
-///   `GapReason::Experiential` — UNLESS the registry itself records the
-///   concept's lexeme edge as `Correspondent::Absent(Void::Unnamed(text))`
-///   (spec: The Correspondence), in which case the gap is `GapReason::
-///   Unnameable(text)`: not "this culture never met it" but "no culture
-///   here could ever name it", a claim about the world rather than the
-///   species.
+///   `GapReason::Experiential`. **Then, last and unconditionally,** any
+///   concept whose registry lexeme edge is
+///   `Correspondent::Absent(Void::Unnamed(text))` (spec: The Correspondence)
+///   is overwritten to `GapReason::Unnameable(text)` regardless of what any
+///   earlier rule above assigned it: not "this culture never met it" but "no
+///   culture here could ever name it", a claim about the world rather than
+///   the species, so it must never depend on which pack/biome/terrain rule
+///   happened to classify the concept first for a given species.
 ///
 /// Takes ALREADY-BUILT terrain and climate instead of re-sculpting them.
 /// Threaded down the `lexicon_from` chain so the census's ~14 lexicon
@@ -4335,22 +4337,50 @@ fn exposure_of_impl(
         }
     }
 
-    // Unknown: every remaining registered concept — Experiential, UNLESS the
-    // registry itself already records the concept as objectively unnameable
-    // (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence).
-    // That is a claim about the WORLD ("no culture here has this concept at
-    // all"), not about this species' particular experience, so it must not
-    // be overwritten by the generic experiential fallback.
+    // Unknown: every remaining registered concept, Experiential — the
+    // generic "this species hasn't gotten to it" fallback for anything no
+    // earlier rule claimed.
     for concept in world.registry.concepts() {
-        classes.entry(concept.name.clone()).or_insert_with(|| {
-            let reason = match world.registry.manifest(&concept.name).map(|m| &m.lexeme) {
-                Some(Correspondent::Absent(Void::Unnamed(text))) => {
-                    GapReason::Unnameable(text.to_string())
-                }
-                _ => GapReason::Experiential(experiential_reason(species, &concept.name)),
-            };
-            ExposureClass::Unknown { reason }
-        });
+        classes
+            .entry(concept.name.clone())
+            .or_insert_with(|| ExposureClass::Unknown {
+                reason: GapReason::Experiential(experiential_reason(species, &concept.name)),
+            });
+    }
+
+    // Unknown/Unnameable: FINAL and UNCONDITIONAL — a concept the registry
+    // itself records as objectively unnameable
+    // (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence)
+    // is Unknown/Unnameable for every species, full stop, overwriting
+    // whatever any earlier rule in this function assigned. That is a claim
+    // about the WORLD ("no culture here has the concept to name this at
+    // all"), not about this species' particular experience, so it must
+    // never depend on which pack/biome/terrain/settlement rule happened to
+    // run first for a given species.
+    //
+    // Deliberately last, not merely hoisted above the pack loop: every rule
+    // above commits via a bare `.insert()` (an unconditional overwrite) or
+    // an `.entry().or_insert()` that yields to whichever rule ran first, so
+    // a check placed anywhere upstream of every other rule could still be
+    // silently overwritten by one that runs after it — making the
+    // classification depend on accidental name collisions and therefore
+    // species-dependent, exactly the bug this closes. Running last and
+    // unconditionally is what makes it registry-derived and
+    // species-independent, matching `cli/src/proto.rs`'s predicate over the
+    // same registry field. Latent today: none of Task 1's nine concepts
+    // collides with a pack/biome/terrain/settlement concept name, so this is
+    // a no-op for the current registry and only guards a future collision.
+    for concept in world.registry.concepts() {
+        if let Some(Correspondent::Absent(Void::Unnamed(text))) =
+            world.registry.manifest(&concept.name).map(|m| &m.lexeme)
+        {
+            classes.insert(
+                concept.name.clone(),
+                ExposureClass::Unknown {
+                    reason: GapReason::Unnameable(text.to_string()),
+                },
+            );
+        }
     }
 
     Ok(classes)

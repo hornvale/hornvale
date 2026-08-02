@@ -333,10 +333,19 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // Epoch 6 — The Vernacular, Part 2: the nine spectral classes, each
     // registered `lexeme: Absent(Void::Unnamed(...))` — a star's class is
     // real whether or not anyone here has invented spectroscopy, but no
-    // culture has, so no word realizes it. `exposure_from` draws its universe
-    // from the packs, not the registry, so none of these nine ever reaches
-    // `assign_proto_roots`; this cohort exists only to satisfy the parity
-    // check above, not because a proto-root will ever be drawn for them.
+    // culture has, so no word realizes it. These nine DO reach the exposures
+    // map: `exposure_of_impl` closes with a loop over every registered
+    // concept (`windows/worldgen/src/lib.rs`'s own doc: "the map's keys are
+    // always exactly `world.registry.concepts()`'s names"), so nothing in
+    // the registry is ever absent from it. What keeps a proto-root from
+    // being drawn for them is `hornvale_language::lexicon::
+    // proto_root_universe`'s `GapReason::Unnameable` filter, which excludes
+    // exactly this classification from `build_lexicon`'s universe before
+    // `assign_proto_roots` runs — a language-side exclusion, not a registry-
+    // side absence. This cohort exists to satisfy the parity check above and
+    // to keep the epoch-first sort giving these nine no influence on any
+    // earlier-epoch assignment, per that filter and the ordering property
+    // this module's own tests pin.
     &[
         "orange-dwarf",
         "yellow-dwarf",

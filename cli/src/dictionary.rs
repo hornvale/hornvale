@@ -234,13 +234,12 @@ fn one_liner(
     format!("{proto_roman} → {rules} → {modern_roman}")
 }
 
-/// A gap's recountable reason, tagged with its provenance kind.
+/// A gap's recountable reason, tagged with its provenance kind. Delegates to
+/// [`GapReason`]'s own `Display` — the canonical rendering every gap-
+/// recounting surface should use, per that impl's own doc, rather than a
+/// second hand-rolled match that could drift from it.
 fn gap_text(reason: &GapReason) -> String {
-    match reason {
-        GapReason::Experiential(text) => format!("gap (experiential): {text}"),
-        GapReason::Perceptual(text) => format!("gap (perceptual): {text}"),
-        GapReason::Unnameable(text) => format!("gap (unnameable): {text}"),
-    }
+    reason.to_string()
 }
 
 /// A single-line, REPL-friendly description of an entry: `<roman> /<ipa>/ —
