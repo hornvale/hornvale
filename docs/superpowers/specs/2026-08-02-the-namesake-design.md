@@ -443,14 +443,17 @@ without saying so in the chronicle.
 
 ## 8. Capture manifest
 
-**Idea-registry rows to add** (slugs per decision 0026, never numbers):
+**Idea-registry rows — ADDED in `e52fb373`** (slugs per decision 0026, never
+numbers; `docs_consistency` green):
 
 - `LANG-truename` — the true name / name taboo / address-vs-reference
   epistemic layer; couples to UNI-16.
 - `LANG-teknonymy` — the parent named for the child; assignment flowing
   backward along the descent edge.
-- `LANG-name-fossil` — inherited elements as phonological fossils; whatever
-  §5 returns, including the null.
+- `LANG-name-fossil` — inherited elements as phonological fossils, carrying
+  the measured reason it is withdrawn rather than merely deferred.
+- `LANG-cascade-inertness` — **not a naming row**: the seed-42 evidence that
+  the sound-change cascade may be inert for most peoples (§5.0, §7.3).
 - `LANG-namescope` — the shortest-prefix render rule as a general naming
   primitive, shared with toponymy.
 
