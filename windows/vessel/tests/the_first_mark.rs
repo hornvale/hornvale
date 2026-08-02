@@ -37,7 +37,12 @@ fn world() -> hornvale_kernel::World {
 /// `Gootoogotoodaoka` -> `Goodogododaga`. If these tests fail with `marks 0
 /// vs 3` or `hostility 0 vs 1`, check this constant against `npcs` BEFORE
 /// suspecting the grievance fold.
-const GRIEVANCE_NPC: &str = "bugbear of Goodogododaga";
+///
+/// It happened a fourth time at The Contour's epoch v2 (2026-08-02,
+/// `history/bake/v2`): the BAKE label bump re-mints the cascade again,
+/// `Goodogododaga` -> `Godogododaga` (one fewer `o`). Same seven NPCs at the
+/// same entity ids, re-verified from `book/src/gallery/possession-seed-42.md`.
+const GRIEVANCE_NPC: &str = "bugbear of Godogododaga";
 
 fn out_text(t: Turn) -> String {
     match t {

@@ -436,7 +436,7 @@ pub fn cult_form_held_by(world: &World, community: EntityId) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
+    use hornvale_kernel::{Referent, Seed};
 
     /// A deterministic test `DeityNamer`: `("XarN", "xarN")` for deities,
     /// `("EpithetN(sentiment)", "epithetN")` for epithets, where `N` is the
@@ -463,9 +463,17 @@ mod tests {
         (w, community)
     }
 
-    fn ph(kind: &str, desc: &str, period: Option<f64>, salience: f64, venue: Venue) -> Phenomenon {
+    fn ph(
+        kind: &str,
+        concept: &str,
+        desc: &str,
+        period: Option<f64>,
+        salience: f64,
+        venue: Venue,
+    ) -> Phenomenon {
         Phenomenon {
             kind: kind.to_string(),
+            referent: Referent::of(concept),
             description: desc.to_string(),
             period_days: period,
             salience,
@@ -476,16 +484,24 @@ mod tests {
     // Pre-sorted salience-descending, as kernel::observe delivers.
     fn sky() -> Vec<Phenomenon> {
         vec![
-            ph("celestial-body", "the sun", None, 1.0, Venue::DaySky), // eternal
+            ph("celestial-body", "sun", "the sun", None, 1.0, Venue::DaySky), // eternal
             ph(
                 "seasonal-cycle",
+                "day",
                 "the seasons",
                 Some(365.0),
                 0.5,
                 Venue::Ambient,
             ), // ambient venue wins regardless of period
-            ph("celestial-body", "a moon", Some(29.0), 0.4, Venue::NightSky), // cyclic
-            ph("ambient", "still air", None, 0.15, Venue::Ambient),    // below floor
+            ph(
+                "celestial-body",
+                "moon",
+                "a moon",
+                Some(29.0),
+                0.4,
+                Venue::NightSky,
+            ), // cyclic
+            ph("ambient", "wind", "still air", None, 0.15, Venue::Ambient),   // below floor
         ]
     }
 
@@ -574,8 +590,22 @@ mod tests {
         // Locked sky: eternal sun (day sky, aperiodic), cyclic moon (night
         // sky, periodic).
         let locked = vec![
-            ph("celestial-body", "a fixed sun", None, 1.0, Venue::DaySky),
-            ph("celestial-body", "a moon", Some(29.0), 0.4, Venue::NightSky),
+            ph(
+                "celestial-body",
+                "sun",
+                "a fixed sun",
+                None,
+                1.0,
+                Venue::DaySky,
+            ),
+            ph(
+                "celestial-body",
+                "moon",
+                "a moon",
+                Some(29.0),
+                0.4,
+                Venue::NightSky,
+            ),
         ];
         let ids = genesis(&mut w, c, &locked, &society(), &mut StubNamer).unwrap();
         let beliefs = beliefs_of(&w);
@@ -607,6 +637,7 @@ mod tests {
         let (mut w, c) = world(42);
         let seasons = vec![ph(
             "seasonal-cycle",
+            "day",
             "the seasons",
             Some(365.0),
             1.0,
@@ -631,8 +662,22 @@ mod tests {
     fn below_floor_only_still_yields_the_single_most_salient() {
         let (mut w, c) = world(42);
         let faint = vec![
-            ph("ambient", "a whisper of air", None, 0.15, Venue::Ambient),
-            ph("celestial-body", "a dim star", None, 0.1, Venue::DaySky),
+            ph(
+                "ambient",
+                "wind",
+                "a whisper of air",
+                None,
+                0.15,
+                Venue::Ambient,
+            ),
+            ph(
+                "celestial-body",
+                "star",
+                "a dim star",
+                None,
+                0.1,
+                Venue::DaySky,
+            ),
         ];
         let flat = SocietySummary {
             strata: 2,

@@ -156,44 +156,126 @@ fn rotation_flip_flips_the_religion() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// The distinct phenomenon kinds the world's deities derive from, read from
+/// the **committed ledger** rather than from rendered prose. Reading the
+/// ledger is the point: a deity's `derived-from-phenomenon` is a fact the sky
+/// put there, where a rendered name is a string several unrelated systems get
+/// a vote on (see the moons test below).
+fn deity_source_kinds(path: &std::path::Path) -> std::collections::BTreeSet<String> {
+    let json = std::fs::read_to_string(path).expect("world.json readable");
+    let world = hornvale_kernel::World::from_json(&json).expect("world.json parses");
+    world
+        .ledger
+        .find("derived-from-phenomenon")
+        .filter_map(|f| match &f.object {
+            hornvale_kernel::Value::Text(t) => Some(t.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
-fn moons_flip_flips_the_calendar_and_grows_the_pantheon_without_displacing_the_head() {
+fn moons_flip_the_calendar_and_seat_gods_no_moonless_world_can_hold() {
+    // **Restated by The Contour, and the restatement is a finding.** What
+    // stood here asserted that the moons pin left "the head" alone, and it
+    // never tested that. Its helper read `gods.split("\n\n").nth(1)`, but
+    // paragraph 0 of the Gods section is the heading and paragraph 1 is the
+    // SETTLEMENT LEAD LINE (`windows/almanac/src/lib.rs`); deity blocks start
+    // at paragraph 2. A helper named `head_belief` therefore compared a
+    // settlement NAME STRING, never a deity.
+    //
+    // That mattered, because the claim it was standing in for is false. The
+    // sky-debut plan asked for `moons_flip_flips_the_calendar_not_the_faith`
+    // — Gods sections EQUAL. Gods sections are not equal, so the claim was
+    // later softened to "the head is not displaced"; but measured at seed 42
+    // the head DEITY is displaced, an eclipse deity leading at `--moons 3`
+    // against a wandering-star deity at `--moons 0`, and the two pantheons
+    // share no member at all (2 deities against 14). Both the original claim
+    // and its softening are false, and were false long before The Contour —
+    // the test passed only because the paragraph it compared happened to
+    // match.
+    //
+    // What finally reddened it was not a leak into head selection. The head
+    // is NOT displaced: the same entity heads the section in both arms, same
+    // cell, same people, same population, same `name-gloss`. Only its
+    // rendered name moved, one letter, because toponymic wear (The Wearing)
+    // keys a morpheme to its own culture's corpus size and the moons pin
+    // moves that corpus — moons reach tides, tides reach climate, climate
+    // reaches history, and history places settlements. That non-pin-isolation
+    // is documented in `windows/worldgen/src/lib.rs`; the old assertion's
+    // stability was a coincidence of corpus sizes that the `history/bake/v2`
+    // epoch expired.
+    //
+    // So this asserts the claim that is actually PHYSICS, at the altitude
+    // where the divergence method wants it — vary one pin, show the
+    // downstream culture differs LEGIBLY — and reads it from the ledger, not
+    // from prose:
+    //
+    //   * a moonless world can seat no eclipse god and no tide god, because
+    //     it has neither phenomenon to observe; and
+    //   * moons only ADD source kinds, never remove one — which is the
+    //     salvageable half of "coarse constrains fine", stated over the
+    //     KINDS of god a sky affords rather than over a rendered line.
+    //
+    // Both are robust to exactly what broke the old form: settlement churn,
+    // naming drift, corpus wear, and any history change. Neither can be
+    // satisfied by comparing the wrong paragraph.
     let dir = temp_dir("moons");
     let seed = 42u64;
 
-    // Generate with --moons 0
-    let zero_path = make_world_with(
+    // TAGGED filenames, not `make_world_with`: both arms share a seed, so the
+    // untagged helper writes both worlds to `world-42.json` and the second
+    // `new` silently clobbers the first. That was invisible while this test
+    // read only almanacs (captured as Strings before the overwrite); it is
+    // not invisible now that the arms are read back from their ledgers.
+    let zero_path = make_world_tagged(
         &dir,
         seed,
+        "moons0",
         &["--sky", "generated", "--rotation", "normal", "--moons", "0"],
     );
     let zero_almanac = almanac_of(&zero_path);
     let zero_gods = extract_gods_section(&zero_almanac);
     let zero_calendar = extract_calendar_section(&zero_almanac);
 
-    // Generate with --moons 3
-    let three_path = make_world_with(
+    let three_path = make_world_tagged(
         &dir,
         seed,
+        "moons3",
         &["--sky", "generated", "--rotation", "normal", "--moons", "3"],
     );
     let three_almanac = almanac_of(&three_path);
     let three_gods = extract_gods_section(&three_almanac);
     let three_calendar = extract_calendar_section(&three_almanac);
 
-    // The pantheon is salience-ordered with the sun always first; each moon
-    // is itself a salient celestial-body phenomenon, so more moons seat more
-    // deities. The head deity (the sun) must stay put regardless — "coarse
-    // constrains fine": moons never displace it.
-    let head_belief = |gods: &str| gods.split("\n\n").nth(1).unwrap_or("").to_string();
-    assert_eq!(
-        head_belief(&zero_gods),
-        head_belief(&three_gods),
-        "the head deity is unchanged by moon count"
-    );
+    // Each moon is itself a salient celestial-body phenomenon, and moons
+    // additionally afford eclipses and tides, so more moons seat more deities.
     assert_ne!(
         zero_gods, three_gods,
         "more moons seat more deities in the pantheon"
+    );
+
+    // The sky reaches the faith, read from the ledger. A moonless world has
+    // no eclipse and no tide to observe, so it can seat no god derived from
+    // either; a three-moon world seats both.
+    let zero_kinds = deity_source_kinds(&zero_path);
+    let three_kinds = deity_source_kinds(&three_path);
+    for absent in ["eclipse", "tide"] {
+        assert!(
+            !zero_kinds.contains(absent),
+            "a moonless world cannot seat a god derived from {absent}: {zero_kinds:?}"
+        );
+        assert!(
+            three_kinds.contains(absent),
+            "a three-moon world must seat a god derived from {absent}: {three_kinds:?}"
+        );
+    }
+    // Moons only ADD source kinds — the salvageable half of "coarse
+    // constrains fine", stated over the KINDS of god a sky affords.
+    assert!(
+        zero_kinds.is_subset(&three_kinds),
+        "moons must not retire a source kind a moonless sky already had: \
+         {zero_kinds:?} is not a subset of {three_kinds:?}"
     );
 
     // Calendar sections must differ

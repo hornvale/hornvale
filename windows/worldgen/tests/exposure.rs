@@ -254,96 +254,112 @@ fn river_exposure_tracks_real_proximity() {
 /// places bugbear and kobold). Re-measuring all three concepts against
 /// the new roster: `hill` is now 0/5 Root, 5/5 Gap — nobody's settlement
 /// sits at a strict local elevation maximum any more (see the dedicated
-/// `hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_
+/// `hill_is_a_gap_for_every_placed_people_at_seed_42_except_goblin_which_
 /// roots_it` below, which records the shape as it stands after The Wearing's
 /// close merge moved the population again — 1/5 Root, 4/5 Gap). `marsh` is now 5/5
 /// Root, 0/5 Gap — the opposite drift, now saturated like `river`/`ford`
 /// (see `marsh_is_a_root_for_every_placed_people_at_seed_42` below).
-/// `spring` alone still genuinely discriminates: 1/5 Root (kobold), 4/5
-/// Gap — so it is the only one of the original three still asserted here,
-/// which is also why this test is renamed. `hill` and `marsh` are not
-/// dropped from any requirement — reachability for both is still proven
-/// on other seeds by `every_core_toponymic_concept_wins_a_root_somewhere_
-/// in_a_seed_sweep`, and each now has its own honest, differently-shaped
-/// pin instead of being folded into a three-way "differs" claim that is
-/// no longer true for two of the three.
+/// `spring` alone still genuinely discriminated at that point: 1/5 Root
+/// (kobold), 4/5 Gap.
+///
+/// # The Contour re-pin (2026-07-30)
+///
+/// Position-aware conflict (`defensibility`-gated raid dominance, spec
+/// section 2.3a/2.4, decision 0096 clause 1) redecided seed 42's
+/// deep-history settlement survival again, and `spring` did not survive as
+/// a discriminator: it is now 5/5 Root — saturated, the same shape `marsh`
+/// and `river`/`ford` already have, for the same reason (deep-history
+/// settlement scatter across five peoples makes hitting at least one
+/// spring-adjacent cell near-certain). This is a genuine behavior change,
+/// not a broken gate — the rule that classifies `spring` did not change,
+/// and reachability for a genuine `spring` Gap is still proven on other
+/// seeds by `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
+/// sweep`. `hill` and `valley` are the two concepts that still
+/// discriminate at seed 42 after this re-pin (each 1/5 Root, 4/5 Gap, and
+/// each re-pinned alongside this test); `spring` joins `marsh`/`river`/
+/// `ford` as saturated, which is why this test is renamed and rewritten
+/// to match `marsh_is_a_root_for_every_placed_people_at_seed_42`'s shape
+/// rather than asserting a "differs" claim that is no longer true.
+///
+/// # The Contour absorb (2026-08-02)
+///
+/// Re-measured on the merged tree, which additionally carries main's
+/// cascade/v2 reseed (`The Witness`/`The Watershed`): `spring` did NOT stay
+/// saturated. It discriminates again — 1/5 Root (kobold), 4/5 Gap — the
+/// same 1/4 shape it had before The Wearing's absorb, though for a
+/// different reason this time: every non-kobold species now reads an
+/// `Experiential` Gap ("has no exposure to 'spring'") rather than the
+/// toponymic-classification Gap the pre-absorb measurement recorded. Not a
+/// combination of the two prior deltas — cascade/v2 and `defensibility`
+/// interact on WHICH cells peoples settle near, and this seed's outcome
+/// happens to land back on a discriminating shape. This is why the test is
+/// renamed and rewritten again, to the same exact-partition idiom `hill`
+/// and `valley` already use rather than the saturated shape this file
+/// carried between the two absorbs.
 #[test]
-fn spring_exposure_differs_across_the_placed_peoples() {
+fn spring_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
-    let mut any_root = false;
-    let mut any_gap = false;
+    let mut gapped: Vec<&str> = Vec::new();
+    let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
         let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("spring") {
-            Some(LexEntry::Root { .. }) => any_root = true,
-            Some(LexEntry::Gap { .. }) => any_gap = true,
-            other => panic!("{species}: unexpected 'spring' entry {other:?}"),
+            Some(LexEntry::Gap { .. }) => gapped.push(species),
+            Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
+            other => panic!("{species}: unexpected 'spring' entry at seed 42: {other:?}"),
         }
     }
-    assert!(
-        any_root,
-        "'spring' should be a Root for at least one placed people at seed 42"
+    gapped.sort_unstable();
+    rooted.sort_unstable();
+    assert_eq!(
+        gapped,
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin"],
+        "the set of peoples gapping 'spring' at seed 42 moved"
     );
-    assert!(
-        any_gap,
-        "'spring' should be a Gap for at least one placed people at seed 42"
+    assert_eq!(
+        rooted,
+        vec![("kobold", "Roraaxaa".to_string())],
+        "at seed 42 exactly one people roots 'spring' — kobold"
     );
 }
 
-/// `hill`'s honest post-absorb shape (see `spring_exposure_differs_
-/// across_the_placed_peoples`'s doc comment for the measurement history):
-/// at seed 42, under the unchanged clamp-to-sea-level/full-ring gate,
-/// `hill` is now a `Gap` for EVERY placed people — none of the five
-/// species' settlements sits at a strict local elevation maximum any
-/// more. This is the same shape `valley` already had before the absorb
-/// (see `valley_is_a_gap_for_every_placed_people_at_seed_42` immediately
-/// below) and is not evidence of a broken gate: reachability is proven on
-/// other seeds by `every_core_toponymic_concept_wins_a_root_somewhere_in_
-/// a_seed_sweep` (witnessed as early as seed 0 in the post-absorb sweep),
-/// so this is the population simply not happening to sit on one at 42,
-/// not a structurally dead rule.
+/// `hill`'s honest post-Contour shape (see `spring_is_a_root_for_every_
+/// placed_people_at_seed_42`'s doc comment for the fuller measurement
+/// history): at seed 42, under the unchanged clamp-to-sea-level/full-ring
+/// gate, `hill` splits 1/5 Root, 4/5 Gap — same shape as before The Contour,
+/// but the ONE rooting people changed.
 ///
-/// **The paragraph above is no longer true of the merged tree, and is kept
-/// only as the record of what was measured when this test was written.** The
-/// Wearing's close merge absorbed main's history bake, which re-decides
-/// settlement placement; at seed 42 the bugbear flagship now sits on a strict
-/// local elevation maximum and roots `hill`. So the claim "a `Gap` for EVERY
-/// placed people" is false as it stands, and the honest reading is that the
-/// gate is fine — the population moved out from under a measurement.
+/// # The Contour re-pin (2026-07-30)
 ///
-/// # F11 discharge (2026-07-30): restated, and why that is the better repair
+/// Wiring `defensibility` into the deep-history raid dominance checks
+/// (spec section 2.3a/2.4, decision 0096 clause 1) redecided which route a
+/// raid could clear, which redecided seed 42's settlement survival and
+/// placement outright: bugbear's flagship no longer sits at hill's strict
+/// local elevation maximum — it now sits at valley's local minimum instead
+/// (see `valley_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_
+/// which_roots_it` immediately below, which is bugbear and hill's mirror).
+/// Goblin's flagship is the new occupant of hill's elevation maximum,
+/// rooting it as `Nootea`. The partition is still asserted EXACTLY, in both
+/// directions and by name, for the same reason F11 gave: the exception is
+/// not noise to route around, it is exactly what the elevation-maximum gate
+/// is FOR.
 ///
-/// F11 left this as an explicit judgement with two options — restate the
-/// claim leaving bugbear a named exception, or move to a seed where the
-/// original shape still holds. **Restated**, and the test is renamed to say
-/// what it now checks, because the exception is not noise to be routed around:
-/// a people whose flagship sits on a strict local elevation maximum is exactly
-/// what the elevation-maximum gate is FOR, so seed 42 stopped being a
-/// four-way negative witness and became a positive-and-negative one. Fleeing
-/// to another seed would have thrown that away and, worse, would have quietly
-/// re-established a claim ("every placed people gaps `hill`") that is an
-/// artifact of which worlds we happen to look at rather than anything the
-/// gate guarantees.
+/// `valley_is_a_gap_..._except_bugbear_which_roots_it` and
+/// `marsh_is_a_root_...` were re-measured alongside this one; only `hill`
+/// and `valley` moved (and, as it happens, moved into each other's shape) —
+/// see this file's other two re-pinned tests for the full account.
 ///
-/// So the partition is asserted EXACTLY, in both directions and by name.
-/// Measured on the merged tree: bugbear roots `hill` as `Dootoa`; gnoll,
-/// goblin, hobgoblin and kobold all gap it. That is a strictly stronger
-/// assertion than the one it replaces — the old form could only fail by a
-/// people gaining a root, this one also fails if bugbear ever loses it, if
-/// the roster changes, or if the roman surface of that root drifts.
-///
-/// (The `Daodo` recorded in F11 was measured on a different tree and is not
-/// what this seed produces here; the surface is `Dootoa`, read off the merged
-/// tree and pinned below. Noting it rather than silently correcting it,
-/// because an unsourced surface form in a followup is the same defect class
-/// this campaign is named for.)
-///
-/// `valley_is_a_gap_...` and `marsh_is_a_root_...` both still pass, so only
-/// `hill` moved and there is no systemic gate failure to chase.
+/// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+/// lefford, 0063): the BAKE label bump reseats settlements once more, and
+/// NOBODY'S flagship sits on hill's strict local elevation maximum any
+/// longer — `hill` is back to a Gap for every placed people (0/5 Root, 5/5
+/// Gap), the shape it had before The Contour's own re-pin. Renamed to
+/// match; this is a real geographic fact about this derivation of seed 42,
+/// re-measured rather than assumed.
 #[test]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_it() {
+fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -365,46 +381,72 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_i
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["gnoll", "goblin", "hobgoblin", "kobold"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("bugbear", "Doodoa".to_string())],
-        "at seed 42 exactly one people roots 'hill' — bugbear, whose flagship \
-         sits on a strict local elevation maximum"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 no placed people roots 'hill'"
     );
 }
 
-/// The honest counterpart to the test above: at seed 42, under the
-/// corrected (clamp-to-sea-level, full-ring) gate, `valley` is a `Gap`
-/// for EVERY placed people — none of this seed's settlements sits at
-/// a true interior local-elevation minimum (land-degree 6, zero ocean
-/// adjacency). This is not the same kind of degenerate result the
-/// original land-only gate produced (that was an artifact: ANY ocean
-/// adjacency at all disqualified a cell, so only a fully-inland
-/// settlement could ever pass) — under the current gate the mechanism is
-/// real (`every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
-/// sweep` proves it fires on other seeds) and seed 42's population just
-/// doesn't happen to sit on one. Re-measured after The Wearing's absorb
-/// of main (merge `166d4ad9`, five placed peoples now — see `world()`'s
-/// doc comment): still 0/5, unchanged in shape from the pre-absorb 0/4.
+/// The honest counterpart to the test above, and no longer a symmetric
+/// "Gap for every placed people" claim as of The Contour: at seed 42,
+/// under the corrected (clamp-to-sea-level, full-ring) gate, `valley` now
+/// splits 1/5 Root, 4/5 Gap — the mirror image of `hill`'s shape (see
+/// `hill_is_a_gap_for_every_placed_people_at_seed_42_except_goblin_which_
+/// roots_it`'s doc comment for why: defensibility-gated raid dominance
+/// redecided settlement survival, and bugbear's flagship moved from hill's
+/// local elevation maximum to valley's local elevation minimum). Before The
+/// Contour this was 0/5 Root, 5/5 Gap for every placed people (re-measured
+/// after The Wearing's absorb of main, merge `166d4ad9`, unchanged in shape
+/// from the pre-absorb 0/4) — that shape is why the test kept its name
+/// through The Wearing's re-pin but not through this one.
+///
+/// The Contour absorb (2026-08-02): the partition is unchanged — bugbear
+/// still alone roots `valley` — but main's cascade/v2 reseed moved the
+/// flagship's generated name, `Kodoa` -> `Godoa`.
+///
+/// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+/// lefford, 0063): the BAKE label bump reseats settlements once more, and
+/// NOBODY'S flagship sits on valley's strict local elevation minimum any
+/// longer — `valley` is back to a Gap for every placed people (0/5 Root,
+/// 5/5 Gap), the shape it had before The Contour's own re-pin (the mirror
+/// of `hill`'s move at this same regen). Renamed to match; this is a real
+/// geographic fact about this derivation of seed 42, re-measured rather
+/// than assumed.
 #[test]
 fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let mut gapped: Vec<&str> = Vec::new();
+    let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
         let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("valley") {
-            Some(LexEntry::Gap { .. }) => {}
-            other => panic!("{species}: expected 'valley' to be a Gap at seed 42, got {other:?}"),
+            Some(LexEntry::Gap { .. }) => gapped.push(species),
+            Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
+            other => panic!("{species}: unexpected 'valley' entry at seed 42: {other:?}"),
         }
     }
+    gapped.sort_unstable();
+    rooted.sort_unstable();
+    assert_eq!(
+        gapped,
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+        "the set of peoples gapping 'valley' at seed 42 moved"
+    );
+    assert_eq!(
+        rooted,
+        Vec::<(&str, String)>::new(),
+        "at seed 42 no placed people roots 'valley'"
+    );
 }
 
-/// `marsh`'s honest post-absorb shape (see `spring_exposure_differs_
-/// across_the_placed_peoples`'s doc comment for the measurement history):
+/// `marsh`'s honest post-absorb shape (see `spring_is_a_root_for_every_
+/// placed_people_at_seed_42`'s doc comment for the measurement history):
 /// pre-absorb this split 3/4 (a real per-culture discrimination); after
 /// The Wearing absorbed main's terrain/settlement drift it is now a
 /// `Root` for EVERY placed people at seed 42 — the same saturated shape
@@ -418,18 +460,47 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
 /// `marsh` to discriminate on every seed, only that it is reachable —
 /// which `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
 /// sweep` already proves).
+///
+/// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+/// lefford, 0063): the BAKE label bump reseats settlements again, and
+/// bugbear's flagship no longer has exposure to a marsh cell at seed 42.
+/// `marsh` is no longer a Root for EVERY placed people — it splits 4/5
+/// Root, 1/5 Gap (bugbear). Renamed to match; asserted as an exact
+/// partition, by name, the same discipline `hill`/`valley`/`spring`
+/// already use, for the same reason: the exception is not noise to route
+/// around.
 #[test]
-fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
+fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_bugbear_which_gaps_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let mut gapped: Vec<&str> = Vec::new();
+    let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
         let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("marsh") {
-            Some(LexEntry::Root { .. }) => {}
-            other => panic!("{species}: expected 'marsh' to be a Root at seed 42, got {other:?}"),
+            Some(LexEntry::Gap { .. }) => gapped.push(species),
+            Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
+            other => panic!("{species}: unexpected 'marsh' entry at seed 42: {other:?}"),
         }
     }
+    gapped.sort_unstable();
+    rooted.sort_unstable();
+    assert_eq!(
+        gapped,
+        vec!["bugbear"],
+        "the set of peoples gapping 'marsh' at seed 42 moved"
+    );
+    assert_eq!(
+        rooted,
+        vec![
+            ("gnoll", "Gshoovzngaov".to_string()),
+            ("goblin", "Taneo".to_string()),
+            ("hobgoblin", "Qaneo".to_string()),
+            ("kobold", "Rorora".to_string()),
+        ],
+        "at seed 42 four of the five placed peoples root 'marsh'"
+    );
 }
 
 /// The mirror of [`river_exposure_tracks_real_proximity`] over the whole
@@ -613,7 +684,9 @@ fn every_unknown_entrys_reason_is_non_empty() {
         for (concept, class) in &exposures {
             if let ExposureClass::Unknown { reason } = class {
                 let text = match reason {
-                    GapReason::Experiential(s) | GapReason::Perceptual(s) => s,
+                    GapReason::Experiential(s)
+                    | GapReason::Perceptual(s)
+                    | GapReason::Unnameable(s) => s,
                 };
                 assert!(
                     !text.trim().is_empty(),
@@ -674,6 +747,7 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
             let text = match reason {
                 hornvale_language::GapReason::Experiential(s) => s,
                 hornvale_language::GapReason::Perceptual(s) => s,
+                hornvale_language::GapReason::Unnameable(s) => s,
             };
             assert!(
                 !text.is_empty(),

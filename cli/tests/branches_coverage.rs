@@ -227,14 +227,17 @@ fn gaps_have_reasons() {
     let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
     let mut checked = 0;
     // Substrings drawn directly from worldgen's `experiential_reason`/
-    // `perceptual_reason` and lexicon's own composed compound-gap messages
-    // — every reason `build_lexicon` can produce matches at least one.
+    // `perceptual_reason`, lexicon's own composed compound-gap messages, and
+    // astronomy's `Void::Unnamed` text for the objectively unnameable
+    // spectral classes — every reason `build_lexicon` can produce matches at
+    // least one.
     let markers = [
         "night-vision",
         "no settlement",
         "has no exposure",
         "no compound recipe",
         "needs",
+        "encountered the main sequence",
     ];
 
     // Language/lexicon coverage is a speaker-only concern. Since The Eremite the
@@ -252,6 +255,7 @@ fn gaps_have_reasons() {
                 let text = match reason {
                     GapReason::Experiential(s) => s,
                     GapReason::Perceptual(s) => s,
+                    GapReason::Unnameable(s) => s,
                 };
                 assert!(
                     !text.is_empty(),

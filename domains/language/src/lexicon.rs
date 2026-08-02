@@ -53,18 +53,27 @@ pub enum GapReason {
     /// A gap rooted in perception — the concept's referent exists but the
     /// species' senses (or an acquisition ladder) haven't resolved it yet.
     Perceptual(String),
+    /// A gap rooted in the world rather than the culture — the referent is
+    /// real and objective, and no culture here has the concept to name it at
+    /// all (the registry records this as
+    /// `Correspondent::Absent(Void::Unnamed(..))`). Distinct from
+    /// [`GapReason::Experiential`], which says a particular culture never met
+    /// a referent others do name.
+    Unnameable(String),
 }
 
 impl std::fmt::Display for GapReason {
     /// The canonical recountable rendering of a gap's reason, tagged with
     /// its provenance kind: `gap (experiential): <text>` /
-    /// `gap (perceptual): <text>`. Every surface that recounts a gap (the
-    /// tongue realizer's [`crate::grammar::TongueGap`]; the CLI's
-    /// dictionary dump) should render through this, never `{:?}`.
+    /// `gap (perceptual): <text>` / `gap (unnameable): <text>`. Every surface
+    /// that recounts a gap (the tongue realizer's
+    /// [`crate::grammar::TongueGap`]; the CLI's dictionary dump) should
+    /// render through this, never `{:?}`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GapReason::Experiential(text) => write!(f, "gap (experiential): {text}"),
             GapReason::Perceptual(text) => write!(f, "gap (perceptual): {text}"),
+            GapReason::Unnameable(text) => write!(f, "gap (unnameable): {text}"),
         }
     }
 }
@@ -237,6 +246,32 @@ fn compound_entry(
     }
 }
 
+/// The family-level proto-root universe: every concept in `exposures`
+/// EXCEPT one gapped [`GapReason::Unnameable`]. The universe is otherwise
+/// the WHOLE `exposures` key set, Steeped/KnowsOf/Unknown alike, so a
+/// Steeped concept reserves the same distinct proto-root regardless of
+/// which other concepts a given world exposed — keeping the assignment
+/// world-independent and cognate-safe. `Unnameable` is the one carve-out:
+/// the referent is real but no culture here has the concept to name it at
+/// all, so no proto-root is reserved for it — a reconstructed ancestor must
+/// not be handed a word for something none of its daughters could ever have
+/// spoken of. `pub(crate)` so its own test can assert the exclusion
+/// directly, rather than only through [`build_lexicon`]'s opaque output.
+pub(crate) fn proto_root_universe(exposures: &BTreeMap<String, ExposureClass>) -> Vec<&str> {
+    exposures
+        .iter()
+        .filter(|(_, class)| {
+            !matches!(
+                class,
+                ExposureClass::Unknown {
+                    reason: GapReason::Unnameable(_)
+                }
+            )
+        })
+        .map(|(concept, _)| concept.as_str())
+        .collect()
+}
+
 /// Build a species' full lexicon: draw a [`Headedness`] and one shared
 /// sound-change cascade for `species`, then two passes over `exposures`.
 /// Pass one gives every `Steeped` concept a proto-root drawn at the
@@ -278,14 +313,12 @@ pub fn build_lexicon(
 
     // Assign a distinct proto-root to every concept in the universe at the
     // family level, once (the homophony fix, draw side — replaces per-concept
-    // `proto_root` drawing). The universe is the WHOLE `exposures` key set,
-    // Steeped/KnowsOf/Unknown alike, so a Steeped concept reserves the same
-    // distinct proto-root regardless of which other concepts a given world
-    // exposed — keeping the assignment world-independent and cognate-safe.
-    // `daughters` (the family's members, supplied by the composition root) make
-    // the assignment merger-aware (epoch root/v3): a core proto is chosen to
-    // survive every daughter's cascade distinct, so core homophony is zero.
-    let universe: Vec<&str> = exposures.keys().map(String::as_str).collect();
+    // `proto_root` drawing). `daughters` (the family's members, supplied by
+    // the composition root) make the assignment merger-aware (epoch
+    // root/v3): a core proto is chosen to survive every daughter's cascade
+    // distinct, so core homophony is zero. See [`proto_root_universe`] for
+    // which concepts the universe includes.
+    let universe = proto_root_universe(exposures);
     let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe, daughters);
 
     // Pass 1: roots for every Steeped concept — pass 2's compounds need these
@@ -787,5 +820,117 @@ mod tests {
             sea_last.starts_with(&many_last) && sea_last.ends_with(&water_last),
             "HeadLast: {sea_last:?} should start with modifier {many_last:?} and end with head {water_last:?}"
         );
+    }
+
+    /// A gap whose provenance is "no one here can name this" renders as its own
+    /// kind, distinct from a gap of lived experience. `gap (experiential)` says
+    /// the culture never met the referent; `gap (unnameable)` says the referent
+    /// is beyond anyone's vocabulary here, which is a different claim.
+    #[test]
+    fn an_unnameable_gap_renders_as_its_own_provenance() {
+        let reason =
+            GapReason::Unnameable("no culture here has encountered the main sequence".to_string());
+        assert_eq!(
+            reason.to_string(),
+            "gap (unnameable): no culture here has encountered the main sequence"
+        );
+    }
+
+    /// The real guard for this task's invariant, direct on
+    /// [`proto_root_universe`] rather than inferred through
+    /// [`build_lexicon`]'s opaque output. `build_lexicon` exposes no
+    /// assignment map, and `assign_proto_roots_with_epoch` keys each draw on
+    /// the concept's own name and epoch — so an excluded concept provably
+    /// displaces nobody else's assignment, which means the exclusion itself
+    /// is NOT observable by comparing `build_lexicon`'s rendered output
+    /// against a hand-built universe: both would agree whether or not the
+    /// filter ran. Testing the extracted function directly is the only way
+    /// this guard actually reds when the filter is deleted.
+    #[test]
+    fn proto_root_universe_excludes_unnameable_concepts() {
+        let mut exposures = one_steeped("water");
+        exposures.insert(
+            "yellow-dwarf".to_string(),
+            ExposureClass::Unknown {
+                reason: GapReason::Unnameable(
+                    "no culture here has encountered the main sequence".to_string(),
+                ),
+            },
+        );
+
+        let universe = proto_root_universe(&exposures);
+        assert!(
+            !universe.contains(&"yellow-dwarf"),
+            "an Unnameable concept must not enter the proto-root universe"
+        );
+        assert!(
+            universe.contains(&"water"),
+            "a Steeped concept must still enter the universe"
+        );
+        assert_eq!(
+            universe.len(),
+            1,
+            "exactly the non-Unnameable concept should survive the filter"
+        );
+    }
+
+    /// End-to-end confirmation (not the guard itself — see
+    /// [`proto_root_universe_excludes_unnameable_concepts`] for that): an
+    /// `Unnameable` concept reaches `build_lexicon` as a
+    /// [`LexEntry::Gap`] rendering its reason, and its presence in
+    /// `exposures` does not disturb a co-resident `Steeped` concept's root.
+    #[test]
+    fn an_unnameable_concept_gaps_without_disturbing_a_co_resident_root() {
+        let ph = test_phonology();
+        let mut exposures = one_steeped("water");
+        exposures.insert(
+            "yellow-dwarf".to_string(),
+            ExposureClass::Unknown {
+                reason: GapReason::Unnameable(
+                    "no culture here has encountered the main sequence".to_string(),
+                ),
+            },
+        );
+
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        match lex.entry("yellow-dwarf").unwrap() {
+            LexEntry::Gap { reason } => assert_eq!(
+                reason.to_string(),
+                "gap (unnameable): no culture here has encountered the main sequence"
+            ),
+            other => panic!("yellow-dwarf should be a Gap, got {other:?}"),
+        }
+
+        // "water" must still root exactly as it would with no unnameable
+        // concept present at all.
+        let solo_water = one_steeped("water");
+        let solo_lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &solo_water,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        match (
+            lex.entry("water").unwrap(),
+            solo_lex.entry("water").unwrap(),
+        ) {
+            (LexEntry::Root { derivation: a, .. }, LexEntry::Root { derivation: b, .. }) => {
+                assert_eq!(a.modern, b.modern)
+            }
+            other => panic!("water should be a Root in both lexicons, got {other:?}"),
+        }
     }
 }

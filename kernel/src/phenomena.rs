@@ -20,6 +20,57 @@ pub enum Venue {
     Ambient,
 }
 
+/// What a phenomenon is *about*, in the world's own vocabulary: the
+/// registered concept it refers to, plus the registered concepts that
+/// qualify it.
+///
+/// This is the machine-facing half of a phenomenon and **the only field a
+/// consumer may branch on**. [`Phenomenon::description`] is a rendering
+/// derived from this one way; nothing may parse it back (decision 0022, and
+/// `hornvale_language::register`'s content→render seam). Before this type
+/// existed, `windows/worldgen` decided which concept a phenomenon glossed to
+/// — and therefore what a people's deity was named — by grepping the
+/// description for `"moon"`; rewording one description moved 73 committed
+/// facts on seed 42.
+///
+/// Every id here is a **concept-registry key**, never prose: `moon`, not
+/// `"a vast moon"`. Qualifiers are registry keys too, which is load-bearing
+/// rather than tidy — every concept a producer can name here already has a
+/// registered key (`blue` included); what varies per culture is whether a
+/// *word* realizes that key at all. An unlexicalized concept never goes
+/// silent: it surfaces as a reasoned gap (`hornvale_language::GapReason`,
+/// e.g. `gap (perceptual): hue rank 4 exceeds depth 2 …` for a Berlin & Kay
+/// rung a species hasn't acquired), not as a missing key.
+/// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: qualifiers)
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Referent {
+    /// The registered concept id this phenomenon is about.
+    pub concept: String,
+    /// Registered concept ids qualifying the head, in producer-declared
+    /// order. Empty is the common case.
+    pub qualifiers: Vec<String>,
+}
+
+impl Referent {
+    /// A referent naming `concept` with no qualifiers.
+    /// type-audit: bare-ok(identifier-text: concept)
+    pub fn of(concept: &str) -> Referent {
+        Referent {
+            concept: concept.to_string(),
+            qualifiers: Vec::new(),
+        }
+    }
+
+    /// A referent naming `concept`, qualified by `qualifiers` in order.
+    /// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: qualifiers)
+    pub fn qualified(concept: &str, qualifiers: &[&str]) -> Referent {
+        Referent {
+            concept: concept.to_string(),
+            qualifiers: qualifiers.iter().map(|q| (*q).to_string()).collect(),
+        }
+    }
+}
+
 /// Something an observer would notice. `kind` must be registered in the
 /// concept registry by the producing domain. Consumers must not branch on
 /// the producing system — only on kind, period, character, salience.
@@ -28,6 +79,9 @@ pub enum Venue {
 pub struct Phenomenon {
     /// Registered phenomenon kind (concept-registry key).
     pub kind: String,
+    /// What this phenomenon is about, in registry keys. The only field a
+    /// consumer may branch on.
+    pub referent: Referent,
     /// Human-readable character of the phenomenon.
     pub description: String,
     /// None = constant or aperiodic; Some(d) = recurs every d days.
@@ -216,6 +270,7 @@ mod tests {
     fn ph(kind: &str, salience: f64) -> Phenomenon {
         Phenomenon {
             kind: kind.to_string(),
+            referent: Referent::of(kind),
             description: format!("the {kind}"),
             period_days: None,
             salience,
@@ -421,5 +476,24 @@ mod tests {
         assert!(Visibility::new(f64::NAN).is_none());
         assert_eq!(Visibility::new(0.5).map(|v| v.get()), Some(0.5));
         assert_eq!(Visibility::CLEAR.get(), 1.0);
+    }
+
+    #[test]
+    fn a_referent_names_a_concept_and_its_qualifiers() {
+        let plain = Referent::of("moon");
+        assert_eq!(plain.concept, "moon");
+        assert!(plain.qualifiers.is_empty());
+
+        let qualified = Referent::qualified("star", &["red", "new"]);
+        assert_eq!(qualified.concept, "star");
+        assert_eq!(qualified.qualifiers, vec!["red", "new"]);
+    }
+
+    #[test]
+    fn a_referent_round_trips_through_json() {
+        let r = Referent::qualified("eclipse", &["sun"]);
+        let json = serde_json::to_string(&r).expect("a referent serializes");
+        let back: Referent = serde_json::from_str(&json).expect("a referent deserializes");
+        assert_eq!(r, back);
     }
 }

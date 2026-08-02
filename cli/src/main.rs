@@ -312,9 +312,29 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
 }
 
 /// Load a world from `--world` (default world.json).
+///
+/// `ConceptRegistry::manifests` is `#[serde(skip)]` (kernel/src/registry.rs)
+/// — the correspondence manifests (lexeme/percept/cognition edges,
+/// including `Void::Unnamed` for a concept the world records as objectively
+/// unnameable) are a compile-time coverage record, never save-format state,
+/// so a freshly loaded world's registry comes back with an empty manifests
+/// map. `register_all` is a pure function of static domain code (no world
+/// state, no seed) that is idempotent over an already-populated registry —
+/// every predicate/phenomenon-kind/concept it re-registers matches the
+/// loaded definition byte-for-byte, so this call can only ever add the
+/// missing in-memory manifests, never move a committed fact or concept
+/// definition. Re-running it here, at the single chokepoint every CLI
+/// command loads a world through, is what lets `dictionary` and `repl`'s
+/// `word` command see the same `Unnameable` classification a freshly built
+/// world would.
 fn load_world(args: &[String]) -> Result<World, String> {
     let path = flag_value(args, "--world").unwrap_or("world.json");
-    World::load(std::path::Path::new(path)).map_err(|e| format!("loading {path}: {e}"))
+    let mut world =
+        World::load(std::path::Path::new(path)).map_err(|e| format!("loading {path}: {e}"))?;
+    world_builder::register_all(&mut world.registry).map_err(|e| {
+        format!("loading {path}: reloaded registry could not re-register concepts: {e}")
+    })?;
+    Ok(world)
 }
 
 fn cmd_almanac(args: &[String]) -> Result<(), String> {

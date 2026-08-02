@@ -153,10 +153,28 @@ rm -f "$possess_ot_tmp"
 # emptied the previously-pinned cell 36918 while its hand-authored paragraph
 # went on describing a lineage that no longer existed there; the drift check
 # passed throughout, since the *generated* half was current.
-history_site=28414
+#
+# The Contour (position-aware conflict, decision 0096): the same class of
+# drift recurred a second time. The paragraph below IS the hand-authored
+# half, embedded here rather than typed directly into the committed .md —
+# editing the committed file alone (as a merge-reconciliation pass once did)
+# does not survive the next `make rebaseline`, which re-emits this exact
+# text. Fix drift HERE, not in the .md file, or the fix is silently undone by
+# the next regen.
+#
+# The Contour epoch v2 (history/bake/v2, the BAKE label bump): a THIRD
+# occurrence of the same drift class, from the label bump alone rather than
+# from the mechanism itself — cell 28414 emptied again. Repointed at cell
+# 1400, chosen because it is the richest single-people stratigraphy in the
+# new world (20 gnoll layers, year 500 to year 1950, still occupied) and
+# because its shape is a small showcase of the mechanism this whole campaign
+# adds: 8 of its 19 completed layers ended not in cold but in eviction by a
+# RIVAL gnoll band wanting the same defensible ground — a people fighting
+# only itself over position, which a single strength scalar could not do.
+history_site=1400
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
-    printf '# The Abandoned Clearing of Seed 42\n\n'
+    printf '# The Contested Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
     printf 'of every people that ever settled one cell, oldest layer deepest, and the\n'
@@ -164,19 +182,20 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
-    printf 'peoples have failed on it. Every one of them arrived the same way: fleeing\n'
-    printf 'the ice of the clearing at cell 7169, looking for kinder ground. They kept\n'
-    printf 'finding the same ground. Bugbears held it seven times, then hobgoblins\n'
-    printf 'twice, then bugbears three times more, from the year 1175 to the year 1725 —\n'
-    printf 'and what the layers show is not progress but repetition: every steading\n'
-    printf 'arrives classical and ends classical, and every one of the twelve held the\n'
-    printf 'ground for exactly twenty-five years. Nor does the count improve: seven\n'
-    printf 'souls in the deepest layer, then six, five, seven, six, five, six, eight,\n'
-    printf 'six, four, three, and three in the last. Not one of the twelve was taken by\n'
-    printf 'force — every single one was ended by the cold, or by ground that stopped\n'
-    printf 'feeding them. What is left in the grass is potsherds, the low turf-lines of\n'
-    printf 'the dwellings, and a scatter of worked flint.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and twenty\n' "$history_site"
+    printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
+    printf 'last, from the year 500 down to the year 1950. The first held the\n'
+    printf 'ground a hundred seventy-five years before its own people turned\n'
+    printf 'conqueror, driving a rival gnoll band off a neighbouring clearing and\n'
+    printf 'carrying the settlement onto that ground instead — two more of the\n'
+    printf 'twenty would go on to do the same. Winter took most of the rest: the\n'
+    printf 'ice crept down the valley, or the seasons shortened past what the\n'
+    printf 'ground could still feed, and the survivors moved on rather than\n'
+    printf 'starve. But eight of the nineteen completed layers ended a different\n'
+    printf 'way — put to flight not by cold but by another gnoll band wanting the\n'
+    printf 'same defensible ground for itself, a people with only itself to fight.\n'
+    printf 'The twentieth was founded in the year 1950 and stands yet, fifty years\n'
+    printf 'on: eleven souls, a hut and a granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

@@ -2835,6 +2835,19 @@ mod tests {
     //! esoteric law stopped working" rather than "the planet was renamed".
     //! Fix the key, never the behaviour.
     //!
+    //! ## The Contour epoch v2 (`history/bake/v2`) — the third rename, one entry
+    //!
+    //! Bumping the `BAKE` stream label (position-aware conflict changes
+    //! committed history, decision 0006's epoch-suffix discipline) re-mints
+    //! every draw the deep-history bake takes, including seed 1's planet
+    //! name: `Xoaboa` → `Pao`. Unlike the two maps above, no OTHER proper
+    //! noun in this module moved — the five peoples' own names (`Booxo`,
+    //! `Kabja`, `Woove`, `Boove`, `Ngosho`) and every ordinary word form are
+    //! byte-identical, verified test by test rather than assumed. Every
+    //! occurrence of `Xoaboa` as a planet name in this module's test bodies
+    //! was mechanically replaced with `Pao`; this doc comment and the two
+    //! rename tables above it are left as the historical record they are.
+    //!
     //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
     //! points directly to build its own world state, once per test — the
     //! sanctioned test-fixture posture the weir's spec carves out.
@@ -2928,7 +2941,7 @@ mod tests {
             .expect("the planet's sentence is present");
         assert_eq!(
             line,
-            "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); \
+            "Pao is a planet with two moons, orbiting a yellow-white dwarf (F); \
              its day lasts about 1.5 standard days."
         );
     }
@@ -3547,7 +3560,7 @@ mod tests {
         let probes = tongue_probes(&world);
         assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
         assert_eq!(probes[0].concept, "planet");
-        assert_eq!(probes[0].subject, "Xoaboa");
+        assert_eq!(probes[0].subject, "Pao");
     }
 
     /// C4 T1: the probe's SUCCESS path lands the realized line instead of
@@ -3642,7 +3655,7 @@ mod tests {
             .expect("goblin voice");
         assert_eq!(goblin.heading, "As the Woove tell it");
         assert!(
-            goblin.emic.contains(&"Xoaboa is the earth.".to_string()),
+            goblin.emic.contains(&"Pao is the earth.".to_string()),
             "planet substituted to the carving: {:?}",
             goblin.emic
         );
@@ -3657,7 +3670,7 @@ mod tests {
             goblin
                 .margin
                 .iter()
-                .any(|m| m.starts_with("In truth, Xoaboa is a planet")
+                .any(|m| m.starts_with("In truth, Pao is a planet")
                     && m.contains("two moons")
                     && m.contains("yellow-white dwarf")),
             "the margin carries what the stack lost: {:?}",
@@ -4015,7 +4028,7 @@ mod tests {
         let vol = render_volume(&world);
         assert!(
             vol.lines.iter().any(|l| l
-                == "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); \
+                == "Pao is a planet with two moons, orbiting a yellow-white dwarf (F); \
                     its day lasts about 1.5 standard days."),
             "the god's-eye planet line stays exactly as C4 shipped it: {:?}",
             vol.lines
@@ -4468,14 +4481,14 @@ mod tests {
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "Pao is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4494,14 +4507,14 @@ mod tests {
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "Pao is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4745,14 +4758,14 @@ mod tests {
 
         // The initiated reader: exactly one line, for exactly this key.
         let mut reader: BTreeSet<(String, String)> = BTreeSet::new();
-        reader.insert(("Xoaboa".to_string(), MOON_COUNT.to_string()));
+        reader.insert(("Pao".to_string(), MOON_COUNT.to_string()));
         let lines = esoteric_lines(&world, &reader);
         assert_eq!(
             lines,
             // The Book Polish (2026-07-20): re-pinned with its subject
             // (was the bare "— two, as the initiated count."). Merge:
             // planet renamed Vebe -> Booko.
-            vec!["Xoaboa has two moons, as the initiated count.".to_string()],
+            vec!["Pao has two moons, as the initiated count.".to_string()],
             "exactly one initiated line for the one key in the reader"
         );
 
@@ -4763,26 +4776,26 @@ mod tests {
         // would NOT match what `esoteric_lines` actually produced (the
         // "verify the mechanism by asserting a WRONG expected value
         // fails" arm this test's own doc calls out).
-        let xobo = entity_named(&world, "Xoaboa").expect("Xoaboa resolves to an entity");
+        let xobo = entity_named(&world, "Pao").expect("Pao resolves to an entity");
         let ledger_value = match world.ledger.value_of(xobo, MOON_COUNT) {
             Some(Value::Number(n)) => *n as u64,
-            other => panic!("Xoaboa's ledger moon-count must be a Value::Number: {other:?}"),
+            other => panic!("Pao's ledger moon-count must be a Value::Number: {other:?}"),
         };
         assert_eq!(
             ledger_value, 2,
-            "Xoaboa's committed moon-count is two at seed 1"
+            "Pao's committed moon-count is two at seed 1"
         );
         let moon_word = if ledger_value == 1 { "moon" } else { "moons" };
         assert_eq!(
             lines[0],
             format!(
-                "Xoaboa has {} {moon_word}, as the initiated count.",
+                "Pao has {} {moon_word}, as the initiated count.",
                 cardinal(ledger_value)
             ),
             "the line's cardinal must equal the ledger's own value"
         );
         let wrong = format!(
-            "Xoaboa has {} {moon_word}, as the initiated count.",
+            "Pao has {} {moon_word}, as the initiated count.",
             cardinal(ledger_value + 1)
         );
         assert_ne!(
@@ -4835,7 +4848,7 @@ mod tests {
         let initiated_extra = esoteric_lines(&world, &reader);
         assert!(
             // The Book Polish (2026-07-20): re-pinned with its subject.
-            initiated_extra.contains(&"Xoaboa has two moons, as the initiated count.".to_string()),
+            initiated_extra.contains(&"Pao has two moons, as the initiated count.".to_string()),
             "the moon-count RevealedClaim's initiated line should surface under the \
              omniscient reader: {:?}",
             initiated_extra
@@ -5207,7 +5220,7 @@ mod tests {
         assert_eq!(
             vol.lines,
             vec![
-                "Xoaboa is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
+                "Pao is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
                  lasts about 1.5 standard days."
                     .to_string(),
                 "The Booxo are bugbears.".to_string(),
@@ -5254,19 +5267,17 @@ mod tests {
                 // rendering again happened to land unchanged.
                 "Xngatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
                     .to_string(),
-                "Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
-                    .to_string(),
+                "Xngatboa Pao Xoaboa. (in the bugbear tongue: \"Pao is the earth.\")".to_string(),
                 "Kabja Paab Jaadjaajoo. (in the gnoll tongue: \"The Kabja are gnolls.\")"
                     .to_string(),
-                "Xoaboa Paab Paokaa. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Pao Paab Paokaa. (in the gnoll tongue: \"Pao is the earth.\")".to_string(),
                 "Sa Woowoo Woove. (in the goblin tongue: \"The Woove are goblins.\")".to_string(),
-                "Sa Weveawea Xoaboa. (in the goblin tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Sa Weveawea Pao. (in the goblin tongue: \"Pao is the earth.\")".to_string(),
                 "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")"
                     .to_string(),
-                "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")"
-                    .to_string(),
+                "Pao Veabea Boa Be. (in the hobgoblin tongue: \"Pao is the earth.\")".to_string(),
                 "Ngosho Ngod Nga. (in the kobold tongue: \"The Ngosho are kobolds.\")".to_string(),
-                "Xoaboa Ngod Ngotngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Pao Ngod Ngotngo. (in the kobold tongue: \"Pao is the earth.\")".to_string(),
             ]
         );
         assert_eq!(
@@ -5293,14 +5304,14 @@ mod tests {
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "Pao is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -5314,7 +5325,7 @@ mod tests {
             goblin_doctrine.tongue_taught_line,
             // The same goblin lexicon re-draw as the `tongue_lines` block
             // above: `Saa Wovewe` -> `Sa Wewoeke`, gloss byte-identical.
-            "Sa Weveawea Xoaboa. (\"Xoaboa is the earth — as it is taught.\")"
+            "Sa Weveawea Pao. (\"Pao is the earth — as it is taught.\")"
         );
         assert_eq!(
             goblin_doctrine.emic,
@@ -5324,7 +5335,7 @@ mod tests {
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "Pao is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 // Absorbing The Watershed's sonority merge alongside The
                 // Witness's Tonogenesis gating re-derives this agent name:
@@ -5337,7 +5348,7 @@ mod tests {
         assert_eq!(
             goblin_doctrine.margin,
             vec![
-                "In truth, Xoaboa is a planet orbiting a yellow-white dwarf (F); its day lasts \
+                "In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts \
                  about 1.5 standard days."
                     .to_string()
             ]
@@ -5356,14 +5367,14 @@ mod tests {
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "Pao is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Xoaboa is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -5386,7 +5397,7 @@ mod tests {
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
-                "Xoaboa is the earth.".to_string(),
+                "Pao is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 // Absorbing The Watershed's sonority merge alongside The
                 // Witness's Tonogenesis gating re-derives this agent name

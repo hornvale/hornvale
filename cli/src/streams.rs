@@ -309,6 +309,12 @@ mod tests {
         // `domains/language/src/streams.rs`'s `CASCADE_V2` doc for the full
         // reasoning, including why this is the leg that owes the bump and
         // not `name/settlement/v4` or `lexicon/root/v4`.
+        //
+        // The Contour (position-aware conflict, decision 0096) adds
+        // `history/bake` at `v2`: the mechanism consumes no new draw, but it
+        // changes every generated world's committed history, so the label
+        // takes an epoch suffix per decision 0006 (an epoch suffix, never a
+        // rename). See `domains/history/src/streams.rs`'s `BAKE` doc.
         let rows: Vec<String> = versioned_labels()
             .into_iter()
             .map(|(k, v)| format!("{k} {v}"))
@@ -321,6 +327,7 @@ mod tests {
                 // perturbs no existing stream.
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
+                "history/bake v2",
                 "language/<family>/lexicon/root/<concept> v3",
                 "language/<species>/lexicon/cascade v2",
                 "language/<species>/lexicon/cascade/wear v2",

@@ -199,9 +199,18 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // 15.1591); the preregistered directional claim asserted above — below
     // the uniform-sphere baseline of 32.7 — is untouched and still clears by
     // better than 2x.
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict moves settlement placement
+    // again, pulling population slightly poleward (15.1591 -> 15.2716); the
+    // directional claim is untouched and still clears the baseline by
+    // better than 2x.
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves settlement placement again
+    // (15.2716 -> 15.3350); the directional claim is untouched and still
+    // clears the baseline by better than 2x.
     assert!(
-        (mean - 15.1591).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.1591)"
+        (mean - 15.3350).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.3350)"
     );
 }
 

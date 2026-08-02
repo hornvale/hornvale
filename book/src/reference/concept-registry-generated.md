@@ -160,6 +160,7 @@
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
 | `blue` | language | quality | the color term for blue |
+| `blue-giant` | astronomy | celestial | a hot, brilliant, short-lived star |
 | `bone` | language | body | the rigid frame of a body |
 | `boreal-stand` | climate | substance | A stand of northern conifers. |
 | `brown` | language | quality | the color term for brown |
@@ -256,6 +257,8 @@
 | `old-growth` | climate | substance | Mature forest, closed above and open beneath. |
 | `one` | language | quality | the cardinal number 1 |
 | `open-blue` | climate | substance | Open sunlit water, far from any shore. |
+| `orange-dwarf` | astronomy | celestial | a cooler, dimmer main-sequence star |
+| `orange-giant` | astronomy | celestial | a cooling star swollen off the main sequence |
 | `otyugh-kind` | species | living | an otyugh |
 | `over` | language | quality | above; atop |
 | `owlbear-kind` | species | living | an owlbear |
@@ -268,6 +271,8 @@
 | `rain` | climate | substance | liquid precipitation |
 | `red` | language | quality | the color term for red |
 | `red-dragon-kind` | species | living | a red dragon |
+| `red-dwarf` | astronomy | celestial | the commonest and faintest main-sequence star |
+| `red-giant` | astronomy | celestial | a cool, vast star late in its life |
 | `reef-rubble` | climate | substance | Broken coral debris behind a reef. |
 | `reef-shark-kind` | species | living | a reef shark |
 | `reg` | climate | substance | A desert floor of wind-swept gravel. |
@@ -300,6 +305,7 @@
 | `starlit` | language | quality | dark faintly lit by stars |
 | `stone` | terrain | substance | rock |
 | `sun` | astronomy | celestial | the sun |
+| `sun-like-star` | astronomy | celestial | a distant star resembling this world's own sun |
 | `taiga` | climate | terrain | a biome class |
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
@@ -327,9 +333,12 @@
 | `water` | language | substance | the drinkable liquid |
 | `wheat` | climate | substance | a staple crop |
 | `white-dragon-kind` | species | living | a white dragon |
+| `white-dwarf` | astronomy | celestial | the dense cinder a spent star leaves |
 | `wind` | language | substance | moving air |
 | `wind-scour` | climate | substance | Ground swept bare by wind. |
 | `wooded-grassland` | climate | substance | Grassland with scattered trees. |
 | `woolly-mammoth-kind` | species | living | a woolly mammoth |
 | `xorn-kind` | species | living | a xorn |
 | `yellow` | language | quality | the color term for yellow |
+| `yellow-dwarf` | astronomy | celestial | a main-sequence star of the sun's own kind |
+| `yellow-white-dwarf` | astronomy | celestial | a hotter, brighter main-sequence star |
