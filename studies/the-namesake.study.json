@@ -2,6 +2,6 @@
   "description": "The Namesake's two preregistered claims (spec 5.1, 5.2) over 200 unselected worlds: whether the SocietyVector-derived naming patterns produce distinguishable cultures, and whether the shortest-prefix render rule earns its keep at settlement and region scope.",
   "seeds": { "from": 0, "count": 200 },
   "pin_sets": [ { "label": "default", "pins": [] } ],
-  "metrics": ["name-pattern-signatures", "name-people-recoverability",
+  "metrics": ["name-pattern-signatures", "peoples-placed", "name-people-recoverability",
               "name-prefix-settlement-scope", "name-prefix-region-scope",
               "name-prefix-region-full-stack"] }

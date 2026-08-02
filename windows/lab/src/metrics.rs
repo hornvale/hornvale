@@ -2505,6 +2505,17 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(name_pattern_signatures),
         },
         Metric {
+            name: "peoples-placed",
+            doc: "How many peoples hold a flagship settlement in this world — the n in \
+                   the 1/n chance baseline The Namesake §5.1(2) is judged against, \
+                   published so that verdict is re-derivable from rows.csv without \
+                   inferring n; Absent if no people is placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            extract: Extractor::Full(peoples_placed),
+        },
+        Metric {
             name: "name-people-recoverability",
             doc: "The share of this world's placed peoples whose naming-pattern \
                    signature is unique among them — the structure-alone recoverability \
@@ -5030,6 +5041,26 @@ fn placed_pattern_signatures(v: &FullView) -> Vec<String> {
     sigs
 }
 
+/// How many peoples are PLACED in this world — the `n` in the chance
+/// baseline `1/n` that The Namesake's preregistered criterion §5.1(2) is
+/// judged against.
+///
+/// This metric exists so that verdict is **re-derivable from `rows.csv`
+/// alone**. `name-people-recoverability` reports a share, `u/n`, and the
+/// criterion is `share >= 2/n`; without `n` on the row a reader has to infer
+/// it by inverting the (signature-count, share) pair against the roster's
+/// signature classes. That inversion happens to be sound for the shipped
+/// roster, but it is arithmetic done in prose over data the artifact does not
+/// carry, and a preregistered verdict should not rest on it. `Absent` when no
+/// people is placed, matching `name-pattern-signatures`' empty case.
+fn peoples_placed(v: &FullView) -> MetricValue {
+    let n = hornvale_worldgen::placed_peoples(v.world()).len();
+    if n == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(n as f64)
+}
+
 /// The share of this world's placed peoples whose naming-pattern signature
 /// is UNIQUE among them (The Namesake, preregistered criterion §5.1(2)).
 ///
@@ -6654,8 +6685,11 @@ mod tests {
         // name-pattern-signatures and name-people-recoverability read §5.1;
         // name-prefix-settlement-scope reads §5.2(1); name-prefix-region-scope
         // and name-prefix-region-full-stack read the two OPPOSITE halves of
-        // §5.2(2), which the median alone cannot separate).
-        assert_eq!(registry().len(), 179);
+        // §5.2(2), which the median alone cannot separate), +1 more at Task 7's
+        // fix round (peoples-placed: the n behind §5.1(2)'s 1/n chance
+        // baseline, so that verdict is re-derivable from rows.csv rather than
+        // from an inversion done in prose).
+        assert_eq!(registry().len(), 180);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---

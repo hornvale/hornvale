@@ -18,6 +18,18 @@ Seeds 0..200 × 1 pin set(s); 200 rows; 0 refusals.
 | >= 5 | 0 | 0.0% |
 | absent | 44 | 22.0% |
 
+### peoples-placed — default
+
+| value | count | share |
+|---|---|---|
+| < 1 | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 3 | 1.5% |
+| >= 5 | 153 | 76.5% |
+| absent | 44 | 22.0% |
+
 ### name-people-recoverability — default
 
 | value | count | share |

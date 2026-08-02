@@ -10,6 +10,9 @@ fn the_four_namesake_metrics_are_registered() {
     let names: Vec<&str> = registry().iter().map(|m| m.name).collect();
     for expected in [
         "name-pattern-signatures",
+        // The n behind §5.1(2)'s 1/n chance baseline, so that criterion's
+        // verdict is re-derivable from rows.csv. See the metric's doc.
+        "peoples-placed",
         "name-people-recoverability",
         "name-prefix-settlement-scope",
         "name-prefix-region-scope",
@@ -44,7 +47,7 @@ fn metric_values_on_seed(metric_names: &[&str], seed: u64) -> Vec<MetricValue> {
         .collect()
 }
 
-/// The five metrics report a value at all on a real world, and each reports
+/// The six metrics report a value at all on a real world, and each reports
 /// one inside the range its own definition allows.
 ///
 /// Not a pin on the measured numbers — those are the campaign's finding, not
@@ -57,6 +60,7 @@ fn metric_values_on_seed(metric_names: &[&str], seed: u64) -> Vec<MetricValue> {
 fn the_namesake_metrics_report_in_range_on_a_real_world() {
     let names = [
         "name-pattern-signatures",
+        "peoples-placed",
         "name-people-recoverability",
         "name-prefix-settlement-scope",
         "name-prefix-region-scope",
@@ -69,7 +73,7 @@ fn the_namesake_metrics_report_in_range_on_a_real_world() {
         };
         println!("seed 42  {name} = {n}");
         let (lo, hi) = match *name {
-            "name-pattern-signatures" => (1.0, 16.0),
+            "name-pattern-signatures" | "peoples-placed" => (1.0, 16.0),
             "name-prefix-region-scope" => (1.0, 16.0),
             _ => (0.0, 1.0),
         };

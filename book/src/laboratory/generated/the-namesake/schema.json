@@ -23,6 +23,19 @@
     },
     {
       "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "doc": "How many peoples hold a flagship settlement in this world — the n in the 1/n chance baseline The Namesake §5.1(2) is judged against, published so that verdict is re-derivable from rows.csv without inferring n; Absent if no people is placed",
+      "kind": "numeric",
+      "name": "peoples-placed",
+      "rung": "full"
+    },
+    {
+      "buckets": [
         0.0,
         0.2,
         0.4,
@@ -86,7 +99,7 @@
   },
   "rows": {
     "count": 200,
-    "fnv1a64": "0x3ca8da01bc4cc4e3"
+    "fnv1a64": "0x6c52af98cff35eda"
   },
   "schema_version": 1,
   "study": {
