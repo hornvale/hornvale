@@ -33,6 +33,11 @@ editing:
   footgun.
 - `scripts/` — the gate ladder, `regenerate-artifacts.sh`, `census-run.sh`,
   the (abandoned) AWS remote gate.
+- `tropes/` — frozen, provenance-stamped corpora of dramatic situations, read
+  backwards as capability probes. The corpus is **data** and the resolver is
+  **code** (the studies-are-data rule, decision 0011); a corpus is frozen
+  before measurement and its situation count is asserted, so changing it is a
+  deliberate act.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact
@@ -184,6 +189,7 @@ cargo run -p hornvale -- almanac --world world.json
 cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
 cargo run -p hornvale -- streams         # stream manifest (book reference page)
+cargo run -p hornvale -- tropes report   # trope coverage -> docs/audits/ (`check` = ratchet)
 cargo run -p hornvale -- lab run studies/the-census.study.json
 cargo run -p hornvale -- lab list-metrics
 
@@ -251,8 +257,13 @@ Cross-domain communication uses only the kernel's trace protocol:
 - **Facts** — subject/predicate/object envelope, append-only, contradiction-
   checked against the concept registry (predicates registered per domain;
   naming conventions are in the book's concept-registry chapter).
-- **Phenomena** — the universal read: salience-ranked observations. Consumers
-  (e.g. religion) must never learn which system produced a phenomenon.
+- **Phenomena** — the universal read: salience-ranked observations. The
+  channel does not carry a producer, so a consumer (religion, say)
+  receives *appearances*, never sources — decision 0003 states this as a
+  cost it accepts ("a consumer **may** never learn which system produced a
+  given observation"), not as a prohibition. The distinction matters: a
+  consumer must not be *handed* a source, but a future campaign is free to
+  let an observer **achieve** an identification and be wrong about it.
 - **Fields** — typed functions over (space × time), the statistical prior.
 
 **Provider tiers coexist:** the tier-0 `ConstantSun` and the generated star
@@ -264,14 +275,21 @@ contradicts, lower ("coarse constrains fine").
 - Same seed + same pins → byte-identical worlds, almanacs, and artifacts.
   Tests assert this; CI's drift check enforces it on committed artifacts.
 - **Cross-platform byte-identity via quantization** (decision
-  0033): `f64`
-  transcendentals route to the platform libm (Apple's vs glibc's), which
-  differ in the last ULP, so serialized floats are quantized to 8
+  0033): serialized floats are quantized to 8
   significant digits (`hornvale_kernel::quantize`, libm-free) at every
   serialization boundary — `Ledger::commit`, the lab `render_csv`, and the
   scene/ephemeris JSON. Quantization is at the emit boundary **only**, never
   in the compute path (the noise fields, sculpting, and orbital mechanics
-  run at full precision). **Lorenz guard-rail:** a lossy save is safe only
+  run at full precision). **Why it exists, and what has since changed:** 0033
+  was written when `f64` transcendentals dispatched to the *platform* libm
+  (Apple's vs glibc's), which differ in the last ULP. Decision 0041 removed
+  that source — every transcendental now routes through the pure-Rust `libm`
+  crate via `kernel/src/math.rs`, making the **compute path** bit-identical
+  too (see `kernel/CLAUDE.md`). Quantization stays as the durable emit-boundary
+  guarantee, not because the platform libm is still in the path. The Pyx
+  (decision 0090) measured the combined result: a
+  40-world, all-metric probe is byte-identical between x86_64/Linux and
+  aarch64/Darwin. **Lorenz guard-rail:** a lossy save is safe only
   because reload re-derives from the lossless seed — never seed a chaotic
   forward-integrator from quantized ledger floats; resumption re-derives
   from the seed, and any chaotic checkpoint needs its own full-precision
@@ -388,13 +406,26 @@ regeneration worktree is **shared** — ask before reusing it, verify its HEAD,
 and sweep orphans rather than assuming it is parked where you left it.
 
 **Measurement is preregistered.** A study freezes its hypothesis and its
-success criteria *before* the code that would move them (decision 0016), and
-`preregistration_guard` enforces that a study can't be quietly edited to
-match a result. A falsified prediction is a finding, not a failure — several
+success criteria *before* the code that would move them (decision 0016). Note
+what does and does not enforce that: a study JSON has **no hypothesis field**
+(only `name`/`description`/`seeds`/`pin_sets`/`metrics`), so the freeze lives
+in the campaign's **spec**, and nothing mechanical compares a result to it.
+`windows/lab/tests/preregistration_guard.rs` is narrower than its name — it is
+PROC-6's *result-quieting* guard, a default-deny scan requiring every
+`#[ignore]` in a lab calibration test to carry a reason that names a cost or
+cites a decision number. A falsified prediction is a finding, not a failure — several
 campaigns ship the null as the headline. Don't retune a constant to rescue a
 prediction after unblinding without saying so in the chronicle.
 
-**The tooling/process backlog is `WORKFLOW_IMPROVEMENTS_PLAN.md`** (TOOL-*
-and PROC-* registry rows, staged). Per-campaign process lessons land in
-`docs/retrospectives/`; settled choices land in `docs/decisions/` (88
-records, append-only — grep before relitigating).
+**The tooling/process backlog is the idea registry's `TOOL-*` and `PROC-*`
+rows** — there is no separate plan file. `WORKFLOW_IMPROVEMENTS_PLAN.md` was
+retired once every stage in it read `Complete` and all that remained was a
+backlog list duplicating the registry, a residue already carried in the rows'
+**Where** cells, and one sequencing fact now held by `PROC-ci-topology-block`.
+The duplication was not harmless: reading that stale list is what minted a
+duplicate `TOOL-24`, which then travelled through a spec, a plan, a study JSON
+and a decision (`docs/retrospectives/the-pyx.md`). Treat a `shipped` row's
+**Where** cell as the place a deferred half is recorded. Per-campaign process
+lessons land in `docs/retrospectives/`; settled choices land in
+`docs/decisions/` (append-only — `make doctor` counts them; grep before
+relitigating).

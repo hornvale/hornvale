@@ -124,14 +124,14 @@ pub fn brief_of(
             // derivation path is how derived state stops being derived.
             hornvale_worldgen::occupations_by_cell(world).remove(&cell)
         })
-        .and_then(|occs| occs.into_iter().find(|o| o.ended.is_none()));
+        .and_then(|occs| occs.into_iter().find(|o| o.core.ended.is_none()));
     match alive {
         Some(o) => Brief::from_parts(
-            Some(o.function),
-            Some(o.tech),
-            Some(o.notability),
-            Some(o.people),
-            o.peak_population,
+            Some(o.core.function),
+            Some(o.core.tech),
+            Some(o.core.notability),
+            Some(o.core.people),
+            o.core.peak_population,
             built,
             cold,
         ),

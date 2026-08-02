@@ -8,6 +8,7 @@ mod phonology;
 mod proto;
 mod repl;
 mod streams;
+mod tropes;
 
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
@@ -78,6 +79,10 @@ usage:
   hornvale concepts [--manifest]           dump the concept registry as markdown
                           (--manifest: the correspondence ledger — per-concept
                           lexeme/percept/cognition coverage + trial balance)
+  hornvale tropes [report|check] [--corpus <PATH>]
+                          score the frozen dramatic-situation corpus against the live
+                          registry (report: render to stdout; check: diff against the
+                          committed artifact; default corpus: tropes/polti.trope.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -137,6 +142,7 @@ fn main() -> ExitCode {
         Some("connections") => cmd_connections(&args),
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
+        Some("tropes") => cmd_tropes(&args),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
@@ -532,6 +538,9 @@ const PLATFORM_LOCAL_RENDER_NOTE: &str = "> Rendered view — this raster's exac
 depend on the host math library) and are not cross-platform byte-checked; the \
 page above is deterministic.\n\n";
 
+// Named construction site (decision 0092): a CLI handler — sculpts once
+// to render its own map.
+#[allow(clippy::disallowed_methods)]
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let field = flag_value(args, "--field").unwrap_or("elevation");
     if !matches!(
@@ -617,6 +626,9 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
 /// Render the world's deep-time strata: a markdown page (title, deep-time
 /// lines, ASCII strata map) to stdout and, with `--out`, the PNG to disk. Both
 /// deterministic; CI drift-checks the committed copies.
+// Named construction site (decision 0092): a CLI handler — sculpts once
+// to render its own deep-time page.
+#[allow(clippy::disallowed_methods)]
 fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
@@ -813,6 +825,62 @@ fn cmd_concepts(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// The Repertoire: score the frozen corpus against the live registry.
+/// Seed 0 as in `cmd_concepts` — the registry is identical for any seed
+/// because every predicate registers up front; this exercises the fuller
+/// pipeline as a smoke test.
+fn cmd_tropes(args: &[String]) -> Result<(), String> {
+    let path = flag_value(args, "--corpus").unwrap_or("tropes/polti.trope.json");
+    let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = tropes::load(&json)?;
+    let world = world_builder::build_world(
+        Seed(0),
+        &SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    let outcomes = tropes::resolve(&corpus, &world.registry);
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `tropes` has no valueless flags. It is not a property of
+    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
+    // adding an equivalent here would resurrect the bug above. If `tropes`
+    // ever gains a valueless flag, this loop must learn which flags take
+    // values.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    match mode {
+        Some("report") | None => {
+            print!("{}", tropes::render(&corpus, &outcomes, &world.registry));
+            Ok(())
+        }
+        Some("check") => {
+            let live = tropes::render(&corpus, &outcomes, &world.registry);
+            let committed = std::fs::read_to_string("docs/audits/trope-coverage.md")
+                .map_err(|e| format!("docs/audits/trope-coverage.md: {e}"))?;
+            if live == committed {
+                Ok(())
+            } else {
+                Err("trope coverage drifted; run `make rebaseline` and review the diff".into())
+            }
+        }
+        Some(other) => Err(format!("tropes: unknown mode '{other}' (report|check)")),
+    }
+}
+
 fn cmd_streams() -> Result<(), String> {
     print!("{}", streams::render_streams());
     Ok(())
@@ -862,15 +930,30 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
     let mut out = String::from("# The Book\n");
     let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
     for seed in [1u64, 2, 3] {
-        let world = world_builder::build_world(
+        // Build once, threaded (The Shuttle): `build_world_to_with_artifacts`
+        // hands back the terrain/climate the build already sculpted — at
+        // `BuildDepth::Full` both are `Some` — so the three renders below
+        // reuse them via the `_from` entry points instead of each
+        // re-sculpting the globe (`terrain_of`/`climate_from`) on its own.
+        let wc = world_builder::WorldComponents::assemble().map_err(|e| e.to_string())?;
+        let world_builder::BuildArtifacts {
+            world,
+            terrain,
+            climate,
+        } = world_builder::build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
             world_builder::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
+            &wc,
+            world_builder::BuildDepth::Full,
         )
         .map_err(|e| e.to_string())?;
-        let vol = hornvale_book::render_volume(&world);
+        let vol = match (terrain.as_ref(), climate.as_ref()) {
+            (Some(t), Some(c)) => hornvale_book::render_volume_from(&world, t, c),
+            _ => hornvale_book::render_volume(&world),
+        };
         let title = world_builder::planet_entity(&world)
             .and_then(|p| world.ledger.text_of(p, hornvale_kernel::NAME))
             .map(str::to_string)
@@ -938,7 +1021,11 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
             Some(day) => {
                 let at_days =
                     hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
-                vec![hornvale_book::reckoning_at(&world, at_days)]
+                let epoch = match (terrain.as_ref(), climate.as_ref()) {
+                    (Some(t), Some(c)) => hornvale_book::reckoning_at_from(&world, at_days, t, c),
+                    _ => hornvale_book::reckoning_at(&world, at_days),
+                };
+                vec![epoch]
             }
             None => vol.reckoning,
         };
@@ -970,7 +1057,10 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
                     .into_iter()
                     .map(|f| (f.subject, f.predicate))
                     .collect();
-            let initiated = hornvale_book::esoteric_lines(&world, &reader);
+            let initiated = match (terrain.as_ref(), climate.as_ref()) {
+                (Some(t), Some(c)) => hornvale_book::esoteric_lines_from(&world, &reader, t, c),
+                _ => hornvale_book::esoteric_lines(&world, &reader),
+            };
             if !initiated.is_empty() {
                 out.push_str("\n### To the initiated\n\n");
                 for line in &initiated {

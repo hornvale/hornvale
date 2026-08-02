@@ -121,19 +121,19 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
         )
         .expect("the default pins build at Terrain depth on every sampled seed");
         let peoples: Vec<KindId> = {
-            let mut seen: Vec<KindId> = history.records.iter().map(|r| r.people).collect();
+            let mut seen: Vec<KindId> = history.records.iter().map(|r| r.core.people).collect();
             seen.sort_by(|a, b| a.0.cmp(b.0));
             seen.dedup();
             seen
         };
         for people in peoples {
-            let Some(genesis) = history.records.iter().find(|r| r.people == people) else {
+            let Some(genesis) = history.records.iter().find(|r| r.core.people == people) else {
                 continue;
             };
             let Some(flagship) = history
                 .records
                 .iter()
-                .find(|r| r.people == people && r.ended.is_none())
+                .find(|r| r.core.people == people && r.core.ended.is_none())
             else {
                 // A people wholly extinguished by `now` has no flagship to
                 // re-seat; it is not a world this rate is defined on.
@@ -141,7 +141,7 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
             };
             let entry = tally.entry(people).or_insert((0, 0));
             entry.1 += 1;
-            if flagship.site != genesis.site {
+            if flagship.core.site != genesis.core.site {
                 entry.0 += 1;
             }
         }

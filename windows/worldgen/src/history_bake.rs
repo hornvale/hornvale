@@ -2,7 +2,7 @@
 //! living-community engine. It seeds an ancient world with a handful of
 //! proto-communities, steps epochs across paleoclimate era-variance, and
 //! resolves grow / found / migrate / raid / flee / collapse / resettle into
-//! an occupation skeleton (a `Vec<OccupationRecord>` — alive and dead).
+//! an occupation skeleton (a `Vec<BakeOccupation>` — alive and dead).
 //!
 //! It lives at the composition root because it reads multiple domains
 //! together (history's data model, paleoclimate's era masks, a demography
@@ -30,10 +30,10 @@
 //! `records`.
 
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, CellMap, EntityId, Geosphere, KindId, Seed, Stream};
+use hornvale_kernel::{CellId, CellMap, Geosphere, KindId, Seed, Stream};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
@@ -352,6 +352,44 @@ pub const CASCADE_DEPTH_CAP: u32 = 256;
 /// 5-8, … up to 2^11+.
 const CASCADE_BINS: usize = 12;
 
+/// A handle to a community *inside the bake*, and nowhere else.
+///
+/// Deliberately not an `EntityId`: these live for the duration of one
+/// simulation and are translated to real entities at emit. Deliberately not
+/// `Serialize`/`Deserialize` either — a handle that never reaches the ledger
+/// has no business being saveable, and `EntityId` deriving serde is exactly
+/// what made the two easy to confuse.
+/// type-audit: bare-ok(constructor-edge)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BakeId(pub u64);
+
+/// One span of a people occupying a site, as the **bake** holds it. The
+/// bake-side half of the pair.
+///
+/// Unlike [`OccupationRecord`] it knows its community and its lineage, because
+/// the simulation tracks both; neither survives emit, because neither is
+/// committed as a fact.
+///
+/// It deliberately does **not** delegate `is_alive`/`tenure` the way
+/// [`OccupationRecord`] does. Bake-side callers write `.core.is_alive()`, and
+/// the extra word is the point: inside the bake an occupation is one of
+/// thousands being stepped, and the reminder that the liveness question is
+/// asked of the shared core — not of the handle-bearing wrapper — is worth
+/// more than the brevity.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BakeOccupation {
+    /// The facts both sides agree on.
+    pub core: Occupation,
+    /// The community this occupation belongs to.
+    pub community: BakeId,
+    /// The lineage this occupation continues.
+    pub lineage: BakeId,
+    /// How the occupation began.
+    pub founded_from: Founding<BakeId>,
+    /// How the occupation ended.
+    pub ended_by: Ended<BakeId>,
+}
+
 /// Configuration for a deep-history bake: the span of years to simulate, the
 /// epoch step, and the authored per-people psychology the raid and tribute
 /// rules read (the raid rule's durable inhibition, and the subordinate's
@@ -424,7 +462,7 @@ impl BakeConfig {
 #[derive(Clone, Debug)]
 pub struct History {
     /// Every occupation record, in commit (creation) order.
-    pub records: Vec<OccupationRecord>,
+    pub records: Vec<BakeOccupation>,
     /// The standard-day/year the bake closed at.
     pub now: f64,
     /// The tribute relations still standing at `now`, in subordinate order.
@@ -439,16 +477,16 @@ pub struct History {
 
 /// A standing tribute relation as it stood at `now`, carried out of the bake
 /// for emission. Both parties are named by their **community handle** (the
-/// `community` field of an [`OccupationRecord`]), not by a bake-internal index,
+/// `community` field of a [`BakeOccupation`]), not by a bake-internal index,
 /// so this survives the bake it came from — the same translation `Ended::By`
 /// and `Founding::From` already rely on.
 /// type-audit: bare-ok(count: since)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TributeRelation {
     /// The community that pays.
-    pub subordinate: EntityId,
+    pub subordinate: BakeId,
     /// The community that collects.
-    pub patron: EntityId,
+    pub patron: BakeId,
     /// The standard day this relation was established: when the *current*
     /// patron took it over, not when the subordinate first began paying
     /// somebody. A patronage transfer re-establishes it, and so does a
@@ -618,7 +656,7 @@ impl History {
     /// `tribute` likewise starts empty — a hand-built history has no relation
     /// table behind it; a test that wants one assigns the field directly.
     /// type-audit: bare-ok(count: now)
-    pub fn new(records: Vec<OccupationRecord>, now: f64) -> History {
+    pub fn new(records: Vec<BakeOccupation>, now: f64) -> History {
         History {
             records,
             now,
@@ -629,7 +667,7 @@ impl History {
 }
 
 /// One alive (or lately-dead) community's live state during the bake. The
-/// `record` index ties it to its `OccupationRecord`; population is carried in
+/// `record` index ties it to its `BakeOccupation`; population is carried in
 /// full `f64` precision.
 struct Community {
     /// Index into `Bake::records` of this community's occupation record.
@@ -637,9 +675,9 @@ struct Community {
     /// The cell this community currently occupies.
     site: CellId,
     /// The community's own entity handle.
-    id: EntityId,
+    id: BakeId,
     /// The lineage this community continues (inherited by daughters/refounds).
-    lineage: EntityId,
+    lineage: BakeId,
     /// Current population (full precision).
     population: f64,
     /// Whether the community is still alive.
@@ -679,7 +717,7 @@ struct Tribute {
     /// patron took it. **Two things re-establish it**: a patronage transfer
     /// (some rival out-muscled the incumbent) and a relocation that re-seats
     /// the patron ([`Bake::carry_portfolio_to`]), because the reseated lord is
-    /// a new community with a new [`EntityId`] and a fact naming it may not
+    /// a new community with a new [`BakeId`] and a fact naming it may not
     /// predate it. Carried only so the emitted fact can be dated by when it
     /// became true, exactly as an occupation's end-of-life facts are; no rule
     /// reads it.
@@ -802,7 +840,7 @@ struct Bake<'a> {
     /// — the patron's discount rate [`Bake::target_stock`] reads.
     time_horizon: &'a BTreeMap<KindId, f64>,
     /// Every occupation record, in commit order.
-    records: Vec<OccupationRecord>,
+    records: Vec<BakeOccupation>,
     /// Every community's live state, in commit order (dead ones retained).
     communities: Vec<Community>,
     /// The single alive community per occupied cell (the scan≡index invariant).
@@ -946,9 +984,9 @@ fn tech_weight(t: TechHorizon) -> f64 {
 }
 
 impl<'a> Bake<'a> {
-    /// Mint a fresh, never-reused entity id.
-    fn mint(&mut self) -> EntityId {
-        let id = EntityId::new(self.next_id).expect("entity ids start at 1");
+    /// Mint a fresh, never-reused bake-local handle.
+    fn mint(&mut self) -> BakeId {
+        let id = BakeId(self.next_id);
         self.next_id += 1;
         id
     }
@@ -1196,8 +1234,8 @@ impl<'a> Bake<'a> {
         &mut self,
         people: KindId,
         pop: f64,
-        lineage: EntityId,
-        predecessor: EntityId,
+        lineage: BakeId,
+        predecessor: BakeId,
         offset: f64,
         from: CellId,
         era: &EraClimate,
@@ -1272,7 +1310,7 @@ impl<'a> Bake<'a> {
         let (v_people, v_pop, v_lineage, v_offset, v_id) = {
             let c = &self.communities[victim];
             (
-                self.records[c.record].people,
+                self.records[c.record].core.people,
                 c.population,
                 c.lineage,
                 c.tech_offset,
@@ -1349,8 +1387,8 @@ impl<'a> Bake<'a> {
         &mut self,
         people: KindId,
         pop: f64,
-        lineage: EntityId,
-        predecessor: EntityId,
+        lineage: BakeId,
+        predecessor: BakeId,
         offset: f64,
         from: CellId,
         era: &EraClimate,
@@ -1659,29 +1697,31 @@ impl<'a> Bake<'a> {
         site: CellId,
         year: f64,
         population: f64,
-        founded_from: Founding,
-        lineage: Option<EntityId>,
+        founded_from: Founding<BakeId>,
+        lineage: Option<BakeId>,
         tech_offset: f64,
     ) -> usize {
         let id = self.mint();
         let lineage = lineage.unwrap_or(id);
         let tech = tech_for(year + tech_offset);
-        let record = OccupationRecord {
-            people,
+        let record = BakeOccupation {
+            core: Occupation {
+                people,
+                site,
+                founded: year,
+                ended: None,
+                peak_population: population.round() as u32,
+                tech,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: None,
+                notability: Notability::Common,
+            },
             community: id,
             lineage,
-            site,
-            founded: year,
-            ended: None,
-            peak_population: population.round() as u32,
-            tech,
-            function: Function::Agrarian,
-            deity: None,
-            tongue: None,
-            cause: None,
-            ended_by: Ended::Nature,
             founded_from,
-            notability: Notability::Common,
+            ended_by: Ended::Nature,
         };
         let record_idx = self.records.len();
         self.records.push(record);
@@ -1732,13 +1772,13 @@ impl<'a> Bake<'a> {
     /// forfeits it all, exactly as before. So this stays the single
     /// unconditional dissolution point: preserving is something a caller does
     /// deliberately, never something this method decides.
-    fn close(&mut self, idx: usize, year: f64, cause: CauseOfEnd, ended_by: Ended) {
+    fn close(&mut self, idx: usize, year: f64, cause: CauseOfEnd, ended_by: Ended<BakeId>) {
         let c = &mut self.communities[idx];
         c.alive = false;
         let site = c.site;
         let rec = c.record;
-        self.records[rec].ended = Some(year);
-        self.records[rec].cause = Some(cause);
+        self.records[rec].core.ended = Some(year);
+        self.records[rec].core.cause = Some(cause);
         self.records[rec].ended_by = ended_by;
         // Only free the cell if THIS community is the one indexed there.
         if self.node_index.get(&site) == Some(&idx) {
@@ -1795,7 +1835,7 @@ impl<'a> Bake<'a> {
     ///
     /// **`since` does NOT travel: this lord's tenure begins at `year`.** The
     /// obligation continues, but the patron on the far side of a relocation is
-    /// a *new community with a new [`EntityId`]* — `open` minted it moments
+    /// a *new community with a new [`BakeId`]* — `open` minted it moments
     /// ago — and [`TributeRelation::since`] is documented as when the CURRENT
     /// patron took the relation over, not when the subordinate first began
     /// paying somebody (a patronage transfer already re-stamps it for exactly
@@ -2049,7 +2089,9 @@ impl<'a> Bake<'a> {
             // across a collection pass, so the order-independence this method
             // documents below survives the new term.
             let sub_eff = self.eff_capacity(era, self.communities[sub].site);
-            let patron_people = self.records[self.communities[rel.patron].record].people;
+            let patron_people = self.records[self.communities[rel.patron].record]
+                .core
+                .people;
             // …and by how many OTHER vassals this patron holds (spec §4.3c):
             // the alternatives to this relation are what make it expendable, so
             // the relation in hand is excluded. A patron holding only this one
@@ -2072,7 +2114,8 @@ impl<'a> Bake<'a> {
             // (spec §4.2) — and, since it can only ever LOWER a remittance, the
             // setpoint (and with it the floor beneath it) holds at any
             // concealment.
-            let conceal = self.concealment_of(self.records[self.communities[sub].record].people);
+            let conceal =
+                self.concealment_of(self.records[self.communities[sub].record].core.people);
             let remittance = rel.assessment.min((harvest + bleed) * (1.0 - conceal));
             // The burden: what was handed over as a share of the community
             // that handed it over, measured against the population the demand
@@ -2260,7 +2303,7 @@ impl<'a> Bake<'a> {
         if arriving < VIABLE_MIN {
             return false; // too small to survive leaving: it endures instead
         }
-        let people = self.records[record].people;
+        let people = self.records[record].core.people;
         // Close BEFORE relocating so the cell it is abandoning is free — a
         // people must not be able to flee onto its own site, and `close` frees
         // the cell only when this community is the one indexed there. Lift the
@@ -2311,15 +2354,15 @@ impl<'a> Bake<'a> {
         let c = &mut self.communities[idx];
         let peak = c.population.round() as u32;
         let rec = c.record;
-        if peak > self.records[rec].peak_population {
-            self.records[rec].peak_population = peak;
+        if peak > self.records[rec].core.peak_population {
+            self.records[rec].core.peak_population = peak;
         }
         let tech = tech_for(year + c.tech_offset);
         if tech > c.tech {
             c.tech = tech;
         }
-        if c.tech > self.records[rec].tech {
-            self.records[rec].tech = c.tech;
+        if c.tech > self.records[rec].core.tech {
+            self.records[rec].core.tech = c.tech;
         }
     }
 
@@ -2343,7 +2386,7 @@ impl<'a> Bake<'a> {
                 let c = &self.communities[idx];
                 (c.record, c.population, c.lineage, c.tech_offset, c.id)
             };
-            let people = self.records[record].people;
+            let people = self.records[record].core.people;
             // A refuge is only a refuge for a band big enough to hold it: a
             // migrant whose arriving population would fall below `VIABLE_MIN`
             // starves on the road instead of refounding, exactly as `relocate`
@@ -2504,7 +2547,7 @@ impl<'a> Bake<'a> {
         let raider_site = self.communities[raider].site;
         // Read once: it does not vary over the candidate walk, and both the
         // durable inhibition and the size gate (spec §4.3b) are keyed on it.
-        let raider_people = self.records[self.communities[raider].record].people;
+        let raider_people = self.records[self.communities[raider].record].core.people;
         // The durable inhibition: a timid people never takes the initiative,
         // so it never enters the candidate loop at all.
         if !self.takes_the_initiative(raider_people) {
@@ -2680,7 +2723,7 @@ impl<'a> Bake<'a> {
         let (raider_people, raider_id, raider_lineage, raider_offset) = {
             let c = &self.communities[raider];
             (
-                self.records[c.record].people,
+                self.records[c.record].core.people,
                 c.id,
                 c.lineage,
                 c.tech_offset,
@@ -2689,7 +2732,7 @@ impl<'a> Bake<'a> {
         let (loser_people, loser_id, loser_lineage, loser_offset) = {
             let c = &self.communities[target];
             (
-                self.records[c.record].people,
+                self.records[c.record].core.people,
                 c.id,
                 c.lineage,
                 c.tech_offset,
@@ -2816,7 +2859,7 @@ impl<'a> Bake<'a> {
             if let Some(dest) = dest {
                 let (people, lineage, offset) = {
                     let c = &self.communities[idx];
-                    (self.records[c.record].people, c.lineage, c.tech_offset)
+                    (self.records[c.record].core.people, c.lineage, c.tech_offset)
                 };
                 let new_idx = self.open(
                     people,
@@ -2966,7 +3009,7 @@ pub fn bake(
 
     // 3. Close at `now`: alive records keep `ended = None`.
     let now = cfg.end_year;
-    bake.tally.alive_at_now = bake.records.iter().filter(|r| r.is_alive()).count() as u64;
+    bake.tally.alive_at_now = bake.records.iter().filter(|r| r.core.is_alive()).count() as u64;
     // The stock at `now`: how many relations survived the span, and the widest
     // star among them (spec §8.2's runaway-hub reading). `close` dissolves both
     // directions of a relation, so every entry left here must name two live
@@ -4200,7 +4243,7 @@ mod tests {
             let held_by = bake
                 .tribute
                 .get(&sub)
-                .map(|t| bake.records[bake.communities[t.patron].record].people)
+                .map(|t| bake.records[bake.communities[t.patron].record].core.people)
                 .expect("the vassal must still be paying somebody: nothing closes in this world");
             assert_eq!(
                 held_by,
@@ -4788,7 +4831,7 @@ mod tests {
         );
         let rec = &bake.records[bake.communities[sub].record];
         assert_eq!(
-            (rec.cause, rec.ended_by),
+            (rec.core.cause, rec.ended_by),
             (Some(CauseOfEnd::Migrated), Ended::Nature),
             "it left of its own accord: an orderly migration, ended by nobody"
         );
@@ -5300,7 +5343,7 @@ mod tests {
         );
         let rec = &bake.records[bake.communities[patron].record];
         assert_eq!(
-            (rec.cause, rec.ended_by),
+            (rec.core.cause, rec.ended_by),
             (Some(CauseOfEnd::Fled), Ended::By(attacker_id)),
             "precondition: driven off by the attacker, not a self-directed move"
         );
@@ -5363,6 +5406,7 @@ mod tests {
         );
         assert_eq!(
             bake.records[bake.communities[reseated].record]
+                .core
                 .founded
                 .to_bits(),
             standing.since.to_bits(),
@@ -7036,7 +7080,7 @@ mod tests {
             .get(&CellId(20))
             .expect("the rich cell must be occupied");
         assert_eq!(
-            bake.records[bake.communities[seated].record].people,
+            bake.records[bake.communities[seated].record].core.people,
             KindId("kobold"),
             "the roller must be the one seated on the rich cell"
         );
@@ -7050,7 +7094,7 @@ mod tests {
             "the holder must be evicted"
         );
         assert_eq!(
-            bake.records[bake.communities[holder].record].cause,
+            bake.records[bake.communities[holder].record].core.cause,
             Some(CauseOfEnd::Fled)
         );
         // The evicted holder rolled onward and found marginal vacant land.
@@ -7184,7 +7228,7 @@ mod tests {
                 .node_index
                 .get(&CellId(20))
                 .expect("the rich cell is occupied either way");
-            let holder_people = bake.records[bake.communities[seated].record].people;
+            let holder_people = bake.records[bake.communities[seated].record].core.people;
             (outcome, holder_people)
         };
 
@@ -7292,7 +7336,7 @@ mod tests {
             .get(&CellId(20))
             .expect("the held rich cell must have changed hands");
         assert_eq!(
-            bake.records[bake.communities[seated].record].people,
+            bake.records[bake.communities[seated].record].core.people,
             KindId("kobold")
         );
     }
@@ -7574,12 +7618,12 @@ mod tests {
             let seated = LADDER.map(|cell| {
                 bake.node_index
                     .get(&cell)
-                    .map(|&i| bake.records[bake.communities[i].record].people)
+                    .map(|&i| bake.records[bake.communities[i].record].core.people)
             });
             let terminal_survived = bake
                 .communities
                 .iter()
-                .any(|c| c.alive && bake.records[c.record].people == TERMINAL);
+                .any(|c| c.alive && bake.records[c.record].core.people == TERMINAL);
             (
                 outcome,
                 (bake.tally.raided, bake.tally.fled, bake.tally.collapsed),

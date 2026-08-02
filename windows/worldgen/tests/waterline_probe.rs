@@ -58,6 +58,11 @@
 //!
 //! Run with:
 //!   cargo test -p hornvale-worldgen --test waterline_probe -- --nocapture --ignored
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_demography::home_range;
 use hornvale_kernel::{ANIMAL_PREY, CellMap, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE};
@@ -321,7 +326,8 @@ fn waterline_probe() {
     // `menagerie_full_roster_dominant_breakdown` iterates `geo.cells()` with
     // no land filter. Measure the split directly rather than inferring it.
     println!("\n-- dominance by land/ocean (the shipped metric's own definition)");
-    let report = hornvale_worldgen::demography_report(&world, &wc).expect("demography report");
+    let report = hornvale_worldgen::demography_report_from(&world, &wc, &terrain, &climate)
+        .expect("demography report");
     let mut dom_land: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
     let mut dom_sea: std::collections::BTreeMap<u32, usize> = std::collections::BTreeMap::new();
     for &cell in &cells {

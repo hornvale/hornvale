@@ -54,17 +54,17 @@ pub struct BookVolume {
     pub tongue_gaps: Vec<String>,
     /// C4 T4: one chorus section per placed people with a committed
     /// collective — the same ground truth composed through that culture's
-    /// epistemic account (`hornvale_worldgen::accounts_of`). The
+    /// epistemic account (`hornvale_worldgen::accounts_from`). The
     /// null-filter law (spec §4.1): an identity account's section
     /// reproduces `lines` byte-identically — see
     /// `identity_chorus_reproduces_the_gods_eye_lines`.
     pub chorus: Vec<ChorusSection>,
     /// C8 (The Diachronic Book): the Book's time axis — one
     /// [`ReckoningEpoch`] per preregistered epoch (day 0 and the
-    /// hundredth year, `36_525.0` standard days; see [`reckoning_epochs`]),
+    /// hundredth year, `36_525.0` standard days; see `reckoning_epochs_from`),
     /// always the same fixed pair regardless of any `--at` lens the CLI
     /// renders separately ([`reckoning_at`]). Zero new draws/facts: pure
-    /// derivation over `hornvale_worldgen::{observations_of, ladder_of}`.
+    /// derivation over `hornvale_worldgen::{observations_from, ladder_from}`.
     pub reckoning: Vec<ReckoningEpoch>,
 }
 
@@ -88,7 +88,7 @@ pub struct ChorusSection {
     pub margin: Vec<String>,
     /// C6 (The Doctrine): this culture's doctrine section, when its
     /// flagship's committed `cult-form` fact gates it in (the SOC-1 gate,
-    /// `hornvale_worldgen::doctrine_of`) — `None` for a folk-cult-form
+    /// `hornvale_worldgen::doctrine_from`) — `None` for a folk-cult-form
     /// culture. The folk registers above (`emic`/`margin`) are
     /// byte-unchanged by this campaign regardless of this field.
     pub doctrine: Option<DoctrineSection>,
@@ -96,7 +96,7 @@ pub struct ChorusSection {
 
 /// C6 (The Doctrine): one organized culture's doctrine section — the
 /// institution's second account (the priesthood's own composition of the
-/// SAME ground truth, run through `hornvale_worldgen::doctrine_of`'s four
+/// SAME ground truth, run through `hornvale_worldgen::doctrine_from`'s four
 /// preregistered deltas), split into four registers rather than the folk
 /// section's two: `tongue_taught_line` (C7: the in-tongue taught contrast),
 /// `emic` (the doctrine's own paragraph, with the `RevealedClaim`
@@ -133,17 +133,18 @@ pub struct DoctrineSection {
 
 /// C8 (The Diachronic Book): one epoch's Reckoning-of-Years section — the
 /// observation ledger at a fixed day `T`, read back through
-/// `hornvale_worldgen::{observations_of, ladder_of}` for every placed
+/// `hornvale_worldgen::{observations_from, ladder_from}` for every placed
 /// culture (see [`reckoning_epoch`]). `lines` is empty-arm-or-per-culture
 /// (never both): the empty arm (`"The sky keeps no dates to number."`)
 /// when the true event count at `T` is zero, else one run of lines per
 /// placed culture at `Counted`+ (the folk line, then — organized cultures
 /// only — the Numbered line, then — `Predictive` only — the prediction
 /// line). `margin` carries zero or more lines: one per placed culture with
-/// a live prediction crisis (`hornvale_worldgen::crisis_of`, placed-culture
+/// a live prediction crisis (`hornvale_worldgen::crisis_from`, placed-culture
 /// order), then — exactly when some culture's held knowledge falls short of
 /// the true count — the world-level shortfall sentence, last.
 /// type-audit: bare-ok(prose: heading), bare-ok(prose: lines), bare-ok(prose: margin)
+#[derive(Debug)]
 pub struct ReckoningEpoch {
     /// `"In the first days"` / `"In the hundredth year"` for the committed
     /// pair; an ad hoc `"At day ⟨N⟩"` for the CLI's `--at` lens.
@@ -152,7 +153,7 @@ pub struct ReckoningEpoch {
     /// order) — see the struct doc.
     pub lines: Vec<String>,
     /// `margin` carries zero or more lines: one per placed culture with a
-    /// live prediction crisis (`hornvale_worldgen::crisis_of`,
+    /// live prediction crisis (`hornvale_worldgen::crisis_from`,
     /// placed-culture order), then — exactly when some culture's held
     /// knowledge falls short of the true count — the world-level shortfall
     /// sentence, last.
@@ -263,8 +264,47 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 /// ([`CONSTRUCTION_ORDER`]) — the sentence's surface order is an authored
 /// grammar decision, not an echo of ledger commit order. Then one more
 /// sentence per `instance-of` fact (C2 T5): a placed peopled species'
-/// collective, named by its autonym.
+/// collective, named by its autonym. Sculpts once (`terrain_of` +
+/// `climate_from`) and delegates to [`render_volume_from`], which every
+/// internal reader (`lexicon_from`, `chorus_sections_from`,
+/// `reckoning_epochs_from`, …) threads instead of re-sculpting the globe per
+/// call — The Shuttle (this campaign): one `render_volume` call sculpted the
+/// globe ~85 times before this threading, once after. On a world whose
+/// committed terrain pins fail to parse (malformed save data a built world
+/// cannot actually produce), renders an empty volume — the same
+/// silent-empty posture `hornvale_worldgen::accounts_from` already takes on
+/// the identical failure, rather than panicking on state a normal build
+/// never reaches.
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `render_volume_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn render_volume(world: &World) -> BookVolume {
+    let empty = || BookVolume {
+        seed: world.seed.0,
+        lines: Vec::new(),
+        tongue_lines: Vec::new(),
+        tongue_gaps: Vec::new(),
+        chorus: Vec::new(),
+        reckoning: Vec::new(),
+    };
+    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
+        return empty();
+    };
+    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else {
+        return empty();
+    };
+    render_volume_from(world, &terrain, &climate)
+}
+
+/// [`render_volume`]'s threaded twin: takes ALREADY-BUILT terrain/climate (a
+/// caller that already sculpted the globe, e.g. for another purpose)
+/// instead of re-sculpting it, and otherwise renders the identical volume —
+/// see [`render_volume`] for what a volume contains.
+pub fn render_volume_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> BookVolume {
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
@@ -370,13 +410,20 @@ pub fn render_volume(world: &World) -> BookVolume {
         };
         let ph = hornvale_worldgen::language_of(world, kind);
         let grammar = tongue_grammar(&world.seed, kind, &ph);
-        let Ok(lexicon) = hornvale_worldgen::lexicon_of(world, kind) else {
+        let Ok(lexicon) = hornvale_worldgen::lexicon_from(world, kind, terrain, climate) else {
             continue;
         };
         let Ok(morph) = hornvale_worldgen::tongue_morphology_of(world, kind) else {
             continue;
         };
-        let noun_class_of = |concept: &str| hornvale_worldgen::noun_class_of(world, kind, concept);
+        // The Shuttle: compute the sky-override's animacy answer ONCE per
+        // kind (the same draw `noun_class_of` used to repeat per concept)
+        // and hand it to `noun_class_with_sky`, the one shared copy of the
+        // animacy-coherence branch (`chorus.rs`).
+        let sky_animate = hornvale_worldgen::day_schema_from(world, kind, terrain, climate)
+            == Some(SchemaId::Agentive);
+        let noun_class_of =
+            |concept: &str| hornvale_worldgen::noun_class_with_sky(sky_animate, concept);
 
         let own_kind = format!("{kind}-kind");
         let self_statement = TongueClause {
@@ -445,16 +492,16 @@ pub fn render_volume(world: &World) -> BookVolume {
         lines,
         tongue_lines,
         tongue_gaps,
-        chorus: chorus_sections(world),
-        reckoning: reckoning_epochs(world),
+        chorus: chorus_sections_from(world, terrain, climate),
+        reckoning: reckoning_epochs_from(world, terrain, climate),
     }
 }
 
 /// The autonym (committed collective `NAME`) for each placed people that
 /// has one, keyed by kind label — the small ledger scan
 /// [`render_volume`]'s `people_by_kind` already performs, repeated here so
-/// [`chorus_sections`] stays a self-contained `fn(&World) -> _` per its
-/// documented signature.
+/// `chorus_sections_from` stays a self-contained `fn(&World, ..) -> _` per
+/// its documented signature.
 fn autonym_by_kind(world: &World) -> BTreeMap<String, String> {
     let mut autonyms = BTreeMap::new();
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
@@ -473,7 +520,7 @@ fn autonym_by_kind(world: &World) -> BTreeMap<String, String> {
 }
 
 /// C4 T4: every placed people's chorus section, in
-/// `hornvale_worldgen::accounts_of` order — a people with no committed
+/// `hornvale_worldgen::accounts_from` order — a people with no committed
 /// collective is skipped (mirrors C3's `continue` in the tongue-lines
 /// loop above). C7 T3: each organized culture's doctrine section also gets
 /// its in-tongue taught line here — [`planet_name_of`] and the tongue's own
@@ -481,59 +528,73 @@ fn autonym_by_kind(world: &World) -> BTreeMap<String, String> {
 /// culture, independently of `render_volume`'s own tongue-lines loop (the
 /// same "each section derives its own inputs" idiom `autonym_by_kind`
 /// already follows here, rather than threading state between the two
-/// unrelated `BookVolume` fields).
-fn chorus_sections(world: &World) -> Vec<ChorusSection> {
+/// unrelated `BookVolume` fields). The Shuttle: takes ALREADY-BUILT
+/// terrain/climate so every placed people's account and doctrine share the
+/// one sculpt [`render_volume_from`] already paid for.
+fn chorus_sections_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Vec<ChorusSection> {
     let autonyms = autonym_by_kind(world);
     let planet_name = planet_name_of(world);
-    hornvale_worldgen::accounts_of(world)
+    hornvale_worldgen::accounts_from(world, terrain, climate)
         .into_iter()
         .filter_map(|voice| {
             let autonym = autonyms.get(&voice.kind)?;
             let mut section = voice_section(&voice.kind, autonym, &voice.account, world);
-            section.doctrine = hornvale_worldgen::doctrine_of(world, &voice.kind).map(|dv| {
-                let kind = voice.kind.as_str();
-                let ph = hornvale_worldgen::language_of(world, kind);
-                let grammar = tongue_grammar(&world.seed, kind, &ph);
-                let lexicon = hornvale_worldgen::lexicon_of(world, kind).unwrap_or_else(|e| {
-                    panic!(
-                        "the taught-contrast law is violated for {kind}: lexicon derivation \
-                         failed: {e:?}"
-                    )
-                });
-                let morph =
-                    hornvale_worldgen::tongue_morphology_of(world, kind).unwrap_or_else(|e| {
+            section.doctrine =
+                hornvale_worldgen::doctrine_from(world, &voice.kind, terrain, climate).map(|dv| {
+                    let kind = voice.kind.as_str();
+                    let ph = hornvale_worldgen::language_of(world, kind);
+                    let grammar = tongue_grammar(&world.seed, kind, &ph);
+                    let lexicon = hornvale_worldgen::lexicon_from(world, kind, terrain, climate)
+                    .unwrap_or_else(|e| {
                         panic!(
-                            "the taught-contrast law is violated for {kind}: morphology \
-                             derivation failed: {e:?}"
+                            "the taught-contrast law is violated for {kind}: lexicon derivation \
+                             failed: {e:?}"
                         )
                     });
-                let noun_class_of =
-                    |concept: &str| hornvale_worldgen::noun_class_of(world, kind, concept);
-                let name = planet_name.as_deref().unwrap_or_else(|| {
-                    panic!(
-                        "the world-statement law is violated: {kind}'s doctrine is organized \
+                    let morph = hornvale_worldgen::tongue_morphology_of(world, kind)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "the taught-contrast law is violated for {kind}: morphology \
+                             derivation failed: {e:?}"
+                            )
+                        });
+                    // The Shuttle: sky_animate computed once per kind (see the
+                    // matching comment in `render_volume_from`).
+                    let sky_animate =
+                        hornvale_worldgen::day_schema_from(world, kind, terrain, climate)
+                            == Some(SchemaId::Agentive);
+                    let noun_class_of = |concept: &str| {
+                        hornvale_worldgen::noun_class_with_sky(sky_animate, concept)
+                    };
+                    let name = planet_name.as_deref().unwrap_or_else(|| {
+                        panic!(
+                            "the world-statement law is violated: {kind}'s doctrine is organized \
                          but the planet has no committed name"
+                        )
+                    });
+                    let taught_line = world_statement(
+                        kind,
+                        name,
+                        Evidential::Taught,
+                        &grammar,
+                        &morph,
+                        &noun_class_of,
+                        &lexicon,
+                    );
+                    let tongue_taught_line =
+                        format!("{taught_line} (\"{name} is the earth — as it is taught.\")");
+                    doctrine_section(
+                        autonym,
+                        &dv,
+                        &voice.params,
+                        &voice.account,
+                        tongue_taught_line,
                     )
                 });
-                let taught_line = world_statement(
-                    kind,
-                    name,
-                    Evidential::Taught,
-                    &grammar,
-                    &morph,
-                    &noun_class_of,
-                    &lexicon,
-                );
-                let tongue_taught_line =
-                    format!("{taught_line} (\"{name} is the earth — as it is taught.\")");
-                doctrine_section(
-                    autonym,
-                    &dv,
-                    &voice.params,
-                    &voice.account,
-                    tongue_taught_line,
-                )
-            });
             Some(section)
         })
         .collect()
@@ -541,7 +602,7 @@ fn chorus_sections(world: &World) -> Vec<ChorusSection> {
 
 // ---------------------------------------------------------------------
 // C8, The Diachronic Book: the Reckoning of Years — the Book's time axis.
-// Pure derivation over `hornvale_worldgen::{observations_of, ladder_of}`
+// Pure derivation over `hornvale_worldgen::{observations_from, ladder_from}`
 // (T1); zero new draws, facts, or save-format state. See `ReckoningEpoch`'s
 // doc for the per-epoch shape and the plan's Preregistered block for every
 // closed string below (frozen before measurement).
@@ -585,8 +646,15 @@ fn parse_reckoning_folk_counted(line: &str) -> Option<&str> {
 /// Every placed culture's Reckoning-of-Years read, at the two
 /// preregistered epochs — the committed `BookVolume::reckoning`. Always
 /// exactly two entries; never gated on world content (an eventless world
-/// renders the empty arm at both).
-fn reckoning_epochs(world: &World) -> Vec<ReckoningEpoch> {
+/// renders the empty arm at both). The Shuttle: takes ALREADY-BUILT
+/// terrain/climate (threaded down to [`observations_from`]/[`ladder_from`]
+/// via `reckoning_epoch`) instead of re-sculpting the globe per epoch per
+/// culture.
+fn reckoning_epochs_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Vec<ReckoningEpoch> {
     let autonyms = autonym_by_kind(world);
     [
         (
@@ -605,7 +673,15 @@ fn reckoning_epochs(world: &World) -> Vec<ReckoningEpoch> {
         let at = hornvale_astronomy::StdDays::new(day).unwrap_or_else(|e| {
             panic!("the Reckoning's preregistered epoch day {day} must be a valid StdDays: {e}")
         });
-        reckoning_epoch(world, &autonyms, heading, at, margin_phrase)
+        reckoning_epoch(
+            world,
+            &autonyms,
+            heading,
+            at,
+            margin_phrase,
+            terrain,
+            climate,
+        )
     })
     .collect()
 }
@@ -624,25 +700,57 @@ fn reckoning_epochs(world: &World) -> Vec<ReckoningEpoch> {
 /// `reckoning_at_matches_the_fixed_pair_and_renders_arbitrary_days`. The
 /// possessed session's `consult` verb (`windows/vessel`, T2) is the
 /// second caller: it reads the Reckoning at the session's own day through
-/// this same function.
+/// this same function. Sculpts once (`terrain_of`+`climate_from`) and
+/// delegates to [`reckoning_at_from`] — a build failure on a normal world's
+/// committed pins is unreachable, so this panics on it (the same posture
+/// `reckoning_epoch`'s own `observations_from`/`ladder_from` calls already took
+/// before The Shuttle threaded them).
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `reckoning_at_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
+    let terrain = hornvale_worldgen::terrain_of(world)
+        .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable terrain: {e}"));
+    let climate = hornvale_worldgen::climate_from(world, &terrain)
+        .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable climate: {e}"));
+    reckoning_at_from(world, at, &terrain, &climate)
+}
+
+/// [`reckoning_at`], threaded: takes ALREADY-BUILT terrain/climate instead
+/// of re-sculpting the globe — the CLI/vessel callers of `reckoning_at`
+/// each sculpt once per call; a caller that already holds a build (or
+/// wants many `--at` lenses over one world) can share it here instead.
+pub fn reckoning_at_from(
+    world: &World,
+    at: hornvale_astronomy::StdDays,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> ReckoningEpoch {
     let day = at.get();
     let heading = format!("At day {day}");
     let margin_phrase = format!("by day {day}");
-    reckoning_epoch(world, &autonym_by_kind(world), &heading, at, &margin_phrase)
+    reckoning_epoch(
+        world,
+        &autonym_by_kind(world),
+        &heading,
+        at,
+        &margin_phrase,
+        terrain,
+        climate,
+    )
 }
 
 /// The true count of eclipse events to `at` (spec §3.4): every syzygy in
 /// `[0, at]`, solar AND lunar, regardless of any culture's witnessing
 /// capability — the world's own physical record, as opposed to
-/// [`hornvale_worldgen::observations_of`]'s per-culture WITNESSED subset.
+/// [`hornvale_worldgen::observations_from`]'s per-culture WITNESSED subset.
 /// The margin law compares each culture's held count against this. A
 /// tier-0 constant-sun world ([`hornvale_worldgen::Sky::Constant`]) has no
 /// calendar and so no eclipses ever — honestly zero, never a panic, so
 /// `render_volume` stays total over every world `hornvale_worldgen` can
 /// build (not just the Book's own `SkyChoice::Generated` worlds); the
 /// zero short-circuits [`reckoning_epoch`] straight to the empty arm
-/// before it ever calls `observations_of`/`ladder_of` (both of which
+/// before it ever calls `observations_from`/`ladder_from` (both of which
 /// themselves require a Generated sky).
 fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
@@ -695,6 +803,8 @@ fn reckoning_epoch(
     heading: &str,
     at: hornvale_astronomy::StdDays,
     margin_phrase: &str,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
 ) -> ReckoningEpoch {
     let true_count = true_event_count(world, at);
     if true_count == 0 {
@@ -712,17 +822,17 @@ fn reckoning_epoch(
         let Some(autonym) = autonyms.get(kind) else {
             continue;
         };
-        let observations =
-            hornvale_worldgen::observations_of(world, kind, at).unwrap_or_else(|e| {
+        let observations = hornvale_worldgen::observations_from(world, kind, at, terrain, climate)
+            .unwrap_or_else(|e| {
                 panic!(
-                    "the Reckoning section requires observations_of to succeed for placed culture \
-                 {kind}: {e}"
+                    "the Reckoning section requires observations_from to succeed for placed \
+                     culture {kind}: {e}"
                 )
             });
-        let (rung, prediction) =
-            hornvale_worldgen::ladder_of(world, kind, at).unwrap_or_else(|e| {
+        let (rung, prediction) = hornvale_worldgen::ladder_from(world, kind, at, terrain, climate)
+            .unwrap_or_else(|e| {
                 panic!(
-                    "the Reckoning section requires ladder_of to succeed for placed culture \
+                    "the Reckoning section requires ladder_from to succeed for placed culture \
                      {kind}: {e}"
                 )
             });
@@ -743,12 +853,13 @@ fn reckoning_epoch(
         }
 
         if rung == hornvale_worldgen::LadderRung::Predictive {
-            let crisis = hornvale_worldgen::crisis_of(world, kind, at).unwrap_or_else(|e| {
-                panic!(
-                    "the Reckoning section requires crisis_of to succeed for placed culture \
-                     {kind}: {e}"
-                )
-            });
+            let crisis = hornvale_worldgen::crisis_from(world, kind, at, terrain, climate)
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "the Reckoning section requires crisis_from to succeed for placed \
+                         culture {kind}: {e}"
+                    )
+                });
             if let Some(crisis) = crisis {
                 margin.push(reckoning_crisis_margin_line(autonym, crisis));
             }
@@ -839,7 +950,7 @@ fn reckoning_crisis_margin_line(
 /// ledger #3) -- `None` for a folk-only culture, matching every other
 /// doctrine-gated render path's existing convention. `has_doctrine` is
 /// always `true` at every real call site in this file today (a
-/// `Predictive`-rung culture always has a doctrine, by `ladder_of`'s own
+/// `Predictive`-rung culture always has a doctrine, by `ladder_from`'s own
 /// gate), so the `false` arm is unreachable through any live world -- kept
 /// and tested anyway (see the tests above), the same defensive posture
 /// `reckoning_culture_lines`'s own `Unknown` arm already keeps.
@@ -1567,11 +1678,35 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 ///
 /// [`RevealedClaim`]: ConflictState::RevealedClaim
 /// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `esoteric_lines_from`.
+#[allow(clippy::disallowed_methods)]
 pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec<String> {
+    let Ok(terrain) = hornvale_worldgen::terrain_of(world) else {
+        return Vec::new();
+    };
+    let Ok(climate) = hornvale_worldgen::climate_from(world, &terrain) else {
+        return Vec::new();
+    };
+    esoteric_lines_from(world, reader, &terrain, &climate)
+}
+
+/// [`esoteric_lines`], threaded: takes ALREADY-BUILT terrain/climate instead
+/// of re-sculpting the globe. On a sculpt failure, [`esoteric_lines`] mirrors
+/// `hornvale_worldgen::accounts_from`'s own posture on the same failure — an
+/// empty `Vec`, never a panic.
+/// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
+pub fn esoteric_lines_from(
+    world: &World,
+    reader: &BTreeSet<(String, String)>,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Vec<String> {
     let mut lines = Vec::new();
     let mut seen: BTreeSet<(String, String)> = BTreeSet::new();
-    for voice in hornvale_worldgen::accounts_of(world) {
-        let Some(doctrine) = hornvale_worldgen::doctrine_of(world, &voice.kind) else {
+    for voice in hornvale_worldgen::accounts_from(world, terrain, climate) {
+        let Some(doctrine) = hornvale_worldgen::doctrine_from(world, &voice.kind, terrain, climate)
+        else {
             continue;
         };
         for entry in &doctrine.account.entries {
@@ -1913,8 +2048,59 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 /// `"earth"`) — a book-layer carving that never appears as a committed
 /// `is-a` object, so a chorus emic line naming it would otherwise parse as
 /// `UnknownComplement`. The closed set stays derived from the world:
-/// walking `accounts_of(world)` rather than hardcoding the carving text.
+/// walking `accounts_from(world)` rather than hardcoding the carving text.
+/// Sculpts once (`terrain_of` + `climate_from`) and delegates to
+/// [`parse_context_from`] on success — the vessel session's `write` verb
+/// (The Shuttle) threads an already-built terrain/climate instead of
+/// paying for this sculpt on every turn. On a sculpt failure, mirrors
+/// `hornvale_worldgen::accounts_from`'s own posture: only the chorus-derived
+/// complements are absent (an empty voice list), never the whole set — the
+/// two pure-ledger loops (`is-a`, `instance-of`) still run, so a world
+/// whose terrain pins fail to parse still parses every Common line it
+/// would have accepted before that failure, just without the chorus
+/// vocabulary.
+// Named construction site (decision 0092): this entry wrapper sculpts/fits
+// once, then delegates to `parse_context_with_voices`.
+#[allow(clippy::disallowed_methods)]
 pub fn parse_context(world: &World) -> ParseContext {
+    let sculpted = hornvale_worldgen::terrain_of(world)
+        .ok()
+        .and_then(|terrain| {
+            hornvale_worldgen::climate_from(world, &terrain)
+                .ok()
+                .map(|climate| (terrain, climate))
+        });
+    let voices = match &sculpted {
+        Some((terrain, climate)) => hornvale_worldgen::accounts_from(world, terrain, climate),
+        None => Vec::new(),
+    };
+    parse_context_with_voices(world, voices)
+}
+
+/// [`parse_context`], threaded: takes ALREADY-BUILT terrain/climate instead of
+/// re-sculpting the globe. Success path only — a caller already holding a
+/// terrain/climate pair has, by construction, a sculpt that succeeded, so
+/// this never takes the degraded (empty-voices) arm [`parse_context`]
+/// falls back to on its own internal sculpt failure.
+pub fn parse_context_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> ParseContext {
+    parse_context_with_voices(
+        world,
+        hornvale_worldgen::accounts_from(world, terrain, climate),
+    )
+}
+
+/// The shared body behind [`parse_context`] and [`parse_context_from`]: the
+/// two pure-ledger loops (`is-a`, `instance-of`) always run; `voices` is the
+/// only part either caller varies — the real (sculpted) chorus accounts, or
+/// an empty list on a sculpt failure ([`parse_context`]'s degraded arm).
+fn parse_context_with_voices(
+    world: &World,
+    voices: Vec<hornvale_worldgen::ChorusVoice>,
+) -> ParseContext {
     let mut complements = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
         if let Value::Text(kind) = &fact.object {
@@ -1926,7 +2112,7 @@ pub fn parse_context(world: &World) -> ParseContext {
             complements.insert(species_label(kind));
         }
     }
-    for voice in hornvale_worldgen::accounts_of(world) {
+    for voice in voices {
         for entry in &voice.account.entries {
             if let Disposition::Substituted { theirs, .. } = effective(&entry.disposition) {
                 complements.insert(theirs.clone());
@@ -2140,7 +2326,7 @@ pub enum ChorusLine {
 /// sentence shapes plus the truth margin, which carries a count rather
 /// than a classification clause, so it cannot reuse `ParsedLine`). Carries
 /// no ground-fact recovery: the section states counts drawn from
-/// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
+/// `hornvale_worldgen::{observations_from, ladder_from}`, not a `chorus_ground`
 /// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
 /// truth walk has nothing here to check.
 /// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count), bare-ok(prose: Crisis.autonym), bare-ok(diagnostic-value: Crisis.taught_day), bare-ok(diagnostic-value: Crisis.actual_day), bare-ok(prose: Doctrine.autonym), bare-ok(flag: Doctrine.crisis_live)
@@ -2595,6 +2781,36 @@ mod tests {
     //! tongue word forms moved as well — see `the_additivity_law`, the one
     //! register whose drift is not confined to proper nouns.
     //!
+    //!
+    //! ## The Watershed's sonority merge (Item 0) — the second rename map
+    //!
+    //! Sonority sequencing orders every drawn onset and coda template by
+    //! rising-to-nucleus / falling-away sonority. The draw COUNT is
+    //! unchanged, so this costs no entropy — it changes only what the same
+    //! draws mean, and every lexicon-derived name re-mints. The map here is
+    //! far smaller than the one above, because SSP reorders only the
+    //! templates that actually violate it:
+    //!
+    //! | what | old | new | why |
+    //! |---|---|---|---|
+    //! | kobold, seed 1 | Zhzho | Ngosho | `Zhzh-` is a flat sibilant cluster |
+    //! | deity (goblin) | Voovoo | Voovo | equal-sonority neighbours collapse |
+    //! | deity | Wtoevvelqa | Twoevave | `Wt-` falls; `Tw-` rises |
+    //! | deity | Dbemdden | Daemdam | (survived the LAST reseed; not this one) |
+    //! | gnoll, seed 2 | Klojsho | Kloshjo | metathesis under the reorder |
+    //! | kobold, seed 2 | Ngkooqngto | Dngooqtngo | `Ngk-` rises as `Dng-` |
+    //! | kobold word, seed 2 | Ngkaa | Tngaa | same onset repair, in a word |
+    //! | bugbear, seed 3 | Doozka | Zooqsha | |
+    //! | gnoll, seed 3 | Jpojjpo | Pjojpjo | `Jp-` falls; `Pj-` rises |
+    //! | goblin, seed 3 | Sdoozka | Qzhooqsa | |
+    //! | planet, seed 3 | Nxatboa | Xngatboa | |
+    //! | hobgoblin, seed 3 | Shtoozka | Qzhooqsha | |
+    //! | kobold, seed 3 | Jjojjjo | Jaojjao | `Jj-` geminate collapses |
+    //! | kobold, seed 1 word | Ngngoq/Ngngo | Ngod/Nga | the `ngng` the commit names |
+    //!
+    //! The third row is the change doing exactly what it was written for:
+    //! a glide-then-stop onset no language uses, reordered to the stop-then-
+    //! glide one every language has.
     //! **Where the inversion proof is blind.** It verifies a BIJECTION. A
     //! many-to-one entry — one old form standing for two things, as
     //! `Kaavoa` did — collapses under the map and re-expands under its
@@ -2618,6 +2834,11 @@ mod tests {
     //! nothing and the assertion saw an empty vec — which reads as "the
     //! esoteric law stopped working" rather than "the planet was renamed".
     //! Fix the key, never the behaviour.
+    //!
+    //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+    //! points directly to build its own world state, once per test — the
+    //! sanctioned test-fixture posture the weir's spec carves out.
+    #![allow(clippy::disallowed_methods)]
     use super::*;
 
     fn constant(seed: u64) -> World {
@@ -2795,7 +3016,7 @@ mod tests {
 
     /// C3 T3's self-statement law (spec §5): every placed people's autonym
     /// and own-kind concept are Steeped by construction (worldgen's
-    /// `exposure_of`), so every placed people's tongue self-statement
+    /// `exposure_from`), so every placed people's tongue self-statement
     /// renders — no gaps. C7 T3 adds a second line per placed people (the
     /// emic world-statement — `every_people_states_the_world_in_its_tongue`
     /// pins that law directly), so `tongue_lines` now carries TWO lines per
@@ -3076,7 +3297,7 @@ mod tests {
         );
         assert!(
             vol.tongue_lines.contains(
-                &"Ngkooqngto Ngkaa. (in the kobold tongue: \"The Ngkooqngto are kobolds.\")"
+                &"Dngooqtngo Tngaa. (in the kobold tongue: \"The Dngooqtngo are kobolds.\")"
                     .to_string()
             ),
             "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
@@ -3109,6 +3330,32 @@ mod tests {
         let a = render_volume(&generated(1)).tongue_lines;
         let b = render_volume(&generated(1)).tongue_lines;
         assert_eq!(a, b);
+    }
+
+    /// The Shuttle: a drift guard, not byte-identity evidence — `render_volume`
+    /// is now literally "sculpt, then call `render_volume_from`," and this
+    /// test derives `terrain`/`climate` the same way, so the two calls reduce
+    /// to `f(x) == f(x)`. What it pins is that a FUTURE edit cannot fork
+    /// `render_volume_from`'s body from `render_volume`'s wrapper without
+    /// reddening this test. The campaign's actual byte-identity evidence is
+    /// the cross-binary artifact comparison: the committed gallery artifact
+    /// `book/src/gallery/the-book.md` (unchanged at this campaign's HEAD) and
+    /// Task 6's pre/post-binary diffs.
+    #[test]
+    fn from_entry_points_equal_their_wrappers() {
+        let world = generated(1);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        let a = render_volume(&world);
+        assert!(
+            !a.lines.is_empty(),
+            "seed 1 must render a non-empty volume or this drift guard is vacuous"
+        );
+        let b = render_volume_from(&world, &terrain, &climate);
+        assert_eq!(a.lines, b.lines);
+        assert_eq!(a.tongue_lines, b.tongue_lines);
+        assert_eq!(a.tongue_gaps, b.tongue_gaps);
+        assert_eq!(format!("{:?}", a.reckoning), format!("{:?}", b.reckoning));
     }
 
     /// The Echo T3's corpus law: for each seed volume, every rendered line
@@ -3297,8 +3544,11 @@ mod tests {
         let grammar = hornvale_language::tongue_grammar(&world.seed, "goblin", &ph);
         let morph = hornvale_worldgen::tongue_morphology_of(&world, "goblin")
             .expect("goblin morphology derives at seed 1");
-        let noun_class_of =
-            |concept: &str| hornvale_worldgen::noun_class_of(&world, "goblin", concept);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+        let noun_class_of = |concept: &str| {
+            hornvale_worldgen::noun_class_from(&world, "goblin", concept, &terrain, &climate)
+        };
         let mut exposures = BTreeMap::new();
         exposures.insert("planet".to_string(), ExposureClass::Steeped);
         let lexicon = build_lexicon(
@@ -3647,7 +3897,10 @@ mod tests {
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
             let vol = render_volume(&world);
-            for voice in hornvale_worldgen::accounts_of(&world) {
+            let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+            let climate =
+                hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+            for voice in hornvale_worldgen::accounts_from(&world, &terrain, &climate) {
                 for entry in &voice.account.entries {
                     let Disposition::Explained {
                         schema,
@@ -3712,11 +3965,11 @@ mod tests {
 
     /// Task 4, the null-filter law extended: the identity account (used by
     /// `identity_chorus_reproduces_the_gods_eye_lines`) never runs through
-    /// `explain` (only `accounts_of` calls it), so its chorus section must
+    /// `explain` (only `accounts_from` calls it), so its chorus section must
     /// carry none of the six frames' distinguishing text — and
     /// `render_volume`'s god's-eye `lines` (never touched by C5's causal
     /// filter at all — `explain` only ever runs inside `voice_section` via
-    /// `accounts_of`) stay exactly as C4 shipped them.
+    /// `accounts_from`) stay exactly as C4 shipped them.
     #[test]
     fn the_null_volume_is_untouched() {
         let world = generated(1);
@@ -3842,8 +4095,8 @@ mod tests {
         assert!(
             doctrine
                 .emic
-                .contains(&"The day returns because Voovoo strides the sky, briskly.".to_string()),
-            "the measured doctrine day explanation, agent Voovoo: {:?}",
+                .contains(&"The day returns because Voovo strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Voovo: {:?}",
             doctrine.emic
         );
     }
@@ -3875,8 +4128,13 @@ mod tests {
         for seed in 1u64..=5 {
             let world = generated(seed);
             let vol = render_volume(&world);
-            for voice in hornvale_worldgen::accounts_of(&world) {
-                let Some(doctrine) = hornvale_worldgen::doctrine_of(&world, &voice.kind) else {
+            let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+            let climate =
+                hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
+            for voice in hornvale_worldgen::accounts_from(&world, &terrain, &climate) {
+                let Some(doctrine) =
+                    hornvale_worldgen::doctrine_from(&world, &voice.kind, &terrain, &climate)
+                else {
                     continue;
                 };
                 let mut contested_here = 0usize;
@@ -4191,7 +4449,7 @@ mod tests {
                 "The Kabjab are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
-                "The Zhzho are kobolds — neighbors.".to_string(),
+                "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
@@ -4217,7 +4475,7 @@ mod tests {
                 "The Kabjab are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
-                "The Zhzho are kobolds — rivals.".to_string(),
+                "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
@@ -4650,10 +4908,10 @@ mod tests {
                 "The Boove's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Zhzho, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Zhzho numbers the darkenings: 6472.".to_string(),
+                "Among the Ngosho, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngosho numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Zhzho's own priesthood taught wrongly, and could be shown wrong by \
+                "The Ngosho's own priesthood taught wrongly, and could be shown wrong by \
                  any who kept their own count."
                     .to_string(),
             ],
@@ -4675,7 +4933,7 @@ mod tests {
                 "In truth, the Boove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Zhzho's priesthood taught the darkening would come on day \
+                "In truth, the Ngosho's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
@@ -4698,10 +4956,10 @@ mod tests {
                 "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Klojsho, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Klojsho numbers the darkenings: 81.".to_string(),
+                "Among the Kloshjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kloshjo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Klojsho's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Kloshjo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
@@ -4716,10 +4974,10 @@ mod tests {
                 "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Ngkooqngto, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngkooqngto numbers the darkenings: 81.".to_string(),
+                "Among the Dngooqtngo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dngooqtngo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Ngkooqngto's own priesthood taught wrongly, and could be shown wrong by \
+                "The Dngooqtngo's own priesthood taught wrongly, and could be shown wrong by \
                  any who kept their own count."
                     .to_string(),
             ]
@@ -4730,7 +4988,7 @@ mod tests {
                 "In truth, the Bobboo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Klojsho's priesthood taught the darkening would come on day \
+                "In truth, the Kloshjo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day \
@@ -4739,7 +4997,7 @@ mod tests {
                 "In truth, the Webwee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Ngkooqngto's priesthood taught the darkening would come on day \
+                "In truth, the Dngooqtngo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
@@ -4754,34 +5012,34 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                "Among the Doozka, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Doozka numbers the darkenings: 53.".to_string(),
+                "Among the Zooqsha, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zooqsha numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Doozka's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Jpojjpo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jpojjpo numbers the darkenings: 53.".to_string(),
+                "Among the Pjojpjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Pjojpjo numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jpojjpo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Pjojpjo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Sdoozka, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Sdoozka numbers the darkenings: 32.".to_string(),
+                "Among the Qzhooqsa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Qzhooqsa numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Sdoozka's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Qzhooqsa's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Shtoozka, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Shtoozka numbers the darkenings: 32.".to_string(),
+                "Among the Qzhooqsha, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Qzhooqsha numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Shtoozka's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Qzhooqsha's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Jjojjjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jjojjjo numbers the darkenings: 53.".to_string(),
+                "Among the Jaojjao, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Jaojjao numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Jjojjjo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
             ],
@@ -4791,19 +5049,19 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
-                "In truth, the Doozka's priesthood taught the darkening would come on day \
+                "In truth, the Zooqsha's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Jpojjpo's priesthood taught the darkening would come on day \
+                "In truth, the Pjojpjo's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Sdoozka's priesthood taught the darkening would come on day \
+                "In truth, the Qzhooqsa's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Shtoozka's priesthood taught the darkening would come on day \
+                "In truth, the Qzhooqsha's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Jjojjjo's priesthood taught the darkening would come on day \
+                "In truth, the Jaojjao's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
@@ -4875,7 +5133,7 @@ mod tests {
                 "In truth, the Boove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Zhzho's priesthood taught the darkening would come on day \
+                "In truth, the Ngosho's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the darkenings by day 36525 number 6472.".to_string(),
@@ -4916,7 +5174,7 @@ mod tests {
                 "The Kabjab are gnolls.".to_string(),
                 "The Woove are goblins.".to_string(),
                 "The Boove are hobgoblins.".to_string(),
-                "The Zhzho are kobolds.".to_string(),
+                "The Ngosho are kobolds.".to_string(),
             ]
         );
         assert_eq!(
@@ -4939,9 +5197,9 @@ mod tests {
                 // tongue-pairing. The additivity law this test exists for —
                 // C8 adds only `reckoning`, perturbing no pre-C8 register's
                 // SHAPE — is therefore intact.
-                "Nxatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
+                "Xngatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
                     .to_string(),
-                "Nxatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
+                "Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
                 "Kabjab Paab Jaadjaakjood. (in the gnoll tongue: \"The Kabjab are gnolls.\")"
                     .to_string(),
@@ -4952,10 +5210,8 @@ mod tests {
                     .to_string(),
                 "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
-                "Zhzho Ngngoq Ngngo. (in the kobold tongue: \"The Zhzho are kobolds.\")"
-                    .to_string(),
-                "Xoaboa Ngngoq Ngngongnga. (in the kobold tongue: \"Xoaboa is the earth.\")"
-                    .to_string(),
+                "Ngosho Ngod Nga. (in the kobold tongue: \"The Ngosho are kobolds.\")".to_string(),
+                "Xoaboa Ngod Ngodngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
             ]
         );
         assert_eq!(
@@ -4981,7 +5237,7 @@ mod tests {
                 "The Kabjab are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
-                "The Zhzho are kobolds — neighbors.".to_string(),
+                "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
@@ -5012,11 +5268,11 @@ mod tests {
                 "The Kabjab are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
-                "The Zhzho are kobolds — neighbors.".to_string(),
+                "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Wtoevvelqa strides the sky, slowly.".to_string(),
-                "The day returns because Voovoo strides the sky, briskly.".to_string(),
+                "The moons cross because Twoevave strides the sky, slowly.".to_string(),
+                "The day returns because Voovo strides the sky, briskly.".to_string(),
             ]
         );
         assert!(goblin_doctrine.annotations.is_empty());
@@ -5041,7 +5297,7 @@ mod tests {
                 "The Kabjab are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
-                "The Zhzho are kobolds — rivals.".to_string(),
+                "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
@@ -5071,14 +5327,14 @@ mod tests {
                 "The Kabjab are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
-                "The Zhzho are kobolds — rivals.".to_string(),
+                "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Dbemdden strides the sky, slowly.".to_string(),
-                // NOT the goblin's `Voovoo` above. Before this rebase BOTH
+                "The moons cross because Daemdam strides the sky, slowly.".to_string(),
+                // NOT the goblin's `Voovo` above. Before this rebase BOTH
                 // peoples' day-deities rendered `Kaavoa` — two distinct
                 // beliefs that happened to draw the same form — and the
-                // reseed separates them: goblin -> `Voovoo`, hobgoblin ->
+                // reseed separates them: goblin -> `Voovo`, hobgoblin ->
                 // `Vooboo`. A rename map built by token therefore CANNOT be
                 // inverted to prove this pair name-only; the collapse is
                 // invisible to the inversion and only this assertion caught
@@ -5308,12 +5564,16 @@ mod tests {
         // arm, no shortfall. The solar-only pair (goblin, hobgoblin) hold only
         // 49, a shortfall that fires the margin.
         let world = generated(2);
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate derives");
         let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&world, at), 81);
 
         for kind in ["bugbear", "kobold"] {
-            let (rung, _) = hornvale_worldgen::ladder_of(&world, kind, at).unwrap();
-            let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
+            let (rung, _) =
+                hornvale_worldgen::ladder_from(&world, kind, at, &terrain, &climate).unwrap();
+            let obs =
+                hornvale_worldgen::observations_from(&world, kind, at, &terrain, &climate).unwrap();
             assert_eq!(rung, hornvale_worldgen::LadderRung::Predictive);
             assert_eq!(
                 obs.events.len(),
@@ -5326,8 +5586,10 @@ mod tests {
             );
         }
         for kind in ["goblin", "hobgoblin"] {
-            let (rung, _) = hornvale_worldgen::ladder_of(&world, kind, at).unwrap();
-            let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
+            let (rung, _) =
+                hornvale_worldgen::ladder_from(&world, kind, at, &terrain, &climate).unwrap();
+            let obs =
+                hornvale_worldgen::observations_from(&world, kind, at, &terrain, &climate).unwrap();
             assert_eq!(
                 obs.events.len(),
                 49,
@@ -5347,11 +5609,15 @@ mod tests {
         // seed 3: the same shape at a smaller scale (true 53; the solar-only
         // pair holds 32, a shortfall that fires the margin).
         let seed3 = generated(3);
+        let terrain3 = hornvale_worldgen::terrain_of(&seed3).expect("terrain reconstructs");
+        let climate3 = hornvale_worldgen::climate_from(&seed3, &terrain3).expect("climate derives");
         let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
         assert_eq!(true_event_count(&seed3, at3), 53);
         for kind in ["goblin", "hobgoblin"] {
-            let (rung, _) = hornvale_worldgen::ladder_of(&seed3, kind, at3).unwrap();
-            let obs = hornvale_worldgen::observations_of(&seed3, kind, at3).unwrap();
+            let (rung, _) =
+                hornvale_worldgen::ladder_from(&seed3, kind, at3, &terrain3, &climate3).unwrap();
+            let obs = hornvale_worldgen::observations_from(&seed3, kind, at3, &terrain3, &climate3)
+                .unwrap();
             assert_eq!(
                 obs.events.len(),
                 32,

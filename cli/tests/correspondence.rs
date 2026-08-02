@@ -30,7 +30,7 @@ fn fresh_registry() -> ConceptRegistry {
 /// The set of concept names the language lexicon can realize: every **core**
 /// concept ([`is_core_concept`] — the universal/body/kin Swadesh strata plus
 /// The Wearing's toponymic terrain concepts, which win a root the same way
-/// once `windows/worldgen::exposure_of` classifies a culture `Steeped` in
+/// once `windows/worldgen::exposure_from` classifies a culture `Steeped` in
 /// them, even though they are not pack members); every [`color_pack`] entry
 /// (periphery, but still root-eligible once a culture's hue/luminance ladder
 /// reaches it — `build_lexicon`'s Steeped pass roots ANY Steeped concept,

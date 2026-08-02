@@ -52,6 +52,11 @@
 //! **tribute bake's wall-time** and the **relation table's size**, the
 //! latter of which nothing in the tree bounded before. See that test's
 //! constants for its own measured numbers and for what each ceiling catches.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;

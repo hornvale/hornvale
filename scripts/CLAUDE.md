@@ -86,9 +86,16 @@ confirmation-gated in the Makefile.
 - Scripts run under `set -euo pipefail` where they can; `|| true` is used
   deliberately where a step is best-effort (e.g. `panic.sh`, safe to run
   repeatedly).
-- The git hooks in `hooks/` run `make quick` pre-commit (`make install-hooks`
-  points git at them). The hook also carries the **golden-pins.sql tripwire
-  guard**: staging any of `windows/lab/tests/{calibration,
+- The git hook in `scripts/hooks/` runs `make quick` pre-commit (`make
+  install-hooks` points `core.hooksPath` at that directory — it is the ONLY
+  hook; a second, weaker one at the repo root was deleted 2026-07-31, since
+  `core.hooksPath` names one directory and the root copy still advertised
+  itself in its own header). `make quick` is skipped when nothing
+  Rust-relevant is staged (`.rs`, `Cargo.*`, `clippy.toml`,
+  `rust-toolchain.toml`, `.cargo/`, `tools/type-audit/`) so docs-only commits
+  are instant; the guards below always run. A **linked worktree may not commit
+  to `main`** — the primary checkout may. The hook also carries the
+  **golden-pins.sql tripwire guard**: staging any of `windows/lab/tests/{calibration,
   branches_family_calibration,gathering_calibration}.rs` or
   `tools/census/queries/calibrate/golden-pins.sql` runs `make census-check`
   (~2.5 min) before the commit lands. That SQL file deliberately duplicates

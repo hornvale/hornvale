@@ -1,13 +1,18 @@
 //! Exposure derivation at the composition root (Words Task 8):
 //! `pack_depths` maps a species' perception vector onto the color-pack
-//! ladders, and `exposure_of`/`lexicon_of` classify (and then name) every
+//! ladders, and `exposure_from`/`lexicon_from` classify (and then name) every
 //! registered concept for a settled species. Also covers The Vigil's other
 //! composition-root perception seam, `observed_phenomena_as`: the malformed-
 //! kind failure for a non-perceiving fauna kind, and the dragon success path.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 use hornvale_language::{ExposureClass, GapReason, LexEntry, PackDepths, color_pack, in_ladder};
 use hornvale_species::{ActivityCycle, DRACONIC_NIGHT_VISION, PerceptionVector};
 use hornvale_worldgen::{
-    BuildError, SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of,
+    BuildError, SettlementPins, SkyChoice, build_world, exposure_from, lexicon_from,
     observed_phenomena_as, pack_depths, placed_peoples,
 };
 
@@ -40,7 +45,9 @@ fn world() -> hornvale_kernel::World {
 #[test]
 fn goblin_lexicon_has_a_root_for_water_the_universal_concept() {
     let w = world();
-    let lex = lexicon_of(&w, "goblin").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let lex = lexicon_from(&w, "goblin", &terrain, &climate).unwrap();
     match lex.entry("water") {
         Some(LexEntry::Root { .. }) => {}
         other => panic!("expected water to be a Root entry (universal stratum), got {other:?}"),
@@ -50,8 +57,10 @@ fn goblin_lexicon_has_a_root_for_water_the_universal_concept() {
 #[test]
 fn kobold_blue_is_a_perceptual_gap_and_goblin_blue_is_not() {
     let w = world();
-    let goblin = exposure_of(&w, "goblin").unwrap();
-    let kobold = exposure_of(&w, "kobold").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let goblin = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
+    let kobold = exposure_from(&w, "kobold", &terrain, &climate).unwrap();
 
     match kobold.get("blue") {
         Some(ExposureClass::Unknown {
@@ -107,8 +116,10 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
         &SettlementPins::default(),
     )
     .unwrap();
-    let goblin = lexicon_of(&w, "goblin").unwrap();
-    let hobgoblin = lexicon_of(&w, "hobgoblin").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let goblin = lexicon_from(&w, "goblin", &terrain, &climate).unwrap();
+    let hobgoblin = lexicon_from(&w, "hobgoblin", &terrain, &climate).unwrap();
 
     let mut romans = Vec::new();
     for (lex, species) in [(&goblin, "goblin"), (&hobgoblin, "hobgoblin")] {
@@ -143,11 +154,13 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
 #[test]
 fn toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap() {
     let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     let terrain_concepts = [
         "river", "hill", "lake", "valley", "coast", "island", "ford", "marsh", "spring",
     ];
     for (species, _) in placed_peoples(&w) {
-        let lex = lexicon_of(&w, species).expect("lexicon");
+        let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         for concept in terrain_concepts {
             match lex.entry(concept) {
                 Some(LexEntry::Root { .. }) | Some(LexEntry::Compound { .. }) => {}
@@ -194,16 +207,18 @@ fn river_exposure_tracks_real_proximity() {
         },
     )
     .unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
 
     // kobold never settles in a goblin-only world: it cannot be exposed to
     // river the way a real settlement would be.
-    let exposures = exposure_of(&w, "kobold").unwrap();
+    let exposures = exposure_from(&w, "kobold", &terrain, &climate).unwrap();
     assert!(
         matches!(exposures.get("river"), Some(ExposureClass::Unknown { .. })),
         "an unplaced species must not hold 'river' — got {:?}",
         exposures.get("river")
     );
-    let lex = lexicon_of(&w, "kobold").expect("lexicon");
+    let lex = lexicon_from(&w, "kobold", &terrain, &climate).expect("lexicon");
     match lex.entry("river") {
         Some(LexEntry::Gap { reason, .. }) => {
             assert!(
@@ -249,10 +264,12 @@ fn river_exposure_tracks_real_proximity() {
 #[test]
 fn spring_exposure_differs_across_the_placed_peoples() {
     let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     let mut any_root = false;
     let mut any_gap = false;
     for (species, _) in placed_peoples(&w) {
-        let lex = lexicon_of(&w, species).expect("lexicon");
+        let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("spring") {
             Some(LexEntry::Root { .. }) => any_root = true,
             Some(LexEntry::Gap { .. }) => any_gap = true,
@@ -322,6 +339,8 @@ fn spring_exposure_differs_across_the_placed_peoples() {
 #[test]
 fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_it() {
     let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     // The exact partition, by name — not a count, and not "at least one of
     // each". A count would survive the roster changing under it; naming both
     // sides means any movement at all lands in a failure message that says
@@ -329,7 +348,7 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_i
     let mut gapped: Vec<&str> = Vec::new();
     let mut rooted: Vec<(&str, String)> = Vec::new();
     for (species, _) in placed_peoples(&w) {
-        let lex = lexicon_of(&w, species).expect("lexicon");
+        let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("hill") {
             Some(LexEntry::Gap { .. }) => gapped.push(species),
             Some(LexEntry::Root { views, .. }) => rooted.push((species, views.roman.clone())),
@@ -367,8 +386,10 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_which_roots_i
 #[test]
 fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     for (species, _) in placed_peoples(&w) {
-        let lex = lexicon_of(&w, species).expect("lexicon");
+        let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("valley") {
             Some(LexEntry::Gap { .. }) => {}
             other => panic!("{species}: expected 'valley' to be a Gap at seed 42, got {other:?}"),
@@ -394,8 +415,10 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
 #[test]
 fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
     let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     for (species, _) in placed_peoples(&w) {
-        let lex = lexicon_of(&w, species).expect("lexicon");
+        let lex = lexicon_from(&w, species, &terrain, &climate).expect("lexicon");
         match lex.entry("marsh") {
             Some(LexEntry::Root { .. }) => {}
             other => panic!("{species}: expected 'marsh' to be a Root at seed 42, got {other:?}"),
@@ -422,7 +445,9 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
         },
     )
     .unwrap();
-    let exposures = exposure_of(&w, "kobold").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let exposures = exposure_from(&w, "kobold", &terrain, &climate).unwrap();
     for concept in [
         "river", "hill", "lake", "valley", "coast", "island", "ford", "marsh", "spring",
     ] {
@@ -441,7 +466,7 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
 /// actually fires in any world. `TOPONYMIC_CORE`
 /// (`domains/language/src/packs.rs`) is a hand-maintained list asserting
 /// "this concept can win a Root"; the property it claims lives here, in
-/// `exposure_of`, which `hornvale_language` cannot depend on and so cannot
+/// `exposure_from`, which `hornvale_language` cannot depend on and so cannot
 /// enforce. That gap is exactly how `spring`'s Critical 1 shipped
 /// undetected in round 1: `Hydro::Spring` was structurally unreachable on
 /// EVERY seed, not just seed 42, and nothing caught it before review.
@@ -483,7 +508,7 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
 /// sweep, measured on this box: seeds 0-7 in isolation take ~53s to build
 /// and classify (seeds with zero placed peoples, e.g. 6 and 9 elsewhere in
 /// the swept range, are cheap — no coexistence winner means no
-/// `exposure_of` calls); the early break keeps the actual per-run cost
+/// `exposure_from` calls); the early break keeps the actual per-run cost
 /// close to ~43s (seeds 0-5), under the roughly-a-minute budget this test
 /// already implicitly accepted pre-absorb.
 ///
@@ -537,8 +562,14 @@ fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
             Ok(w) => w,
             Err(_) => continue,
         };
+        let Ok(terrain) = hornvale_worldgen::terrain_of(&w) else {
+            continue;
+        };
+        let Ok(climate) = hornvale_worldgen::climate_from(&w, &terrain) else {
+            continue;
+        };
         for (species, _) in placed_peoples(&w) {
-            let Ok(exposures) = exposure_of(&w, species) else {
+            let Ok(exposures) = exposure_from(&w, species, &terrain, &climate) else {
                 continue;
             };
             for concept in &core_toponymic {
@@ -569,8 +600,10 @@ fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
 #[test]
 fn every_unknown_entrys_reason_is_non_empty() {
     let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     for species in ["goblin", "kobold"] {
-        let exposures = exposure_of(&w, species).unwrap();
+        let exposures = exposure_from(&w, species, &terrain, &climate).unwrap();
         for (concept, class) in &exposures {
             if let ExposureClass::Unknown { reason } = class {
                 let text = match reason {
@@ -586,10 +619,12 @@ fn every_unknown_entrys_reason_is_non_empty() {
 }
 
 #[test]
-fn exposure_of_is_pure_across_two_calls() {
+fn exposure_from_is_pure_across_two_calls() {
     let w = world();
-    let a = exposure_of(&w, "goblin").unwrap();
-    let b = exposure_of(&w, "goblin").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let a = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
+    let b = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
     assert_eq!(a, b, "same world+species must yield identical exposure");
 }
 
@@ -612,8 +647,10 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
         },
     )
     .unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
 
-    let exposures = exposure_of(&w, "kobold").unwrap();
+    let exposures = exposure_from(&w, "kobold", &terrain, &climate).unwrap();
     assert_eq!(
         exposures.len(),
         w.registry.concepts().count(),
@@ -639,20 +676,23 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
         }
     }
     // The lexicon still assembles over that map without panicking.
-    let lex = lexicon_of(&w, "kobold").unwrap();
+    let lex = lexicon_from(&w, "kobold", &terrain, &climate).unwrap();
     assert_eq!(lex.entries().count(), exposures.len());
 }
 
 #[test]
 fn a_kind_without_perception_fails_loudly_instead_of_borrowing_goblin_eyes() {
-    // Before The Vigil, `exposure_of` resolved a hardcoded goblin baseline for
+    // Before The Vigil, `exposure_from` resolved a hardcoded goblin baseline for
     // any kind with no perception row — so a bear classified colour as though
     // it saw like a goblin, and the dictionary printed "night-vision 0.5" as a
     // claim about dragons. The baseline is gone: no speaker lacks perception
     // (check_integrity enforces speech ⊆ perception), so the only kinds that
     // reach this path are plain fauna, and they must fail loudly.
     let w = world();
-    let err = exposure_of(&w, "owlbear").expect_err("plain fauna carries no perception");
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let err = exposure_from(&w, "owlbear", &terrain, &climate)
+        .expect_err("plain fauna carries no perception");
     let msg = format!("{err:?}");
     assert!(
         msg.contains("owlbear") && msg.contains("perception"),
@@ -667,8 +707,10 @@ fn a_dragon_perceives_with_its_own_eyes_not_the_goblins() {
     // so blue is a perceptual gap for a dragon exactly as it is for a kobold —
     // and unlike the goblin, whose depth-4 ladder lexicalizes it.
     let w = world();
-    let dragon = exposure_of(&w, "red-dragon").unwrap();
-    let goblin = exposure_of(&w, "goblin").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let dragon = exposure_from(&w, "red-dragon", &terrain, &climate).unwrap();
+    let goblin = exposure_from(&w, "goblin", &terrain, &climate).unwrap();
     assert!(
         matches!(
             dragon.get("blue"),

@@ -107,6 +107,9 @@ fn residue_pixels(world: &World, terrain: &hornvale_terrain::GeneratedTerrain) -
 /// `goblinoid_region_overlap`); a world that fails to reconstruct its own
 /// terrain is not a world this lens can be asked to render.
 /// type-audit: bare-ok(artifact: return)
+// Named construction site (decision 0092): sculpts once for its own PNG
+// readout.
+#[allow(clippy::disallowed_methods)]
 pub fn vestige_png(world: &World) -> Vec<u8> {
     let terrain = terrain_of(world).expect("a built world's terrain reconstructs");
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &residue_pixels(world, &terrain))

@@ -2,11 +2,16 @@
 //! knowledge ladder — the accumulation law, the witness law, the ladder
 //! law (the full measured rung table, pinned exact), and the prophecy
 //! law, all measured against live seeds.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::{EclipseBody, StdDays};
 use hornvale_worldgen::{
-    LadderRung, SettlementPins, SkyChoice, crisis_of, doctrine_of, ladder_of, observations_of,
-    placed_peoples,
+    LadderRung, SettlementPins, SkyChoice, crisis_from, doctrine_from, ladder_from,
+    observations_from, placed_peoples,
 };
 
 /// Build a world with the shipped four-people component set, generated
@@ -39,16 +44,19 @@ fn observations_at_day_zero_are_empty() {
     // so the witnessed set is empty and the rung is Unknown.
     for seed in 1..=3u64 {
         let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         let placed = placed_peoples(&w);
         assert!(!placed.is_empty(), "seed {seed} must place cultures");
         for (kind, _) in placed {
-            let obs = observations_of(&w, kind, at(EPOCH_1)).unwrap();
+            let obs = observations_from(&w, kind, at(EPOCH_1), &terrain, &climate).unwrap();
             assert!(
                 obs.events.is_empty(),
                 "seed {seed} {kind}: observations at day 0 must be empty, got {}",
                 obs.events.len()
             );
-            let (rung, prediction) = ladder_of(&w, kind, at(EPOCH_1)).unwrap();
+            let (rung, prediction) =
+                ladder_from(&w, kind, at(EPOCH_1), &terrain, &climate).unwrap();
             assert_eq!(rung, LadderRung::Unknown, "seed {seed} {kind} at day 0");
             assert_eq!(prediction, None, "no prediction below Predictive");
         }
@@ -63,10 +71,12 @@ fn the_accumulation_law() {
     // extends it.
     for seed in 1..=3u64 {
         let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         for (kind, _) in placed_peoples(&w) {
-            let t0 = observations_of(&w, kind, at(0.0)).unwrap();
-            let t1 = observations_of(&w, kind, at(10_000.0)).unwrap();
-            let t2 = observations_of(&w, kind, at(36_525.0)).unwrap();
+            let t0 = observations_from(&w, kind, at(0.0), &terrain, &climate).unwrap();
+            let t1 = observations_from(&w, kind, at(10_000.0), &terrain, &climate).unwrap();
+            let t2 = observations_from(&w, kind, at(36_525.0), &terrain, &climate).unwrap();
             assert!(t0.events.len() <= t1.events.len(), "seed {seed} {kind}");
             assert!(t1.events.len() <= t2.events.len(), "seed {seed} {kind}");
             assert!(
@@ -96,10 +106,12 @@ fn the_witness_law() {
     // regardless of capability. Lunar events are night-gated: goblin and
     // hobgoblin (below 0.6) witness none; kobold (1.0) witnesses them.
     let w = generated(2);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let t = at(EPOCH_2);
 
     let solar_of = |kind: &str| -> Vec<(f64, usize, EclipseBody)> {
-        observations_of(&w, kind, t)
+        observations_from(&w, kind, t, &terrain, &climate)
             .unwrap()
             .events
             .into_iter()
@@ -107,7 +119,7 @@ fn the_witness_law() {
             .collect()
     };
     let lunar_of = |kind: &str| -> Vec<(f64, usize, EclipseBody)> {
-        observations_of(&w, kind, t)
+        observations_from(&w, kind, t, &terrain, &climate)
             .unwrap()
             .events
             .into_iter()
@@ -171,7 +183,7 @@ type Row = (
 // so all four (now five) placed peoples on a given seed share the exact
 // same predicted day — only the witnessed COUNT differs (lunar-witnessing
 // group vs solar-only pair). Re-pinned at the-living-community merge: the
-// values are the live `ladder_of` output (the prior table carried
+// values are the live `ladder_from` output (the prior table carried
 // per-culture-varying predictions, which was a mispinning — the closed form
 // is world-global). The Vacancy T9 re-pins again: the gnoll places at every
 // seed 1..=5 and its witnessed count matches bugbear/kobold's exactly at
@@ -384,9 +396,11 @@ const LADDER_TABLE: &[Row] = &[
 fn the_ladder_law() {
     // The full measured (seed 1..=5 × culture × epoch) rung table, pinned
     // exact, plus the structural law: no rung above Counted without
-    // doctrine_of (the SOC-1 gate's diachronic consequence).
+    // doctrine_from (the SOC-1 gate's diachronic consequence).
     for seed in 1..=5u64 {
         let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         let placed = placed_peoples(&w);
         let expected_rows: Vec<&Row> = LADDER_TABLE.iter().filter(|r| r.0 == seed).collect();
         assert_eq!(
@@ -399,9 +413,12 @@ fn the_ladder_law() {
                 .iter()
                 .find(|r| r.0 == seed && r.1 == kind)
                 .unwrap_or_else(|| panic!("seed {seed} {kind}: missing from the pinned table"));
-            let (rung_1, pred_1) = ladder_of(&w, kind, at(EPOCH_1)).unwrap();
-            let (rung_2, pred_2) = ladder_of(&w, kind, at(EPOCH_2)).unwrap();
-            let n_2 = observations_of(&w, kind, at(EPOCH_2)).unwrap().events.len();
+            let (rung_1, pred_1) = ladder_from(&w, kind, at(EPOCH_1), &terrain, &climate).unwrap();
+            let (rung_2, pred_2) = ladder_from(&w, kind, at(EPOCH_2), &terrain, &climate).unwrap();
+            let n_2 = observations_from(&w, kind, at(EPOCH_2), &terrain, &climate)
+                .unwrap()
+                .events
+                .len();
             assert_eq!(rung_1, row.2, "seed {seed} {kind} epoch 1 rung");
             assert_eq!(pred_1, None, "seed {seed} {kind}: no epoch-1 prediction");
             assert_eq!(rung_2, row.3, "seed {seed} {kind} epoch 2 rung");
@@ -409,7 +426,7 @@ fn the_ladder_law() {
             assert_eq!(pred_2, row.5, "seed {seed} {kind} epoch 2 prediction");
 
             // Structural: no Numbered (or higher) without doctrine.
-            let organized = doctrine_of(&w, kind).is_some();
+            let organized = doctrine_from(&w, kind, &terrain, &climate).is_some();
             for rung in [rung_1, rung_2] {
                 if matches!(rung, LadderRung::Numbered | LadderRung::Predictive) {
                     assert!(
@@ -432,6 +449,8 @@ fn the_ladder_law() {
     // Numbered rung — which both committed epochs skip over — is
     // exercised live, never vacuously.
     let w = generated(3);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let climb = [
         (1_000.0, LadderRung::Unknown, None),
         (2_000.0, LadderRung::Counted, None),
@@ -439,7 +458,7 @@ fn the_ladder_law() {
         (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
     ];
     for (day, expected_rung, expected_pred) in climb {
-        let (rung, pred) = ladder_of(&w, "goblin", at(day)).unwrap();
+        let (rung, pred) = ladder_from(&w, "goblin", at(day), &terrain, &climate).unwrap();
         assert_eq!(rung, expected_rung, "seed 3 goblin at day {day}");
         assert_eq!(pred, expected_pred, "seed 3 goblin at day {day}");
     }
@@ -454,14 +473,16 @@ fn the_prophecy_law() {
     // now: a Predictive culture's taught day, when `Some`, is EXACTLY
     // what the naive model computes from that culture's OWN witnessed
     // days for its own top recurrence class -- self-consistency between
-    // `ladder_of` and the model it's built from, not a truth guarantee.
+    // `ladder_from` and the model it's built from, not a truth guarantee.
     let t = at(EPOCH_2);
     let mut any_predictive = false;
 
     for seed in 1..=5u64 {
         let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         for (kind, _) in placed_peoples(&w) {
-            let (rung, prediction) = ladder_of(&w, kind, t).unwrap();
+            let (rung, prediction) = ladder_from(&w, kind, t, &terrain, &climate).unwrap();
             if rung != LadderRung::Predictive {
                 continue;
             }
@@ -471,9 +492,9 @@ fn the_prophecy_law() {
             };
 
             // Re-derive the most-observed recurrence class with the same
-            // deterministic tie-break ladder_of documents (max count,
+            // deterministic tie-break ladder_from documents (max count,
             // ties toward the numerically smallest (moon, body) key).
-            let obs = observations_of(&w, kind, t).unwrap();
+            let obs = observations_from(&w, kind, t, &terrain, &climate).unwrap();
             let mut counts: std::collections::BTreeMap<(usize, u8), usize> =
                 std::collections::BTreeMap::new();
             for &(_, moon, body) in &obs.events {
@@ -521,14 +542,28 @@ fn diachronic_is_deterministic() {
     // Pure derivation: the same (world, species, at) twice → identical
     // Debug output, for both the ledger and the ladder.
     let w = generated(1);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     let t = at(EPOCH_2);
     for (kind, _) in placed_peoples(&w) {
-        let obs_a = format!("{:?}", observations_of(&w, kind, t).unwrap());
-        let obs_b = format!("{:?}", observations_of(&w, kind, t).unwrap());
-        assert_eq!(obs_a, obs_b, "{kind}: observations_of must be pure");
-        let ladder_a = format!("{:?}", ladder_of(&w, kind, t).unwrap());
-        let ladder_b = format!("{:?}", ladder_of(&w, kind, t).unwrap());
-        assert_eq!(ladder_a, ladder_b, "{kind}: ladder_of must be pure");
+        let obs_a = format!(
+            "{:?}",
+            observations_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        let obs_b = format!(
+            "{:?}",
+            observations_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        assert_eq!(obs_a, obs_b, "{kind}: observations_from must be pure");
+        let ladder_a = format!(
+            "{:?}",
+            ladder_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        let ladder_b = format!(
+            "{:?}",
+            ladder_from(&w, kind, t, &terrain, &climate).unwrap()
+        );
+        assert_eq!(ladder_a, ladder_b, "{kind}: ladder_from must be pure");
     }
 }
 
@@ -544,8 +579,10 @@ fn a_crisis_fires_on_a_real_generated_sky() {
     let mut found = None;
     for seed in 1..=200u64 {
         let w = generated(seed);
+        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         for (kind, _) in placed_peoples(&w) {
-            if let Some(crisis) = crisis_of(&w, kind, at(EPOCH_2)).unwrap() {
+            if let Some(crisis) = crisis_from(&w, kind, at(EPOCH_2), &terrain, &climate).unwrap() {
                 found = Some((seed, kind.to_string(), crisis));
                 break;
             }
@@ -564,8 +601,11 @@ fn a_crisis_fires_on_a_real_generated_sky() {
         crisis.last_predicted != crisis.last_actual,
         "seed {seed} {kind}: a crisis's own last predicted/actual days must differ"
     );
+    let w = generated(seed);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     assert!(
-        doctrine_of(&generated(seed), &kind).is_some(),
+        doctrine_from(&w, &kind, &terrain, &climate).is_some(),
         "seed {seed} {kind}: a Predictive-rung culture with a crisis must hold a doctrine"
     );
 }

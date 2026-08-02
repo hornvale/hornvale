@@ -199,21 +199,49 @@ fn dominant_corner(weights: &[(CellId, u64); 3]) -> (CellId, u64) {
 
 impl LocaleContext {
     /// Build the coarse world (climate + terrain + nearest-cell index) once.
+    /// The sanctioned entry point for any caller that has not already
+    /// sculpted terrain/climate itself — derives them once here and
+    /// delegates to [`Self::build_from`] (the book-entry-point pattern: a
+    /// wrapper that derives once, mirroring `windows/book`'s `parse_context`/
+    /// `parse_context_from` split).
+    // Named construction site (decision 0092): this entry wrapper sculpts/
+    // fits once, then delegates to `build_from`.
+    #[allow(clippy::disallowed_methods)]
     pub fn build(world: &World) -> Result<LocaleContext, LocaleError> {
         let terrain = terrain_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
         let climate =
             climate_from(world, &terrain).map_err(|e| LocaleError::Build(e.to_string()))?;
+        Ok(Self::build_from(world, &terrain, &climate))
+    }
+
+    /// Build the coarse world from an ALREADY-sculpted terrain and fit
+    /// climate (The Weir, Stage 2) — the "pass the pre-built value" idiom
+    /// `hornvale_worldgen::climate_from` already established, so a caller
+    /// that must also thread `terrain`/`climate` into further derivation
+    /// (`Session::start`'s demography fit, the lab health sweep) builds them
+    /// ONCE and shares the same pair with this context, instead of `build`
+    /// quietly re-sculpting a second copy underneath it. Infallible: both
+    /// inputs are already validated by construction (the caller obtained
+    /// them from `terrain_of`/`climate_from` succeeding), so there is
+    /// nothing left here that can fail. Byte-identical to `build` whenever
+    /// `terrain` equals `terrain_of(world)` and `climate` equals
+    /// `climate_from(world, &terrain)`.
+    pub fn build_from(
+        world: &World,
+        terrain: &GeneratedTerrain,
+        climate: &GeneratedClimate,
+    ) -> LocaleContext {
         let index = NearestCellIndex::new(climate.geosphere());
         let globe_level = climate.geosphere().level();
-        let budget = StrangenessBudget::build(world.seed, &climate, &terrain);
-        Ok(LocaleContext {
+        let budget = StrangenessBudget::build(world.seed, climate, terrain);
+        LocaleContext {
             seed: world.seed,
-            climate,
-            terrain,
+            climate: climate.clone(),
+            terrain: terrain.clone(),
             index,
             globe_level,
             budget,
-        })
+        }
     }
 
     /// The canonical globe level (canonical-grid refinement depth).
@@ -360,7 +388,7 @@ impl LocaleContext {
     pub fn describe_at(
         &self,
         addr: &RoomAddr,
-        _at: WorldTime,
+        at: WorldTime,
         stratum: Option<Stratum>,
     ) -> Result<Locale, LocaleError> {
         // Fail fast on an unaddressable room (e.g. `path.len() > MAX_DEPTH`)
@@ -374,6 +402,95 @@ impl LocaleContext {
         let weights = addr
             .corner_weights(geo, &self.index)
             .ok_or(LocaleError::AboveGrid)?;
+        let _ = at; // v1: time-independent (see the doc above)
+        self.describe_with_weights(addr, stratum, id, weights)
+    }
+
+    /// [`Self::describe_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// the shape a `&self`-only reader needs: a `&dyn Terrain` implementor
+    /// (`windows/vessel`'s `LocaleTerrain`) can hold a prefilled cache and
+    /// consult it from an ordinary `&self` trait method, never needing `&mut`
+    /// access at read time. A cache miss falls through to a fresh
+    /// [`RoomAddr::corner_weights`] call — correctness never depends on the
+    /// cache being complete, only speed does. `cache: None` is byte-identical
+    /// to `describe_at` (always a miss). Byte-identical to `describe_at` on
+    /// a hit too, by construction (`corner_weights_lookup` only ever returns
+    /// what [`RoomAddr::corner_weights_memo`] would have inserted, which is
+    /// pinned bit-equal to `corner_weights` itself). The same `corner_weights`
+    /// result [`Self::temperature_at_cached`], [`Self::productivity_at_cached`],
+    /// [`Self::blend_at_cached`], and [`Self::hazards_at_cached`] would each
+    /// independently recompute for the SAME room in one read scope (e.g.
+    /// `windows/vessel`'s per-tick drive stack), a caller that shares one
+    /// cache across all five collapses that back down to one scan.
+    pub fn describe_at_cached(
+        &self,
+        addr: &RoomAddr,
+        at: WorldTime,
+        stratum: Option<Stratum>,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Result<Locale, LocaleError> {
+        let id = addr
+            .pack()
+            .map_err(|e| LocaleError::Unaddressable(format!("{e:?}")))?
+            .0;
+        let geo = self.climate.geosphere();
+        let weights = self
+            .corner_weights_for(addr, geo, cache)
+            .ok_or(LocaleError::AboveGrid)?;
+        let _ = at; // v1: time-independent (see `describe_at`'s doc)
+        self.describe_with_weights(addr, stratum, id, weights)
+    }
+
+    /// The shared corner_weights read every `_cached` reader uses: a hit in
+    /// `cache` returns the memoized answer (including a memoized above-grid
+    /// `None`, which is why the lookup itself returns `Option<Option<_>>` —
+    /// see [`hornvale_kernel::RoomMeshMemo::corner_weights_lookup`]'s own
+    /// doc); a miss (or no cache at all) falls through to a fresh
+    /// [`RoomAddr::corner_weights`] call. No mutation — this never fills a
+    /// miss back into `cache`, which is exactly what lets a `&self` reader
+    /// use it without `&mut` access.
+    fn corner_weights_for(
+        &self,
+        addr: &RoomAddr,
+        geo: &hornvale_kernel::Geosphere,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<[(CellId, u64); 3]> {
+        if let Some(cache) = cache {
+            // The read-path half of the geo-aliasing guard (the-waymark fix
+            // round, round 2): `corner_weights_memo`'s own `debug_assert_eq!`
+            // catches a memo FED from two different globe levels; this
+            // catches the other half — a memo READ against a `geo` it was
+            // never filled against in the first place (e.g. a `LocaleTerrain`
+            // handed a cache built for a different world/context's
+            // geosphere). `None` (nothing inserted yet) asserts nothing —
+            // there is no recorded level to disagree with.
+            debug_assert!(
+                cache
+                    .corner_weights_geo_level()
+                    .is_none_or(|level| level == geo.level()),
+                "RoomMeshMemo read against a geosphere at a different level than it was \
+                 filled with — a RoomAddr alone does not name which (Geosphere, \
+                 NearestCellIndex) resolved it, so reading a cache built for a different \
+                 world/context silently returns a stale corner_weights answer"
+            );
+            if let Some(hit) = cache.corner_weights_lookup(addr) {
+                return hit;
+            }
+        }
+        addr.corner_weights(geo, &self.index)
+    }
+
+    /// The shared tail of [`Self::describe_at`]/[`Self::describe_at_cached`]:
+    /// everything past resolving `id` and `weights`, so the two callers can
+    /// never drift apart in how a `Locale` is built from them.
+    fn describe_with_weights(
+        &self,
+        addr: &RoomAddr,
+        stratum: Option<Stratum>,
+        id: u64,
+        weights: [(CellId, u64); 3],
+    ) -> Result<Locale, LocaleError> {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
 
         // Categorical biome: max weight, tie-break lowest CellId. Inherited,
@@ -458,12 +575,35 @@ impl LocaleContext {
     pub fn temperature_at(&self, addr: &RoomAddr, at: WorldTime) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
+        Some(self.temperature_with_weights(at, weights))
+    }
+
+    /// [`Self::temperature_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `temperature_at`.
+    /// type-audit: pending(wave-2: return)
+    pub fn temperature_at_cached(
+        &self,
+        addr: &RoomAddr,
+        at: WorldTime,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
+        Some(self.temperature_with_weights(at, weights))
+    }
+
+    /// The shared tail of [`Self::temperature_at`]/[`Self::temperature_at_cached`]:
+    /// the blend itself, once `weights` is resolved (the-waymark fix round,
+    /// round 2 — kills the base/`_cached` duplicate body).
+    fn temperature_with_weights(&self, at: WorldTime, weights: [(CellId, u64); 3]) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights
             .iter()
             .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day).get())
             .sum();
-        Some(sum / denom as f64)
+        sum / denom as f64
     }
 
     /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
@@ -484,6 +624,27 @@ impl LocaleContext {
     pub fn productivity_at(&self, addr: &RoomAddr) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
+        Some(self.productivity_with_weights(weights))
+    }
+
+    /// [`Self::productivity_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `productivity_at`.
+    /// type-audit: pending(wave-2: return)
+    pub fn productivity_at_cached(
+        &self,
+        addr: &RoomAddr,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
+        Some(self.productivity_with_weights(weights))
+    }
+
+    /// The shared tail of [`Self::productivity_at`]/[`Self::productivity_at_cached`]
+    /// (the-waymark fix round, round 2).
+    fn productivity_with_weights(&self, weights: [(CellId, u64); 3]) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
             let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
@@ -491,13 +652,13 @@ impl LocaleContext {
         };
         let temp = blend(&|c| self.climate.mean_temperature_at(c).get());
         let moisture = blend(&|c| self.climate.moisture_at(c));
-        Some(miami_npp(temp, moisture))
+        miami_npp(temp, moisture)
     }
 
     /// Corner-blend an externally-supplied per-cell `field` (over the canonical
     /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
     /// `hazards_at` use, generalized so a caller can sample a field this context
-    /// does not itself hold. The Quarry injects `worldgen::predator_pressure`
+    /// does not itself hold. The Quarry injects `worldgen::predator_pressure_from`
     /// (the carnivore-pressure field) and reads it here per room. Full precision
     /// (a compute-path read, not quantized). `None` for a room the canonical grid
     /// does not cover.
@@ -505,9 +666,35 @@ impl LocaleContext {
     pub fn blend_at(&self, addr: &RoomAddr, field: &hornvale_kernel::CellMap<f64>) -> Option<f64> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
+        Some(Self::blend_with_weights(weights, field))
+    }
+
+    /// [`Self::blend_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `blend_at`.
+    /// type-audit: bare-ok(ratio: field), bare-ok(ratio: return)
+    pub fn blend_at_cached(
+        &self,
+        addr: &RoomAddr,
+        field: &hornvale_kernel::CellMap<f64>,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
+        Some(Self::blend_with_weights(weights, field))
+    }
+
+    /// The shared tail of [`Self::blend_at`]/[`Self::blend_at_cached`] (the-waymark
+    /// fix round, round 2). No `&self` needed — the blend reads only `weights`
+    /// and the injected `field`.
+    fn blend_with_weights(
+        weights: [(CellId, u64); 3],
+        field: &hornvale_kernel::CellMap<f64>,
+    ) -> f64 {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
-        Some(sum / denom as f64)
+        sum / denom as f64
     }
 
     /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees
@@ -526,6 +713,27 @@ impl LocaleContext {
     pub fn hazards_at(&self, addr: &RoomAddr) -> Option<(f64, f64, f64)> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
+        Some(self.hazards_with_weights(weights))
+    }
+
+    /// [`Self::hazards_at`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] (the-waymark fix round, Finding 1) —
+    /// see [`Self::describe_at_cached`] for the `&self`-only-reader
+    /// rationale. `cache: None` is byte-identical to `hazards_at`.
+    /// type-audit: pending(wave-2: return)
+    pub fn hazards_at_cached(
+        &self,
+        addr: &RoomAddr,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Option<(f64, f64, f64)> {
+        let geo = self.climate.geosphere();
+        let weights = self.corner_weights_for(addr, geo, cache)?;
+        Some(self.hazards_with_weights(weights))
+    }
+
+    /// The shared tail of [`Self::hazards_at`]/[`Self::hazards_at_cached`] (the-waymark
+    /// fix round, round 2).
+    fn hazards_with_weights(&self, weights: [(CellId, u64); 3]) -> (f64, f64, f64) {
         // The dominant corner cell (max weight, tie-break lowest CellId) — the
         // same pick `describe` uses for the categorical biome/regime.
         let mut best = weights[0];
@@ -550,7 +758,7 @@ impl LocaleContext {
             / denom as f64;
         let heat = ((temp - HOT_DANGER_C) / (LETHAL_HEAT_C - HOT_DANGER_C)).clamp(0.0, 1.0);
         let cold = ((COLD_DANGER_C - temp) / (COLD_DANGER_C - LETHAL_COLD_C)).clamp(0.0, 1.0);
-        Some((uncanny.clamp(0.0, 1.0), heat, cold))
+        (uncanny.clamp(0.0, 1.0), heat, cold)
     }
 }
 
@@ -1016,5 +1224,165 @@ mod tests {
         assert_eq!(compass(270.0), Compass::W);
         assert_eq!(compass(45.0), Compass::Ne);
         assert_eq!(compass(359.9), Compass::N);
+    }
+
+    /// A small walk-visited neighborhood: `start` plus every room reachable
+    /// within `hops` edge-steps (BFS over `RoomAddr::neighbors`, the same
+    /// mesh a real possession walk traverses) — the-waymark Task 3's
+    /// "rooms a real walk visits" fixture, sized for a fast unit test rather
+    /// than a full possession transcript.
+    fn walk_visited(start: &RoomAddr, hops: u32) -> Vec<RoomAddr> {
+        let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        let mut frontier = vec![start.clone()];
+        seen.insert(start.clone());
+        for _ in 0..hops {
+            let mut next = Vec::new();
+            for r in &frontier {
+                for n in r.neighbors() {
+                    if seen.insert(n.clone()) {
+                        next.push(n);
+                    }
+                }
+            }
+            frontier = next;
+        }
+        seen.into_iter().collect()
+    }
+
+    #[test]
+    fn the_five_cached_readers_bit_equal_their_recomputing_siblings_with_a_partial_prefill() {
+        // The-waymark fix round, Finding 1: a PREFILLED, READ-ONLY cache
+        // (never mutated by the readers themselves) must still be
+        // byte-identical to the raw recomputing siblings, on BOTH a cache
+        // hit (prefilled rooms) and a cache miss (rooms deliberately left
+        // out of the prefill, falling through to a fresh `corner_weights`
+        // call) — correctness must never depend on prefill completeness.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let start = RoomAddr {
+            face: 4,
+            path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
+        };
+        let rooms = walk_visited(&start, 3);
+        assert!(rooms.len() > 10, "fixture must cover a real neighborhood");
+        let at = WorldTime { day: 12.5 };
+        let zero_field = hornvale_kernel::CellMap::from_fn(ctx.climate().geosphere(), |_| 0.0f64);
+
+        // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay
+        // deliberately un-prefilled, so this run exercises both a hit and a
+        // miss for every one of the five readers.
+        let mut memo = hornvale_kernel::RoomMeshMemo::new();
+        let geo = ctx.climate().geosphere();
+        let mut prefilled = 0usize;
+        for (i, addr) in rooms.iter().enumerate() {
+            if i % 2 == 0 {
+                addr.corner_weights_memo(geo, ctx.nearest_index(), &mut memo);
+                prefilled += 1;
+            }
+        }
+        assert!(
+            prefilled > 0 && prefilled < rooms.len(),
+            "fixture must actually mix hits and misses"
+        );
+
+        // Count hits vs misses directly against the read-only lookup — the
+        // review's own ask: prove the prefill actually covers the hot rooms,
+        // not just that the byte-identity holds regardless.
+        let mut hits = 0usize;
+        let mut misses = 0usize;
+        for addr in &rooms {
+            match memo.corner_weights_lookup(addr) {
+                Some(_) => hits += 1,
+                None => misses += 1,
+            }
+        }
+        assert_eq!(hits, prefilled, "every prefilled room must be a cache hit");
+        assert_eq!(
+            misses,
+            rooms.len() - prefilled,
+            "every un-prefilled room must be a cache miss"
+        );
+
+        // Now the actual byte-identity check, reading through the cache
+        // (Some(&memo)) for every room — hits AND misses both included.
+        for addr in &rooms {
+            let expected_describe = ctx.describe_at(addr, at, None);
+            let got_describe = ctx.describe_at_cached(addr, at, None, Some(&memo));
+            assert_eq!(
+                expected_describe.is_ok(),
+                got_describe.is_ok(),
+                "describe_at_cached Ok/Err mismatch at {addr:?}"
+            );
+            if let (Ok(exp), Ok(got)) = (expected_describe, got_describe) {
+                assert_eq!(
+                    serde_json::to_string(&exp).unwrap(),
+                    serde_json::to_string(&got).unwrap(),
+                    "describe_at_cached mismatch at {addr:?}"
+                );
+            }
+
+            let expected_temp = ctx.temperature_at(addr, at);
+            let got_temp = ctx.temperature_at_cached(addr, at, Some(&memo));
+            assert_eq!(got_temp, expected_temp, "temperature_at_cached at {addr:?}");
+
+            let expected_prod = ctx.productivity_at(addr);
+            let got_prod = ctx.productivity_at_cached(addr, Some(&memo));
+            assert_eq!(
+                got_prod, expected_prod,
+                "productivity_at_cached at {addr:?}"
+            );
+
+            let expected_blend = ctx.blend_at(addr, &zero_field);
+            let got_blend = ctx.blend_at_cached(addr, &zero_field, Some(&memo));
+            assert_eq!(got_blend, expected_blend, "blend_at_cached at {addr:?}");
+
+            let expected_hazards = ctx.hazards_at(addr);
+            let got_hazards = ctx.hazards_at_cached(addr, Some(&memo));
+            assert_eq!(
+                got_hazards, expected_hazards,
+                "hazards_at_cached at {addr:?}"
+            );
+        }
+
+        // `cache: None` must also be byte-identical (always a miss).
+        let addr = &rooms[0];
+        assert_eq!(
+            ctx.describe_at(addr, at, None).is_ok(),
+            ctx.describe_at_cached(addr, at, None, None).is_ok()
+        );
+        assert_eq!(
+            ctx.temperature_at(addr, at),
+            ctx.temperature_at_cached(addr, at, None)
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "RoomMeshMemo read against a geosphere at a different level")]
+    fn cached_readers_assert_against_geo_level_aliasing_on_read() {
+        // The-waymark fix round, round 2: `RoomMeshMemo`'s own
+        // `debug_assert_eq!` (kernel/src/room.rs) already catches the geo-
+        // aliasing footgun on the WRITE path (a memo fed from two different
+        // globe levels). This proves the READ path catches it too — a memo
+        // filled entirely against an INDEPENDENT geosphere (never touching
+        // `ctx` at all) must still trip `corner_weights_for`'s own guard the
+        // moment a `_cached` reader consults it against `ctx`'s real one.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let real_level = ctx.climate().geosphere().level();
+        let other_level = real_level + 1;
+        let fake_geo = hornvale_kernel::Geosphere::new(other_level);
+        let fake_index = NearestCellIndex::new(&fake_geo);
+        let mut memo = hornvale_kernel::RoomMeshMemo::new();
+        let fake_addr = RoomAddr {
+            face: 0,
+            path: vec![0; other_level as usize],
+        };
+        fake_addr.corner_weights_memo(&fake_geo, &fake_index, &mut memo);
+
+        let real_addr = RoomAddr {
+            face: 4,
+            path: vec![2, 0, 3, 1, 2, 0, 3, 1, 2, 0, 3, 1],
+        };
+        let _ = ctx.temperature_at_cached(&real_addr, WorldTime { day: 0.0 }, Some(&memo));
     }
 }

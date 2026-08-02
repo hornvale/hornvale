@@ -1,9 +1,14 @@
 //! Param derivation at the composition root (C4 Task 3): `AccountParams`
 //! derived from existing authored/committed state — the `voice_params`
 //! twin — plus the authored observability table and the ground fact list.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 use hornvale_language::{Disposition, LossReason, OrderPolicy, Stance};
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, accounts_of, build_world, chorus_ground, pathological_params,
+    SettlementPins, SkyChoice, accounts_from, build_world, chorus_ground, pathological_params,
     sky_capability,
 };
 
@@ -53,7 +58,9 @@ fn goblin_params_derive_from_existing_state_only() {
     // Seed 1: goblin and hobgoblin both place (the default world's shared
     // joint-greedy placement pass — see windows/worldgen/tests/exposure.rs).
     let w = generated(1);
-    let params = hornvale_worldgen::account_params_of(&w, "goblin").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let params = hornvale_worldgen::account_params_from(&w, "goblin", &terrain, &climate).unwrap();
 
     for concept in [
         "earth",
@@ -84,8 +91,12 @@ fn goblin_params_derive_from_existing_state_only() {
 #[test]
 fn hobgoblin_reads_rivals_where_goblin_reads_neighbors() {
     let w = generated(1);
-    let goblin_params = hornvale_worldgen::account_params_of(&w, "goblin").unwrap();
-    let hobgoblin_params = hornvale_worldgen::account_params_of(&w, "hobgoblin").unwrap();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let goblin_params =
+        hornvale_worldgen::account_params_from(&w, "goblin", &terrain, &climate).unwrap();
+    let hobgoblin_params =
+        hornvale_worldgen::account_params_from(&w, "hobgoblin", &terrain, &climate).unwrap();
 
     assert_eq!(
         goblin_params.stances.get("hobgoblin").copied(),
@@ -106,7 +117,9 @@ fn kobold_keeps_the_moons_goblin_loses() {
     // Seed 2: kobold places (a different seed's attractor-dominance draw —
     // see the C4 decision ledger's seed-2 sky-calibration note).
     let w = generated(2);
-    let voices = accounts_of(&w);
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let voices = accounts_from(&w, &terrain, &climate);
     let kobold_voice = voices
         .iter()
         .find(|v| v.kind == "kobold")
@@ -181,14 +194,18 @@ fn kobold_keeps_the_moons_goblin_loses() {
 #[test]
 fn accounts_are_deterministic() {
     let w = generated(1);
-    let a = format!("{:?}", accounts_of(&w));
-    let b = format!("{:?}", accounts_of(&w));
-    assert_eq!(a, b, "accounts_of must be a pure function of the world");
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let a = format!("{:?}", accounts_from(&w, &terrain, &climate));
+    let b = format!("{:?}", accounts_from(&w, &terrain, &climate));
+    assert_eq!(a, b, "accounts_from must be a pure function of the world");
 }
 
 #[test]
 fn pathological_pole_exercises_loss_and_collision() {
     let w = generated(2);
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
     let ground = chorus_ground(&w);
     let pathological = pathological_params();
     let account = hornvale_language::account_of(&ground, &pathological);
@@ -239,7 +256,7 @@ fn pathological_pole_exercises_loss_and_collision() {
     // Manifest and Steeped by construction), while the pathological pole
     // keeps none — already established by the `all(... !Kept)` assertion
     // above. Made explicit here as the pole's defining contrast.
-    let voices = accounts_of(&w);
+    let voices = accounts_from(&w, &terrain, &climate);
     assert!(
         !voices.is_empty(),
         "seed 2 must place at least one people to contrast against"

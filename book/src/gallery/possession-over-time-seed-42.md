@@ -24,7 +24,7 @@ Ways on: SE, N, SW.
 7 NPC(s) derived this session:
   [1865] bugbear of Gootoogotoodaoka
   [1866] hobgoblin of Geoboegetoanaoga
-  [1867] gnoll of Pzofdzhaxgzavmzho
+  [1867] gnoll of Pzofdzhaxgzavshmo
   [1868] a wild rust-monster
   [1869] a wild otyugh
   [1870] a wild xorn

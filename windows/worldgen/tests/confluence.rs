@@ -90,6 +90,11 @@
 //! regression — T3 re-ran this keystone specifically to catch a re-fit that
 //! weakened it past its floor, and 1.7 was chosen as the sweep point that
 //! keeps both the count band and this keystone's margin real.
+//!
+//! Test fixture (decision 0092): calls the sculpt/fit derivation entry
+//! points directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed, Value};
@@ -386,7 +391,7 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // (`windows/worldgen/src/lib.rs` — "the retired `coexist::pack`/
     // `condense_stack` placer is gone from genesis"). The peopled roster's
     // `ANIMAL_PREY` weights are therefore not an input to settlement
-    // placement at all; the per-axis supply fields feed `demography_report`
+    // placement at all; the per-axis supply fields feed `demography_report_from`
     // and the Lab's coexistence readout instead. A future author should not
     // expect a supply-axis change to show up here.
     //

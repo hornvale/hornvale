@@ -192,7 +192,7 @@ pub fn universal_stratum() -> &'static [PackEntry] {
         // concept: a rootable one should win the short proto-root form
         // (core), while whether a given culture holds the word at all
         // should depend on real geography
-        // (`windows/worldgen::exposure_of`), the same gate-by-exposure
+        // (`windows/worldgen::exposure_from`), the same gate-by-exposure
         // `sea`/`mountain` already use. Listing them here
         // (The Wearing's Task 3) conflated the two: `universal_stratum`
         // grants its members `ExposureClass::Steeped` unconditionally, so
@@ -420,13 +420,13 @@ pub fn kin_pack() -> &'static [PackEntry] {
 /// of [`universal_stratum`] (which would ALSO grant unconditional
 /// `ExposureClass::Steeped` — the bug Task 4 found and fixed: every
 /// culture held every one of the nine regardless of geography, before a
-/// single exposure rule in `windows/worldgen::exposure_of` ever ran).
+/// single exposure rule in `windows/worldgen::exposure_from` ever ran).
 /// Core-ness and unconditional exposure used to be the same lever (pack
 /// membership); this list is what keeps them separable now that terrain
 /// concepts need the first without the second.
 ///
 /// **Deliberately excludes `coast` and `lake`** (Task 4 review, Important
-/// 5): both are `KnowsOf`-only in `exposure_of` by construction (a culture
+/// 5): both are `KnowsOf`-only in `exposure_from` by construction (a culture
 /// can know a shore or a salt basin without living on either), so neither
 /// ever wins the `Steeped` pass that hands out roots — every occurrence
 /// renders as a `Compound` (`compound_recipe`) or a `Gap`, never a `Root`.
@@ -500,7 +500,7 @@ pub fn concept_domain(concept: &str) -> Option<&'static str> {
 /// dedicated word for it names it "many water". `mountain`, likewise owned
 /// by terrain, is named "many stone". The Wearing (Task 4) adds `coast`
 /// ("earth water") and `lake` ("little water") on the same principle — both
-/// are `KnowsOf`-only in `exposure_of` (a culture can know the shore or a
+/// are `KnowsOf`-only in `exposure_from` (a culture can know the shore or a
 /// salt lake without living on either), so neither ever gets a root of its
 /// own; every ingredient is drawn from [`universal_stratum`] so the compound
 /// always resolves once its `KnowsOf` gate fires, exactly as `sea`'s and

@@ -1,0 +1,211 @@
+# 0090. The canonical host is audited, not assumed — and the audit came back clean
+
+**Status:** Accepted (2026-07-30) · **Decider:** Nathan · **Refines:**
+[0063](0063-census-regen-is-local-again.md),
+[0079](0079-census-goldens-are-authored-on-one-enforced-host.md) ·
+**Relates to:** [0033](0033-serialized-floats-are-quantized-for-cross-platform-determinism.md),
+[0041](0041-libm-for-portable-transcendentals.md)
+
+Decision 0063 ruled that one machine is the single canonical platform, on the
+strength of one measurement: lefford and an AWS box disagreed by one unit on
+~0.1% of census values, discrete counts decided by a comparison upstream of
+quantize-at-emit. 0079 then mechanized the ruling — a declared hostname,
+enforced at every write path, failing closed.
+
+**The mechanism of that divergence was never diagnosed, and its conditions no
+longer hold.** The codegen baseline pin (`.cargo/config.toml`, `3a7092c3`)
+landed on 2026-07-27, eight days after the measurement, and it moved the hot
+floating-point path: on the default `x86-64` baseline LLVM cannot emit
+`roundsd`, so every `f64::floor()` was a *library call* into per-host glibc —
+a bare `floor` symbol at 4.62% of census self-time under `perf` — inside
+`Fbm::sample`, twice per noise sample. Nobody re-measured afterwards.
+
+Underneath that sat a larger gap. Every determinism guarantee the project
+enforces is a **repeatability** guarantee in the ISO 5725 sense — same box,
+short interval: the drift check compares a fresh lefford run against a
+lefford-authored golden. **Reproducibility** — whether any other apparatus,
+or the same apparatus later, reaches the same values — had never been
+measured. Lefford was Le Grand K: a physical artifact serving as a standard,
+never assayed against a copy.
+
+## The measurement
+
+Three layers, all run 2026-07-30 at
+`9855048d` (L0/L1) and `8962db1b` (L2). Both
+hosts on rustc 1.96.1; lefford Linux x86_64/glibc 2.36 on 40 cores, the Mac
+Darwin arm64 on 10.
+
+| Layer | Question | Result |
+|---|---|---|
+| L0 | Does lefford reproduce the goldens it authored? | **Zero diff** across the whole generated tree — the 1000-row census, 520 charts, both summaries, the schemas, the gallery and audit artifacts. 900.652 s, rc=0. |
+| L1 | Is the release binary a pure function of the source? | **Byte-identical.** Two clean builds at the same SHA in different directories both hash `fb8c368c…`; zero differing bytes. |
+| L2 | Do two platforms agree, value for value? | **Byte-identical.** Both 40-world probe CSVs hash `ddb999ff…` across x86_64/Linux and aarch64/Darwin. |
+
+**Seed 681 — the tripwire 0063 named — reads `divergence-magnitude-hobgoblin
+= 5` on lefford, on the Mac, and in the committed golden.** The single value
+AWS disagreed on is now agreed on by two architectures and two operating
+systems.
+
+## The ruling
+
+**0063's divergence does not reproduce under today's pins.** That is what was
+shown, and the record says so at exactly that width.
+
+**This refines 0063; it does not supersede it.** Velaryon was never run, so
+nothing here licenses a second authoring host. 0079's authorship discipline
+is untouched and the hostname guard stays exactly as it is. What changes is
+that the single-platform ruling now rests on a *re-measured* premise instead
+of an unexamined one, and the premise it rests on has moved: the divergence
+that justified it is no longer observable between two current hosts.
+
+**What was not shown, stated so it is not later misread.** The §2 hypothesis —
+that the `floor`-as-library-call path was the mechanism — is *consistent with*
+these results and remains **unproven**. Confirming it requires rebuilding
+without `target-cpu=x86-64-v2` and showing divergence return. IEEE-754 `floor`
+is exactly representable, so a conforming glibc should not have diverged at
+all; either the mechanism is elsewhere or one box was non-conforming. The
+honest position is that the 2026-07-19 observation stands as an observation
+whose cause is still unknown.
+
+**Binary identity is adopted as the cross-host oracle.** This was the
+campaign's surprise and it inverts a preregistered prediction (§5 of the spec
+predicted L1 would fail on embedded build paths). It did not, because the
+workspace declares no `[profile.release]`, so cargo's default `debug = false`
+leaves no debuginfo and therefore no absolute paths in the binary. The
+consequence is operational: **a candidate host can be qualified by building
+there and comparing one SHA-256** — seconds, no census, no goldens tree, no
+storage. Any future host-qualification starts there and runs a census only if
+the hashes match.
+
+**That oracle is conditional and the condition is now load-bearing.** It holds
+only while release builds carry no debuginfo. `[profile.profiling]` sets
+`debug = true` and is correspondingly *not* directory-reproducible. Adding
+`debug` to the release profile would silently revoke the oracle, and nothing
+currently detects that.
+
+## Consequences
+
+- Host qualification has a cheap first gate (binary hash) and an expensive
+  confirmation (census diff), in that order.
+- `docs/timings.md` gains a `census` row at 900.652 s for a run that authored
+  nothing — recorded because the run happened, per 0087's "timings are a
+  record."
+- The residual risk 0079 was built against is unchanged: exactly one host may
+  *commit* goldens. This decision makes that a measured choice rather than an
+  inherited one.
+- Migrating 0079's guard from a hostname to a toolchain fingerprint is now
+  clearly the right shape — a hostname cannot catch lefford drifting from
+  itself, and L0/L1 together are what a fingerprint would assert. Carried as a
+  followup under TOOL-cross-host-assay, not built here.
+
+## Amendment (2026-07-30, same day, after merge)
+
+Additive correction of a factual claim about *future work*; the ruling above
+and every measurement in it are unchanged.
+
+The ruling states that confirming the §2 codegen hypothesis "requires
+rebuilding without `target-cpu=x86-64-v2` and showing divergence return."
+**That experiment, as scoped, could not have shown it.** The flag is declared
+under `[target.'cfg(target_arch = "x86_64")']` (`.cargo/config.toml:36`), so
+the Mac never carried it, and aarch64 lowers `f64::floor()` to the base-ISA
+`frintm` instruction regardless. Removing the flag moves the lefford arm and
+leaves the Mac arm untouched, which compares glibc's `floor` against ARM's
+floor instruction — **not** the two-x86_64-Linux-boxes configuration 0063
+measured.
+
+The same correction sharpens what L2's green result did and did not exercise:
+lefford floored with `roundsd`, the Mac with `frintm`. Both hardware, both
+IEEE-exact. The agreement is real and is what the decision claims, but it
+never ran the library-call path the hypothesis concerns.
+
+Testing the hypothesis needs two x86_64 Linux hosts with **different glibc
+versions**, both built unflagged. That is the velaryon campaign, where a
+container pins glibc deliberately instead of inheriting it. Recorded here
+rather than left to imply that a cheap experiment was declined; the cheap
+experiment does not exist.
+
+Nothing here changes the standing caveat that IEEE-754 `floor` is exactly
+representable, so the hypothesis requires a non-conforming libm and remains
+the best-localized story rather than a likely one. The 2026-07-19 observation
+still stands as an observation whose cause is unknown.
+
+## Amendment 2 (2026-07-30, after merge) — the oracle needs a condition
+
+**The three measurements are unchanged.** L0's zero diff, L1's identical
+hashes on lefford, and L2's identical probe CSVs were all real and their
+evidence is retained. What this amendment corrects is the **generalization**
+built on L1.
+
+The ruling says "a candidate host can be qualified by building there and
+comparing one SHA-256." **That is false as stated**, and the ruling's stated
+reason for it is also wrong.
+
+Measured on the Mac, 2026-07-30, running L1's exact procedure — two clean
+`--release` builds of one commit in two worktrees:
+
+```
+  5bae5217…  /tmp/pyx-mech/target/release/hornvale
+  2b8a4f65…  /tmp/pyx-mech2/target/release/hornvale     <-- DIFFERENT
+```
+
+Each binary embeds its own build directory (`/private/tmp/pyx-mech2/cli`),
+with `debug = false` and no debug information anywhere. So the ruling's
+explanation — that the absence of `[profile.release]` leaves no debuginfo and
+"therefore no absolute paths in the binary" — **is not the mechanism.** The
+paths arrive by a different route entirely: two *production* call sites expand
+`env!("CARGO_MANIFEST_DIR")` at compile time,
+`cli/src/main.rs:1150` (`ci-record`) and `windows/lab/src/blackbox.rs:23`
+(failure recording). Debug information never enters into it.
+
+Why lefford's two builds contained no such string, and hashed identically, is
+**not known**. The result is solid — two files, zero differing bytes, and
+neither containing its own worktree name — but the platform difference is
+unexplained and is deliberately not guessed at here. This decision has already
+been wrong twice by reasoning where it should have measured.
+
+**The corrected claim.** Binary identity is a valid cross-host oracle **only
+when both hosts build at the same absolute path.** That condition was met by
+neither of the two comparisons that motivated the claim, and it is not
+optional: a differing build path is sufficient on its own to make two
+otherwise-identical builds disagree.
+
+The condition is not onerous — it is what a container gives for free, since
+the image fixes the build directory on every host. So the oracle survives, and
+the velaryon campaign is where it becomes usable rather than merely plausible.
+Qualification is: build at the *same* path in the *same* image on both hosts,
+then compare one hash.
+
+**Consequence for the guard this decision implied.** A test asserting that
+`[profile.release]` stays debuginfo-free was written, and withdrawn before
+commit: it would have guarded a property that is not load-bearing while
+sitting green as the real one broke. The load-bearing property is that
+production code embeds no *new* absolute build paths, which is greppable —
+see `cli/tests/build_path_embedding.rs` and its frozen list of the two
+existing sites.
+
+## Amendment 3 (2026-07-30, after merge) — the §2 hypothesis is dead
+
+Superseded on this point by
+[0091](0091-glibc-does-not-explain-it-and-the-machine-does-not-matter.md);
+recorded here so a reader of this decision alone is not left with a live
+hypothesis that has since been falsified.
+
+This decision, and amendment 1, describe the codegen-baseline story as
+"consistent but unproven" and say testing it needs two x86_64 Linux **hosts**
+with different glibc. **The requirement was two x86_64 Linux _glibcs_, which
+is a much weaker condition** — the upstream `rust:1.96.1` image carries glibc
+2.41 against lefford's host 2.36, so one machine holds both and no second host
+is needed.
+
+The Twin ran it. With the codegen flag off — verified by disassembly, 147
+`roundsd` with it and 0 without — builds against glibc 2.36 and glibc 2.41
+produced **byte-identical** probe output, matching this campaign's own results
+on two further platforms. **The hypothesis is falsified**, for the reason it
+always carried as a caveat: IEEE-754 `floor` is exactly representable and both
+libraries conform.
+
+0091 also eliminates the bare machine as a cause (lefford and velaryon produce
+identical binaries once toolchain, libc, and build path are fixed), and names
+a better surviving candidate — a rustc pin that applies only inside the
+working tree. 0063's divergence remains unexplained; the space it hides in is
+now much smaller.
