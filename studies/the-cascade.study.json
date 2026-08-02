@@ -1,0 +1,5 @@
+{ "name": "the-cascade",
+  "description": "The Namesake Task 1: how many of a species' drawn sound-change rules actually fire, over 200 unselected worlds. Answers whether the seed-42 observation (goblin 0/70, hobgoblin 0/74, kobold 0/78 words changed) is general or a one-seed artifact.",
+  "seeds": { "from": 0, "count": 200 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": ["cascade-rules-fired-goblin", "cascade-rules-fired-bugbear"] }

@@ -2472,6 +2472,28 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "goblin")),
         },
         Metric {
+            name: "cascade-rules-fired-goblin",
+            doc: "How many DISTINCT sound rules in the goblin cascade actually fire on \
+                   at least one lexicon Root. Zero means the etymological layer is inert \
+                   for this species (The Namesake §5.0); Absent if goblin is unrostered \
+                   or minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0],
+            },
+            extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "goblin")),
+        },
+        Metric {
+            name: "cascade-rules-fired-bugbear",
+            doc: "How many DISTINCT sound rules in the bugbear cascade actually fire on \
+                   at least one lexicon Root. Zero means the etymological layer is inert \
+                   for this species (The Namesake §5.0); Absent if bugbear is unrostered \
+                   or minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0],
+            },
+            extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "bugbear")),
+        },
+        Metric {
             name: "lexicon-regular-kobold",
             doc: "Whether every kobold lexicon Root entry's recorded sound-change \
                    derivation replays byte-identically through evolve (Neogrammarian \
@@ -4668,6 +4690,48 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
     MetricValue::Flag(regular)
 }
 
+/// How many DISTINCT sound rules in `species`' drawn cascade actually fire
+/// on at least one of its lexicon's `Root` entries.
+///
+/// The Namesake, Task 1. A `Cascade` is 2-4 drawn rules
+/// (`hornvale_language::Cascade`), but `evolve` adopts a rule's proposed
+/// output only when the resulting segment is already in the phonology's
+/// inventory (the codomain constraint), so a rule can be drawn and then
+/// rejected on every word. This metric asks how many survive that filter.
+///
+/// Zero means the species' whole etymological layer is inert: every word's
+/// modern form equals its proto-form's nativization, and an inherited name
+/// and a re-derived one are byte-identical. `Absent` if `species` is not in
+/// this world's roster or its lexicon minted no `Root`.
+fn cascade_rules_fired(v: &FullView, species: &str) -> MetricValue {
+    if !v.components().biosphere.ids().any(|k| k.0 == species) {
+        return MetricValue::Absent;
+    }
+    let Ok(lex) = lex(v, species) else {
+        return MetricValue::Absent;
+    };
+    // A BTreeSet, not a HashSet: the workspace bans hashed containers, and
+    // the count must not depend on iteration order anyway.
+    let mut fired: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+    let mut any_root = false;
+    // `Lexicon::entries()` yields (&str, &LexEntry) pairs — it is an
+    // iterator, not a map, so there is no `.values()`.
+    for (_concept, entry) in lex.entries() {
+        if let hornvale_language::LexEntry::Root { derivation, .. } = entry {
+            any_root = true;
+            for (i, step) in derivation.steps.iter().enumerate() {
+                if step.changed {
+                    fired.insert(i);
+                }
+            }
+        }
+    }
+    if !any_root {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(fired.len() as f64)
+}
+
 // --- The Wearing (Task 11c): the lab's own reading of the toponymic gates.
 //
 // Task 4 gave `hornvale_worldgen::exposure_from` seven new `Steeped` rules —
@@ -6179,8 +6243,9 @@ mod tests {
         // forgotten-fraction, dominant-hazard, mean-warning-legibility),
         // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
         // per-species, beside the name-length-{species} pair they are read
-        // against — and the world-level name-transparency).
-        assert_eq!(registry().len(), 172);
+        // against — and the world-level name-transparency),
+        // +2 for The Namesake (Task 1: cascade-rules-fired-{goblin,bugbear}).
+        assert_eq!(registry().len(), 174);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
