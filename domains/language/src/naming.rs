@@ -572,6 +572,37 @@ impl<'a> Namer<'a> {
         self.wear_under(segments, frequency, Prominence::None)
     }
 
+    /// [`Namer::wear`]'s reflex for a morpheme that stands **as an entire
+    /// name by itself** — [`Namer::worn_compound`]'s rung-0 treatment of a
+    /// solo part (`chosen.len() == 1`), exposed so a caller outside this
+    /// module can ask what production actually produces instead of guessing
+    /// candidate surface shapes.
+    ///
+    /// [`Namer::wear`] always reduces under [`Prominence::None`] — correct
+    /// for a morpheme *inside* a compound, where some other part carries the
+    /// word's stress, but wrong for a one-morpheme name: there the morpheme
+    /// IS the whole word, so its first nucleus is stressed and
+    /// [`reduce_nuclei`] must protect it (`Prominence::InitialVowel`), the
+    /// same rule [`Namer::worn_compound`] applies via [`Namer::part_prominence`]
+    /// when a chosen list has exactly one element. `Prominence` itself is
+    /// private (it is a positional bookkeeping type, not a species-facing
+    /// concept), so before this seam existed nothing outside `naming.rs`
+    /// could reconstruct that reflex — an external check was reduced to
+    /// enumerating candidate forms it hoped production might have produced,
+    /// which is a weaker property than asking production directly (The
+    /// Witness, `speakable_properties.rs`'s saturated-corpus battery: seed 1
+    /// salt 1 fell in exactly this gap). Unlike [`Namer::wear`], this applies
+    /// [`reduce_nuclei`] unconditionally — matching `worn_compound`'s rung 0,
+    /// which never floor-gates the positional reduction, only the cascade
+    /// limb inside [`Namer::sounded`].
+    ///
+    /// Pure, same as [`Namer::wear`]: a function of
+    /// `(seed, species, ph, segments, frequency)` and nothing else.
+    /// type-audit: bare-ok(ratio: frequency)
+    pub fn wear_as_whole_name(&self, segments: &[Segment], frequency: f64) -> Vec<Segment> {
+        self.wear_under(segments, frequency, Prominence::InitialVowel)
+    }
+
     /// [`Namer::wear`]'s two limbs with the reduction's [`Prominence`] left
     /// to the caller — the single composition site, so the citation-form
     /// reading ([`Namer::wear`], nothing prominent) and the in-a-word

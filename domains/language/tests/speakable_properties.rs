@@ -238,6 +238,26 @@ fn the_audibility_property_still_reds_under_erasure() {
 /// under final-nucleus simplification — because both underlying causes
 /// (Tonogenesis's new merger gate, and cross-morpheme resyllabification)
 /// are real and coexist in the merged tree.
+///
+/// **The Witness (2026-08-01) fixed a latent proxy/predicate mismatch,
+/// exposed rather than caused by the merge above.** `worn_form` called the
+/// public [`Namer::wear`], which always reduces under
+/// `Prominence::None` — correct for a morpheme sitting inside a compound,
+/// where some other part carries the word's stress, but wrong for a
+/// one-morpheme name, where the morpheme IS the whole word and
+/// `worn_compound`'s rung 0 protects its first nucleus
+/// (`Prominence::InitialVowel`) instead. `Prominence` is private to
+/// `naming.rs`, so this test had no way to ask for that reflex and instead
+/// silently checked a shape production never promised for a solo-morpheme
+/// name. The combined Watershed + Witness reseed (Tonogenesis's merger gate
+/// widening which cascades do real work) was merely the first input to land
+/// a solo-morpheme name whose real, initial-vowel-protected reflex differs
+/// from both `citation` and `worn_form` — seed 1 salt 1 Settlement
+/// (`water` → "Faaffaf"), below. The fix is a `pub` seam,
+/// [`Namer::wear_as_whole_name`], that asks production directly instead of
+/// widening this test to guess more candidate shapes — see that method's
+/// doc for why. `stressed_form` reconstructs the sixth admissible form from
+/// it.
 #[test]
 fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut worn_names = 0usize;
@@ -290,6 +310,19 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                 if name.roman != plain.roman {
                     worn_names += 1;
                 }
+                // Whether this name has exactly one glossed concept — the
+                // same condition `worn_compound`'s rung 0 branches on
+                // (`chosen.len() > 1`, and every corpus frequency here is
+                // 1.0, above `WEAR_FLOOR`) to decide which `Prominence` a
+                // part reduces under. A solo-morpheme name IS the whole
+                // word, so its first nucleus is stressed and protected; a
+                // compound's non-initial-vowel-carrying members are not.
+                // Computing this once per name and asking production for
+                // the matching reflex is the fix (The Witness): the old
+                // `worn_form` always asked for the `Prominence::None`
+                // reflex, which is simply the wrong prediction for a
+                // solo-morpheme name.
+                let solo = gloss.split('-').filter(|c| !c.is_empty()).count() == 1;
                 for concept in gloss.split('-').filter(|c| !c.is_empty()) {
                     let citation = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
@@ -302,9 +335,12 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                     };
                     let worn_form = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
-                            render_views(&namer.wear(&derivation.modern, 1.0))
-                                .roman
-                                .to_lowercase()
+                            let reflex = if solo {
+                                namer.wear_as_whole_name(&derivation.modern, 1.0)
+                            } else {
+                                namer.wear(&derivation.modern, 1.0)
+                            };
+                            render_views(&reflex).roman.to_lowercase()
                         }
                         _ => unreachable!("checked above"),
                     };
@@ -330,11 +366,16 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                             || surface.contains(&final_nucleus_simplified(&citation))
                             || surface.contains(&final_nucleus_simplified(&worn_form)),
                         "seed {seed} salt {salt} {kind:?}: name {:?} contains NEITHER \
-                         {concept}'s citation form {citation:?}, its fully-worn reflex \
+                         {concept}'s citation form {citation:?}, its {} reflex \
                          {worn_form:?}, nor its cascade-only reflex {sounded_form:?} (nor \
                          either of the first two under final-nucleus simplification) — \
                          the gloss names a morpheme the name does not say",
-                        name.roman
+                        name.roman,
+                        if solo {
+                            "solo-name, stress-protected"
+                        } else {
+                            "fully-worn"
+                        },
                     );
                 }
             }
