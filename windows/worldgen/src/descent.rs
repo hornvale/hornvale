@@ -101,16 +101,20 @@ pub fn generation_length_of(world: &World, species: &str) -> Option<f64> {
 /// The figure `occupation`'s founder descends from — the founder of the
 /// community it was settled from — together with how they are related.
 ///
-/// `None` for a genesis occupation, which has no mother community.
+/// `None` in two cases: `occupation` is a genesis occupation with no mother
+/// community, or its people's generation length cannot be derived (an
+/// `Ametabolic` kind, or a species absent from this world's roster). The
+/// latter is deliberate: with no generation length, `remove` has nothing to
+/// divide the founding gap by, so there is no basis to call the pair
+/// `Sibling`, `Ancestor`, or anything else — reporting "no forebear
+/// derivable" is honest about what is unknown, where guessing a `Kinship`
+/// would not be.
 pub fn forebear_of(world: &World, occupation: EntityId) -> Option<(RoleHandle, Kinship)> {
     let mother = mother_of(world, occupation)?;
     let child_year = founded_year(world, occupation)?;
     let mother_year = founded_year(world, mother)?;
     let species = people_of(world, occupation)?;
-    // A people with no generation length (Ametabolic, or unrostered) cannot
-    // have its remove derived; fall back to `Sibling` rather than inventing
-    // a generation length, so the relation stays honest about what is known.
-    let gl = generation_length_of(world, &species).unwrap_or(0.0);
+    let gl = generation_length_of(world, &species)?;
     Some((
         founder_of(world, mother),
         kinship(child_year - mother_year, gl),

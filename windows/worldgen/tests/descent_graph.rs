@@ -111,3 +111,101 @@ fn generation_length_is_resolved_per_species_and_differs_across_the_roster() {
         "bugbear generation length was {bugbear}"
     );
 }
+
+#[test]
+fn generation_length_of_is_none_for_a_species_outside_the_roster() {
+    let w = seed42();
+    assert!(
+        generation_length_of(&w, "not-a-real-species-label").is_none(),
+        "an unrostered species has no derivable generation length"
+    );
+}
+
+/// `forebear_of` must return `None`, not a guessed `Kinship::Sibling`, when
+/// the daughter's species has no derivable generation length. Seed 42's real
+/// roster cannot reach this path — every `Settled` people is `Endotherm` or
+/// `Ectotherm`, never `Ametabolic` or absent from the roster — so this
+/// constructs the case directly: a minimal two-occupation ledger whose
+/// daughter's `occ-people` names a species outside the roster, built without
+/// going through a full world build.
+#[test]
+fn forebear_of_is_none_when_the_generation_length_cannot_be_derived() {
+    use hornvale_kernel::{Fact, Value, World};
+
+    fn commit(
+        world: &mut World,
+        subject: hornvale_kernel::EntityId,
+        predicate: &str,
+        object: Value,
+    ) {
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject,
+                    predicate: predicate.to_string(),
+                    object,
+                    place: None,
+                    day: Some(0.0),
+                    provenance: "descent_graph test fixture".to_string(),
+                },
+                &world.registry,
+            )
+            .expect("fixture facts commit cleanly");
+    }
+
+    let mut w = World::new(Seed(42));
+    hornvale_history::register_concepts(&mut w.registry).expect("registers cleanly");
+
+    let mother = w.ledger.mint_entity();
+    let child = w.ledger.mint_entity();
+
+    commit(
+        &mut w,
+        mother,
+        hornvale_history::IS_OCCUPATION,
+        Value::Flag(true),
+    );
+    commit(
+        &mut w,
+        mother,
+        hornvale_history::OCC_PEOPLE,
+        Value::Text("goblin".to_string()),
+    );
+    commit(
+        &mut w,
+        mother,
+        hornvale_history::OCC_FOUNDED,
+        Value::Number(0.0),
+    );
+
+    commit(
+        &mut w,
+        child,
+        hornvale_history::IS_OCCUPATION,
+        Value::Flag(true),
+    );
+    commit(
+        &mut w,
+        child,
+        hornvale_history::OCC_PEOPLE,
+        Value::Text("not-a-real-species-label".to_string()),
+    );
+    commit(
+        &mut w,
+        child,
+        hornvale_history::OCC_FOUNDED,
+        Value::Number(100.0),
+    );
+    commit(
+        &mut w,
+        child,
+        hornvale_history::OCC_FOUNDED_FROM,
+        Value::Entity(mother),
+    );
+
+    assert!(
+        forebear_of(&w, child).is_none(),
+        "an undeterminable generation length must not resolve to a guessed Kinship"
+    );
+}
