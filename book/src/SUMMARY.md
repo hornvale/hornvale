@@ -292,6 +292,7 @@
 - [The Repertoire](./chronicle/the-repertoire.md)
 - [The Scaffold](./chronicle/the-scaffold.md)
 - [The Witness](./chronicle/the-witness.md)
+- [The Namesake](./chronicle/the-namesake.md)
 
 # Appendix: The Frontier
 
