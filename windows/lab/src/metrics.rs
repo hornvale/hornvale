@@ -8409,21 +8409,36 @@ mod tests {
     /// a staple that the lab does not know about reds this test rather than
     /// slipping past it.
     ///
-    /// Seed 5's bugbear is the witness: diagnosed by sweeping seeds 0..20
-    /// and every placed people for which staple concepts actually reach a
-    /// `Root` in the committed lexicon (which only happens when `exposure_of`
-    /// classified them `Steeped`), seed 5's bugbear is the only (seed,
-    /// species) pair in that sweep whose settlements span all six crop
-    /// bands at once. No single seed need witness all six for the campaign's
-    /// claim to hold — this test only needs one that does, so the assertion
-    /// is not vacuous.
+    /// Seed 5's bugbear was the original witness: diagnosed by sweeping
+    /// seeds 0..20 and every placed people for which staple concepts
+    /// actually reach a `Root` in the committed lexicon (which only happens
+    /// when `exposure_of` classified them `Steeped`), seed 5's bugbear was
+    /// the only (seed, species) pair in that sweep whose settlements span
+    /// all six crop bands at once. No single seed need witness all six for
+    /// the campaign's claim to hold — this test only needs one that does, so
+    /// the assertion is not vacuous.
+    ///
+    /// **The Contour re-witness (2026-08-02):** position-aware conflict
+    /// (defensibility as a second contest axis) reseats settlements on
+    /// nearly every world, and seed 5's bugbear no longer spans all six
+    /// bands. Re-diagnosed the same way, widened: swept seeds 0..150 (a
+    /// fresh sweep, not a re-pin of the old one — the old witness's range
+    /// no longer contains a hit) against every placed people, dynamically
+    /// read off `FullView::components().perception` per seed rather than a
+    /// hardcoded roster, so a new people entering the roster would still be
+    /// swept. Seven (seed, species) pairs in that range clear all six bands:
+    /// (42, gnoll), (50, goblin), (83, bugbear), (83, kobold), (90, kobold),
+    /// (133, hobgoblin), (148, kobold). Seed 83's bugbear is the new
+    /// witness — same species as before, for continuity, and independently
+    /// corroborated by seed 83's kobold clearing the same six bands in the
+    /// same world.
     const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
 
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
-        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(83), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 83");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

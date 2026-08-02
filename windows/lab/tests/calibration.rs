@@ -497,8 +497,13 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // than eviction, so far more communities survive in place (seed 42: 203
     // -> 329 live settlements) and which site flags a goblin flagship moves
     // on seven worlds: 552 -> 556 coastal, 214 -> 211 inland.
-    assert_eq!(coastal, 556, "coastal flagship count drifted");
-    assert_eq!(inland, 211, "inland flagship count drifted");
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict (defensibility as a second
+    // contest axis) reshapes raid outcomes and therefore which site condenses
+    // a goblin flagship on many worlds: 556 -> 548 coastal, 211 -> 218 inland.
+    assert_eq!(coastal, 548, "coastal flagship count drifted");
+    assert_eq!(inland, 218, "inland flagship count drifted");
 }
 
 #[test]
@@ -672,12 +677,17 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // head at all, moving the moonless-spinning pool (33 -> 34 solar,
     // 61 -> 59 lunar). The invariant above it — a mooned kobold head is
     // always lunar — never fired.
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict changes which worlds field a
+    // kobold head, moving the moonless-spinning pool (34 -> 34 solar, 59 ->
+    // 60 lunar).
     assert_eq!(
         moonless_solar, 34,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 59,
+        moonless_lunar, 60,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -792,8 +802,14 @@ fn blind_attribution_beats_chance_decisively() {
     // which shifts which worlds field an attributable pair (759 -> 758) and
     // which side two of them land on (695 -> 693); accuracy 0.9157 ->
     // 0.9142, still decisively above the 0.75 floor asserted above.
-    assert_eq!(correct, 693, "blind-attribution count drifted");
-    assert_eq!(total, 758, "attributable-pair count drifted");
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict shifts which worlds field an
+    // attributable pair (758 -> 761) and which side several land on (693 ->
+    // 694); accuracy 0.9142 -> 0.9119, still decisively above the 0.75 floor
+    // asserted above.
+    assert_eq!(correct, 694, "blind-attribution count drifted");
+    assert_eq!(total, 761, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -979,14 +995,21 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // landed between the two measurements reseat settlements, so a handful of
     // worlds gain or lose a flagship pantheon; the DIRECTION this row exists
     // to guard is untouched.
+    //
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict reseats settlements again,
+    // moving which worlds hold a flagship pantheon: goblin 767/233 -> 766/234
+    // true/absent, kobold 760/240 -> 763/237 false/absent. The direction this
+    // row guards is untouched — the detector still reads true on every goblin
+    // world with a pantheon and false on every kobold one.
     assert_eq!(
         (g_true, g_absent),
-        (767, 233),
+        (766, 234),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (760, 240),
+        (763, 237),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1401,7 +1424,11 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Witness (cascade/v2 epoch), 0063: 0.564_509_597_998_702_8 ->
         // 0.567_057_788_528_571. Same cascade reseed as the zero/nonzero pins
         // above: every generated name redrawn, nudging the mean up a hair.
-        (mean - 0.567_057_788_528_571).abs() < 1e-6,
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): position-aware conflict reseats settlements
+        // (zero/nonzero/absent unmoved at 3/767/230), nudging the mean down:
+        // 0.567_057_788_528_571 -> 0.559_547_123_829_870.
+        (mean - 0.559_547_123_829_870).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1562,7 +1589,11 @@ fn name_length_distributions_are_measured_and_pinned() {
         // stopped offering `Tonogenesis`/`VowelShift` to species whose
         // phonology cannot host them, reseeding every cascade and therefore
         // every generated name.
-        ("goblin", 767u32, 8.639_595_029_986_95),
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): position-aware conflict reshapes raid outcomes
+        // and therefore which sites carry a goblin flagship; 767 -> 766
+        // present, mean 8.639_595_029_986_95 -> 8.660_349_090_208_882.
+        ("goblin", 766u32, 8.660_349_090_208_882),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1603,7 +1634,11 @@ fn name_length_distributions_are_measured_and_pinned() {
         // The Witness (cascade/v2 epoch), 0063: 7.403_195_966_315_787 ->
         // 7.228_477_004_342_105. Present count holds at 760; same cascade
         // reseed as the goblin pin above.
-        ("kobold", 760u32, 7.228_477_004_342_105),
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): 760 -> 763 present, mean 7.228_477_004_342_105 ->
+        // 7.219_848_265_006_563. Same position-aware-conflict reseat as the
+        // goblin pin above.
+        ("kobold", 763u32, 7.219_848_265_006_563),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1695,8 +1730,15 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // 2.318_080_226_315_786_7. Present counts unmoved (767 / 760); the
         // claim still HOLDS at both species (2.767 and 2.318, both inside
         // 2-3).
-        ("goblin", 767u32, 2.767_352_168_839_636),
-        ("kobold", 760u32, 2.318_080_226_315_786_7),
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): goblin 767 -> 766 present, mean
+        // 2.767_352_168_839_636 -> 2.775_172_454_830_285; kobold 760 -> 763
+        // present, mean 2.318_080_226_315_786_7 -> 2.313_806_532_765_403. Same
+        // position-aware-conflict reseat as the name-length pins above; the
+        // claim still HOLDS at both species (2.775 and 2.314, both inside
+        // 2-3).
+        ("goblin", 766u32, 2.775_172_454_830_285),
+        ("kobold", 763u32, 2.313_806_532_765_403),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1810,7 +1852,11 @@ fn name_transparency_is_measured_and_pinned() {
         // fire (`Tonogenesis`/`VowelShift` on atonal/non-vowel-shifting
         // peoples), so more names still gloss to the source concept they
         // compound over.
-        (mean - 0.803_660_578_424_675).abs() < 1e-9,
+        // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e
+        // on lefford, 0063): position-aware conflict reseats settlements
+        // (present/absent unmoved at 770/230), nudging the mean down:
+        // 0.803_660_578_424_675 -> 0.807_392_672_749_351.
+        (mean - 0.807_392_672_749_351).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
