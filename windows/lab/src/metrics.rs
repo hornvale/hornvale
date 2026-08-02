@@ -3282,7 +3282,7 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(chorus_sky_calibration_metric),
         },
         // --- The Contour (Task 4): the measurement instrument, built ahead
-        // of the mechanism (spec 2.2/decision 0089) so Task 5's baseline is
+        // of the mechanism (spec 2.2/decision 0091) so Task 5's baseline is
         // honest. M2/M3 read `occupation_records` — the same decoder
         // `windows/almanac` and The Vestige already share — filtered to
         // still-alive occupations at bake end.
@@ -6354,17 +6354,24 @@ mod tests {
     /// and not a drift of the naming machinery in one direction. Goblin was
     /// outside the target on the high side before and is inside it now; kobold
     /// was inside and still is.
+    ///
+    /// The Contour re-pin (2026-07-30): another LIVE pin, moved again for the
+    /// same reason — `defensibility`-gated raid dominance (spec section
+    /// 2.3a/2.4, decision 0091 clause 1) redecided seed 42's deep-history
+    /// settlement placement once more. Goblin 2.466_666_666_666_667 ->
+    /// 2.724_637_681_159_420_4, kobold 2.742_574_257_425_743 ->
+    /// 2.613_138_686_131_387. Both still read inside the 2-3 target.
     #[test]
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.466_666_666_666_667)
+            MetricValue::Number(2.724_637_681_159_420_4)
         );
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.742_574_257_425_743)
+            MetricValue::Number(2.613_138_686_131_387)
         );
     }
 
@@ -6394,11 +6401,19 @@ mod tests {
         // then, which is the same near-doubling of the surviving roster The
         // Tithe recorded (seed 42: 203 -> 329 live settlements).
         //
+        // The Contour re-pin (2026-07-30): 202/329 -> 192/324. Another LIVE
+        // pin, moved again for the same reason — `defensibility`-gated raid
+        // dominance (spec section 2.3a/2.4, decision 0091 clause 1) redecided
+        // seed 42's deep-history settlement survival once more, this time by
+        // a small margin (329 -> 324 glossed settlement names, 5 fewer,
+        // consistent with `genesis_observes_an_unoccluded_sky`'s name-gloss
+        // count moving 367 -> 362 over the same world).
+        //
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 202 of 329 glossed settlement names.
-        assert_eq!(share, 202.0 / 329.0, "seed 42 transparency drifted");
+        // 192 of 324 glossed settlement names.
+        assert_eq!(share, 192.0 / 324.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

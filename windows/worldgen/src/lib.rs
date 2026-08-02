@@ -7470,6 +7470,13 @@ mod tests {
     /// three 48s unchanged. Re-pinned here rather than dropped, because an
     /// exact count is the stronger check; if it moves again, ask whether the
     /// moving campaign added names or culled phenomena, and read the 48s.
+    ///
+    /// The Contour re-pin (2026-07-30): position-aware conflict
+    /// (`defensibility` gating raid outcomes) redecided deep-history
+    /// settlement survival, which redecided which settlements got named —
+    /// seed 42's world went 367 -> 362 glossed names with all three 48s
+    /// unchanged, so the sky-occlusion invariant this test exists to guard
+    /// held; only the corroborating gloss count moved.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
@@ -7477,7 +7484,7 @@ mod tests {
         assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 48);
         assert_eq!(count("deity-name"), 48);
-        assert_eq!(count("name-gloss"), 367);
+        assert_eq!(count("name-gloss"), 362);
     }
 
     #[test]
