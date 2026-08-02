@@ -1,6 +1,89 @@
 # The Contour — readout (Task 7)
 
-**This is the adjudication of spec §4.2's frozen predictions.** The baseline
+---
+
+## EPOCH RE-MEASUREMENT (authoritative for the shipped world)
+
+**`domains/history/src/streams.rs`'s `BAKE` label was bumped from
+`history/bake` to `history/bake/v2`** after the measurement below was taken
+(`Seed::derive` is FNV-1a over the label's bytes, `kernel/src/seed.rs:70`, so
+this re-mints every draw the bake takes, on top of whatever the mechanism
+itself changes). **Everything below this banner, down to the horizontal
+rule marking the end of this section, describes the PRE-EPOCH world and is
+kept unedited as the historical record.** It no longer describes the world
+this branch ships. The matched-pair re-measurement below, taken on the
+post-epoch tree (full method and every number:
+`docs/superpowers/plans/the-contour-baseline-v2.md`), is what describes the
+shipped world, and is what a reader citing this campaign's numbers should
+use.
+
+### What changed, what didn't
+
+None of the three frozen predictions' top-line verdicts flip:
+
+| prediction | pre-epoch verdict | post-epoch verdict |
+|---|---|---|
+| 1 — M3 rises | FALSIFIED | **FALSIFIED (unchanged)** |
+| 2 — M2 heavier tail | stayed geometric | **stayed geometric (unchanged)** |
+| 3 — M1 roughly unchanged | partially confirmed (σ +15–27%) | **partially confirmed (σ +24–31%), unchanged** |
+
+**But the specific claim behind Prediction 1's verdict does flip, and it is
+this readout's most important finding from the re-measurement.** The
+pre-epoch readout's headline for M3 was: *"the entire delta is one seed
+(seed 12: 5 → 4); every other seed's peoples-count is byte-identical to the
+baseline... it is one world losing one people and nothing else moving, in
+either direction, across all 30 seeds."* That sentence is **false** for the
+shipped, post-epoch world. On the post-epoch matched pair (Arm A =
+mechanism neutralised, Arm B = mechanism live, both on `history/bake/v2`,
+seeds 1..=30 and replicated at 1..=100):
+
+- **Seed 11 now moves**, and it moves *down* under the mechanism: 5 → 4.
+- **Seed 12 still moves, but its direction reverses**: neutralised = 4, live
+  = **5** — the mechanism now *gains* a people at seed 12, where pre-epoch it
+  had *lost* one there.
+- Both moves are identical at 100 seeds (same two seeds, same directions) —
+  not a small-sample artifact.
+- The two moves are equal and opposite, so the **pooled mean is exactly
+  unchanged** (3.9333 → 3.9333 at 30 seeds; 4.0600 → 4.0600 at 100 seeds) —
+  not approximately flat, bit-for-bit identical. The **extinction set is
+  unchanged in identity and size** at both sample sizes (6/30, then 18/100),
+  same as pre-epoch: the mechanism still rescues nobody.
+
+So Prediction 1 is FALSIFIED under both derivations, but for a subtly
+different reason: pre-epoch, the mechanism looked almost completely inert
+except for one net loss; post-epoch, it visibly moves two different worlds
+in opposite directions that happen to cancel in the pooled mean. This
+strengthens rather than weakens the null this campaign ships: it is not that
+the mechanism does nothing, it is that whatever it does to individual worlds
+does not net into a diversity rise. The addendum's stratified framing
+(extinction vs surviving) still holds: the extinction set is untouched by
+the epoch bump, and the surviving-world mean is *exactly* tied
+(4.9167 → 4.9167 at 30 seeds; 4.9512 → 4.9512 at 100 seeds) rather than
+merely close, because seeds 11 and 12 are both surviving-world seeds whose
+moves cancel within that subset too.
+
+M2 (`largest-holding-share`) and M1 (hand-obtained `cascade_sizes`) both
+reproduce their pre-epoch qualitative shape — no heavier tail, same
+two-bin/hard-cutoff cascade shape — with different exact numbers (expected,
+since the epoch re-mints every draw); full tables in
+`the-contour-baseline-v2.md`. M4 (supplementary, not frozen) is the most
+epoch-stable number of the four: pre-epoch live mean −0.0200 (95% CI
+[−0.0692, +0.0293]) vs. post-epoch live mean −0.0203 (95% CI
+[−0.0694, +0.0288]) — indistinguishable to three decimal places across the
+epoch bump.
+
+**§4.3's null still obtains, unchanged, on the shipped world**: a second
+contest axis, uncorrelated with the first and entering at the decision
+point, is not sufficient to hold diversity open in this world. See
+`the-contour-baseline-v2.md` for the full per-seed tables, the M2 shape
+comparison, and the M1 σ computation this section summarises.
+
+---
+
+## Historical record (pre-epoch, `history/bake`) — kept unedited below
+
+**This is the adjudication of spec §4.2's frozen predictions, as originally
+measured, before the epoch bump above.** The baseline
 (`docs/superpowers/plans/the-contour-baseline.md`, measured at `c405a5e2`,
 mechanism absent) is unedited and is the comparator throughout. The live
 measurement is taken at commit `71f2c433` (`feat(the-contour): wire
