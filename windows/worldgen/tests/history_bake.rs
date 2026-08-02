@@ -668,6 +668,18 @@ fn value_flat_history() -> hornvale_worldgen::history_bake::History {
 fn value_flat_history_with(
     in_group_radius: std::collections::BTreeMap<KindId, f64>,
 ) -> hornvale_worldgen::history_bake::History {
+    value_flat_history_seeded_with(42, in_group_radius)
+}
+
+/// [`value_flat_history_with`] over an arbitrary seed. The fixture's own
+/// construction is seed-INDEPENDENT — 42 cells, uniform capacity, one era —
+/// so the seed enters only through `bake`, which is what makes a seed band
+/// affordable here: the whole 1..=100 sweep the concealment test runs costs
+/// well under a second.
+fn value_flat_history_seeded_with(
+    seed: u64,
+    in_group_radius: std::collections::BTreeMap<KindId, f64>,
+) -> hornvale_worldgen::history_bake::History {
     let (geo, cap, river, eras, refugia) = value_flat_fixture();
     let people = peoples();
     let cfg = BakeConfig {
@@ -679,7 +691,7 @@ fn value_flat_history_with(
     };
     let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
     bake(
-        Seed(42),
+        Seed(seed),
         &geo,
         &cap,
         &river,
@@ -793,74 +805,128 @@ fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_d
     // changing a line, because what it multiplies — the availability branch —
     // changed shape underneath it. A volume reading alone cannot tell "moved
     // the rate" from "moved the payer", and here it has been each in turn.
+    // **Widened to a seed band by The Contour (decision 0097), and the
+    // widening is a finding.** What stood here ran the two arms at seed 42
+    // alone and guarded the comparison with nine equality assertions on the
+    // ground that the arms "differ in EXACTLY ONE input". They do differ in
+    // exactly one INPUT. They do not differ in exactly one OUTCOME, and they
+    // never could: concealment moves tribute, tribute moves the subordinate's
+    // population, population moves strength, and strength enters the
+    // `RAID_MARGIN` comparison that decides a takeover
+    // (`history_bake.rs`'s `maybe_raid`). The guard held at seed 42's old
+    // draws only because no takeover happened to sit astride the margin.
+    //
+    // The `history/bake/v2` epoch re-minted those draws and one did. Measured
+    // over seeds 1..=100, both arms, all nine originally-guarded fields: the
+    // fixture is structurally invariant on **63 of 100 seeds**, and seed 42
+    // moved from the 63 to the 37 on the re-mint alone — the test passes at
+    // pre-epoch `e8c85d68` with the position-aware raid rule already live, so
+    // the mechanism did not move it. The mechanism could not have: this
+    // fixture's `full_land_graph` gives every edge conductance 1.0, so
+    // `defensibility` evaluates to the single constant 0.750001838 (`DEF_MIN`)
+    // over all 240 ordered adjacent pairs and is arm-invariant by
+    // construction.
+    //
+    // So the old guard was decision 0097's row three exactly — an existence
+    // claim near its threshold, carrying a value pin's noise profile with an
+    // invariant's authority. It is not re-pinned and not relaxed; it is
+    // replaced by the reading that is available at n = 100 and was not
+    // available at n = 1.
+    //
+    // **And the guard was asking the wrong question.** It treated
+    // concealment's own downstream consequences as confounds to be excluded.
+    // Over a band, they are not confounds — they ARE the effect, and the total
+    // effect is the honest thing to report. The DIRECT term, which is the one
+    // claim that genuinely needs a same-state comparison, is bound separately
+    // and unchanged in
+    // `an_insular_subordinate_remits_less_than_an_expansive_one`, which
+    // compares the two radii against the SAME state in a single epoch.
+    //
+    // Structural invariance is therefore REPORTED here and asserted nowhere
+    // (0097 clause 3: never the same claim in two instruments). What is
+    // asserted is the pooled sign, plus a strict majority of seeds — a
+    // majority being the weakest statement that still says "down" rather than
+    // "either way", so it is a floor with a reason and not a bar set just
+    // under a measurement.
+    //
+    // The sign itself is the amendment-4 direction (spec §4.3a): the reach
+    // stops at the patron's setpoint rather than at `FARM_FLOOR`, so
+    // availability is of the order of the epoch's increment, the `min` selects
+    // the availability branch often, and there the concealment factor binds —
+    // what a vassal hides is once again a share it does not hand over.
+    const BAND: u64 = 100;
+
     let expansive: std::collections::BTreeMap<KindId, f64> =
         peoples().into_iter().map(|k| (k, 1.0)).collect();
     let insular: std::collections::BTreeMap<KindId, f64> =
         peoples().into_iter().map(|k| (k, 0.0)).collect();
 
-    let ce = census(&value_flat_history_with(expansive));
-    let ci = census(&value_flat_history_with(insular));
+    let mut pooled_expansive = 0.0_f64;
+    let mut pooled_insular = 0.0_f64;
+    let mut sign_holds = 0u64;
+    let mut structurally_invariant = 0u64;
 
-    assert!(
-        ce.subordinations_formed > 0 && ci.subordinations_formed > 0,
-        "precondition: relations must form in both arms: expansive {ce:?}, insular {ci:?}"
-    );
-    assert!(
-        ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
-        "precondition: tribute must flow in BOTH arms — a difference over two zeros \
-         proves nothing: expansive {}, insular {}",
-        ce.tribute_collected,
-        ci.tribute_collected
-    );
-    // (a) Structural invariance — what makes the comparison clean.
-    for (name, e, i) in [
-        (
-            "subordinations_formed",
-            ce.subordinations_formed,
-            ci.subordinations_formed,
-        ),
-        (
-            "patronage_transfers",
-            ce.patronage_transfers,
-            ci.patronage_transfers,
-        ),
-        (
-            "tribute_relations_at_now",
-            ce.tribute_relations_at_now,
-            ci.tribute_relations_at_now,
-        ),
-        (
-            "tribute_collection_events",
-            ce.tribute_collection_events,
-            ci.tribute_collection_events,
-        ),
-        ("records_total", ce.records_total, ci.records_total),
-        ("alive_at_now", ce.alive_at_now, ci.alive_at_now),
-        ("raided", ce.raided, ci.raided),
-        ("migrated", ce.migrated, ci.migrated),
-        ("collapsed", ce.collapsed, ci.collapsed),
-    ] {
-        assert_eq!(
-            e, i,
-            "the arms must differ in what MOVED and in nothing else: {name} is {e} expansive \
-             vs {i} insular, so this fixture is no longer structurally invariant and the \
-             comparison below would be reading two different histories"
+    for seed in 1..=BAND {
+        let ce = census(&value_flat_history_seeded_with(seed, expansive.clone()));
+        let ci = census(&value_flat_history_seeded_with(seed, insular.clone()));
+
+        assert!(
+            ce.subordinations_formed > 0 && ci.subordinations_formed > 0,
+            "precondition: relations must form in both arms at seed {seed}: \
+             expansive {ce:?}, insular {ci:?}"
         );
+        assert!(
+            ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
+            "precondition: tribute must flow in BOTH arms at seed {seed} — a difference over \
+             two zeros proves nothing: expansive {}, insular {}",
+            ce.tribute_collected,
+            ci.tribute_collected
+        );
+
+        pooled_expansive += ce.tribute_collected;
+        pooled_insular += ci.tribute_collected;
+        if ci.tribute_collected < ce.tribute_collected {
+            sign_holds += 1;
+        }
+        // Reported, not asserted — see above.
+        let same = [
+            (ce.subordinations_formed, ci.subordinations_formed),
+            (ce.patronage_transfers, ci.patronage_transfers),
+            (ce.tribute_relations_at_now, ci.tribute_relations_at_now),
+            (ce.tribute_collection_events, ci.tribute_collection_events),
+            (ce.records_total, ci.records_total),
+            (ce.alive_at_now, ci.alive_at_now),
+            (ce.raided, ci.raided),
+            (ce.migrated, ci.migrated),
+            (ce.collapsed, ci.collapsed),
+        ]
+        .iter()
+        .all(|(e, i)| e == i);
+        if same {
+            structurally_invariant += 1;
+        }
     }
-    // (b) …and concealment is not inert. Asserted with its measured SIGN,
-    //     which under the setpoint runs the direct way again: what a vassal
-    //     hides is a share it does not hand over, and the availability branch
-    //     — the only place the factor binds — is now the branch that is
-    //     usually selected.
+
+    println!(
+        "concealment over seeds 1..={BAND}: structurally invariant {structurally_invariant}/{BAND}, \
+         sign holds {sign_holds}/{BAND}, pooled tribute expansive {pooled_expansive:.2} vs \
+         insular {pooled_insular:.2}"
+    );
+
+    // (a) Concealment is not inert, and pooled over the band it moves what the
+    //     patrons collected DOWN.
     assert!(
-        ci.tribute_collected < ce.tribute_collected,
-        "concealment must move what the patrons collected — and under the setpoint (amendment \
-         4) it moves it DOWN again, because the reach stops at the patron's target rather than \
-         at the floor, so availability is of the order of the epoch's increment and the \
-         concealment factor actually binds: insular {} vs expansive {}. Equal totals mean the \
-         term is inert.",
-        ci.tribute_collected,
-        ce.tribute_collected
+        pooled_insular < pooled_expansive,
+        "concealment must move what the patrons collected, and under the setpoint it moves it \
+         DOWN: pooled over seeds 1..={BAND}, insular {pooled_insular} vs expansive \
+         {pooled_expansive}. Equal totals mean the term is inert."
+    );
+    // (b) …and not by one outlier seed carrying the pool: it runs the same
+    //     direction on a strict majority of individual worlds.
+    assert!(
+        sign_holds * 2 > BAND,
+        "the pooled direction must not rest on a few large worlds: concealment lowered \
+         collections on only {sign_holds} of {BAND} seeds, which is not a majority"
     );
 }
 
