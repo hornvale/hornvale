@@ -5445,7 +5445,7 @@ fn build_to(
     // `BuildDepth::Terrain` world instead, so both call sites' assembly is
     // written exactly once. Same seed + pins ⇒ byte-identical `History` ⇒
     // byte-identical committed skeleton (the bake draws only under the
-    // isolated `history/genesis/<people>` and `history/bake` streams).
+    // isolated `history/genesis/<people>` and `history/bake/v2` streams).
     let history = bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)?;
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
