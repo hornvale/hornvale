@@ -113,7 +113,7 @@ const DEF_SCALE: f64 = 1.0;
 /// How well `to` is defended against an approach from `from`: a strictly
 /// monotone, saturating function of the log traversal cost of the cheapest
 /// route between them. A multiplier on the HOLDER's side of the dominance
-/// test — the second contest axis (decision 0089 clause 1).
+/// test — the second contest axis (decision 0091 clause 1).
 ///
 /// Reads the approach rather than the cell because the calibration found
 /// approach ease is two disjoint regimes — water-connected and land-only —
