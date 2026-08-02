@@ -49,8 +49,12 @@ what moved. The rule that replaces the old gate:
 > undeclared, and that is a finding to report before continuing, not a diff to
 > accept.
 
-Baseline: snapshot a seed-42 world **before Task 2** and keep it. Tasks 2 and 3
-diff against it and report per-predicate counts.
+**The baseline is already snapshotted** at
+`.superpowers/sdd/2026-08-02-the-vernacular-part-3a-star-class/baseline-seed-42.json`
+(26309 facts, taken at the plan's base commit). **Every** task diffs against it
+— including Task 1, which must show it byte-identical. Compare fact lists, not
+whole files: `World` serializes the concept registry, so the file can move while
+no fact does.
 
 ## Scope
 
@@ -215,11 +219,24 @@ Expected: PASS.
 cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-3a-t1.json
 ```
 
-Compare its fact list against a world generated at this task's base commit.
-This task is a pure addition plus a behaviour-preserving extraction, so
-**every fact must be identical**. If any moved, the extraction changed the
-class boundaries — read `class_name_of_mass`'s comparisons against the
-original.
+Compare its **fact list** against `$BASELINE` (see "This plan MOVES committed
+facts" above). This task is a pure addition plus a behaviour-preserving
+extraction, so **every fact must be identical**. If any moved, the extraction
+changed the class boundaries — read `class_name_of_mass`'s comparisons against
+the original.
+
+Then refresh the drifted artifact and commit it here, in this task:
+
+```bash
+make rebaseline
+git diff --stat book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+```
+
+Expected: **`docs/audits/type-audit-report.md` only** — three new `pub` items
+with `type-audit:` tags drift it, and omitting that is named in `CLAUDE.md` as
+a common miss. Part 1 of this campaign hit it once and had to sweep it
+afterwards. Anything under `book/src/gallery/` here means the extraction moved
+a rendering, which this task must not do.
 
 - [ ] **Step 6: Commit**
 
