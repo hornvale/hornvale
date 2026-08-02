@@ -203,9 +203,33 @@ report that counts it, and never filled.
 state facts about *the world*; `Gap` — "a deliberate hole in coverage, expected
 to be filled later" — states a fact about *our codebase*. With 23 `Gap` uses
 against zero `Unnamed`, the project has been recording "we have not got to it"
-where the truth was sometimes "no one there can name this." That conflation is
-why the distinction was never drawn: the honest answer was always available and
-the convenient one always adjacent.
+where the truth was sometimes "no one there can name this."
+
+> **Correction (whole-branch review, 2026-08-01).** The paragraph above
+> overstated this, and the correction sharpens the whole section. A sample of
+> 8 of the 23 found **seven correctly `Gap`** — sky events, heat/cold,
+> snow/rain/ice, crops, species kinds, god/spirit, home/hearth are all things
+> cultures obviously name, and our packs genuinely have not got to them. The
+> real residue is not spread across 23 sites; it sits inside **two blanket
+> loops** applying one `Gap` to a mixed population
+> (`domains/climate/src/lib.rs:171` variants, `:197` biome classes), where
+> `grass-sward` is our gap but `marine-snow`, `abyssal-plain`, `hadal-trench`
+> and `vent-plume` are nameable by nobody here. A granularity problem, not a
+> 23-wide one.
+>
+> **And `Unnamed` is the wrong repair even there** — which is the finding that
+> matters. `Void::Unnamed` is a **static, compile-time** edge: it says
+> unnameable in *every* world. A spectral class qualifies, because no world's
+> peoples have invented spectroscopy. A hadal trench does not: it is unnameable
+> only because *this* world's peoples happen to be terrestrial, which is
+> **contingent per seed** and is already expressed correctly by the exposure
+> classifier as `Experiential`. The static edge cannot say "in this world."
+>
+> So the honest follow-up is **not** "find more `Unnamed`". It is: split the two
+> blanket loops so the deep-ocean cluster stops promising that a language pack
+> will one day name it. The registry's static edge and the exposure
+> classifier's per-world one are different instruments, and §3.1's original
+> framing blurred them.
 
 **Unnamed does not mean unspeakable.** A concept with no lexeme must be
 *circumlocuted*, not refused — sign-language communities fingerspell or
