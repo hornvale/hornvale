@@ -233,10 +233,17 @@ fn fragment_for(predicate: &str, object: &Value) -> Option<Fragment> {
                 if count == 1 { "" } else { "s" }
             )))
         }
-        (STAR_CLASS, Value::Text(class)) => Some(Fragment::Modifier(format!(
-            "orbiting {} {class}",
-            indefinite_article(class)
-        ))),
+        (STAR_CLASS, Value::Text(concept)) => {
+            // The ledger holds a concept id; the author's ground-truth register
+            // renders it as Morgan-Keenan taxonomy, which is the author's frame
+            // and not anything a creature says. An unknown id renders nothing
+            // rather than leaking a raw registry key into prose.
+            let display = hornvale_astronomy::class_display(concept)?;
+            Some(Fragment::Modifier(format!(
+                "orbiting {} {display}",
+                indefinite_article(display)
+            )))
+        }
         (DAY_LENGTH_STD, Value::Number(days)) => Some(Fragment::Trailing(format!(
             "its day lasts {} standard days",
             quantity(*days)
@@ -2000,10 +2007,11 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
         ));
     }
     if let Some(rest) = fragment.strip_prefix("orbiting ") {
-        let class = rest
+        let display = rest
             .strip_prefix("an ")
             .or_else(|| rest.strip_prefix("a "))?;
-        return Some((STAR_CLASS.to_string(), Value::Text(class.to_string())));
+        let concept = hornvale_astronomy::class_concept(display)?;
+        return Some((STAR_CLASS.to_string(), Value::Text(concept.to_string())));
     }
     if let Some(rest) = fragment.strip_prefix("its day lasts about ") {
         let days = rest.strip_suffix(" standard days")?;
@@ -2013,6 +2021,15 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
         ));
     }
     None
+}
+
+/// The public face of the private [`fact_for`], exported so
+/// `cli/tests/star_class_is_a_concept.rs` can assert render and parse are
+/// inverse. Do not make `fact_for` itself public — its privacy is what keeps
+/// the construction table a Book concern.
+/// type-audit: bare-ok(prose: fragment), bare-ok(identifier-text: return)
+pub fn fact_for_public(fragment: &str) -> Option<(String, Value)> {
+    fact_for(fragment)
 }
 
 /// Apply a listener's numeracy rung to a heard quantity fragment (LANG-44
@@ -2950,10 +2967,12 @@ mod tests {
 
     /// Vowel-initial star classes (e.g. seed 3's "orange dwarf (K)") need
     /// "an", not "a" — a real seed exposed this via `regenerate-artifacts.sh`
-    /// ("Zhqea is a planet orbiting a orange dwarf (K)…").
+    /// ("Zhqea is a planet orbiting a orange dwarf (K)…"). The ledger holds
+    /// the concept id (`"orange-dwarf"`); the article is chosen from the
+    /// rendered *display*'s first letter, never the id's.
     #[test]
     fn star_class_modifier_chooses_an_before_a_vowel() {
-        let value = Value::Text("orange dwarf (K)".to_string());
+        let value = Value::Text("orange-dwarf".to_string());
         let modifier = match fragment_for(STAR_CLASS, &value) {
             Some(Fragment::Modifier(m)) => m,
             _ => panic!("expected a Modifier fragment"),

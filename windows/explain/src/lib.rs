@@ -36,7 +36,12 @@ fn text(world: &World, subject: EntityId, predicate: &str) -> Option<String> {
 /// type-audit: bare-ok(artifact: return)
 pub fn explain_sky(world: &World) -> Option<String> {
     let e = world_entity(world)?;
-    let class = text(world, e, facts::STAR_CLASS)?;
+    let class_concept = text(world, e, facts::STAR_CLASS)?;
+    // The ledger holds the class's registered concept id; render it through
+    // the author's-frame display used everywhere else this fact surfaces
+    // (`windows/book`). An unrecognized id omits the "is a ..." clause
+    // rather than leaking the raw registry key into narration.
+    let class = hornvale_astronomy::class_display(&class_concept);
     let star_mass = num(world, e, facts::STAR_MASS_SOLAR)?;
     let luminosity = num(world, e, facts::STAR_LUMINOSITY_SOLAR)?;
     let zone_in = num(world, e, facts::HAB_ZONE_INNER_AU)?;
@@ -69,12 +74,17 @@ pub fn explain_sky(world: &World) -> Option<String> {
         "the cool edge"
     };
 
+    let star_clause = match class {
+        Some(display) => format!("Its star is a {display}"),
+        None => "Its star".to_string(),
+    };
+
     let mut out = String::new();
     out.push_str(&format!(
         "This world receives {insolation:.2}× Earth's sunlight (insolation, global annual mean).\n"
     ));
     out.push_str(&format!(
-        "Its star is a {class} — mass {star_mass:.2} M☉ (rolled) — giving luminosity \
+        "{star_clause} — mass {star_mass:.2} M☉ (rolled) — giving luminosity \
          {luminosity:.2} L☉ (derived, L = M³·⁵) and a habitable zone of {zone_in:.2}–{zone_out:.2} AU \
          (derived, 0.95√L–1.37√L).\n"
     ));
