@@ -1,5 +1,20 @@
 # The Witness Implementation Plan
 
+> **STATUS: COMPLETE — Tasks 1 through 10 executed** (Task 11's close —
+> absorb, gate, heavy tier, census regen, merge — is the controller's own
+> step and runs separately). Chronicle: `book/src/chronicle/the-witness.md`.
+> Retrospective: `docs/retrospectives/the-witness.md`. Two task blocks in
+> this plan are superseded in place rather than deleted, as the record of a
+> measured reversal: Task 4's original porosity-coefficient sweep came back
+> BLOCKED (no coefficient in the specified range could cross the gate), and
+> Task 5 shipped once, then was itself superseded by Task 5b once a
+> floor-only guard was found to have let 69.64% of land read `Aquifer`
+> unnoticed. The "epoch this campaign owes" section below reverses spec §5
+> flagged item ① after G3, re-derived from the ratified records rather than
+> the approved package. See the retrospective for the process lessons this
+> plan's own execution surfaced, including four recurrences of the
+> campaign's own subject defect inside the campaign itself.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Repair three branches that could never fire — `Hydro::Spring`/`Aquifer`

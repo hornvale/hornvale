@@ -1,5 +1,20 @@
 # The Witness — design
 
+> **STATUS: COMPLETE — all repairs and guards shipped; documentation half
+> landed.** Chronicle: `book/src/chronicle/the-witness.md`. Retrospective:
+> `docs/retrospectives/the-witness.md` (follow-up table F5/F7/F13 discharged;
+> F14–F19 open). §3.1's original porosity-formula repair was superseded by
+> measurement before it shipped (see the plan's Task 4/5/5b); the shipped
+> repair moves a threshold, not the formula, and adds a grain term for range
+> rather than to cross a gate. §5 flagged item ① (two epoch bumps) was
+> reversed after G3 to one bump, `language/<species>/lexicon/cascade/v2` —
+> see the plan's "The epoch this campaign owes" section. H1 (§6) is
+> **supported**, measured on one merged tree rather than the cross-tree
+> comparison an earlier draft of the readout used (retrospective, "what
+> worked"). §9's decision-record instruction is superseded: decision 0094,
+> ratified by a different campaign one day after this one reached the same
+> principle independently, is cited rather than duplicated.
+
 **Campaign:** The Witness · **Date:** 2026-07-30 · **Branch:** `the-witness`
 **Discharges:** The Wearing's follow-ups **F5**, **F7**, **F13**
 (`docs/retrospectives/the-wearing.md`)

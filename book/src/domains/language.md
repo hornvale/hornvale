@@ -145,10 +145,15 @@ conditioned change, applied wherever its environment occurs rather than hunted
 word by word, so two roots a merger would have collapsed stay distinct precisely
 when they differed in the sound the merger destroyed — the segmental contrast
 transposed into pitch rather than erased. Cognate descent is untouched, because
-the rule reads the derivation's own history and never the shared proto. The
-shipped peoples are atonal, so tonogenesis is inert for them and their words
-change only through the epoch's reseed; the mechanism waits, complete, for the
-first tone-capable people the world admits.
+the rule reads the derivation's own history and never the shared proto. A
+cascade may draw `Tonogenesis` only at a position where a merger has already
+fired — drawn earlier it would have nothing to condition on and would be the
+identity by construction — and only for a phonology that can actually host a
+toned vowel. The shipped peoples are atonal, so that second gate excludes
+tonogenesis from their draw entirely, rather than drawing it and finding it
+inert after the fact; their words still change only through the epoch's
+reseed, and the mechanism waits for the first tone-capable people the world
+admits.
 
 **Naming grammars, and the status-basis keying.** Three kinds of name this
 substrate generates — settlement names, deity names, deity epithets, place
@@ -969,15 +974,25 @@ frequent morpheme reduces even under stress — which is why *Hampton* keeps its
 a word its name does not contain is a ledger falsehood. So a worn morpheme must
 leave a contiguous reflex in the repaired surface, or the wear is surrendered,
 least-frequent morpheme first. Opacification is a reduced survival, never an
-erasure. Measured across four worlds and 650 names: 940 morphemes, of which
-611 clear the frequency floor, of which the drawn cascade alters **53**, of
-which the guard rejects 40 — all forty genuine deletions, none an interrupted
-reflex — leaving **14 names** carrying surviving wear. The guard is innocent
-and the bottleneck is the cascade's match rate. Part of it has a name:
-`Tonogenesis` reads its conditioning from a merger earlier in the same cascade,
-so a leading `Tonogenesis` is provably the identity, and in a one-to-two-rule
-wear regime it is the *entire* cascade for three of twenty production cultures.
-The name cycle's opacification phase is therefore in progress, not shipped.
+erasure. The guard was always innocent; the bottleneck above it was which
+rules a cascade was even *permitted* to draw. `Tonogenesis` reads its
+conditioning from a merger earlier in the same cascade, so a `Tonogenesis`
+drawn *before* any merger is provably the identity, and a one-to-two-rule wear
+regime could spend its entire budget on exactly that draw. A second, quieter
+version of the same mistake let a cascade draw `Tonogenesis` or `VowelShift`
+for a phonology that could never host either. Both are now gated at the draw
+itself, not discovered inert after the fact: a cascade may not pick a rule it
+cannot condition, or that the drawing phonology cannot host. Measured on a
+fixed, committed seed sweep, removing both gates alone — same seeds, same
+tree, only the offered roster changes — lifts the cascade's match rate from
+117 to 250 of 421 eligible morphemes (27.8% → 59.4%) and surviving wear from
+86 to 154. An earlier published survival figure (14 of 650 names) traced to
+an unrecorded four-world sample and could not be reproduced afterward; the
+reproducible instrument above is what any future change to the cascade should
+be measured against. The name cycle's opacification phase is markedly
+stronger for it, though still a minority outcome — most eligible morphemes
+still do not wear — and conventionalization, reanalysis and renewal remain
+unbuilt.
 
 *What was given up.* Frequency requires the whole scatter, so a glossed
 settlement name now depends on which *other* settlements its species placed.

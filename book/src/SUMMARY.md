@@ -291,6 +291,7 @@
 - [The Waymark](./chronicle/the-waymark.md)
 - [The Repertoire](./chronicle/the-repertoire.md)
 - [The Scaffold](./chronicle/the-scaffold.md)
+- [The Witness](./chronicle/the-witness.md)
 
 # Appendix: The Frontier
 
