@@ -327,3 +327,77 @@ already deferred by name.
 Position, alone, does not hold diversity open in Hornvale. That is the
 keystone test the sequence exists to run, run first because it was the
 cheapest, and it says: the next axis has to do something position does not.
+
+## The epoch, declared after the close
+
+Position-aware conflict draws nothing new — the pin-isolation batteries in
+`domains/terrain/tests/tectonic_properties.rs` and
+`domains/astronomy/tests/genesis_properties.rs` prove stream consumption
+order never moved, 19 of 19 both times, before and after. But it changes
+every generated world's committed history, so a world saved after this
+campaign merges is not the same world a save from before it would produce
+on the same seed. `Seed::derive` is FNV-1a over the label's *bytes*
+(`kernel/src/seed.rs`), so the honest way to say "this derivation changed"
+is to change the bytes: `domains/history/src/streams.rs::BAKE` moved from
+`history/bake` to `history/bake/v2`, an epoch suffix per decision 0006,
+never a rename. That re-mints every draw the deep-history bake takes, on
+top of whatever the mechanism itself already changed — which meant the
+readout above, measured before the bump, was comparing a baseline and a
+live arm that differed in *two* ways at once, not one, and needed
+re-measuring on a matched pair that differs in only the mechanism.
+
+The re-measurement changed no verdict. M3 is still FALSIFIED, M2 still
+stayed geometric, M1 is still partially confirmed — the σ move, on the
+post-epoch derivation, is now 24–31% rather than 15–27%, larger but the
+same shape, the same two occupied bins, still zero cascades of size four or
+larger. The extinction set — six of thirty seeds, the same six seeds by
+number — is untouched in both identity and size across the epoch, which is
+the strongest form the "does not rescue from extinction" half of the null
+can take.
+
+One thing about the shape of the null did change, and it is worth stating
+plainly rather than letting the old numbers stand unremarked: the pre-epoch
+readout's headline for M3 was that the entire delta was one seed losing one
+people, nothing else moving in either direction. On the post-epoch matched
+pair, *two* seeds move — one down, one up, the reverse of the pre-epoch
+direction on the seed that had moved before — and they cancel exactly, so
+the pooled mean is bit-identical between the neutralised and the live arm
+at both thirty and a hundred seeds, not merely close. The mechanism is not
+more inert than the first reading suggested; it visibly moves two different
+worlds in opposite directions that happen to net to nothing. That
+strengthens the null rather than weakening it — it is not that position
+does nothing to individual histories, it is that whatever it does does not
+add up to more diversity — but it is a different mechanism-level story than
+"almost nothing happened," and the old readout's specific sentence to that
+effect no longer describes the shipped world. Both readings are kept, side
+by side, in `docs/superpowers/plans/the-contour-readout.md` and
+`the-contour-baseline-v2.md`, with the newer one marked as the one that
+describes what ships.
+
+Re-pinning after the epoch surfaced a wider blast radius than expected: a
+full-workspace run at the pre-epoch commit has exactly one known failure
+(`hearth_population_calibration`, discussed above); the same run after the
+bump showed twenty-seven, not one — the predicted failure now *passes*
+(apparently resolved by the fresh re-mint, not by anything this pass
+touched), and twenty-seven others broke in its place. Twenty-five were
+ordinary re-pins: census-derived calibration constants, seed-42 fact
+counts, a stream-label roster entry, a showcase cell whose stratigraphy
+emptied (repointed at a cell whose new occupant history — a rival gnoll
+band evicting the incumbent eight times over nineteen attempts, more often
+than cold ever did — is its own small demonstration of what a second
+contest axis does to a single people fighting only itself), and a run of
+fixture-descriptor and generated-name propagations following one settlement
+reseat through every place its name got hardcoded. Two were not simple
+re-pins and are left failing, reported rather than patched: a "coarse
+constrains fine" sky invariant that turns out to depend on moon count in a
+way nobody had previously exercised, and a synthetic fixture inherited from
+*The Tithe* whose claim of structural invariance between two arms of one
+seed no longer holds under this derivation's draws. Both are genuine
+findings about mechanisms this campaign did not build, exposed rather than
+caused by the re-mint; neither is this campaign's to fix, and neither was
+softened to get to a clean gate.
+
+The census was regenerated on the canonical host (`lefford`, decision 0063)
+under the epoch-bumped ref, and every downstream artifact — the seed-42
+gallery, the two 1000-seed censuses, `golden-pins.sql`'s independent second
+path — was re-synced to it and re-verified to agree.

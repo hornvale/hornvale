@@ -1166,3 +1166,20 @@ multi-axis thesis than "unmeasured" was, and a materially stronger one than
 falsified by one mechanism's failure to move one metric, but it has now spent
 its cheapest test and has one clean finding to show for it: position, alone,
 is not the term that holds diversity open here.
+
+**Re-measured after the epoch (2026-08-02).** Position-aware conflict draws
+no new stream, but it changes every world's committed history, and the
+`history/bake` label was bumped to `/v2` to say so honestly (decision 0006).
+That re-mints every draw a second time on top of the mechanism's own effect,
+so the numbers above were re-measured on a fresh matched pair taken entirely
+on the post-epoch derivation rather than trusted to still describe the
+shipped world. Neither null moved: M3 is still falsified, M2 still stayed
+geometric, and the extinction set is unchanged in both identity and size
+across the epoch — the strongest form the "does not rescue from extinction"
+half of the decomposition above can take. **This rescore is unchanged and
+stands as written.** One thing about *how* the null holds did shift: where
+the pre-epoch reading found a single seed accounting for the whole M3 delta,
+the post-epoch reading finds two seeds moving in opposite directions that
+cancel exactly — the mechanism is visibly live at the individual-world
+level, it simply does not net into more diversity. Full numbers:
+`docs/superpowers/plans/the-contour-baseline-v2.md`.
