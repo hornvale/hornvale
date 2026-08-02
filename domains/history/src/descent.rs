@@ -79,13 +79,26 @@ pub fn kinship(gap_years: f64, generation_length_years: f64) -> Kinship {
 /// forebear without a special case at the call site.
 ///
 /// The mix is the same splitmix-style arithmetic [`crate::flesh::persona_of`]
-/// uses, iterated: pure bit operations over the arguments, no `Stream`, so it
+/// uses, iterated, with the step counter folded into each round so the walk
+/// is not the same fixed permutation applied `steps` times: a fixed
+/// permutation iterated has fixed points, and `(RoleHandle(0), Seed(0))` was
+/// one — every step collapsed onto the same handle, and Seed(0) is a
+/// reachable world seed. In practice, distinctness across a chain is
+/// empirically verified for the seeds and lengths this crate's tests probe
+/// (including the all-zero degenerate case and the deepest measured chain,
+/// 32 steps), not proven for every input; no `Stream` is drawn, so it
 /// consumes no draws and touches no stream-consumption-order contract.
 /// type-audit: bare-ok(count: steps)
 pub fn ancestor(of: RoleHandle, steps: u32, seed: Seed) -> RoleHandle {
     let mut h = of.0;
-    for _ in 0..steps {
-        let mut x = h ^ seed.0;
+    for k in 0..steps {
+        // `k + 1` (never zero, even at the first round) times an odd
+        // constant is the perturbation. A plain `u64::from(k)` still leaves
+        // the k = 0 round's term at zero, and `mix(0) == 0` (multiplying and
+        // xor-shifting zero is a no-op), so the very first round would still
+        // fix `(RoleHandle(0), Seed(0))` at zero — the defect this exists to
+        // close.
+        let mut x = h ^ seed.0 ^ (u64::from(k) + 1).wrapping_mul(0x9E37_79B9_7F4A_7C15);
         x = x.wrapping_mul(0x9E37_79B9_7F4A_7C15);
         x ^= x >> 29;
         x = x.wrapping_mul(0xBF58_476D_1CE4_E5B9);

@@ -75,6 +75,20 @@ fn ancestor_of_zero_steps_is_the_figure_themself() {
 }
 
 #[test]
+fn the_all_zero_seed_and_handle_still_walk_to_distinct_ancestors() {
+    // A fixed bit-mixing permutation iterated k times has fixed points;
+    // (Seed(0), RoleHandle(0)) was one, which collapsed a figure's entire
+    // lineage onto a single handle -- and therefore a single name.
+    let chain: Vec<u64> = (0..=32)
+        .map(|k| ancestor(RoleHandle(0), k, Seed(0)).0)
+        .collect();
+    let mut sorted = chain.clone();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(sorted.len(), 33, "ancestor walk collapsed: {chain:?}");
+}
+
+#[test]
 fn the_deepest_measured_chain_walks_without_collision() {
     // Spec 1.1: max remove 32. Every ancestor along the deepest real chain
     // must be distinct, or two forebears would share a name.
