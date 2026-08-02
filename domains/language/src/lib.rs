@@ -12,6 +12,11 @@
 /// Pure and surface-free — the caller supplies the observability table.
 pub mod accession;
 pub mod account;
+/// The anthroponymic schema (The Namesake, spec §3.2): what a personal name
+/// is made of — an ordered list of `(source, author)` elements, plus the new
+/// [`naming::NameKind::Person`] seed path a given name draws off. Plain data,
+/// kernel-only; it never learns which people a name belongs to.
+pub mod anthroponym;
 /// The clause layer: a language-neutral `ClauseSpec` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
@@ -558,6 +563,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/name/settlement/v3",
             "the glossed settlement name (The Wearing): composed from the lexicon's roots/compounds under the species' drawn headedness, each morpheme first worn to its frequency in this culture's own name corpus. The epoch bump is owed to two changes in what this stream consumes — the wear, and the RETIREMENT of v2's per-salt drawn stem (decision 0024: uniqueness is reference-time, and no future work fixes collisions by adding entropy)",
+        ),
+        (
+            "language/<species>/name/person",
+            "the given-name element of a personal name (The Namesake), salted by the bearer's role handle: a bare 2-3 syllable stem. No epoch suffix — this label is new, not a regeneration of an existing one (decision 0084: an epoch is declared only when a derivation moved)",
         ),
         (
             "language/<species>/name/deity/v3",
