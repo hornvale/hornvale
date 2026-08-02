@@ -350,6 +350,53 @@ fixture. Cheap once stage 3 lands, and it is the campaign's most interesting
 readout — a null result here (every registered concept nameable) would itself
 say something.
 
+**The first reading (Task 4, commit `08b70ba8`).** `hornvale concepts
+--manifest`'s trial balance, over 191 registered concepts:
+
+```
+Trial balance (per ledger: covered + voids = 191 concepts):
+  lexeme:    covered 62  unnamed 9  gap 120
+  percept:   covered 10  gap 172  imperceptible 9
+  cognition: covered 2  uncognized 189
+```
+
+Nine concepts carry `Void::Unnamed` on the lexeme edge and nine carry
+`Void::Imperceptible` on the percept edge — the same nine both times,
+astronomy's spectral classes (`blue-giant`, `orange-dwarf`, `orange-giant`,
+`red-dwarf`, `red-giant`, `sun-like-star`, `white-dwarf`, `yellow-dwarf`,
+`yellow-white-dwarf`).
+
+**The finding is the history, not the fraction: both columns read zero for
+the entire life of the project before this campaign.** Verified rather than
+taken on faith: `book/src/reference/concept-manifest-generated.md` as
+committed on `main` (182 registered concepts, pre-dating these nine) shows
+`lexeme: covered 62 gap 120` and `percept: covered 10 gap 172` with no
+`unnamed` or `imperceptible` term at all — the renderer omits a zero-count
+class from its line entirely, so the absence of the word is itself the
+zero. The manifest types and this report shipped on `main` on 2026-07-18
+(`3132ff75`, `ee8dc053`); `3132ff75`'s own commit message says "nothing
+constructs a Manifest yet," and `ee8dc053` flipped seven over-optimistic
+`Expected` declarations to `Gap`, never to `Unnamed`. `git log -S
+'Void::Unnamed' -- domains/ windows/ kernel/ cli/` finds exactly six
+commits touching that string, and the first construction is Task 1's own
+(`1de14954`), whose message states it plainly: "the first use of that
+vocabulary by any domain since manifest.rs was written." No domain
+constructed either variant at any earlier point in the project's history.
+
+**This is a floor, not a measurement of the world's unnameability,** for two
+reasons:
+
+1. It counts only what `domains/astronomy` has so far declared honestly. No
+   other domain — climate, terrain, species, culture, language — has
+   audited its concepts for this distinction yet.
+2. §3.1 argues `Void::Gap` has been absorbing cases that belong here:
+   there are 23 `Gap` uses against these first nine, and `Gap` means "a hole
+   in *our* coverage" where `Unnamed` means "no culture in this world can
+   name it." Some fraction of those 23 are likely miscategorised and belong
+   on this side of the ledger instead.
+
+Nine of 191 is where the reading starts, not where the fraction settles.
+
 **Stage 4 — the prose audit lint, in BOTH directions.** §3.1 establishes the
 leak has two signs and the campaign has chased one. The lint is therefore two
 default-deny rules, not one: **no prose in the content register**, and **no
