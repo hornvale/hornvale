@@ -53,18 +53,27 @@ pub enum GapReason {
     /// A gap rooted in perception — the concept's referent exists but the
     /// species' senses (or an acquisition ladder) haven't resolved it yet.
     Perceptual(String),
+    /// A gap rooted in the world rather than the culture — the referent is
+    /// real and objective, and no culture here has the concept to name it at
+    /// all (the registry records this as
+    /// `Correspondent::Absent(Void::Unnamed(..))`). Distinct from
+    /// [`GapReason::Experiential`], which says a particular culture never met
+    /// a referent others do name.
+    Unnameable(String),
 }
 
 impl std::fmt::Display for GapReason {
     /// The canonical recountable rendering of a gap's reason, tagged with
     /// its provenance kind: `gap (experiential): <text>` /
-    /// `gap (perceptual): <text>`. Every surface that recounts a gap (the
-    /// tongue realizer's [`crate::grammar::TongueGap`]; the CLI's
-    /// dictionary dump) should render through this, never `{:?}`.
+    /// `gap (perceptual): <text>` / `gap (unnameable): <text>`. Every surface
+    /// that recounts a gap (the tongue realizer's
+    /// [`crate::grammar::TongueGap`]; the CLI's dictionary dump) should
+    /// render through this, never `{:?}`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GapReason::Experiential(text) => write!(f, "gap (experiential): {text}"),
             GapReason::Perceptual(text) => write!(f, "gap (perceptual): {text}"),
+            GapReason::Unnameable(text) => write!(f, "gap (unnameable): {text}"),
         }
     }
 }
@@ -282,10 +291,25 @@ pub fn build_lexicon(
     // Steeped/KnowsOf/Unknown alike, so a Steeped concept reserves the same
     // distinct proto-root regardless of which other concepts a given world
     // exposed — keeping the assignment world-independent and cognate-safe.
+    // EXCEPT a concept gapped `Unnameable`: the referent is real but no
+    // culture here has the concept to name at all, so no proto-root is
+    // reserved for it — a reconstructed ancestor must not be handed a word
+    // for something none of its daughters could ever have spoken of.
     // `daughters` (the family's members, supplied by the composition root) make
     // the assignment merger-aware (epoch root/v3): a core proto is chosen to
     // survive every daughter's cascade distinct, so core homophony is zero.
-    let universe: Vec<&str> = exposures.keys().map(String::as_str).collect();
+    let universe: Vec<&str> = exposures
+        .iter()
+        .filter(|(_, class)| {
+            !matches!(
+                class,
+                ExposureClass::Unknown {
+                    reason: GapReason::Unnameable(_)
+                }
+            )
+        })
+        .map(|(concept, _)| concept.as_str())
+        .collect();
     let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe, daughters);
 
     // Pass 1: roots for every Steeped concept — pass 2's compounds need these
@@ -777,5 +801,79 @@ mod tests {
             sea_last.starts_with(&many_last) && sea_last.ends_with(&water_last),
             "HeadLast: {sea_last:?} should start with modifier {many_last:?} and end with head {water_last:?}"
         );
+    }
+
+    /// A gap whose provenance is "no one here can name this" renders as its own
+    /// kind, distinct from a gap of lived experience. `gap (experiential)` says
+    /// the culture never met the referent; `gap (unnameable)` says the referent
+    /// is beyond anyone's vocabulary here, which is a different claim.
+    #[test]
+    fn an_unnameable_gap_renders_as_its_own_provenance() {
+        let reason =
+            GapReason::Unnameable("no culture here has encountered the main sequence".to_string());
+        assert_eq!(
+            reason.to_string(),
+            "gap (unnameable): no culture here has encountered the main sequence"
+        );
+    }
+
+    /// The invariant this task exists for: a concept gapped `Unnameable`
+    /// reserves no family-level proto-root at all — `build_lexicon`'s
+    /// internal assignment must be indistinguishable from one computed over
+    /// a universe that never mentioned the concept. Without the exclusion,
+    /// the reconstructed ancestor would hand every daughter a word for a
+    /// referent none of them can name.
+    #[test]
+    fn unnameable_concepts_reserve_no_proto_root() {
+        let ph = test_phonology();
+        let mut exposures = one_steeped("water");
+        exposures.insert(
+            "yellow-dwarf".to_string(),
+            ExposureClass::Unknown {
+                reason: GapReason::Unnameable(
+                    "no culture here has encountered the main sequence".to_string(),
+                ),
+            },
+        );
+
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        match lex.entry("yellow-dwarf").unwrap() {
+            LexEntry::Gap { reason } => assert_eq!(
+                reason.to_string(),
+                "gap (unnameable): no culture here has encountered the main sequence"
+            ),
+            other => panic!("yellow-dwarf should be a Gap, got {other:?}"),
+        }
+
+        // Compute the assignment over a universe that never mentions
+        // "yellow-dwarf" at all, and confirm build_lexicon's internal
+        // assignment agrees — proving the concept reserved no proto-root of
+        // its own that could perturb `water`'s.
+        let without_unnameable: Vec<&str> = exposures
+            .keys()
+            .filter(|k| k.as_str() != "yellow-dwarf")
+            .map(String::as_str)
+            .collect();
+        let assigned_without = assign_proto_roots(&Seed(1), "test", &ph, &without_unnameable, &[]);
+        assert!(!assigned_without.contains_key("yellow-dwarf"));
+        let expected_water = evolve(
+            &assigned_without["water"],
+            &draw_cascade(&Seed(1), "test"),
+            &ph,
+        )
+        .modern;
+        match lex.entry("water").unwrap() {
+            LexEntry::Root { derivation, .. } => assert_eq!(derivation.modern, expected_water),
+            other => panic!("water should be a Root, got {other:?}"),
+        }
     }
 }

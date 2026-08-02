@@ -5069,6 +5069,7 @@ fn exposure_sound_against(
                 let text = match reason {
                     GapReason::Experiential(s) => s,
                     GapReason::Perceptual(s) => s,
+                    GapReason::Unnameable(s) => s,
                 };
                 if text.is_empty() {
                     sound = false;

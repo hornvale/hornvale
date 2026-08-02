@@ -18,9 +18,10 @@ use hornvale_climate::{
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
-    ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
-    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, Visibility, World, WorldContext, WorldTime, observe,
+    ConceptRegistry, Correspondent, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId,
+    LedgerError, ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
+    RegistryError, Seed, Temperature, Value, Visibility, Void, World, WorldContext, WorldTime,
+    observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{
@@ -4025,7 +4026,12 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   `<biome>`"); every remaining leftover concept (an unplaced species'
 ///   living-kind, or a social/geographic concept the species hasn't
 ///   settled to reach) gets a generic but still recountable
-///   `GapReason::Experiential`.
+///   `GapReason::Experiential` — UNLESS the registry itself records the
+///   concept's lexeme edge as `Correspondent::Absent(Void::Unnamed(text))`
+///   (spec: The Correspondence), in which case the gap is `GapReason::
+///   Unnameable(text)`: not "this culture never met it" but "no culture
+///   here could ever name it", a claim about the world rather than the
+///   species.
 ///
 /// Takes ALREADY-BUILT terrain and climate instead of re-sculpting them.
 /// Threaded down the `lexicon_from` chain so the census's ~14 lexicon
@@ -4329,13 +4335,22 @@ fn exposure_of_impl(
         }
     }
 
-    // Unknown: every remaining registered concept.
+    // Unknown: every remaining registered concept — Experiential, UNLESS the
+    // registry itself already records the concept as objectively unnameable
+    // (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence).
+    // That is a claim about the WORLD ("no culture here has this concept at
+    // all"), not about this species' particular experience, so it must not
+    // be overwritten by the generic experiential fallback.
     for concept in world.registry.concepts() {
-        classes
-            .entry(concept.name.clone())
-            .or_insert_with(|| ExposureClass::Unknown {
-                reason: GapReason::Experiential(experiential_reason(species, &concept.name)),
-            });
+        classes.entry(concept.name.clone()).or_insert_with(|| {
+            let reason = match world.registry.manifest(&concept.name).map(|m| &m.lexeme) {
+                Some(Correspondent::Absent(Void::Unnamed(text))) => {
+                    GapReason::Unnameable(text.to_string())
+                }
+                _ => GapReason::Experiential(experiential_reason(species, &concept.name)),
+            };
+            ExposureClass::Unknown { reason }
+        });
     }
 
     Ok(classes)

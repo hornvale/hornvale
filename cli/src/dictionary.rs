@@ -239,6 +239,7 @@ fn gap_text(reason: &GapReason) -> String {
     match reason {
         GapReason::Experiential(text) => format!("gap (experiential): {text}"),
         GapReason::Perceptual(text) => format!("gap (perceptual): {text}"),
+        GapReason::Unnameable(text) => format!("gap (unnameable): {text}"),
     }
 }
 
