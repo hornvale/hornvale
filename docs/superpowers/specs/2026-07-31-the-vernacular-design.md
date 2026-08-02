@@ -317,6 +317,14 @@ Register the missing concepts from §2. `region_word` and `describe`
 (`figures.rs`) are **branch C** and are conditional on §8 risk 2 — if the
 frame abstraction proves large they stay, and the campaign ships A/B/D.
 
+Since The Pigment (2026-08-02), the three colour-valued members of that
+deletion list — `daylight_words`, `twilight_words`, `class_color` — have a real
+destination rather than needing one invented: they collapse into
+`color_naming::name_color` under the star's own illuminant. See item 2's
+rescope below. The rest (`PHASE_WORDS`, the `count_word`s, `size_word`,
+`season_words`, `class_name`) still need concepts registered and rendering
+through `ClauseSpec`.
+
 *Scope added after part 1 shipped — five findings the G3 draft did not have:*
 
 1. **`star-class` is not deleted — it becomes the first honest use of
@@ -347,8 +355,52 @@ frame abstraction proves large they stay, and the campaign ships A/B/D.
    `daylight_words`/`twilight_words` branch on
    `class_name.contains("(K)")`. Lexicalizing the returned prose while leaving
    the dispatch standing would leave the trap fully armed — reword `star.rs`
-   and every K and F world silently falls to the G branch. Derive from
-   `star.mass`, which is committed and sitting unused.
+   and every K and F world silently falls to the G branch.
+
+   > **Rescoped 2026-08-02, after The Pigment merged.** This item said "derive
+   > from `star.mass`, which is committed and sitting unused." That is now the
+   > *weak* version of the fix. The Pigment shipped a spectral colour model —
+   > reflectance × illuminant × sensitivity over ten 40 nm bands, derived at the
+   > emit boundary, nothing committed — and with it:
+   >
+   > - `Star::t_eff` (`domains/astronomy/src/star.rs`), Planck-law effective
+   >   temperature derived from the mass the seed already fixed, carrying an
+   >   explicit containment rule: it feeds **colour and nothing else**, never
+   >   insolation, never climate.
+   > - `illuminant::daylight(&Star) -> Illuminant` and
+   >   `illuminant::at_elevation(&Illuminant, sun_elevation_deg)` — the star's
+   >   own light, and that light at any elevation, which is exactly the
+   >   noon/twilight distinction `daylight_words` and `twilight_words` were
+   >   hand-writing.
+   > - `hornvale_worldgen::color_naming::name_color(&Reflectance, &Illuminant,
+   >   &Observer, &speaker)` — naming a sample against remembered exemplars
+   >   under the light both share, gated by the speaker's Berlin & Kay depths
+   >   on **two** axes (luminance for `dark`/`light`, chromaticity for the five
+   >   hues).
+   >
+   > So the honest fix is no longer "swap a prose key for a numeric one." It is
+   > that **the sky's colour should be named, per culture, by the machinery that
+   > now exists** — the same machinery that makes goblins call an outcrop
+   > *yellow* and kobolds call it *red*. `daylight_words`/`twilight_words` and
+   > `neighborhood.rs`'s `class_color` all collapse into that path.
+   >
+   > This also makes §2's `class_color` row actionable rather than aspirational:
+   > it said colour "bypasses the Berlin & Kay ladders entirely," and there is
+   > now a ladder-gated namer to route it through.
+   >
+   > **And the two campaigns compose into the campaign's own thesis.** A star's
+   > *colour* is nameable per culture — different peoples say different words
+   > for the same light. A star's *class* is `Void::Unnamed` — nameable by
+   > nobody here. Same star, two registers, and the code can now express both.
+   > That is §3.1 demonstrated rather than argued, and it is the most
+   > interesting thing part 3 can ship.
+   >
+   > Note also that The Pigment independently found this campaign's §2
+   > `class_color` defect from the other side ("astronomy could tell you a star
+   > was amber, as a *word*, from a switch over a class enum … a machine for
+   > deciding what a people can say about colour, wired to nothing that produced
+   > any"). Two campaigns converging on one finding is evidence about the
+   > finding.
 3. **Instance disambiguation is a rendering concern, not a type change.**
    `Referent` does **not** gain an instance field (ledger #12, converged over
    two ideonomy passes). Two moons in one size class are distinguished by
