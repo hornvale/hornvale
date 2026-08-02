@@ -290,6 +290,7 @@
 - [The Waymark](./chronicle/the-waymark.md)
 - [The Repertoire](./chronicle/the-repertoire.md)
 - [The Scaffold](./chronicle/the-scaffold.md)
+- [The Vernacular](./chronicle/the-vernacular.md)
 
 # Appendix: The Frontier
 

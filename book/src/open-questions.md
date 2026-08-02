@@ -95,6 +95,17 @@ perceptual, and cognitive ledgers or record a typed void, so a drift-checked
 trial balance — not a reviewer's memory — reports what the world models but
 cannot yet name, perceive, or think.
 
+That instrument sat at zero for its whole life until
+[The Vernacular](./chronicle/the-vernacular.md) put the first entries in it: nine
+concepts declaring, in the registry rather than in a comment, that a star's
+spectral class is real and that no culture here can name it. The sharpening is
+worth the tier it sits at, because it is about the *instrument* and not the
+reading. A trial balance that can report a class and never has is not yet known
+to work — and this one, once exercised, immediately found that its own claim
+evaporated across a save boundary and that the language layer was minting words
+for concepts the registry had just declared unnameable. Confidence here rests on
+a ledger having been *made to answer*, not on its having been built.
+
 **The divergence method** — once the year-one research bet, now the project's
 own instrument of proof. Generate two worlds differing in a single pin, hold
 everything else, and measure whether the downstream culture differs *legibly*.

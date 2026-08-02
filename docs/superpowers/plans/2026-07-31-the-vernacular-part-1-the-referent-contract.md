@@ -1021,3 +1021,9 @@ wandering-star qualifier because it is a registered concept (a verb-ish pack
 entry). If it reads oddly in review, drop the qualifier rather than inventing
 a key — an unregistered qualifier fails
 `every_referent_key_is_registered` in Task 3, which is the intended behaviour.
+
+---
+
+**Status: COMPLETE.** All five tasks landed and reviewed; merged to main
+as part of The Vernacular parts 1–2. Readout in the spec's §7; process lessons
+in `docs/retrospectives/the-vernacular.md`.

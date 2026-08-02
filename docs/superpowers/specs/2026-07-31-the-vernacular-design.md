@@ -668,3 +668,17 @@ Full ledger: `.superpowers/sdd/decision-ledger.md` (6 entries).
   branch — no error, just wrong daylight and twilight text — even though the
   semantic input (`star.mass`) is sitting right there unused. Stage 3 must
   delete this substring dispatch, not merely lexicalize its output.
+
+---
+
+## Status
+
+**Parts 1–2 merged (2026-08-02).** Stages 1 and 2 shipped in part 1 (the
+referent contract); the first half of stage 3 item 1 shipped in part 2 (honest
+manifests). Chronicle: `book/src/chronicle/the-vernacular.md`. Retrospective:
+`docs/retrospectives/the-vernacular.md`.
+
+**Still owed, and specced above:** the rest of stage 3 (derive the renderings;
+the `star-class` value change, which moves committed facts and carries its own
+epoch measurement under decision 0084), stage 3.5's lab metric, stage 4's
+bidirectional lint, and stage 5. These are part 3 and beyond.

@@ -657,3 +657,10 @@ tells the implementer to grep first — `lexicon_of` was among the thirteen
 convenience readouts The Weir deleted, so it may not exist. The task says what
 to do if it does not, and forbids widening the public API without the
 controller.
+
+---
+
+**Status: COMPLETE.** All four tasks landed and reviewed; merged to main as
+part of The Vernacular parts 1–2. The first reading of the unnameable fraction
+is in the spec's stage 3.5; process lessons in
+`docs/retrospectives/the-vernacular.md`.
