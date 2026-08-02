@@ -2,7 +2,7 @@
 
 # Proto-goblinoid
 
-The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
+The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
 
 ## Inventory
 
@@ -44,7 +44,6 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `black-dragon-kind` | a black dragon | *Pope | /pope/ |
 | `blood` | the circulating fluid of a body | *No | /no/ |
 | `blue` | the color term for blue | *Toqoo | /toqoo/ |
-| `blue-giant` | a hot, brilliant, short-lived star | *Taodaa | /taodaa/ |
 | `bone` | the rigid frame of a body | *Ke | /ke/ |
 | `boreal-stand` | A stand of northern conifers. | *Qonao | /qonao/ |
 | `brown` | the color term for brown | *Pa | /pa/ |
@@ -141,8 +140,6 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `old-growth` | Mature forest, closed above and open beneath. | *Neneo | /neneo/ |
 | `one` | the cardinal number 1 | *Kaa | /kaa/ |
 | `open-blue` | Open sunlit water, far from any shore. | *Paqoo | /paqoo/ |
-| `orange-dwarf` | a cooler, dimmer main-sequence star | *Nado | /nado/ |
-| `orange-giant` | a cooling star swollen off the main sequence | *Nene | /nene/ |
 | `otyugh-kind` | an otyugh | *Neonoo | /neonoo/ |
 | `over` | above; atop | *Datee | /datee/ |
 | `owlbear-kind` | an owlbear | *Poko | /poko/ |
@@ -155,8 +152,6 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `rain` | liquid precipitation | *De | /de/ |
 | `red` | the color term for red | *Nee | /nee/ |
 | `red-dragon-kind` | a red dragon | *Noenea | /noenea/ |
-| `red-dwarf` | the commonest and faintest main-sequence star | *Poena | /poena/ |
-| `red-giant` | a cool, vast star late in its life | *Neqaa | /neqaa/ |
 | `reef-rubble` | Broken coral debris behind a reef. | *Naena | /naena/ |
 | `reef-shark-kind` | a reef shark | *Deopoe | /deopoe/ |
 | `reg` | A desert floor of wind-swept gravel. | *Neono | /neono/ |
@@ -189,7 +184,6 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `starlit` | dark faintly lit by stars | *Kee | /kee/ |
 | `stone` | rock | *Tee | /tee/ |
 | `sun` | the sun | *Toa | /toa/ |
-| `sun-like-star` | a distant star resembling this world's own sun | *Geaqaa | /geaqaa/ |
 | `taiga` | a biome class | *Naa | /naa/ |
 | `temperate-forest` | a biome class | *Nena | /nena/ |
 | `temperate-grassland` | a biome class | *Dano | /dano/ |
@@ -217,12 +211,9 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `water` | the drinkable liquid | *Doege | /doege/ |
 | `wheat` | a staple crop | *Netea | /netea/ |
 | `white-dragon-kind` | a white dragon | *Qo | /qo/ |
-| `white-dwarf` | the dense cinder a spent star leaves | *Taa | /taa/ |
 | `wind` | moving air | *Neqoo | /neqoo/ |
 | `wind-scour` | Ground swept bare by wind. | *Poa | /poa/ |
 | `wooded-grassland` | Grassland with scattered trees. | *Neekae | /neekae/ |
 | `woolly-mammoth-kind` | a woolly mammoth | *Qae | /qae/ |
 | `xorn-kind` | a xorn | *Notee | /notee/ |
 | `yellow` | the color term for yellow | *Qaene | /qaene/ |
-| `yellow-dwarf` | a main-sequence star of the sun's own kind | *Nedea | /nedea/ |
-| `yellow-white-dwarf` | a hotter, brighter main-sequence star | *Koago | /koago/ |

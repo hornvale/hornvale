@@ -9,7 +9,7 @@
 //! nativizes these very roots.
 #![warn(missing_docs)]
 
-use hornvale_kernel::{Seed, World};
+use hornvale_kernel::{Correspondent, Seed, Void, World};
 use hornvale_language::{Manner, Segment, assign_proto_roots, ipa, render_views, romanize};
 use hornvale_worldgen as world_builder;
 
@@ -48,7 +48,12 @@ pub fn render_proto() -> Result<String, String> {
          (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two \
          core concepts collide even after a daughter's cascade), \
          independent of any daughter's actual exposure — the ancestral vocabulary exists \
-         whether or not a given daughter still holds it as a root today. The \
+         whether or not a given daughter still holds it as a root today. **Excepted:** a \
+         concept the registry itself records as objectively unnameable \
+         (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no \
+         proto-root at all and is omitted from this table entirely — the ancestor cannot have \
+         spoken of a referent no culture here has ever had the concept to name (see \
+         `hornvale_language::GapReason::Unnameable`). The \
          [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each \
          daughter's own sound-change cascade nativizing these same roots into its modern \
          reflex.\n\n"
@@ -83,7 +88,19 @@ pub fn render_proto() -> Result<String, String> {
 
     doc.push_str("## Proto-root table\n\n");
     doc.push_str("| Concept | Gloss | Proto | IPA |\n|---|---|---|---|\n");
-    let universe: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
+    // Exclude any concept the registry itself records as objectively
+    // unnameable (`Correspondent::Absent(Void::Unnamed(..))`) from the
+    // proto-root universe entirely — read from the registry, never
+    // hardcoded by name, the same exclusion
+    // `windows/worldgen`'s exposure classifier applies via
+    // `GapReason::Unnameable`. Otherwise this page would keep asserting the
+    // ancestor had a word for a referent no culture here can name at all.
+    let universe: Vec<&str> = world
+        .registry
+        .concepts()
+        .map(|c| c.name.as_str())
+        .filter(|name| !is_unnameable(&world, name))
+        .collect();
     // The merger-aware assignment (epoch root/v3): the same daughters the
     // composition root feeds `build_lexicon`, so this page's proto-roots are
     // exactly the ones the dictionary's modern forms descend from.
@@ -91,6 +108,9 @@ pub fn render_proto() -> Result<String, String> {
     let daughters = world_builder::family_daughters(&world, &wc, FAMILY);
     let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &daughters);
     for concept in world.registry.concepts() {
+        if is_unnameable(&world, &concept.name) {
+            continue;
+        }
         let proto = &assignment[&concept.name];
         let views = render_views(proto);
         doc.push_str(&format!(
@@ -100,6 +120,19 @@ pub fn render_proto() -> Result<String, String> {
     }
 
     Ok(doc)
+}
+
+/// True when `world`'s registry records `concept`'s lexeme edge as
+/// `Correspondent::Absent(Void::Unnamed(..))` — a referent real in the world
+/// that no culture here has any concept to name at all, so no proto-root may
+/// be reserved for it. Read straight from the registry; never a hardcoded
+/// concept-name list, so a future `Void::Unnamed` registration is excluded
+/// automatically.
+fn is_unnameable(world: &World, concept: &str) -> bool {
+    matches!(
+        world.registry.manifest(concept).map(|m| &m.lexeme),
+        Some(Correspondent::Absent(Void::Unnamed(_)))
+    )
 }
 
 /// A segment's raw structural feature-bundle, compactly rendered — mirrors
