@@ -160,3 +160,47 @@ pub struct NamePattern {
     /// The elements this culture's names carry, in order.
     pub elements: Vec<(ElementSource, Author)>,
 }
+
+/// A name whose elements have been resolved to actual words by the
+/// composition root — the form this module can render.
+///
+/// The schema above says what a name is *made of*; this says what it *reads
+/// as*. Kept separate because resolving `Cite::Parent` to a word requires
+/// walking the descent graph, which is a composition-root concern.
+/// type-audit: bare-ok(identifier-text: parts)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rendered {
+    /// The rendered words, in the culture's own order.
+    pub parts: Vec<String>,
+}
+
+/// Render `name` as the shortest element prefix that distinguishes it from
+/// every name in `competitors`.
+///
+/// This is decision 0024 — "uniqueness is a property of a reference, not of
+/// a name" — generalized off settlements. Personal names collide far harder
+/// than toponyms and *should*: Earth's commonest given name is borne by tens
+/// of millions. Name length is therefore **computed at the point of
+/// utterance**, never authored into the name. The structure is git's
+/// shortest-unique-SHA prefix, DNS search-domain suffixing, and *E. coli*
+/// after the first *Escherichia coli*.
+///
+/// `competitors` is the scope: pass the household to be addressed by a given
+/// name, the settlement to be addressed by given-plus-byname, the region for
+/// the full stack. A competitor identical to `name` cannot be
+/// distinguished from it at any length, so the full stack is returned and
+/// the ambiguity is left standing rather than papered over with invented
+/// entropy — the same choice 0024 made for settlements.
+/// type-audit: bare-ok(prose: return)
+pub fn render(name: &Rendered, competitors: &[Rendered]) -> String {
+    for take in 1..=name.parts.len() {
+        let prefix = &name.parts[..take];
+        let ambiguous = competitors
+            .iter()
+            .any(|c| c.parts.len() >= take && &c.parts[..take] == prefix);
+        if !ambiguous {
+            return prefix.join(" ");
+        }
+    }
+    name.parts.join(" ")
+}
