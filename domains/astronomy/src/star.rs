@@ -2,7 +2,7 @@
 //! (model card: L = M^3.5; habitable zone 0.95√L–1.37√L AU).
 
 use crate::streams;
-use crate::units::{Au, Gyr, HabitableZone, SolarLuminosities, SolarMasses};
+use crate::units::{Au, Gyr, HabitableZone, Kelvin, SolarLuminosities, SolarMasses};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
@@ -24,6 +24,13 @@ pub struct Star {
     /// those stay exactly `M^3.5`-derived so age can never move a world's
     /// insolation, orbit admission, or climate.
     pub age: Gyr,
+    /// Effective surface temperature in kelvin (derived from `mass`, not
+    /// drawn — so it consumes no draw, adds no stream label, and owes no
+    /// epoch). **Does not feed `luminosity`, `habitable_zone`, insolation,
+    /// orbit admission, or climate** — the same containment rule `age`
+    /// carries. It exists so the star's light has a spectrum; nothing
+    /// physical downstream may consult it.
+    pub t_eff: Kelvin,
 }
 
 /// The main-sequence bound on a drawn age. **Not 13.8 Gyr**: this is a bound,
@@ -39,6 +46,20 @@ pub const T_MAX: Gyr = Gyr(15.0);
 /// exists exactly once.
 fn t_ms_of_mass(mass: f64) -> f64 {
     10.0 * math::powf(mass, -2.5)
+}
+
+/// Effective temperature from mass, on the raw mass value.
+///
+/// The repo already fixes both relations this needs: `L = M^3.5`
+/// (`generate_star`) and `R = M^0.8` ([`sun_angular_diameter_rel`]'s declared
+/// approximation). Stefan–Boltzmann gives `L = 4πR²σT⁴`, so
+/// `T⁴ ∝ L/R² = M^3.5 / M^1.6 = M^1.9`, hence `T ∝ M^0.475`. Calibrated on
+/// Sol at 5772 K.
+///
+/// Declared approximation, not a stellar-structure model — the same standing
+/// [`main_sequence_lifetime`] has.
+fn t_eff_of_mass(mass: f64) -> f64 {
+    5772.0 * math::powf(mass, 0.475)
 }
 
 /// Main-sequence lifetime: t_MS = 10 Gyr · M^-2.5 (declared approximation —
@@ -83,6 +104,7 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
         habitable_zone: HabitableZone::new(Au(0.95 * sqrt_l), Au(1.37 * sqrt_l))
             .expect("0.95√L < 1.37√L for all L > 0"),
         age,
+        t_eff: Kelvin(t_eff_of_mass(mass.0)),
     }
 }
 
@@ -171,6 +193,7 @@ mod tests {
             habitable_zone: HabitableZone::new(Au::new(0.95).unwrap(), Au::new(1.37).unwrap())
                 .unwrap(),
             age: Gyr::new(4.5).unwrap(),
+            t_eff: Kelvin::new(5772.0).unwrap(),
         };
         assert!((sun_angular_diameter_rel(&sol, Au::new(1.0).unwrap()) - 1.0).abs() < 1e-12);
         // A heavier star seen from a wider orbit: θ = M^0.8 / a.
@@ -331,5 +354,82 @@ mod tests {
     #[test]
     fn age_is_deterministic() {
         assert_eq!(generate_star(Seed(42)).age, generate_star(Seed(42)).age);
+    }
+
+    #[test]
+    fn effective_temperature_spans_the_expected_range_across_the_mass_draw() {
+        // The mass draw is 0.6 + u*0.8, so 0.6..1.4 solar masses.
+        // T = 5772 * M^0.475 gives 4528.4 K at 0.6 and 6772.3 K at 1.4.
+        let cool = t_eff_of_mass(0.6);
+        let hot = t_eff_of_mass(1.4);
+        assert!((cool - 4528.4).abs() < 0.1, "cool end was {cool}");
+        assert!((hot - 6772.3).abs() < 0.1, "hot end was {hot}");
+    }
+
+    #[test]
+    fn a_solar_mass_star_is_solar_temperature() {
+        assert!((t_eff_of_mass(1.0) - 5772.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn the_derived_temperature_agrees_with_the_existing_class_name() {
+        // generate_star labels K below 0.8 solar masses, G below 1.05, F
+        // above. Published main-sequence boundaries are ~5300 K (K/G) and
+        // ~5900 K (G/F). If the derived temperature disagreed with the
+        // label the star already carries, the world would contradict
+        // itself in print.
+        let kg_boundary = t_eff_of_mass(0.8);
+        let gf_boundary = t_eff_of_mass(1.05);
+        assert!(
+            (5000.0..5400.0).contains(&kg_boundary),
+            "K/G boundary landed at {kg_boundary} K, outside the published band"
+        );
+        assert!(
+            (5800.0..6100.0).contains(&gf_boundary),
+            "G/F boundary landed at {gf_boundary} K, outside the published band"
+        );
+    }
+
+    /// The containment rule `age` already carries (see the doc comment on
+    /// [`Star::t_eff`]): `t_eff` must reach colour and nothing else. Asserted
+    /// by *perturbation*, not by re-deriving the same star twice — two
+    /// identical generations agree on every field whether or not `t_eff`
+    /// leaks, so that form of the test could never fail. Here the temperature
+    /// is forced to a wildly un-solar value and every physical consumer in
+    /// the crate must return exactly what it returned before.
+    #[test]
+    fn effective_temperature_is_contained_and_moves_nothing_else() {
+        use crate::pins::SkyPins;
+        use crate::units::StdDays;
+        let star = generate_star(Seed(42));
+        assert_eq!(star.t_eff, generate_star(Seed(42)).t_eff);
+
+        let anchor = crate::anchor::generate_anchor(Seed(42), &star, &SkyPins::default()).unwrap();
+        let mut hot = star.clone();
+        hot.t_eff = Kelvin(30_000.0);
+
+        assert_eq!(hot.luminosity, star.luminosity);
+        assert_eq!(hot.habitable_zone.inner(), star.habitable_zone.inner());
+        assert_eq!(hot.habitable_zone.outer(), star.habitable_zone.outer());
+        assert_eq!(hot.age, star.age);
+        assert_eq!(main_sequence_lifetime(&hot), main_sequence_lifetime(&star));
+        assert_eq!(planet_age(&hot), planet_age(&star));
+        assert_eq!(brightening_per_gyr(&hot), brightening_per_gyr(&star));
+        assert_eq!(
+            insolation_rel(&hot, &anchor),
+            insolation_rel(&star, &anchor)
+        );
+        assert_eq!(
+            insolation_rel_at(&hot, &anchor, StdDays(GYR_DAYS)),
+            insolation_rel_at(&star, &anchor, StdDays(GYR_DAYS))
+        );
+        assert_eq!(
+            luminosity_at(&hot, StdDays(GYR_DAYS)),
+            luminosity_at(&star, StdDays(GYR_DAYS))
+        );
+        assert_eq!(
+            sun_angular_diameter_rel(&hot, Au(1.0)),
+            sun_angular_diameter_rel(&star, Au(1.0))
+        );
     }
 }

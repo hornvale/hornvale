@@ -388,7 +388,7 @@ fn the_high_god_takes_the_day_where_compatible() {
     // high-god belief at all (society.strata never clears RANKED_STRATA)
     // — delta d's preference is inert for this culture, and the doctrine's
     // day binding falls straight through to folk's OWN period-match rule.
-    // That rule finds the SAME belief (Voovo, period 1.55 std days,
+    // That rule finds the SAME belief (Vooboo, period 1.55 std days,
     // matching the world's committed day-length-std, 1.5507196, within the
     // 1% tolerance) folk's own cyclic_beliefs_from would also find — even
     // though folk's OWN measured schema draw for this fact (PathJourney)
@@ -422,15 +422,14 @@ fn the_high_god_takes_the_day_where_compatible() {
             schema: SchemaId::Agentive,
             // The Wearing (this merge): Wowako -> Kaavoa, the same
             // lexicon re-draw. The rebase onto The Toponym's cohort
-            // ordering re-draws it once more: Kaavoa -> Voovoo. At both
-            // steps the belief, its period and the day-match are
-            // unchanged, and `underlying`, `schema`, `lexeme` and
-            // `manner` compare byte-identical — only `agent` moved.
-            //
-            // The Watershed (Item 0): sonority takes it to Voovo, a
-            // one-segment shortening from collapsing equal-sonority
-            // neighbours. Same invariants hold a third time.
-            agent: Some("Voovo".to_string()),
+            // ordering re-draws it once more: Kaavoa -> Voovoo. The
+            // Witness, Task 8b (this commit): the phonology-hosting gate
+            // in `draw_rule` reseeds every cascade again, re-drawing this
+            // name once more: Voovoo -> Vooboo. At every step the belief,
+            // its period and the day-match are unchanged, and
+            // `underlying`, `schema`, `lexeme` and `manner` compare
+            // byte-identical — only `agent` moved.
+            agent: Some("Vooboo".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Brisk,
         }
@@ -446,7 +445,7 @@ fn the_high_god_takes_the_day_where_compatible() {
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
         .expect("a day-matched cyclic belief must exist at seed 1 goblin");
     assert_eq!(
-        folk_bound.0.deity, "Voovo",
+        folk_bound.0.deity, "Vooboo",
         "doctrine's binding must be the SAME belief folk's own period-match rule finds"
     );
 }

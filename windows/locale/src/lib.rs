@@ -179,6 +179,24 @@ pub struct LocaleContext {
     budget: StrangenessBudget,
 }
 
+/// The corner cell a room's *categorical* readings come from: the greatest
+/// blend weight, tie-broken to the lowest `CellId`.
+///
+/// One rule, one caller-visible consequence: every categorical field a room
+/// reports — biome, water kind, substrate, and (since The Pigment) the rock
+/// whose reflectance the colour layer reads — names the same cell. Splitting
+/// this would let a room be described as granite lowland and drawn in
+/// basalt grey.
+fn dominant_corner(weights: &[(CellId, u64); 3]) -> (CellId, u64) {
+    let mut best = weights[0];
+    for &cand in &weights[1..] {
+        if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
+            best = cand;
+        }
+    }
+    best
+}
+
 impl LocaleContext {
     /// Build the coarse world (climate + terrain + nearest-cell index) once.
     /// The sanctioned entry point for any caller that has not already
@@ -297,6 +315,34 @@ impl LocaleContext {
     /// (threaded for the P8 temporal-phase layer).
     pub fn describe(&self, addr: &RoomAddr, at: WorldTime) -> Result<Locale, LocaleError> {
         self.describe_at(addr, at, None)
+    }
+
+    /// The reflectance of the rock underfoot at `addr`.
+    ///
+    /// A pure re-projection of the material buffer the terrain provider
+    /// already holds — `material_at` and `rock_at` have been public all
+    /// along, so this is an accessor, not a new derivation, and it stores
+    /// nothing.
+    ///
+    /// The cell is the same *categorical* corner [`LocaleContext::describe`]
+    /// takes its biome and water kind from (max blend weight, tie-break
+    /// lowest `CellId` — the shared `dominant_corner`), never a blend of the
+    /// three: rock class is categorical, and averaging granite with basalt
+    /// would name a rock that is not there. Sharing that one rule is what
+    /// makes the colour and the prose agree about which ground a room
+    /// stands on.
+    pub fn reflectance_at(
+        &self,
+        addr: &RoomAddr,
+    ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights(geo, &self.index)
+            .ok_or(LocaleError::AboveGrid)?;
+        let cell = dominant_corner(&weights).0;
+        let buffer = self.terrain.material_at(cell);
+        let rock = self.terrain.rock_at(cell);
+        Ok(hornvale_terrain::lithology::reflectance(&buffer, rock).integrate())
     }
 
     /// The water column at a marine cell: every stratum from the sunlit water
@@ -449,12 +495,7 @@ impl LocaleContext {
 
         // Categorical biome: max weight, tie-break lowest CellId. Inherited,
         // never re-quantized (decision 0038).
-        let mut best = weights[0];
-        for &cand in &weights[1..] {
-            if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
-                best = cand;
-            }
-        }
+        let best = dominant_corner(&weights);
         let biome = match stratum {
             Some(st) => self.expr_at_stratum(best.0, st).biome(),
             None => self.climate.biome_at(best.0),

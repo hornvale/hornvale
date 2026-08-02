@@ -3284,20 +3284,38 @@ mod tests {
     /// unchanged. The pre-C7 bytes remain unreachable by construction —
     /// that is a consequence of the naming work, not a weakening of this
     /// test, which still asserts the clause SHAPE exactly.
+    ///
+    /// Re-pinned again at F7 (The Witness, 2026-07-30): gating `Tonogenesis`
+    /// on a prior merger reseeds every cascade, so `evolve`'s output moves
+    /// for every root — seed 2's goblin `Mepmee Gmaamea` -> `Mepmee Maa` and
+    /// kobold `Ngkooqngto Ngkaa` -> `Kooqngto Kaa`. Same story again: only
+    /// the drawn word forms moved.
+    ///
+    /// Re-pinned again at Task 8b (The Witness, same campaign): the
+    /// phonology-hosting gate in `draw_rule` reseeds every cascade once
+    /// more, so kobold's self-statement moves again: `Kooqngto Kaa` ->
+    /// `Nggooqngdo Nggaa`. Goblin's line is unaffected (goblin's roster was
+    /// already narrowed the same way by Task 7 alone, per the golden-fixture
+    /// diff this same commit re-pins). Same story once more: only the drawn
+    /// word forms moved.
+    ///
+    /// Re-pinned a further time absorbing The Watershed's sonority merge
+    /// (independently reseeding the same cascade roster): only the drawn
+    /// word forms moved again, re-derived from a live run.
     #[test]
     fn shallow_species_lines_are_byte_identical_to_c3() {
         let world = generated(2);
         let vol = render_volume(&world);
         assert!(
             vol.tongue_lines.contains(
-                &"Mepmee Gmaamea. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
+                &"Mepmee Maa. (in the goblin tongue: \"The Mepmee are goblins.\")".to_string()
             ),
             "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
             vol.tongue_lines
         );
         assert!(
             vol.tongue_lines.contains(
-                &"Dngooqtngo Tngaa. (in the kobold tongue: \"The Dngooqtngo are kobolds.\")"
+                &"Dngooqdngo Dngaa. (in the kobold tongue: \"The Dngooqdngo are kobolds.\")"
                     .to_string()
             ),
             "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
@@ -4050,9 +4068,9 @@ mod tests {
     /// `RevealedClaim` exoteric formula for the moons (folk capability loses
     /// `moon-count`, doctrine's boosted capability clears the threshold and
     /// keeps it) and a day explanation whose bound agent is the doctrine's
-    /// own measured deity, Kaavoa (folk's own day explanation is agentless
-    /// `PathJourney`, so this is genuinely a doctrine-only causal story, not
-    /// an echo of folk's).
+    /// own measured deity, Vooboo (re-pinned at Task 8b, The Witness; folk's
+    /// own day explanation is agentless `PathJourney`, so this is genuinely a
+    /// doctrine-only causal story, not an echo of folk's).
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
@@ -4095,8 +4113,8 @@ mod tests {
         assert!(
             doctrine
                 .emic
-                .contains(&"The day returns because Voovo strides the sky, briskly.".to_string()),
-            "the measured doctrine day explanation, agent Voovo: {:?}",
+                .contains(&"The day returns because Vooboo strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Vooboo: {:?}",
             doctrine.emic
         );
     }
@@ -4446,7 +4464,7 @@ mod tests {
             goblin.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
@@ -4472,7 +4490,7 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
@@ -4890,10 +4908,10 @@ mod tests {
                 "The Booxo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Kabjab, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kabjab numbers the darkenings: 6472.".to_string(),
+                "Among the Kabja, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kabja numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                "The Kabjab's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Kabja's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Woove, the sky has darkened, now and again.".to_string(),
@@ -4924,7 +4942,7 @@ mod tests {
                 "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Kabjab's priesthood taught the darkening would come on day \
+                "In truth, the Kabja's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Woove's priesthood taught the darkening would come on day \
@@ -4956,10 +4974,10 @@ mod tests {
                 "The Bobboo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Kloshjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Kloshjo numbers the darkenings: 81.".to_string(),
+                "Among the Loshjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Loshjo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Kloshjo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Loshjo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Mepmee, the sky has darkened, now and again.".to_string(),
@@ -4974,10 +4992,10 @@ mod tests {
                 "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Dngooqtngo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Dngooqtngo numbers the darkenings: 81.".to_string(),
+                "Among the Dngooqdngo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Dngooqdngo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Dngooqtngo's own priesthood taught wrongly, and could be shown wrong by \
+                "The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by \
                  any who kept their own count."
                     .to_string(),
             ]
@@ -4988,7 +5006,7 @@ mod tests {
                 "In truth, the Bobboo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Kloshjo's priesthood taught the darkening would come on day \
+                "In truth, the Loshjo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day \
@@ -4997,7 +5015,7 @@ mod tests {
                 "In truth, the Webwee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
-                "In truth, the Dngooqtngo's priesthood taught the darkening would come on day \
+                "In truth, the Dngooqdngo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
@@ -5008,6 +5026,28 @@ mod tests {
         // Ztashoeg, Sqaojxo); the lunar-witnessing group (bugbear/Tashoo,
         // gnoll/Jpajjpa, kobold/Sqaojxo) numbers 53, the solar-only pair
         // (goblin/Ztasoe, hobgoblin/Ztashoeg) 32.
+        //
+        // Re-pinned at F7 (The Witness, 2026-07-30): gating `Tonogenesis` on
+        // a prior merger reseeds every cascade — bugbear `Doozka` ->
+        // `Shdoozga`, gnoll `Jpojjpo` -> `Pojjpoj`, kobold `Jjojjjo` ->
+        // `Jojjjo`; goblin `Sdoozka` and hobgoblin `Shtoozka` happened to
+        // land unchanged. Same story: only drawn word forms moved, the day
+        // numbers and counts (53/32) are untouched.
+        //
+        // Re-pinned again at Task 8b (The Witness, same campaign): the
+        // phonology-hosting gate in `draw_rule` reseeds every cascade once
+        // more — bugbear `Shdoozga` -> `Doozka`, gnoll `Pojjpoj` ->
+        // `Jpojjpoj`, goblin `Sdoozka` -> `Xofozho`, hobgoblin `Shtoozka` ->
+        // `Toozka`, kobold `Jojjjo` -> `Jjojjjo`. Same story once more: only
+        // drawn word forms moved, the day numbers and counts (53/32) are
+        // untouched.
+        //
+        // Re-pinned a further time absorbing The Watershed's sonority merge
+        // (independently reseeding the same cascade roster) — gnoll
+        // `Jpojjpoj` -> `Pjojpjoj`, goblin `Xofozho` -> `Zhooqsa`, hobgoblin
+        // `Toozka` -> `Zhooqsha`; bugbear and kobold happened to land
+        // unchanged. Same story once more: only drawn word forms moved, the
+        // day numbers and counts (53/32) are untouched.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
@@ -5018,22 +5058,22 @@ mod tests {
                 "The Zooqsha's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Pjojpjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Pjojpjo numbers the darkenings: 53.".to_string(),
+                "Among the Pjojpjoj, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Pjojpjoj numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Pjojpjo's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Pjojpjoj's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Qzhooqsa, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Qzhooqsa numbers the darkenings: 32.".to_string(),
+                "Among the Zhooqsa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zhooqsa numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Qzhooqsa's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Zhooqsa's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Qzhooqsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Qzhooqsha numbers the darkenings: 32.".to_string(),
+                "Among the Zhooqsha, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Zhooqsha numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Qzhooqsha's own priesthood taught wrongly, and could be shown wrong by any \
+                "The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Jaojjao, the sky has darkened, now and again.".to_string(),
@@ -5052,13 +5092,13 @@ mod tests {
                 "In truth, the Zooqsha's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Pjojpjo's priesthood taught the darkening would come on day \
+                "In truth, the Pjojpjoj's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Qzhooqsa's priesthood taught the darkening would come on day \
+                "In truth, the Zhooqsa's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
-                "In truth, the Qzhooqsha's priesthood taught the darkening would come on day \
+                "In truth, the Zhooqsha's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Jaojjao's priesthood taught the darkening would come on day \
@@ -5124,7 +5164,7 @@ mod tests {
                 "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
-                "In truth, the Kabjab's priesthood taught the darkening would come on day \
+                "In truth, the Kabja's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Woove's priesthood taught the darkening would come on day \
@@ -5171,7 +5211,7 @@ mod tests {
                  lasts about 1.5 standard days."
                     .to_string(),
                 "The Booxo are bugbears.".to_string(),
-                "The Kabjab are gnolls.".to_string(),
+                "The Kabja are gnolls.".to_string(),
                 "The Woove are goblins.".to_string(),
                 "The Boove are hobgoblins.".to_string(),
                 "The Ngosho are kobolds.".to_string(),
@@ -5197,13 +5237,28 @@ mod tests {
                 // tongue-pairing. The additivity law this test exists for —
                 // C8 adds only `reckoning`, perturbing no pre-C8 register's
                 // SHAPE — is therefore intact.
+                //
+                // Re-pinned again at F7 (The Witness, 2026-07-30): gating
+                // `Tonogenesis` on a prior merger reseeds every cascade.
+                // Only the gnoll lines moved this time — the exonym `Kabjab`
+                // -> `Kabja` and the gnoll-tongue self-statement `Kabjab Paab
+                // Jaadjaakjood` -> `Kabja Paab Jaadjaajoo` (and its earth
+                // clause `Paobkaad` -> `Baogaa`); every other tongue's
+                // rendering happened to land unchanged. Same story: only
+                // drawn word forms moved, shape and gloss untouched.
+                //
+                // Re-pinned a further time absorbing The Watershed's
+                // sonority merge (independently reseeding the same cascade
+                // roster): the bugbear self-statement and the kobold earth
+                // clause both moved once more; every other tongue's
+                // rendering again happened to land unchanged.
                 "Xngatboa Booxo Bobao. (in the bugbear tongue: \"The Booxo are bugbears.\")"
                     .to_string(),
                 "Xngatboa Xoaboa Xoaboa. (in the bugbear tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
-                "Kabjab Paab Jaadjaakjood. (in the gnoll tongue: \"The Kabjab are gnolls.\")"
+                "Kabja Paab Jaadjaajoo. (in the gnoll tongue: \"The Kabja are gnolls.\")"
                     .to_string(),
-                "Xoaboa Paab Paobkaad. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Xoaboa Paab Paokaa. (in the gnoll tongue: \"Xoaboa is the earth.\")".to_string(),
                 "Sa Woowoo Woove. (in the goblin tongue: \"The Woove are goblins.\")".to_string(),
                 "Sa Weveawea Xoaboa. (in the goblin tongue: \"Xoaboa is the earth.\")".to_string(),
                 "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")"
@@ -5211,7 +5266,7 @@ mod tests {
                 "Xoaboa Veabea Boa Be. (in the hobgoblin tongue: \"Xoaboa is the earth.\")"
                     .to_string(),
                 "Ngosho Ngod Nga. (in the kobold tongue: \"The Ngosho are kobolds.\")".to_string(),
-                "Xoaboa Ngod Ngodngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
+                "Xoaboa Ngod Ngotngo. (in the kobold tongue: \"Xoaboa is the earth.\")".to_string(),
             ]
         );
         assert_eq!(
@@ -5234,7 +5289,7 @@ mod tests {
             goblin.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
@@ -5265,14 +5320,17 @@ mod tests {
             goblin_doctrine.emic,
             vec![
                 "The Booxo are bugbears — neighbors.".to_string(),
-                "The Kabjab are gnolls — neighbors.".to_string(),
+                "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
+                // Absorbing The Watershed's sonority merge alongside The
+                // Witness's Tonogenesis gating re-derives this agent name:
+                // `Wtoevvelqa` -> `Twoevave` (`Wt-` falls; `Tw-` rises).
                 "The moons cross because Twoevave strides the sky, slowly.".to_string(),
-                "The day returns because Voovo strides the sky, briskly.".to_string(),
+                "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );
         assert!(goblin_doctrine.annotations.is_empty());
@@ -5294,7 +5352,7 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
@@ -5324,21 +5382,35 @@ mod tests {
             hobgoblin_doctrine.emic,
             vec![
                 "The Booxo are bugbears — rivals.".to_string(),
-                "The Kabjab are gnolls — rivals.".to_string(),
+                "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Xoaboa is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
+                // Absorbing The Watershed's sonority merge alongside The
+                // Witness's Tonogenesis gating re-derives this agent name
+                // once more: `Dbemdden` -> `Daemdam` (equal-sonority
+                // neighbours collapse — the same mechanism, applied to a
+                // different form, that moved the goblin's day-deity in
+                // `goblin_doctrine.emic` above).
                 "The moons cross because Daemdam strides the sky, slowly.".to_string(),
-                // NOT the goblin's `Voovo` above. Before this rebase BOTH
-                // peoples' day-deities rendered `Kaavoa` — two distinct
-                // beliefs that happened to draw the same form — and the
-                // reseed separates them: goblin -> `Voovo`, hobgoblin ->
-                // `Vooboo`. A rename map built by token therefore CANNOT be
-                // inverted to prove this pair name-only; the collapse is
-                // invisible to the inversion and only this assertion caught
-                // it. Measured per-people off the rendered doctrine.
+                // Before The Toponym's rebase, BOTH peoples' day-deities
+                // rendered `Kaavoa` — two distinct beliefs that happened to
+                // draw the same form — and that reseed separated them:
+                // goblin -> `Voovoo`, hobgoblin -> `Vooboo`. Task 8b's
+                // phonology-hosting gate (The Witness, same campaign)
+                // reseeds every cascade once more and happens to RE-COLLAPSE
+                // them: goblin's day-deity now ALSO renders `Vooboo` (see
+                // this test's goblin_doctrine.emic block above), the exact
+                // same coincidental-collision shape the original comment
+                // warned about, just with a different string. They remain
+                // two distinct beliefs (different underlying entities,
+                // confirmed by re-running with each renamed independently);
+                // a rename map built by token therefore still CANNOT be
+                // inverted to prove this pair name-only. Measured per-people
+                // off the rendered doctrine. Absorbing The Watershed left
+                // this particular pin unchanged (`Vooboo` for both).
                 "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );

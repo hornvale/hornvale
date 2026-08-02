@@ -80,6 +80,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 
 pub mod alchemy;
 pub mod chorus;
+pub mod color_naming;
 pub mod components;
 pub mod graph_derive;
 pub mod history_bake;
@@ -3928,21 +3929,24 @@ fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> b
         && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a karst conduit with enough drainage to surface as
-/// flow rather than sit as a dry cave or sinkhole: `hydro_at` is `Karst`
-/// and `drainage_at` clears `RIVER_MIN_DRAINAGE` — "where an aquifer meets
-/// the surface with flow" read through the reachable half of the
-/// lithology model (`Hydro::Spring` is structurally unreachable on every
-/// seed; see `.superpowers/sdd/followups.md` F5). Disclosure: `classify`
-/// (`water.rs`) routes any non-sink land cell at this drainage to `River`
-/// regardless of lithology, so a Karst cell that clears the floor is almost
-/// always ALSO a `River` cell (measured at seed 42: 137 Karst cells clear
-/// it, 132 of those are `WaterKind::River`) — `spring` is `river`
-/// partitioned by rock type, not an independent signal. The single
-/// definition of "is this cell a spring," shared the same way.
+/// Whether `cell` reads directly as `Hydro::Spring` — "where an aquifer
+/// meets the surface with flow." Previously a Karst proxy (`hydro_at ==
+/// Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because `Hydro::Spring`
+/// was analytically unreachable under the original carbonate-scale gate
+/// (The Witness, F5). F5's own replacement gate was itself mismeasured — a
+/// threshold pinned to a level-4 sweep applied at the model's real level-6
+/// resolution made 69.64% of land Aquifer (The Witness, Task 5b) — and
+/// `Spring` was, at the time, still a still-vs-flowing split on `drainage`
+/// against a threshold land drainage never clears at production resolution.
+/// Both are fixed now: `hydrogeology` gates on a clastic-scale porosity
+/// threshold measured on the correct population, and `Spring` is no longer
+/// a drainage split at all — it is a geometric descending contact
+/// (`GeneratedTerrain::hydro_at` promotes an `Aquifer` cell with a lower
+/// non-`Aquifer` neighbour), so `spring` is the independent signal it was
+/// always meant to be rather than `river` partitioned by rock type. The
+/// single definition of "is this cell a spring," shared the same way.
 fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
-    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
-        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring
 }
 
 /// Whether `cell` sits on a real small landmass: a bounded flood-fill of
@@ -4317,10 +4321,8 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped: spring, a karst conduit with enough drainage to surface as
-    // flow. NOT `Hydro::Spring` (Task 4 review, Critical 1: structurally
-    // unreachable — see `.superpowers/sdd/followups.md` F5). Gate logic
-    // and the `spring ⊆ river` disclosure: [`is_spring_cell`].
+    // Steeped: spring, `Hydro::Spring` directly — reachable since The
+    // Witness's F5 repair. Gate logic: [`is_spring_cell`].
     for &cell in settled {
         if is_spring_cell(terrain, cell) {
             classes.insert("spring".to_string(), ExposureClass::Steeped);
@@ -4427,13 +4429,15 @@ pub fn family_daughters(
                 .biosphere
                 .get(kind)
                 .expect("every kind in family_of has a biosphere row (integrity-checked)");
+            let phonology = language_of_wc(world, wc, kind.0);
             hornvale_language::Daughter {
                 cascade: hornvale_language::draw_cascade_with_regime(
                     &world.seed,
                     kind.0,
                     cascade_regime_of(bio),
+                    &phonology,
                 ),
-                phonology: language_of_wc(world, wc, kind.0),
+                phonology,
             }
         })
         .collect()
@@ -4493,10 +4497,12 @@ pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cas
         .biosphere
         .get(&KindId(name))
         .expect("resolve_kind only returns kinds with a biosphere row (integrity-checked)");
+    let ph = language_of_wc(world, &wc, name);
     Ok(hornvale_language::draw_cascade_with_regime(
         &world.seed,
         name,
         cascade_regime_of(bio),
+        &ph,
     ))
 }
 

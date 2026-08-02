@@ -5,7 +5,8 @@
 use hornvale_kernel::Seed;
 use hornvale_language::{
     CascadeRegime, Envelope, ExoticSeg, ExposureClass, LexEntry, MorphOptions, NameCorpus,
-    NameKind, Namer, Phonology, SiteConcepts, build_lexicon, draw_phonology, render_views,
+    NameKind, Namer, Phonology, SiteConcepts, build_lexicon, draw_phonology, draw_wear_cascade,
+    evolve, render_views,
 };
 use std::collections::BTreeMap;
 
@@ -200,14 +201,63 @@ fn the_audibility_property_still_reds_under_erasure() {
 /// code with the rule it admits. This one was **not edited at all**. It
 /// widened implicitly, because its `worn_form` is
 /// `namer.wear(&derivation.modern, 1.0)` — production code, which now runs
-/// the reduction. So half of this test's acceptance set is computed by the
+/// the reduction. So most of this test's acceptance set is computed by the
 /// very machinery it checks, and it would not catch a reduction that was
 /// wrong in the same way on both sides. Recorded rather than repaired: the
-/// erasure it exists to catch is a *disagreement* between the name and both
-/// reflexes, and the disarming check confirms it still fires — it reds under
+/// erasure it exists to catch is a *disagreement* between the name and every
+/// reflex, and the disarming check confirms it still fires — it reds under
 /// a reduction mutation as well as under a containment-guard stub. The
 /// independent check on the reduction itself is the unworn sweep and the
 /// unit battery in `naming.rs`, not this one.
+///
+/// **The Witness (2026-07-30) widened the acceptance set from two to
+/// three.** `worn_compound`'s survival ladder (`naming.rs`) has a rung
+/// below the full `wear()` (cascade + positional reduction) that surrenders
+/// only the reduction and keeps the cascade-only sound change — the private
+/// `sounded()` — when the fully-reduced compound cannot be assembled and
+/// containment must fall back. That rung is not new: it shipped with the
+/// ladder. What is new is that a leading, unconditioned `Tonogenesis` used
+/// to be the identity on most cascades (F7), so most sound changes were
+/// near-inert and rung 0 (full wear) rarely failed containment for the
+/// 0..64 sweep below. Gating `Tonogenesis` on a prior merger makes more
+/// cascades do real work, so more of this sweep's compounds now fall to the
+/// cascade-only rung — seed 11 / salt 1 / Settlement is the first observed
+/// case (`water`'s reflex "seos", neither its citation "shseos" nor its
+/// fully-worn "ses"). `sounded_form` below reconstructs that rung's output
+/// from the two public functions it composes (`draw_wear_cascade` +
+/// `evolve`) at frequency 1.0, which the saturated corpus here always
+/// clears (`WEAR_FLOOR` is 0.25). This is not a weakened assertion — the
+/// erasure check is unchanged; it is a third genuinely producible surface
+/// form the check was never wide enough to admit.
+///
+/// **The Watershed independently widened the same acceptance set**, from
+/// the other direction: `final_nucleus_simplified` (defined above) admits
+/// the word-edge nuclear sandhi a compound's resyllabification can produce.
+/// Absorbing both campaigns' widenings together, this check now admits five
+/// forms — citation, worn, and cascade-only, each of the first two also
+/// under final-nucleus simplification — because both underlying causes
+/// (Tonogenesis's new merger gate, and cross-morpheme resyllabification)
+/// are real and coexist in the merged tree.
+///
+/// **The Witness (2026-08-01) fixed a latent proxy/predicate mismatch,
+/// exposed rather than caused by the merge above.** `worn_form` called the
+/// public [`Namer::wear`], which always reduces under
+/// `Prominence::None` — correct for a morpheme sitting inside a compound,
+/// where some other part carries the word's stress, but wrong for a
+/// one-morpheme name, where the morpheme IS the whole word and
+/// `worn_compound`'s rung 0 protects its first nucleus
+/// (`Prominence::InitialVowel`) instead. `Prominence` is private to
+/// `naming.rs`, so this test had no way to ask for that reflex and instead
+/// silently checked a shape production never promised for a solo-morpheme
+/// name. The combined Watershed + Witness reseed (Tonogenesis's merger gate
+/// widening which cascades do real work) was merely the first input to land
+/// a solo-morpheme name whose real, initial-vowel-protected reflex differs
+/// from both `citation` and `worn_form` — seed 1 salt 1 Settlement
+/// (`water` → "Faaffaf"), below. The fix is a `pub` seam,
+/// [`Namer::wear_as_whole_name`], that asks production directly instead of
+/// widening this test to guess more candidate shapes — see that method's
+/// doc for why. `stressed_form` reconstructs the sixth admissible form from
+/// it.
 #[test]
 fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut worn_names = 0usize;
@@ -260,6 +310,19 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                 if name.roman != plain.roman {
                     worn_names += 1;
                 }
+                // Whether this name has exactly one glossed concept — the
+                // same condition `worn_compound`'s rung 0 branches on
+                // (`chosen.len() > 1`, and every corpus frequency here is
+                // 1.0, above `WEAR_FLOOR`) to decide which `Prominence` a
+                // part reduces under. A solo-morpheme name IS the whole
+                // word, so its first nucleus is stressed and protected; a
+                // compound's non-initial-vowel-carrying members are not.
+                // Computing this once per name and asking production for
+                // the matching reflex is the fix (The Witness): the old
+                // `worn_form` always asked for the `Prominence::None`
+                // reflex, which is simply the wrong prediction for a
+                // solo-morpheme name.
+                let solo = gloss.split('-').filter(|c| !c.is_empty()).count() == 1;
                 for concept in gloss.split('-').filter(|c| !c.is_empty()) {
                     let citation = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
@@ -272,7 +335,23 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                     };
                     let worn_form = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
-                            render_views(&namer.wear(&derivation.modern, 1.0))
+                            let reflex = if solo {
+                                namer.wear_as_whole_name(&derivation.modern, 1.0)
+                            } else {
+                                namer.wear(&derivation.modern, 1.0)
+                            };
+                            render_views(&reflex).roman.to_lowercase()
+                        }
+                        _ => unreachable!("checked above"),
+                    };
+                    // The survival ladder's cascade-only rung (see the
+                    // module doc above): `sounded()` restated from its two
+                    // public building blocks, since the method itself is
+                    // private to `naming.rs`.
+                    let sounded_form = match lex.entry(concept) {
+                        Some(LexEntry::Root { derivation, .. }) => {
+                            let cascade = draw_wear_cascade(&Seed(seed), "swept", &ph);
+                            render_views(&evolve(&derivation.modern, &cascade, &ph).modern)
                                 .roman
                                 .to_lowercase()
                         }
@@ -283,13 +362,20 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
                     assert!(
                         surface.contains(&citation)
                             || surface.contains(&worn_form)
+                            || surface.contains(&sounded_form)
                             || surface.contains(&final_nucleus_simplified(&citation))
                             || surface.contains(&final_nucleus_simplified(&worn_form)),
                         "seed {seed} salt {salt} {kind:?}: name {:?} contains NEITHER \
-                         {concept}'s citation form {citation:?} nor its worn reflex \
-                         {worn_form:?} (nor either under final-nucleus simplification) \
-                         — the gloss names a morpheme the name does not say",
-                        name.roman
+                         {concept}'s citation form {citation:?}, its {} reflex \
+                         {worn_form:?}, nor its cascade-only reflex {sounded_form:?} (nor \
+                         either of the first two under final-nucleus simplification) — \
+                         the gloss names a morpheme the name does not say",
+                        name.roman,
+                        if solo {
+                            "solo-name, stress-protected"
+                        } else {
+                            "fully-worn"
+                        },
                     );
                 }
             }

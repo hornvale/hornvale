@@ -400,16 +400,23 @@ checks AS (
   -- F11 discharge re-pin, 2026-07-30 (rows.csv at 4cd19ff9): 43 -> 1. See the
   -- decision-0024 note at calibration.rs::name_collision_rate_is_measured_and_
   -- pinned: this rise is SANCTIONED and is not to be bought back with entropy.
+  -- The Witness (cascade/v2 epoch), 0063: 2 -> 3. Every cascade in every
+  -- world reseeded when `draw_rule` stopped offering rules the phonology
+  -- cannot host, so every generated name moved; one more world lands on a
+  -- zero collision rate and one fewer on a nonzero one. The absent count is
+  -- unmoved, and 2+768 = 3+767, so the partition is intact.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 2.0, collision_zero = 2 FROM agg
+         CAST(collision_zero AS DOUBLE), 3.0, collision_zero = 3 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
   -- The Tithe (tribute) re-pin, 0063: 731 -> 737.
   -- The Toponym (name-gloss epoch), 0063: 737 -> 727.
   -- F11 discharge re-pin, 2026-07-30: 727 -> 769; the absent set is unmoved.
+  -- The Witness (cascade/v2 epoch), 0063: 768 -> 767. The paired half of the
+  -- zero-collision row above; the absent set is unmoved.
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 768.0, collision_nonzero = 768 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 767.0, collision_nonzero = 767 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
@@ -428,8 +435,11 @@ checks AS (
   -- narrowed (mean name length fell sharply, below) while the roster of things
   -- to name kept growing. Sanctioned by decision 0024 — read it before
   -- treating this as something to fix.
+  -- The Witness (cascade/v2 epoch), 0063: 0.564_509_597_998_702 ->
+  -- 0.567_057_788_528_571. Same cascade reseed as the zero/nonzero pins
+  -- above.
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.564_509_597_998_702, abs(collision_mean - 0.564_509_597_998_702) < 1e-6 FROM agg
+         collision_mean, 0.567_057_788_528_571, abs(collision_mean - 0.567_057_788_528_571) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -444,8 +454,10 @@ checks AS (
   -- 13.665_297_457_235_99.
   -- F11 discharge re-pin, 2026-07-30: 13.665_297_457_235_99 ->
   -- 8.784_123_816_558_01. The present count holds at 767.
+  -- The Witness (cascade/v2 epoch), 0063: 8.784_123_816_558_01 ->
+  -- 8.639_595_029_986_95. Present count holds at 767.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 8.784_123_816_558_01, abs(goblin_len_mean - 8.784_123_816_558_01) < 1e-6 FROM agg
+         goblin_len_mean, 8.639_595_029_986_95, abs(goblin_len_mean - 8.639_595_029_986_95) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -461,8 +473,10 @@ checks AS (
   -- 15.548_879_020_789_471 (kobold again moves far more than goblin).
   -- F11 discharge re-pin, 2026-07-30: 15.548_879_020_789_471 ->
   -- 7.403_195_966_315_787. Kobold moves nearly twice as far as goblin again.
+  -- The Witness (cascade/v2 epoch), 0063: 7.403_195_966_315_787 ->
+  -- 7.228_477_004_342_105. Present count holds at 760.
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 7.403_195_966_315_787, abs(kobold_len_mean - 7.403_195_966_315_787) < 1e-6 FROM agg
+         kobold_len_mean, 7.228_477_004_342_105, abs(kobold_len_mean - 7.228_477_004_342_105) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -539,20 +553,29 @@ checks AS (
   UNION ALL
   -- Spec §8 criterion 2 asks for a mean syllable count in the 2-3 range; both
   -- species read inside it, which is the claim the Rust row carries.
+  -- The Witness (cascade/v2 epoch), 0063: 2.761_284_613_820_079 ->
+  -- 2.767_352_168_839_636. Still inside 2-3.
   SELECT 'mean goblin name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         goblin_syl_mean, 2.761_284_613_820_079, abs(goblin_syl_mean - 2.761_284_613_820_079) < 1e-6 FROM agg
+         goblin_syl_mean, 2.767_352_168_839_636, abs(goblin_syl_mean - 2.767_352_168_839_636) < 1e-6 FROM agg
   UNION ALL
   SELECT 'kobold name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
          CAST(kobold_syl_present AS DOUBLE), 760.0, kobold_syl_present = 760 FROM agg
   UNION ALL
+  -- The Witness (cascade/v2 epoch), 0063: 2.316_698_345_263_158 ->
+  -- 2.318_080_226_315_786_7. Still inside 2-3.
   SELECT 'mean kobold name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         kobold_syl_mean, 2.316_698_345_263_158, abs(kobold_syl_mean - 2.316_698_345_263_158) < 1e-6 FROM agg
+         kobold_syl_mean, 2.318_080_226_315_786_7, abs(kobold_syl_mean - 2.318_080_226_315_786_7) < 1e-6 FROM agg
   UNION ALL
   SELECT 'name-transparency present-row count (calibration.rs::name_transparency_is_measured_and_pinned)',
          CAST(transparency_present AS DOUBLE), 770.0, transparency_present = 770 FROM agg
   UNION ALL
+  -- The Witness (cascade/v2 epoch), 0063: 0.793_035_961_411_688_4 ->
+  -- 0.803_660_578_424_675. Transparency ROSE — the wear cascade now lands
+  -- real sound changes instead of spending rule slots on rules a species'
+  -- phonology could never fire, so more names still gloss to their source
+  -- concept. See the Rust row's own note for the fuller reading.
   SELECT 'mean name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_mean, 0.793_035_961_411_688_4, abs(transparency_mean - 0.793_035_961_411_688_4) < 1e-6 FROM agg
+         transparency_mean, 0.803_660_578_424_675, abs(transparency_mean - 0.803_660_578_424_675) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -651,9 +674,14 @@ checks AS (
   -- -0.066 was. (DuckDB's summation lands one ULP from the Rust row's
   -- -0.025_217_538_228_395_456; the 1e-6 tolerance is what makes the two
   -- independent computations comparable at all, and is unchanged.)
+  -- The Witness (cascade/v2 epoch), 0063: -0.025_217_538_228_395_456 ->
+  -- -0.012_055_568_856_886_177. The cascade reseed touches both the goblin
+  -- and its deliberately-identical twin alike; the residual moved roughly
+  -- HALFWAY toward zero, not away from it, so the null control reads more
+  -- true after this re-pin than before. No sign flip.
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.025_217_538_228_395_456,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.025_217_538_228_395_456) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.012_055_568_856_886_177,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.012_055_568_856_886_177) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

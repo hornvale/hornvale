@@ -4702,7 +4702,7 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
     // caller iterates the fixed ALL_DAUGHTERS = ["goblin", "hobgoblin",
     // "bugbear", "kobold"] constant. The default SETTLED regime is
     // therefore always the correct one here.
-    let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
+    let cascade = hornvale_language::draw_cascade(&v.world().seed, species, &ph);
     let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
@@ -4823,13 +4823,21 @@ fn lab_is_marsh_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId)
         && terrain.drainage_at(cell) >= LAB_MARSH_MIN_DRAINAGE
 }
 
-/// Whether `cell` is a karst conduit carrying enough flow to surface: karst
-/// lithology at or above the river drainage floor. (`Hydro::Spring` is
-/// structurally unreachable on every seed, so the reachable half of the
-/// lithology model is what both readings gate on.)
+/// Whether `cell` reads directly as `Hydro::Spring`. Previously a Karst
+/// proxy (`hydro_at == Karst && drainage_at >= RIVER_MIN_DRAINAGE`), because
+/// `Hydro::Spring` was analytically unreachable under the original
+/// carbonate-scale gate (The Witness, F5), and F5's own replacement gate was
+/// itself mismeasured — pinned to a level-4 sweep but applied at the
+/// model's real level-6 resolution, it made 69.64% of land Aquifer (The
+/// Witness, Task 5b). Both are fixed now: `hydrogeology` gates the clastic
+/// case on a porosity threshold measured on the correct population, and
+/// `Spring` is no longer a still-vs-flowing drainage split at all — it is a
+/// geometric descending contact (`GeneratedTerrain::hydro_at` promotes an
+/// `Aquifer` cell with a lower non-`Aquifer` neighbour) — independently
+/// restated here rather than calling `worldgen`'s `is_spring_cell` (the lab
+/// does not depend on worldgen's window-local predicates).
 fn lab_is_spring_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId) -> bool {
-    terrain.hydro_at(cell) == Hydro::Karst
-        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+    terrain.hydro_at(cell) == Hydro::Spring
 }
 
 /// Whether the contiguous non-ocean landmass under `cell` stays within
@@ -4857,6 +4865,26 @@ fn lab_is_island_cell(terrain: &hornvale_terrain::GeneratedTerrain, cell: CellId
     }
     true
 }
+
+/// The seven toponymic terrain gates (Task 4) and the concept each steeps
+/// when satisfied — declared once, here, so [`independently_steeped_concepts`]
+/// and [`steepable_concept_roster`] read the same table instead of each
+/// keeping its own copy of the concept names (The Witness, Task 3: a second
+/// copy of this list is exactly the drift F13 recurred on three times).
+const TOPONYMIC_GATES: [(&str, TerrainGate); 7] = [
+    ("river", lab_is_river_cell),
+    ("ford", lab_is_ford_cell),
+    ("hill", lab_is_hill_cell),
+    ("valley", lab_is_valley_cell),
+    ("marsh", lab_is_marsh_cell),
+    ("spring", lab_is_spring_cell),
+    ("island", lab_is_island_cell),
+];
+
+/// The four settlement/religion social concepts steeped unconditionally for
+/// any settled species, once the registry carries them — declared once for
+/// the same reason as [`TOPONYMIC_GATES`].
+const FIXED_STEEPED_CONCEPTS: [&str; 4] = ["home", "hearth", "god", "spirit"];
 
 /// The concepts an INDEPENDENT re-derivation of `species`' exposure would
 /// classify `Steeped` — duplicating `exposure_from`'s own Steeped rules
@@ -4932,17 +4960,20 @@ fn independently_steeped_concepts(
         }
     }
 
-    // The STAPLE of every settled cell (The Watershed), re-derived here the
-    // same way the biome and variant above are: independently of
-    // `exposure_of`, which is this function's whole reason for existing.
-    //
-    // Steeped only where the cell's subsistence is Farming. A people that
-    // fishes, herds or forages has met the plant and never named it as a
-    // staple -- an EXPERIENTIAL gap, not a perceptual one -- so the crop must
-    // NOT be steeped by merely growing where they live. Subsistence is read
-    // per cell, so a people farming one valley and fishing another is steeped
-    // in the valley's grain, and one Farming cell is enough: the rule never
-    // downgrades a crop another cell already steeped.
+    // Steeped: the STAPLE of every settled cell whose subsistence is
+    // Farming (The Watershed). Re-derived independently of `exposure_of`,
+    // which is the point of this function: worldgen reads
+    // `hornvale_culture::subsistence(biome_class(biome_at(cell)), coastal)`
+    // and gates on `Subsistence::Farming`; this reading calls the same
+    // public climate/culture functions (never `exposure_of` itself, and
+    // `hornvale_worldgen::biome_class` is a domain-agnostic biome→culture
+    // classifier already used elsewhere in this file, not an exposure
+    // predicate) to reach the same verdict. A crop known only through
+    // herding, fishing, or foraging is an experiential gap, not a
+    // perceptual one, and is deliberately never inserted here — the six
+    // staples (`hornvale_climate::Crop::catalog()`) are F13's third
+    // recurrence: `exposure-sound-{goblin,kobold}` read false on 767/759 of
+    // 1000 worlds because this loop did not exist.
     for &cell in &settled {
         let expr = v.climate().biome_expr_at(cell);
         let Some(crop) = hornvale_climate::crop_at(
@@ -4957,12 +4988,12 @@ fn independently_steeped_concepts(
             .geosphere()
             .neighbors(cell)
             .iter()
-            .any(|n| v.terrain().is_ocean(*n));
-        if hornvale_culture::subsistence(
+            .any(|&n| v.terrain().is_ocean(n));
+        let subsistence = hornvale_culture::subsistence(
             hornvale_worldgen::biome_class(v.climate().biome_at(cell)),
             coastal,
-        ) == hornvale_culture::Subsistence::Farming
-        {
+        );
+        if subsistence == hornvale_culture::Subsistence::Farming {
             steeped.insert(crop.concept_name().to_string());
         }
     }
@@ -4987,7 +5018,7 @@ fn independently_steeped_concepts(
                 steeped.insert(kind);
             }
         }
-        for concept in ["home", "hearth", "god", "spirit"] {
+        for concept in FIXED_STEEPED_CONCEPTS {
             if v.world().registry.concept(concept).is_some() {
                 steeped.insert(concept.to_string());
             }
@@ -5001,24 +5032,103 @@ fn independently_steeped_concepts(
     // would only invite one of them to drift out of the shape. `valley` is
     // in the table even though the census never saw it fire — a rule left
     // out because it is currently rare is a rule that goes stale silently
-    // the first time terrain moves.
+    // the first time terrain moves. The table itself lives at
+    // [`TOPONYMIC_GATES`] (module scope), shared with
+    // [`steepable_concept_roster`].
     let terrain = v.terrain();
-    let gates: [(&str, TerrainGate); 7] = [
-        ("river", lab_is_river_cell),
-        ("ford", lab_is_ford_cell),
-        ("hill", lab_is_hill_cell),
-        ("valley", lab_is_valley_cell),
-        ("marsh", lab_is_marsh_cell),
-        ("spring", lab_is_spring_cell),
-        ("island", lab_is_island_cell),
-    ];
-    for (concept, holds) in gates {
+    for (concept, holds) in TOPONYMIC_GATES {
         if settled.iter().any(|&cell| holds(terrain, cell)) {
             steeped.insert(concept.to_string());
         }
     }
 
     Some(steeped)
+}
+
+/// Every concept [`independently_steeped_concepts`] is CAPABLE of steeping,
+/// for some world and some species — the roster half of that function,
+/// exposed so `windows/lab/tests/roster_parity.rs` can check it against
+/// worldgen's own roster without importing either side's predicates.
+///
+/// **Roster parity, predicate independence** (The Witness, Task 3): this
+/// returns WHAT is considered, never HOW any of it is decided for a
+/// particular world. F13 recurred three times (The Wearing's toponymic
+/// concepts, The Toponym's variants, The Watershed's staples) because the
+/// independent reading's ROSTER silently lost entries while its PREDICATES
+/// stayed fine — this function exists so a test can catch the next one.
+///
+/// Built from exactly the same tables `independently_steeped_concepts`
+/// reads for its unconditional/static rules ([`TOPONYMIC_GATES`],
+/// [`FIXED_STEEPED_CONCEPTS`]) so there is only one copy of each list, plus
+/// the closed catalogs the *dynamic per-cell* rules draw their concept
+/// names from:
+///
+/// - `biome`/`variant`/`staple` are read per settled CELL (a species is
+///   steeped in whichever biome/variant/crop that cell's geography and
+///   climate actually produce), so no fixed cell-by-cell comparison is
+///   meaningful — a census sweep would only ever witness the biomes this
+///   run's seeds happen to generate. What IS meaningful, and what this
+///   returns, is the full closed catalog each rule draws from:
+///   [`hornvale_climate::biome::ALL`], [`hornvale_climate::Variant::catalog`],
+///   [`hornvale_climate::Crop::catalog`]. Parity here means "the lab knows
+///   every biome/variant/crop NAME that could ever appear," not "the lab
+///   saw the same biome as some particular cell."
+/// - `{species}-kind` is read per COEXISTING roster (a species is steeped in
+///   the kind-concept of every OTHER species that places a settlement in
+///   the same world, which varies seed to seed — see
+///   `windows/worldgen/tests/exposure.rs`'s `world()` doc comment for how
+///   much that placement moves). The closed universe this rule can ever
+///   draw from is not seed-dependent, though: it is the set of KINDS THAT
+///   SPEAK, fixed at composition root by
+///   [`hornvale_worldgen::WorldComponents::assemble`]'s `articulation`
+///   store (The Eremite: a family may hold a non-speaking minded kind, so
+///   articulation — not the full biosphere roster — is the right closed
+///   set). Enumerated here rather than hardcoded, so a sixth people joining
+///   the roster enrolls automatically.
+///
+/// The universal stratum and the ladder-gated color/body/kin packs are
+/// listed here UNCONDITIONALLY (every pack member, not only the ones a
+/// given species' perception ladder reaches) for the same reason: capacity
+/// to steep, not achievement for one species. Whether a given species
+/// actually reaches a given ladder rung is real per-species work done only
+/// in `independently_steeped_concepts`.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn steepable_concept_roster() -> std::collections::BTreeSet<String> {
+    let mut roster: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+
+    for entry in hornvale_language::universal_stratum()
+        .iter()
+        .chain(hornvale_language::color_pack())
+        .chain(hornvale_language::body_pack())
+        .chain(hornvale_language::kin_pack())
+    {
+        roster.insert(entry.concept.to_string());
+    }
+
+    for (concept, _) in TOPONYMIC_GATES {
+        roster.insert(concept.to_string());
+    }
+    for concept in FIXED_STEEPED_CONCEPTS {
+        roster.insert(concept.to_string());
+    }
+
+    for biome in hornvale_climate::biome::ALL {
+        roster.insert(biome.concept_name().to_string());
+    }
+    for variant in hornvale_climate::Variant::catalog() {
+        roster.insert(variant.concept_name().to_string());
+    }
+    for crop in hornvale_climate::Crop::catalog() {
+        roster.insert(crop.concept_name().to_string());
+    }
+
+    let wc = hornvale_worldgen::WorldComponents::assemble()
+        .expect("the shipped composition root always assembles");
+    for kind in wc.articulation.ids() {
+        roster.insert(format!("{}-kind", kind.0));
+    }
+
+    roster
 }
 
 /// Whether `species`' lexicon is exposure-sound (spec §9.2): no concept the
@@ -6291,6 +6401,16 @@ mod tests {
     /// 3.031_25 -> 2.466_666_666_666_667, kobold 2.241_379_310_344_827_6 ->
     /// 2.742_574_257_425_743.
     ///
+    /// The Witness, Task 5b re-measurement (2026-07-30): kobold moved again,
+    /// 2.742_574_257_425_743 (277/101) -> 2.752_475_247_524_752_3 (278/101)
+    /// — the same 101-settlement denominator, one more syllable across the
+    /// roster. `hydrogeology`'s clastic aquifer threshold moved from a
+    /// mismeasured `0.25` to the correctly-measured `0.46`, and `Spring`
+    /// stopped being a drainage split and became a geometric descending
+    /// contact — both reclassify which cells read `Aquifer`/`Spring`, which
+    /// moves settlement placement exactly the way the history-bake landing
+    /// did above. Goblin is untouched by this pass.
+    ///
     /// The claim above is re-checked, not assumed: both peoples still read
     /// inside the 2-3 target, which is the whole point of the row. They moved
     /// in OPPOSITE directions to get there — goblin down by 0.56, kobold up by
@@ -6298,6 +6418,16 @@ mod tests {
     /// and not a drift of the naming machinery in one direction. Goblin was
     /// outside the target on the high side before and is inside it now; kobold
     /// was inside and still is.
+    ///
+    /// Task 8b (The Witness, same campaign): the phonology-hosting gate in
+    /// `draw_rule` reseeds every cascade once more, so kobold moved a third
+    /// time, 2.752_475_247_524_752_3 (278/101) -> 2.663_366_336_633_663_5
+    /// (269/101) — the same 101-settlement denominator, one fewer syllable
+    /// across the roster this time (not monotone: F11 added a syllable, this
+    /// removes one, which is expected of a value-level cascade reseed rather
+    /// than a directional trend). Goblin is untouched (unaffected by this
+    /// change per the golden-fixture diff this same commit re-pins). Both
+    /// peoples still read inside the 2-3 target.
     #[test]
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -6311,9 +6441,15 @@ mod tests {
         // is untouched at 2.467 — its drawn templates were already in
         // sonority order, which is the expected shape of this change rather
         // than a surprise: SSP reorders only the templates that violate it.
+        //
+        // Absorbing The Witness's Task 8b phonology-hosting gate alongside
+        // The Watershed's sonority merge reseeds the cascade a further time:
+        // 2.663_366_336_633_663_5 (269/101) -> 2.584_158_415_841_584_2
+        // (261/101) — same 101-settlement denominator, eight fewer syllables
+        // across the roster. Goblin is untouched.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.603_960_396_039_604)
+            MetricValue::Number(2.584_158_415_841_584_2)
         );
     }
 
@@ -6343,17 +6479,48 @@ mod tests {
         // then, which is the same near-doubling of the surviving roster The
         // Tithe recorded (seed 42: 203 -> 329 live settlements).
         //
+        // The Witness, Task 5b re-measurement (2026-07-30): 202/329 ->
+        // 207/329 — the denominator (329 glossed names) is unchanged, so
+        // this is NOT another placement-count shift; five more of the same
+        // 329 names now carry a transparent gloss. `hydrogeology`'s clastic
+        // aquifer threshold moved from a mismeasured `0.25` to the
+        // correctly-measured `0.46`, and `Spring` became a geometric
+        // descending contact rather than a drainage split — both
+        // reclassify which cells read `Aquifer`/`Spring`/`Aquitard`/`Runoff`,
+        // which is exactly the exposure vocabulary transparency's gloss
+        // check reads against.
+        //
+        // The Witness, Task 7 re-measurement (2026-07-30, F7): 207/329 ->
+        // 188/329 — the denominator is still unchanged (no placement moved),
+        // but the numerator dropped: gating `Tonogenesis` on a prior merger
+        // reseeds every cascade, so `evolve`'s output moves for essentially
+        // every root, and `namer.wear`'s cascade limb draws different rules
+        // too. Some names that used to contain an audible reflex of their
+        // glossed concept no longer do under the new draws (and vice versa,
+        // net down 19). This is the same wear-audibility surface
+        // `speakable_properties.rs` measures; it is expected to move on any
+        // cascade-affecting change and is not itself evidence of a defect.
+        //
+        // The Witness, Task 8b re-measurement (2026-07-30/31): 188/329 ->
+        // 149/329 — the denominator is still unchanged (no placement moved),
+        // and the numerator dropped again: the phonology-hosting gate in
+        // `draw_rule` reseeds every cascade once more (removing the dead
+        // Tonogenesis/VowelShift roster slots for every atonal/narrow-vowel
+        // species), so `evolve`'s output and `namer.wear`'s cascade limb both
+        // move again. Same story as F7: expected on any cascade-affecting
+        // change, not itself evidence of a defect.
+        //
         // What the row exists to assert is untouched and is re-checked above
         // rather than assumed: transparency is strictly between 0 and 1, so it
         // is still a DISTRIBUTION and neither degenerate answer has crept back.
-        // 216 of 329 glossed settlement names. 202 before The Watershed;
-        // 209 after Item 0's sonority merge (legal clusters let a morpheme
-        // survive repair intact, so the gloss stays audible in it); 216 after
-        // Item 5 adds the predecessor people, which contributes a concept that
-        // is itself a registered word rather than an opaque one. Both steps
-        // moved this metric FAVOURABLY on its own terms, which is why it is
-        // tracked here rather than merely re-pinned.
-        assert_eq!(share, 216.0 / 329.0, "seed 42 transparency drifted");
+        // 149 of 329 glossed settlement names.
+        //
+        // Absorbing The Watershed's sonority merge alongside The Witness's
+        // Task 8b gate re-measures once more: 149/329 -> 144/329 — same
+        // denominator, five fewer names carry a transparent gloss under the
+        // combined reseed. Same story: expected on any cascade-affecting
+        // change, not itself evidence of a defect.
+        assert_eq!(share, 144.0 / 329.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -6794,7 +6961,7 @@ mod tests {
     /// The property under test is "no lexicon `Root` stands at a concept
     /// the INDEPENDENT exposure reading does not steep." Seed 7's goblins
     /// root five of the seven toponymic concepts Task 4 added — `river`,
-    /// `ford`, `hill`, `valley`, `spring` — so this seed exercises the
+    /// `ford`, `hill`, `marsh`, `spring` — so this seed exercises the
     /// elevation gates and the karst gate, not just the river one every
     /// seed hits.
     ///
@@ -6805,32 +6972,30 @@ mod tests {
     /// worlds. The stripped set below reconstructs that state exactly, and
     /// the flag must flip.
     ///
-    /// # Why this is ignored (F11 discharge, 2026-07-30)
+    /// # Re-enabled (The Witness, Task 3 Step 4b, 2026-07-30)
     ///
-    /// Two things moved under it, and only one of them is a number.
+    /// This test was `#[ignore]`d (F11 discharge, 2026-07-30) for two
+    /// reasons, and the doc comment at that ignore said it plainly: "It
+    /// comes back with the staple repair, and both halves must be
+    /// re-derived then." The Witness's Task 2 *is* that staple repair
+    /// (`independently_steeped_concepts` learned The Watershed's six
+    /// staples), so both halves are re-derived here:
     ///
-    /// The small one: seed 7's goblins now root `river`, `ford`, `hill`,
-    /// `marsh`, `spring` — `marsh` where `valley` used to be — because
-    /// `main`'s history bake re-decides settlement placement. Still five of
-    /// the seven toponymic concepts, still the elevation and karst gates and
-    /// not just the river one, so the seed is as good a witness as it was.
-    /// That alone would be a one-line re-derivation.
-    ///
-    /// The blocking one: this test asserts `exposure_sound(&view, "goblin") ==
-    /// Flag(true)` BEFORE it mutates anything, and that baseline is now false
-    /// — `independently_steeped_concepts` has not learned The Watershed's
-    /// staple Steeped rules, so seed 7's goblins read unsound on `millet`,
-    /// `rice` and `vine`. The full diagnosis is at
-    /// `calibration.rs::lexicon_is_exposure_sound_for_both_species`.
-    ///
-    /// That cannot be re-pinned, and the reason is the point of the test.
-    /// Pinning the baseline to `Flag(false)` would leave a mutation test whose
-    /// before and after are both false — it would pass while proving nothing,
-    /// which is precisely the failure mode ("a soundness check that cannot
-    /// report false is worse than one that reports it wrongly") this test was
-    /// written to prevent. An honest ignore is worth more than a green
-    /// mutation test that has stopped mutating. It comes back with the staple
-    /// repair, and both halves must be re-derived then.
+    /// - The small one, unrelated to the staple repair: seed 7's goblins now
+    ///   root `river`, `ford`, `hill`, `marsh`, `spring` — `marsh` where
+    ///   `valley` used to be — because `main`'s history bake re-decides
+    ///   settlement placement between F11's discharge and this task. Still
+    ///   five of the seven toponymic concepts, still the elevation and karst
+    ///   gates and not just the river one, so the seed is as good a witness
+    ///   as it was. The `rooted` assertion below is updated to match.
+    /// - The blocking one: with the staple repair in place,
+    ///   `exposure_sound(&view, "goblin")` reads `Flag(true)` again (seed 7's
+    ///   goblins no longer read unsound on `millet`, `rice`, `vine`), so the
+    ///   pre-mutation baseline this test asserts is true again, and the test
+    ///   mutates for real: `Flag(true)` before stripping the toponymic gates,
+    ///   `Flag(false)` after. Verified by re-running this test standalone
+    ///   after the re-derivation (both assertions passed in the same run,
+    ///   which is the flip firing, not merely typechecking).
     #[test]
     fn exposure_sound_reports_false_when_the_toponymic_gates_are_removed() {
         const TOPONYMIC: [&str; 7] = [
@@ -7966,5 +8131,37 @@ mod tests {
             chorus_sky_calibration_metric_over(&one_voice),
             MetricValue::Absent
         );
+    }
+
+    /// The Watershed's six staples (`hornvale_climate::Crop::catalog()`,
+    /// gated `Steeped` in `exposure_of` only where a settled cell's
+    /// subsistence is `Farming`) reach `Steeped` through the crop gate that
+    /// `independently_steeped_concepts` never learned — F13, the third
+    /// recurrence of the duplicate going stale. Named individually so ADDING
+    /// a staple that the lab does not know about reds this test rather than
+    /// slipping past it.
+    ///
+    /// Seed 5's bugbear is the witness: diagnosed by sweeping seeds 0..20
+    /// and every placed people for which staple concepts actually reach a
+    /// `Root` in the committed lexicon (which only happens when `exposure_of`
+    /// classified them `Steeped`), seed 5's bugbear is the only (seed,
+    /// species) pair in that sweep whose settlements span all six crop
+    /// bands at once. No single seed need witness all six for the campaign's
+    /// claim to hold — this test only needs one that does, so the assertion
+    /// is not vacuous.
+    const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
+
+    #[test]
+    fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
+        let steeped =
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
+        for staple in STAPLE_CONCEPTS {
+            assert!(
+                steeped.contains(staple),
+                "the lab's independent reading does not steep {staple}, which \
+                 worldgen does — the duplicate is stale again"
+            );
+        }
     }
 }

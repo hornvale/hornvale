@@ -55,7 +55,6 @@ DOM-ocean
 DOM-symbiosis
 EXP-10
 LANG-10
-LANG-11
 LANG-27
 LANG-32
 LANG-33

@@ -9,6 +9,7 @@ pub mod facts;
 pub mod figures;
 pub mod forcing;
 pub mod heliacal;
+pub mod illuminant;
 pub mod moons;
 pub mod neighborhood;
 pub mod night_sky;
@@ -39,6 +40,7 @@ pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
 };
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
+pub use illuminant::{at_elevation, daylight};
 pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, is_icy, radius_km};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
@@ -58,8 +60,8 @@ pub use star::{
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
-    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, LightYears, LocalDays, LunarMasses,
-    Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
+    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, Kelvin, LightYears, LocalDays,
+    LunarMasses, Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 

@@ -87,7 +87,7 @@ pub struct LegendEntry {
 /// and absent on a seam cell. Fine-grain fields are `null` at coarse grain —
 /// a cell carries the detail its epistemic state warrants, which is what
 /// makes the chart and the prose one lens rather than two.
-/// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m)
+/// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(artifact: color)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsCell {
     /// Packed room id.
@@ -123,6 +123,12 @@ pub struct SurroundsCell {
     /// Elevation, metres — fine grain, `null` when coarse.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub elevation_m: Option<f64>,
+    /// Display colour under the requested observer, absent unless this scene
+    /// was built through [`surrounds_scene_colored_in`]. The key is skipped
+    /// entirely when absent, so an uncoloured document is byte-for-byte what
+    /// it was before the colour layer existed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<[u8; 3]>,
     /// Salience-ranked things standing here.
     pub marks: Vec<Mark>,
 }
@@ -247,6 +253,10 @@ pub fn surrounds_scene_in(
             temperature_c: is_here.then_some(locale.fields.temperature_c),
             moisture: is_here.then_some(locale.fields.moisture),
             elevation_m: is_here.then_some(locale.fields.elevation_m),
+            // The default path never colours. `surrounds_scene_colored_in`
+            // is the only writer, which is what keeps every committed
+            // artifact byte-identical.
+            color: None,
             marks,
         });
     }
@@ -310,6 +320,49 @@ pub fn surrounds_scene(
     }
     let ctx = LocaleContext::build(world).map_err(|e| SceneError::Build(e.to_string()))?;
     surrounds_scene_in(world, &ctx, room, radius, at)
+}
+
+/// Build a `scene/surrounds/v1` document with a colour layer, as seen by
+/// `observer` under the world star's daylight.
+///
+/// A separate entry point rather than a parameter on
+/// [`surrounds_scene_in`]: every committed artifact goes through the
+/// uncoloured path, and this way they cannot move.
+///
+/// Cells whose observer has no truthful sRGB image keep `color: None` — the
+/// mapping for a non-standard observer is a false-colour choice the caller
+/// must declare (RENDER-9), not one this builder may invent.
+///
+/// The light is the star's daylight spectrum, not its light at the
+/// observer's own sun elevation: `scene/surrounds/v1` carries no sun angle,
+/// and inventing one here would make the chart's colours disagree with a
+/// prose renderer that knows the real hour. A caller with an elevation in
+/// hand should say so — `hornvale_astronomy::illuminant::at_elevation` is
+/// the seam, and the day it belongs on is a `scene/surrounds/v2` question.
+/// type-audit: bare-ok(count: radius)
+pub fn surrounds_scene_colored_in(
+    world: &World,
+    ctx: &LocaleContext,
+    room: &RoomAddr,
+    radius: u32,
+    at: WorldTime,
+    observer: &hornvale_kernel::color::Observer,
+) -> Result<SurroundsScene, SceneError> {
+    let mut scene = surrounds_scene_in(world, ctx, room, radius, at)?;
+    let star = hornvale_astronomy::star::generate_star(
+        world.seed.derive(hornvale_astronomy::streams::ROOT),
+    );
+    let light = hornvale_astronomy::illuminant::daylight(&star);
+    for cell in scene.cells.iter_mut() {
+        let addr = hornvale_kernel::RoomId(cell.room)
+            .unpack()
+            .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?;
+        let reflectance = ctx
+            .reflectance_at(&addr)
+            .map_err(|e| SceneError::Build(e.to_string()))?;
+        cell.color = observer.to_srgb(&observer.sense(&reflectance, &light));
+    }
+    Ok(scene)
 }
 
 /// Settlement marks keyed by the packed room id their coordinates fall in at
@@ -575,5 +628,192 @@ mod tests {
         let mut sorted = ids.clone();
         sorted.sort_unstable();
         assert_eq!(ids, sorted, "cell order is contract: ascending room id");
+    }
+
+    fn colored(w: &hornvale_kernel::World, radius: u32) -> SurroundsScene {
+        let ctx = hornvale_locale::LocaleContext::build(w).unwrap();
+        surrounds_scene_colored_in(
+            w,
+            &ctx,
+            &observer(w),
+            radius,
+            WorldTime { day: 0.0 },
+            &hornvale_kernel::color::standard_observer(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn the_uncolored_builder_leaves_every_cell_without_a_color() {
+        // This is what keeps book/src/gallery/scene-surrounds-seed-42.json
+        // byte-identical: the field is skipped when None.
+        let w = world();
+        let s = surrounds_scene(&w, &observer(&w), 2, WorldTime { day: 0.0 }).unwrap();
+        for cell in &s.cells {
+            assert!(
+                cell.color.is_none(),
+                "the default builder invented a colour on room {}",
+                cell.room
+            );
+        }
+    }
+
+    #[test]
+    fn the_colored_builder_gives_placed_cells_a_color() {
+        let w = world();
+        let s = colored(&w, 2);
+        let with = s.cells.iter().filter(|c| c.color.is_some()).count();
+        assert_eq!(
+            with,
+            s.cells.len(),
+            "{with} of {} cells received a colour — the standard observer has a \
+             truthful sRGB image, so every placed cell must",
+            s.cells.len()
+        );
+    }
+
+    #[test]
+    fn the_uncolored_json_emits_no_color_key() {
+        // serde skip_serializing_if means an absent colour emits no key at
+        // all, so the committed gallery JSON cannot move.
+        let w = world();
+        let s = surrounds_scene(&w, &observer(&w), 1, WorldTime { day: 0.0 }).unwrap();
+        let json = crate::surrounds_json(&s);
+        assert!(
+            !json.contains("\"color\""),
+            "an absent colour still emitted a key"
+        );
+    }
+
+    #[test]
+    fn a_colored_document_does_emit_the_key() {
+        // The negative test above is only meaningful if the key is emitted
+        // when a colour IS present — otherwise `skip_serializing_if` could be
+        // a blanket `serde(skip)` and nothing would notice.
+        let w = world();
+        let json = crate::surrounds_json(&colored(&w, 1));
+        assert!(
+            json.contains("\"color\""),
+            "a coloured document dropped the key it was built to carry"
+        );
+    }
+
+    #[test]
+    fn coloring_is_deterministic_across_repeated_builds() {
+        let w = world();
+        let a: Vec<_> = colored(&w, 2).cells.iter().map(|c| c.color).collect();
+        let b: Vec<_> = colored(&w, 2).cells.iter().map(|c| c.color).collect();
+        assert_eq!(a, b);
+    }
+
+    /// A non-standard observer has no truthful sRGB image, so its cells keep
+    /// `color: None` — a false-colour mapping is the caller's to declare
+    /// (RENDER-9), never this builder's to invent.
+    #[test]
+    fn a_non_standard_observer_is_left_uncolored() {
+        use hornvale_kernel::color::{Observer, Spectrum};
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        // Two channels: nothing sRGB can be made of.
+        let dichromat = Observer::new(vec![
+            Spectrum::new([1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).unwrap(),
+            Spectrum::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap(),
+        ])
+        .unwrap();
+        let s = surrounds_scene_colored_in(
+            &w,
+            &ctx,
+            &observer(&w),
+            2,
+            WorldTime { day: 0.0 },
+            &dichromat,
+        )
+        .unwrap();
+        assert!(!s.cells.is_empty());
+        for cell in &s.cells {
+            assert!(
+                cell.color.is_none(),
+                "the builder invented an sRGB colour for a two-channel eye"
+            );
+        }
+    }
+
+    /// Everything else about a coloured chart must be the coloured chart's
+    /// only difference: the colour layer is additive, and if it perturbed a
+    /// biome index or a mark the committed artifacts would be at risk the
+    /// moment anything switched builders.
+    #[test]
+    fn coloring_changes_nothing_but_the_color() {
+        let w = world();
+        let plain = surrounds_scene(&w, &observer(&w), 2, WorldTime { day: 0.0 }).unwrap();
+        let mut stripped = colored(&w, 2);
+        for cell in stripped.cells.iter_mut() {
+            cell.color = None;
+        }
+        assert_eq!(plain, stripped);
+    }
+
+    /// **A colour chart at walking depth is one flat wash, and that is the
+    /// honest answer.**
+    ///
+    /// Rock class is read from the room's dominant *canonical-grid* corner
+    /// (`LocaleContext::reflectance_at`), and the vessel walks at
+    /// `globe_level + 6` — rooms roughly 64× finer per axis than a globe
+    /// cell. A radius-8 neighbourhood of those rooms (109 cells) lies inside
+    /// a single grid cell, so it reports one rock, one biome, one water
+    /// kind, one relief band — and now one colour. Measured on seed 42: at
+    /// `globe_level + 6` every radius from 2 to 8 yields exactly one
+    /// distinct sRGB value (`#828074`), while at `globe_level` a radius-4
+    /// chart yields six.
+    ///
+    /// This test exists so a consumer cannot mistake the flatness for a bug
+    /// in the colour layer. The colour is exactly as spatially resolved as
+    /// every categorical field the chart already carried; a finer colour
+    /// would need a finer lithology, not a different builder.
+    #[test]
+    fn the_color_is_no_finer_grained_than_the_chart_already_was() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let gl = ctx.globe_level();
+        let v = hornvale_settlement::village_info(&w).expect("seed 42 has a village");
+        let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
+        let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+
+        let distinct = |depth: u32, radius: u32| -> (usize, usize) {
+            let s = surrounds_scene_colored_in(
+                &w,
+                &ctx,
+                &RoomAddr::containing(pos, depth),
+                radius,
+                WorldTime { day: 0.0 },
+                &hornvale_kernel::color::standard_observer(),
+            )
+            .unwrap();
+            let colors: BTreeSet<Option<[u8; 3]>> = s.cells.iter().map(|c| c.color).collect();
+            let biomes: BTreeSet<u32> = s.cells.iter().map(|c| c.biome).collect();
+            (colors.len(), biomes.len())
+        };
+
+        // At walking depth the whole neighbourhood is one grid cell.
+        let (walk_colors, walk_biomes) = distinct(gl + 6, 8);
+        assert_eq!(
+            walk_colors, 1,
+            "a radius-8 walking-depth chart drew {walk_colors} colours; the \
+             fixture is one flat wash"
+        );
+        assert_eq!(
+            walk_biomes, 1,
+            "the fixture's premise moved: the biome is no longer constant here"
+        );
+
+        // At the grid's own level the same query crosses many cells, so the
+        // colour varies — proving the flatness above is the GRAIN and not a
+        // constant baked into the builder.
+        let (coarse_colors, _) = distinct(gl, 4);
+        assert!(
+            coarse_colors > 1,
+            "the builder returned one colour even across {coarse_colors} grid \
+             cells — it is not reading lithology at all"
+        );
     }
 }

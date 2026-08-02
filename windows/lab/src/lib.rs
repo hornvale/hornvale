@@ -24,6 +24,7 @@ pub use diff::{render_diff, render_diff_results};
 pub use metrics::{
     AstronomyView, BuiltView, ClimateView, Extractor, FullView, Metric, MetricValue,
     SettlementView, SummaryKind, TerrainView, WorldView, registry, render_metric_list,
+    steepable_concept_roster,
 };
 pub use publish::publish;
 pub use roster::{

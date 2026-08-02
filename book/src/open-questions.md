@@ -122,7 +122,14 @@ authored parameter vectors grew different languages and religions, verified by
 a 500/500 null control and a blind-attribution metric pinned honest at 0.875
 ([The Meeting](./chronicle/18-the-meeting.md)). This is no longer *the actual
 research*; it is how the research checks itself, and it is applied afresh to
-every new layer.
+every new layer. [The Pigment](./chronicle/the-pigment.md) applied it to
+colour and got the sharpest instance yet, because the observer parameter is a
+single scalar: two peoples differing only in night vision descend Berlin &
+Kay's ladder to different depths, so the same iron-rich outcrop under the
+same light is *yellow* to a goblin and *red* to a kobold — neither holding
+the word *brown* that is actually nearest. Self-scorable, and already scored:
+the census pins mean hue-depth at 4 and 2 respectively, and flattening the
+derivation reddens the claim.
 
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no

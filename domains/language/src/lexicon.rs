@@ -307,7 +307,7 @@ pub fn build_lexicon(
     regime: CascadeRegime,
 ) -> Lexicon {
     let headedness = draw_headedness(seed, species);
-    let cascade = draw_cascade_with_regime(seed, species, regime);
+    let cascade = draw_cascade_with_regime(seed, species, regime, ph);
 
     let mut entries: BTreeMap<String, LexEntry> = BTreeMap::new();
 
@@ -450,7 +450,12 @@ mod tests {
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
         let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
-        let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
+        let expected = evolve(
+            &assigned["water"],
+            &draw_cascade(&Seed(1), "test", &ph),
+            &ph,
+        )
+        .modern;
         match lex.entry("water").unwrap() {
             LexEntry::Root { derivation, .. } => assert_eq!(derivation.modern, expected),
             _ => panic!("water should be a Root"),
@@ -479,7 +484,12 @@ mod tests {
         );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
         let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
-        let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
+        let expected = evolve(
+            &assigned["water"],
+            &draw_cascade(&Seed(1), "test", &ph),
+            &ph,
+        )
+        .modern;
         match lex.entry("water").unwrap() {
             LexEntry::Root { derivation, .. } => assert_eq!(
                 derivation.modern, expected,
