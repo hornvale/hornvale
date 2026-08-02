@@ -99,7 +99,7 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
-pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of};
+pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,

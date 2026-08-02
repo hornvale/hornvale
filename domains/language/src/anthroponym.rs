@@ -17,8 +17,10 @@
 /// Where a name element's material comes from.
 ///
 /// The variant order is a **save-format contract** where a pattern is
-/// serialized by index; add new variants at the end.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// serialized by index; add new variants at the end. Deriving `Ord` makes
+/// that order an **ordering contract** too — reordering variants silently
+/// changes how patterns sort, not just how they serialize.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ElementSource {
     /// Drawn phonology: the given name, a bare stem in the culture's own
     /// sound system.
@@ -37,7 +39,10 @@ pub enum ElementSource {
 }
 
 /// What a descriptive byname describes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// Variant order is a save-format contract (see [`ElementSource`]) and,
+/// since `Ord` is derived, an ordering contract as well.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum GlossBasis {
     /// What the bearer does: Smith, Müller, Kovács.
     Trade,
@@ -48,7 +53,10 @@ pub enum GlossBasis {
 }
 
 /// Which relation a `Relation` element walks to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// Variant order is a save-format contract (see [`ElementSource`]) and,
+/// since `Ord` is derived, an ordering contract as well.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Cite {
     /// The bearer's forebear: the patronymic (Jónsdóttir, ibn, -ovich).
     Parent,
@@ -70,7 +78,10 @@ pub enum Cite {
 }
 
 /// Which sequence an `Index` element counts along.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// Variant order is a save-format contract (see [`ElementSource`]) and,
+/// since `Ord` is derived, an ordering contract as well.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IndexBasis {
     /// Position among siblings.
     BirthOrder,
@@ -81,8 +92,10 @@ pub enum IndexBasis {
 /// Who conferred an element.
 ///
 /// The load-bearing axis: authorship determines whether an element can be
-/// revoked, who may confer another, and whether it can be *false*.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// revoked, who may confer another, and whether it can be *false*. Variant
+/// order is a save-format contract (see [`ElementSource`]) and, since `Ord`
+/// is derived, an ordering contract as well.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Author {
     /// Given at birth by family.
     Kin,

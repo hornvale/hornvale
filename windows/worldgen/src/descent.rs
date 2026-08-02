@@ -139,3 +139,76 @@ pub fn clan_root_of(world: &World, occupation: EntityId) -> EntityId {
     }
     here
 }
+
+/// The naming pattern a culture uses, derived from its society vector.
+///
+/// **Derived, never authored** (spec §3.3). A per-culture naming table would
+/// be exactly the lookup table decision 0021 forecloses; the same discipline
+/// already produces `morph_options`' honorific flag from
+/// `StatusBasis::Rank`, and The Bane's whole threat niche from what the
+/// creature already is.
+///
+/// The mapping:
+///
+/// - `Hierarchic` cites **descent** — who you came from legitimates you.
+/// - `Communal` cites the **community or the deed** — what you did does.
+/// - `Rank` adds a descent citation and (through `morph_options`) an
+///   honorific; `Knowledge` cites the **mentor**, because where craft earns
+///   standing the transmission lineage *is* the lineage; `Generosity` cites
+///   the deed.
+/// - `in_group_radius` sets how many elements the pattern carries: an
+///   insular people needs fewer to pick someone out.
+pub fn name_pattern(
+    mind: &hornvale_species::MindVector,
+    society: &hornvale_species::SocietyVector,
+) -> hornvale_language::anthroponym::NamePattern {
+    use hornvale_language::anthroponym::{Author, Cite, ElementSource, GlossBasis, NamePattern};
+    let _ = mind;
+
+    // Every culture gives a given name. It is the only universal element.
+    let mut elements = vec![(ElementSource::Stem, Author::Kin)];
+
+    // What legitimates a person here.
+    match society.status_basis {
+        hornvale_species::StatusBasis::Rank => {
+            elements.push((ElementSource::Relation(Cite::Parent), Author::Kin));
+        }
+        hornvale_species::StatusBasis::Knowledge => {
+            elements.push((ElementSource::Relation(Cite::Mentor), Author::Institution));
+        }
+        hornvale_species::StatusBasis::Generosity => {
+            elements.push((ElementSource::Deed, Author::Witnesses));
+        }
+    }
+
+    // How authority is shaped.
+    match society.sociality {
+        hornvale_species::Sociality::Hierarchic => {
+            elements.push((ElementSource::Relation(Cite::Clan), Author::Kin));
+        }
+        hornvale_species::Sociality::Communal => {
+            elements.push((ElementSource::Relation(Cite::Community), Author::Community));
+        }
+    }
+
+    // How wide "us" is drawn decides how much disambiguation a name must
+    // carry on its face. The threshold is the midpoint of the [0,1] axis,
+    // the same place `SocietyVector::baseline` sits.
+    //
+    // These two arms are mutually exclusive by construction (`> 0.5` and
+    // `< 0.5` never both hold), so the `pop()` below never removes a `Gloss`
+    // element this call just pushed — it always removes whatever was last
+    // on the list *before* this block ran, which is the sociality citation
+    // pushed immediately above (`Clan` or `Community`). That is exactly what
+    // the comment on the `pop()` describes.
+    if society.in_group_radius > 0.5 {
+        elements.push((ElementSource::Gloss(GlossBasis::Bearing), Author::Outsiders));
+    }
+    if society.in_group_radius < 0.5 {
+        // An insular people drops the outermost citation: everyone already
+        // knows which clan or community you belong to.
+        elements.pop();
+    }
+
+    NamePattern { elements }
+}
