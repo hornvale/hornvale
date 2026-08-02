@@ -2494,6 +2494,61 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "bugbear")),
         },
         Metric {
+            name: "name-pattern-signatures",
+            doc: "How many DISTINCT (ElementSource, Author) naming-pattern signatures \
+                   this world's placed peoples derive from their society vectors (The \
+                   Namesake §5.1(1); target >= 3); Absent if no placed people carries \
+                   both psychology vectors",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            extract: Extractor::Full(name_pattern_signatures),
+        },
+        Metric {
+            name: "name-people-recoverability",
+            doc: "The share of this world's placed peoples whose naming-pattern \
+                   signature is unique among them — the structure-alone recoverability \
+                   of a figure's people (The Namesake §5.1(2); target >= 2x the \
+                   1/n_peoples chance baseline); Absent if fewer than two peoples are \
+                   placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(name_people_recoverability),
+        },
+        Metric {
+            name: "name-prefix-settlement-scope",
+            doc: "The share of this world's occupation founders whose name renders in \
+                   exactly one element against the other founders of their own site \
+                   (The Namesake §5.2(1); target >= 0.80); Absent if the world has no \
+                   founders",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(name_prefix_settlement_scope),
+        },
+        Metric {
+            name: "name-prefix-region-scope",
+            doc: "The MEDIAN number of elements this world's occupation founders render \
+                   in against every other founder in the world (The Namesake §5.2(2); \
+                   target >= 2); Absent if the world has no founders",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            extract: Extractor::Full(name_prefix_region_scope),
+        },
+        Metric {
+            name: "name-prefix-region-full-stack",
+            doc: "The share of this world's occupation founders whose region-scope \
+                   render spends every element their name carries — the second, \
+                   opposite half of The Namesake §5.2(2) (target < 0.50); Absent if the \
+                   world has no founders",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(name_prefix_region_full_stack),
+        },
+        Metric {
             name: "lexicon-regular-kobold",
             doc: "Whether every kobold lexicon Root entry's recorded sound-change \
                    derivation replays byte-identically through evolve (Neogrammarian \
@@ -4740,6 +4795,348 @@ fn cascade_rules_fired(v: &FullView, species: &str) -> MetricValue {
     MetricValue::Number(fired.len() as f64)
 }
 
+// --- The Namesake (Task 7): the two preregistered claims. ---
+//
+// §5.1 asks whether the `SocietyVector`-derived naming patterns actually
+// differ between peoples; §5.2 asks whether the shortest-prefix render rule
+// earns its keep. Four metrics below read the first pair, and a fifth reads
+// §5.2(2)'s second half — see `name_prefix_region_full_stack` for why that
+// one exists.
+//
+// WHAT A `Rendered` NAME CONTAINS HERE, AND WHAT IT DOES NOT. `name_pattern`
+// (Task 5) emits five kinds of element across the shipped roster:
+// `Stem`, `Relation(Parent)`, `Relation(Clan)`, `Relation(Mentor)` and
+// `Deed`, plus `Gloss(Bearing)` for a wide-in-group people. This campaign
+// shipped resolvers for exactly three of them — the person-name draw
+// (`NameKind::Person`, Task 4) and the descent graph's `forebear_of` /
+// `clan_root_of` (Task 3). There is no mentorship relation anywhere in the
+// repo, no deed-name derivation, and no per-person gloss basis, so
+// `Relation(Mentor)`, `Relation(Community)`, `Deed` and `Gloss(..)` have
+// nothing to resolve to.
+//
+// An element with no resolver is **dropped**, not filled with a placeholder.
+// A per-figure placeholder would fabricate disambiguating entropy the engine
+// does not have (and would flatter §5.2); a constant placeholder would
+// inflate the element counts §5.2 measures without adding any disambiguating
+// power. Dropping states the honest position: a name carries only the
+// elements this slice of the engine can actually speak. The consequence is
+// measured and reported rather than hidden — a kobold (pattern
+// `[Stem, Relation(Mentor)]`) speaks one element, and a gnoll (pattern
+// `[Stem, Deed, Relation(Clan), Gloss(Bearing)]`) speaks two.
+
+/// One occupation founder, resolved to the words their culture's naming
+/// pattern actually produces.
+struct FounderName {
+    /// The `occ-site` cell the occupation sits on — the settlement scope.
+    site: u32,
+    /// The name, element by element, in the culture's own order.
+    rendered: hornvale_language::anthroponym::Rendered,
+}
+
+/// Every occupation founder in the world, with their name resolved to words.
+///
+/// The Namesake §5.2. One entry per occupation carrying an `occ-people`, an
+/// `occ-site`, and a people this world's component set knows — the whole
+/// nameable population, since §2 of the spec restricts naming to the figures
+/// a role implies.
+///
+/// Empty (never `Absent` on its own account) when the world has no
+/// occupations at all; the callers turn that into `MetricValue::Absent`.
+fn rendered_founders(v: &FullView) -> Vec<FounderName> {
+    use hornvale_language::anthroponym::{Cite, ElementSource, Rendered};
+
+    let world = v.world();
+    let wc = v.components();
+
+    // Per speaking, minded people: its phonology (the single construction
+    // site is worldgen's `language_of_in`), its morphology, and its naming
+    // pattern. Keyed on the `'static` `KindId` label so the `Namer`s below
+    // can borrow the phonologies without cloning them per founder.
+    let mut phonologies: std::collections::BTreeMap<&'static str, Phonology> =
+        std::collections::BTreeMap::new();
+    let mut kits: std::collections::BTreeMap<
+        &'static str,
+        (
+            hornvale_language::MorphOptions,
+            hornvale_language::anthroponym::NamePattern,
+        ),
+    > = std::collections::BTreeMap::new();
+    for kid in wc.articulation.ids() {
+        let (Some(mind), Some(society)) = (wc.psyche.get(kid), wc.society.get(kid)) else {
+            continue;
+        };
+        phonologies.insert(kid.0, language_of_in(world, wc, kid.0));
+        kits.insert(
+            kid.0,
+            (
+                hornvale_worldgen::morph_options(mind, society),
+                hornvale_worldgen::name_pattern(mind, society),
+            ),
+        );
+    }
+    let namers: std::collections::BTreeMap<&'static str, Namer> = phonologies
+        .iter()
+        .map(|(name, ph)| (*name, Namer::new(&world.seed, name, ph)))
+        .collect();
+
+    // A figure's given name: the `NameKind::Person` draw off the persona
+    // seed their role handle expands to. This is the ONLY material any
+    // element resolves from — a patronymic is the forebear's given name, a
+    // clan name is the chain root's.
+    let stem_of = |species: &'static str, handle: hornvale_history::flesh::RoleHandle| -> String {
+        let persona = hornvale_history::flesh::persona_of(handle, world.seed);
+        namers[species]
+            .name(NameKind::Person, persona.name_seed, &kits[species].0)
+            .roman
+    };
+
+    let mut out = Vec::new();
+    for fact in world.ledger.find(hornvale_history::IS_OCCUPATION) {
+        let occupation = fact.subject;
+        let Some(Value::Text(people)) = world
+            .ledger
+            .value_of(occupation, hornvale_history::OCC_PEOPLE)
+        else {
+            continue;
+        };
+        let Some(species) = kits.keys().find(|k| **k == people.as_str()).copied() else {
+            continue;
+        };
+        let Some(Value::Number(site)) = world
+            .ledger
+            .value_of(occupation, hornvale_history::OCC_SITE)
+        else {
+            continue;
+        };
+
+        let mut parts: Vec<String> = Vec::new();
+        for (source, _author) in &kits[species].1.elements {
+            match source {
+                ElementSource::Stem => {
+                    parts.push(stem_of(
+                        species,
+                        hornvale_worldgen::founder_of(world, occupation),
+                    ));
+                }
+                ElementSource::Relation(Cite::Parent) => {
+                    // A genesis founder has no forebear, so the patronymic
+                    // slot stays empty rather than citing the figure
+                    // themselves.
+                    if let Some((forebear, _kinship)) =
+                        hornvale_worldgen::forebear_of(world, occupation)
+                    {
+                        parts.push(stem_of(species, forebear));
+                    }
+                }
+                ElementSource::Relation(Cite::Clan) => {
+                    let root = hornvale_worldgen::clan_root_of(world, occupation);
+                    parts.push(stem_of(species, hornvale_worldgen::founder_of(world, root)));
+                }
+                // No resolver in this slice — see the module comment above.
+                ElementSource::Relation(_) | ElementSource::Index(_) | ElementSource::Deed => {}
+                ElementSource::Gloss(_) => {}
+            }
+        }
+        if parts.is_empty() {
+            continue;
+        }
+        out.push(FounderName {
+            site: *site as u32,
+            rendered: Rendered { parts },
+        });
+    }
+    out
+}
+
+/// How many elements the shipped [`hornvale_language::anthroponym::render`]
+/// spent on `name` against `competitors`.
+///
+/// Asks the real render rule and then reads its answer back, rather than
+/// re-deriving the prefix length here: a second copy of the loop would
+/// measure the copy, not the rule. The spoken form is
+/// `parts[..k].join(" ")` for exactly one smallest `k`, which is what this
+/// recovers.
+fn rendered_element_count(
+    name: &hornvale_language::anthroponym::Rendered,
+    competitors: &[hornvale_language::anthroponym::Rendered],
+) -> usize {
+    let spoken = hornvale_language::anthroponym::render(name, competitors);
+    for take in 1..=name.parts.len() {
+        if name.parts[..take].join(" ") == spoken {
+            return take;
+        }
+    }
+    name.parts.len()
+}
+
+/// Each founder's region-scope rendered element count, in ledger order.
+///
+/// The competitor scope is every OTHER founder in the world. The exclusion
+/// is by position, not by value: `render` treats a competitor identical to
+/// `name` as undistinguishable, so leaving the figure in their own
+/// competitor set would drive every name to its full stack. Swapping the
+/// figure to the end and passing the head of the vector excludes exactly one
+/// entry without cloning the other n-1.
+fn region_scope_counts(v: &FullView) -> Vec<usize> {
+    let founders = rendered_founders(v);
+    let mut names: Vec<hornvale_language::anthroponym::Rendered> =
+        founders.into_iter().map(|f| f.rendered).collect();
+    let n = names.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let mut counts = Vec::with_capacity(n);
+    for i in 0..n {
+        names.swap(i, n - 1);
+        let subject = names[n - 1].clone();
+        counts.push(rendered_element_count(&subject, &names[..n - 1]));
+        names.swap(i, n - 1);
+    }
+    counts
+}
+
+/// How many DISTINCT naming-pattern signatures this world's placed peoples
+/// produce (The Namesake, preregistered criterion §5.1(1); target >= 3).
+///
+/// A signature is the ordered list of `(ElementSource, Author)` pairs
+/// `name_pattern` derives from a people's society vector. If every people
+/// produced the same signature the naming system would be one shape with
+/// cosmetic variation, which is the failure this metric exists to catch.
+/// `Absent` if no placed people carries both psychology vectors.
+fn name_pattern_signatures(v: &FullView) -> MetricValue {
+    let sigs = placed_pattern_signatures(v);
+    if sigs.is_empty() {
+        return MetricValue::Absent;
+    }
+    let distinct: std::collections::BTreeSet<&String> = sigs.iter().collect();
+    MetricValue::Number(distinct.len() as f64)
+}
+
+/// The naming-pattern signature of every placed people, one entry per
+/// people, in registry order.
+fn placed_pattern_signatures(v: &FullView) -> Vec<String> {
+    let wc = v.components();
+    let mut sigs = Vec::new();
+    for kind in hornvale_worldgen::placed_peoples(v.world()) {
+        let (Some(mind), Some(society)) = (
+            wc.psyche.get(&hornvale_kernel::KindId(kind.0)),
+            wc.society.get(&hornvale_kernel::KindId(kind.0)),
+        ) else {
+            continue;
+        };
+        let p = hornvale_worldgen::name_pattern(mind, society);
+        sigs.push(format!("{:?}", p.elements));
+    }
+    sigs
+}
+
+/// The share of this world's placed peoples whose naming-pattern signature
+/// is UNIQUE among them (The Namesake, preregistered criterion §5.1(2)).
+///
+/// A directly interpretable stand-in for "a figure's people is recoverable
+/// from its name structure alone": a people whose signature no other people
+/// shares is recoverable with certainty from the structure, and one that
+/// shares its signature is not recoverable from the structure at all. The
+/// criterion compares this share against twice the chance baseline
+/// (1/n_peoples). `Absent` if fewer than two peoples are placed, where
+/// "recoverable above chance" has no content.
+fn name_people_recoverability(v: &FullView) -> MetricValue {
+    let sigs = placed_pattern_signatures(v);
+    if sigs.len() < 2 {
+        return MetricValue::Absent;
+    }
+    let unique = sigs
+        .iter()
+        .filter(|s| sigs.iter().filter(|o| o == s).count() == 1)
+        .count();
+    MetricValue::Number(unique as f64 / sigs.len() as f64)
+}
+
+/// The share of this world's founders who resolve in EXACTLY ONE element at
+/// settlement scope (The Namesake, preregistered criterion §5.2(1); target
+/// >= 80%).
+///
+/// The scope is the other founders of occupations sharing this founder's
+/// `occ-site` cell — every community that has ever stood on that site, which
+/// is the population a name uttered there has to pick out. `Absent` if the
+/// world has no founders.
+fn name_prefix_settlement_scope(v: &FullView) -> MetricValue {
+    let founders = rendered_founders(v);
+    if founders.is_empty() {
+        return MetricValue::Absent;
+    }
+    // Group by site, preserving ledger order inside each group.
+    let mut by_site: std::collections::BTreeMap<
+        u32,
+        Vec<hornvale_language::anthroponym::Rendered>,
+    > = std::collections::BTreeMap::new();
+    for f in &founders {
+        by_site.entry(f.site).or_default().push(f.rendered.clone());
+    }
+    let mut single = 0usize;
+    let mut total = 0usize;
+    for names in by_site.values_mut() {
+        let n = names.len();
+        for i in 0..n {
+            names.swap(i, n - 1);
+            let subject = names[n - 1].clone();
+            if rendered_element_count(&subject, &names[..n - 1]) == 1 {
+                single += 1;
+            }
+            names.swap(i, n - 1);
+            total += 1;
+        }
+    }
+    MetricValue::Number(single as f64 / total as f64)
+}
+
+/// The MEDIAN number of elements this world's founders resolve in at region
+/// scope (The Namesake, preregistered criterion §5.2(2); target >= 2).
+///
+/// The scope is every other founder in the world. `Absent` if the world has
+/// no founders.
+fn name_prefix_region_scope(v: &FullView) -> MetricValue {
+    let mut counts = region_scope_counts(v);
+    if counts.is_empty() {
+        return MetricValue::Absent;
+    }
+    counts.sort_unstable();
+    let mid = counts.len() / 2;
+    let median = if counts.len() % 2 == 1 {
+        counts[mid] as f64
+    } else {
+        (counts[mid - 1] as f64 + counts[mid] as f64) / 2.0
+    };
+    MetricValue::Number(median)
+}
+
+/// The share of this world's founders whose region-scope render spends EVERY
+/// element their name carries (The Namesake, preregistered criterion
+/// §5.2(2)'s second half; target < 50%).
+///
+/// §5.2(2) is two-sided by design and the median alone reads only one side
+/// of it: a median of 2 is compatible both with a rule that usually saves an
+/// element and with one that never does. This metric reads the other side —
+/// how often the shortest-prefix rule buys nothing because the whole stack
+/// is spent anyway. Note that a figure whose name carries a single speakable
+/// element (see this section's module comment) counts here by construction,
+/// having nothing shorter to fall back to. `Absent` if the world has no
+/// founders.
+fn name_prefix_region_full_stack(v: &FullView) -> MetricValue {
+    let founders = rendered_founders(v);
+    if founders.is_empty() {
+        return MetricValue::Absent;
+    }
+    let lengths: Vec<usize> = founders.iter().map(|f| f.rendered.parts.len()).collect();
+    let counts = region_scope_counts(v);
+    let full = counts
+        .iter()
+        .zip(lengths.iter())
+        .filter(|(spent, len)| spent == len)
+        .count();
+    MetricValue::Number(full as f64 / counts.len() as f64)
+}
+
 // --- The Wearing (Task 11c): the lab's own reading of the toponymic gates.
 //
 // Task 4 gave `hornvale_worldgen::exposure_from` seven new `Steeped` rules —
@@ -6252,8 +6649,13 @@ mod tests {
         // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
         // per-species, beside the name-length-{species} pair they are read
         // against — and the world-level name-transparency),
-        // +2 for The Namesake (Task 1: cascade-rules-fired-{goblin,bugbear}).
-        assert_eq!(registry().len(), 174);
+        // +2 for The Namesake (Task 1: cascade-rules-fired-{goblin,bugbear}),
+        // +5 more for The Namesake (Task 7, the preregistered claims:
+        // name-pattern-signatures and name-people-recoverability read §5.1;
+        // name-prefix-settlement-scope reads §5.2(1); name-prefix-region-scope
+        // and name-prefix-region-full-stack read the two OPPOSITE halves of
+        // §5.2(2), which the median alone cannot separate).
+        assert_eq!(registry().len(), 179);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
