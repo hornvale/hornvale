@@ -113,12 +113,28 @@ pub fn class_concept(display: &str) -> Option<&'static str> {
 
 /// The author's-frame display for a registered concept, or `None` if the
 /// concept is not a spectral class. The render direction.
+///
+/// Superseded by [`common_words`] (The Vernacular, Task 3): a caller
+/// rendering into Common should go through the assembled `CommonVocabulary`
+/// instead, so a spectral class's word passes through the same declared-word
+/// seam as every other concept. Kept here — not deleted — because
+/// `windows/explain` and `windows/book` still call it directly; a later task
+/// migrates those call sites and retires this function.
 /// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: return)
 pub fn class_display(concept: &str) -> Option<&'static str> {
     SPECTRAL_CLASSES
         .iter()
         .find(|(c, _)| *c == concept)
         .map(|(_, d)| *d)
+}
+
+/// This domain's Common words: the concepts whose ids are not words, paired
+/// with the author's-frame display. The composition root declares these into
+/// the `CommonVocabulary`; a domain may not reach into `domains/language`'s
+/// map itself.
+/// type-audit: bare-ok(identifier-text)
+pub fn common_words() -> &'static [(&'static str, &'static str)] {
+    &SPECTRAL_CLASSES
 }
 
 /// The class name for a drawn mass, on the raw mass value — the exact

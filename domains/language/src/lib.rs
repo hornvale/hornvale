@@ -16,6 +16,11 @@ pub mod account;
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
 pub mod clause;
+/// Common's declared vocabulary (The Vernacular, Task 3): a TOTAL id→word map
+/// for the author's out-of-world register, which — unlike a people's tongue —
+/// has no speakers and so no `Lexicon`. Holds no domain's concept ids; each
+/// domain exposes its own pairs and the composition root assembles them.
+pub mod common_vocab;
 /// The etymology engine: proto-roots drawn from a phonology, and a drawn
 /// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
 /// that turns a proto-root into its modern form.
@@ -79,6 +84,7 @@ pub use account::{
 pub use clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
 };
+pub use common_vocab::{CommonVocabulary, MissingCommonWords};
 pub use etymology::{
     AppliedRule, Cascade, CascadeRegime, Daughter, Derivation, RuleKind, SoundRule,
     assign_proto_roots, draw_cascade, draw_cascade_with_regime, draw_wear_cascade, evolve,
