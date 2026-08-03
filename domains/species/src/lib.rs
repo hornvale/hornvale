@@ -1,6 +1,7 @@
 //! Species, tier 1: the authored body/mind/taxonomy component registries —
 //! the universal biosphere component (mass, metabolic class, resource + climate
-//! niche, potency), a closed six-dimension psychology vector, a closed
+//! niche, potency), the closed three-dimension mind and society vectors (*The
+//! Cloister* split the former six-dimension psychology vector), a closed
 //! three-dimension perception vector, and each kind's family label. Kinds are
 //! keyed by `KindId`; each component authors its own rows directly (the former
 //! authored god-struct was dissolved in ECS c3). Species are data; the
@@ -2703,6 +2704,14 @@ mod tests {
     /// perception coincides with [`PerceptionVector::MANIKIN`]; nothing in the
     /// model requires that, and kobold is here to show the vector genuinely
     /// varies across the roster.
+    ///
+    /// Unlike its sibling, this test cannot simply be deleted the day goblin
+    /// is characterised on its own merits: it welds one characterization
+    /// assertion (goblin's row) to one real contract (the kobold contrast,
+    /// which pins that the vector genuinely varies across the roster and
+    /// must survive). When that day comes, split this test — delete the
+    /// goblin assertions, keep the kobold ones — rather than deleting the
+    /// whole function or leaving the stale goblin assertions in place.
     #[test]
     fn goblin_perception_is_authored_at_the_manikin_and_kobold_contrasts() {
         let per = perception_registry();

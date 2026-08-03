@@ -739,3 +739,42 @@ impl hornvale_kernel::Domain for Language {
         crate::stream_labels()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::KindId;
+
+    /// CHARACTERIZATION, NOT CONTRACT.
+    ///
+    /// Goblin is currently authored at exactly
+    /// [`ArticulationVector::MANIKIN`]. That is authorship, not definition:
+    /// goblin was the first people written down, and nobody ever decided
+    /// that goblins speak with the reference voice. Nothing in the model
+    /// requires a kind to sit on the manikin, and this test does not make it
+    /// a requirement.
+    ///
+    /// It exists so that characterising goblin's phonology — giving it a
+    /// voice that is its own rather than the reference figure's — arrives as
+    /// a visible diff on this test rather than as a silent shift baked into
+    /// the doc comment's unpinned claim. When that campaign comes, DELETE
+    /// this test; do not "fix" it.
+    ///
+    /// The sibling in `hornvale-species`,
+    /// `goblin_is_currently_authored_at_the_manikin`, does the same for
+    /// mind/society/perception; this is the fourth vector family's half,
+    /// redeclared here rather than shared because a domain crate depends on
+    /// the kernel and never on a sibling domain.
+    #[test]
+    fn goblin_is_currently_authored_at_the_manikin() {
+        let row = articulation_registry()
+            .get(&KindId("goblin"))
+            .copied()
+            .unwrap();
+        assert_eq!(
+            row,
+            ArticulationVector::MANIKIN,
+            "goblin's articulation is authored at the manikin (characterization)"
+        );
+    }
+}
