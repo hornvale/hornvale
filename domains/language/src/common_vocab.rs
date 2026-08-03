@@ -19,9 +19,13 @@ use hornvale_kernel::ConceptRegistry;
 use std::collections::BTreeMap;
 
 /// Common's TOTAL id→word map: declared exceptions first, then the naming
-/// convention's own rules. Built by [`CommonVocabulary::build`], which
-/// validates against a registry — so holding one is the proof that every
-/// concept in that registry can be said.
+/// convention's own rules. `word_for` is total by construction — it returns
+/// `String` unconditionally for any input, so totality does not depend on
+/// how a value was built. [`CommonVocabulary::build`] validates a registry's
+/// concepts against the naming convention and is how a caller should
+/// construct one in practice, but `Default` (mandated by the brief, and used
+/// by every test in this module) bypasses that check — it is not a second
+/// validating constructor, just the ordinary empty starting point.
 #[derive(Clone, Debug, Default)]
 pub struct CommonVocabulary {
     declared: BTreeMap<String, String>,
@@ -59,24 +63,28 @@ impl CommonVocabulary {
         stem.replace('-', " ")
     }
 
-    /// Validate every concept in `registry` resolves to a Common word — a
-    /// derived word that still reads as an id rather than a word. This is the
-    /// vocabulary's validating constructor: holding a `CommonVocabulary` is
-    /// the proof `word_for` cannot be handed a hole for any concept `registry`
-    /// knows about.
+    /// A lint on the naming convention, not a totality check: verifies that
+    /// no concept in `registry` derives to degenerate whitespace (empty, a
+    /// leftover hyphen, or a stray/doubled separator) — identifier
+    /// well-formedness, not word quality. `sun-like-star` → `"sun like
+    /// star"` is grammatically wrong but passes this check cleanly, because
+    /// it is not degenerate; fixing it is a domain's job (see
+    /// `star::common_words` in `domains/astronomy`), not this function's.
     ///
     /// Starts from [`CommonVocabulary::default`] (no exceptions declared) and
-    /// applies the mechanical rules alone — a domain's authored overrides
+    /// checks the mechanical rules alone — a domain's authored overrides
     /// (astronomy's spectral-class displays, say) are layered on afterward by
     /// the composition root via [`declare`](Self::declare), which never
-    /// re-validates. `build` only has to guarantee the *mechanical* fallback
-    /// never leaves a hole; a later `declare` call is trusted because an
-    /// author chose it deliberately.
+    /// re-validates.
     pub fn build(registry: &ConceptRegistry) -> Result<Self, MissingCommonWords> {
         let vocab = Self::default();
         let mut bad = Vec::new();
         for concept in registry.concepts() {
             let word = vocab.word_for(&concept.name);
+            // `vocab` is fresh from `Self::default()` above, so `is_declared`
+            // is always false here today — this guard is forward-looking,
+            // not live: if `build` ever gains a way to seed exceptions before
+            // validating, a declared word must still skip this check.
             if !vocab.is_declared(&concept.name) && reads_as_a_key(&word) {
                 bad.push((concept.name.clone(), word));
             }
@@ -89,18 +97,20 @@ impl CommonVocabulary {
     }
 }
 
-/// Whether `word` still reads as an id rather than a word. "Still reads as a
-/// key" is deliberately broader than the obvious `contains('-')` check: any
-/// leftover hyphen means the rules didn't finish their job, but a malformed id
-/// can also leave an empty span, a leading/trailing separator, or a doubled
-/// one (`"--"` collapses to nothing, but `"foo-"` leaves a trailing space, and
-/// `"foo--bar"` leaves a doubled one) — none of which read as a word either.
-/// None of these fire on the live registry today (the mechanical rules
-/// already resolve all 191 concepts cleanly); this is a guard against a
-/// *future* id the rules mis-handle, not a check that currently rejects
-/// anything. A declared entry is exempt by construction — [`build`] never
-/// calls this against a declared word, because an author may legitimately
-/// keep a hyphen (`sun-like star`).
+/// Whether `word` still reads as degenerate whitespace rather than a word: an
+/// empty span, a leading/trailing separator, or a doubled one (a malformed id
+/// like `"-leading"` or `"foo--bar"` can leave any of these; none of them read
+/// as a word). These are the reachable cases — the two synthetic tests below
+/// (`build_rejects_a_malformed_id`, `build_reports_every_failure_not_just_the_first`)
+/// exercise them directly. The check also includes a leftover-hyphen disjunct
+/// (`contains('-')`) as defense in depth against a future change to
+/// [`CommonVocabulary::word_for`]'s algorithm; today it provably never fires,
+/// because `word_for`'s non-declared path always ends in
+/// `replace('-', " ")`, which cannot leave a hyphen behind. None of these
+/// fire on the live registry today — the mechanical rules already resolve
+/// all 191 concepts cleanly. A declared entry is exempt by construction —
+/// [`CommonVocabulary::build`] never calls this against a declared word,
+/// because an author may legitimately keep a hyphen (`sun-like star`).
 fn reads_as_a_key(word: &str) -> bool {
     word.is_empty()
         || word.contains('-')
@@ -109,13 +119,11 @@ fn reads_as_a_key(word: &str) -> bool {
         || word.ends_with(' ')
 }
 
-/// Concepts whose derived Common word still read as a key rather than a word
-/// — [`CommonVocabulary::build`] refuses to construct a vocabulary carrying
-/// one of these, because [`CommonVocabulary::word_for`]'s infallibility rests
-/// on there never being one. Each entry is fixed by a `declare` call (in the
-/// domain that owns the concept) that runs before `build`... no — `declare`
-/// runs on the vocabulary `build` returns, so a mechanical failure here can
-/// only be fixed by changing the rules themselves, not by declaring after the
+/// Concepts whose derived Common word still reads as degenerate whitespace
+/// rather than a word — [`CommonVocabulary::build`] refuses to construct a
+/// vocabulary carrying one of these. `declare` runs on the vocabulary
+/// `build` has already returned, so a failure here can only be fixed by
+/// changing the mechanical rules themselves, not by declaring after the
 /// fact. In practice this has never fired against the live registry.
 /// type-audit: bare-ok(identifier-text: concepts)
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -417,14 +425,17 @@ mod tests {
         "yellow-white-dwarf",
     ];
 
-    /// Every registered concept resolves. This is the invariant the whole
-    /// asymmetry rests on — if it can fail, `word_for` must return an `Option`
-    /// and an authoring hole becomes indistinguishable from a real linguistic
-    /// gap. Run against a snapshot of the live 191-concept registry (see
-    /// `LIVE_REGISTRY_SNAPSHOT`'s doc comment for why it is reproduced as data
-    /// rather than assembled from the domains that actually own these ids).
+    /// Every id in the snapshot resolves without degenerating. This is a
+    /// smoke test over a broad, realistic sample of ids — it is NOT the
+    /// enforcement that the live registry stays total. This crate cannot
+    /// build the live, fully-composed registry (layering forbids depending
+    /// on the domains that own most of its concepts — see
+    /// `LIVE_REGISTRY_SNAPSHOT`'s doc comment), so nothing here can actually
+    /// guarantee totality over the real world. That enforcement belongs in
+    /// `cli/tests/`, which can build a full world; Task 4 adds it once the
+    /// composition root assembles a `CommonVocabulary` to check.
     #[test]
-    fn the_live_registry_resolves_completely() {
+    fn the_registry_snapshot_resolves_completely() {
         let mut registry = ConceptRegistry::default();
         for name in LIVE_REGISTRY_SNAPSHOT {
             with_concept(&mut registry, name);
