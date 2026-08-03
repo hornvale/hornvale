@@ -13,10 +13,10 @@ fn society(sociality: Sociality, status_basis: StatusBasis, radius: f64) -> Soci
 }
 
 fn mind() -> hornvale_species::MindVector {
-    // MindVector has NO `baseline()` constructor (SocietyVector does; the
-    // asymmetry is real). Construct it literally — the pattern derivation
-    // does not read these values today, but an honest test supplies real
-    // ones rather than zeroes.
+    // Construct the vector literally rather than reaching for
+    // `MindVector::MANIKIN` — the pattern derivation does not read these
+    // values today, but an honest test supplies real ones rather than
+    // zeroes.
     hornvale_species::MindVector {
         threat_response: 0.5,
         deliberation_latency: 0.5,
