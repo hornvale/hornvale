@@ -80,20 +80,67 @@ pub fn planet_age(star: &Star) -> Gyr {
     Gyr((star.age.0 - 0.05).max(0.0))
 }
 
+/// The nine spectral classes, paired with the **author's-frame** display each
+/// renders as. The concept ids are what the ledger commits (part 2 registered
+/// all nine with `lexeme: Absent(Void::Unnamed(..))` — real, and nameable by
+/// nobody in this world); the display strings are Morgan–Keenan taxonomy, which
+/// the campaign permits in the author's ground-truth register on the same
+/// footing as °C or solar masses: units are the author's frame, names are the
+/// world's. A creature never says these.
+/// type-audit: bare-ok(identifier-text)
+pub const SPECTRAL_CLASSES: [(&str, &str); 9] = [
+    ("orange-dwarf", "orange dwarf (K)"),
+    ("yellow-dwarf", "yellow dwarf (G)"),
+    ("yellow-white-dwarf", "yellow-white dwarf (F)"),
+    ("red-dwarf", "red dwarf"),
+    ("sun-like-star", "sun-like star"),
+    ("white-dwarf", "white dwarf"),
+    ("orange-giant", "orange giant"),
+    ("red-giant", "red giant"),
+    ("blue-giant", "blue giant"),
+];
+
+/// The registered concept a display string names, or `None` if it names none.
+/// The parse direction: `windows/book`'s `fact_for` reads rendered prose back
+/// into a fact and needs this to recover the committed id.
+/// type-audit: bare-ok(identifier-text: display), bare-ok(identifier-text: return)
+pub fn class_concept(display: &str) -> Option<&'static str> {
+    SPECTRAL_CLASSES
+        .iter()
+        .find(|(_, d)| *d == display)
+        .map(|(c, _)| *c)
+}
+
+/// The author's-frame display for a registered concept, or `None` if the
+/// concept is not a spectral class. The render direction.
+/// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: return)
+pub fn class_display(concept: &str) -> Option<&'static str> {
+    SPECTRAL_CLASSES
+        .iter()
+        .find(|(c, _)| *c == concept)
+        .map(|(_, d)| *d)
+}
+
+/// The class name for a drawn mass, on the raw mass value — the exact
+/// `if mass.0 < 0.8 { … }` chain `generate_star` built inline, extracted so
+/// the boundaries have a name and a test can reach them directly.
+fn class_name_of_mass(mass: f64) -> &'static str {
+    if mass < 0.8 {
+        "orange dwarf (K)"
+    } else if mass < 1.05 {
+        "yellow dwarf (G)"
+    } else {
+        "yellow-white dwarf (F)"
+    }
+}
+
 /// Generate the star from the astronomy domain seed.
 pub fn generate_star(astronomy_seed: Seed) -> Star {
     let mut stream = astronomy_seed.derive(streams::STAR_MASS).stream();
     let mass = SolarMasses(0.6 + stream.next_f64() * 0.8);
     let luminosity = SolarLuminosities(math::powf(mass.0, 3.5));
     let sqrt_l = luminosity.0.sqrt();
-    let class_name = if mass.0 < 0.8 {
-        "orange dwarf (K)"
-    } else if mass.0 < 1.05 {
-        "yellow dwarf (G)"
-    } else {
-        "yellow-white dwarf (F)"
-    }
-    .to_string();
+    let class_name = class_name_of_mass(mass.0).to_string();
     let ceiling = t_ms_of_mass(mass.0).min(T_MAX.0);
     let age =
         Gyr((0.05 + astronomy_seed.derive(streams::STAR_AGE).stream().next_f64() * 0.90) * ceiling);
@@ -431,5 +478,46 @@ mod tests {
             sun_angular_diameter_rel(&hot, Au(1.0)),
             sun_angular_diameter_rel(&star, Au(1.0))
         );
+    }
+
+    /// The table is a bijection: every concept has exactly one display string and
+    /// every display string maps back to the concept it came from. The round-trip
+    /// matters because `windows/book` parses rendered prose back into a fact (The
+    /// Echo's transfer law), so render and parse must be inverse or a recovered
+    /// fact stops equalling the committed one.
+    #[test]
+    fn concept_and_display_round_trip_in_both_directions() {
+        for (concept, display) in SPECTRAL_CLASSES {
+            assert_eq!(
+                class_concept(display),
+                Some(concept),
+                "{display:?} must parse back to {concept:?}"
+            );
+            assert_eq!(
+                class_display(concept),
+                Some(display),
+                "{concept:?} must render as {display:?}"
+            );
+        }
+        assert_eq!(class_concept("a star"), None);
+        assert_eq!(class_display("not-a-class"), None);
+    }
+
+    /// Every string `class_name_of_mass` can mint is registered in the table
+    /// (producer ⊆ table) — this is the direction actually tested. It does
+    /// NOT test the converse: the table may carry (and does — six of nine
+    /// entries here are minted only by `neighborhood::class_name`, never by
+    /// this crate's own mass-boundary chain) classes this function never
+    /// mints. A bogus tenth row added to `SPECTRAL_CLASSES` would pass this
+    /// test undetected.
+    #[test]
+    fn every_star_class_name_is_in_the_table() {
+        for mass in [0.6, 0.79, 0.8, 1.04, 1.05, 1.4] {
+            let name = class_name_of_mass(mass);
+            assert!(
+                class_concept(name).is_some(),
+                "star.rs mints {name:?}, which the table does not carry"
+            );
+        }
     }
 }

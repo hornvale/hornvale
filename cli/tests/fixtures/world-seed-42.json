@@ -560,7 +560,7 @@
       "star-class": {
         "name": "star-class",
         "functional": true,
-        "doc": "the host star's descriptive spectral class"
+        "doc": "the host star's spectral class, as a registered concept id (Morgan-Keenan prose is rendered from it at read time by windows/book, never stored)"
       },
       "star-luminosity-solar": {
         "name": "star-luminosity-solar",
@@ -1803,7 +1803,7 @@
         "subject": 1,
         "predicate": "star-class",
         "object": {
-          "Text": "yellow dwarf (G)"
+          "Text": "yellow-dwarf"
         },
         "place": null,
         "day": 0.0,
@@ -2203,7 +2203,7 @@
         "subject": 2,
         "predicate": "neighbor-class",
         "object": {
-          "Text": "red giant"
+          "Text": "red-giant"
         },
         "place": null,
         "day": 0.0,
@@ -2263,7 +2263,7 @@
         "subject": 3,
         "predicate": "neighbor-class",
         "object": {
-          "Text": "sun-like star"
+          "Text": "sun-like-star"
         },
         "place": null,
         "day": 0.0,
@@ -2323,7 +2323,7 @@
         "subject": 4,
         "predicate": "neighbor-class",
         "object": {
-          "Text": "orange giant"
+          "Text": "orange-giant"
         },
         "place": null,
         "day": 0.0,
@@ -2383,7 +2383,7 @@
         "subject": 5,
         "predicate": "neighbor-class",
         "object": {
-          "Text": "red dwarf"
+          "Text": "red-dwarf"
         },
         "place": null,
         "day": 0.0,
@@ -2443,7 +2443,7 @@
         "subject": 6,
         "predicate": "neighbor-class",
         "object": {
-          "Text": "white dwarf"
+          "Text": "white-dwarf"
         },
         "place": null,
         "day": 0.0,

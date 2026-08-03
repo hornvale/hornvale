@@ -54,8 +54,9 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, Star, T_MAX, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
-    luminosity_at, main_sequence_lifetime, planet_age,
+    GYR_DAYS, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr, class_concept, class_display,
+    generate_star, insolation_rel, insolation_rel_at, luminosity_at, main_sequence_lifetime,
+    planet_age,
 };
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
@@ -109,7 +110,8 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::STAR_CLASS,
         true,
-        "the host star's descriptive spectral class",
+        "the host star's spectral class, as a registered concept id (Morgan-Keenan \
+         prose is rendered from it at read time by windows/book, never stored)",
     )?;
     registry.register_predicate(
         facts::TIDALLY_LOCKED,
@@ -591,22 +593,18 @@ mod tests {
     /// class whether or not anyone has invented spectroscopy. `Void::Unnamed` is
     /// the kernel's word for exactly that, and before this campaign no domain had
     /// ever used it.
+    ///
+    /// Iterates `SPECTRAL_CLASSES` — the same table `star.rs` mints ids from —
+    /// rather than a second hand-written list of the nine names. Before this
+    /// fix, this test carried its own copy, so a typo in the registration loop
+    /// (`lib.rs`) and this table could each be wrong about the same class and
+    /// still agree with each other.
     #[test]
     fn spectral_classes_are_registered_as_unnameable() {
         let mut registry = hornvale_kernel::ConceptRegistry::default();
         register_concepts(&mut registry).expect("astronomy registers");
 
-        for name in [
-            "orange-dwarf",
-            "yellow-dwarf",
-            "yellow-white-dwarf",
-            "red-dwarf",
-            "sun-like-star",
-            "white-dwarf",
-            "orange-giant",
-            "red-giant",
-            "blue-giant",
-        ] {
+        for (name, _display) in SPECTRAL_CLASSES {
             let manifest = registry
                 .manifest(name)
                 .unwrap_or_else(|| panic!("{name} should be registered"));

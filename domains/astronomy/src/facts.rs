@@ -10,7 +10,11 @@ use crate::streams;
 use crate::system::GenesisOutcome;
 use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
 
-/// The host star's descriptive spectral class (functional, Text).
+/// The host star's spectral class, committed as its registered concept id
+/// (e.g. `"yellow-dwarf"`), never as Morgan-Keenan prose — no creature in
+/// this world could have invented that taxonomy. `windows/book` renders the
+/// id as the author's-frame display (`hornvale_astronomy::class_display`)
+/// and parses it back (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const STAR_CLASS: &str = "star-class";
 /// The anchor world is tidally locked: no local solar day exists
@@ -266,7 +270,11 @@ pub fn genesis(
         fact(
             subject,
             STAR_CLASS,
-            Value::Text(system.star.class_name.clone()),
+            Value::Text(
+                crate::star::class_concept(&system.star.class_name)
+                    .expect("every minted class name is in SPECTRAL_CLASSES")
+                    .to_string(),
+            ),
         ),
         &world.registry,
     )?;
@@ -496,7 +504,11 @@ pub fn genesis(
             fact(
                 id,
                 NEIGHBOR_CLASS,
-                Value::Text(crate::neighborhood::class_name(neighbor.class).to_string()),
+                Value::Text(
+                    crate::star::class_concept(crate::neighborhood::class_name(neighbor.class))
+                        .expect("every neighbour class name is in SPECTRAL_CLASSES")
+                        .to_string(),
+                ),
             ),
             &world.registry,
         )?;
