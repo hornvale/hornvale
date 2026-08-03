@@ -18,6 +18,7 @@ hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-demography = { path = "../../domains/demography" }
 hornvale-culture = { path = "../../domains/culture" }
 hornvale-species = { path = "../../domains/species" }
+hornvale-history = { path = "../../domains/history" }
 hornvale-language = { path = "../../domains/language" }
 serde = { workspace = true }
 serde_json = { workspace = true }

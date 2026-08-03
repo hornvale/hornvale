@@ -309,9 +309,11 @@ fn the_stitch_law_end_to_end() {
         // merge): Xobo -> Booko — the 19 toponymic/quality concepts Task 3
         // registered shift the proto-root walk, so every lexicon-derived
         // name re-draws. The rebase onto The Toponym's cohort ordering
-        // re-draws them once more: Booko -> Xoaboa. Moon count ("two"),
-        // subject and sentence frame unchanged at every step.
-        after.contains("Xoaboa has two moons, as the initiated count."),
+        // re-draws them once more: Booko -> Xoaboa. The Contour's epoch v2
+        // (2026-08-02, history/bake/v2) re-mints the draw again: Xoaboa ->
+        // Pao. Moon count ("two"), subject and sentence frame unchanged at
+        // every step.
+        after.contains("Pao has two moons, as the initiated count."),
         "the ledger's own moon-count, now unlocked: {after}"
     );
     assert!(
@@ -340,7 +342,7 @@ fn the_stitch_law_end_to_end() {
         _ => panic!("consult must not release"),
     };
     assert!(
-        consulted.contains("Xoaboa has two moons, as the initiated count."),
+        consulted.contains("Pao has two moons, as the initiated count."),
         "heard 'nine' still renders the ledger's 'two' — heard is not true, printed: {consulted}"
     );
     assert!(

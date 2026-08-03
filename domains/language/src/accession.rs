@@ -330,6 +330,33 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // six move the descriptor space where nineteen site descriptors could not
     // (LANG-9's recorded limit).
     &["barley", "millet", "rice", "tuber", "vine", "wheat"],
+    // Epoch 6 — The Vernacular, Part 2: the nine spectral classes, each
+    // registered `lexeme: Absent(Void::Unnamed(...))` — a star's class is
+    // real whether or not anyone here has invented spectroscopy, but no
+    // culture has, so no word realizes it. These nine DO reach the exposures
+    // map: `exposure_of_impl` closes with a loop over every registered
+    // concept (`windows/worldgen/src/lib.rs`'s own doc: "the map's keys are
+    // always exactly `world.registry.concepts()`'s names"), so nothing in
+    // the registry is ever absent from it. What keeps a proto-root from
+    // being drawn for them is `hornvale_language::lexicon::
+    // proto_root_universe`'s `GapReason::Unnameable` filter, which excludes
+    // exactly this classification from `build_lexicon`'s universe before
+    // `assign_proto_roots` runs — a language-side exclusion, not a registry-
+    // side absence. This cohort exists to satisfy the parity check above and
+    // to keep the epoch-first sort giving these nine no influence on any
+    // earlier-epoch assignment, per that filter and the ordering property
+    // this module's own tests pin.
+    &[
+        "orange-dwarf",
+        "yellow-dwarf",
+        "yellow-white-dwarf",
+        "red-dwarf",
+        "sun-like-star",
+        "white-dwarf",
+        "orange-giant",
+        "red-giant",
+        "blue-giant",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

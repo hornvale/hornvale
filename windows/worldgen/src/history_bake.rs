@@ -25,7 +25,9 @@
 //! Determinism: every arithmetic op stays in full `f64` precision (quantize
 //! only at the emit boundary, which is Task 4 — not here); the genesis draws
 //! derive per-people streams under `history/genesis/<people>`; the epoch
-//! dynamics draw sequentially from one `history/bake` stream in commit order;
+//! dynamics draw sequentially from one `history/bake/v2` stream in commit
+//! order (bumped from `history/bake` by The Contour — decision 0006, an
+//! epoch suffix, never a rename);
 //! neighbour candidates sort by `f64::total_cmp`. Same seed ⇒ byte-identical
 //! `records`.
 
@@ -53,6 +55,147 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
     ns.sort();
     ns.dedup();
     ns
+}
+
+/// The aggregate ease of reaching `cell`: the summed `conductance` of every
+/// traversable edge into it (`conductance > 0.0` — ocean-touching adjacency
+/// edges are stored at exactly 0.0 and are not routes). Higher means more,
+/// and easier, ways in.
+///
+/// A pure function of the graph, with no time, seed, or bake state in it,
+/// which is what makes [`defensibility`] recomputable and testable. The
+/// graph is per-era, so this is too: a glacial low-stand that exposes a land
+/// bridge raises the ease of every cell it reaches.
+///
+/// The `conductance > 0.0` filter is intent-documenting, not behaviourally
+/// load-bearing for this sum: `conductance` is never negative by domain
+/// convention (every producer in `graph_derive.rs` emits either `0.0` or a
+/// positive reciprocal), so a filtered-out `0.0` term would contribute
+/// nothing to the total even if the filter were removed. It stays because it
+/// says explicitly, at the call site, "only traversable edges count" —
+/// matching `traversable_neighbors`' idiom directly above — not because a
+/// test can observe it changing this function's output.
+///
+/// Reserved integration seam: this campaign's Task 3 wires this into
+/// `defensibility`, not yet present. Present in all builds (not
+/// `#[cfg(test)]`-gated) so that seam is real, exercised here only by this
+/// module's tests until it lands.
+#[allow(dead_code)]
+fn approach_ease(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    graph
+        .edges(cell)
+        .iter()
+        .filter(|e| e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .sum()
+}
+
+/// AUTHORED prior: the defensibility a wholly unobstructed approach tends to.
+/// Approached, never attained — `tanh` is asymptotic in both directions.
+/// Symmetric with `DEF_MAX` about 1.0, which is what lets the centred form
+/// put the median approach at exactly 1.0 (spec §2.3).
+/// type-audit: bare-ok(ratio: DEF_MIN)
+const DEF_MIN: f64 = 0.75;
+/// AUTHORED prior: the defensibility an infinitely dear approach tends to.
+/// type-audit: bare-ok(ratio: DEF_MAX)
+const DEF_MAX: f64 = 1.25;
+/// CALIBRATED (Task 2d): the pooled median `cost_exponent` over 756,510
+/// ordered pairs across seeds 1..=30, measured before any behavioural readout
+/// existed and frozen thereafter (spec §4.4). Centring here is what makes the
+/// MEDIAN approach in the world map to exactly 1.0. A save-format constant.
+/// type-audit: bare-ok(ratio: DEF_CENTER)
+const DEF_CENTER: f64 = 6.256709;
+/// AUTHORED: how many log-cost units the transition spans. A SHAPE parameter,
+/// not a scale of the quantity — the quantity's scale is `DEF_CENTER` — so
+/// this is authored at 1.0 rather than fitted. At this value the land
+/// population grades across 0.376, five times spec §4.4's trigger threshold.
+/// type-audit: bare-ok(ratio: DEF_SCALE)
+const DEF_SCALE: f64 = 1.0;
+
+/// How well `to` is defended against an approach from `from`: a strictly
+/// monotone, saturating function of the log traversal cost of the cheapest
+/// route between them. A multiplier on the HOLDER's side of the dominance
+/// test — the second contest axis (decision 0096 clause 1).
+///
+/// Reads the approach rather than the cell because the calibration found
+/// approach ease is two disjoint regimes — water-connected and land-only —
+/// which no single transform over an aggregate can grade (spec §2.3a). A raid
+/// arrives along one route, and what shelters the defender is the resistance
+/// of that route.
+///
+/// Parallel edges resolve by MAXIMUM conductance: an attacker takes the
+/// easiest road, which is also why this cannot double-count the 6.7% of cells
+/// carrying duplicate `to` values.
+///
+/// Pure in `(graph, from, to)` — no seed, no time, no bake state — so it
+/// consumes no draw and cannot move stream consumption order. Returns
+/// `DEF_MAX` for a nonexistent or wholly impassable link, which no caller
+/// reaches: both call sites walk edges that exist.
+fn defensibility(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    let best = graph
+        .edges(from)
+        .iter()
+        .filter(|e| e.to == to && e.conductance > 0.0)
+        .map(|e| e.conductance)
+        .fold(0.0_f64, f64::max);
+    if best <= 0.0 {
+        return DEF_MAX;
+    }
+    let cost_exponent = -hornvale_kernel::math::ln(best);
+    let shaped = hornvale_kernel::math::tanh((cost_exponent - DEF_CENTER) / DEF_SCALE);
+    DEF_MIN + (DEF_MAX - DEF_MIN) * (shaped + 1.0) / 2.0
+}
+
+/// Test-only re-export of [`defensibility`] so the property battery in
+/// `tests/defensibility_field.rs` can reach it without making the field part
+/// of this crate's real public surface.
+/// type-audit: bare-ok(ratio: return)
+#[doc(hidden)]
+pub fn defensibility_for_test(graph: &ConnectionGraph, from: CellId, to: CellId) -> f64 {
+    defensibility(graph, from, to)
+}
+
+/// The per-cell VIEW over [`defensibility`] (spec §2.4): the MINIMUM of
+/// `defensibility(graph, from, cell)` over every `from` with a traversable
+/// approach into `cell` — its weakest point, the quantity Ammann's envelope
+/// model cares about. A place is only as defensible as its worst way in,
+/// which is the same principle the mechanism itself applies from the other
+/// end: `defensibility` resolves PARALLEL edges between the same pair of
+/// cells by MAXIMUM conductance (an attacker always takes the easiest of
+/// several roads to the SAME neighbour); this view takes the MINIMUM across
+/// DISTINCT neighbours (a defender cannot choose which of several different
+/// approaches an attacker picks). Two ends of one principle.
+///
+/// This is a view over the mechanism, not the mechanism: nothing in the bake
+/// reads it (raiding still resolves per-edge, per spec §2.3a's finding that
+/// no single aggregate grades both the water-connected and land-only
+/// regimes), and it draws no seed and consumes no stream — pure in
+/// `(graph, cell)`. Built for the almanac and for M4
+/// (`defensibility-capacity-rank-corr`), per spec §2.4.
+///
+/// `DEF_MAX` — the same ceiling `defensibility` itself returns for a
+/// nonexistent or wholly impassable link — for a cell with NO traversable
+/// approach at all: an unreachable cell cannot be attacked, so it reads as
+/// maximally (vacuously) defended rather than undefined.
+///
+/// Reads `cell`'s own edge list rather than scanning every node in the graph
+/// for one pointing in: `ConnectionGraph::add_edge` mirrors every edge onto
+/// both endpoints with the SAME conductance (its own doc comment), so this
+/// graph is genuinely undirected, and `defensibility(graph, from, cell)` —
+/// which internally reads `graph.edges(from)` — always agrees with the
+/// matching entry already sitting in `graph.edges(cell)`. No reverse-
+/// adjacency index is needed to enumerate "every `from` with an edge into
+/// `cell`"; `traversable_neighbors(graph, cell)` already is that set.
+/// type-audit: bare-ok(ratio: return)
+pub fn weakest_point_defensibility(graph: &ConnectionGraph, cell: CellId) -> f64 {
+    let approaches = traversable_neighbors(graph, cell);
+    if approaches.is_empty() {
+        return DEF_MAX;
+    }
+    approaches
+        .into_iter()
+        .map(|from| defensibility(graph, from, cell))
+        .fold(f64::INFINITY, f64::min)
 }
 
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
@@ -1162,7 +1305,9 @@ impl<'a> Bake<'a> {
                     None => (value, 0.0, None),
                     Some(&h) => {
                         let hs = self.strength(h);
-                        if !may_take_held_land || strength <= hs * RAID_MARGIN {
+                        if !may_take_held_land
+                            || strength <= hs * defensibility(self.cur(), from, n) * RAID_MARGIN
+                        {
                             continue; // not a fight this people can win, or survive winning
                         }
                         if !self.has_spoils(era, h) {
@@ -2584,7 +2729,7 @@ impl<'a> Bake<'a> {
             };
             let t_val = self.eff_capacity(era, n);
             let t_str = self.strength(t);
-            if raider_str <= t_str * RAID_MARGIN {
+            if raider_str <= t_str * defensibility(self.cur(), raider_site, n) * RAID_MARGIN {
                 continue; // dominance: only a fight it can win
             }
             if !self.has_spoils(era, t) {
@@ -3123,6 +3268,49 @@ mod tests {
         assert_eq!(traversable_neighbors(&g, CellId(0)), vec![CellId(1)]);
     }
 
+    #[test]
+    fn approach_ease_sums_traversable_conductance_only() {
+        use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
+        let mut g = ConnectionGraph::new(4);
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.25,
+            },
+        );
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(2),
+                kind: EdgeKind::LandRoute,
+                conductance: 0.75,
+            },
+        );
+        // Ocean-touching adjacency is stored at exactly 0.0. Note this is not
+        // a test of the `conductance > 0.0` filter: a zero-valued term
+        // contributes nothing to the sum whether or not it is filtered out
+        // first, so this edge's presence is here only to document the
+        // ocean-touching case, not to exercise exclusion behaviour.
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(3),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.0,
+            },
+        );
+        assert_eq!(approach_ease(&g, CellId(0)), 1.0);
+    }
+
+    #[test]
+    fn approach_ease_is_zero_for_an_isolated_cell() {
+        use hornvale_topology::ConnectionGraph;
+        let g = ConnectionGraph::new(2);
+        assert_eq!(approach_ease(&g, CellId(0)), 0.0);
+    }
+
     /// A pure-land connection graph over `geo` (unit-conductance adjacency,
     /// no water routes) — mirrors the integration test file's `full_land_graph`
     /// helper, duplicated here because `Bake` (and this free function) are
@@ -3416,6 +3604,127 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    #[test]
+    fn a_cheaply_reached_holder_is_raided_and_a_dearly_reached_one_is_not() {
+        // Two holders identical in every respect except the CONDUCTANCE of the
+        // route reaching them from the raider. Only the cheaply-reached one may
+        // be taken. Two defects this catches: the term wired to the ATTACKER's
+        // side, and `from`/`to` transposed (the graph is mirrored, so a
+        // transposition compiles and mostly works — it fails exactly when the
+        // two cells' parallel-edge sets differ).
+        use hornvale_kernel::ReferenceElevation;
+
+        let geo = Geosphere::new(1);
+        let raider_site = CellId(0);
+        let neighbors = geo.neighbors(raider_site);
+        assert!(
+            neighbors.len() >= 2,
+            "fixture precondition: the raider's cell needs at least two neighbours"
+        );
+        let easy = neighbors[0];
+        let hard = neighbors[1];
+
+        // A hand-built graph carrying ONLY the two approach edges the test
+        // cares about — `traversable_neighbors` reads solely off
+        // `raider_site`'s edge list, so nothing else needs to exist. Same
+        // edge kind, wildly different conductance: the only difference
+        // between the two approaches is how easy the road is.
+        let mut graph = ConnectionGraph::new(geo.cell_count());
+        graph.add_edge(
+            raider_site,
+            Edge {
+                to: easy,
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0e3,
+            },
+        );
+        graph.add_edge(
+            raider_site,
+            Edge {
+                to: hard,
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0e-6,
+            },
+        );
+        let graphs = vec![graph];
+
+        // Uniform capacity everywhere: raider and both holders read the same
+        // land value, so nothing but the approach conductance can decide
+        // which holder falls.
+        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let era = EraClimate {
+            day: 0.0,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        // Population and tech are pinned identical between the two holders
+        // (both KindId("kobold"), both opened at year 0 with no tech
+        // offset) — the fixture's whole point is that conductance is the
+        // only axis left to decide the outcome.
+        let raider = bake.open(
+            KindId("goblin"),
+            raider_site,
+            0.0,
+            15.0,
+            Founding::Genesis(raider_site),
+            None,
+            0.0,
+        );
+        let easy_idx = bake.open(
+            KindId("kobold"),
+            easy,
+            0.0,
+            10.0,
+            Founding::Genesis(easy),
+            None,
+            0.0,
+        );
+        let hard_idx = bake.open(
+            KindId("kobold"),
+            hard,
+            0.0,
+            10.0,
+            Founding::Genesis(hard),
+            None,
+            0.0,
+        );
+
+        // Precondition, so a failure here points at the fixture rather than
+        // the mechanism: the raider must clear the easy holder's threshold
+        // but not the dear one's, computed from the SAME `defensibility` the
+        // mechanism itself reads (not a hand-rolled approximation of it).
+        let raider_str = bake.strength(raider);
+        let easy_str = bake.strength(easy_idx);
+        let hard_str = bake.strength(hard_idx);
+        let easy_threshold = easy_str * defensibility(bake.cur(), raider_site, easy) * RAID_MARGIN;
+        let hard_threshold = hard_str * defensibility(bake.cur(), raider_site, hard) * RAID_MARGIN;
+        assert!(
+            raider_str > easy_threshold && raider_str <= hard_threshold,
+            "precondition: raider strength ({raider_str}) must clear the easy \
+             threshold ({easy_threshold}) but not the dear one ({hard_threshold}), \
+             or the split below proves nothing"
+        );
+
+        bake.maybe_raid(raider, &era, 0.0);
+
+        assert_eq!(
+            bake.tribute.get(&easy_idx).map(|tr| tr.patron),
+            Some(raider),
+            "the cheaply-reached holder must be taken, by the raider"
+        );
+        assert!(
+            !bake.tribute.contains_key(&hard_idx),
+            "the dearly-reached holder must be left alone"
         );
     }
 

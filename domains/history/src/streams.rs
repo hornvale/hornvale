@@ -32,7 +32,7 @@ hornvale_kernel::stream_labels! {
         /// grow/found/migrate/raid/collapse draws, taken sequentially from
         /// one stream in commit order at the composition root
         /// (`windows/worldgen::history_bake::bake`).
-        BAKE = "history/bake" => "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root";
+        BAKE = "history/bake/v2" => "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order at the composition root; bumped from history/bake by The Contour's position-aware conflict, which changes committed history without moving stream consumption order (decision 0006: an epoch suffix, never a rename)";
         /// Root stream label for the deep-history bake's genesis draws:
         /// how many proto-communities a people seeds with, which sites
         /// they take, and their tech-advance offset. The bake further

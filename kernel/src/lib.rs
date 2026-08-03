@@ -47,8 +47,8 @@ pub use ledger::{EntityId, Fact, KindId, Ledger, LedgerError, Value};
 pub use manifest::{CognitiveHandle, Correspondent, Lexicalization, Manifest, PerceptKind, Void};
 pub use noise::{Fbm, fbm_2d, value_noise_2d};
 pub use phenomena::{
-    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, VISIBILITY_FLOOR, Venue,
-    Visibility, observe,
+    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Referent, VISIBILITY_FLOOR,
+    Venue, Visibility, observe,
 };
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};
 pub use refine::choose_consistent;

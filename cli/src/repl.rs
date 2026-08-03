@@ -726,11 +726,12 @@ mod tests {
     fn facts_lists_an_entity() {
         let out = drive("facts 2\nquit\n");
         // Each fact line is tagged with the domain that asserted it. Under The
-        // Living Community epoch (this merge), entity 2 is the flagship
-        // settlement, whose is-settlement/population/cell-id facts are now
-        // committed by the deep-history bake (tag "(history/bake)") rather than
-        // the settlement domain. The OR tolerates entity-numbering shifts.
-        assert!(out.contains("(history/bake)") || out.contains("(terrain)"));
+        // Living Community epoch, entity 2 is the flagship settlement, whose
+        // is-settlement/population/cell-id facts are now committed by the
+        // deep-history bake (tag "(history/bake/v2)" since The Contour bumped
+        // the label — decision 0006, an epoch suffix, never a rename) rather
+        // than the settlement domain. The OR tolerates entity-numbering shifts.
+        assert!(out.contains("(history/bake/v2)") || out.contains("(terrain)"));
     }
 
     #[test]
