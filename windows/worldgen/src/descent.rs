@@ -50,31 +50,27 @@ pub fn founder_of(world: &World, occupation: EntityId) -> RoleHandle {
     RoleHandle(key ^ world.seed.0.rotate_left(17))
 }
 
-/// The canonical component roster, assembled once per process rather than
-/// once per [`founding_coords_of`] call. The roster is world-independent —
-/// the same observation `generation_length_of`'s doc makes — but
-/// `WorldComponents::assemble()` itself costs ~0.032 s measured, and
-/// `founder_of` is called once per occupation: roughly 700 times for a
-/// single seed-42 world. Assembling per call would add on the order of 22 s
-/// to a single build; this cache keeps the path a lookup instead.
-fn canonical_components() -> Option<&'static crate::WorldComponents> {
-    static CACHE: std::sync::OnceLock<Option<crate::WorldComponents>> = std::sync::OnceLock::new();
-    CACHE
-        .get_or_init(|| crate::WorldComponents::assemble().ok())
-        .as_ref()
-}
-
 /// The founding coordinates of `occupation`, read off its committed facts.
 ///
 /// `None` when the occupation is not reconstructable (no `occ-people`,
-/// `occ-site` or `occ-founded`), or when its people's label is not in the
-/// canonical roster — a malformed ledger degrades rather than panicking, the
-/// same posture [`clan_root_of`]'s bounded walk takes.
+/// `occ-site` or `occ-founded`) — a malformed ledger degrades rather than
+/// panicking, the same posture [`clan_root_of`]'s bounded walk takes.
+///
+/// Deliberately does NOT resolve the people label against the canonical
+/// roster. Doing so looked tidier and was wrong: Lab's synthetic rosters
+/// carry species the canonical roster has never heard of (`goblin-twin`),
+/// so every founder in `census-of-the-meeting` would have resolved to
+/// `None` and collapsed onto a single handle in a committed census fixture.
+/// The key folds the label by content and never needed a `KindId`.
 fn founding_coords_of(
     world: &World,
     occupation: EntityId,
-) -> Option<hornvale_history::record::FoundingCoords> {
-    let people = people_of(world, occupation)?;
+) -> Option<hornvale_history::record::FoundingCoords<'_>> {
+    // Borrowed straight off the ledger rather than through `people_of`, which
+    // clones into a `String` that could not outlive this call.
+    let people = world
+        .ledger
+        .text_of(occupation, hornvale_history::OCC_PEOPLE)?;
     let founded = founded_year(world, occupation)?;
     let site = match world
         .ledger
@@ -83,19 +79,8 @@ fn founding_coords_of(
         Value::Number(n) => hornvale_kernel::CellId(*n as u32),
         _ => return None,
     };
-    // `KindId` wraps a `&'static str`, and `people` here is borrowed from
-    // ledger text (a runtime `String`), so it cannot be used to construct a
-    // `KindId` directly — the same constraint `generation_length_of` states
-    // at a different call site. Resolved instead against the canonical
-    // roster, which hands back the roster's own `'static` label.
-    let wc = canonical_components()?;
-    let label = wc
-        .biosphere
-        .iter()
-        .find(|(k, _)| k.0 == people)
-        .map(|(k, _)| *k)?;
     Some(hornvale_history::record::FoundingCoords {
-        people: label,
+        people,
         site,
         founded,
     })

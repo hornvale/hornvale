@@ -162,8 +162,11 @@ fn founding_key_separates_on_the_founding_and_on_the_parent() {
         founding_key(&a, None),
         founding_key(&core(10, 525.0, 40), None)
     );
-    let p1 = founding_coords(&core(20, 100.0, 5));
-    let p2 = founding_coords(&core(21, 100.0, 5));
+    // `FoundingCoords` borrows its people label, so the cores must outlive it.
+    let pc1 = core(20, 100.0, 5);
+    let pc2 = core(21, 100.0, 5);
+    let p1 = founding_coords(&pc1);
+    let p2 = founding_coords(&pc2);
     assert_ne!(
         founding_key(&a, Some(p1)),
         founding_key(&a, Some(p2)),

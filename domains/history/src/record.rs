@@ -256,11 +256,17 @@ pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>,
 /// in [`founding_key`], and as [`layer_key`]'s predecessor tie-break.
 /// `Copy` is available because `KindId` and `CellId` both are; `Occupation`
 /// itself is `Clone` only, which is why the tests below clone rather than move.
-/// type-audit: bare-ok(count: founded)
+/// The people label is a bare `&str`, not a `KindId`, on purpose: the key
+/// folds it by content, and requiring a `KindId` would force every caller to
+/// resolve the label against the canonical roster first. A Lab synthetic
+/// roster's species (`goblin-twin`) is absent from that roster, so such a
+/// caller would resolve nothing and collapse every founder in
+/// `census-of-the-meeting` onto one handle.
+/// type-audit: bare-ok(count: founded), bare-ok(identifier-text: people)
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct FoundingCoords {
-    /// The people who founded.
-    pub people: KindId,
+pub struct FoundingCoords<'a> {
+    /// The people who founded, by label.
+    pub people: &'a str,
     /// The cell founded on.
     pub site: CellId,
     /// The standard day founded.
@@ -268,9 +274,9 @@ pub struct FoundingCoords {
 }
 
 /// This occupation's own founding coordinates.
-pub fn founding_coords(c: &Occupation) -> FoundingCoords {
+pub fn founding_coords(c: &Occupation) -> FoundingCoords<'static> {
     FoundingCoords {
-        people: c.people,
+        people: c.people.0,
         site: c.site,
         founded: c.founded,
     }
@@ -348,14 +354,14 @@ pub fn material_key(c: &Occupation) -> u64 {
 /// of inert-placeholder construction this repo has been bitten by before, so
 /// this sibling exists instead of a `synthetic_core` helper.
 /// type-audit: bare-ok(identifier-text: return)
-pub fn founding_key_from(own: FoundingCoords, parent: Option<FoundingCoords>) -> u64 {
-    let mut h = mix_str(0x5361_6C74_0000_0002, own.people.0);
+pub fn founding_key_from(own: FoundingCoords<'_>, parent: Option<FoundingCoords<'_>>) -> u64 {
+    let mut h = mix_str(0x5361_6C74_0000_0002, own.people);
     h = mix(h, u64::from(own.site.0));
     h = mix(h, day_key(own.founded));
     match parent {
         Some(p) => {
             h = mix(h, 1);
-            h = mix_str(h, p.people.0);
+            h = mix_str(h, p.people);
             h = mix(h, u64::from(p.site.0));
             mix(h, day_key(p.founded))
         }
@@ -374,6 +380,6 @@ pub fn founding_key_from(own: FoundingCoords, parent: Option<FoundingCoords>) ->
 /// 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000, against 27.7% / 14.8% / 16.2%
 /// for the founding triple alone (spec D2, Nathan's ruling).
 /// type-audit: bare-ok(identifier-text: return)
-pub fn founding_key(c: &Occupation, parent: Option<FoundingCoords>) -> u64 {
+pub fn founding_key(c: &Occupation, parent: Option<FoundingCoords<'_>>) -> u64 {
     founding_key_from(founding_coords(c), parent)
 }

@@ -293,3 +293,70 @@ fn a_founders_handle_does_not_depend_on_how_the_community_ended() {
         hornvale_history::record::founding_key(&later, parent),
     );
 }
+
+/// A people the CANONICAL roster has never heard of must still get distinct
+/// founder handles.
+///
+/// The Salt's first implementation of `founder_of` resolved the ledger's
+/// people label against `WorldComponents::assemble()` in order to obtain a
+/// `'static` `KindId`. That looked tidy and was wrong: Lab's synthetic
+/// rosters carry species the canonical roster does not contain — `goblin-twin`
+/// is the whole basis of `census-of-the-meeting`, the solo-roster null
+/// control — so every occupation in that study would have resolved to `None`
+/// and collapsed onto ONE founder handle, giving every figure in a committed
+/// census fixture the same name. Nothing in the suite would have gone red.
+///
+/// This pins the property directly: two occupations of a non-canonical people,
+/// differing only in their founding coordinates, must yield different handles.
+#[test]
+fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
+    use hornvale_kernel::{EntityId, Fact, Value, World};
+
+    let mut world = World::new(Seed(42));
+    hornvale_worldgen::register_all(&mut world.registry).expect("registry registers");
+
+    let found = |world: &mut World, cell: f64, day: f64| -> EntityId {
+        let id = world.ledger.mint_entity();
+        for (predicate, object) in [
+            (
+                hornvale_history::OCC_PEOPLE,
+                // NOT in the canonical roster — Lab mints this one itself.
+                Value::Text("goblin-twin".to_string()),
+            ),
+            (hornvale_history::OCC_SITE, Value::Number(cell)),
+            (hornvale_history::OCC_FOUNDED, Value::Number(day)),
+        ] {
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: predicate.to_string(),
+                        object,
+                        place: Some(id),
+                        day: Some(day),
+                        provenance: "test-fixture".to_string(),
+                    },
+                    &world.registry,
+                )
+                .expect("fixture fact commits");
+        }
+        id
+    };
+
+    let a = found(&mut world, 10.0, 500.0);
+    let b = found(&mut world, 11.0, 500.0);
+    let c = found(&mut world, 10.0, 525.0);
+
+    let (ha, hb, hc) = (
+        founder_of(&world, a),
+        founder_of(&world, b),
+        founder_of(&world, c),
+    );
+    assert_ne!(ha, hb, "a different site must give a different founder");
+    assert_ne!(
+        ha, hc,
+        "a different founding day must give a different founder"
+    );
+    assert_eq!(ha, founder_of(&world, a), "the handle must be stable");
+}
