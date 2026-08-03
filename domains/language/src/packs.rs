@@ -254,13 +254,83 @@ pub fn universal_stratum() -> &'static [PackEntry] {
         PackEntry {
             concept: "north",
             kind: ConceptKind::Quality,
-            doc: "the compass point opposite south",
+            doc: "toward the pole of increasing latitude",
             ladder_rank: 0,
         },
         PackEntry {
             concept: "south",
             kind: ConceptKind::Quality,
-            doc: "the compass point opposite north",
+            doc: "toward the pole of decreasing latitude",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "east",
+            kind: ConceptKind::Quality,
+            doc: "the direction of increasing longitude",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "west",
+            kind: ConceptKind::Quality,
+            doc: "the direction of decreasing longitude",
+            ladder_rank: 0,
+        },
+    ]
+}
+
+/// Every bearing a [`Compass`](../../../windows/locale) variant answers to —
+/// the four cardinal roots above plus the four intercardinal compounds below.
+/// One list drives the roster test and the reverse audit, so a bearing cannot
+/// enter the vocabulary without both noticing.
+/// type-audit: bare-ok(identifier-text)
+pub const BEARINGS: &[&str] = &[
+    "north",
+    "north-east",
+    "east",
+    "south-east",
+    "south",
+    "south-west",
+    "west",
+    "north-west",
+];
+
+/// The intercardinal bearings: registered concepts with **no root of their
+/// own**, realized through [`compound_recipe`] exactly as `sea` and `mountain`
+/// are. Deliberately not in [`universal_stratum`] — giving them roots would
+/// mint an unanalysable word where every attested language builds these by
+/// composition, and would waste the compound machinery that already exists.
+///
+/// **The glosses name the mesh frame, never the sun.** "East is where the sun
+/// rises" is false on a retrograde world — the `retrograde-spin` predicate says
+/// so in as many words — and undefined on a tidally locked one, which has no
+/// solar day at all. Retrograde spin mirrors the SUN, not the compass: the
+/// frame is fixed by the geosphere, where latitude is north-positive and
+/// longitude increases eastward.
+pub fn bearing_compounds() -> &'static [PackEntry] {
+    const KIND: ConceptKind = ConceptKind::Quality;
+    &[
+        PackEntry {
+            concept: "north-east",
+            kind: KIND,
+            doc: "between north and east",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "south-east",
+            kind: KIND,
+            doc: "between south and east",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "south-west",
+            kind: KIND,
+            doc: "between south and west",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "north-west",
+            kind: KIND,
+            doc: "between north and west",
             ladder_rank: 0,
         },
     ]
@@ -522,6 +592,10 @@ const RECIPES: &[(&str, &str, &str)] = &[
     ("mountain", "many", "stone"),
     ("coast", "earth", "water"),
     ("lake", "little", "water"),
+    ("north-east", "north", "east"),
+    ("south-east", "south", "east"),
+    ("south-west", "south", "west"),
+    ("north-west", "north", "west"),
 ];
 
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
@@ -573,7 +647,8 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         .iter()
         .chain(color_pack())
         .chain(body_pack())
-        .chain(kin_pack());
+        .chain(kin_pack())
+        .chain(bearing_compounds());
     for entry in packs {
         if registry.concept(entry.concept).is_some() {
             continue;
@@ -675,6 +750,63 @@ mod tests {
             assert!(
                 r.concept(head).is_some(),
                 "recipe head '{head}' for '{concept}' is not a registered concept"
+            );
+        }
+    }
+
+    /// Every `Compass` variant answers to a registered concept. The four
+    /// cardinals are roots in [`universal_stratum`]; the four intercardinals
+    /// are compound-only, exactly as `sea` and `mountain` are.
+    #[test]
+    fn every_bearing_is_a_registered_concept() {
+        let mut r = registry_with_ambient();
+        register_concepts(&mut r).unwrap();
+        for bearing in BEARINGS {
+            assert!(
+                r.concept(bearing).is_some(),
+                "bearing '{bearing}' is not a registered concept"
+            );
+        }
+    }
+
+    /// The cardinals get roots; the intercardinals must NOT, or a culture
+    /// would mint an atomic word where every attested language compounds.
+    #[test]
+    fn cardinals_are_roots_and_intercardinals_are_compounds() {
+        for c in ["north", "south", "east", "west"] {
+            assert_eq!(concept_domain(c), Some("universal"), "{c} is a root");
+            assert!(compound_recipe(c).is_none(), "{c} needs no recipe");
+        }
+        for c in ["north-east", "south-east", "south-west", "north-west"] {
+            assert_eq!(concept_domain(c), None, "{c} must have no root");
+            let (modifier, head) =
+                compound_recipe(c).unwrap_or_else(|| panic!("{c} should have a recipe"));
+            assert!(
+                ["north", "south"].contains(&modifier),
+                "{c} modifier '{modifier}' should be a north/south cardinal"
+            );
+            assert!(
+                ["east", "west"].contains(&head),
+                "{c} head '{head}' should be an east/west cardinal"
+            );
+        }
+    }
+
+    /// The bug this change exists to fix: `north` and `south` were each
+    /// glossed as the compass point opposite the other, a loop that grounds
+    /// nothing. Every bearing must be defined against the mesh frame.
+    #[test]
+    fn no_bearing_is_defined_circularly() {
+        for entry in universal_stratum()
+            .iter()
+            .chain(bearing_compounds())
+            .filter(|e| BEARINGS.contains(&e.concept))
+        {
+            assert!(
+                !entry.doc.contains("opposite"),
+                "bearing '{}' is defined circularly: {:?}",
+                entry.concept,
+                entry.doc
             );
         }
     }

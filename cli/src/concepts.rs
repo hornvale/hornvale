@@ -186,6 +186,18 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
         .filter(|name| registry.concept(name).is_none())
         .collect();
 
+    // Orphan bearings: the exit graph's compass roster, reconciled the same
+    // way. A direction the world can send you in but no concept names cannot
+    // be spoken of or rendered in any tongue — the same gap as an unnamed act,
+    // and the one that let `east` and `west` go unregistered while `north` and
+    // `south` were carried in for toponymy alone. `Compass::all()` is held
+    // exhaustive by a compile-time tripwire, so this cannot silently miss one.
+    let orphan_bearings: Vec<&'static str> = hornvale_locale::Compass::all()
+        .iter()
+        .map(|c| c.concept_name())
+        .filter(|name| registry.concept(name).is_none())
+        .collect();
+
     let list = |names: &[&str]| {
         if names.is_empty() {
             "none".to_string()
@@ -245,6 +257,10 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
     doc.push_str(&format!(
         "Orphan acts (performed, no concept names): {}\n",
         list(&orphan_acts)
+    ));
+    doc.push_str(&format!(
+        "Orphan bearings (traversable, no concept names): {}\n",
+        list(&orphan_bearings)
     ));
     doc.push_str(
         "Prose vocabulary (player-facing words, no concept names): UNAUDITED \
@@ -489,7 +505,56 @@ mod tests {
         }
     }
 
-    /// Anti-vacuity for both audits above: they are `iff` assertions, which a
+    /// The bearing reverse audit, same discipline. `Compass::all()` is held
+    /// exhaustive by the compile-time tripwire beside it, so this cannot
+    /// silently miss a newly added bearing.
+    #[test]
+    fn manifest_render_derives_orphan_bearings_from_the_compass_roster() {
+        let mut registry = ConceptRegistry::default();
+        register_all(&mut registry).unwrap();
+        let doc = render_manifest(&registry);
+        let line = doc
+            .lines()
+            .find(|l| l.starts_with("Orphan bearings"))
+            .unwrap_or_else(|| panic!("no orphan-bearings line in the manifest view"));
+
+        for bearing in hornvale_locale::Compass::all() {
+            let name = bearing.concept_name();
+            let named = registry.concept(name).is_some();
+            let listed = line
+                .split(':')
+                .nth(1)
+                .unwrap_or("")
+                .split(',')
+                .map(str::trim)
+                .any(|e| e == name);
+            assert_eq!(
+                listed, !named,
+                "'{name}' is listed as an orphan iff it has no concept; \
+                 registered={named}, listed={listed}; line: {line}"
+            );
+        }
+    }
+
+    /// Every bearing is in fact named — the audit above is an `iff`, so it
+    /// would pass just as happily with the whole compass orphaned. This is the
+    /// assertion that would have been RED before the cardinals were completed.
+    #[test]
+    fn no_bearing_is_an_orphan() {
+        let mut registry = ConceptRegistry::default();
+        register_all(&mut registry).unwrap();
+        let unnamed: Vec<&str> = hornvale_locale::Compass::all()
+            .iter()
+            .map(|c| c.concept_name())
+            .filter(|n| registry.concept(n).is_none())
+            .collect();
+        assert!(
+            unnamed.is_empty(),
+            "every traversable bearing needs a concept; unnamed: {unnamed:?}"
+        );
+    }
+
+    /// Anti-vacuity for the audits above: they are `iff` assertions, which a
     /// roster of zero would satisfy trivially.
     #[test]
     fn the_reverse_audits_run_over_non_empty_rosters() {
@@ -500,6 +565,11 @@ mod tests {
         assert!(
             hornvale_vessel::liveness::Action::all().len() >= 4,
             "the action roster should be non-trivial"
+        );
+        assert_eq!(
+            hornvale_locale::Compass::all().len(),
+            8,
+            "the compass roster should be the full eight points"
         );
     }
 

@@ -111,7 +111,7 @@ that is the difference.
 
 ## Supply
 
-286 registered tokens no situation in this corpus requires.
+292 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -151,6 +151,7 @@ missing half before this list can serve it.
 - `concept:dire-wolf-kind` (species)
 - `concept:drink` (language)
 - `concept:earth` (language)
+- `concept:east` (language)
 - `concept:eat` (language)
 - `concept:eclipse` (astronomy)
 - `concept:epipelagic` (climate)
@@ -219,6 +220,8 @@ missing half before this list can serve it.
 - `concept:night` (astronomy)
 - `concept:nodule-field` (climate)
 - `concept:north` (language)
+- `concept:north-east` (language)
+- `concept:north-west` (language)
 - `concept:old` (language)
 - `concept:old-growth` (climate)
 - `concept:one` (language)
@@ -260,6 +263,8 @@ missing half before this list can serve it.
 - `concept:snow` (climate)
 - `concept:snowfield` (climate)
 - `concept:south` (language)
+- `concept:south-east` (language)
+- `concept:south-west` (language)
 - `concept:spring` (terrain)
 - `concept:spur-and-groove` (climate)
 - `concept:staghorn-stand` (climate)
@@ -293,6 +298,7 @@ missing half before this list can serve it.
 - `concept:vent-plume` (climate)
 - `concept:vine` (climate)
 - `concept:water` (language)
+- `concept:west` (language)
 - `concept:wheat` (climate)
 - `concept:white-dragon-kind` (species)
 - `concept:white-dwarf` (astronomy)

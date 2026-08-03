@@ -29,6 +29,7 @@ die: Toono /toono/
 dire-wolf-kind: Penae /penae/
 drink: Ganae /ganae/
 earth: Geo /geo/
+east: Neepa /neepa/
 eat: Nao /nao/
 eclipse: Ne /ne/
 epipelagic: Naenoo /naenoo/
@@ -99,6 +100,8 @@ new: Nopee /nopee/
 night: Neqa /neqa/
 nodule-field: Koo /koo/
 north: Nanoe /nanoe/
+north-east: Doneo /doneo/
+north-west: Gea /gea/
 old: Tape /tape/
 old-growth: Neneo /neneo/
 one: Koego /koego/
@@ -139,6 +142,8 @@ smoker-field: Qoge /qoge/
 snow: Noanee /noanee/
 snowfield: Qane /qane/
 south: Qaeneo /qaeneo/
+south-east: Napea /napea/
+south-west: Note /note/
 spirit: Paa /paa/
 spring: Negao /negao/
 spur-and-groove: Goakoo /goakoo/
@@ -172,6 +177,7 @@ valley: Konoa /konoa/
 vent-plume: Naote /naote/
 vine: Teona /teona/
 water: Doege /doege/
+west: Neakea /neakea/
 wheat: Netea /netea/
 white-dragon-kind: Qo /qo/
 wind: Neqoo /neqoo/
