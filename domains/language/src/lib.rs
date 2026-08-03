@@ -120,8 +120,8 @@ pub use lexicon::{
     draw_headedness,
 };
 pub use morphology::{
-    ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
-    morph_depths, morph_forms,
+    ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, SKY_OVERRIDE, TongueMorphology,
+    affix, morph_depths, morph_forms, noun_class_with_sky,
 };
 pub use naming::{
     GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,

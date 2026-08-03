@@ -22,10 +22,16 @@
 //!   goblin noun would import English grammar into a language that never
 //!   asked for it. Modifier/head order is not invented either: it is the
 //!   lexicon's own drawn [`Headedness`], the same parameter that already
-//!   orders every compound this people builds.
+//!   orders every compound this people builds. The head noun additionally
+//!   carries C7 noun-class marking ([`tongue_head`]) — a class marker binds
+//!   to a noun, not to a predication, so it is meaningful here even though
+//!   this is a bare noun phrase and neither clause realizer runs.
 
 use hornvale_kernel::Phenomenon;
-use hornvale_language::{CommonVocabulary, Headedness, LexEntry, Lexicon};
+use hornvale_language::{
+    ClassPosition, CommonVocabulary, Headedness, LexEntry, Lexicon, MorphDepth, NounClass, affix,
+    noun_class_with_sky,
+};
 
 use crate::Speaker;
 
@@ -55,6 +61,63 @@ fn tongue_word(lexicon: &Lexicon, vocab: &CommonVocabulary, concept: &str) -> St
         // this lexicon at all) are the same thing to a reader: this people
         // cannot say it. Both circumlocute.
         Some(LexEntry::Gap { .. }) | None => common_word(vocab, concept),
+    }
+}
+
+/// The referent's head concept, realized in a speaker's tongue with C7
+/// noun-class marking applied at whatever depth `speaker.morph` draws — the
+/// morphological half of [`hornvale_language::realize_tongue_deep`]'s
+/// noun-class arm, reapplied here because a phenomenon line has no clause
+/// for that realizer to run (see the module docs); [`noun_class_with_sky`]
+/// answers the SAME classification either way.
+///
+/// Marking only ever binds to a NATIVE lexicon entry (`Root`/`Compound`): a
+/// concept that circumlocutes into Common (a [`LexEntry::Gap`], or no entry
+/// at all) borrows a foreign word, and grafting this people's own class
+/// morpheme onto someone else's noun would not be marking anything, so a
+/// circumlocuted head renders exactly as [`tongue_word`] already renders
+/// it — unmarked.
+///
+/// `MorphDepth::Affix` additionally needs the word's own retained
+/// phonological segments, which only [`LexEntry::Root`] keeps —
+/// [`LexEntry::Compound`] discards its already-joined segments at build
+/// time (the identical retained-segments gap
+/// `hornvale_language::grammar::layer_affix` — not exported, but its doc
+/// comment names the same gap — panics on for a clause complement). None of
+/// [`hornvale_language::SKY_OVERRIDE`]'s four sky bodies are ever compound
+/// concepts (`hornvale_language::compound_recipe` only ever answers `sea`,
+/// `mountain`, `coast`, `lake`, all `NounClass::Inanimate` and none of them
+/// observed as a phenomenon referent today), so this arm is unreached by
+/// anything this renderer marks; it degrades to the unmarked word rather
+/// than panicking, because a renderer feeding a committed artifact must
+/// never panic on a case its own data cannot yet produce.
+fn tongue_head(speaker: &Speaker, vocab: &CommonVocabulary, concept: &str) -> String {
+    let (plain, segments) = match speaker.lexicon.entry(concept) {
+        Some(LexEntry::Root { derivation, views }) => {
+            (views.roman.clone(), Some(&derivation.modern))
+        }
+        Some(LexEntry::Compound { views, .. }) => (views.roman.clone(), None),
+        Some(LexEntry::Gap { .. }) | None => return common_word(vocab, concept),
+    };
+
+    let class_value = match noun_class_with_sky(speaker.sky_animate, concept) {
+        NounClass::Animate => "animate",
+        NounClass::Inanimate => "inanimate",
+    };
+    let Some(marker) = speaker.morph.class.get(class_value) else {
+        return plain;
+    };
+
+    match speaker.morph.noun_class_depth {
+        MorphDepth::None => plain,
+        MorphDepth::Particle => match speaker.morph.class_position {
+            ClassPosition::Prefix => format!("{} {plain}", marker.roman),
+            ClassPosition::Suffix => format!("{plain} {}", marker.roman),
+        },
+        MorphDepth::Affix => match segments {
+            Some(segs) => affix(segs, &marker.segments, speaker.morph.class_position).roman,
+            None => plain,
+        },
     }
 }
 
@@ -92,7 +155,7 @@ pub fn phenomenon_line(
             format!("the {}", words.join(" "))
         }
         Some(speaker) => {
-            let head = tongue_word(&speaker.lexicon, vocab, &referent.concept);
+            let head = tongue_head(speaker, vocab, &referent.concept);
             let qualifiers: Vec<String> = referent
                 .qualifiers
                 .iter()
@@ -121,15 +184,16 @@ pub fn phenomenon_line(
 /// rather than a hand-stuffed map because [`Lexicon`] owns its entries
 /// privately, so this is a genuinely drawn vocabulary.
 ///
-/// `morph` is the inert bundle (no evidential or noun-class marking): this
-/// renderer realizes a noun phrase, not a predication, and today reads only
-/// `speaker.lexicon`. See the module docs.
+/// `morph`'s bundle is inert by default (`MorphDepth::None` on both axes,
+/// no marker forms) so every existing caller keeps its C3-floor surface; a
+/// test exercising noun-class marking overrides `morph`/`sky_animate` on
+/// the returned `Speaker` (see `sky_override_concepts_mark_by_...` below).
 #[cfg(test)]
 pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
     use hornvale_kernel::Seed;
     use hornvale_language::{
         CascadeRegime, ClassPosition, Envelope, ExoticSeg, ExposureClass, MorphDepth,
-        TongueMorphology, build_lexicon, draw_phonology, tongue_grammar,
+        TongueMorphology, build_lexicon, draw_phonology,
     };
     use std::collections::BTreeMap;
 
@@ -164,7 +228,6 @@ pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
             &[],
             CascadeRegime::SETTLED,
         ),
-        grammar: tongue_grammar(&Seed(1), "test", &ph),
         morph: TongueMorphology {
             evidential_depth: MorphDepth::None,
             noun_class_depth: MorphDepth::None,
@@ -180,6 +243,7 @@ pub(crate) fn test_speaker(concepts: &[&str]) -> Speaker {
 mod tests {
     use super::*;
     use hornvale_kernel::{Phenomenon, Referent, Venue};
+    use hornvale_language::{Manner, MorphForm, Place, Segment};
 
     fn moon() -> Phenomenon {
         Phenomenon {
@@ -362,5 +426,150 @@ mod tests {
         let mut p = moon();
         p.kind = "an-unlikely-registry-key".to_string();
         assert_eq!(phenomenon_line(&p, None, &v), "the great moon");
+    }
+
+    /// The deliverable: a sky-override concept's noun-class marking flips
+    /// with the culture's agentive day-schema draw. Asserts on RENDERED
+    /// TEXT, never a `NounClass` value — feeding the classifier's own
+    /// output back to itself would prove nothing about the renderer, which
+    /// is exactly how this campaign shipped an earlier bug undetected.
+    #[test]
+    fn sky_override_marks_by_the_agentive_day_schema_particle_depth() {
+        let v = CommonVocabulary::default();
+        let mut speaker = test_speaker(&["sun"]);
+        speaker.morph.noun_class_depth = MorphDepth::Particle;
+        speaker.morph.class_position = ClassPosition::Suffix;
+        speaker.morph.class.insert(
+            "animate",
+            MorphForm {
+                segments: vec![],
+                roman: "aya".to_string(),
+            },
+        );
+        speaker.morph.class.insert(
+            "inanimate",
+            MorphForm {
+                segments: vec![],
+                roman: "ombo".to_string(),
+            },
+        );
+        let p = Phenomenon {
+            referent: Referent::of("sun"),
+            ..moon()
+        };
+
+        speaker.sky_animate = true;
+        let animate_line = phenomenon_line(&p, Some(&speaker), &v);
+        speaker.sky_animate = false;
+        let inanimate_line = phenomenon_line(&p, Some(&speaker), &v);
+
+        assert_ne!(
+            animate_line, inanimate_line,
+            "the same sky concept must render differently under an agentive \
+             vs. non-agentive day-schema: animate={animate_line:?} \
+             inanimate={inanimate_line:?}"
+        );
+        assert!(
+            animate_line.ends_with("aya"),
+            "the animate marker must reach the rendered line: {animate_line}"
+        );
+        assert!(
+            inanimate_line.ends_with("ombo"),
+            "the inanimate marker must reach the rendered line: {inanimate_line}"
+        );
+    }
+
+    /// The same deliverable at `MorphDepth::Affix` — the segment-level join
+    /// (`hornvale_language::affix`), not just a free particle. Real seed-42
+    /// species draw this depth ~30% of the time (`NOUN_CLASS_DEPTH_WEIGHTS`),
+    /// so it must work, not merely the particle case.
+    #[test]
+    fn sky_override_marks_by_the_agentive_day_schema_affix_depth() {
+        let v = CommonVocabulary::default();
+        let mut speaker = test_speaker(&["sun"]);
+        let p = Phenomenon {
+            referent: Referent::of("sun"),
+            ..moon()
+        };
+        let unmarked = phenomenon_line(&p, Some(&speaker), &v);
+
+        speaker.morph.noun_class_depth = MorphDepth::Affix;
+        speaker.morph.class_position = ClassPosition::Suffix;
+        speaker.morph.class.insert(
+            "animate",
+            MorphForm {
+                segments: vec![Segment::Consonant {
+                    place: Place::Alveolar,
+                    manner: Manner::Sibilant,
+                    voiced: false,
+                }],
+                roman: "s".to_string(),
+            },
+        );
+        speaker.morph.class.insert(
+            "inanimate",
+            MorphForm {
+                segments: vec![Segment::Consonant {
+                    place: Place::Labial,
+                    manner: Manner::Stop,
+                    voiced: false,
+                }],
+                roman: "p".to_string(),
+            },
+        );
+
+        speaker.sky_animate = true;
+        let animate_line = phenomenon_line(&p, Some(&speaker), &v);
+        speaker.sky_animate = false;
+        let inanimate_line = phenomenon_line(&p, Some(&speaker), &v);
+
+        assert_ne!(
+            animate_line, unmarked,
+            "affix marking must change the rendered word: {animate_line}"
+        );
+        assert_ne!(
+            inanimate_line, unmarked,
+            "affix marking must change the rendered word: {inanimate_line}"
+        );
+        assert_ne!(
+            animate_line, inanimate_line,
+            "the two classes' affixes must render differently: \
+             animate={animate_line:?} inanimate={inanimate_line:?}"
+        );
+    }
+
+    /// A circumlocuted head — this people has no native word for the
+    /// concept, so it borrows Common's — never receives this tongue's own
+    /// class morpheme. Grafting a native morpheme onto a foreign word would
+    /// not be marking anything.
+    #[test]
+    fn a_circumlocuted_head_is_never_class_marked() {
+        let v = CommonVocabulary::default();
+        // Only "moon" is exposed — "sun" circumlocutes into Common.
+        let mut speaker = test_speaker(&["moon"]);
+        speaker.morph.noun_class_depth = MorphDepth::Particle;
+        speaker.morph.class_position = ClassPosition::Suffix;
+        speaker.morph.class.insert(
+            "animate",
+            MorphForm {
+                segments: vec![],
+                roman: "aya".to_string(),
+            },
+        );
+        speaker.sky_animate = true; // "sun" would be Animate if marked.
+
+        let line = phenomenon_line(
+            &Phenomenon {
+                referent: Referent::of("sun"),
+                ..moon()
+            },
+            Some(&speaker),
+            &v,
+        );
+        assert!(
+            !line.contains("aya"),
+            "a foreign (Common-circumlocuted) word must never carry this \
+             tongue's own class marker: {line}"
+        );
     }
 }

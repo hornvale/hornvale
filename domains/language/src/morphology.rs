@@ -55,9 +55,14 @@ pub enum MorphDepth {
 /// A concept's noun class, as DERIVED (never drawn — anti-astrology line)
 /// from shipped world-state; see the plan's animacy base table
 /// (`docs/superpowers/plans/2026-07-19-the-deep-grammar.md`). This crate
-/// only defines the category; deriving it is the composition root's
+/// defines the category and answers the pure-string half of it
+/// ([`noun_class_with_sky`]); the sky-override half's own input —
+/// `sky_animate`, the C5 day-schema draw — still needs a built
+/// terrain/climate, so DERIVING *that* stays the composition root's
 /// business (a `noun_class_of` callback, per
-/// [`crate::grammar::realize_tongue_deep`]'s signature).
+/// [`crate::grammar::realize_tongue_deep`]'s signature — `windows/worldgen`'s
+/// `noun_class_from` is the one that owns the day-schema draw and hands the
+/// answer to [`noun_class_with_sky`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NounClass {
     /// A living, agentive referent (or, for a handful of sky bodies, one a
@@ -65,6 +70,66 @@ pub enum NounClass {
     Animate,
     /// A non-agentive referent.
     Inanimate,
+}
+
+/// The four sky-body concepts whose animacy needs a per-culture agentive
+/// day-schema draw rather than the plain string rule below; every other
+/// concept answers from [`noun_class_plain`] alone. Moved here from
+/// `windows/worldgen::chorus` (Campaign The Vernacular, Task 6, correcting a
+/// controller error in Task 5's dispatch): the four-name list and the
+/// plain/override split are a pure `(bool, &str)` language fact with no
+/// world/terrain/climate dependency of their own — nothing about them is
+/// composition-root work, even though the ANSWER a caller supplies for the
+/// sky-override arm (`sky_animate`) is composition-root-derived.
+/// type-audit: bare-ok(identifier-text)
+pub const SKY_OVERRIDE: [&str; 4] = ["sun", "moon", "star", "earth"];
+
+/// The non-sky-override half of the animacy coherence law (plan header,
+/// `docs/superpowers/plans/2026-07-19-the-deep-grammar.md`): every `*-kind`
+/// concept (e.g. `"goblin-kind"`) and `"person"` are [`NounClass::Animate`];
+/// every other concept is [`NounClass::Inanimate`]. Pure string comparison —
+/// needs no world, terrain, or climate — so [`noun_class_with_sky`] can
+/// answer it before its caller pays for a sculpt, and it can never be
+/// affected by a `BuildError` on an unrelated (sky) concept. Moved from
+/// `windows/worldgen::chorus` alongside [`SKY_OVERRIDE`] and
+/// [`noun_class_with_sky`].
+fn noun_class_plain(concept: &str) -> NounClass {
+    if concept == "person" || concept.ends_with("-kind") {
+        NounClass::Animate
+    } else {
+        NounClass::Inanimate
+    }
+}
+
+/// C7's derived noun-class assignment, the animacy-coherence branch shared
+/// by every caller that already holds (or has just computed) `sky_animate`
+/// — the C5 day-schema draw's `Some(SchemaId::Agentive)` answer, per
+/// species/culture — rather than deriving it itself: [`SKY_OVERRIDE`]
+/// concepts answer `sky_animate` (mapped to `Animate`/`Inanimate`); every
+/// other concept answers [`noun_class_plain`], unaffected by `sky_animate`.
+///
+/// Moved from `windows/worldgen::chorus` (Campaign The Vernacular, Task 6):
+/// it is a pure function of `(bool, &str)`, nothing about it is
+/// composition-root work, and moving it down here lets a consumer that
+/// cannot depend on `hornvale-worldgen` reach it directly. That is not a
+/// hypothetical — it is why this move happened: `windows/almanac`'s
+/// phenomenon renderer needs exactly this function, and `hornvale-worldgen`
+/// depends on `hornvale-almanac` (it constructs `hornvale_almanac::Speaker`),
+/// so an almanac → worldgen edge is a dependency cycle. Re-exported from
+/// `hornvale_worldgen::chorus` so every caller that reached it as
+/// `hornvale_worldgen::noun_class_with_sky` (`windows/book`, and `chorus`'s
+/// own `noun_class_from`) keeps compiling unchanged.
+/// type-audit: bare-ok(flag: sky_animate), bare-ok(identifier-text: concept)
+pub fn noun_class_with_sky(sky_animate: bool, concept: &str) -> NounClass {
+    if SKY_OVERRIDE.contains(&concept) {
+        if sky_animate {
+            NounClass::Animate
+        } else {
+            NounClass::Inanimate
+        }
+    } else {
+        noun_class_plain(concept)
+    }
 }
 
 /// Which side of the marked word a class marker binds. Drawn per species

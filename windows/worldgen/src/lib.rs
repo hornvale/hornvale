@@ -7383,8 +7383,6 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         })
         .and_then(|p| hornvale_species::species_of(world, p.id));
     let speaker = flagship_species.and_then(|species| {
-        let ph = language_of(world, &species);
-        let grammar = hornvale_language::tongue_grammar(&world.seed, &species, &ph);
         let lexicon = lexicon_from(world, &species, &terrain, &climate).ok()?;
         let morph = tongue_morphology_of(world, &species).ok()?;
         let sky_animate = day_schema_from(world, &species, &terrain, &climate)
@@ -7392,7 +7390,6 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         Some(hornvale_almanac::Speaker {
             species,
             lexicon,
-            grammar,
             morph,
             sky_animate,
         })

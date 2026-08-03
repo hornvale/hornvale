@@ -1552,40 +1552,36 @@ pub fn day_schema_from(
     .map(|(schema, _rank)| schema)
 }
 
-/// The four sky-body concepts whose animacy needs the C5 day-schema draw
-/// (and therefore a terrain/climate sculpt); every other concept answers
-/// from [`noun_class_plain`] alone.
-const SKY_OVERRIDE: [&str; 4] = ["sun", "moon", "star", "earth"];
-
-/// The non-sky-override half of the animacy coherence law (plan header):
-/// every `*-kind` concept (e.g. `"goblin-kind"`) and `"person"` are
-/// [`NounClass::Animate`]; every other concept is [`NounClass::Inanimate`].
-/// Pure string comparison — needs no world, terrain, or climate — so
-/// [`noun_class_from`] can answer it before paying for a sculpt, and it can
-/// never be affected by a `BuildError` on an unrelated (sky) concept.
-fn noun_class_plain(concept: &str) -> NounClass {
-    if concept == "person" || concept.ends_with("-kind") {
-        NounClass::Animate
-    } else {
-        NounClass::Inanimate
-    }
-}
+// `SKY_OVERRIDE`, `noun_class_plain`, and `noun_class_with_sky` moved to
+// `domains/language::morphology` (Campaign The Vernacular, Task 6,
+// correcting a controller error in Task 5's dispatch: `windows/almanac` may
+// NOT depend on `hornvale-worldgen` — `hornvale-worldgen` depends on
+// `hornvale-almanac`, so that edge would be a dependency cycle). All three
+// were a pure `(bool, &str)` language fact with no world/terrain/climate
+// dependency; nothing about them was composition-root work. Re-exported
+// here so every existing caller (`windows/book`, and this file's own
+// `noun_class_from` below) that reaches `noun_class_with_sky` as
+// `hornvale_worldgen::noun_class_with_sky`/`chorus::noun_class_with_sky`
+// keeps compiling unchanged — a move, not a fork; there is exactly one copy
+// of the animacy table, now living in `domains/language`.
+pub use hornvale_language::noun_class_with_sky;
 
 /// C7's derived noun-class assignment (the animacy coherence law, plan
-/// header): [`noun_class_plain`] for every concept EXCEPT
-/// `"sun"`/`"moon"`/`"star"`/`"earth"` ([`SKY_OVERRIDE`]), which are
-/// `Animate` iff `species`' C5 day-schema draw ([`day_schema_from`]) is
-/// [`SchemaId::Agentive`]. Zero draws (the anti-astrology line): the sky
-/// override reads a draw `day_schema_from` already made, never rolls a
-/// fresh die.
+/// header): [`hornvale_language::noun_class_with_sky`]'s sky-override arm,
+/// gated on `species`' C5 day-schema draw ([`day_schema_from`]) — the half
+/// of the animacy coherence law that DOES stay composition-root work,
+/// because it needs a built terrain/climate to answer. Zero draws of its
+/// own (the anti-astrology line): the sky override reads a draw
+/// `day_schema_from` already made, never rolls a fresh die.
 ///
 /// Takes ALREADY-BUILT terrain/climate (down the sky-override arm's
 /// [`day_schema_from`]) instead of re-sculpting the globe. Computes the
 /// sky-override's `sky_animate` answer lazily (only when `concept` is in
-/// [`SKY_OVERRIDE`]) and delegates to [`noun_class_with_sky`] — the single
-/// copy of the animacy-coherence branch, shared with callers (The Shuttle's
-/// book window) that already hold `sky_animate` for a whole kind and want
-/// to answer many concepts without re-running [`day_schema_from`] per call.
+/// [`hornvale_language::SKY_OVERRIDE`]) and delegates to
+/// [`noun_class_with_sky`] for both arms — the non-sky-override branch
+/// passes a `sky_animate` of `false`, which `noun_class_with_sky` ignores
+/// for any concept outside `SKY_OVERRIDE`, so there is no second copy of
+/// the plain-concept rule here.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: concept)
 pub fn noun_class_from(
     world: &World,
@@ -1594,35 +1590,12 @@ pub fn noun_class_from(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> NounClass {
-    if SKY_OVERRIDE.contains(&concept) {
+    if hornvale_language::SKY_OVERRIDE.contains(&concept) {
         let sky_animate =
             day_schema_from(world, species, terrain, climate) == Some(SchemaId::Agentive);
         return noun_class_with_sky(sky_animate, concept);
     }
-    noun_class_plain(concept)
-}
-
-/// The animacy-coherence branch ([`noun_class_from`]'s doc), taking the
-/// sky-override's `sky_animate` answer as an argument
-/// instead of deriving it — for a caller (e.g. `windows/book`) that already
-/// computed [`day_schema_from`]'s `Some(SchemaId::Agentive)` answer once per
-/// kind and wants to classify many concepts against it without re-running
-/// the day-schema draw per concept. [`SKY_OVERRIDE`] concepts answer
-/// `sky_animate` (mapped to [`NounClass::Animate`]/[`NounClass::Inanimate`]);
-/// every other concept answers [`noun_class_plain`], unaffected by
-/// `sky_animate`. The one copy of this logic — [`noun_class_from`]'s own
-/// sky-override arm calls this rather than duplicating it.
-/// type-audit: bare-ok(flag: sky_animate), bare-ok(identifier-text: concept)
-pub fn noun_class_with_sky(sky_animate: bool, concept: &str) -> NounClass {
-    if SKY_OVERRIDE.contains(&concept) {
-        if sky_animate {
-            NounClass::Animate
-        } else {
-            NounClass::Inanimate
-        }
-    } else {
-        noun_class_plain(concept)
-    }
+    noun_class_with_sky(false, concept)
 }
 
 // --- C8, The Diachronic Book: the observation ledger and the knowledge

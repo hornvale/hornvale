@@ -129,6 +129,21 @@ pub struct NightSkyLines {
 ///
 /// The composition root fills this — a window may not reach back to the root,
 /// which is why [`AlmanacContext::place_labels`] is filled rather than derived.
+///
+/// **No `grammar` field.** Task 1 widened this struct to carry
+/// `hornvale_language::TongueGrammar` on the assumption (recorded in its own
+/// report) that the renderer would run `hornvale_language::realize_tongue_deep`,
+/// which needs one. Task 5 found a phenomenon has no subject for that
+/// clause-level realizer to take, and rendered a bare noun phrase instead —
+/// at which point `grammar`'s clause-order/copula fields (and the
+/// not-yet-surfaced article flag) had nothing left to answer. Task 6 (this
+/// campaign, correcting its own dispatch error) wired `morph` and
+/// `sky_animate` into noun-class marking on that noun phrase, which *is*
+/// meaningful without a clause — a class marker binds to a noun, not to a
+/// predication. `grammar` stayed dead through that fix too (confirmed:
+/// nothing in this crate reads it), so it is removed rather than shipped
+/// unread. A struct carrying a field nothing uses is the defect class this
+/// campaign exists to remove, dead-field or not.
 /// type-audit: bare-ok(identifier-text: species), bare-ok(flag: sky_animate)
 #[derive(Clone, Debug)]
 pub struct Speaker {
@@ -136,14 +151,14 @@ pub struct Speaker {
     pub species: String,
     /// That species' vocabulary.
     pub lexicon: hornvale_language::Lexicon,
-    /// Its clause-level grammar.
-    pub grammar: hornvale_language::TongueGrammar,
-    /// Its morphology.
+    /// Its morphology — how deeply noun class grammaticalizes, and the
+    /// marker forms themselves. Read by [`phenomenon_line`]'s tongue path to
+    /// mark a referent's head noun for animacy.
     pub morph: hornvale_language::TongueMorphology,
     /// Whether this people's day-schema is agentive, which overrides the
     /// animacy of sky concepts. Stored as the bool rather than a closure so
     /// the struct stays plain data; a renderer rebuilds the classifier with
-    /// `hornvale_worldgen::noun_class_with_sky(sky_animate, concept)`.
+    /// `hornvale_language::noun_class_with_sky(sky_animate, concept)`.
     pub sky_animate: bool,
 }
 
