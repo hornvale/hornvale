@@ -132,18 +132,62 @@ unrelated: the two `cascade` matches describe a conflict-collapse mechanism,
 not sound change, and the `descent` match is a chamber-derivation sentence
 from a different campaign. Checked, no re-score owed.
 
-## A note on the branch's red gate
+## A note on the branch's red gate — resolved at the close
 
-This campaign's branch closes with a known-red baseline of **34** failures in
-`hornvale-lab`, all one cause: adding metrics to the lab registry makes the
-committed census fixtures' headers disagree with the study schema, and those
-fixtures are authored on the canonical host at the campaign's close rather
-than locally. The plan did not carry a census-refresh step, which is a real
-gap in it — the count and shape were established after the first task and
-carried into every subsequent review brief precisely so that 34 reds would not
-be mistaken for the task under review. One correction was needed along the
-way: the reds are **two** stale study fixtures, not one (31 from the main
-census, 3 from a second `"metrics": "all"` study), so a refresh covering only
-the first would leave three red. Any campaign that adds a lab metric inherits
-this, and should establish the baseline's exact count and shape at its first
-task rather than at its last.
+For its whole working life this branch carried a known-red baseline of **34**
+failures in `hornvale-lab`, all one cause: adding metrics to the lab registry
+makes the committed census fixtures' headers disagree with the study schema,
+and those fixtures are authored on the canonical host rather than locally. The
+plan did not carry a census-refresh step, which is a real gap in it — the count
+and shape were established after the first task and carried into every
+subsequent review brief precisely so that 34 reds would not be mistaken for the
+task under review. One correction was needed along the way: the reds are **two**
+stale study fixtures, not one (31 from the main census, 3 from a second
+`"metrics": "all"` study), so a refresh covering only the first would leave
+three red.
+
+Cleared at the close by regenerating both fixtures on the canonical host
+against the merged branch head (1000 rows each, 0 refusals, 718 s wall,
+`cpu_ratio` 25.2). The branch merged with a fully green gate: **2845 tests,
+2845 passed**, artifact drift clean across gallery, reference, laboratory and
+audits.
+
+Any campaign that adds a lab metric inherits this, and should establish the
+baseline's exact count and shape at its first task rather than its last.
+
+## What the close itself cost, and why
+
+The close was the most expensive part of this campaign, and every hour of it
+traces to one omission.
+
+**F8 — the branch never absorbed main until the close.** CLAUDE.md requires
+absorption at every plan-stage boundary; this branch's first meeting with main
+was `make preflight` at the close, by which point main had moved **87 commits**
+carrying two whole campaigns (*The Contour* and *The Vernacular*). Then it moved
+**twice more** while the close was in progress — 18 commits mid-close, and 3
+more during the final gate — so the branch absorbed main three separate times
+and re-ran preflight after each. The rule exists to keep semantic drift next to
+its cause; obeying it would have turned one 87-commit reconciliation into six or
+seven cheap ones. This is the campaign's single clearest process failure.
+
+**F9 — the absorption's one conflict was the silently-wrong kind.** Both this
+campaign and *The Contour* moved the lab registry's pinned metric count off the
+same base: 172 → 175 there, 172 → 180 here. **Neither side's value is correct —
+the merged truth is 183.** Git conflicted on that exact line so it could not slip
+through, but that was luck of formatting, not a guarantee: the second absorption
+touched the same file and auto-merged clean, and the pin had to be re-verified
+by *running the test* rather than by trusting the arithmetic. A count pinned as a
+literal in a file two parallel campaigns both append to is a merge hazard by
+construction. Worth considering whether the count should be derived rather than
+pinned, or the registry split so two campaigns rarely touch one line.
+
+**F10 — a parallel campaign hit this campaign's exact defect, independently.**
+*The Contour*'s chronicle reports that "the metric that was supposed to
+adjudicate the question was specified as two halves and built as one, and the
+half that shipped was already sitting at its ceiling." That is precisely what
+happened here to §5.2(2): a two-sided criterion given a metric for only one
+side, caught during execution and fixed by adding the second. Two campaigns
+running in the same week, independently, made the same mistake. That is a
+process signal rather than a coincidence — a preregistered criterion with a
+conjunction in it needs a metric per conjunct, and nothing currently checks
+that.
