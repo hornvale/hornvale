@@ -116,7 +116,7 @@ pub use grammar::{
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
-    draw_headedness,
+    draw_headedness, proto_root_universe,
 };
 pub use morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,

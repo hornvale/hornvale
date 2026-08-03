@@ -5982,14 +5982,33 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
 /// checks: it proves shared ancestry, never mere self-consistency.
 fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String, Vec<Segment>> {
     let proto_ph = hornvale_worldgen::proto_phonology_of(v.world(), "goblinoid");
-    let universe: Vec<&str> = v
-        .world()
-        .registry
-        .concepts()
-        .map(|c| c.name.as_str())
-        .collect();
-    // The merger-aware assignment (epoch root/v3) build_lexicon consumes, so
-    // this reconstruction matches every daughter's recorded proto exactly.
+    // The universe comes from `build_lexicon`'s OWN rule, not from a second
+    // copy of it. This function used to build it from every registered
+    // concept, which silently disagreed with `proto_root_universe`'s
+    // `Unnameable` exclusion (the nine spectral classes). That cost nothing
+    // for as long as the excluded cohort sorted last — `assign_proto_roots`
+    // is epoch-first and an assignment depends only on the concepts at or
+    // before it — and then the compass added accession epoch 7 (`east`,
+    // `west`), the first concepts ever to sort AFTER them, and this metric
+    // reported a monophyly break on 14 of 1000 seeds in worlds that were
+    // monophyletic. Re-deriving the DRAW independently is the point of this
+    // check; re-deriving the universe RULE was the bug.
+    //
+    // Any goblinoid daughter's exposures serve: the map's keys are always
+    // exactly `world.registry.concepts()`'s names, and `Unnameable` is a
+    // property of the concept rather than of the species, so the filtered
+    // universe is species-invariant — as it must be, since a family-level
+    // assignment that differed per daughter could not produce cognates.
+    let exposures = GOBLINOID_DAUGHTERS
+        .iter()
+        .filter(|s| in_roster(v, s))
+        .find_map(|s| {
+            hornvale_worldgen::exposure_from(v.world(), s, v.terrain(), v.climate()).ok()
+        });
+    let Some(exposures) = exposures else {
+        return std::collections::BTreeMap::new();
+    };
+    let universe = hornvale_language::proto_root_universe(&exposures);
     let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), "goblinoid");
     hornvale_language::assign_proto_roots(
         &v.world().seed,
@@ -8474,6 +8493,29 @@ mod tests {
             MetricValue::Flag(true),
             "every goblinoid daughter's Root proto must match the family proto-root"
         );
+    }
+
+    /// Regression: three seeds where this metric reported a monophyly break
+    /// in a world that was monophyletic.
+    ///
+    /// Seed 42 could never have caught it. The defect needed a *collision* in
+    /// `assign_proto_roots`'s reject-and-reprobe loop on an accession-epoch-7
+    /// concept (`east`/`west`), which is what makes the extra nine
+    /// `Unnameable` concepts in the old unfiltered universe change the
+    /// answer — rare enough to hit 14 of 1000 seeds and to miss the one seed
+    /// every unit test in this file uses. These three are taken from that
+    /// failing set; the full list was `[21, 70, 130, 153, 187, 308, 371, 471,
+    /// 502, 571, 836, 847, 849, 855]`.
+    #[test]
+    fn monophyly_goblinoid_holds_on_the_seeds_the_unfiltered_universe_broke() {
+        for seed in [21u64, 70, 130] {
+            let view = FullView::build(Seed(seed), &SkyPins::default()).unwrap();
+            assert_eq!(
+                extract(&view, "monophyly-goblinoid"),
+                MetricValue::Flag(true),
+                "seed {seed}: the daughters agree with each other; a reported break                  here means the metric's universe has drifted from build_lexicon's again"
+            );
+        }
     }
 
     #[test]
