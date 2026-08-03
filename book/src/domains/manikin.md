@@ -26,6 +26,12 @@ manikin is built to no customer's measurements precisely so that every
 customer can be measured against it. This one is the same construction, and
 the same deliberate nobody.
 
+This chapter's nine dimensions are `hornvale-species`'s three vectors (mind,
+society, perception). A fourth vector, articulation, carries the identical
+construction one domain over — see [Language](./language.md) for its own
+`ArticulationVector::MANIKIN` and the third case its `tonality` dimension
+adds to the vocabulary below.
+
 **Why it is not a species.** The manikin has no identifier and no registry
 row, but the sharper reason is physical rather than bookkeeping: it has no
 mass, no metabolic class, and no resource or climate niche, so it has no
@@ -69,9 +75,23 @@ here rather than dressed up, because a designated default that quietly
 acquires the authority of a midpoint is precisely the error this chapter
 exists to end.
 
+There is a third case, and it does not appear among these nine — it belongs
+to articulation, the fourth vector, over in `hornvale-language`. Most of that
+vector's dimensions are the first kind, scalars sitting at the neutral
+midpoint. `tonality` is neither kind cleanly: it *is* a scalar, so unlike
+`Hierarchic`/`Rank`/`Diurnal` it does have a middle to occupy — and the
+manikin deliberately does not sit at it. It reads `0.0`, atonal, the value
+every shipped people currently carries, because every shipped body plan
+affords no pitch contrast. A designated default can therefore wear a
+scalar's clothes exactly as it wears an enumeration's; the tell is not the
+axis's shape but whether the value was *chosen* or *derived*. Recording that
+is the point of a chapter whose subject is a convention that had quietly
+acquired the authority of a fact.
+
 **Goblin, afterwards.** Goblin's authored row still sits at exactly the
-manikin's values on every dimension. Nothing in the model requires that, and
-the coincidence is now pinned by a characterization test rather than assumed
-by the arithmetic — so the day goblin is finally characterised on its own
-merits, it arrives as a visible change to one test, not as a silent
-re-origining of the world.
+manikin's values on every dimension, of every vector, all four of them.
+Nothing in the model requires that, and the coincidence is now pinned by a
+characterization test per vector family rather than assumed by the
+arithmetic — so the day goblin is finally characterised on its own merits, it
+arrives as a visible change to those tests, not as a silent re-origining of
+the world.

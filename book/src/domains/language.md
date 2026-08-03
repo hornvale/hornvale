@@ -60,18 +60,22 @@ about a phenomenon rather than a second phenomenon standing in for the
 first.
 
 **The articulation vector, and why it stays closed.** A species' phonology
-is built from an **articulation vector** — the species crate's fourth closed
-vector, after the three-dimension mind and society vectors (*The Cloister*
+is built from an **articulation vector** — the fourth closed vector in this
+lineage, after the three-dimension mind and society vectors (*The Cloister*
 split the old six-dimension psychology vector) and the three-dimension
-perception vector, authored per species and read against a **manikin** of its
-own — a reference vector belonging to no creature, the same discipline both
-earlier vectors already keep (see [The Manikin](./manikin.md)). This vector's
-manikin is the one that wears its asymmetry on its face: five of its six
-scalars sit at the **neutral midpoint** `0.5`, but **tonality** sits at a
-**designated default** of `0.0` — atonal, chosen because the shipped body
-plans afford no pitch contrast, not because zero is a middle — and the exotic
-manner is an enumeration with no middle at all, whose designated default is
-`None`. Seven dimensions: each one a
+perception vector, but the first to live outside `hornvale-species`: since
+*The Dissolution* it is owned by `hornvale-language` itself, and it carries
+its own manikin — `ArticulationVector::MANIKIN` — redeclared rather than
+imported, because a domain depends on the kernel and never on a sibling
+domain. It is authored per species and read against that manikin — a
+reference vector belonging to no creature, the same discipline all three
+earlier vectors already keep (see [Species](./species.md) and
+[The Manikin](./manikin.md)). This vector's manikin is the one that wears its
+asymmetry on its face: five of its six scalars sit at the **neutral
+midpoint** `0.5`, but **tonality** sits at a **designated default** of `0.0`
+— atonal, chosen because the shipped body plans afford no pitch contrast, not
+because zero is a middle — and the exotic manner is an enumeration with no
+middle at all, whose designated default is `None`. Seven dimensions: each one a
 named capacity the phonology engine intersects with whatever it draws, so that
 any difference between two peoples' sounds recounts to a dimension by name
 rather than to an author's ear. The seventh, **tonality**, was the phonology

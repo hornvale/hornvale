@@ -148,11 +148,13 @@ free. Leaving it would not have stayed free.
 
 Goblin's authored row still sits at exactly the manikin's values on every
 dimension of every vector. Nothing in the model requires that any longer, and
-the coincidence is now pinned by a test that says in its own name that goblin
-is *authored at* the manikin rather than *defining* it. Characterising goblin
-on its own merits — giving it a temperament that is its own rather than the
-origin's — is now a decision about one people, arriving as a visible change to
-one test. Before this campaign it was a silent re-origining of nine axes in
+the coincidence is now pinned by characterization tests, one per vector
+family, each naming in the test itself that goblin is *authored at* the
+manikin rather than *defining* it. Characterising goblin on its own merits —
+giving it a temperament that is its own rather than the origin's — is now a
+decision about one people, arriving as a visible change to those tests.
+Before this campaign it was a silent re-origining of sixteen axes (nine in
+`hornvale-species`, seven in `hornvale-language`'s articulation vector) in
 every world that has ever contained a goblin.
 
 That is the whole deliverable: not a number, but the removal of a reason a
