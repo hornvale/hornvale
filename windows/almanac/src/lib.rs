@@ -345,12 +345,37 @@ pub fn render_weather_line(site: &str, sky: &str) -> String {
     format!("{site}: the sky is {sky}.")
 }
 
+/// Pluralize a people label naively (`goblin` → `goblins`), matching
+/// `history::pluralize` and `qualify::plural`: the biosphere roster has no
+/// irregular plurals. A third private copy rather than a shared export —
+/// the header line is the only caller here, in a different module from
+/// either sibling.
+fn pluralize_people(people: &str) -> String {
+    if people.ends_with('s') {
+        people.to_string()
+    } else {
+        format!("{people}s")
+    }
+}
+
 /// Render the one-page world document as markdown. Deterministic: same
 /// context, same bytes.
 /// type-audit: bare-ok(artifact: return)
 pub fn render(ctx: &AlmanacContext) -> String {
     let mut doc = String::new();
     doc.push_str(&format!("# The Almanac of Seed {}\n\n", ctx.seed));
+
+    // Spec §3: a document voiced by one people's tongue is a projection, and
+    // a projection whose choice is invisible reads as neutral fact. Name the
+    // speaker right under the title so a reader is never left inferring it
+    // from `Doa` a paragraph later. `speaker: None` says nothing here — the
+    // absence of a people is not itself a claim about who is speaking.
+    if let Some(speaker) = &ctx.speaker {
+        doc.push_str(&format!(
+            "*As reckoned among the {}.*\n\n",
+            pluralize_people(&speaker.species)
+        ));
+    }
 
     doc.push_str("## The Sky\n\n");
     doc.push_str(&format!("{}\n\n", ctx.sky.description));
@@ -835,6 +860,31 @@ mod tests {
         assert!(
             !voiced.contains("- [1.00] the sun"),
             "a speaker's almanac must not fall back to Common here:\n{voiced}"
+        );
+    }
+
+    /// Spec §3: the document must name whose account it is when it has a
+    /// speaker, and must invent no neutral claim when it does not.
+    #[test]
+    fn the_header_names_the_speaker_when_one_exists_and_says_nothing_otherwise() {
+        let neutral = render(&sample_context());
+        assert!(
+            !neutral.contains("As reckoned among"),
+            "no speaker means no claim about who is speaking:\n{neutral}"
+        );
+
+        let mut ctx = sample_context();
+        ctx.speaker = Some(crate::phenomenon_line::test_speaker(&["sun"]));
+        let voiced = render(&ctx);
+        assert!(
+            voiced.contains("*As reckoned among the tests.*"),
+            "the header must name the speaker's people:\n{voiced}"
+        );
+        let header_pos = voiced.find("As reckoned among").unwrap();
+        let sky_pos = voiced.find("## The Sky").unwrap();
+        assert!(
+            header_pos < sky_pos,
+            "the speaker attribution belongs right under the title"
         );
     }
 

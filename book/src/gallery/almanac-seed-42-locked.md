@@ -1,5 +1,7 @@
 # The Almanac of Seed 42
 
+*As reckoned among the bugbears.*
+
 ## The Sky
 
 A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars. The sky is a flat overcast.

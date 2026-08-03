@@ -1,5 +1,7 @@
 # The Almanac of Seed 42
 
+*As reckoned among the bugbears.*
+
 ## The Sky
 
 A golden sun hangs fixed at zenith. It has never been seen to move. The sky is fair, with scattered cumulus.

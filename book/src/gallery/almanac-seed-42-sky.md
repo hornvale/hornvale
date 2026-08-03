@@ -1,5 +1,7 @@
 # The Almanac of Seed 42
 
+*As reckoned among the bugbears.*
+
 ## The Sky
 
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.

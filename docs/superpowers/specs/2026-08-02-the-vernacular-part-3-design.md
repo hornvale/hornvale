@@ -350,6 +350,173 @@ first seed to draw it. `every_neighbour_class_is_in_the_spectral_table`
 (`domains/astronomy/src/neighborhood.rs`) now covers all six, and was shown to
 fail — naming the orphaned variant — with a pair removed from the table.
 
+### 6.2 Readout — 3b
+
+Written *alongside* the frozen §6 predictions, never over them, per decision
+0016. 3c is not yet measured.
+
+**Zero committed facts moved, across all eight tasks.**
+`lens_purity::seed_42_world_json_matches_the_committed_fixture` — the whole
+serialized seed-42 world compared byte-for-byte against the committed fixture,
+which subsumes a fact-list diff — passed on every task's own gate. Task 7,
+whose change (deleting `Phenomenon.description`) turned out to touch
+`kernel::observe`'s tie-break, went further than the pin: it dumped
+`build_world(...)` for seeds **1** and **7** before and after, and diffed with
+`cmp`. Both byte-identical. No task in 3b moved a fact; 3a remains the only
+plan in this campaign that does.
+
+**The cost question — the prediction as literally measured, and why that
+number alone is not the whole story.**
+
+The most recent pre-3b `rebaseline` row in `docs/timings.md` is:
+
+| when | wall_s | user_s | sys_s | cpu_ratio | commit |
+|---|---|---|---|---|---|
+| 2026-08-03T01:10:16Z | 85.705 | 105.542 | 4.535 | 1.28 | `da08ae07` |
+
+`da08ae07` is the merge that closed out 3a's main-absorption, the commit
+immediately before 3b's first commit (`087b7d75`, 08:32:21 local — 21 seconds
+later). Two `make rebaseline` runs against 3b's last commit (`dbedf7f2`, Task
+7) on the same host (`ambrose`, 12 cores):
+
+| when | wall_s | user_s | sys_s | cpu_ratio | commit |
+|---|---|---|---|---|---|
+| 2026-08-03T17:48:25Z | 118.045 | 107.180 | 4.954 | 0.95 | `dbedf7f2` |
+| 2026-08-03T17:51:51Z | 90.124 | 105.805 | 4.854 | 1.23 | `dbedf7f2` |
+
+By **wall time**, the two post-3b samples give ratios of **1.38×** and
+**1.05×** against the 85.705 s baseline — one above the frozen 1.25× line, one
+below it, from the identical commit and host, ten minutes apart. Pre-3b
+history on this same host/branch shows the same spread at a single unchanged
+commit (`385b1c27`: 143.921 s at 15:09:52Z vs. 131.947 s at 23:21:30Z, 8 hours
+apart — an 8% swing with zero code change), and the pre-3b row chosen as
+baseline (85.705 s) is itself the *fastest* rebaseline this branch ever
+recorded on this host — every other pre-3b row on `ambrose` reads
+112–144 s. A single wall-clock sample either side of a noisy pair straddling
+the exact commit boundary is not strong evidence on its own.
+
+**user_s + sys_s (actual CPU-seconds of work, not wall-clock scheduling) tells
+a cleaner story.** Baseline: 110.08 s. The two post-3b samples: 112.13 s and
+110.66 s — **1.02× and 1.00×**, both comfortably inside the frozen budget, and
+the two post-3b samples agree with *each other* to within 1.5 s where their
+wall times disagreed by 28 s. The honest reading: **the actual work `make
+rebaseline` performs did not measurably grow past the 1.25× line; the
+wall-clock ratio's excursion above it is scheduling noise on a shared host,
+larger in magnitude than the threshold itself.** This is reported rather than
+resolved by picking the friendlier sample — decision 0016 forbids treating a
+second run as a mulligan for an unwelcome first one, so both are shown, and
+the CPU-time comparison that discriminates between "more work" and "more
+contention" (the same distinction `cpu_ratio` exists to draw, per
+`docs/timings.md`'s own header) is what actually answers the question.
+
+**Verified independently of the timing, because the brief requires it when the
+line is crossed even provisionally: the hoist was built in from the start, not
+skipped.** `windows/worldgen::almanac_context` calls `lexicon_from` once
+(`windows/worldgen/src/lib.rs:7386`) and `common_vocabulary` once
+(`:7402`) per world, both consumed by every phenomenon in that world's almanac
+— confirmed by reading the call sites, not inferred from the task reports.
+Task 1's report independently states the same for the speaker's lexicon
+("`lexicon_from`... runs once per world"), and Task 5's for the vocabulary
+("filled at the composition root... once per world"). `windows/book` and
+`windows/explain` each build their own `CommonVocabulary`/`Lexicon` once per
+call, not per line rendered. So §4.2's proposed mitigation was never deferred
+as optional and then skipped — it shipped as the only shape built, in Task 1
+and Task 4/5 alike — and the CPU-time evidence above says it worked: the
+work Task 1–7 added is essentially free at the wall-clock ratio decision 0016
+asked about.
+
+**What moved, and how the phenomena block reads now.** Across 3b's eight
+tasks, `make rebaseline` moved `book/src/gallery/almanac-seed-42.md`,
+`book/src/gallery/almanac-seed-42-sky.md`,
+`book/src/gallery/almanac-seed-42-locked.md`, `book/src/gallery/the-book.md`,
+`book/src/reference/layering-generated.md` (two new window→domain edges:
+`hornvale-almanac → hornvale-language`, `hornvale-explain → hornvale-language`),
+and `docs/audits/type-audit-report.md` (tag-count churn from every renamed or
+retired field, net across the eight tasks). One gallery line, before (Task
+5's diff against the pre-campaign artifact) and after:
+
+```diff
+-- [0.70] *celestial-body* — a golden sun fixed at zenith
++- [0.70] Doa
+```
+
+`Doa` is the bugbears' own word for the sun — seed 42's flagship people (the
+chief bugbear settlement, Godogododaga, is the first settlement placed; prior
+task reports narrated this people as "goblin," which the committed artifact
+does not bear out — see the concern below). No
+registry key and no authored English sentence remain on this line; the kind
+that used to leak beside the prose (`*celestial-body*`) is gone with the prose
+that leaked beside it. Task 8 adds one more line, right under the title, so a
+reader is never left inferring who is speaking from `Doa` a paragraph later:
+
+```diff
+ # The Almanac of Seed 42
+
++*As reckoned among the bugbears.*
+
+ ## The Sky
+```
+
+**Common's vocabulary found zero exceptions.** Task 3 ran the mechanical
+rules (declared → strip `-kind` → hyphen-to-space) against the full live
+191-concept registry, by hand, entry by entry. **Zero declared exceptions were
+needed inside `domains/language`** — every hyphenated id, including all 28
+`-kind` species tags, read as good English from the naming convention alone.
+The one bad case found (`sun-like-star` → "sun like star") belongs to
+astronomy, not to the mechanism, and is handled by astronomy's own declared
+`common_words()` exception, respecting the layering rule rather than
+special-casing it inside `domains/language`. This is this campaign's first
+measurement of its own remaining leak surface — the naming convention that
+lets a stored concept id double as a rendered word holds for the entire
+registry today, with the correction load concentrated in exactly the one
+domain (astronomy's Morgan–Keenan classes) that already had authored display
+strings before this campaign began.
+
+**The order-coupling finding — the campaign's most important result, and the
+reason to delete rather than relocate.** `kernel::observe`'s salience tie-break
+was `salience → kind → description`; deleting the field (Task 7) forced it to
+`salience → kind → referent`. Seeds 42 and 1 each hold two lunar-eclipse
+phenomena tied on the first two keys, so the tie-break decided their order —
+and the order changed, because the English sentence that used to hold that
+third rank no longer exists to hold it. `chorus::cyclic_beliefs_from` joins
+committed beliefs to a *re-computed* phenomena list by list position, so the
+reordering swapped two deities' periods: eight pantheon lines moved in
+`almanac-seed-42-sky.md` and two agent names in `the-book.md`. Nothing was
+written differently — the ledger is unchanged — but two rendered documents
+disagreed with their previous selves about which belief belonged to which
+period.
+
+The reword-invariance battery this campaign retired
+(`cli/tests/prose_is_not_a_contract.rs`) existed specifically to disprove that
+prose could carry meaning beyond its gloss. It compared only the text
+*produced by* `observe`, never the *order* `observe` produced — so a
+description that decided world order the whole time was invisible to the one
+test built to catch exactly that class of coupling, for the entire life of the
+test. The coupling did not hide from the reword battery; it stood one field to
+the left of everywhere the battery ever looked. That is the strongest evidence
+this campaign has that **description needed to be deleted, not relocated**: a
+relocated field would have kept deciding world order under a new roof,
+invisibly, and the same battery would have kept passing. A type that cannot
+express the defect is a stronger guarantee than a test that watches the wrong
+field for it.
+
+**One correction to the campaign's own record, caught only by re-reading the
+committed artifact rather than the prior reports about it.** Tasks 5, 6, and
+7's reports, and this campaign's own task-8 dispatch, all name seed 42's
+flagship people as "goblin." The regenerated `almanac-seed-42*.md` files say
+otherwise: "The chief bugbear settlement, Godogododaga, holds 118 souls," and
+`Doa` sits in the same document under the header this task adds, "*As
+reckoned among the bugbears.*" Goblin, hobgoblin, and bugbear all place
+settlements in this world; bugbear's is first, so bugbear is the flagship
+species `almanac_context` resolves. This does not change any test's
+correctness — every phenomenon-rendering test in Tasks 5–7 asserts on rendered
+text (`Doa`, `Goododo Daboa`, …) without naming a species, so the mislabeling
+never reached an assertion. It reached only prose, repeated across four
+documents without being checked against the artifact it described. Recorded
+here because it is exactly the failure mode §3 exists to prevent: an
+unverified claim about whose account something is, made confidently and
+carried forward uncorrected.
+
 ## 7. What composes, and why it is worth building
 
 A star's **colour** is nameable per culture — different peoples, different
