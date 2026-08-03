@@ -211,6 +211,103 @@ the same result The Pigment measured for an outcrop, now for the sky. A null
 here (both peoples say the same thing) is a finding about the star's colour
 landing in a basin both lexicons reach, not a failure.
 
+### 6.1 Readout — 3a
+
+Written *alongside* the frozen predictions above, never over them: decision
+0016's preregistration is worthless if the numbers can be edited after
+unblinding. 3b and 3c are not yet measured.
+
+**Measured at** `d2c1f8cf` — the last commit in 3a to move a committed value —
+against a seed-42 ledger captured before task 1, whose facts are identical to
+the committed fixture at `6db788ec`. Both ledgers hold **26309** facts;
+comparison is index-aligned, fact by fact.
+
+**Six facts moved, and only six.**
+
+| predicate | count | movement |
+|---|---|---|
+| `star-class` | 1 | `yellow dwarf (G)` → `yellow-dwarf` |
+| `neighbor-class` | 5 | `red giant` → `red-giant`; `sun-like star` → `sun-like-star`; `orange giant` → `orange-giant`; `red dwarf` → `red-dwarf`; `white dwarf` → `white-dwarf` |
+
+Nothing downstream moved — no name, no deity, no settlement; seed 42's village
+is still `Goodogododaga`. Artifact drift across all three tasks was confined to
+`book/src/reference/concept-registry-generated.md` (one predicate's doc string)
+and `docs/audits/type-audit-report.md` (tags for the new `_public` mirror).
+**`book/src/gallery/` did not move at all**, and the author's ground-truth
+sentence in `the-book.md` — "orbiting a yellow-white dwarf (F)" — is
+character-identical. That is the round trip working as designed: the ledger
+holds the registered id, the author's register renders the Morgan–Keenan
+display back out of it.
+
+**The prediction held**, as stated, with nothing to qualify.
+
+**Why nothing downstream moved — read off the source rather than inferred.**
+One path does consume a `star-class` *value*: `chorus_ground` flattens the fact
+into a `GroundFact`, and `filtered_disposition` can carry a value's text into a
+culture's account. It never fires, for two structural reasons.
+`observability_table()` gives `star-class` `Requirement::Instrumental`, which
+returns `Lost(BeyondCapability)` without reading the object at all, and
+`NeededConcept::Fixed("star")`, so even the lexicon check tests the constant
+`"star"` rather than the fact's value. The only requirement that *does* read the
+value — `Taxonomic` — is assigned to `star-class` solely by
+`pathological_params()`, the dial's gibberish pole, where
+`world_carving: Some("earth")` substitutes every text fact to the same target
+regardless of what the truth text says. `neighbor-class` has no value reader at
+all outside the `--neighbor` pin round-trip; the census's
+`brightest-neighbor-class` metric recomputes its kebab-case from the live
+`NeighborClass` enum, never from the ledger. The zero-diff `book/src/laboratory/`
+is the independent check on all of that: `the-chorus.study.json` is regenerated
+by `scripts/regenerate-artifacts.sh`, so a value-dependent account would have
+shown up there.
+
+**The epoch question: no epoch is owed.**
+
+Decision 0084's test is whether a *derivation* moved. It did not. A spectral
+class is a pure function of the star's drawn mass, and the mass draw is
+untouched — same seed, same mass, same bucket boundaries (`class_name_of_mass`,
+extracted in task 1 and proved to move nothing). What changed is which of two
+strings the ledger writes for that one unchanged class: the registered concept
+id instead of its author-frame display. That is a re-spelling of a derived
+label, not a moved derivation — the same shape as 0084's own `room/furnishing`
+declination, which recorded the decline rather than the bump.
+
+Declaring one anyway would be the **empty epoch** 0084 names as a defect: a
+permanent manifest row asserting a discontinuity in derivation history that did
+not occur, which every world written afterwards would carry as a fiction. There
+is also no label to bump. Seed-derivation labels are declared per *algorithm*
+and never in advance (decision 0083); no algorithm changed, and astronomy's
+stream labels are untouched — `STAR_MASS` and `NEIGHBORS` above all. Minting a
+label for the class *naming* would be exactly the pre-declaration 0083 forbids.
+
+**One consideration weighed and deliberately not allowed to decide it.** This is
+a committed-fact value change at the determinism boundary. Nothing in-repo
+carries either predicate across the wasm ABI — `clients/` was grepped for
+`.rs`, `.ts`, `.js` and `.json` with zero hits on `star-class` or
+`neighbor-class`, reproduced independently at this readout — but a sibling repo
+reading a *released world JSON* directly would see the value change. So this is
+consumer-visible without being an in-repo break. That is a **compatibility**
+fact and is recorded here as one; it is not an epoch. 0084 asks whether the
+derivation moved, and the answer to that question does not change with who is
+reading the output. The right response to a consumer-visible value change is the
+additive-or-versioned discipline the scene schemas already carry, applied at
+whatever release publishes it — not a derivation epoch that would misdescribe
+what happened.
+
+**What would have changed the verdict.** Any committed fact outside
+`star-class`/`neighbor-class` moving — a name, a deity, a settlement — would
+have meant the class text was load-bearing in an undeclared derivation, and the
+epoch would have been owed and named after *that* derivation. So would a moved
+metric or census golden, which is 0084's EPOCH case by definition. Neither
+happened, and both were checked rather than assumed.
+
+**One guard added while deciding.** `facts.rs` `.expect()`s that every
+`NeighborClass` display is in `SPECTRAL_CLASSES`, and nothing asserted it: seed
+42 draws five of the six variants, leaving `BlueGiant` correct only by
+inspection, so a drift between the two tables would be a worldgen panic on the
+first seed to draw it. `every_neighbour_class_is_in_the_spectral_table`
+(`domains/astronomy/src/neighborhood.rs`) now covers all six, and was shown to
+fail — naming the orphaned variant — with a pair removed from the table.
+
 ## 7. What composes, and why it is worth building
 
 A star's **colour** is nameable per culture — different peoples, different

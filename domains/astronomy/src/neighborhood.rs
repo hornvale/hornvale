@@ -204,4 +204,26 @@ mod tests {
         assert_eq!(neighbors[0].class, NeighborClass::BlueGiant);
         assert_eq!(neighbors[0].color, "hard blue-white");
     }
+
+    /// Every neighbour class maps into the spectral table the ledger commits
+    /// through. `facts.rs` `.expect()`s this lookup, so a drift between the two
+    /// tables is a panic on whatever seed first draws the orphaned variant —
+    /// seed 42 draws only five of the six.
+    #[test]
+    fn every_neighbour_class_is_in_the_spectral_table() {
+        for class in [
+            NeighborClass::RedDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::BlueGiant,
+        ] {
+            let display = class_name(class);
+            assert!(
+                crate::star::class_concept(display).is_some(),
+                "{class:?} mints {display:?}, which SPECTRAL_CLASSES does not carry"
+            );
+        }
+    }
 }
