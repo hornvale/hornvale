@@ -704,7 +704,12 @@ mod tests {
     use super::*;
     use hornvale_kernel::Seed;
 
-    fn goblin_env() -> Envelope {
+    /// The manikin's articulation envelope: the reference values these tests
+    /// are framed against — five scalars at the neutral midpoint, `tonality`
+    /// at the designated default 0.0 (atonal), no exotic manner. Goblin's
+    /// authored row happens to equal it, which is why the goblin-labelled
+    /// draws below pass it.
+    fn manikin_env() -> Envelope {
         Envelope {
             labiality: 0.5,
             vowel_space: 0.5,
@@ -735,7 +740,7 @@ mod tests {
             voiced: false,
         };
         assert!(!permits(&kobold_env(), &bilabial));
-        assert!(permits(&goblin_env(), &bilabial));
+        assert!(permits(&manikin_env(), &bilabial));
     }
 
     #[test]
@@ -802,7 +807,7 @@ mod tests {
     fn drawn_inventory_is_always_a_subset_of_canonical_segments() {
         let canonical = canonical_segments();
         for (seed, species, env) in [
-            (Seed(1), "goblin", goblin_env()),
+            (Seed(1), "goblin", manikin_env()),
             (Seed(42), "kobold", kobold_env()),
             (Seed(99), "kobold", kobold_env()),
         ] {
@@ -819,11 +824,12 @@ mod tests {
 
     // ---- The tone dimension (Stage 4).
 
-    /// A fully tone-capable envelope (goblin baseline elsewhere, tonality 1.0).
+    /// A fully tone-capable envelope (the manikin's values elsewhere,
+    /// tonality 1.0).
     fn tonal_env() -> Envelope {
         Envelope {
             tonality: 1.0,
-            ..goblin_env()
+            ..manikin_env()
         }
     }
 
@@ -836,7 +842,7 @@ mod tests {
         // tonality 0.0 ⇒ tone inventory {Neutral} ⇒ no toned vowel is admitted,
         // so the vowel set is exactly the pre-tone (Neutral-only) set.
         for seed in 0..12u64 {
-            let ph = draw_phonology(&Seed(seed), "goblin", &goblin_env());
+            let ph = draw_phonology(&Seed(seed), "goblin", &manikin_env());
             assert!(
                 !ph.inventory.iter().any(is_toned_vowel),
                 "seed {seed}: an atonal species must carry no toned vowel"
@@ -928,7 +934,7 @@ mod tests {
     #[test]
     fn no_language_requires_a_diphthong_in_every_syllable() {
         let mut complex_seen = 0usize;
-        for (label, env) in [("goblin", goblin_env()), ("kobold", kobold_env())] {
+        for (label, env) in [("goblin", manikin_env()), ("kobold", kobold_env())] {
             for seed in 0..200u64 {
                 let ph = draw_phonology(&Seed(seed), label, &env);
                 assert!(
@@ -993,7 +999,7 @@ mod tests {
         // not repaired).
         let atonal = Envelope {
             tonality: 0.0,
-            ..goblin_env()
+            ..manikin_env()
         };
         let mut ph = cramped_phonology();
         let before = ph.clone();
@@ -1006,7 +1012,7 @@ mod tests {
         // The tone draw lives on its own `phonology/tones` leg, so raising
         // tonality must not perturb the consonant inventory (drawn on the
         // separate `inventory` leg) — only add toned vowels.
-        let atonal = draw_phonology(&Seed(5), "x", &goblin_env());
+        let atonal = draw_phonology(&Seed(5), "x", &manikin_env());
         let tonal = draw_phonology(&Seed(5), "x", &tonal_env());
         let consonants = |ph: &Phonology| -> Vec<Segment> {
             ph.inventory

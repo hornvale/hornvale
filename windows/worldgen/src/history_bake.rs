@@ -247,8 +247,9 @@ const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// **Disclosure on the value.** This gate's stated purpose is to make raiding
 /// heterogeneous *across peoples*; a threshold that admits the whole roster, or
 /// vetoes the whole roster, is inert by construction and buys nothing. 0.6 is
-/// chosen to sit between the registry's declared baseline temperament (goblin,
-/// 0.5) and the assertive peoples (hobgoblin 0.7, kobold and bugbear 0.8), so
+/// chosen to sit between the manikin's neutral midpoint — where goblin's
+/// authored temperament happens to sit (0.5) — and the assertive peoples
+/// (hobgoblin 0.7, kobold and bugbear 0.8), so
 /// exactly one of the four settling peoples declines to raid. That is a choice
 /// about what the gate *means*, made against the authored roster — not one
 /// fitted to a measured outcome; the cascade metric was not consulted in

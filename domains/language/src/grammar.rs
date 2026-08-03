@@ -465,8 +465,8 @@ mod tests {
     use hornvale_kernel::Seed;
     use std::collections::BTreeMap;
 
-    /// A goblin-baseline articulation envelope — per `phonology.rs`'s own
-    /// test-constructor pattern (`goblin_env`), reconstructed locally here
+    /// The manikin's articulation envelope — per `phonology.rs`'s own
+    /// test-constructor pattern (`manikin_env`), reconstructed locally here
     /// since that helper is private to `phonology`'s own test module.
     fn test_envelope() -> Envelope {
         Envelope {

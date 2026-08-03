@@ -708,7 +708,8 @@ pub fn deposit_of(
 /// decisively against the 200-seed `census-of-the-gathering` census (mean
 /// 27.15; see `carrying_capacity.rs`'s freeze note for the full measurement),
 /// so these factors are frozen unchanged as save-format constants.
-/// Identity-ish at the goblin baseline; deterministic in `p`.
+/// Identity-ish at [`hornvale_species::MindVector::MANIKIN`]; deterministic
+/// in `p`.
 pub fn species_carrying_input(
     base: hornvale_demography::CarryingInput,
     p: &hornvale_species::MindVector,
@@ -3138,8 +3139,9 @@ fn observed_phenomena_occluded(
 /// becomes occlusion — no domain learns that clouds exist.
 ///
 /// Identity and [`Visibility::CLEAR`] under a clear, cloudless sky **by
-/// construction**, the same discipline [`perception_lens`] keeps at the goblin
-/// baseline: `observe` then performs no arithmetic at all, so an unclouded
+/// construction**, the same discipline [`perception_lens`] keeps at the
+/// manikin's perception vector: `observe` then performs no arithmetic at all,
+/// so an unclouded
 /// world is byte-identical to its pre-occlusion self.
 ///
 /// Ambient rises above 1.0 deliberately as the sky dims — the occluder
@@ -3202,8 +3204,8 @@ fn occlusion_lens_at(
 }
 
 /// Derive a species' perception lens from its authored vector (spec §4).
-/// Identity at the goblin baseline (Diurnal, 0.5, 0.5) by construction:
-/// every factor is exactly 1.0 there.
+/// Identity at [`hornvale_species::PerceptionVector::MANIKIN`] (`Diurnal`,
+/// 0.5, 0.5) by construction: every factor is exactly 1.0 there.
 pub fn perception_lens(p: &hornvale_species::PerceptionVector) -> PerceptionLens {
     let activity_factor = match p.activity {
         hornvale_species::ActivityCycle::Diurnal => 1.0,
@@ -3665,8 +3667,8 @@ fn proto_phonology_of_in(
 /// straining at daylight hue distinctions. `luminance` is a coarse
 /// two-step switch: a species with keen night vision (`night_vision >
 /// 0.6`) has lexicalized the full gloom/shadow/starlit ladder (3); every
-/// other species has only the coarsest term (1). At the goblin baseline
-/// (`night_vision == 0.5`), `hue == 4` (blue lexicalized, brown not) and
+/// other species has only the coarsest term (1). At the manikin's neutral
+/// midpoint (`night_vision == 0.5`), `hue == 4` (blue lexicalized, brown not) and
 /// `luminance == 1`; the kobold roster value (`night_vision == 0.9`) gives
 /// `hue == 2` (blue *not* lexicalized — kobolds stop before blue) and
 /// `luminance == 3`.
@@ -4095,7 +4097,8 @@ fn exposure_of_impl(
     // crate-private `lexicon_of_in_from` core shares the same resolution) and
     // `resolve_kind` accepts any biosphere kind, so a caller may still pass
     // plain fauna — which fails loudly here rather than
-    // silently classifying colour as though a bear saw like a goblin. Mirrors
+    // silently classifying colour against the manikin's reference perception,
+    // which is nobody's eyes and certainly not a bear's. Mirrors
     // the same failure in `chorus::account_params_from`.
     let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
         BuildError::MalformedKind(format!(
@@ -4583,10 +4586,11 @@ pub fn lexicon_from(
 }
 
 /// A status basis' contribution to the `formality`/`epithet_density` voice
-/// knobs (spec §7): `Rank` — the goblin baseline — reads as the "high" end;
-/// `Knowledge`/`Generosity` read lower. `Rank`'s value is fixed at exactly
-/// the voice engine's identity value, 0.5, so a Rank-basis species with an
-/// otherwise-baseline psychology nets out to identity by construction.
+/// knobs (spec §7): `Rank` — the manikin's designated default — reads as the
+/// "high" end; `Knowledge`/`Generosity` read lower. `Rank`'s value is fixed at
+/// exactly the voice engine's identity value, 0.5, so a Rank-basis species
+/// whose psychology is otherwise the manikin's nets out to identity by
+/// construction.
 fn status_register(status: hornvale_species::StatusBasis) -> f64 {
     use hornvale_species::StatusBasis;
     match status {
@@ -4597,7 +4601,8 @@ fn status_register(status: hornvale_species::StatusBasis) -> f64 {
 
 /// A sociality mode's contribution to the `repetition` voice knob (spec
 /// §7): `Communal` reads high (kobold's echoed refrains); `Hierarchic` — the
-/// goblin baseline — sits at the voice engine's identity value, 0.5.
+/// manikin's designated default — sits at the voice engine's identity value,
+/// 0.5.
 fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
     use hornvale_species::Sociality;
     match sociality {
@@ -4610,7 +4615,7 @@ fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
 /// `formality` blends the status register with deliberation latency;
 /// `repetition` follows sociality alone; `epithet_density` follows the
 /// status register alone. Every field is exactly the identity 0.5 at the
-/// goblin baseline (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
+/// manikin (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
 /// `status_register(Rank) == sociality_register(Hierarchic) == 0.5`, so
 /// blending two 0.5s (or reading either directly) always yields 0.5.
 pub fn voice_params(
@@ -4647,9 +4652,9 @@ const QUALIFIED_WEIGHT: f64 = 0.25;
 /// to survive being said to someone who was not there: the generic gets
 /// carried explicitly (`Ox-ford`), and the rare case needs a qualifier on
 /// top of that. So simplex weight falls and specific+generic weight rises
-/// with `in_group_radius`, crossing over at **0.6** — above the goblin
-/// baseline of 0.5, so only a people whose "us" reaches well past the
-/// baseline carries the generic explicitly as a matter of course.
+/// with `in_group_radius`, crossing over at **0.6** — above the manikin's
+/// neutral midpoint of 0.5, so only a people whose "us" reaches well past
+/// that midpoint carries the generic explicitly as a matter of course.
 ///
 /// The two slopes and the crossover are calibration dials (the Lab's
 /// name-length metrics are what move them), not derived quantities, and
@@ -4681,8 +4686,8 @@ pub fn shape_weights(society: &hornvale_species::SocietyVector) -> [f64; 3] {
 /// copied, and hardens into *the* way places are named here. A
 /// short-horizon, opportunistic people never converges — each name is made
 /// for the moment, so its toponymy stays heterogeneous. So β rises with
-/// `time_horizon`: `0.5 + 2·h`, spanning `[0.5, 2.5]`, with the goblin
-/// baseline (`h = 0.5`) at 1.5. Below 1 the profile is *flattened* toward
+/// `time_horizon`: `0.5 + 2·h`, spanning `[0.5, 2.5]`, with the manikin's
+/// neutral midpoint (`h = 0.5`) at 1.5. Below 1 the profile is *flattened* toward
 /// uniform, which is a real reading and not a degenerate one — it is what
 /// "this people has no single way of naming things" looks like.
 ///
@@ -4708,7 +4713,7 @@ pub fn shape_beta(mind: &hornvale_species::MindVector) -> f64 {
 
 /// Derive a species' naming morphology from its psychology vectors (spec
 /// §7): honorifics are drawn only for a rank-based status basis — the
-/// goblin baseline — matching `voice_params`' epithet-density reading of
+/// manikin's designated default — matching `voice_params`' epithet-density reading of
 /// the same field; the glossed-name shape distribution comes from
 /// [`shape_weights`] and [`shape_beta`].
 ///
@@ -7179,7 +7184,7 @@ fn rendered_pantheon_of(
 
 /// Render a pre-species save's beliefs (`beliefs_of` — no `peopled-by`
 /// facts exist to recover a species from), as the single anonymous pantheon
-/// they always were: voiced at the goblin baseline (voice's identity value,
+/// they always were: voiced at the manikin (voice's identity value,
 /// since no species is recoverable) with periods recovered from the world's
 /// unlensed phenomena (the pre-species observation path,
 /// `observed_phenomena`). Empty if the world has no beliefs at all. Shared
@@ -7638,7 +7643,8 @@ mod tests {
 
     #[test]
     fn occlusion_composes_with_species_perception() {
-        // `perception_lens` is already non-identity for non-goblin species, so
+        // `perception_lens` is already non-identity for any species off the
+        // manikin's vector, so
         // occlusion must MULTIPLY with it, not replace it.
         let nocturnal = hornvale_species::PerceptionVector {
             activity: hornvale_species::ActivityCycle::Nocturnal,
@@ -9902,7 +9908,7 @@ mod tests {
         // current world, it happens to be), so the recomputed structure
         // must use the flagship's OWN species' psychology and role
         // vocabulary (the same construction `build_world_from_components`
-        // performs per-flagship), not a fixed goblin-baseline
+        // performs per-flagship), not a fixed manikin
         // `PsychSummary::default()` a single-species world could get away
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
@@ -10285,7 +10291,7 @@ mod tests {
     }
 
     #[test]
-    fn goblin_voice_params_are_the_baseline() {
+    fn goblin_voice_params_sit_at_the_manikin_identity() {
         let psy = hornvale_species::psyche_registry();
         let soc = hornvale_species::society_registry();
         let v = voice_params(
@@ -11653,7 +11659,7 @@ mod tests {
             time_horizon: horizon,
             ..*hornvale_species::psyche_registry()
                 .get(&KindId("goblin"))
-                .expect("the goblin baseline mind")
+                .expect("the shipped goblin's authored mind row")
         };
 
         // Sampled across the whole authored domain, not at a convenient
