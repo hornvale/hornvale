@@ -328,6 +328,33 @@ mod tests {
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
                 "history/bake v2",
+                // The Salt re-keys the flesh seed from the occupation's
+                // entity id onto its material core, so residue and
+                // structures stop moving when an id moves. Taking the
+                // review decision here rather than deferring it, because
+                // this row sits at a genuine tension with decision 0084
+                // and the reasoning should be legible later:
+                //
+                // 0084 DECLINED an epoch for `room/furnishing`, and one of
+                // its three stated reasons was that the chamber composer
+                // "is read only by the chamber renderer, which commits
+                // nothing" — which describes `history/flesh` exactly. On
+                // that reading this label should stay unversioned and this
+                // row should not exist.
+                //
+                // It is recorded anyway, and the difference from 0084 is
+                // the one that matters: there, the measurement came back
+                // byte-identical — *nothing moved at all*, which is the
+                // empty epoch 0089 warns against writing into the
+                // manifest. Here the derivation genuinely moved (measured:
+                // cell 1400's rendered layer draws Seed(11388647889657673426)
+                // under the old key and Seed(10641468697408252209) under
+                // the new one), and a reader re-rendering `hornvale history
+                // --site` off an older save under newer code gets different
+                // prose with no other record of why. The stamp is that
+                // record. It claims nothing about the save's BYTES, and
+                // says so.
+                "history/flesh v2",
                 "language/<family>/lexicon/root/<concept> v3",
                 "language/<species>/lexicon/cascade v2",
                 "language/<species>/lexicon/cascade/wear v2",

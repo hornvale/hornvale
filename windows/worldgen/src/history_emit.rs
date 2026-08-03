@@ -14,8 +14,8 @@
 use crate::history_bake::BakeId;
 use crate::{BuildError, History};
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
-    layer_key,
+    CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
+    OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
 use hornvale_kernel::{CellId, EntityId, Fact, KindId, Value, World};
 use std::collections::{BTreeMap, BTreeSet};
@@ -330,16 +330,37 @@ pub fn occupation_records(world: &World) -> Vec<OccupationRecord> {
 /// Occupations on a cell, oldest-founded first (the palimpsest layers a
 /// site's stratigraphy stacks in). Ordered by [`layer_key`]: material facts
 /// only (founded, then ended — a still-living occupation sorts last, then
-/// peak population, then `founded_from`) — never by mint order, so a site's
-/// stratigraphy is a property of the world, not of the order a bake loop
-/// happened to mint its entities in.
+/// peak population, then the predecessor's founding coordinates) — never by
+/// mint order, so a site's stratigraphy is a property of the world, not of
+/// the order a bake loop happened to mint its entities in.
 pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
-    let mut v: Vec<OccupationRecord> = occupation_records(world)
-        .into_iter()
-        .filter(|o| o.core.site == cell)
-        .collect();
-    v.sort_by_key(layer_key);
+    let all = occupation_records(world);
+    let coords = founding_coords_by_id(&all);
+    let mut v: Vec<OccupationRecord> = all.into_iter().filter(|o| o.core.site == cell).collect();
+    v.sort_by_key(|r| layer_key(r, parent_coords(r, &coords)));
     v
+}
+
+/// Every occupation's founding coordinates, by entity — the lookup
+/// [`layer_key`]'s ancestry tail needs. `FoundingCoords<'static>` because
+/// `Occupation::people` is a `KindId` wrapping a `&'static str`, so this map
+/// borrows nothing from `all` and outlives the scan that built it.
+fn founding_coords_by_id(all: &[OccupationRecord]) -> BTreeMap<EntityId, FoundingCoords<'static>> {
+    all.iter()
+        .map(|o| (o.id, founding_coords(&o.core)))
+        .collect()
+}
+
+/// The founding coordinates of `r`'s predecessor, if it has one and it is
+/// present in `coords`.
+fn parent_coords(
+    r: &OccupationRecord,
+    coords: &BTreeMap<EntityId, FoundingCoords<'static>>,
+) -> Option<FoundingCoords<'static>> {
+    match r.founded_from {
+        Founding::From(e) => coords.get(&e).copied(),
+        Founding::Genesis(_) => None,
+    }
 }
 
 /// Every occupation, grouped by `site`, each cell's vec ordered
@@ -350,14 +371,19 @@ pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
 /// `occupations_at` per cell would rescan the ledger `O(cells)` times. Each
 /// cell's vec is sorted with the exact same [`layer_key`] `occupations_at`
 /// uses, so a cell's entry here is byte-for-byte identical to what
-/// `occupations_at(world, cell)` would produce.
+/// `occupations_at(world, cell)` would produce. The predecessor-coordinates
+/// map is built **once** for the whole world, not per cell — `layer_key`'s
+/// ancestry tail can point at a predecessor on any site, so a per-cell map
+/// would miss it.
 pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
+    let all = occupation_records(world);
+    let coords = founding_coords_by_id(&all);
     let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
-    for occ in occupation_records(world) {
+    for occ in all {
         by_cell.entry(occ.core.site).or_default().push(occ);
     }
     for occs in by_cell.values_mut() {
-        occs.sort_by_key(layer_key);
+        occs.sort_by_key(|r| layer_key(r, parent_coords(r, &coords)));
     }
     by_cell
 }

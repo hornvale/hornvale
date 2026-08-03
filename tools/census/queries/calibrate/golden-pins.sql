@@ -469,7 +469,10 @@ checks AS (
   -- The Contour epoch v2 resync, 0063: 0.559_547_123_829_870 ->
   -- 0.560_567_825_485_714_4.
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.560_567_825_485_714_4, abs(collision_mean - 0.560_567_825_485_714_4) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 0.560_567_825_485_714_4 ->
+  -- 0.560_572_844_615_584_4.
+         collision_mean, 0.560_572_844_615_584_4, abs(collision_mean - 0.560_572_844_615_584_4) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 766 -> 767.
@@ -490,7 +493,10 @@ checks AS (
   -- The Contour epoch v2 resync, 0063: 8.660_349_090_208_882 ->
   -- 8.688_230_827_083_34. Present count moves 766 -> 768.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 8.688_230_827_083_34, abs(goblin_len_mean - 8.688_230_827_083_34) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 8.688_230_827_083_34 ->
+  -- 8.687_525_197_786_464.
+         goblin_len_mean, 8.687_525_197_786_464, abs(goblin_len_mean - 8.687_525_197_786_464) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   -- The Tithe (tribute) re-pin, 0063: 762 -> 760.
@@ -512,7 +518,10 @@ checks AS (
   -- The Contour epoch v2 resync, 0063: 7.219_848_265_006_563 ->
   -- 7.188_685_503_790_846. Present count moves 763 -> 765.
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 7.188_685_503_790_846, abs(kobold_len_mean - 7.188_685_503_790_846) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 7.188_685_503_790_846 ->
+  -- 7.188_604_358_823_526.
+         kobold_len_mean, 7.188_604_358_823_526, abs(kobold_len_mean - 7.188_604_358_823_526) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -599,7 +608,10 @@ checks AS (
   -- The Contour epoch v2 resync, 0063: 2.775_172_454_830_285 ->
   -- 2.787_026_517_317_707_3. Present count moves 766 -> 768.
   SELECT 'mean goblin name-syllables (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
-         goblin_syl_mean, 2.787_026_517_317_707_3, abs(goblin_syl_mean - 2.787_026_517_317_707_3) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 2.787_026_517_317_707_3 ->
+  -- 2.787_048_218_749_998_5.
+         goblin_syl_mean, 2.787_048_218_749_998_5, abs(goblin_syl_mean - 2.787_048_218_749_998_5) < 1e-6 FROM agg
   UNION ALL
   -- The Contour epoch v2 resync, 0063: 763 -> 765.
   SELECT 'kobold name-syllables present-row count (calibration.rs::name_syllable_distributions_are_measured_and_pinned)',
@@ -623,7 +635,10 @@ checks AS (
   -- The Contour epoch v2 resync, 0063: 0.807_392_672_749_351 ->
   -- 0.804_951_365_489_610_2.
   SELECT 'mean name-transparency (calibration.rs::name_transparency_is_measured_and_pinned)',
-         transparency_mean, 0.804_951_365_489_610_2, abs(transparency_mean - 0.804_951_365_489_610_2) < 1e-6 FROM agg
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): 0.804_951_365_489_610_2 ->
+  -- 0.804_225_380_346_752_7.
+         transparency_mean, 0.804_225_380_346_752_7, abs(transparency_mean - 0.804_225_380_346_752_7) < 1e-6 FROM agg
   UNION ALL
   -- The min and max are the SPREAD pins the deferred note asked for. A floor
   -- of 0.154 against a ceiling of 1.0 is what proves the 0.816 mean describes
@@ -739,8 +754,14 @@ checks AS (
   -- The Contour epoch v2 resync, 0063: -0.012_055_568_856_886_177 ->
   -- -0.017_848_707_186_831_292.
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.017_848_707_186_831_292,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.017_848_707_186_831_292) < 1e-6
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): -0.017_848_707_186_831_292 ->
+  -- -0.018_069_698_979_322_31.
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.018_069_698_979_322_31,
+  -- The Salt's close regen, 0063 (the mover is ce13bae0's compass concepts,
+  -- not The Salt, which touches no language code): -0.017_848_707_186_831_292 ->
+  -- -0.018_069_698_979_322_31.
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.018_069_698_979_322_31) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

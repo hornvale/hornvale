@@ -521,10 +521,19 @@ fn homophony_count_is_measured_and_pinned() {
     // highest among the goblinoid daughters by better than 3x (3.51x over
     // goblin, 3.83x over hobgoblin), which is the claim this row guards;
     // these re-pin the witnesses, not the observation.
-    assert!((mg - 3.562).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 3.268).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 12.517).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 3.971).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Salt's close regen (2026-08-03, canonical census on lefford,
+    // 0063): goblin 3.562 -> 3.605, hobgoblin 3.268 -> 3.300, bugbear
+    // 12.517 -> 12.674, kobold 3.971 -> 4.016. The mover is NOT The Salt,
+    // which touches no language code: the same refresh absorbed ce13bae0
+    // (the language compass), whose east/west and four intercardinal
+    // concepts widen the lexicon every periphery homophony draw reads.
+    // Bugbear stays highest among the goblinoid daughters by better than
+    // 3x (3.52x over goblin, 3.84x over hobgoblin), which is the claim
+    // this row guards; these re-pin the witnesses, not the observation.
+    assert!((mg - 3.605).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 3.300).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 12.674).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 4.016).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

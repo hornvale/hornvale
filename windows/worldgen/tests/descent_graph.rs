@@ -214,3 +214,149 @@ fn forebear_of_is_none_when_the_generation_length_cannot_be_derived() {
         "an undeterminable generation length must not resolve to a guessed Kinship"
     );
 }
+
+/// The Salt: a founder's handle must be a function of the founding, not of
+/// the occupation's entity id.
+#[test]
+fn founder_handles_are_free_of_the_entity_id() {
+    let w = seed42();
+    let occs = occupation_records(&w);
+    // Every occupation's handle must be reproducible from its material facts
+    // alone. Proxy: two occupations with identical founding coordinates AND
+    // identical parent coordinates must share a handle, which cannot happen
+    // while the id is in the mix.
+    use std::collections::BTreeMap;
+    let by_id: BTreeMap<u64, &_> = occs.iter().map(|o| (o.id.get(), o)).collect();
+    let key_of = |o: &hornvale_history::record::OccupationRecord| {
+        let parent = match o.founded_from {
+            hornvale_history::record::Founding::From(e) => by_id
+                .get(&e.get())
+                .map(|p| hornvale_history::record::founding_coords(&p.core)),
+            hornvale_history::record::Founding::Genesis(_) => None,
+        };
+        hornvale_history::record::founding_key(&o.core, parent)
+    };
+    let mut seen: BTreeMap<u64, hornvale_history::flesh::RoleHandle> = BTreeMap::new();
+    let mut shared = 0usize;
+    for o in &occs {
+        let h = founder_of(&w, o.id);
+        if let Some(prev) = seen.insert(key_of(o), h) {
+            shared += 1;
+            assert_eq!(prev, h, "same founding key must yield the same handle");
+        }
+    }
+    assert!(
+        shared > 0,
+        "seed 42 must contain colliding founding keys (measured 8.4%); \
+         zero means the key is not the one specced"
+    );
+    // Mutation check (The Salt, constraint 4): `same founding key => same
+    // handle` alone is satisfied trivially by a `founder_of` that always
+    // returns the same constant handle. That mutation was tried and
+    // confirmed this test stays green under it, so this assertion is added
+    // to also require the converse direction: distinct founding keys must
+    // land on distinct handles. With ~700 occupations mixed through a
+    // splitmix-style hash, an accidental collision in the codomain is not
+    // expected; a `RoleHandle` that ignores the key entirely is what this
+    // catches.
+    let distinct_handles: std::collections::BTreeSet<u64> = seen.values().map(|h| h.0).collect();
+    assert_eq!(
+        distinct_handles.len(),
+        seen.len(),
+        "distinct founding keys must map to distinct handles"
+    );
+}
+
+/// The founding key excludes everything after the founding, so a founder's
+/// handle must not move when their community's fate does.
+#[test]
+fn a_founders_handle_does_not_depend_on_how_the_community_ended() {
+    let w = seed42();
+    let occs = occupation_records(&w);
+    let dead = occs
+        .iter()
+        .find(|o| o.core.ended.is_some() && o.core.peak_population > 0)
+        .expect("seed 42 has completed occupations");
+    // Recompute the handle from the material core with the ending perturbed.
+    let mut later = dead.core.clone(); // Occupation is Clone, not Copy
+    later.ended = Some(later.founded + 9999.0);
+    later.peak_population = dead.core.peak_population + 777;
+    let parent = match dead.founded_from {
+        hornvale_history::record::Founding::From(e) => occs
+            .iter()
+            .find(|p| p.id == e)
+            .map(|p| hornvale_history::record::founding_coords(&p.core)),
+        hornvale_history::record::Founding::Genesis(_) => None,
+    };
+    assert_eq!(
+        hornvale_history::record::founding_key(&dead.core, parent),
+        hornvale_history::record::founding_key(&later, parent),
+    );
+}
+
+/// A people the CANONICAL roster has never heard of must still get distinct
+/// founder handles.
+///
+/// The Salt's first implementation of `founder_of` resolved the ledger's
+/// people label against `WorldComponents::assemble()` in order to obtain a
+/// `'static` `KindId`. That looked tidy and was wrong: Lab's synthetic
+/// rosters carry species the canonical roster does not contain — `goblin-twin`
+/// is the whole basis of `census-of-the-meeting`, the solo-roster null
+/// control — so every occupation in that study would have resolved to `None`
+/// and collapsed onto ONE founder handle, giving every figure in a committed
+/// census fixture the same name. Nothing in the suite would have gone red.
+///
+/// This pins the property directly: two occupations of a non-canonical people,
+/// differing only in their founding coordinates, must yield different handles.
+#[test]
+fn a_people_outside_the_canonical_roster_still_gets_distinct_founders() {
+    use hornvale_kernel::{EntityId, Fact, Value, World};
+
+    let mut world = World::new(Seed(42));
+    hornvale_worldgen::register_all(&mut world.registry).expect("registry registers");
+
+    let found = |world: &mut World, cell: f64, day: f64| -> EntityId {
+        let id = world.ledger.mint_entity();
+        for (predicate, object) in [
+            (
+                hornvale_history::OCC_PEOPLE,
+                // NOT in the canonical roster — Lab mints this one itself.
+                Value::Text("goblin-twin".to_string()),
+            ),
+            (hornvale_history::OCC_SITE, Value::Number(cell)),
+            (hornvale_history::OCC_FOUNDED, Value::Number(day)),
+        ] {
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: predicate.to_string(),
+                        object,
+                        place: Some(id),
+                        day: Some(day),
+                        provenance: "test-fixture".to_string(),
+                    },
+                    &world.registry,
+                )
+                .expect("fixture fact commits");
+        }
+        id
+    };
+
+    let a = found(&mut world, 10.0, 500.0);
+    let b = found(&mut world, 11.0, 500.0);
+    let c = found(&mut world, 10.0, 525.0);
+
+    let (ha, hb, hc) = (
+        founder_of(&world, a),
+        founder_of(&world, b),
+        founder_of(&world, c),
+    );
+    assert_ne!(ha, hb, "a different site must give a different founder");
+    assert_ne!(
+        ha, hc,
+        "a different founding day must give a different founder"
+    );
+    assert_eq!(ha, founder_of(&world, a), "the handle must be stable");
+}

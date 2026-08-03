@@ -297,6 +297,7 @@
 - [The Namesake](./chronicle/the-namesake.md)
 - [The Contour](./chronicle/the-contour.md)
 - [The Manikin](./chronicle/the-manikin.md)
+- [The Salt](./chronicle/the-salt.md)
 
 # Appendix: The Frontier
 

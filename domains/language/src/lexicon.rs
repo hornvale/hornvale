@@ -255,9 +255,23 @@ fn compound_entry(
 /// the referent is real but no culture here has the concept to name it at
 /// all, so no proto-root is reserved for it — a reconstructed ancestor must
 /// not be handed a word for something none of its daughters could ever have
-/// spoken of. `pub(crate)` so its own test can assert the exclusion
-/// directly, rather than only through [`build_lexicon`]'s opaque output.
-pub(crate) fn proto_root_universe(exposures: &BTreeMap<String, ExposureClass>) -> Vec<&str> {
+/// spoken of.
+///
+/// **`pub` since The Salt's follow-up, and the reason is a defect the
+/// duplication of this rule caused.** `windows/lab`'s `monophyly-goblinoid`
+/// metric re-derives the family assignment independently — deliberately, so
+/// that it checks rather than echoes — but it built its universe from every
+/// registered concept and so did NOT apply this filter. The discrepancy was
+/// invisible for as long as the excluded cohort (the nine spectral classes,
+/// accession epoch 6) sorted LAST, because
+/// [`crate::etymology::assign_proto_roots_with_epoch`] orders epoch-first and
+/// an assignment depends only on the concepts at or before it. Epoch 7 (the
+/// compass's `east`/`west`) was the first thing ever to sort after them, and
+/// the metric began reporting a monophyly break on 14 of 1000 seeds where the
+/// world was in fact monophyletic. An independent re-derivation may
+/// legitimately redo the *draw*; it must not redo the *universe rule*.
+/// type-audit: bare-ok(identifier-text: exposures), bare-ok(identifier-text: return)
+pub fn proto_root_universe(exposures: &BTreeMap<String, ExposureClass>) -> Vec<&str> {
     exposures
         .iter()
         .filter(|(_, class)| {

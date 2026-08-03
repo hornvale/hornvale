@@ -241,6 +241,17 @@ site's layers and their flesh render through a read-only surface (the `history`
 CLI verb and the almanac); see [The Living
 Community](../chronicle/the-living-community.md).
 
+The "committed fact" that flesh is a function of is specifically the
+occupation's **material core** — its people, site, span, size, tech, function,
+cause and notability — and deliberately *not* its entity id, which is a mint
+counter and says nothing about the world. [The Salt](../chronicle/the-salt.md)
+made that true of every derived readout here: a ruin's remains, the order its
+layers stack in, and the name of the figure who founded it are all functions of
+what the world states, so they no longer move when an unrelated change shifts
+the numbering. The consequence is deliberate — two occupations identical in
+every material fact leave *identical* remains, because the alternative was
+distinguishing them by mint order, which is entropy the world does not have.
+
 **Communities fight over value, not over room (The Tumult).** The history's
 conflict rule was rewritten to drop density entirely. Each epoch, after growth,
 a community scans the occupied cells it can reach across that era's connection

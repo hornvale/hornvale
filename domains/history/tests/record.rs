@@ -90,3 +90,91 @@ fn the_core_carries_the_shared_facts_and_the_record_carries_identity() {
         "a record knows its own identity, not a placeholder"
     );
 }
+
+use hornvale_history::record::{founding_coords, founding_key, material_key};
+
+/// A helper mirroring the file's existing record builders. Adjust the field
+/// list if `Occupation` has drifted; the point is one core you can perturb.
+fn core(site: u32, founded: f64, peak: u32) -> hornvale_history::record::Occupation {
+    hornvale_history::record::Occupation {
+        people: hornvale_kernel::KindId("goblin"),
+        site: hornvale_kernel::CellId(site),
+        founded,
+        ended: Some(founded + 100.0),
+        peak_population: peak,
+        tech: hornvale_history::record::TechHorizon::Classical,
+        function: hornvale_history::record::Function::Agrarian,
+        deity: None,
+        tongue: None,
+        cause: Some(hornvale_history::record::CauseOfEnd::Famine),
+        notability: hornvale_history::record::Notability::Common,
+    }
+}
+
+#[test]
+fn material_key_is_a_total_function_of_the_core() {
+    assert_eq!(
+        material_key(&core(10, 500.0, 40)),
+        material_key(&core(10, 500.0, 40))
+    );
+}
+
+#[test]
+fn material_key_separates_cores_that_differ_in_any_field() {
+    let base = material_key(&core(10, 500.0, 40));
+    assert_ne!(base, material_key(&core(11, 500.0, 40)), "site must matter");
+    assert_ne!(
+        base,
+        material_key(&core(10, 525.0, 40)),
+        "founded must matter"
+    );
+    assert_ne!(base, material_key(&core(10, 500.0, 41)), "peak must matter");
+    let mut alive = core(10, 500.0, 40);
+    alive.ended = None;
+    assert_ne!(
+        base,
+        material_key(&alive),
+        "a living occupation must differ"
+    );
+}
+
+#[test]
+fn founding_key_ignores_everything_after_the_founding() {
+    // A founder's name must not depend on how their community later died.
+    let a = core(10, 500.0, 40);
+    // `Occupation` is Clone but NOT Copy -- clone, do not move.
+    let mut b = a.clone();
+    b.ended = Some(9000.0);
+    b.peak_population = 4000;
+    b.cause = Some(hornvale_history::record::CauseOfEnd::Plague);
+    b.notability = hornvale_history::record::Notability::Seat;
+    assert_eq!(founding_key(&a, None), founding_key(&b, None));
+}
+
+#[test]
+fn founding_key_separates_on_the_founding_and_on_the_parent() {
+    let a = core(10, 500.0, 40);
+    assert_ne!(
+        founding_key(&a, None),
+        founding_key(&core(11, 500.0, 40), None)
+    );
+    assert_ne!(
+        founding_key(&a, None),
+        founding_key(&core(10, 525.0, 40), None)
+    );
+    // `FoundingCoords` borrows its people label, so the cores must outlive it.
+    let pc1 = core(20, 100.0, 5);
+    let pc2 = core(21, 100.0, 5);
+    let p1 = founding_coords(&pc1);
+    let p2 = founding_coords(&pc2);
+    assert_ne!(
+        founding_key(&a, Some(p1)),
+        founding_key(&a, Some(p2)),
+        "the ancestry hop must discriminate"
+    );
+    assert_ne!(
+        founding_key(&a, None),
+        founding_key(&a, Some(p1)),
+        "a genesis root must not collide with a descended founding"
+    );
+}
