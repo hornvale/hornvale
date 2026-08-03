@@ -105,7 +105,7 @@ pub use graph_derive::{
 };
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, TributeRelation,
-    bake, cascade_sizes, census,
+    bake, cascade_sizes, census, defensibility_for_test, weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
@@ -5504,7 +5504,7 @@ fn build_to(
     // `BuildDepth::Terrain` world instead, so both call sites' assembly is
     // written exactly once. Same seed + pins ⇒ byte-identical `History` ⇒
     // byte-identical committed skeleton (the bake draws only under the
-    // isolated `history/genesis/<people>` and `history/bake` streams).
+    // isolated `history/genesis/<people>` and `history/bake/v2` streams).
     let history = bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)?;
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
@@ -7678,6 +7678,13 @@ mod tests {
     /// three 48s unchanged. Re-pinned here rather than dropped, because an
     /// exact count is the stronger check; if it moves again, ask whether the
     /// moving campaign added names or culled phenomena, and read the 48s.
+    ///
+    /// The Contour re-pin (2026-07-30): position-aware conflict
+    /// (`defensibility` gating raid outcomes) redecided deep-history
+    /// settlement survival, which redecided which settlements got named —
+    /// seed 42's world went 367 -> 362 glossed names with all three 48s
+    /// unchanged, so the sky-occlusion invariant this test exists to guard
+    /// held; only the corroborating gloss count moved.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
@@ -7685,7 +7692,11 @@ mod tests {
         assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 48);
         assert_eq!(count("deity-name"), 48);
-        assert_eq!(count("name-gloss"), 367);
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements, moving
+        // the glossed-name count from 362 to 196. The pantheon-size counts
+        // above (48 each) are unmoved — only settlement-derived naming did.
+        assert_eq!(count("name-gloss"), 196);
     }
 
     #[test]

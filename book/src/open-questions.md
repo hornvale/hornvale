@@ -1044,6 +1044,69 @@ back geometric, the right conclusion is that this world does not sit at a
 critical point, and this chapter should record that as settled rather than
 open.**
 
+### The third ask is being spent elsewhere (2026-07-29)
+
+That test — *materially different, or a rephrasing?* — has now been applied,
+and the answer is that the connected-cascade question **does not clear its own
+bar by much**, while a different question clears it easily. This chapter is
+therefore rescored: the criticality bet is **not** being asked a third time in
+the form above, and the depth-and-collapse-release levers are **deferred, not
+refuted**.
+
+The reason is that three campaigns have been measuring the size distribution of
+**events** — how long a cascade of displacements runs — while the property the
+project actually wants from its history is a distribution over **entities**:
+how large the largest polity gets, how unequal holdings become, whether an
+empire is a thing a world can produce at all. Those are different variables with
+different mechanisms and different literatures. Event-size criticality is
+Bak–Tang–Wiesenfeld, and the conduction diagnosis is correct on its own terms.
+Entity-size heaviness is Gibrat and Kesten — a random *multiplicative* factor
+against a reflecting lower barrier — which is the standard account of Zipf's law
+for city sizes and of the empire-area distributions. **Hornvale has never
+measured it, and the bake has no empire-size metric at all.**
+
+Reading the mechanism against that second literature explains the two nulls
+without appealing to conduction, and the reading was verified in source rather
+than reasoned about. A Kesten process needs a per-entity random multiplier that
+persists. The bake's strength is `(population + stores × 0.5) × tech_weight`.
+Population is logistic, so its growth is *anti*-proportional to its size near
+capacity. Stores decay at 0.95 per epoch to a fixed point set by inflow, and are
+destroyed on a community's closure. `tech_weight` takes four values capping at
+3.0, is driven by absolute year, and its per-people head start is a draw in
+[0, 300) years against era boundaries at 400/900/1400 — so **the world's only
+irreversible advantage provably converges to zero relative value at year 1400**.
+Every multiplier in the model is shared, capped, or mean-reverting, and no two
+communities of one people differ in any authored dimension at all. A model with
+no persistent per-entity multiplicative heterogeneity cannot produce a heavy
+entity-size tail, and would not do so even with a conduction medium added.
+
+**What replaces the bet is narrower, and it is a different shape of claim.**
+Not a power law: a **sigmoid**. The wager is that annihilation, coexistence and
+domination lie on one saturating response, that the middle is where nearly every
+world sits, and that both extremes are **reachable but rare** — a world with no
+goblins, and a world under one government, each possible and each unusual. This
+is preregisterable, it is falsifiable in both directions, and it is a claim
+about a distribution the Laboratory can compute over seeds rather than about a
+scaling exponent that needs 1.5 decades of support to be well-posed at all.
+
+It also carries a structural requirement the previous framing never surfaced,
+recorded as [decision 0096](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0096-diversity-is-terminal-and-rubberbanding-is-multi-axis.md)
+clause 3: rare extremes need **asymptotes, not clamps**. Hornvale's saturating
+bounds are presently clamps — population against capacity, `tech_weight` against
+3.0, `coexist.rs`'s viability `FLOOR` — and the probability of exceeding a clamp
+is exactly zero at any input. On the current response forms the tails are not
+rare; they are impossible. That is a build constraint, not a tuning target, and
+it is the first thing a successor campaign owes this chapter.
+
+**Confidence: low, and deliberately so.** The sigmoid has not been measured, the
+claim that per-world conditions vary widely enough to reach either tail is
+**unverified**, and this chapter should not be read as predicting the result. The
+one thing it does now assert with the same confidence as the two falsifications
+above it is the diagnosis: **this world's history evaluates every people on a
+single scalar axis, and on one axis weakness is absolute.** That is checkable in
+forty lines of source, it is the standing charge decision 0096 opens, and it is
+why the third ask is being spent on a second axis rather than on a deeper graph.
+
 One further note the campaign earns a place for, because it bears on how much
 any of the above should be trusted. *The Tithe* amended its own specification
 **five times, four of them following a disappointing measurement** — and that
@@ -1055,3 +1118,79 @@ confidence score is only as good as the disclosure attached to the measurement
 under it: the number here is a falsification, which is the direction that
 *cannot* be manufactured by adding mechanisms, and that asymmetry is the reason
 the rescore is trustworthy despite the amendment count.
+
+### The sigmoid's first axis is measured, and the null is in (2026-08-02)
+
+*The Contour* built the cheapest test of the sigmoid wager's own diagnosis —
+a second contest axis, uncorrelated with strength, entering at the raid
+dominance test — deliberately touching no authored species data, so that if
+it moved nothing the two costlier campaigns behind it (*The Appraisal*,
+*The Deviation*) would be worth reconsidering for one campaign's price rather
+than three. It moved nothing. Both of the wager's own preregistered halves
+are now measured, matched against a frozen thirty-seed baseline, and both are
+null:
+
+- **M3 (peoples-alive-at-bake-end) fell, fractionally, rather than rising.**
+  The entire thirty-seed delta is one world losing one people; every other
+  seed's count is byte-identical to baseline, including the exact set of six
+  extinction seeds. The mechanism rescued zero worlds from total extinction
+  and caused zero new ones.
+- **M2 (the entity-size distribution — the sigmoid's own headline variable)
+  stayed geometric.** Mean, median and IQR sit within a few percent of
+  baseline at both thirty and a hundred seeds; the one statistic that moved
+  cleanly (max/median) moves inside the band a single outlier seed produces,
+  not a distributional shift.
+
+Per §4.3 of the spec, both conditions being met is the null the chapter
+above already named as the informative branch: **a second contest axis,
+uncorrelated with the first and entering at the decision point, is not
+sufficient to hold diversity open in this world** — a finding about decision
+0096 clause 1's *chosen mechanism*, not about the axiom, and one that sends
+the sequence back to design rather than forward to *The Appraisal*.
+
+**The null itself decomposes, and the decomposition is the part this chapter
+must not round away.** `peoples-alive-at-bake-end` is discrete and bounded at
+five, the roster's own size, and the baseline sits at that ceiling in 76.7%
+of worlds already. "M3 rises" was close to unfalsifiable *upward*: in
+twenty-three of thirty seeds the metric could not rise, because all five
+peoples were already alive. So the null is really two claims of unequal
+strength. **"Does not rescue worlds from extinction" is strong** — six
+extinction seeds at baseline, six live, the identical seed set, a detectable
+effect measured at exactly zero. **"Does not improve diversity in surviving
+worlds" is untested**, because the instrument is saturated at its ceiling in
+twenty-three of the twenty-four surviving worlds. The spec asked for a second
+half of M3 — the effective-diversity reading `coexist.rs` already computes in
+space, which would have headroom inside an all-five-peoples world that a bare
+count cannot see — and only the count was ever wired up. Building that half
+now, immediately after a disappointing count, would have the *shape* of
+metric-chasing even with clean logic behind it, so it is deliberately
+deferred to whichever campaign answers this chapter next, with its own
+headroom declared in the preregistration before any code exists.
+
+**Rescore.** The sigmoid wager's confidence stays **low**, but the character
+of the "low" has changed, and the gradient should say so precisely: it was
+*unmeasured* when the bet above was struck; it is now *measured on one axis
+and null there*, with the other, headroom-bearing axis still unmeasured
+rather than merely undiscussed. That is a materially weaker position for the
+multi-axis thesis than "unmeasured" was, and a materially stronger one than
+"falsified outright" would be — decision 0096 clause 1 is not itself
+falsified by one mechanism's failure to move one metric, but it has now spent
+its cheapest test and has one clean finding to show for it: position, alone,
+is not the term that holds diversity open here.
+
+**Re-measured after the epoch (2026-08-02).** Position-aware conflict draws
+no new stream, but it changes every world's committed history, and the
+`history/bake` label was bumped to `/v2` to say so honestly (decision 0006).
+That re-mints every draw a second time on top of the mechanism's own effect,
+so the numbers above were re-measured on a fresh matched pair taken entirely
+on the post-epoch derivation rather than trusted to still describe the
+shipped world. Neither null moved: M3 is still falsified, M2 still stayed
+geometric, and the extinction set is unchanged in both identity and size
+across the epoch — the strongest form the "does not rescue from extinction"
+half of the decomposition above can take. **This rescore is unchanged and
+stands as written.** One thing about *how* the null holds did shift: where
+the pre-epoch reading found a single seed accounting for the whole M3 delta,
+the post-epoch reading finds two seeds moving in opposite directions that
+cancel exactly — the mechanism is visibly live at the individual-world
+level, it simply does not net into more diversity. Full numbers:
+`docs/superpowers/plans/the-contour-baseline-v2.md`.

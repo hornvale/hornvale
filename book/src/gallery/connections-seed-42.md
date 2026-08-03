@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Goodogododaga
-================================
+The connections of Godogododaga
+===============================
 
-A natural route runs to Gododaga and Daoga, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Godogododaga opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-Goodogododaga sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+Godogododaga sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -33,8 +33,8 @@ larger region.
 The connections of Nenato
 =========================
 
-Nenato is linked by sea-lane to Dodadodo (15.3°N, 103.9°W), cell 28374, and Geoge -- a current-borne crossing, not a road.
-A natural route runs to Neteabo, Geoge, Geoboge, and Dodadodo (18.1°N, 104.9°W), by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Nenato is linked by sea-lane to Dodadodo, cell 28374, and Geoge -- a current-borne crossing, not a road.
+A natural route runs to Geobogebo and Geoge, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
 Nenato's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```

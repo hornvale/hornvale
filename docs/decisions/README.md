@@ -134,3 +134,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0092](0092-derivation-at-named-sites.md) | Derivation happens at named construction sites; readouts take artifacts | Accepted |
 | [0093](0093-seed-hunting-is-not-a-test-mechanism.md) | Seed-hunting is not a test mechanism | Accepted |
 | [0094](0094-a-deliberate-duplicate-shares-its-roster-never-its-derivation.md) | A deliberate duplicate shares its *roster*, never its *derivation* | Accepted |
+| [0095](0095-a-corpus-is-an-instrument-never-a-standard.md) | A trope corpus is a provenance-stamped instrument, never a standard | Accepted |
+| [0096](0096-diversity-is-terminal-and-rubberbanding-is-multi-axis.md) | Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap | Accepted |
+| [0097](0097-assert-the-robust-half-measure-the-fragile-half.md) | Assert the robust half in the gate; measure the fragile half in the census | Accepted |

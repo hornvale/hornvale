@@ -506,10 +506,25 @@ fn homophony_count_is_measured_and_pinned() {
     // over the 1000-seed census divided by 1000 (3505/1000, 3219/1000,
     // 12491/1000, 4014/1000), which is why all four land on a clean three
     // decimal digits.
-    assert!((mg - 3.505).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 3.219).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 12.491).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 4.014).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Contour re-pin (2026-08-02, canonical census regen at 4c46b45e on
+    // lefford, 0063): position-aware conflict (defensibility as a second
+    // contest axis) moved every world's raid/settle outcomes, reshaping each
+    // daughter's periphery homophony draws again — goblin 3.505 -> 3.536,
+    // hobgoblin 3.219 -> 3.243, bugbear 12.491 -> 12.332, kobold 4.014 ->
+    // 4.026. Bugbear stays highest among the goblinoid daughters by better
+    // than 3x (3.49x over goblin, 3.80x over hobgoblin), which is the claim
+    // this row guards; these re-pin the witnesses, not the observation.
+    // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+    // lefford, 0063): the BAKE label bump moves every daughter's periphery
+    // homophony draws again — goblin 3.536 -> 3.562, hobgoblin 3.243 ->
+    // 3.268, bugbear 12.332 -> 12.517, kobold 4.026 -> 3.971. Bugbear stays
+    // highest among the goblinoid daughters by better than 3x (3.51x over
+    // goblin, 3.83x over hobgoblin), which is the claim this row guards;
+    // these re-pin the witnesses, not the observation.
+    assert!((mg - 3.562).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 3.268).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 12.517).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 3.971).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

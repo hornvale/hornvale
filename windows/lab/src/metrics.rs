@@ -17,7 +17,7 @@ use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
     accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
     commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
-    observed_phenomena_as_in_from, rock_class_name,
+    observed_phenomena_as_in_from, occupation_records, rock_class_name,
     settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
     soil_order_name, terrain_of, vestiges_field,
 };
@@ -3307,6 +3307,95 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(chorus_sky_calibration_metric),
         },
+        // --- The Contour (Task 4): the measurement instrument, built ahead
+        // of the mechanism (spec 2.2/decision 0096) so Task 5's baseline is
+        // honest. M2/M3 read `occupation_records` — the same decoder
+        // `windows/almanac` and The Vestige already share — filtered to
+        // still-alive occupations at bake end.
+        //
+        // M2's `peak_population` caveat: `OccupationRecord::peak_population`
+        // is each occupation's historical HIGH-WATER MARK
+        // (`Bake::touch` only ever raises it — `history_bake.rs`), not a
+        // bake-end census. There is no end-state population accessor in the
+        // data model today: the live per-epoch figure
+        // (`Bake::Community::population`) is bake-internal state that
+        // `history_bake::bake` discards when it returns `History` (only
+        // `records` — carrying `peak_population` — survives). So M2 reads
+        // "largest peak share among communities alive at bake end," not a
+        // literal simultaneous snapshot; see task-4-report.md round 2 for
+        // the finding and the proposed accessor if a true end-state figure
+        // is ever needed.
+        //
+        // M4 (defensibility-capacity-rank-corr), round 3 / spec §2.4
+        // amendment 4: registered on PRESENT-DAY terrain, not the bake's
+        // own final era. `bake_history_from` computes and discards its own
+        // final-era `(ConnectionGraph, capacity)` on every build path, and
+        // `FullView` has no field for it (round 2's finding, still true);
+        // present-day terrain/climate is a DIFFERENT, honestly-labelled
+        // reading — spec §2.2's claim is about whether defensible ground is
+        // also poor ground, a structural fact about the geography that
+        // present-day terrain samples fully, so the substitution is
+        // legitimate as long as it says so out loud (the metric's own `doc`
+        // carries the label, not just this comment — see
+        // `spearman_defensibility_capacity`).
+        Metric {
+            name: "peoples-alive-at-bake-end",
+            doc: "M3: how many distinct peoples still hold a live community when the \
+                  bake ends — the decision-0089 compliance reading",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let mut peoples = std::collections::BTreeSet::new();
+                for occ in occupation_records(v.world())
+                    .into_iter()
+                    .filter(|o| o.is_alive())
+                {
+                    peoples.insert(occ.core.people);
+                }
+                MetricValue::Number(peoples.len() as f64)
+            }),
+        },
+        Metric {
+            name: "largest-holding-share",
+            doc: "M2: the largest live community's PEAK population as a share of the \
+                  summed peak population of every community alive at bake end \
+                  (peak_population is each occupation's historical high-water mark, not \
+                  a true bake-end census — no end-state population accessor exists \
+                  today; see task-4-report.md) — the entity-size reading the criticality \
+                  campaigns never took",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.3, 0.5, 0.7],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let pops: Vec<f64> = occupation_records(v.world())
+                    .into_iter()
+                    .filter(|o| o.is_alive())
+                    .map(|o| f64::from(o.core.peak_population))
+                    .collect();
+                let total: f64 = pops.iter().sum();
+                if total <= 0.0 {
+                    return MetricValue::Absent;
+                }
+                let max = pops.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                MetricValue::Number(max / total)
+            }),
+        },
+        Metric {
+            name: "defensibility-capacity-rank-corr",
+            doc: "M4: Spearman rank correlation between a habitable cell's weakest-point \
+                  defensibility and its carrying capacity, BOTH READ FROM PRESENT-DAY \
+                  terrain, climate, and connection graph — NOT the bake's own final era, \
+                  which can differ on a world with real orbital forcing (spec §2.4 \
+                  amendment 4). Checks §2.2's structural claim that defensible ground \
+                  is also poor ground, on the geography as it stands today. Ties get \
+                  average ranks; Absent if fewer than 2 habitable cells, or if either \
+                  series is constant (no variance, so no correlation is defined)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.6, -0.3, 0.0, 0.3, 0.6],
+            },
+            extract: Extractor::Full(spearman_defensibility_capacity),
+        },
     ]
 }
 
@@ -3472,6 +3561,107 @@ fn chorus_sky_calibration_metric_over(voices: &[ChorusVoice]) -> MetricValue {
 
 fn chorus_sky_calibration_metric(v: &FullView) -> MetricValue {
     chorus_sky_calibration_metric_over(&chorus_voices(v))
+}
+
+// --- The Contour (Task 4, round 3): the Spearman rank-correlation helpers
+// M4 (`defensibility-capacity-rank-corr`) uses. ---
+
+/// Average-rank ranking of `values` (Spearman's standard tie handling):
+/// ascending order via `f64::total_cmp` (never `partial_cmp().unwrap()`),
+/// with a tied group of values sharing the MEAN of the 1-based integer
+/// ranks its group spans, rather than an arbitrary tie-break order. Returns
+/// one rank per input value, in `values`' original order (not sorted
+/// order), so the caller can zip it against a second series' ranks.
+fn average_ranks(values: &[f64]) -> Vec<f64> {
+    let mut order: Vec<usize> = (0..values.len()).collect();
+    order.sort_by(|&a, &b| values[a].total_cmp(&values[b]));
+    let mut ranks = vec![0.0; values.len()];
+    let mut i = 0;
+    while i < order.len() {
+        let mut j = i;
+        while j + 1 < order.len() && values[order[j + 1]] == values[order[i]] {
+            j += 1;
+        }
+        // Positions i..=j (0-based, already sorted) share the mean of the
+        // 1-based ranks (i+1)..=(j+1) their tie group spans.
+        let shared_rank = ((i + 1) + (j + 1)) as f64 / 2.0;
+        for &idx in &order[i..=j] {
+            ranks[idx] = shared_rank;
+        }
+        i = j + 1;
+    }
+    ranks
+}
+
+/// Pearson correlation of `xs` and `ys` (equal length) — Spearman IS this,
+/// applied to `average_ranks`' output rather than the raw values. `None`
+/// when fewer than 2 points, or when either series is constant (zero
+/// variance leaves the coefficient undefined, not zero).
+fn pearson_correlation(xs: &[f64], ys: &[f64]) -> Option<f64> {
+    debug_assert_eq!(xs.len(), ys.len(), "paired series must be the same length");
+    let n = xs.len();
+    if n < 2 {
+        return None;
+    }
+    let mean_x = xs.iter().sum::<f64>() / n as f64;
+    let mean_y = ys.iter().sum::<f64>() / n as f64;
+    let (mut cov, mut var_x, mut var_y) = (0.0, 0.0, 0.0);
+    for i in 0..n {
+        let dx = xs[i] - mean_x;
+        let dy = ys[i] - mean_y;
+        cov += dx * dy;
+        var_x += dx * dx;
+        var_y += dy * dy;
+    }
+    if var_x <= 0.0 || var_y <= 0.0 {
+        return None;
+    }
+    Some(cov / (var_x.sqrt() * var_y.sqrt()))
+}
+
+/// M4's extractor (spec §2.4 amendment 4): Spearman rank correlation
+/// between [`hornvale_worldgen::weakest_point_defensibility`] and
+/// [`hornvale_demography::carrying_capacity`], over every PRESENT-DAY
+/// habitable cell (`v.climate().habitability()`) — NOT the bake's own final
+/// era. `hornvale_worldgen::connection_graph_of` is the crate's existing
+/// present-day-graph entry point (already used by the legibility surface
+/// and the DoD check), reused here wholesale rather than reconstructed by
+/// hand; `hornvale_demography::carrying_capacity` over
+/// `hornvale_worldgen::carrying_inputs_of` is the SAME species-agnostic
+/// capacity field `bake_history_from` itself feeds into the bake (up to
+/// its private `SETTLERS_PER_CAPACITY` scale, which cannot move a RANK
+/// correlation — Spearman is invariant under any positive linear
+/// rescaling). Cells iterate in ascending `CellId` order
+/// (`Geosphere::cells()`), so this is deterministic without an explicit
+/// sort of the cell set itself.
+fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
+    let geo = v.terrain().geosphere();
+    let habitability = v.climate().habitability();
+    let capacity = hornvale_demography::carrying_capacity(
+        geo,
+        &hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate()),
+    );
+    let graph = hornvale_worldgen::connection_graph_of(
+        v.world(),
+        &hornvale_worldgen::GraphConfig::default(),
+    );
+
+    let mut defs: Vec<f64> = Vec::new();
+    let mut caps: Vec<f64> = Vec::new();
+    for cell in geo.cells() {
+        if !*habitability.get(cell) {
+            continue;
+        }
+        defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
+        caps.push(*capacity.get(cell));
+    }
+    if defs.len() < 2 {
+        return MetricValue::Absent;
+    }
+    match pearson_correlation(&average_ranks(&defs), &average_ranks(&caps)) {
+        Some(rho) => MetricValue::Number(rho),
+        None => MetricValue::Absent,
+    }
 }
 
 /// The median of `values` (sorted in place by `total_cmp`); `None` when
@@ -6242,8 +6432,13 @@ mod tests {
         // forgotten-fraction, dominant-hazard, mean-warning-legibility),
         // +3 for The Wearing (Task 11: name-syllables-{goblin,kobold} —
         // per-species, beside the name-length-{species} pair they are read
-        // against — and the world-level name-transparency).
-        assert_eq!(registry().len(), 172);
+        // against — and the world-level name-transparency), +3 for The
+        // Contour (Task 4: peoples-alive-at-bake-end, largest-holding-share,
+        // and — round 3, spec §2.4 amendment 4 —
+        // defensibility-capacity-rank-corr, registered on present-day
+        // terrain/connection-graph rather than the bake's own final era,
+        // labelled as such in its own doc string).
+        assert_eq!(registry().len(), 175);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -6435,13 +6630,23 @@ mod tests {
     /// than a directional trend). Goblin is untouched (unaffected by this
     /// change per the golden-fixture diff this same commit re-pins). Both
     /// peoples still read inside the 2-3 target.
+    ///
+    /// The Contour absorb (2026-08-02): re-measured on the merged tree, which
+    /// carries both `defensibility`-gated raid dominance (spec section
+    /// 2.3a/2.4, decision 0096 clause 1) and the cascade/v2 reseeds above —
+    /// neither branch's prior delta alone predicts the combined result, so
+    /// this is a fresh measurement, not an arithmetic combination of the two
+    /// histories above it. Both peoples still read inside the 2-3 target.
     #[test]
     fn seed_42_name_syllables_are_pinned() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements again,
+        // moving goblin from 2.724_637_681_159_420_4 to exactly 2.6.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.466_666_666_666_667)
+            MetricValue::Number(2.6)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -6454,9 +6659,23 @@ mod tests {
         // 2.663_366_336_633_663_5 (269/101) -> 2.584_158_415_841_584_2
         // (261/101) — same 101-settlement denominator, eight fewer syllables
         // across the roster. Goblin is untouched.
+        //
+        // The Contour absorb (2026-08-02): 261/101 -> 344/137. Re-measured on
+        // the merged tree, which additionally carries `defensibility`-gated
+        // raid dominance (spec section 2.3a/2.4, decision 0096 clause 1) — a
+        // fresh measurement, not an arithmetic combination of the two
+        // histories above it. The denominator move (101 -> 137 settlements)
+        // is kobold's own settlement-survival shift under The Contour's
+        // re-pin; goblin's count above is untouched by it, consistent with
+        // every prior entry in this history.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): 344/137 -> 56/23. The BAKE label bump reseats
+        // settlements again, moving both the syllable total and the
+        // denominator.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.584_158_415_841_584_2)
+            MetricValue::Number(56.0 / 23.0)
         );
     }
 
@@ -6527,7 +6746,22 @@ mod tests {
         // denominator, five fewer names carry a transparent gloss under the
         // combined reseed. Same story: expected on any cascade-affecting
         // change, not itself evidence of a defect.
-        assert_eq!(share, 144.0 / 329.0, "seed 42 transparency drifted");
+        //
+        // The Contour absorb (2026-08-02): 144/329 -> 165/324. Re-measured on
+        // the merged tree, which additionally carries `defensibility`-gated
+        // raid dominance (spec section 2.3a/2.4, decision 0096 clause 1) —
+        // a fresh measurement, not an arithmetic combination of the two
+        // histories above it (see this test's doc comment). The denominator
+        // move (329 -> 324, 5 fewer glossed settlement names) is the same
+        // settlement-survival shift The Contour's own re-pin always produces
+        // on this seed.
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): 165/324 -> 93/158. The BAKE label bump reseats
+        // settlements again, moving both the glossed-name total and the
+        // denominator. Still strictly between 0 and 1, so the distribution
+        // claim above holds unweakened.
+        assert_eq!(share, 93.0 / 158.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -7017,6 +7251,13 @@ mod tests {
         // actually root toponymic concepts, or the mutation below would
         // pass for the wrong reason (an unbroken flag on a world with
         // nothing to break).
+        //
+        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
+        // lefford, 0063): the BAKE label bump reseats settlements, so
+        // seed 7's goblins now root only three of the five ("hill" and
+        // "marsh" drop out). The test still bites — three rooted concepts is
+        // still a nonempty precondition — so the set is re-pinned rather
+        // than the seed swapped.
         let rooted: Vec<&str> = TOPONYMIC
             .iter()
             .copied()
@@ -7024,8 +7265,8 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford", "hill", "marsh", "spring"],
-            "seed 7 goblins must root these five toponymic concepts for this test to bite"
+            vec!["river", "ford", "spring"],
+            "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
             assert!(
@@ -8140,6 +8381,126 @@ mod tests {
         );
     }
 
+    // --- The Contour (Task 4): the measurement instrument. ---
+
+    /// M2/M3/M4 are all registered now (round 3 landed M4 on present-day
+    /// terrain, spec §2.4 amendment 4), read the full stack, and carry a
+    /// doc string.
+    #[test]
+    fn the_contour_metrics_are_registered_and_full_rung() {
+        let reg = registry();
+        for name in [
+            "peoples-alive-at-bake-end",
+            "largest-holding-share",
+            "defensibility-capacity-rank-corr",
+        ] {
+            let m = reg
+                .iter()
+                .find(|m| m.name == name)
+                .unwrap_or_else(|| panic!("metric {name} is not registered"));
+            assert_eq!(
+                m.rung(),
+                BuildDepth::Full,
+                "{name} must read the full stack"
+            );
+            assert!(!m.doc.is_empty(), "{name} needs a doc");
+        }
+    }
+
+    /// Seed 42 places a live roster at bake end, so M2/M3/M4 all extract
+    /// real numbers, not `Absent`: at least one people alive; the largest
+    /// community's share strictly between 0 (something must hold
+    /// population) and 1 (a lone community would be the whole world, which
+    /// seed 42's four-people roster does not produce); and M4's rank
+    /// correlation in `[-1, 1]` (seed 42 places land varied enough that the
+    /// series isn't constant).
+    #[test]
+    fn the_contour_metrics_extract_sane_values_for_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        match extract_from(&built, "peoples-alive-at-bake-end") {
+            MetricValue::Number(n) => assert!(n >= 1.0, "expected at least one live people"),
+            other => panic!("peoples-alive-at-bake-end: {other:?}"),
+        }
+        match extract_from(&built, "largest-holding-share") {
+            MetricValue::Number(share) => {
+                assert!(
+                    share > 0.0 && share <= 1.0,
+                    "share must be in (0, 1]: {share}"
+                );
+            }
+            other => panic!("largest-holding-share: {other:?}"),
+        }
+        match extract_from(&built, "defensibility-capacity-rank-corr") {
+            MetricValue::Number(rho) => {
+                assert!((-1.0..=1.0).contains(&rho), "rho out of range: {rho}");
+            }
+            other => panic!("defensibility-capacity-rank-corr: {other:?}"),
+        }
+    }
+
+    // --- The Contour (Task 4, round 3): the Spearman helpers themselves,
+    // driven by hand-built inputs whose rank correlation is not in
+    // dispute — the counting rule, checked against ground truth stated by
+    // hand, mirroring `syllable_count_reads_maximal_vowel_runs`' idiom
+    // above. ---
+
+    #[test]
+    fn average_ranks_gives_ties_the_mean_of_the_ranks_they_span() {
+        // 10, 20, 20, 30 -> tied pair at positions 2-3 (1-based) share 2.5;
+        // the untied ends keep their plain rank.
+        assert_eq!(
+            average_ranks(&[10.0, 20.0, 20.0, 30.0]),
+            vec![1.0, 2.5, 2.5, 4.0]
+        );
+        // A three-way tie at the front: positions 1-3 share (1+2+3)/3 = 2.0.
+        assert_eq!(
+            average_ranks(&[5.0, 5.0, 5.0, 9.0]),
+            vec![2.0, 2.0, 2.0, 4.0]
+        );
+        // Ranking is by VALUE, not input position: descending input order
+        // must still rank ascending by value.
+        assert_eq!(average_ranks(&[3.0, 2.0, 1.0]), vec![3.0, 2.0, 1.0]);
+        // All tied: every rank is the mean of 1..=n.
+        assert_eq!(average_ranks(&[7.0, 7.0, 7.0]), vec![2.0, 2.0, 2.0]);
+    }
+
+    #[test]
+    fn pearson_correlation_reads_perfect_and_inverse_and_undefined() {
+        // Exact equality would be fragile here (the sqrt/division chain
+        // lands at 0.9999999999999998, not bitwise 1.0), so these check a
+        // tight tolerance instead of `assert_eq!` — the ONE place in this
+        // battery that isn't exact, because floating-point summation, not a
+        // logic choice, is why.
+        let perfect = pearson_correlation(&[1.0, 2.0, 3.0], &[10.0, 20.0, 30.0]).unwrap();
+        assert!((perfect - 1.0).abs() < 1.0e-12, "got {perfect}");
+        let inverse = pearson_correlation(&[1.0, 2.0, 3.0], &[30.0, 20.0, 10.0]).unwrap();
+        assert!((inverse - (-1.0)).abs() < 1.0e-12, "got {inverse}");
+        // A constant series has no defined correlation (zero variance), not
+        // a zero correlation.
+        assert_eq!(
+            pearson_correlation(&[1.0, 1.0, 1.0], &[1.0, 2.0, 3.0]),
+            None
+        );
+        assert_eq!(pearson_correlation(&[1.0], &[1.0]), None);
+    }
+
+    #[test]
+    fn spearman_over_ranks_is_invariant_to_a_positive_rescaling() {
+        // The whole reason a rank correlation, rather than a raw Pearson
+        // correlation, is the right read for M4: capacity's scale
+        // (SETTLERS_PER_CAPACITY, private to history_bake.rs) must not be
+        // able to move the answer. Scale one series by an arbitrary
+        // positive constant and the ranks -- hence the Spearman value --
+        // must be untouched.
+        let xs = [3.0, 1.0, 4.0, 1.0, 5.0];
+        let ys = [9.0, 2.0, 6.0, 2.0, 1.0];
+        let scaled_ys: Vec<f64> = ys.iter().map(|y| y * 100.0).collect();
+        let rho_a = pearson_correlation(&average_ranks(&xs), &average_ranks(&ys));
+        let rho_b = pearson_correlation(&average_ranks(&xs), &average_ranks(&scaled_ys));
+        assert_eq!(rho_a, rho_b);
+    }
+
     /// The Watershed's six staples (`hornvale_climate::Crop::catalog()`,
     /// gated `Steeped` in `exposure_of` only where a settled cell's
     /// subsistence is `Farming`) reach `Steeped` through the crop gate that
@@ -8148,21 +8509,47 @@ mod tests {
     /// a staple that the lab does not know about reds this test rather than
     /// slipping past it.
     ///
-    /// Seed 5's bugbear is the witness: diagnosed by sweeping seeds 0..20
-    /// and every placed people for which staple concepts actually reach a
-    /// `Root` in the committed lexicon (which only happens when `exposure_of`
-    /// classified them `Steeped`), seed 5's bugbear is the only (seed,
-    /// species) pair in that sweep whose settlements span all six crop
-    /// bands at once. No single seed need witness all six for the campaign's
-    /// claim to hold — this test only needs one that does, so the assertion
-    /// is not vacuous.
+    /// Seed 5's bugbear was the original witness: diagnosed by sweeping
+    /// seeds 0..20 and every placed people for which staple concepts
+    /// actually reach a `Root` in the committed lexicon (which only happens
+    /// when `exposure_of` classified them `Steeped`), seed 5's bugbear was
+    /// the only (seed, species) pair in that sweep whose settlements span
+    /// all six crop bands at once. No single seed need witness all six for
+    /// the campaign's claim to hold — this test only needs one that does, so
+    /// the assertion is not vacuous.
+    ///
+    /// **The Contour re-witness (2026-08-02):** position-aware conflict
+    /// (defensibility as a second contest axis) reseats settlements on
+    /// nearly every world, and seed 5's bugbear no longer spans all six
+    /// bands. Re-diagnosed the same way, widened: swept seeds 0..150 (a
+    /// fresh sweep, not a re-pin of the old one — the old witness's range
+    /// no longer contains a hit) against every placed people, dynamically
+    /// read off `FullView::components().perception` per seed rather than a
+    /// hardcoded roster, so a new people entering the roster would still be
+    /// swept. Seven (seed, species) pairs in that range clear all six bands:
+    /// (42, gnoll), (50, goblin), (83, bugbear), (83, kobold), (90, kobold),
+    /// (133, hobgoblin), (148, kobold). Seed 83's bugbear is the new
+    /// witness — same species as before, for continuity, and independently
+    /// corroborated by seed 83's kobold clearing the same six bands in the
+    /// same world.
     const STAPLE_CONCEPTS: [&str; 6] = ["barley", "wheat", "rice", "millet", "tuber", "vine"];
 
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
-        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
+        // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
+        // on lefford, 0063): the BAKE label bump reseats settlements, and
+        // seed 83's bugbear no longer clears all six staple bands at its new
+        // site — a witness-seed invalidation, not a code regression. Re-swept
+        // seeds 0..150 against every placed people, dynamically read off
+        // `FullView::components().perception` (the same method the prior
+        // witness search used, not a fresh one); (16, bugbear) clears all six
+        // and independently, (16, kobold) clears the same six bands in the
+        // same world — the same same-seed-two-species corroboration the
+        // previous witness had. Bugbear kept for continuity with the prior
+        // witness species.
+        let view = FullView::build(Seed(16), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 16");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),
