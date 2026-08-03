@@ -133,7 +133,7 @@ reclaims most kobold pantheons there, a fact about eternal night-stars and
 finite moons, not a defect in the rule that found it.
 
 **Campaign Y2-3 (The Tongues) gives every name in the world a mouth.** A new
-kernel-only phoneme model and a third closed species vector — six
+kernel-only phoneme model and a third closed species vector — seven
 articulation dimensions, again read against a manikin of their own and read
 from the D&D 5E corpus — feed a phonology engine that draws a real inventory
 and real phonotactics per species-culture. Every settlement, deity, and

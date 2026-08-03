@@ -684,7 +684,7 @@ or more descendants actually share, and nothing before this campaign built
 one. Proto-goblinoid is that ancestor, and it is not a new kind of object: a
 **proto-language**, here, is simply a language with no speakers — an
 authored ancestral articulation vector, its own point in the same
-six-dimension space every people's envelope already occupies; a phonology
+seven-dimension space every people's envelope already occupies; a phonology
 drawn under that vector by the same machinery that draws a daughter's; and
 one proto-root per concept, drawn once from that phonology under
 family-level labels and shared, unmodified, by every daughter. Proto-goblinoid's
