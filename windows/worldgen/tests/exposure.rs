@@ -914,3 +914,53 @@ fn a_dragon_observes_phenomena_with_its_own_eyes() {
         "a dragon must observe a non-empty phenomena list"
     );
 }
+
+/// Every people that can name north and east can name north-east. The four
+/// cardinals are Steeped by universal-stratum membership; the four
+/// intercardinals sit outside the stratum on purpose — giving them roots would
+/// mint an unanalysable eighth word — so they need their own unconditional
+/// `KnowsOf` rule to resolve as compounds instead of falling through to a
+/// gap. Without that rule every people reads `gap (experiential): X has no
+/// exposure to 'north-east'`, which is false of anyone who can walk.
+#[test]
+fn every_people_compounds_the_intercardinals_and_roots_the_cardinals() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+
+    let peoples = ["goblin", "hobgoblin", "bugbear", "kobold"];
+    for people in peoples {
+        let lex = lexicon_from(&w, people, &terrain, &climate).unwrap();
+        for cardinal in ["north", "south", "east", "west"] {
+            match lex.entry(cardinal) {
+                Some(LexEntry::Root { .. }) => {}
+                other => panic!("{people}: {cardinal} should be a Root, got {other:?}"),
+            }
+        }
+        for inter in ["north-east", "south-east", "south-west", "north-west"] {
+            match lex.entry(inter) {
+                Some(LexEntry::Compound { .. }) => {}
+                other => panic!("{people}: {inter} should be a Compound, got {other:?}"),
+            }
+        }
+    }
+}
+
+/// Anti-vacuity for the test above: it would pass just as happily over an
+/// empty roster of peoples, and the compound claim is only meaningful if the
+/// bearing concepts are actually registered in this world.
+#[test]
+fn the_bearing_exposure_check_runs_over_a_real_roster() {
+    let w = world();
+    for bearing in hornvale_language::BEARINGS {
+        assert!(
+            w.registry.concept(bearing).is_some(),
+            "{bearing} should be registered in a built world"
+        );
+    }
+    assert_eq!(
+        hornvale_language::BEARINGS.len(),
+        8,
+        "the bearing roster should be the full eight points"
+    );
+}
