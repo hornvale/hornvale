@@ -211,32 +211,66 @@ fn day_key(x: f64) -> u64 {
 /// and refounded from nothing a second time) must revisit this before
 /// claiming the key is total again.
 ///
-/// The fourth key itself is a compromise, not a material fact: `Founding::From`
-/// orders two descended layers by the *predecessor's* `EntityId` — an identity
-/// handle, not anything the world states about either occupation, and itself a
-/// mint-order artifact. It is specified behavior (there is no other handle in
-/// the ledger to break this tie with) and, per the invariant above, it is in
-/// practice the discriminator actually doing the work whenever the first three
-/// keys tie — Genesis-vs-Genesis never reaches it. A future encoding that gave
-/// a founding its own material identity (a "signet") would close this gap;
-/// until then, this is documented as the resort it is, not sold as more.
+/// The fourth key is now a material fact, not a compromise (The Salt, C3):
+/// `Founding::From` orders two descended layers by the *predecessor's own
+/// founding coordinates* — [`FoundingCoords`], the same `(people, site,
+/// founded)` triple [`founding_key`] folds for the founder handle — folded
+/// with the same [`mix`]/[`mix_str`] arithmetic under its own tag
+/// (`0x5361_6C74_0000_0003`, distinct from `material_key`'s and
+/// `founding_key`'s tags, so the three derivations never collide with each
+/// other by construction). This closes the gap an earlier version of this
+/// doc left open: it ordered by the predecessor's `EntityId` — "a compromise,
+/// not a material fact … itself a mint-order artifact" — and pointed at a
+/// future encoding that gave a founding its own material identity (a
+/// "signet") to close it. `FoundingCoords` is that signet. When the caller
+/// cannot resolve the predecessor at all (it holds a record for another
+/// site, or the predecessor is missing), the tail ranks last (`from_rank ==
+/// 2`) and ties with every other unresolved predecessor rather than reading
+/// anything id-shaped. Measured: this changes the rendered layer order at 0
+/// sites (seed 42), 1 (seed 7), 0 (seed 1000) — see
+/// `windows/worldgen/tests/history_emit.rs`'s
+/// `the_material_fourth_key_barely_moves_the_stratigraphy`.
 ///
-/// **Sort with a STABLE sort.** Where the key ties (the re-genesis case above),
-/// the three call sites agree only because `sort_by_key` is stable and all
-/// three sort the same ledger iteration order, so all three fall back to the
-/// same order. Switching any of them to `sort_unstable_by_key` would diverge
-/// the worldgen and almanac decoders precisely where this key is not total —
-/// and their agreement is a contract those decoders declare about themselves.
+/// **Sort with a STABLE sort.** Where the key ties — the re-genesis case
+/// above, or the unresolved-predecessor case just described — the three call
+/// sites agree only because `sort_by_key` is stable and all three sort the
+/// same ledger iteration order, so all three fall back to the same order.
+/// This matters *more* than it did under the id-valued tail: that one tied
+/// only in the narrow re-genesis case, while the material tail ties whenever
+/// a caller does not hold the predecessor's record, which is routine for a
+/// single-site view. Ties fall through to ledger iteration order, which is
+/// commit order — invariant under any change of id derivation, because
+/// minting order and commit order are the same fact read two ways, and a
+/// future re-derivation of ids (The Signet) moves ids, not the order facts
+/// were committed in. Switching any of the three call sites to
+/// `sort_unstable_by_key` would diverge them precisely where this key is not
+/// total, and their agreement is a contract those decoders declare about
+/// themselves.
 /// type-audit: bare-ok(count: return)
-pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>, u8, u64) {
+pub fn layer_key(
+    r: &OccupationRecord,
+    parent: Option<FoundingCoords<'_>>,
+) -> (u64, u8, u64, std::cmp::Reverse<u32>, u8, u64, u64, u64) {
     let founded = day_key(r.core.founded);
     let (ended_rank, ended) = match r.core.ended {
         Some(d) => (0u8, day_key(d)),
         None => (1u8, 0),
     };
-    let (from_rank, from) = match r.founded_from {
-        Founding::Genesis(c) => (0u8, u64::from(c.0)),
-        Founding::From(e) => (1u8, e.get()),
+    // The fourth key: ancestry, stated materially. `Genesis` keeps encoding
+    // the site's own cell, exactly as before; `From` now orders by the
+    // PREDECESSOR'S FOUNDING COORDINATES rather than its `EntityId`.
+    let (from_rank, from_a, from_b, from_c) = match (r.founded_from, parent) {
+        (Founding::Genesis(c), _) => (0u8, u64::from(c.0), 0, 0),
+        (Founding::From(_), Some(p)) => (
+            1u8,
+            u64::from(p.site.0),
+            day_key(p.founded),
+            mix_str(0x5361_6C74_0000_0003, p.people),
+        ),
+        // Descended from an occupation this caller could not resolve. Ranks
+        // after every resolvable predecessor and ties with its fellows,
+        // which the stable sort then leaves in commit order.
+        (Founding::From(_), None) => (2u8, 0, 0, 0),
     };
     (
         founded,
@@ -244,7 +278,9 @@ pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>,
         ended,
         std::cmp::Reverse(r.core.peak_population),
         from_rank,
-        from,
+        from_a,
+        from_b,
+        from_c,
     )
 }
 

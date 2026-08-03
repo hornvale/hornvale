@@ -24,8 +24,8 @@ use hornvale_history::flesh::{
     Departure, Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
 };
 use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, OccupationRecord, TechHorizon,
-    layer_key,
+    CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
+    OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, Value, World};
@@ -202,8 +202,29 @@ fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
             Some(Layer { record, people })
         })
         .collect();
-    layers.sort_by_key(|l| layer_key(&l.record));
+    layers.sort_by_key(|l| layer_key(&l.record, parent_of(world, &l.record)));
     layers
+}
+
+/// The founding coordinates of `r`'s predecessor, read straight off the
+/// ledger. `layers_at` filters to one site, so a predecessor founded
+/// elsewhere is not in its own result set and has to be looked up directly
+/// rather than found in an already-held vec (contrast
+/// `windows/worldgen::history_emit`'s two decoders, which hold every
+/// occupation and can build the lookup once from what they already have).
+fn parent_of(world: &World, r: &OccupationRecord) -> Option<FoundingCoords<'static>> {
+    match r.founded_from {
+        Founding::From(e) => founding_coords_of(world, e),
+        Founding::Genesis(_) => None,
+    }
+}
+
+/// The founding coordinates of an occupation, read straight off the ledger.
+/// `layers_at` filters to one site, so a predecessor on another site is not
+/// in its own result set and has to be looked up.
+fn founding_coords_of(world: &World, e: EntityId) -> Option<FoundingCoords<'static>> {
+    let r = record_of(world, e)?;
+    Some(founding_coords(&r.core))
 }
 
 /// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
