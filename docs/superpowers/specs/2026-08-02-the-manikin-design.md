@@ -163,6 +163,21 @@ BIO-39 describes is latent and arrives with the roster, which is C2's business.
 
 ## 5. Non-goals
 
+**Scope amendment, 2026-08-03 (Nathan's call, mid-execution).** This spec
+scoped the campaign to the *species crate*, and so to three vector families:
+mind, society, perception. Execution found a **fourth** — the seven-dimension
+**articulation vector**, which lives in `hornvale-language` (it moved there in
+ECS c3) and whose doc carried the identical weld, `0.5 ≡ the goblin baseline`.
+Scoping to a crate rather than to an idea is what hid it.
+
+Shipping three of four de-welded, behind a book chapter announcing the
+manikin, would have produced precisely the *stale claim* The Vacancy defined —
+a doc that has outlived its code — and would have forced `language.md` either
+to lie or to advertise the gap. The campaign is therefore extended to cover
+the articulation vector and the frame-stating prose left across `worldgen`,
+`culture`, `language` and `vessel`. The extension moves no value and does not
+disturb §4's preregistration.
+
 - **Authoring humans, elves, or dwarves.** That is C2, and it is an epoch.
 - **Characterizing goblin.** Moving goblin off the manikin's values changes
   goblin's language envelope, culture rungs, and demography weights, and so

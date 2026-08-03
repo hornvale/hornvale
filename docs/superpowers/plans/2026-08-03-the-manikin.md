@@ -61,16 +61,19 @@ dependencies — the workspace allowlist is `serde`, `serde_json`, `libm` only.
 | `windows/worldgen/tests/name_pattern.rs` | 1 stale prose reference | 2 |
 | `book/src/domains/species.md` | The "baseline goblin" section + dimension table | 4 |
 | `book/src/domains/manikin.md` (new) | The manikin's own short chapter | 4 |
-| `book/src/SUMMARY.md` | ToC entry for the new chapter (hand-authored) | 4, 7 |
-| `book/src/introduction.md` | 2 goblin-baseline mentions | 5 |
-| `book/src/domains/culture.md` | 1 mention | 5 |
-| `book/src/domains/language.md` | 3 mentions incl. a table header | 5 |
-| `book/src/domains/perception.md` | 3 mentions incl. a table header | 5 |
-| `book/src/domains/settlement.md` | 1 mention | 5 |
-| `book/src/gallery/the-meeting-seed-42.md` | 3 mentions — **hand-authored**, not generated | 5 |
-| `book/src/chronicle/the-manikin.md` (new) | Campaign chronicle | 7 |
-| `docs/retrospectives/the-manikin.md` (new) | Process lessons (decision 0020) | 7 |
-| `book/src/frontier/idea-registry.md` | `PSY-2` status flip + the new enum-neutrality row | 7 |
+| `book/src/SUMMARY.md` | ToC entry for the new chapter (hand-authored) | 4, 8 |
+| `book/src/introduction.md` | 2 goblin-baseline mentions | 6 |
+| `book/src/domains/culture.md` | 1 mention | 6 |
+| `book/src/domains/language.md` | 3 mentions incl. a table header | 6 |
+| `book/src/domains/perception.md` | 3 mentions incl. a table header | 6 |
+| `book/src/domains/settlement.md` | 1 mention | 6 |
+| `book/src/gallery/the-meeting-seed-42.md` | 3 mentions — **hand-authored**, not generated | 6 |
+| `book/src/domains/religion.md`, `domains/overview.md` | 1 mention each (found in Task 4) | 6 |
+| `domains/language/src/lib.rs` | `ArticulationVector` — the FOURTH welded family | 5 |
+| `domains/culture/src/structure.rs`, `windows/worldgen/`, `windows/vessel/` | ~30 frame-stating comments | 5 |
+| `book/src/chronicle/the-manikin.md` (new) | Campaign chronicle | 8 |
+| `docs/retrospectives/the-manikin.md` (new) | Process lessons (decision 0020) | 8 |
+| `book/src/frontier/idea-registry.md` | `PSY-2` status flip + the new enum-neutrality row | 8 |
 
 **Verified call-site inventory** (grepped at merge `489a9ca5`; re-run
 `grep -rn "SocietyVector::baseline\|::baseline()" --include=*.rs domains/ windows/ cli/`
@@ -614,12 +617,133 @@ a frame, and why it is deliberately not a species."
 
 ---
 
-### Task 5: The book freshness sweep
+### Task 5: The articulation vector, and the workspace-wide code prose sweep
 
-The Definition of Done requires that the book never lag merged reality. Six
-chapters state the goblin anchoring as the model's frame, and they were found
-by grep rather than by memory — an earlier draft of this plan swept only
-`species.md`.
+**Added mid-execution (Nathan's call, 2026-08-03) after Task 4 found the spec
+had scoped the campaign to a crate rather than to an idea.**
+
+The species crate holds three vector families — mind, society, perception —
+and Tasks 1–4 de-welded all three. There is a **fourth**: the seven-dimension
+**articulation vector**, which lives in `hornvale-language` (it moved there in
+ECS c3) and whose doc still reads `0.5 ≡ the goblin baseline`. Shipping three
+of four de-welded, behind a book chapter announcing the manikin, would leave
+exactly the "stale claim" The Vacancy defined — a doc that has outlived its
+code.
+
+The same sweep covers the ~30 weld *prose* sites outside `domains/species`,
+which are comments rather than code but which still define the frame as
+goblin's, and which a future reader greps as counter-evidence.
+
+**Files:**
+- Modify: `domains/language/src/lib.rs` — the `ArticulationVector` doc and a
+  new manikin const
+- Modify: `domains/language/src/phonology.rs`, `domains/language/src/register.rs`
+- Modify: `domains/culture/src/structure.rs` (~3 sites, incl. "`Default` is the
+  goblin baseline")
+- Modify: `windows/worldgen/src/lib.rs` (~9 sites, incl. a test named
+  `goblin_voice_params_are_the_baseline`)
+- Modify: `windows/worldgen/tests/exposure.rs`, `windows/vessel/src/liveness.rs`
+- Any further site the greps below turn up
+
+**Interfaces:**
+- Consumes: the naming and the neutral/default vocabulary settled in Tasks 1
+  and 4.
+- Produces: `ArticulationVector`'s manikin const, for Task 6's `language.md`
+  sweep to describe truthfully.
+
+- [ ] **Step 1: Enumerate the real scope with two greps, not one**
+
+Run both and keep the output; the second exists because this campaign has
+already had four incomplete greps, one of which missed a site that never used
+the word "baseline" at all:
+
+```bash
+grep -rn "baseline" --include=*.rs domains/ windows/ cli/ | grep -viE "rebaseline|test-baseline|beta_calibration"
+grep -rn "goblin" --include=*.rs domains/ windows/ cli/ | grep -viE "KindId\(\"goblin\"\)|\"goblin\""
+```
+
+The second finds frame-stating prose that names goblin without the word
+"baseline". Triage every hit by the rule in Step 3.
+
+- [ ] **Step 2: Give the articulation vector its manikin**
+
+`domains/language/src/lib.rs` holds `ArticulationVector`, whose doc reads:
+
+```rust
+/// The closed seven-dimension articulation vector (spec §5, extended by
+/// the phonology epoch with `tonality`). Scalars are bare ratios in
+/// `[0, 1]` with 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the
+/// humanoid default); widening the vector requires its own campaign.
+```
+
+Add a `MANIKIN` associated const alongside it, in the exact shape Task 1 used
+for the species vectors — the values must be **whatever the goblin row already
+holds**, so nothing moves. Read goblin's authored articulation row and copy it;
+do not assume every dimension is `0.5` (the doc itself says `tonality` is
+`0.0`, and that asymmetry is real and must be preserved).
+
+Give it a doc comment in the same register as
+`domains/species/src/lib.rs`'s `SocietyVector::MANIKIN`, carrying the same
+distinction: **neutral midpoint** where a dimension has a genuine middle,
+**designated default** where it does not. Carry the `type-audit:` tag —
+grammar is exactly `bare-ok(ratio)` on its own `///` line.
+
+Then reword the vector's own doc so `0.5` is the manikin's midpoint rather
+than goblin's value.
+
+- [ ] **Step 3: Sweep every remaining prose site**
+
+Two rules decide each hit:
+
+1. Text stating the **frame** — "goblin is the baseline", "`Default` is the
+   goblin baseline", "identity at the goblin baseline" — is now FALSE. Fix it.
+2. Text describing **goblin's actual authored values**, or a worked example at
+   goblin's vector, is still TRUE. Keep the fact; change only the framing.
+
+Rename the test `goblin_voice_params_are_the_baseline` to name the manikin.
+**Before renaming any test, confirm the old name is absent from
+`docs/timings/test-baseline-*.tsv`** — that file is keyed by test name, and
+renaming a test present in it forks the `make ci` per-test duration baseline:
+
+```bash
+grep -rn "goblin_voice_params_are_the_baseline" docs/timings/ || echo "not in baseline — safe to rename"
+```
+
+- [ ] **Step 4: Verify no behaviour moved**
+
+Run: `cargo test -p hornvale-language -p hornvale-culture -p hornvale-worldgen -p hornvale-vessel`
+Expected: PASS.
+
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
+Expected: PASS.
+
+- [ ] **Step 5: Confirm the sweep finished**
+
+Re-run both greps from Step 1. Every surviving hit must be one you can name a
+reason for (a genuine description of goblin's values, a `rebaseline` command,
+a timings filename). Paste the surviving list and the reason for each.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cargo fmt
+git add -A
+git commit -m "refactor(language): the articulation vector gets its manikin too
+
+The fourth vector family carried the same weld the species crate's three
+did, one crate away. Also sweeps the frame-stating prose left across
+worldgen, culture, language and vessel — comments, but comments that a
+future reader greps as counter-evidence."
+```
+
+---
+
+### Task 6: The book freshness sweep
+
+The Definition of Done requires that the book never lag merged reality. **Eight**
+chapters state the goblin anchoring as the model's frame — six found by the
+first grep, plus `domains/religion.md:225` and `domains/overview.md:63` found
+during Task 4. An earlier draft of this plan swept only `species.md`.
 
 **Files** (verified by
 `grep -rn "goblin baseline\|baseline goblin\|Goblin (baseline)" book/src/ --include=*.md`):
@@ -628,11 +752,22 @@ by grep rather than by memory — an earlier draft of this plan swept only
 - Modify: `book/src/domains/language.md:66`, `:87` (table header), `:204`
 - Modify: `book/src/domains/perception.md:72`, `:75`, `:115` (table header)
 - Modify: `book/src/domains/settlement.md:59`
+- Modify: `book/src/domains/religion.md:225` (found during Task 4)
+- Modify: `book/src/domains/overview.md:63` (found during Task 4)
 - Modify: `book/src/gallery/the-meeting-seed-42.md:65`, `:152`, `:164`
 
 **Interfaces:**
-- Consumes: the vocabulary settled in Task 4.
+- Consumes: the vocabulary settled in Task 4, and — critically — Task 5's
+  de-welding of the articulation vector.
 - Produces: no API.
+
+**`language.md` is the chapter that was blocked.** Its articulation table
+(`:87`) and its surrounding prose describe the seven-dimension articulation
+vector, which was still genuinely goblin-anchored in code until Task 5. Sweep
+it only if Task 5 landed; if Task 5 is somehow incomplete, `language.md` must
+say the articulation vector is still goblin-anchored rather than claim a
+re-framing that has not happened. The book may never lag merged reality — and
+it may never lead it either.
 
 **Two rules that decide each edit:**
 
@@ -651,7 +786,7 @@ Expected: only a `census-of-the-meeting.study.json` line — **no** line writing
 `book/src/gallery/the-meeting-seed-42.md`. That file is hand-authored prose and
 is safe to edit directly.
 
-This matters because `book/src/gallery/` is inside Task 6's drift-check path.
+This matters because `book/src/gallery/` is inside Task 7's drift-check path.
 Editing a *generated* gallery page by hand would be wrong and would surface as
 drift; editing this hand-authored one is fine **provided Task 5 is committed
 before Task 6 runs**, so the drift check compares regenerated output against a
@@ -708,7 +843,7 @@ goblin still sits where it sat; it just no longer defines the midpoint."
 
 ---
 
-### Task 6: The preregistered readout
+### Task 7: The preregistered readout
 
 Spec §4 froze a prediction before any of this was written: **zero artifact
 drift**. This task is where it is unblinded, and it is the one task whose
@@ -719,7 +854,7 @@ failure is a finding rather than a bug.
   result — stop and report.
 
 **Interfaces:**
-- Consumes: Tasks 1–5, **all committed** — the drift check compares regenerated
+- Consumes: Tasks 1–6, **all committed** — the drift check compares regenerated
   output against the committed tree, so any uncommitted hand edit under
   `book/src/gallery/` would read as drift and produce a false falsification.
 - Produces: the recorded readout, used by Task 7's chronicle.
@@ -780,7 +915,7 @@ sibling session is gating before starting.
 - [ ] **Step 5: Record the readout**
 
 Write the result — whichever way it came out — into
-`.superpowers/sdd/readout.md` in the worktree, for Task 7 to promote into the
+`.superpowers/sdd/readout.md` in the worktree, for Task 8 to promote into the
 chronicle:
 
 ```markdown
@@ -800,7 +935,7 @@ outcome — say so rather than manufacturing a commit.
 
 ---
 
-### Task 7: Chronicle, retrospective, and registry status
+### Task 8: Chronicle, retrospective, and registry status
 
 **Files:**
 - Create: `book/src/chronicle/the-manikin.md`
@@ -809,7 +944,7 @@ outcome — say so rather than manufacturing a commit.
 - Modify: `book/src/frontier/idea-registry.md`
 
 **Interfaces:**
-- Consumes: the readout from Task 5.
+- Consumes: the readout from Task 7.
 - Produces: campaign close artifacts.
 
 - [ ] **Step 1: Write the chronicle**
