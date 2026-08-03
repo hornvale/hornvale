@@ -134,3 +134,110 @@ downstream lost information. Six facts moved (one `star-class`, five
 `neighbor-class`) and nothing else did. No epoch was owed: a spectral class is
 a pure function of an unchanged mass draw, so only the ledger's *spelling*
 moved, not the draw that produces it — decision 0084's re-spelling case.
+
+## Part 3b: text stops being stored
+
+The audit that opened this campaign found hand-written English scattered across
+two dozen producer sites. What it did not say, and what part 3b establishes, is
+*why they clustered there*. `Phenomenon.description` was a `String` written at
+emit time, and a producer cannot know who is looking: an `ObserverContext`
+carries place, time, lens and position, and by constitutional design carries no
+species. So a stored description could only ever be culture-neutral or wrong.
+The field's **type** guaranteed the leak. Every producer that wrote one was
+obeying the interface it was given.
+
+The field is therefore deleted, not relocated. Rendering moves to the windows,
+where a speaker is known.
+
+### Two registers, asymmetric in the campaign's own dimension
+
+Hornvale realizes a sentence two ways. A tongue takes a **concept id**, resolves
+it through that people's lexicon, and fails loudly when the people has no word —
+a real fact about them. Common, the author's out-of-world register, took a
+**word the caller had already chosen**.
+
+That asymmetry is the whole explanation for where the leaks lived. The tongue
+path has a seam where *"is this concept sayable?"* can be asked; Common had
+none, so every leak entered upstream of the clause layer, in a caller assembling
+a string. The field's own documentation recorded the confusion without resolving
+it: its doc comment called it a lexeme while its type-audit tag called it an
+identifier, and **both were accidentally true**, because concept ids had been
+named as English words. The identity map worked until an id was hyphenated, and
+each break grew its own bespoke helper — one for species labels, one for
+spectral classes, and, for `celestial-body`, none at all, which is how a raw
+registry key shipped into the gallery unnoticed beside the prose everyone was
+reading instead.
+
+Common now has a declared vocabulary, and the measurement is the interesting
+part: across 191 registered concepts, **zero** declared exceptions were needed.
+Strip a trailing `-kind`, replace hyphens with spaces, and the naming convention
+yields good English for every one — `abyssal-plain`, `coral-reef`,
+`temperate-grassland`. The one genuine miss belongs to astronomy and is declared
+there. So Common is *total*, and totality is a property of the resolver's
+signature rather than of a validating constructor: the translation asymmetry
+becomes a type-level fact. Concept to Common is infallible. Concept to a
+people's tongue returns a gap — and a gap now always means something true about
+the world, never an authoring hole.
+
+### The description was load-bearing on world order
+
+Deleting the field moved something no one predicted. The salience ordering's
+tie-break ran `salience → kind → description`, so the prose was quietly serving
+as a sort key. With it gone, two lunar eclipses tied on the remaining keys
+changed places — and because the belief engine joins committed beliefs to a
+re-computed phenomena list **by list position**, two deities swapped periods.
+Eight pantheon lines and two agent names moved.
+
+The reword-invariance battery existed precisely to prove that rewording a
+description changed nothing. It compared the gloss *after* the ordering ran, so
+it never looked at order at all. The coupling it was written to disprove
+outlived it, one field over, for the entire life of the test. This is the
+campaign's strongest result: a relocated description would have carried that
+coupling forward intact and invisible. Only deletion exposed it.
+
+The ordering gained `period_days` and `venue` legs in response, and the comments
+that had claimed the tie-break was total were corrected to say what is true —
+it is deterministic but partial, and the positional join depends on the sort's
+stability rather than on totality.
+
+### What the world says now
+
+The seed-42 almanac's salient phenomena, rendered from referents at the moment
+of reading, in the words of the people the document is voiced by:
+
+```
+*As reckoned among the bugbears.*
+
+- [0.70] Doa
+- [0.29] heat
+- [0.17] Doqoo
+- [0.05] rain
+```
+
+`Doa` is the bugbears' word for the sun; `Doqoo` is wind. `heat` and `rain` are
+concepts their tongue has no word for, circumlocuted into Common — so the line
+where a people's vocabulary runs out is now *visible in the artifact* instead of
+hidden behind an author's English. Qualifiers are ordered by the drawn
+per-species headedness that already orders every compound, which is why the two
+moons read `Goododo Daboa` and `Dodoa Daboa` rather than in an order someone
+chose.
+
+The header line is not decoration. One world now has as many almanacs as it has
+peoples, and the committed artifact is a projection that picks one; a projection
+whose choice is invisible reads as neutral fact.
+
+### What did not move, and what is honestly still there
+
+Zero committed facts, across all of part 3b — pinned by the whole-world
+byte-identity fixture at every task, and confirmed on two further seeds when the
+ordering changed. No epoch is owed: nothing about a draw moved, only how the
+world is described after it.
+
+The claim this part earns is narrower than "text no longer exists in the
+simulation," and the whole-branch review was right to insist on the distinction.
+The **phenomenon channel** is text-free, and no path lets a concept id escape
+into a phenomenon bullet. But `SkyReport` and `ClimateReport` still carry
+description strings assembled by an English renderer inside a domain, and the
+almanac prints them verbatim a few lines above the code that closed the
+phenomenon leak. They are a parallel channel of the same shape, untouched here.
+Naming them is part of the result.

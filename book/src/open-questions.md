@@ -178,7 +178,31 @@ right shape. The bet has now been confirmed on the *producer* side as well:
 climate's felt weather — through a `Domain`-trait roster that lets any domain
 contribute observations without editing the composition root or a sibling, so
 the stream is no longer sky-bound and religion can grow weather-gods where the
-land is harsh. The scene seam has since crossed a repository boundary: an
+land is harsh.
+
+The bet has now also been tested on the channel's *payload*, and the original
+shape was wrong in one respect. A phenomenon carried a `description` string
+alongside its salience, and the forecast treated that as harmless — prose the
+consumer could ignore. It was not harmless, for a reason the interface's own
+design implies: an observer context deliberately carries no species, so a
+producer cannot know who is looking, and a stored sentence could only ever be
+culture-neutral or wrong. The field's *type* guaranteed a leak that no amount of
+producer discipline could close. [The Vernacular](./chronicle/the-vernacular.md)
+deleted it and moved rendering to the windows, where a speaker is known — and
+found the string had been serving as a **sort key**, so its removal reordered
+tied phenomena and, through a positional join, moved two deities' periods. The
+test written to prove the description was not load-bearing had compared the
+gloss *after* the ordering ran, and so had never looked at order at all.
+
+What the bet gets right is confirmed and sharpened: the channel generalizes
+because it carries *what was observed*, not *how to say it*. What it got wrong
+was assuming a description could ride along inertly. It could not, and the
+correction is that a phenomenon now carries a referent and no text. One
+qualification stands unresolved: `SkyReport` and `ClimateReport` still carry
+domain-resident prose of the same shape, so the guarantee is currently true of
+the phenomena channel rather than of the simulation.
+
+The scene seam has since crossed a repository boundary: an
 external client now consumes the same documents through a versioned wasm
 catalog, byte-identical across platforms
 ([Goldengrove](./chronicle/goldengrove.md), decision 0055). It has also
