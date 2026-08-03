@@ -209,8 +209,24 @@ mod tests {
     /// through. `facts.rs` `.expect()`s this lookup, so a drift between the two
     /// tables is a panic on whatever seed first draws the orphaned variant —
     /// seed 42 draws only five of the six.
+    ///
+    /// Coverage of the array below is compiler-enforced, not merely hand-kept
+    /// in sync: the `match` has no wildcard arm, so adding a `NeighborClass`
+    /// variant fails to compile right here — the same shape of guard
+    /// `class_name`'s own `match` already gives the display table, now
+    /// extended to this test instead of stopping at `class_name`. Before this
+    /// fix, a 7th variant broke `class_name` but left this array untouched
+    /// and green, testing five of six variants without complaint.
     #[test]
     fn every_neighbour_class_is_in_the_spectral_table() {
+        fn assert_covered(class: NeighborClass) {
+            let display = class_name(class);
+            assert!(
+                crate::star::class_concept(display).is_some(),
+                "{class:?} mints {display:?}, which SPECTRAL_CLASSES does not carry"
+            );
+        }
+
         for class in [
             NeighborClass::RedDwarf,
             NeighborClass::SunLike,
@@ -219,11 +235,14 @@ mod tests {
             NeighborClass::RedGiant,
             NeighborClass::BlueGiant,
         ] {
-            let display = class_name(class);
-            assert!(
-                crate::star::class_concept(display).is_some(),
-                "{class:?} mints {display:?}, which SPECTRAL_CLASSES does not carry"
-            );
+            match class {
+                NeighborClass::RedDwarf
+                | NeighborClass::SunLike
+                | NeighborClass::WhiteDwarf
+                | NeighborClass::OrangeGiant
+                | NeighborClass::RedGiant
+                | NeighborClass::BlueGiant => assert_covered(class),
+            }
         }
     }
 }
