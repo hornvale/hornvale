@@ -217,3 +217,28 @@ Task 6's per-task reviewer never reported back. That was caught only because the
 ledger tracked which reviews had returned; the whole-branch review was then told
 to weight that commit. **A review that silently never lands looks exactly like a
 review that passed** — the ledger is what distinguishes them.
+
+### The absorption found convergence, not collision
+
+Main gained The Namesake and The Salt while 3b ran. Both touch
+`domains/language`; the merge was textually clean and the full gate passed on
+the merged result, so there was no collision to fix.
+
+What the semantic read found instead is worth more than a conflict would have
+been. The Salt shipped `cli/tests/no_entity_id_values_in_prose.rs` — a scoped
+source scan forbidding an `EntityId`'s *numeric value* from being read into a
+derived-prose path. It was designed independently, in a different campaign, for
+a different identifier type, and it is **the same guard 3b built twice**:
+`a_referent_never_carries_prose` and `common_is_total` forbid a *concept* id
+from reaching reader-facing text.
+
+Three identifier types — `EntityId`, `ConceptId`, `KindId` — have now each
+acquired a bespoke, hand-written guard against the same failure, because none of
+them is a type the compiler can distinguish at the prose boundary. The Salt's
+module doc says so itself, at length, explaining why a `clippy.toml` ban was
+unavailable and a source scan was the backstop.
+
+That is the strongest available argument for `LANG-typed-text` (part 3c), and it
+did not come from either campaign's own reasoning — it came from reading the two
+side by side at an absorption. **The stage-boundary absorption cadence is
+usually justified as conflict avoidance; here it paid as design evidence.**
