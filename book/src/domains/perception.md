@@ -69,10 +69,11 @@ real design work with its own tradeoffs to weigh, and it waits for a
 campaign willing to weigh them, not a quiet addition to a vector that
 happened to have room.
 
-**The lens derivation, and identity at the goblin baseline.** Each
+**The lens derivation, and identity at the manikin.** Each
 species' lens is three multiplicative weights, one per venue, built from
 its perception vector by a formula chosen the same way every Year-2 formula
-has been chosen: written so that the goblin baseline reproduces today's
+has been chosen: written so that the manikin — the reference vector belonging
+to no creature, described in [The Manikin](./manikin.md) — reproduces today's
 behavior by construction, not by being tuned afterward to match it. Writing
 `σ` for sky attention and `ν` for night vision:
 
@@ -112,11 +113,16 @@ Creative Commons Attribution 4.0 International License (CC-BY-4.0). No SRD
 text is reproduced here — only parameter derivations, paraphrased to one
 line each.*
 
-| Dimension | Type | Goblin (baseline) | Kobold | 5E derivation |
+| Dimension | Type | Manikin | Kobold | 5E derivation |
 |---|---|---|---|---|
 | Activity cycle (diurnal, nocturnal, or crepuscular) | enum | Diurnal | Nocturnal | darkvision 60 ft, sunlight sensitivity |
 | Night vision | scalar `[0,1]` | 0.5 | 0.9 | darkvision; a life underground |
 | Sky attention | scalar `[0,1]` | 0.5 | 0.8 | omen-readers and dragon-watchers; the warren's night is spent under the open sky |
+
+Goblin's authored perception values currently coincide with the Manikin
+column exactly. Note that the activity-cycle row is a designated default
+rather than a midpoint — a waking schedule has no middle to occupy — while
+the two scalar rows are genuine neutral midpoints.
 
 Every dimension in this table is **authored**, for both peoples, the same
 posture the species model card kept: nothing here is drawn or fit. Kobold's

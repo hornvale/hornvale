@@ -222,7 +222,7 @@ settlement-name gloss.
   ledger).
 
 Laboratory: [Study 004, the Census of Faiths](../laboratory/study-004.md)
-(the goblin-flagship baseline); [Study 007, the Census of
+(the single-pantheon measurement, goblin flagship only); [Study 007, the Census of
 Eyes](../laboratory/study-007.md) (the two-pantheon comparison); [Study
 008, the Census of Tongues](../laboratory/study-008.md) (the epithet's own
 honorific and collision calibrations). Chronicle: [Campaign 5, The

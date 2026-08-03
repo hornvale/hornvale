@@ -60,7 +60,8 @@ retrospective.
 eyes, then that people's own voice.** Campaign Y2-0 re-baselined every
 census once, on corrected placement, before Year 2 built anything new on
 top of it. Campaign Y2-1 then added the species row: `domains/species`
-holds authored psychology vectors for goblin (the baseline) and kobold,
+holds authored psychology vectors for goblin (then the frame itself, now
+read against the manikin like any other people) and kobold,
 consumed by settlement's joint placement and culture's role vocabulary and
 thresholds — the same coarse-constrains-fine discipline the
 astronomy-to-theology cascade already proved, now widened into a second

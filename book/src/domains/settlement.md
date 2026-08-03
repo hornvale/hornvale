@@ -56,8 +56,8 @@ unrest or aridity, whichever is worse) toward exactly zero. Each species
 reads its own copy of `K`, its psychology folding in much as it did under
 the retired formula: a longer time horizon scales up the freshwater term,
 a bolder threat response scales down the effective hostility — an identity
-substitution at the goblin baseline, a real divergence at kobold's
-authored values. The field's grounding is calibration-checked, not
+substitution at the manikin, where goblin's authored values currently sit,
+and a real divergence at kobold's own. The field's grounding is calibration-checked, not
 asserted: measured against the real biomass-by-latitude gradient, the
 tropical-and-temperate band supports roughly **27×** the capacity of the
 polar band, decisively reproducing the pattern real biomes show.

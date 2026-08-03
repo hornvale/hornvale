@@ -106,7 +106,7 @@ instead of re-deriving them mid-flight.
 
 **Campaign Y2-1 (The Peoples) gives the world a second people.** A new
 kernel-only domain, `domains/species`, holds authored psychology vectors —
-goblin as the baseline, kobold authored from the D&D 5E SRD — consumed by
+goblin sitting at the manikin's values, kobold authored from the D&D 5E SRD — consumed by
 settlement's now-joint placement and culture's role vocabulary and
 thresholds, with a byte-identity superset test proving the goblin path is
 untouched by construction, not by convention. Two peoples now compete for
@@ -121,7 +121,7 @@ activity cycle, night vision, sky attention — sits alongside the
 psychology one on every species definition, authored the same way and read
 from the same D&D 5E corpus. A species-specific salience lens and
 characteristic hour replace the single observer-independent salience every
-prior campaign assumed, built so the goblin baseline is the identity
+prior campaign assumed, built so the manikin is the identity
 function by construction; religion now runs once per species-flagship,
 each through its own lens, so a goblin's sun-headed pantheon and a
 kobold's moon-headed one stand side by side on the same globe under the
@@ -134,7 +134,7 @@ finite moons, not a defect in the rule that found it.
 
 **Campaign Y2-3 (The Tongues) gives every name in the world a mouth.** A new
 kernel-only phoneme model and a third closed species vector — six
-articulation dimensions, again authored at the goblin baseline and read
+articulation dimensions, again read against a manikin of their own and read
 from the D&D 5E corpus — feed a phonology engine that draws a real inventory
 and real phonotactics per species-culture. Every settlement, deity, and
 deity epithet the world mints is now a generated sound rather than a
@@ -163,7 +163,8 @@ honorific, blind attribution at 0.875 — into one preregistration ledger, and
 it adds the control the year still owed: a **distributional twin**, a third
 people carrying the goblin's exact vectors, run alone so seed and cell and
 phenomena are shared and only the name-salt differs. A vector identical to the
-baseline cannot move a formula built to reduce to identity there, and it does
+manikin — where the goblin's own vector sits — cannot move a formula built to
+reduce to identity there, and it does
 not: 500 of 500 twin pairs are structurally indistinguishable, every
 distribution distance zero but for the intended name-length noise — at chance
 where the standard roster separates decisively. That is Year 2's exit

@@ -178,11 +178,13 @@ formula, a species-specific characteristic hour and salience lens that
 crowns the moons and the night sky over the sun. See
 [Perception](./perception.md) for the vector, the lens derivation, and what
 it let religion do with two peoples instead of one. Campaign Y2-3 (The
-Tongues) added a third: a closed six-dimension **articulation vector** —
+Tongues) added a third: a closed **articulation vector** —
 labiality, vowel-space breadth, voicing contrast, sibilance, voice
-loudness, and an exotic manner a species' anatomy affords — again authored
-with goblin's row at 0.5 across the board, and read from the same D&D 5E
-corpus for kobold. Since
+loudness, a tonality the phonology epoch later added, and an exotic manner a
+species' anatomy affords — again read against a manikin of its own, and read
+from the same D&D 5E corpus for kobold. That manikin is not uniformly `0.5`:
+tonality's `0.0` and the exotic manner's `None` are designated defaults, not
+midpoints. Since
 *The Dissolution* the articulation vector is owned by `domains/language`
 itself — its true home, the domain that reads it to build every name — rather
 than by `domains/species`, keyed to the same kind. See
