@@ -565,6 +565,48 @@ Facts moved: <N>, all neighbor-class. Nothing downstream."
 Decision 0084 governs: **an epoch is declared only when a derivation moved.**
 This task decides, with the measurements in hand, and records either outcome.
 
+- [ ] **Step 0: Guard the mapping the commit site panics on**
+
+Task 3's review found that nothing asserts every `NeighborClass` variant maps
+into `SPECTRAL_CLASSES`. `star.rs` has `every_star_class_name_is_in_the_table`
+for its mass buckets; `neighborhood.rs`'s six variants have none — and
+`facts.rs` `.expect()`s on the lookup, so a drift between the two tables is a
+worldgen **panic** on some seed nobody has generated. Seed 42 draws five of the
+six; `BlueGiant` is correct by inspection and unguarded.
+
+Add to `domains/astronomy/src/neighborhood.rs`'s inline `mod tests`:
+
+```rust
+/// Every neighbour class maps into the spectral table the ledger commits
+/// through. `facts.rs` `.expect()`s this lookup, so a drift between the two
+/// tables is a panic on whatever seed first draws the orphaned variant —
+/// seed 42 draws only five of the six.
+#[test]
+fn every_neighbour_class_is_in_the_spectral_table() {
+    for class in [
+        NeighborClass::RedDwarf,
+        NeighborClass::SunLike,
+        NeighborClass::WhiteDwarf,
+        NeighborClass::OrangeGiant,
+        NeighborClass::RedGiant,
+        NeighborClass::BlueGiant,
+    ] {
+        let display = class_name(class);
+        assert!(
+            crate::star::class_concept(display).is_some(),
+            "{class:?} mints {display:?}, which SPECTRAL_CLASSES does not carry"
+        );
+    }
+}
+```
+
+**Prove it can fail**: remove one pair from `SPECTRAL_CLASSES`, confirm the
+test reds naming that variant, restore, prove `git status --porcelain` is
+empty. Then run `cargo test -p hornvale-astronomy --lib every_neighbour`.
+
+If `NeighborClass` does not derive `Debug`, use the display string in the
+message instead of `{class:?}` rather than adding a derive.
+
 - [ ] **Step 1: Assemble the measurement**
 
 From Tasks 2 and 3's reports: total facts moved, the per-predicate breakdown,
