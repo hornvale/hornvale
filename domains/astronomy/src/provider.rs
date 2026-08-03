@@ -6,7 +6,6 @@ use crate::anchor::Rotation;
 use crate::calendar::{Calendar, SkyBand, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
 use crate::units::StdDays;
-use crate::wanderers::WandererClass;
 use crate::{CELESTIAL_BODY, SkyReport};
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -162,18 +161,26 @@ mod tests {
         );
     }
 
+    /// Every neighbour star contributes exactly one night-star phenomenon,
+    /// naming the concept `star`.
+    ///
+    /// This test used to assert that each phenomenon carried its neighbour's
+    /// OWN wording (`Neighbor::night_description`, which names the star's
+    /// colour). A phenomenon carries no text now, and every night star shares
+    /// one referent, so the colour is no longer on this channel at all and no
+    /// assertion can recover which star a given phenomenon is. What remains
+    /// checkable is the count and the concept.
     #[test]
-    fn night_star_phenomenon_description_matches_the_neighbor_s_own_wording() {
+    fn every_neighbor_contributes_one_night_star_phenomenon() {
         let s = sky(SkyPins {
             rotation: Some(RotationPin::Locked),
             ..SkyPins::default()
         });
         let seen = s.phenomena(&ctx(0.0));
-        for neighbor in &s.system().neighbors {
-            assert!(
-                seen.iter()
-                    .any(|p| p.kind == NIGHT_STAR && p.description == neighbor.night_description())
-            );
+        let stars: Vec<_> = seen.iter().filter(|p| p.kind == NIGHT_STAR).collect();
+        assert_eq!(stars.len(), s.system().neighbors.len());
+        for star in stars {
+            assert_eq!(star.referent, Referent::of("star"));
         }
     }
 
@@ -487,10 +494,14 @@ mod tests {
             .iter()
             .find(|p| p.kind == ECLIPSE)
             .expect("eclipse phenomenon");
-        assert!(
-            eclipse.description.contains("devours the sun whole"),
-            "got {}",
-            eclipse.description
+        // A covering moon takes the whole sun: the top eclipse salience.
+        assert_eq!(eclipse.salience, 0.9);
+        // The referent names both bodies — the sun that is eclipsed and the
+        // moon that does it. This moon is middling, so it takes no size
+        // qualifier (`size_concept`).
+        assert_eq!(
+            eclipse.referent,
+            Referent::qualified("eclipse", &["sun", "moon"])
         );
         let period = eclipse.period_days.expect("eclipses recur");
         assert!(
@@ -516,12 +527,16 @@ mod tests {
         );
         let ph = s.phenomena(&ctx(0.0));
         let eclipse = ph.iter().find(|p| p.kind == ECLIPSE).expect("eclipse");
-        assert!(
-            eclipse.description.contains("burning ring"),
-            "got {}",
-            eclipse.description
+        // A ring is a lesser omen than a devoured sun (0.9), and it is the
+        // salience that says so — the prose that used to say "burning ring"
+        // is gone.
+        assert_eq!(eclipse.salience, 0.75);
+        // The little moon reaches the referent, which is what separates this
+        // eclipse from a sibling moon's.
+        assert_eq!(
+            eclipse.referent,
+            Referent::qualified("eclipse", &["sun", "little", "moon"])
         );
-        assert!(eclipse.salience < 0.9, "a ring is a lesser omen");
     }
 
     /// SKY-6: a flat (coplanar) orbit crosses the sun at every new moon —
@@ -600,10 +615,14 @@ mod tests {
             .iter()
             .find(|p| p.kind == ECLIPSE && p.venue == Venue::NightSky)
             .expect("lunar eclipse phenomenon");
+        // The eclipsed body is the moon, and the referent says so — a solar
+        // eclipse's referent names the sun first, so the two never collide.
+        assert_eq!(lunar.referent.concept, "eclipse");
         assert!(
-            lunar.description.contains("bloodred"),
-            "got: {}",
-            lunar.description
+            lunar.referent.qualifiers.contains(&"moon".to_string())
+                && !lunar.referent.qualifiers.contains(&"sun".to_string()),
+            "got: {:?}",
+            lunar.referent
         );
         assert!((lunar.salience - 0.8).abs() < 1e-9);
         assert!(lunar.period_days.expect("recurs") > 0.0);
@@ -1007,7 +1026,7 @@ mod tests {
             for p in s.phenomena(&obs) {
                 if p.kind == WANDERING_STAR {
                     found = true;
-                    assert!(p.description.contains("wander"), "got {}", p.description);
+                    assert_eq!(p.referent, Referent::of("star"));
                     assert!(
                         p.salience > 0.0 && p.salience < 1.0,
                         "got salience {}",
@@ -1029,17 +1048,26 @@ mod tests {
     }
 
     /// Night-sky stage 2, the inner-wanderer branch: seed 42's default pair
-    /// are both outer (no morning/evening-star text, no glare skip), so that
-    /// coverage was silent. Seed 0 with `wanderers: Some(2)` draws an inner
-    /// (rock, `max_elongation_deg` = Some) wanderer at index 0 and an outer
-    /// (giant) one at index 1 — found by a one-off scan over seeds 0..64.
-    /// Scanning latitude 35 across two of the inner wanderer's synodic
-    /// periods must show (a) the morning-star/evening-star Twilight text at
-    /// least once, and (b) the glare skip (elongation < 15°, recomputed
-    /// independently with the same formula the provider uses) hides that
-    /// wanderer's phenomenon on every sample where it applies.
+    /// are both outer (no glare skip), so that coverage was silent. Seed 0
+    /// with `wanderers: Some(2)` draws an inner (rock, `max_elongation_deg` =
+    /// Some) wanderer at index 0 and an outer (giant) one at index 1 — found
+    /// by a one-off scan over seeds 0..64. Scanning latitude 35 across two of
+    /// the inner wanderer's synodic periods, the glare skip (elongation < 15°,
+    /// recomputed independently with the same formula the provider uses) must
+    /// hide that wanderer's phenomenon on every sample where it applies.
+    ///
+    /// **What this test no longer distinguishes.** It used to also assert that
+    /// an inner wanderer shows morning-star/evening-star wording in twilight,
+    /// and it told the two wanderers apart by their class words ("rock-pale"
+    /// versus "giant-bright"). Both lived only in the phenomenon's English
+    /// description, which no longer exists: every wanderer carries an
+    /// identical `Referent::of("star")`, so the referent can distinguish
+    /// neither inner from outer nor morning from evening. The glare skip
+    /// survives because the phenomenon's PERIOD is the wanderer's own synodic
+    /// period, which the two do not share (asserted below) — so a wanderer can
+    /// still be identified structurally, just not described.
     #[test]
-    fn an_inner_wanderer_shows_morning_evening_star_text_and_the_glare_skip() {
+    fn an_inner_wanderer_is_glare_skipped_near_conjunction() {
         let seed = Seed(0);
         let pins = SkyPins {
             rotation: Some(RotationPin::PeriodHours(24.0)),
@@ -1062,14 +1090,27 @@ mod tests {
         let e_max = inner.max_elongation_deg.expect("checked above");
         let synodic = inner.synodic_period.get();
         let year_phase_offset = s.system().forcing.year_phase_offset;
-        let inner_class_word = match inner.class {
-            WandererClass::Rock => "rock-pale",
-            WandererClass::Giant => "giant-bright",
-        };
+
+        // The only field that still separates one wanderer's phenomenon from
+        // another's. If the two ever rounded to the same period this test
+        // would silently stop testing anything, so it says so out loud.
+        let inner_period = round2(synodic);
+        let periods: Vec<f64> = s
+            .system()
+            .wanderers
+            .iter()
+            .map(|w| round2(w.synodic_period.get()))
+            .collect();
+        assert_eq!(
+            periods.iter().filter(|p| **p == inner_period).count(),
+            1,
+            "the two wanderers must differ in rounded synodic period for this \
+             test to identify the inner one: {periods:?}"
+        );
 
         let span = 2.0 * synodic;
         let samples = 80;
-        let mut saw_morning_or_evening_star = false;
+        let mut saw_the_inner_wanderer = false;
         for k in 0..samples {
             let t = k as f64 * span / samples as f64;
             let obs = ObserverContext::at_position(
@@ -1087,7 +1128,7 @@ mod tests {
             let inner_phenomenon = s
                 .phenomena(&obs)
                 .into_iter()
-                .find(|p| p.kind == WANDERING_STAR && p.description.contains(inner_class_word));
+                .find(|p| p.kind == WANDERING_STAR && p.period_days == Some(inner_period));
 
             if elongation < 15.0 {
                 assert!(
@@ -1095,19 +1136,15 @@ mod tests {
                     "t={t}: elongation {elongation:.2}° < 15° should glare-skip the inner \
                      wanderer, got {inner_phenomenon:?}"
                 );
-            } else if let Some(p) = &inner_phenomenon
-                && (p.description.contains("morning star")
-                    || p.description.contains("evening star"))
-            {
-                saw_morning_or_evening_star = true;
+            } else if inner_phenomenon.is_some() {
+                saw_the_inner_wanderer = true;
             }
         }
 
         assert!(
-            saw_morning_or_evening_star,
-            "expected the inner wanderer to show morning-star/evening-star Twilight text \
-             at least once across two synodic periods (seed {:?}, inner index {inner_index})",
-            seed
+            saw_the_inner_wanderer,
+            "expected the inner wanderer to be visible at least once across two \
+             synodic periods (seed {seed:?}, inner index {inner_index})"
         );
     }
 
@@ -1340,6 +1377,34 @@ fn size_concept(angular: f64) -> &'static [&'static str] {
     }
 }
 
+/// A moon named the way a phenomenon's referent must name it: its size
+/// qualifier (if it has one) followed by the head concept `moon`.
+///
+/// A sky with two moons emits a tide, a lunar eclipse and a solar eclipse per
+/// moon. Those used to be told apart by the English sentence each carried
+/// ("under the vast moon" versus "under the small, distant moon"); the
+/// referent said only `moon`, so the producer was keeping information in prose
+/// that it never put in the referent. Naming the size here restores it to the
+/// channel a consumer may actually read.
+///
+/// A middling moon still takes no qualifier ([`size_concept`]), so two
+/// middling moons in one sky remain indistinguishable — that is a limit of the
+/// registered size vocabulary, and it already applies to the moons themselves.
+fn moon_qualifiers(angular: f64) -> Vec<&'static str> {
+    let mut q = size_concept(angular).to_vec();
+    q.push("moon");
+    q
+}
+
+/// A solar eclipse names what is eclipsed *and* the moon that does it:
+/// `["sun", <size>, "moon"]`. Both bodies are load-bearing — the sun alone
+/// cannot separate one moon's eclipse from another's.
+fn solar_eclipse_qualifiers(angular: f64) -> Vec<&'static str> {
+    let mut q = vec!["sun"];
+    q.extend(moon_qualifiers(angular));
+    q
+}
+
 /// Capitalize the first character of `s`, leaving the rest untouched.
 fn capitalize(s: &str) -> String {
     let mut chars = s.chars();
@@ -1565,7 +1630,6 @@ impl PhenomenaSource for GeneratedSky {
                 Rotation::Spinning { day, .. } => out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::of("sun"),
-                    description: format!("the sun, a {}", self.system.star.class_name),
                     period_days: Some(round2(day.get())),
                     salience: 1.0,
                     venue: Venue::DaySky,
@@ -1573,7 +1637,6 @@ impl PhenomenaSource for GeneratedSky {
                 Rotation::Locked => out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::of("sun"),
-                    description: "a sun fixed forever above the day side".to_string(),
                     period_days: None,
                     salience: 1.0,
                     venue: Venue::DaySky,
@@ -1593,27 +1656,16 @@ impl PhenomenaSource for GeneratedSky {
                 let chance =
                     eclipse_chance(sun_angular, moon.angular_diameter_rel, moon.inclination_deg);
                 let total = moon.angular_diameter_rel >= sun_angular;
-                let (description, salience) = if total {
-                    (
-                        format!(
-                            "an eclipse: the {} moon devours the sun whole",
-                            size_word(moon.angular_diameter_rel)
-                        ),
-                        0.9,
-                    )
-                } else {
-                    (
-                        format!(
-                            "an eclipse: the {} moon leaves a burning ring of the sun",
-                            size_word(moon.angular_diameter_rel)
-                        ),
-                        0.75,
-                    )
-                };
+                // A covering moon takes the sun whole; a smaller one leaves a
+                // ring. Salience is the difference a consumer can read: the
+                // whole-sun omen outranks the ring.
+                let salience = if total { 0.9 } else { 0.75 };
                 out.push(Phenomenon {
                     kind: ECLIPSE.to_string(),
-                    referent: Referent::qualified("eclipse", &["sun"]),
-                    description,
+                    referent: Referent::qualified(
+                        "eclipse",
+                        &solar_eclipse_qualifiers(moon.angular_diameter_rel),
+                    ),
                     period_days: Some(round2(synodic.get() / chance)),
                     salience,
                     venue: Venue::DaySky,
@@ -1627,7 +1679,6 @@ impl PhenomenaSource for GeneratedSky {
                 out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::qualified("moon", size_concept(angular)),
-                    description: format!("a {} moon", size_word(angular)),
                     period_days: Some(round2(moon.period.get())),
                     salience: round2(0.35 + 0.35 * angular.min(2.0) / 2.0),
                     venue: Venue::NightSky,
@@ -1651,10 +1702,9 @@ impl PhenomenaSource for GeneratedSky {
                 let chance = crate::eclipses::node_crossing_chance(threshold, moon.inclination_deg);
                 out.push(Phenomenon {
                     kind: ECLIPSE.to_string(),
-                    referent: Referent::qualified("eclipse", &["moon"]),
-                    description: format!(
-                        "an eclipse of the moon: the full {} moon darkens to a bloodred coal",
-                        size_word(moon.angular_diameter_rel)
+                    referent: Referent::qualified(
+                        "eclipse",
+                        &moon_qualifiers(moon.angular_diameter_rel),
                     ),
                     period_days: Some(round2(synodic.get() / chance)),
                     salience: 0.8,
@@ -1682,36 +1732,28 @@ impl PhenomenaSource for GeneratedSky {
                 let moon = &self.system.moons[event.moon];
                 match event.body {
                     EclipseBody::Solar => {
-                        let (description, salience) = match solar_eclipse_sight(
+                        // How much of the sun goes: whole, a ring, or a bite
+                        // out of its edge. The sight is the observer's own —
+                        // it survives as salience, the ranking a consumer
+                        // reads.
+                        let salience = match solar_eclipse_sight(
                             &self.system,
                             &self.calendar,
                             &event,
                             coord.latitude,
                             coord.longitude,
                         ) {
-                            EclipseSight::WholeSun => (
-                                format!(
-                                    "the {} moon devours the sun whole",
-                                    size_word(moon.angular_diameter_rel)
-                                ),
-                                0.95,
-                            ),
-                            EclipseSight::BurningRing => (
-                                format!(
-                                    "the {} moon leaves a burning ring of the sun",
-                                    size_word(moon.angular_diameter_rel)
-                                ),
-                                0.85,
-                            ),
-                            EclipseSight::Bitten => {
-                                ("a dark bite taken from the sun's edge".to_string(), 0.6)
-                            }
+                            EclipseSight::WholeSun => 0.95,
+                            EclipseSight::BurningRing => 0.85,
+                            EclipseSight::Bitten => 0.6,
                             EclipseSight::Unseen => continue,
                         };
                         out.push(Phenomenon {
                             kind: ECLIPSE.to_string(),
-                            referent: Referent::qualified("eclipse", &["sun"]),
-                            description,
+                            referent: Referent::qualified(
+                                "eclipse",
+                                &solar_eclipse_qualifiers(moon.angular_diameter_rel),
+                            ),
                             period_days: None,
                             salience,
                             venue: Venue::DaySky,
@@ -1721,10 +1763,9 @@ impl PhenomenaSource for GeneratedSky {
                         if lunar_eclipse_seen(&self.calendar, &event, coord.longitude) {
                             out.push(Phenomenon {
                                 kind: ECLIPSE.to_string(),
-                                referent: Referent::qualified("eclipse", &["moon"]),
-                                description: format!(
-                                    "the full {} moon darkens to a bloodred coal",
-                                    size_word(moon.angular_diameter_rel)
+                                referent: Referent::qualified(
+                                    "eclipse",
+                                    &moon_qualifiers(moon.angular_diameter_rel),
                                 ),
                                 period_days: None,
                                 salience: 0.8,
@@ -1749,11 +1790,7 @@ impl PhenomenaSource for GeneratedSky {
             let rate = (1.0 / surface_rotation - 1.0 / moon.period.get()).abs();
             out.push(Phenomenon {
                 kind: TIDE.to_string(),
-                referent: Referent::qualified("tide", &["moon"]),
-                description: format!(
-                    "the tide, rising and falling under the {} moon",
-                    size_word(moon.angular_diameter_rel)
-                ),
+                referent: Referent::qualified("tide", &moon_qualifiers(moon.angular_diameter_rel)),
                 // A moon synchronous with the surface holds a motionless
                 // bulge: a tide with no period.
                 period_days: (rate > 0.0).then(|| round2(0.5 / rate)),
@@ -1778,9 +1815,6 @@ impl PhenomenaSource for GeneratedSky {
                 out.push(Phenomenon {
                     kind: TIDE.to_string(),
                     referent: Referent::qualified("tide", &["two", "moon"]),
-                    description: "spring and neap: the tides swell and slacken as the moons \
-                                  align and part"
-                        .to_string(),
                     period_days: Some(round2(0.5 / beat_rate)),
                     // The weaker source sets the modulation depth.
                     salience: round2(0.15 + 0.25 * second.tide_rel.min(2.0) / 2.0),
@@ -1794,7 +1828,6 @@ impl PhenomenaSource for GeneratedSky {
             out.push(Phenomenon {
                 kind: SEASONAL_CYCLE.to_string(),
                 referent: Referent::of("day"),
-                description: "the slow swelling and shrinking of daylight".to_string(),
                 period_days: Some(round2(self.system.anchor.year.get())),
                 salience: round2(0.5 * self.system.anchor.obliquity.get() / 35.0),
                 venue: Venue::Ambient,
@@ -1806,7 +1839,6 @@ impl PhenomenaSource for GeneratedSky {
                 out.push(Phenomenon {
                     kind: NIGHT_STAR.to_string(),
                     referent: Referent::of("star"),
-                    description: neighbor.night_description(),
                     period_days: None,
                     salience: round2(
                         (0.1 + 0.1 * math::ln(1.0 + neighbor.apparent_brightness)).clamp(0.1, 0.6),
@@ -1832,12 +1864,10 @@ impl PhenomenaSource for GeneratedSky {
             for pair in
                 crate::heliacal::heliacal_events(&self.system, &self.calendar, pos.latitude, t)
             {
-                let color = &self.system.neighbors[pair.neighbor].color;
                 if wrapped_dist(phase, pair.rising_frac) < half_day_frac {
                     out.push(Phenomenon {
                         kind: HELIACAL_RISING.to_string(),
                         referent: Referent::qualified("star", &["new"]),
-                        description: format!("The {} star returns before dawn.", color),
                         period_days: Some(round2(year)),
                         salience: 0.6,
                         venue: Venue::NightSky,
@@ -1847,7 +1877,6 @@ impl PhenomenaSource for GeneratedSky {
                     out.push(Phenomenon {
                         kind: HELIACAL_SETTING.to_string(),
                         referent: Referent::qualified("star", &["old"]),
-                        description: format!("The {} star takes its leave into the sunset.", color),
                         period_days: Some(round2(year)),
                         salience: 0.6,
                         venue: Venue::NightSky,
@@ -1868,39 +1897,23 @@ impl PhenomenaSource for GeneratedSky {
         {
             let band = self.calendar.sky_band(t, pos.latitude);
             if !matches!(band, Some(SkyBand::Day)) {
-                let local_frac = self.calendar.local_day(t).map(|d| d.1).unwrap_or(0.0);
                 let sun = self.calendar.solar_equatorial(t);
                 let obliquity_deg = self.system.forcing.obliquity_at(t.0);
                 for (index, wanderer) in self.system.wanderers.iter().enumerate() {
                     let phase_w = (t.0 / wanderer.synodic_period.get()
                         + (self.system.forcing.year_phase_offset + index as f64 * 0.37).fract())
                     .fract();
-                    let class_word = match wanderer.class {
-                        WandererClass::Rock => "rock-pale",
-                        WandererClass::Giant => "giant-bright",
-                    };
 
                     // Inner wanderers are lost in the sun's glare below 15°
                     // of elongation; outer wanderers are lost in it below
-                    // 15° of RA separation, and loop backward near
-                    // opposition (within 30° of it: SkyBand-independent —
-                    // the retrograde loop is a geometric fact, not a
-                    // visibility one).
-                    let text = match wanderer.max_elongation_deg {
+                    // 15° of RA separation. Either way the wanderer is not
+                    // seen, so no phenomenon is emitted.
+                    match wanderer.max_elongation_deg {
                         Some(e_max) => {
                             let elongation =
                                 e_max * math::sin(std::f64::consts::TAU * phase_w).abs();
                             if elongation < 15.0 {
                                 continue;
-                            }
-                            match band {
-                                Some(SkyBand::Twilight) if local_frac < 0.5 => {
-                                    "the morning star, low before the sun".to_string()
-                                }
-                                Some(SkyBand::Twilight) => {
-                                    "the evening star, chasing the sunset".to_string()
-                                }
-                                _ => "a bright star that will not keep its station".to_string(),
                             }
                         }
                         None => {
@@ -1911,20 +1924,12 @@ impl PhenomenaSource for GeneratedSky {
                             if min_sep < 15.0 {
                                 continue;
                             }
-                            if (150.0..=210.0).contains(&sep_deg) {
-                                "a bright star that will not keep its station, drifting \
-                                 backward against the stars"
-                                    .to_string()
-                            } else {
-                                "a bright star that will not keep its station".to_string()
-                            }
                         }
-                    };
+                    }
 
                     out.push(Phenomenon {
                         kind: WANDERING_STAR.to_string(),
                         referent: Referent::of("star"),
-                        description: format!("A {class_word} wanderer: {text}."),
                         period_days: Some(round2(wanderer.synodic_period.get())),
                         salience: 0.65,
                         venue: Venue::NightSky,

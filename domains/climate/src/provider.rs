@@ -501,7 +501,6 @@ impl PhenomenaSource for GeneratedClimate {
         let mut out = vec![Phenomenon {
             kind: AMBIENT.to_string(),
             referent: Referent::of("wind"),
-            description: "warm, still, unchanging air".to_string(),
             period_days: None,
             salience: 0.15,
             venue: Venue::Ambient,
@@ -528,7 +527,6 @@ impl PhenomenaSource for GeneratedClimate {
             out.push(Phenomenon {
                 kind: HEAT.to_string(),
                 referent: Referent::of("heat"),
-                description: "oppressive heat".to_string(),
                 period_days: None,
                 salience: temp_salience,
                 venue: Venue::Ambient,
@@ -537,7 +535,6 @@ impl PhenomenaSource for GeneratedClimate {
             out.push(Phenomenon {
                 kind: COLD.to_string(),
                 referent: Referent::of("cold"),
-                description: "biting cold".to_string(),
                 period_days: None,
                 salience: temp_salience,
                 venue: Venue::Ambient,
@@ -553,15 +550,14 @@ impl PhenomenaSource for GeneratedClimate {
                 (MOISTURE_SALIENCE_PER_UNIT * (moisture - WET_EMIT_THRESHOLD))
                     .clamp(0.0, MAX_CLIMATE_SALIENCE),
             );
-            let (kind, description, referent) = if mean <= FREEZING_C {
-                (SNOW, "falling snow", Referent::of("snow"))
+            let (kind, referent) = if mean <= FREEZING_C {
+                (SNOW, Referent::of("snow"))
             } else {
-                (RAIN, "falling rain", Referent::of("rain"))
+                (RAIN, Referent::of("rain"))
             };
             out.push(Phenomenon {
                 kind: kind.to_string(),
                 referent,
-                description: description.to_string(),
                 period_days: None,
                 salience,
                 venue: Venue::Ambient,

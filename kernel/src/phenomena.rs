@@ -24,14 +24,15 @@ pub enum Venue {
 /// registered concept it refers to, plus the registered concepts that
 /// qualify it.
 ///
-/// This is the machine-facing half of a phenomenon and **the only field a
-/// consumer may branch on**. [`Phenomenon::description`] is a rendering
-/// derived from this one way; nothing may parse it back (decision 0022, and
-/// `hornvale_language::register`'s content→render seam). Before this type
-/// existed, `windows/worldgen` decided which concept a phenomenon glossed to
-/// — and therefore what a people's deity was named — by grepping the
-/// description for `"moon"`; rewording one description moved 73 committed
-/// facts on seed 42.
+/// This is **all** a phenomenon says about what it is about, and the only
+/// field a consumer may branch on. A reader's text is derived from it at the
+/// moment of reading, where the speaker is known; nothing may parse that text
+/// back (decision 0022, and `hornvale_language::register`'s content→render
+/// seam). Before this type existed, `windows/worldgen` decided which concept a
+/// phenomenon glossed to — and therefore what a people's deity was named — by
+/// grepping a stored English description for `"moon"`; rewording one
+/// description moved 73 committed facts on seed 42. That description no longer
+/// exists.
 ///
 /// Every id here is a **concept-registry key**, never prose: `moon`, not
 /// `"a vast moon"`. Qualifiers are registry keys too, which is load-bearing
@@ -73,8 +74,15 @@ impl Referent {
 
 /// Something an observer would notice. `kind` must be registered in the
 /// concept registry by the producing domain. Consumers must not branch on
-/// the producing system — only on kind, period, character, salience.
-/// type-audit: bare-ok(identifier-text: kind), bare-ok(prose: description), pending(wave-1: period_days), bare-ok(ratio: salience)
+/// the producing system — only on kind, referent, period, character, salience.
+///
+/// **A phenomenon carries no text.** A producer cannot know who is looking —
+/// [`ObserverContext`] is `{place, time, lens, position}` by constitutional
+/// design (decision 0003, no species field) — so a stored string could only
+/// ever be culture-neutral or wrong. Reader-facing words are realized where
+/// the speaker is known (`hornvale_almanac::phenomenon_line`), from the
+/// [`Referent`]'s registered concept ids.
+/// type-audit: bare-ok(identifier-text: kind), pending(wave-1: period_days), bare-ok(ratio: salience)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Phenomenon {
     /// Registered phenomenon kind (concept-registry key).
@@ -82,8 +90,6 @@ pub struct Phenomenon {
     /// What this phenomenon is about, in registry keys. The only field a
     /// consumer may branch on.
     pub referent: Referent,
-    /// Human-readable character of the phenomenon.
-    pub description: String,
     /// None = constant or aperiodic; Some(d) = recurs every d days.
     pub period_days: Option<f64>,
     /// How much this demands attention, in [0, 1].
@@ -230,9 +236,12 @@ pub trait PhenomenaSource {
 }
 
 /// Aggregate all sources, sorted by salience descending. Ties break by
-/// kind then description so output order never depends on source order
+/// kind then referent so output order never depends on source order
 /// alone being stable — determinism is constitutional, and every sort
-/// carries a deterministic tie-break (decision 0005).
+/// carries a deterministic tie-break (decision 0005). The referent is the
+/// last discriminator a phenomenon has now that it carries no text, and it
+/// is the better one: it orders by what the phenomenon is *about* rather
+/// than by an English sentence about it.
 pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<Phenomenon> {
     let mut all: Vec<Phenomenon> = sources.iter().flat_map(|s| s.phenomena(ctx)).collect();
     if !ctx.lens.is_identity() {
@@ -246,7 +255,7 @@ pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<P
         b.salience
             .total_cmp(&a.salience)
             .then_with(|| a.kind.cmp(&b.kind))
-            .then_with(|| a.description.cmp(&b.description))
+            .then_with(|| a.referent.cmp(&b.referent))
     });
     all
 }
@@ -271,7 +280,6 @@ mod tests {
         Phenomenon {
             kind: kind.to_string(),
             referent: Referent::of(kind),
-            description: format!("the {kind}"),
             period_days: None,
             salience,
             venue: Venue::Ambient,
@@ -306,7 +314,7 @@ mod tests {
 
     #[test]
     fn observe_breaks_salience_ties_deterministically() {
-        // Equal salience: sorted by kind, then description.
+        // Equal salience: sorted by kind, then referent.
         let a = FixedSource(vec![ph("zephyr", 0.5), ph("aurora", 0.5)]);
         let out = observe(&[&a], &ctx());
         assert_eq!(out[0].kind, "aurora");
@@ -358,7 +366,7 @@ mod tests {
     }
 
     #[test]
-    fn lens_ties_break_by_kind_then_description() {
+    fn lens_ties_break_by_kind_then_referent() {
         // Two night phenomena both clamp to 1.0 under a strong lens.
         let a = FixedSource(vec![
             ph_venue("night-star", 0.6, Venue::NightSky),
@@ -476,6 +484,25 @@ mod tests {
         assert!(Visibility::new(f64::NAN).is_none());
         assert_eq!(Visibility::new(0.5).map(|v| v.get()), Some(0.5));
         assert_eq!(Visibility::CLEAR.get(), 1.0);
+    }
+
+    /// A phenomenon carries no text. A producer cannot know who is looking —
+    /// `ObserverContext` is {place, time, lens, position} by constitutional
+    /// design (decision 0003) — so a stored string could only ever be neutral
+    /// or wrong. Rendering happens where the speaker is known.
+    ///
+    /// This test is a structural assertion: it fails to COMPILE if the field
+    /// returns, which is the point.
+    #[test]
+    fn a_phenomenon_carries_no_text() {
+        let p = Phenomenon {
+            kind: "celestial-body".to_string(),
+            referent: Referent::of("moon"),
+            period_days: None,
+            salience: 1.0,
+            venue: Venue::NightSky,
+        };
+        assert_eq!(p.referent.concept, "moon");
     }
 
     #[test]

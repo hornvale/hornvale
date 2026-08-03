@@ -5426,9 +5426,19 @@ mod tests {
                 "Pao is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 // Absorbing The Watershed's sonority merge alongside The
-                // Witness's Tonogenesis gating re-derives this agent name:
-                // `Wtoevvelqa` -> `Twoevave` (`Wt-` falls; `Tw-` rises).
-                "The moons cross because Twoevave strides the sky, slowly.".to_string(),
+                // Witness's Tonogenesis gating re-derived this agent name to
+                // `Twoevave` (`Wt-` falls; `Tw-` rises). The Vernacular part
+                // 3b then moved it again, to `Tleavese` — and NOT by
+                // re-minting the name. Deleting `Phenomenon.description`
+                // removed `kernel::observe`'s last tie-break, which the
+                // referent now supplies; seed 42's two lunar eclipses tie at
+                // salience 0.8 on kind `eclipse` and swapped places, and
+                // `cyclic_beliefs_from` joins committed beliefs to a
+                // RE-COMPUTED phenomena list by list POSITION. So a different
+                // deity now holds the longest period and takes the `Slow`
+                // rank. No fact moved (`lens_purity` pins seed 42's whole
+                // ledger byte-identical); this is a read-time derivation.
+                "The moons cross because Tleavese strides the sky, slowly.".to_string(),
                 "The day returns because Vooboo strides the sky, briskly.".to_string(),
             ]
         );
@@ -5488,12 +5498,13 @@ mod tests {
                 "Pao is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 // Absorbing The Watershed's sonority merge alongside The
-                // Witness's Tonogenesis gating re-derives this agent name
-                // once more: `Dbemdden` -> `Daemdam` (equal-sonority
-                // neighbours collapse — the same mechanism, applied to a
-                // different form, that moved the goblin's day-deity in
-                // `goblin_doctrine.emic` above).
-                "The moons cross because Daemdam strides the sky, slowly.".to_string(),
+                // Witness's Tonogenesis gating re-derived this agent name to
+                // `Daemdam` (equal-sonority neighbours collapse). The
+                // Vernacular part 3b moved it to `Koonkem` for the same
+                // reason the goblin's moved above: the two tied lunar
+                // eclipses swapped under `observe`'s new referent tie-break,
+                // and the positional belief-to-phenomenon join followed them.
+                "The moons cross because Koonkem strides the sky, slowly.".to_string(),
                 // Before The Toponym's rebase, BOTH peoples' day-deities
                 // rendered `Kaavoa` — two distinct beliefs that happened to
                 // draw the same form — and that reseed separated them:

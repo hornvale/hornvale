@@ -418,7 +418,7 @@ fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
         );
         assert_eq!(
             ph.iter()
-                .filter(|p| p.kind == CELESTIAL_BODY && p.description.contains("moon"))
+                .filter(|p| p.kind == CELESTIAL_BODY && p.referent.concept == "moon")
                 .count(),
             2,
             "seed {seed}: both moons should be visible on a spinning world"

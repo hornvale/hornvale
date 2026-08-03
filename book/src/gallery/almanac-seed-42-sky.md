@@ -8,14 +8,14 @@ This sky holds: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 
-- [0.68] Daboa tide
-- [0.39] Daboa tide
+- [0.68] Goododo Daboa tide
+- [0.39] Dodoa Daboa tide
 - [0.30] Doa
-- [0.27] Doa eclipse
+- [0.27] Doa Goododo Daboa eclipse
 - [0.26] Daadoo Daboa tide
-- [0.24] Daboa eclipse
-- [0.24] Daboa eclipse
-- [0.22] Doa eclipse
+- [0.24] Goododo Daboa eclipse
+- [0.24] Dodoa Daboa eclipse
+- [0.22] Doa Dodoa Daboa eclipse
 - [0.20] Doqoo
 - [0.20] heat
 - [0.20] Doo
@@ -321,11 +321,11 @@ The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matur
 
 In the lair of **Godogododaga**, an organized priesthood tends its own pantheon:
 
-> Doodo the Vngoododo comes back every 3111.86 days. That's how it's always been. That's how it's always been. Doodo is a great one among the gods.
+> Doodo the Vngoododo comes back every 112.53 days. That's how it's always been. That's how it's always been. Doodo is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Doodo the Vngoododo comes back every 112.53 days. That's how it's always been. That's how it's always been. Doodo is a great one among the gods.
+> Doodo the Vngoododo comes back every 3111.86 days. That's how it's always been. That's how it's always been. Doodo is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -359,11 +359,11 @@ In the lair of **Godogododaga**, an organized priesthood tends its own pantheon:
 
 In the camp of **Pzopdzhaxgzavshmo**, an organized priesthood tends its own pantheon:
 
-> Snaxdzhoap Snaxdzhoap comes back every 3111.86 days. That's how it's always been.
+> Snaxdzhoap Snaxdzhoap comes back every 112.53 days. That's how it's always been.
 >
 > — derived from the phenomenon *eclipse*
 
-> Snaxdzhoap Snaxdzhoap comes back every 112.53 days. That's how it's always been.
+> Snaxdzhoap Snaxdzhoap comes back every 3111.86 days. That's how it's always been.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -409,11 +409,11 @@ In the village of **Nakano**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Sevfngof the Zhoffngof returns every 3111.86 days. So it was, so it is.
+> Sevfngof the Zhoffngof returns every 112.53 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Vnaxnovvnev the Noxnofnov returns every 112.53 days. So it was, so it is.
+> Vnaxnovvnev the Noxnofnov returns every 3111.86 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -451,11 +451,11 @@ In the legion of **Geoboegetoanaoka**, an organized priesthood tends its own pan
 >
 > — derived from the phenomenon *eclipse*
 
-> Fenggangbong the Mjefafaqo returns every 3111.86 days. So it was, so it is.
+> Fenggangbong the Mjefafaqo returns every 112.53 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Mjamxemmjom the Temgangjom returns every 112.53 days. So it was, so it is.
+> Mjamxemmjom the Temgangjom returns every 3111.86 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -489,11 +489,11 @@ In the warren of **Roara**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-> Raoxo Raoxo comes back every 3111.86 days. That's how it's always been. That's how it's always been. Raoxo is a great one among the gods.
+> Raoxo Raoxo comes back every 112.53 days. That's how it's always been. That's how it's always been. Raoxo is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
-> Raoxo Raoxo comes back every 112.53 days. That's how it's always been. That's how it's always been. Raoxo is a great one among the gods.
+> Raoxo Raoxo comes back every 3111.86 days. That's how it's always been. That's how it's always been. Raoxo is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 

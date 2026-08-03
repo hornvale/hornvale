@@ -113,7 +113,7 @@ The Boove are hobgoblins — neighbors.
 The Ngosho are kobolds — neighbors.
 Pao is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because Twoevave strides the sky, slowly.
+The moons cross because Tleavese strides the sky, slowly.
 The day returns because Vooboo strides the sky, briskly.
 
 *In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -141,7 +141,7 @@ The Boove are hobgoblins — ourselves.
 The Ngosho are kobolds — rivals.
 Pao is the earth.
 The moons are counted and known to the priesthood.
-The moons cross because Daemdam strides the sky, slowly.
+The moons cross because Koonkem strides the sky, slowly.
 The day returns because Vooboo strides the sky, briskly.
 
 *In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*

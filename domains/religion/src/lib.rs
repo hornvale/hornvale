@@ -466,7 +466,6 @@ mod tests {
     fn ph(
         kind: &str,
         concept: &str,
-        desc: &str,
         period: Option<f64>,
         salience: f64,
         venue: Venue,
@@ -474,7 +473,6 @@ mod tests {
         Phenomenon {
             kind: kind.to_string(),
             referent: Referent::of(concept),
-            description: desc.to_string(),
             period_days: period,
             salience,
             venue,
@@ -484,24 +482,10 @@ mod tests {
     // Pre-sorted salience-descending, as kernel::observe delivers.
     fn sky() -> Vec<Phenomenon> {
         vec![
-            ph("celestial-body", "sun", "the sun", None, 1.0, Venue::DaySky), // eternal
-            ph(
-                "seasonal-cycle",
-                "day",
-                "the seasons",
-                Some(365.0),
-                0.5,
-                Venue::Ambient,
-            ), // ambient venue wins regardless of period
-            ph(
-                "celestial-body",
-                "moon",
-                "a moon",
-                Some(29.0),
-                0.4,
-                Venue::NightSky,
-            ), // cyclic
-            ph("ambient", "wind", "still air", None, 0.15, Venue::Ambient),   // below floor
+            ph("celestial-body", "sun", None, 1.0, Venue::DaySky), // eternal
+            ph("seasonal-cycle", "day", Some(365.0), 0.5, Venue::Ambient), // ambient venue wins regardless of period
+            ph("celestial-body", "moon", Some(29.0), 0.4, Venue::NightSky), // cyclic
+            ph("ambient", "wind", None, 0.15, Venue::Ambient),             // below floor
         ]
     }
 
@@ -590,22 +574,8 @@ mod tests {
         // Locked sky: eternal sun (day sky, aperiodic), cyclic moon (night
         // sky, periodic).
         let locked = vec![
-            ph(
-                "celestial-body",
-                "sun",
-                "a fixed sun",
-                None,
-                1.0,
-                Venue::DaySky,
-            ),
-            ph(
-                "celestial-body",
-                "moon",
-                "a moon",
-                Some(29.0),
-                0.4,
-                Venue::NightSky,
-            ),
+            ph("celestial-body", "sun", None, 1.0, Venue::DaySky),
+            ph("celestial-body", "moon", Some(29.0), 0.4, Venue::NightSky),
         ];
         let ids = genesis(&mut w, c, &locked, &society(), &mut StubNamer).unwrap();
         let beliefs = beliefs_of(&w);
@@ -638,7 +608,6 @@ mod tests {
         let seasons = vec![ph(
             "seasonal-cycle",
             "day",
-            "the seasons",
             Some(365.0),
             1.0,
             Venue::Ambient,
@@ -662,22 +631,8 @@ mod tests {
     fn below_floor_only_still_yields_the_single_most_salient() {
         let (mut w, c) = world(42);
         let faint = vec![
-            ph(
-                "ambient",
-                "wind",
-                "a whisper of air",
-                None,
-                0.15,
-                Venue::Ambient,
-            ),
-            ph(
-                "celestial-body",
-                "star",
-                "a dim star",
-                None,
-                0.1,
-                Venue::DaySky,
-            ),
+            ph("ambient", "wind", None, 0.15, Venue::Ambient),
+            ph("celestial-body", "star", None, 0.1, Venue::DaySky),
         ];
         let flat = SocietySummary {
             strata: 2,

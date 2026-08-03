@@ -89,8 +89,8 @@ fn refinement_adds_structure_only_beneath_the_sun() {
                     }
                     assert!(
                         p.salience < 1.0,
-                        "seed {seed} t {t}: '{}' (salience {}) rivals the sun",
-                        p.description,
+                        "seed {seed} t {t}: {:?} (salience {}) rivals the sun",
+                        p.referent,
                         p.salience
                     );
                 }

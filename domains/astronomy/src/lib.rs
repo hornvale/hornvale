@@ -530,7 +530,6 @@ impl PhenomenaSource for ConstantSun {
         vec![Phenomenon {
             kind: CELESTIAL_BODY.to_string(),
             referent: Referent::of("sun"),
-            description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,
             venue: Venue::DaySky,

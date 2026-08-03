@@ -322,8 +322,19 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 };
                 match result {
                     Ok(phenomena) => {
+                        // A phenomenon carries no text, so its words are
+                        // realized here, through the SAME renderer the almanac
+                        // uses. The REPL has no speaker — it interrogates a
+                        // world from outside it — so the register is Common.
+                        let vocab = world_builder::common_vocabulary(&world.registry);
                         for p in phenomena {
-                            writeln!(output, "[{:.2}] {} — {}", p.salience, p.kind, p.description)?;
+                            writeln!(
+                                output,
+                                "[{:.2}] {} — {}",
+                                p.salience,
+                                p.kind,
+                                hornvale_almanac::phenomenon_line(&p, None, &vocab)
+                            )?;
                         }
                     }
                     Err(e) => writeln!(output, "error: {e}")?,

@@ -362,7 +362,27 @@ fn doctrine_keeps_what_folk_lose() {
             // exactly what it was written for — `Wt-` is a falling-sonority
             // onset no language uses, and SSP reorders it to the rising
             // `Tw-`. Everything but `agent` is byte-identical again.
-            agent: Some("Twoevave".to_string()),
+            //
+            // The Vernacular part 3b (deleting `Phenomenon.description`):
+            // Twoevave -> Tleavese, and this time the NAME did not re-derive
+            // at all — a DIFFERENT belief is now the slowest cyclic one.
+            // `kernel::observe`'s last tie-break was the description; with no
+            // description it is the referent. Seed 1's two lunar eclipses tie
+            // at salience 0.8 on kind `eclipse`, so the tie-break decides
+            // their order, and it flipped (`great moon` now sorts before the
+            // middling moon's bare `moon`, where "the full full-sized moon…"
+            // used to sort before "the full vast moon…"). `cyclic_beliefs_from`
+            // joins committed beliefs to a RE-COMPUTED phenomena list BY LIST
+            // POSITION, so the two eclipse beliefs swapped periods and the
+            // period-sorted `Slow` rank landed on the other deity.
+            //
+            // Nothing was written: the seed-1, seed-7 and seed-42 world JSONs
+            // are byte-identical across this change (`lens_purity` pins 42).
+            // What moved is a read-time derivation — and the fact that it
+            // could move at all is the campaign's own thesis arriving late.
+            // The description was load-bearing on `observe`'s ORDER, which no
+            // reword-invariance test ever looked at.
+            agent: Some("Tleavese".to_string()),
             lexeme: Some(LexemeId("strides")),
             manner: Manner::Slow,
         }

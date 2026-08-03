@@ -282,7 +282,6 @@ impl PhenomenaSource for UniformClimate {
         vec![Phenomenon {
             kind: AMBIENT.to_string(),
             referent: Referent::of("wind"),
-            description: "warm, still, unchanging air".to_string(),
             period_days: None,
             salience: 0.15,
             venue: Venue::Ambient,

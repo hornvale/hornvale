@@ -8,12 +8,12 @@ This sky holds: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 
-- [0.68] Daboa tide
-- [0.39] Daboa tide
+- [0.68] Goododo Daboa tide
+- [0.39] Dodoa Daboa tide
 - [0.30] Doa
-- [0.27] Doa eclipse
+- [0.27] Doa Goododo Daboa eclipse
 - [0.26] Daadoo Daboa tide
-- [0.22] Doa eclipse
+- [0.22] Doa Dodoa Daboa eclipse
 - [0.20] Doqoo
 - [0.14] heat
 - [0.14] rain

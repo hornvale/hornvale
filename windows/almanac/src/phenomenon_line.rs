@@ -252,9 +252,6 @@ mod tests {
             period_days: Some(27.3),
             salience: 0.7,
             venue: Venue::NightSky,
-            // Task 6 deletes this field; it is present only so this file
-            // compiles before that task runs.
-            description: String::new(),
         }
     }
 

@@ -3060,7 +3060,7 @@ fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
 /// is not yet migrated to the roster) followed by every domain's roster
 /// contribution ([`Domain::phenomena_source`]). Today this yields exactly
 /// `[sky, UniformClimate]` — the same set the old hardcoded fan-outs built.
-/// [`observe`] re-sorts by salience with a kind→description tie-break, so the
+/// [`observe`] re-sorts by salience with a kind→referent tie-break, so the
 /// order within the returned list never affects output bytes.
 fn phenomena_sources(world: &World) -> Result<Vec<Box<dyn PhenomenaSource>>, BuildError> {
     phenomena_sources_from(world, &climate_of(world)?)
@@ -7519,22 +7519,23 @@ mod tests {
         .expect("seed 42 builds")
     }
 
-    /// The gloss reads the referent, not the prose. Rewording a description
-    /// must not change which concept a phenomenon glosses to — that coupling
-    /// moved 73 committed facts on seed 42 before the referent existed.
+    /// The gloss reads the referent, and there is nothing else left to read.
+    /// Deciding which concept a phenomenon glosses to by grepping a stored
+    /// English description moved 73 committed facts on seed 42; the
+    /// description is gone, so the gloss answers the same concept however the
+    /// phenomenon's other fields vary.
     #[test]
-    fn the_gloss_ignores_the_description() {
-        let moon = |description: &str| hornvale_kernel::Phenomenon {
-            kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
+    fn the_gloss_reads_only_the_referent() {
+        let moon = |kind: &str, salience: f64| hornvale_kernel::Phenomenon {
+            kind: kind.to_string(),
             referent: hornvale_kernel::Referent::of("moon"),
-            description: description.to_string(),
             period_days: None,
-            salience: 1.0,
+            salience,
             venue: hornvale_kernel::Venue::NightSky,
         };
-        assert_eq!(phenomenon_concept(&moon("a vast moon")), Some("moon"));
-        assert_eq!(phenomenon_concept(&moon("a vast lunar disc")), Some("moon"));
-        assert_eq!(phenomenon_concept(&moon("")), Some("moon"));
+        let celestial = hornvale_astronomy::CELESTIAL_BODY;
+        assert_eq!(phenomenon_concept(&moon(celestial, 1.0)), Some("moon"));
+        assert_eq!(phenomenon_concept(&moon(celestial, 0.01)), Some("moon"));
     }
 
     /// The codomain is unchanged: kinds that did not gloss before still do
@@ -7543,8 +7544,7 @@ mod tests {
     fn kinds_outside_the_gloss_codomain_stay_silent() {
         let eclipse = hornvale_kernel::Phenomenon {
             kind: hornvale_astronomy::ECLIPSE.to_string(),
-            referent: hornvale_kernel::Referent::qualified("eclipse", &["sun"]),
-            description: "the sun is devoured".to_string(),
+            referent: hornvale_kernel::Referent::qualified("eclipse", &["sun", "moon"]),
             period_days: None,
             salience: 1.0,
             venue: hornvale_kernel::Venue::DaySky,
@@ -7553,23 +7553,24 @@ mod tests {
     }
 
     /// `Referent`'s derived `Eq`/`Ord` discriminate on `concept`: two
-    /// referents that render identical prose but name different concepts do
+    /// referents alike in every other respect but naming different concepts do
     /// not compare equal. There is no phenomenon dedup pass in production
     /// today (an earlier version of this doc claimed otherwise — see the
     /// followup register and spec §4's correction) — this pins the property
-    /// any future dedup-by-`Referent` would need, not an existing pass.
+    /// any future dedup-by-`Referent` would need, not an existing pass. It
+    /// also pins `kernel::observe`'s last tie-break, which is the referent
+    /// now that a phenomenon carries no text.
     #[test]
     fn referent_ord_discriminates_on_concept() {
-        let same_prose = |concept: &str| hornvale_kernel::Phenomenon {
+        let alike = |concept: &str| hornvale_kernel::Phenomenon {
             kind: hornvale_astronomy::CELESTIAL_BODY.to_string(),
             referent: hornvale_kernel::Referent::of(concept),
-            description: "a light in the sky".to_string(),
             period_days: None,
             salience: 1.0,
             venue: hornvale_kernel::Venue::NightSky,
         };
         let mut seen = std::collections::BTreeSet::new();
-        for p in [same_prose("sun"), same_prose("moon")] {
+        for p in [alike("sun"), alike("moon")] {
             seen.insert(p.referent.clone());
         }
         assert_eq!(
