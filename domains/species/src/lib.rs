@@ -165,6 +165,20 @@ pub struct MindVector {
     pub time_horizon: f64,
 }
 
+impl MindVector {
+    /// The manikin's mind: the neutral midpoint on every dimension.
+    ///
+    /// This is the model's reference vector, not any creature's psychology —
+    /// no kind is obliged to sit here, and a kind that does, does so by
+    /// authorship. See `SocietyVector::MANIKIN` for the full account.
+    /// type-audit: bare-ok(ratio)
+    pub const MANIKIN: Self = Self {
+        threat_response: 0.5,
+        deliberation_latency: 0.5,
+        time_horizon: 0.5,
+    };
+}
+
 /// The community-mind vector (spec: The Cloister): the psychology only a
 /// society has, carried solely by `Settled` kinds. A `Solitary` creature
 /// carries none; consumers needing a society reading for one resolve
@@ -181,15 +195,32 @@ pub struct SocietyVector {
 }
 
 impl SocietyVector {
-    /// The goblin-baseline society reading — the value a mixed consumer
-    /// resolves for a `Solitary` kind that carries no society vector. Equal to
-    /// the goblin's authored society dims (`Hierarchic`, `Rank`, 0.5).
+    /// The manikin's society: the reference reading a mixed consumer resolves
+    /// for a `Solitary` kind that carries no society vector of its own.
+    ///
+    /// The manikin is a body that is nobody — the model's reference figure, in
+    /// the lineage of the CIE standard observer and ICRP's "standard man". It
+    /// is deliberately *not* a species: it has no `KindId`, no entry in any
+    /// registry, no mass and no niche, so it can never be placed in a world
+    /// and can never be a ghost.
+    ///
+    /// Note the asymmetry, which is real and not papered over: `0.5` is a
+    /// principled **neutral midpoint** on a scalar, but `Sociality` and
+    /// `StatusBasis` have no middle, so `Hierarchic` and `Rank` are a
+    /// designated **default** rather than a neutral value.
+    /// type-audit: bare-ok(ratio)
+    pub const MANIKIN: Self = Self {
+        sociality: Sociality::Hierarchic,
+        status_basis: StatusBasis::Rank,
+        in_group_radius: 0.5,
+    };
+
+    /// The manikin's society reading.
+    ///
+    /// Retained only so this task stays additive; `Task 2` removes it and
+    /// migrates every caller to [`SocietyVector::MANIKIN`].
     pub const fn baseline() -> Self {
-        Self {
-            sociality: Sociality::Hierarchic,
-            status_basis: StatusBasis::Rank,
-            in_group_radius: 0.5,
-        }
+        Self::MANIKIN
     }
 }
 
@@ -205,6 +236,20 @@ pub struct PerceptionVector {
     pub night_vision: f64,
     /// Celestial vs. terrestrial attention: earthbound 0 ↔ sky-rapt 1.
     pub sky_attention: f64,
+}
+
+impl PerceptionVector {
+    /// The manikin's perception: the neutral midpoint on both scalars, and
+    /// `Diurnal` as the designated default schedule.
+    ///
+    /// As with `SocietyVector::MANIKIN`, `activity` is a default rather than a
+    /// neutral value — a schedule has no midpoint.
+    /// type-audit: bare-ok(ratio)
+    pub const MANIKIN: Self = Self {
+        activity: ActivityCycle::Diurnal,
+        night_vision: 0.5,
+        sky_attention: 0.5,
+    };
 }
 
 /// The draconic clade's night-sky acuity. Authored once for the whole clade
@@ -2525,6 +2570,32 @@ mod tests {
         );
         assert_eq!(g_soc.sociality, Sociality::Hierarchic);
         assert_eq!(g_soc.status_basis, StatusBasis::Rank);
+    }
+
+    /// The manikin is the model's reference vector: neutral on every scalar,
+    /// and a designated default on the enums (which have no midpoint to be
+    /// neutral at — see the spec's flagged item 5). It belongs to no creature.
+    #[test]
+    fn the_manikin_is_neutral_on_scalars_and_default_on_enums() {
+        let mind = MindVector::MANIKIN;
+        for v in [
+            mind.threat_response,
+            mind.deliberation_latency,
+            mind.time_horizon,
+        ] {
+            assert_eq!(v, 0.5, "every manikin mind scalar is the neutral midpoint");
+        }
+
+        let society = SocietyVector::MANIKIN;
+        assert_eq!(society.in_group_radius, 0.5);
+        assert_eq!(society.sociality, Sociality::Hierarchic);
+        assert_eq!(society.status_basis, StatusBasis::Rank);
+
+        let perception = PerceptionVector::MANIKIN;
+        for v in [perception.night_vision, perception.sky_attention] {
+            assert_eq!(v, 0.5, "every manikin perception scalar is the midpoint");
+        }
+        assert_eq!(perception.activity, ActivityCycle::Diurnal);
     }
 
     #[test]
