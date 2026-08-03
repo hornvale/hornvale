@@ -357,7 +357,7 @@ two very different absences behind one return type.
 `sun-like-star` → "sun like star" is the clear one, and the nine spectral
 classes already have authored displays in `SPECTRAL_CLASSES` — add a declared
 exception and **report every exception you had to add**. That list is data
-about how well the naming convention holds, and Task 7 reports its size.
+about how well the naming convention holds, and Task 8 reports its size.
 
 **Layering matters here.** `domains/language` may not depend on
 `domains/astronomy`, so the vocabulary is a **mechanism** that holds no
@@ -905,7 +905,95 @@ Gallery artifacts move. Facts do not."
 
 ---
 
-### Task 6: Delete `Phenomenon.description`
+### Task 6: Noun-class marking reaches the almanac
+
+**Files:**
+- Move: `noun_class_with_sky`, `noun_class_plain`, `SKY_OVERRIDE` from
+  `windows/worldgen/src/chorus.rs` → `domains/language/`
+- Modify: `windows/worldgen/src/chorus.rs` (re-export, keep callers compiling)
+- Modify: `windows/almanac/src/phenomenon_line.rs` (apply the classifier)
+- Test: `domains/language/` inline tests; `windows/almanac` inline tests
+
+**Interfaces:**
+- Consumes: Task 5's renderer; `Speaker { grammar, morph, sky_animate }`.
+- Produces: `hornvale_language::noun_class_with_sky(sky_animate: bool,
+  concept: &str) -> NounClass`, re-exported from `hornvale_worldgen` so every
+  existing caller keeps compiling unchanged.
+
+**Why this task exists — a controller error, recorded rather than hidden.**
+Task 5's dispatch asserted that `windows/almanac` may depend on
+`hornvale-worldgen`, citing `windows/book` as precedent. **That is false.**
+`windows/worldgen/Cargo.toml:23` depends on `hornvale-almanac`, so
+almanac → worldgen is a **cycle**. The consequence reached the shipped code:
+`noun_class_with_sky` was unreachable, Task 5's renderer applies **no
+noun-class marking**, and three of `Speaker`'s five fields — `grammar`,
+`morph`, `sky_animate`, which Task 1 widened the struct specifically to
+carry — are dead.
+
+Leaving it would ship a `Speaker` advertising a capability it does not have,
+which is the defect class this whole campaign exists to remove.
+
+`noun_class_with_sky` is a **pure function of `(bool, &str)`** over
+`SKY_OVERRIDE` and `noun_class_plain`. Nothing about it is composition-root
+work; it is a language fact that drifted into the composition root. It belongs
+in `domains/language`, which the almanac may depend on.
+
+- [ ] **Step 1: Write the failing test**
+
+In `windows/almanac`'s tests — a phenomenon whose concept is in `SKY_OVERRIDE`
+must mark differently under an agentive day-schema than under a non-agentive
+one. Assert on **rendered text**, not on a `NounClass` value; a test that
+compares the classifier's output to itself proves nothing about the renderer.
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Expected: FAIL — the renderer ignores `sky_animate` today.
+
+- [ ] **Step 3: Move the function down a layer**
+
+Move `noun_class_with_sky`, `noun_class_plain`, and `SKY_OVERRIDE` into
+`domains/language`. **Re-export from `hornvale_worldgen::chorus`** so no
+existing caller changes — this must be a move, not a fork. Two copies of an
+animacy table is worse than the bug being fixed.
+
+Check what `noun_class_plain` and `SKY_OVERRIDE` actually reference before
+moving them. **If either touches something outside `domains/language`'s reach,
+stop and report** — do not partially move the table.
+
+- [ ] **Step 4: Apply the classifier in the renderer**
+
+`windows/almanac/src/phenomenon_line.rs` builds
+`|c: &str| hornvale_language::noun_class_with_sky(speaker.sky_animate, c)` and
+uses it on the tongue path, so `Speaker`'s `grammar`, `morph` and
+`sky_animate` become live.
+
+**If applying noun-class marking to a bare noun phrase turns out not to be
+meaningful** — the existing marking logic targets a *clause complement*, and a
+phenomenon line has no clause — then say so and **remove the dead fields from
+`Speaker` instead**. Either outcome is correct; a `Speaker` that carries
+exactly what it uses is the requirement. Do not keep dead fields.
+
+- [ ] **Step 5: Gate and read the diff**
+
+`make gate`. The gallery **may** move — marking can change surface forms.
+Quote the before/after of the phenomena block. **Zero facts may move**
+(`lens_purity` asserts the whole serialized world).
+
+- [ ] **Step 6: Commit**
+
+```bash
+cargo fmt
+git add -A
+git commit -F <message-file>
+```
+
+Message: state that the function moved because it is a language fact, not
+composition-root work, and that the move was forced by a real dependency
+cycle rather than by taste.
+
+---
+
+### Task 7: Delete `Phenomenon.description`
 
 **Files:**
 - Modify: `kernel/src/phenomena.rs` (the `Phenomenon` struct)
@@ -956,7 +1044,18 @@ Expected: FAIL to compile — `missing field 'description'`.
 Remove `pub description: String` and its `bare-ok(prose: description)` tag.
 Then let `cargo check --workspace --all-targets` drive you:
 
-- **Producers** — delete the `description:` line. Nothing else.
+- **Producers** — delete the `description:` line. Nothing else, **except the
+  one referent fix below.**
+
+**The referent fix (found in Task 5's gallery, and it is real content loss).**
+`domains/astronomy/src/provider.rs` emits `Referent::qualified("tide", &["moon"])`
+with **no size qualifier**, while the moon phenomena themselves carry one. Since
+Task 5 renders from the referent, the committed gallery now shows `Daboa tide`
+twice and `Daboa eclipse` twice — two distinct phenomena rendering identically.
+The stored prose used to distinguish them; the referent does not, which means
+the producer was carrying information in prose that it never put in the
+referent. Add the size qualifier so the two lines differ. This will move the
+gallery, and that movement is a fix.
 - **Task 5's fixture** — remove the temporary `description: String::new()`.
 - **`cli/src/repl.rs:326`** — the REPL has no speaker; render with `None` and
   the vocabulary. It needs Task 5's renderer, which is `pub(crate)` in
@@ -982,7 +1081,7 @@ Then let `cargo check --workspace --all-targets` drive you:
 
 - [ ] **Step 4: Run the gate**
 
-`make gate 2>&1 | tee /tmp/hv-3b-t6.log`. Read every failure before changing
+`make gate 2>&1 | tee /tmp/hv-3b-t7.log`. Read every failure before changing
 anything.
 
 - [ ] **Step 5: Measure**
@@ -1011,13 +1110,13 @@ structurally impossible: there is nothing left to reword."
 
 ---
 
-### Task 7: The cost measurement, and the named speaker
+### Task 8: The cost measurement, and the named speaker
 
 **Files:**
 - Modify: `windows/almanac/src/lib.rs` (the document header)
 - Modify: `docs/superpowers/specs/2026-08-02-the-vernacular-part-3-design.md`
 
-**Interfaces:** Consumes Tasks 1–6. Produces the readout 3c builds on.
+**Interfaces:** Consumes Tasks 1–7. Produces the readout 3c builds on.
 
 - [ ] **Step 1: Name the speaker in the document**
 
@@ -1063,14 +1162,14 @@ git commit -m "docs(the-vernacular-3): 3b readout — the world says it in its o
 
 ## Self-review
 
-**Spec coverage.** §1 (a stored description can never be per-culture) → Task 6's
-test doc. §2 (delete, render downstream, speaker from the root) → Tasks 1, 5, 6.
-§2's colour channel → **not here**, 3c. §2.1 (the one-way machine) → Task 6
+**Spec coverage.** §1 (a stored description can never be per-culture) → Task 7's
+test doc. §2 (delete, render downstream, speaker from the root) → Tasks 1, 5, 7.
+§2's colour channel → **not here**, 3c. §2.1 (the one-way machine) → Task 7
 removes the last stored text on the phenomenon path; Task 4 makes the *author's*
-register one-way too. §3 (the almanac names its speaker) → Task 7 step 1. §4.1
+register one-way too. §3 (the almanac names its speaker) → Task 8 step 1. §4.1
 (the flagship coupling) → made legible by Task 7 step 1's header. §4.2 (the cost
-risk) → Task 7 step 2, against the frozen 1.25×. §5's 3b plus the 2026-08-03
-authority inversion → Task 2. §6's prediction → Task 7 step 3. Nathan's
+risk) → Task 8 step 2, against the frozen 1.25×. §5's 3b plus the 2026-08-03
+authority inversion → Task 2. §6's prediction → Task 8 step 3. Nathan's
 2026-08-03 Common-vocabulary decision → Tasks 3 and 4.
 
 **Type consistency.** `Speaker`'s five fields are used as shipped in Task 1.
@@ -1085,7 +1184,7 @@ with those signatures at both commit sites. `class_display` is *retired in Task
 **Sequencing hazards, stated so an implementer does not trip on them:**
 
 1. **Task 5's fixture carries a temporary `description: String::new()`**, deleted
-   in Task 6. Deliberate; a reviewer may read it as dead code.
+   in Task 7. Deliberate; a reviewer may read it as dead code.
 2. **Task 3 must not delete `class_display`** — `windows/explain:44` and
    `windows/book` still call it until Task 4.
 3. **Task 4 renames a field on a widely-used struct.** It is the largest task
@@ -1098,9 +1197,9 @@ this campaign's briefs have carried wrong claims into implementers' hands twice:
    judgment call.** Task 3 gives the obvious first cut (`contains('-')` after
    the rules run, skipping declared entries) and requires the implementer to
    decide and report. The exception list they end up with is data about how
-   well the naming convention holds, and Task 7 reports its size.
+   well the naming convention holds, and Task 8 reports its size.
 2. **Whether `TongueClause` has a modifier slot is unconfirmed.** Task 5 says to
    report what happened to the qualifiers rather than drop them silently.
 3. **`provider.rs:1090`/`:1099` may be unconvertible** — every wanderer carries
-   an identical referent. Task 6 says to assert what it can support and record
+   an identical referent. Task 7 says to assert what it can support and record
    the residue, not to fake it.
