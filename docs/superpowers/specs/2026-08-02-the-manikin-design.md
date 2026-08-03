@@ -196,10 +196,21 @@ BIO-39 describes is latent and arrives with the roster, which is C2's business.
 
 ## 7. Definition of Done
 
-- [ ] Three `MANIKIN` consts; `SocietyVector::baseline()` gone. Five production
-      call sites update (`cli/src/phonology.rs` ×3, `cli/src/audio.rs:41`,
-      `windows/worldgen/src/lib.rs:11518`); the sixth occurrence is in the test
-      D6 rewrites.
+- [ ] Three `MANIKIN` consts; `SocietyVector::baseline()` gone. **Verified
+      inventory after absorbing main at `489a9ca5`** — the counts in an earlier
+      draft of this line were wrong, and are corrected here:
+      - 2 production calls: `cli/src/phonology.rs:59`, `cli/src/audio.rs:41`
+      - 3 test calls: `cli/src/phonology.rs:282`, `:316`,
+        `windows/worldgen/src/lib.rs:11650`
+      - 1 species-crate test call: `domains/species/src/lib.rs:2897` (D6
+        rewrites it)
+      - 4 prose/doc references that go stale on rename:
+        `domains/species/src/lib.rs:171` (an intra-doc link — it *will* break),
+        `windows/worldgen/src/descent.rs:162`, `:227`,
+        `windows/worldgen/tests/name_pattern.rs:108`
+      The last group arrived with The Namesake *after* this spec was drafted, and
+      is the reason the inventory is stated as a verified grep rather than a
+      remembered one. Re-run the grep if main is absorbed again before execution.
 - [ ] Module doc (`lib.rs:7`) and the three vector docs (`:155`, `:171`, `:197`)
       no longer define the midpoint in terms of a people.
 - [ ] Tests retargeted per D5 and D6.
@@ -217,10 +228,19 @@ BIO-39 describes is latent and arrives with the roster, which is C2's business.
       in The Frontier part, and it also bans a set of process words outright. The
       chronicle and the new book section must name the *concept* — "a unit is not
       a frame", "the roster grid" — never `BIO-39` or `BIO-37`.
-- [ ] Freshness sweep of chapters naming the goblin baseline —
-      `book/src/domains/language.md` and `book/src/introduction.md` both do.
+- [ ] Freshness sweep of chapters naming the goblin baseline. **Six chapters do,
+      not the two this line originally named** (found by grep at plan time):
+      `introduction.md`, `domains/culture.md`, `domains/language.md`,
+      `domains/perception.md`, `domains/settlement.md`, and the hand-authored
+      `gallery/the-meeting-seed-42.md`. Chronicle entries are excluded — they
+      record what past campaigns did and are not rewritten.
 - [ ] Retrospective (`docs/retrospectives/the-manikin.md`), decision 0020.
-- [ ] Idea-registry rows for C2, C3, and goblin characterization.
+- [ ] Idea-registry: flip **`PSY-2`** (which already described this campaign —
+      *"an abstract reference baseline no species need occupy"* — and was missed
+      when a duplicate `PSY-manikin` was minted and then deleted at plan time)
+      to `shipped (baseline half)`; its stream-label half stays open. Plus the
+      rows for C2 (`BIO-three-probes`), C3 (`LANG-53`, updated not duplicated),
+      goblin characterization, and the enum-neutrality question from §8 item 5.
 - [ ] §4's preregistered diff run and its result recorded in the chronicle,
       whichever way it came out.
 
@@ -243,3 +263,15 @@ campaign *enables* rather than what it does:
 4. **New public surface** — three consts where there was one `const fn`. The two
    new ones formalize conventions that previously existed only as prose, which is
    an argued gain (D3) rather than an incidental addition.
+5. **The manikin's enum dimensions are a convention, not a midpoint.** For a
+   scalar, `0.5` is a principled neutral: it is the middle of `[0, 1]` and means
+   "no lean either way." `Sociality`, `StatusBasis`, and `ActivityCycle` have no
+   middle — the manikin carries `Hierarchic`, `Rank`, and `Diurnal` because
+   goblin does, and no argument makes those *neutral* rather than merely *first*.
+   The campaign does not fix this, and should not pretend to: the honest framing
+   is that the manikin is a neutral **midpoint** on the six scalars and a
+   designated **default** on the three enums. Both docs and the book must say so
+   in those words, because the whole point of the campaign is to stop a
+   convention from reading as a fact. Whether an enum dimension should carry a
+   genuine "unmarked" variant is a real design question and is filed as its own
+   idea-registry row rather than answered here.
