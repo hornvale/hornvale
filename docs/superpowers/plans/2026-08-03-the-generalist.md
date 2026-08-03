@@ -97,8 +97,29 @@ fn report_land_distribution_and_pre_human_fits() {
         let mean = vals.iter().sum::<f64>() / vals.len() as f64;
         println!("pre-human mean fit {kind} = {mean:.4}");
     }
+
+    // Guard assertions (pre-flight ruling, 2026-08-03). This is a measurement
+    // harness, not a hypothesis test — H1/H2/H3 are REPORTED in Task 6, never
+    // asserted, because H3 firing is the campaign's most valuable finding and
+    // must not present as a red build. But a harness that silently measures
+    // nothing looks identical to one that works, so it guards its own inputs.
+    assert!(!elevations.is_empty(), "no settleable land sampled");
+    assert!(
+        elevations.iter().all(|e| e.is_finite()),
+        "non-finite elevation in the sample"
+    );
+    assert_eq!(
+        per_people.len(),
+        5,
+        "all five pre-human peoples must be measured; got {:?}",
+        per_people.keys().collect::<Vec<_>>()
+    );
 }
 ```
+
+**Note the count is 5, not 6:** this test runs *before* Task 2 adds human. Task 6
+raises it to 6 when it extends this file, and that bump is the cheapest possible
+proof that human actually entered the packer.
 
 `measure_one` is written in Step 3 — copy the world-building preamble from
 `windows/worldgen/tests/non_void_roster.rs` verbatim rather than inventing one;
@@ -627,6 +648,25 @@ Report, over seeds 1..=30: human's mean per-cell share; the human–goblin Piank
 overlap and share correlation (H1); and for each of kobold's highland stronghold
 (settleable land ≥ 3000 m), bugbear's warm wet lowland (≤ 500 m), hobgoblin's
 and gnoll's ground — which kind is best-fit (H2).
+
+**H1, H2 and H3 are REPORTED, never asserted** (pre-flight ruling, 2026-08-03).
+Encoding a preregistered prediction as a build failure creates direct pressure
+to retune the niche until the suite goes green, which §5 of the spec forbids.
+The guard assertions stay and the peoples count rises from 5 to 6 — that bump is
+the proof human actually entered the packer:
+
+```rust
+    assert_eq!(
+        per_people.len(),
+        6,
+        "human must be in the packer; got {:?}",
+        per_people.keys().collect::<Vec<_>>()
+    );
+    assert!(
+        per_people.contains_key("human"),
+        "the readout measured every people EXCEPT the one this campaign added"
+    );
+```
 
 - [ ] **Step 2: Run it once, capture everything**
 
