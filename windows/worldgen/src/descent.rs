@@ -8,11 +8,20 @@
 //! neither sibling.
 //!
 //! **Nothing here is committed.** No fact is added, no entity is minted; a
-//! founder's handle is derived from the occupation's entity id and the world
-//! seed, and the chain between two founders is derived from the gap between
-//! their foundings. That is what keeps this campaign free of an epoch — see
+//! founder's handle is derived from the occupation's founding coordinates
+//! (where, when, and from whom it was founded) and the world seed, and the
+//! chain between two founders is derived from the gap between their
+//! foundings. That is what keeps this campaign free of an epoch — see
 //! spec §4, and note that the freedom ends the moment a *committed* value
 //! (an eponymous toponym) cites one of these names.
+//!
+//! **The Salt (spec D2/C2):** `founder_of` used to mix the occupation's
+//! `EntityId` into the seed, so a founder's name moved whenever mint order
+//! moved — 18 of 20 world-rows on The Namesake's name-prefix metrics. It now
+//! keys on the founding itself: the occupation's own `(people, site,
+//! founded)` triple plus one ancestry hop through its parent occupation's
+//! same triple. `EntityId` is still the argument; it is used only as a
+//! lookup key to read the founding facts back off the ledger.
 
 use hornvale_history::descent::{Kinship, kinship};
 use hornvale_history::flesh::RoleHandle;
@@ -20,18 +29,76 @@ use hornvale_kernel::{EntityId, Value, World};
 
 /// The handle of the figure who founded `occupation`.
 ///
-/// Derived from the occupation's own entity id and the world seed, so it is
-/// stable across rebuilds and independent of mint order among *other*
-/// occupations. Carries no ledger write.
+/// Derived from the occupation's founding (where, when, from whom) and the
+/// world seed, so it is stable across rebuilds and independent of mint order
+/// among *other* occupations. `occupation` is a lookup key only — it is
+/// never read for its value (The Salt, spec D2/D7) — used to read the
+/// founding facts back off the ledger. Carries no ledger write.
 pub fn founder_of(world: &World, occupation: EntityId) -> RoleHandle {
-    // Mix the entity id into the seed the same way `persona_of` mixes a
-    // handle, so founder handles are drawn from the same space as the
-    // ancestors `descent::ancestor` walks to.
-    let mut x = u64::from(occupation.0) ^ world.seed.0.rotate_left(17);
-    x = x.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-    x ^= x >> 29;
-    x = x.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    RoleHandle(x ^ (x >> 32))
+    // The Salt: keyed on the FOUNDING (where, when, from whom), never on the
+    // occupation's entity id. Excluding everything after the founding is
+    // deliberate — a founder's name must not be a function of how their
+    // community later died — and the ancestry hop is what recovers the
+    // discrimination that exclusion costs (measured 8.4% / 3.3% / 3.6% stem
+    // collisions at seeds 42 / 7 / 1000; spec D2).
+    let own = founding_coords_of(world, occupation);
+    let parent = mother_of(world, occupation).and_then(|m| founding_coords_of(world, m));
+    let key = match own {
+        Some(c) => hornvale_history::record::founding_key_from(c, parent),
+        None => 0,
+    };
+    RoleHandle(key ^ world.seed.0.rotate_left(17))
+}
+
+/// The canonical component roster, assembled once per process rather than
+/// once per [`founding_coords_of`] call. The roster is world-independent —
+/// the same observation `generation_length_of`'s doc makes — but
+/// `WorldComponents::assemble()` itself costs ~0.032 s measured, and
+/// `founder_of` is called once per occupation: roughly 700 times for a
+/// single seed-42 world. Assembling per call would add on the order of 22 s
+/// to a single build; this cache keeps the path a lookup instead.
+fn canonical_components() -> Option<&'static crate::WorldComponents> {
+    static CACHE: std::sync::OnceLock<Option<crate::WorldComponents>> = std::sync::OnceLock::new();
+    CACHE
+        .get_or_init(|| crate::WorldComponents::assemble().ok())
+        .as_ref()
+}
+
+/// The founding coordinates of `occupation`, read off its committed facts.
+///
+/// `None` when the occupation is not reconstructable (no `occ-people`,
+/// `occ-site` or `occ-founded`), or when its people's label is not in the
+/// canonical roster — a malformed ledger degrades rather than panicking, the
+/// same posture [`clan_root_of`]'s bounded walk takes.
+fn founding_coords_of(
+    world: &World,
+    occupation: EntityId,
+) -> Option<hornvale_history::record::FoundingCoords> {
+    let people = people_of(world, occupation)?;
+    let founded = founded_year(world, occupation)?;
+    let site = match world
+        .ledger
+        .value_of(occupation, hornvale_history::OCC_SITE)?
+    {
+        Value::Number(n) => hornvale_kernel::CellId(*n as u32),
+        _ => return None,
+    };
+    // `KindId` wraps a `&'static str`, and `people` here is borrowed from
+    // ledger text (a runtime `String`), so it cannot be used to construct a
+    // `KindId` directly — the same constraint `generation_length_of` states
+    // at a different call site. Resolved instead against the canonical
+    // roster, which hands back the roster's own `'static` label.
+    let wc = canonical_components()?;
+    let label = wc
+        .biosphere
+        .iter()
+        .find(|(k, _)| k.0 == people)
+        .map(|(k, _)| *k)?;
+    Some(hornvale_history::record::FoundingCoords {
+        people: label,
+        site,
+        founded,
+    })
 }
 
 /// The people occupying `occupation`, as a `KindId` label.

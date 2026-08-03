@@ -214,3 +214,82 @@ fn forebear_of_is_none_when_the_generation_length_cannot_be_derived() {
         "an undeterminable generation length must not resolve to a guessed Kinship"
     );
 }
+
+/// The Salt: a founder's handle must be a function of the founding, not of
+/// the occupation's entity id.
+#[test]
+fn founder_handles_are_free_of_the_entity_id() {
+    let w = seed42();
+    let occs = occupation_records(&w);
+    // Every occupation's handle must be reproducible from its material facts
+    // alone. Proxy: two occupations with identical founding coordinates AND
+    // identical parent coordinates must share a handle, which cannot happen
+    // while the id is in the mix.
+    use std::collections::BTreeMap;
+    let by_id: BTreeMap<u64, &_> = occs.iter().map(|o| (o.id.get(), o)).collect();
+    let key_of = |o: &hornvale_history::record::OccupationRecord| {
+        let parent = match o.founded_from {
+            hornvale_history::record::Founding::From(e) => by_id
+                .get(&e.get())
+                .map(|p| hornvale_history::record::founding_coords(&p.core)),
+            hornvale_history::record::Founding::Genesis(_) => None,
+        };
+        hornvale_history::record::founding_key(&o.core, parent)
+    };
+    let mut seen: BTreeMap<u64, hornvale_history::flesh::RoleHandle> = BTreeMap::new();
+    let mut shared = 0usize;
+    for o in &occs {
+        let h = founder_of(&w, o.id);
+        if let Some(prev) = seen.insert(key_of(o), h) {
+            shared += 1;
+            assert_eq!(prev, h, "same founding key must yield the same handle");
+        }
+    }
+    assert!(
+        shared > 0,
+        "seed 42 must contain colliding founding keys (measured 8.4%); \
+         zero means the key is not the one specced"
+    );
+    // Mutation check (The Salt, constraint 4): `same founding key => same
+    // handle` alone is satisfied trivially by a `founder_of` that always
+    // returns the same constant handle. That mutation was tried and
+    // confirmed this test stays green under it, so this assertion is added
+    // to also require the converse direction: distinct founding keys must
+    // land on distinct handles. With ~700 occupations mixed through a
+    // splitmix-style hash, an accidental collision in the codomain is not
+    // expected; a `RoleHandle` that ignores the key entirely is what this
+    // catches.
+    let distinct_handles: std::collections::BTreeSet<u64> = seen.values().map(|h| h.0).collect();
+    assert_eq!(
+        distinct_handles.len(),
+        seen.len(),
+        "distinct founding keys must map to distinct handles"
+    );
+}
+
+/// The founding key excludes everything after the founding, so a founder's
+/// handle must not move when their community's fate does.
+#[test]
+fn a_founders_handle_does_not_depend_on_how_the_community_ended() {
+    let w = seed42();
+    let occs = occupation_records(&w);
+    let dead = occs
+        .iter()
+        .find(|o| o.core.ended.is_some() && o.core.peak_population > 0)
+        .expect("seed 42 has completed occupations");
+    // Recompute the handle from the material core with the ending perturbed.
+    let mut later = dead.core.clone(); // Occupation is Clone, not Copy
+    later.ended = Some(later.founded + 9999.0);
+    later.peak_population = dead.core.peak_population + 777;
+    let parent = match dead.founded_from {
+        hornvale_history::record::Founding::From(e) => occs
+            .iter()
+            .find(|p| p.id == e)
+            .map(|p| hornvale_history::record::founding_coords(&p.core)),
+        hornvale_history::record::Founding::Genesis(_) => None,
+    };
+    assert_eq!(
+        hornvale_history::record::founding_key(&dead.core, parent),
+        hornvale_history::record::founding_key(&later, parent),
+    );
+}
