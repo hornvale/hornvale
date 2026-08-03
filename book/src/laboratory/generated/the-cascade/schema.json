@@ -1,0 +1,65 @@
+{
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "doc": "How many DISTINCT sound rules in the goblin cascade actually fire on at least one lexicon Root. Zero means the etymological layer is inert for this species (The Namesake §5.0); Absent if goblin is unrostered or minted no Root",
+      "kind": "numeric",
+      "name": "cascade-rules-fired-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ],
+      "doc": "How many DISTINCT sound rules in the bugbear cascade actually fire on at least one lexicon Root. Zero means the etymological layer is inert for this species (The Namesake §5.0); Absent if bugbear is unrostered or minted no Root",
+      "kind": "numeric",
+      "name": "cascade-rules-fired-bugbear",
+      "rung": "full"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 200,
+    "fnv1a64": "0x6553906805815874"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "The Namesake Task 1: how many of a species' drawn sound-change rules actually fire, over 200 unselected worlds. Answers whether the seed-42 observation (goblin 0/70, hobgoblin 0/74, kobold 0/78 words changed) is general or a one-seed artifact.",
+    "name": "the-cascade",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 200,
+      "from": 0
+    }
+  }
+}

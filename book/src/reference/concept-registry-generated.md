@@ -183,6 +183,7 @@
 | `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
 | `earth` | language | terrain | the ground underfoot |
+| `east` | language | quality | the direction of increasing longitude |
 | `eat` | language | act | to consume food |
 | `eclipse` | astronomy | celestial | the darkening when a moon crosses the sun, or the world's shadow crosses a moon |
 | `epipelagic` | climate | terrain | a biome class |
@@ -252,7 +253,9 @@
 | `new` | language | quality | recently come to be |
 | `night` | astronomy | celestial | the dark half of the day-night cycle |
 | `nodule-field` | climate | substance | Seafloor strewn with mineral nodules. |
-| `north` | language | quality | the compass point opposite south |
+| `north` | language | quality | toward the pole of increasing latitude |
+| `north-east` | language | quality | between north and east |
+| `north-west` | language | quality | between north and west |
 | `old` | language | quality | long in existence |
 | `old-growth` | climate | substance | Mature forest, closed above and open beneath. |
 | `one` | language | quality | the cardinal number 1 |
@@ -296,7 +299,9 @@
 | `smoker-field` | climate | substance | A field of hydrothermal chimneys. |
 | `snow` | climate | substance | frozen precipitation |
 | `snowfield` | climate | substance | An unbroken field of snow. |
-| `south` | language | quality | the compass point opposite north |
+| `south` | language | quality | toward the pole of decreasing latitude |
+| `south-east` | language | quality | between south and east |
+| `south-west` | language | quality | between south and west |
 | `spirit` | religion | social | a lesser or unseen supernatural presence |
 | `spring` | terrain | terrain | where water rises from the ground |
 | `spur-and-groove` | climate | substance | The ribbed seaward face of a reef. |
@@ -331,6 +336,7 @@
 | `vent-plume` | climate | substance | Shimmering hot water rising from a vent. |
 | `vine` | climate | substance | a staple crop |
 | `water` | language | substance | the drinkable liquid |
+| `west` | language | quality | the direction of decreasing longitude |
 | `wheat` | climate | substance | a staple crop |
 | `white-dragon-kind` | species | living | a white dragon |
 | `white-dwarf` | astronomy | celestial | the dense cinder a spent star leaves |

@@ -83,6 +83,7 @@ pub mod alchemy;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
+mod descent;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
@@ -100,6 +101,7 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
+pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
@@ -4042,10 +4044,12 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   placed in this world (coexistence in one shared world is exposure —
 ///   spec §3's free endonym/exonym) plus its own domestic and religious
 ///   social concepts (`home`, `hearth`, `god`, `spirit`). The universal
-///   stratum already carries the ten relative/evaluative modifiers
+///   stratum already carries the twelve relative/evaluative modifiers
 ///   (`high`, `low`, `great`, `little`, `new`, `old`, `under`, `over`,
-///   `north`, `south`) unconditionally — every people that speaks has
-///   them — so no separate rule is needed for those. Seven of the nine
+///   `north`, `south`, `east`, `west`) unconditionally — every people that
+///   speaks has them — so no separate rule is needed for those. The four
+///   INTERCARDINAL bearings are deliberately not among them: they are
+///   `KnowsOf` below, so they compound rather than winning roots. Seven of the nine
 ///   toponymic terrain concepts (Task 4) are Steeped instead, each gated
 ///   on the real terrain query that put a settlement there rather than on
 ///   roster membership: `river` (`water_kind_at` is `River`), `ford`
@@ -4064,7 +4068,10 @@ fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 ///   the water); and `lake`, on the same two-cell gate against a
 ///   `SaltBasin` cell (this slice's only standing-water class — a
 ///   through-flow freshwater lake reads as `River`, so it is already
-///   covered there).
+///   covered there); and the four intercardinal bearings
+///   (`hornvale_language::bearing_compounds`) **unconditionally** — the only
+///   ungated rule in this function, because a people that names north and
+///   east names the direction between them regardless of where it lives.
 /// - **Unknown**: every other registered concept — most visibly a
 ///   color-pack entry excluded by ladder depth (`GapReason::Perceptual`)
 ///   and a biome/`sea`/`coast`/`lake` concept the species neither settled
@@ -4322,6 +4329,28 @@ fn exposure_of_impl(
         if near_lake {
             classes
                 .entry("lake".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: the four intercardinal bearings, UNCONDITIONALLY — the one
+    // rule here gated on nothing, and deliberately so. The four cardinals are
+    // already Steeped by universal-stratum membership; anyone who can name
+    // north and east can name the direction between them, and no terrain,
+    // biome or settlement fact makes that more or less true. They are kept out
+    // of the stratum (so they win no root of their own) precisely because
+    // every attested language builds these by composition, and this rule is
+    // what lets the compound actually resolve instead of falling through to a
+    // gap that would read `no exposure to 'north-east'` for a people that
+    // walks in eight directions.
+    //
+    // Sourced from `bearing_compounds()` rather than a literal list, so a
+    // ninth bearing cannot be added to the vocabulary and silently miss its
+    // exposure.
+    for entry in hornvale_language::bearing_compounds() {
+        if world.registry.concept(entry.concept).is_some() {
+            classes
+                .entry(entry.concept.to_string())
                 .or_insert(ExposureClass::KnowsOf);
         }
     }

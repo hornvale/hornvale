@@ -357,6 +357,31 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "red-giant",
         "blue-giant",
     ],
+    // Epoch 7 — the compass completed. `north` and `south` have been rooted
+    // since epoch 4, where they arrived as *toponymic* elements (Northriver,
+    // Southvalley) rather than as bearings; the exit graph has always been an
+    // eight-point compass, so six of its eight directions could be travelled
+    // and none of them named. These six close that gap, and a reverse audit
+    // over `Compass::all()` now keeps it closed.
+    //
+    // The two cardinals get roots in the universal stratum. The four
+    // intercardinals do NOT — they are compound-only concepts realized as
+    // (cardinal, cardinal) through `packs::compound_recipe`, the same footing
+    // as `sea` and `mountain`, because every attested language builds these by
+    // composition rather than minting an unanalysable eighth word.
+    //
+    // Appended rather than folded into epoch 4 beside `north`/`south`, per
+    // this module's absolute rule: re-sorting that cohort is exactly the churn
+    // the epoch-first ordering exists to prevent, and the withdrawn exception
+    // above is the record of what it costs to reason otherwise.
+    &[
+        "east",
+        "west",
+        "north-east",
+        "south-east",
+        "south-west",
+        "north-west",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

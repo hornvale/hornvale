@@ -1458,7 +1458,10 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
         // lefford, 0063): the BAKE label bump nudges the mean up:
         // 0.559_547_123_829_870 -> 0.560_567_825_485_714_4.
-        (mean - 0.560_567_825_485_714_4).abs() < 1e-6,
+        // The Salt's close regen, 0063: 0.560_567_825_485_714_4 ->
+        // 0.560_572_844_615_584_4. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        (mean - 0.560_572_844_615_584_4).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1627,7 +1630,10 @@ fn name_length_distributions_are_measured_and_pinned() {
         // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
         // lefford, 0063): the BAKE label bump reseats flagships again: 766 ->
         // 768 present, mean 8.660_349_090_208_882 -> 8.688_230_827_083_34.
-        ("goblin", 768u32, 8.688_230_827_083_34),
+        // The Salt's close regen, 0063: 8.688_230_827_083_34 ->
+        // 8.687_525_197_786_464. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        ("goblin", 768u32, 8.687_525_197_786_464),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1676,7 +1682,10 @@ fn name_length_distributions_are_measured_and_pinned() {
         // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
         // lefford, 0063): the BAKE label bump reseats flagships again: 763 ->
         // 765 present, mean 7.219_848_265_006_563 -> 7.188_685_503_790_846.
-        ("kobold", 765u32, 7.188_685_503_790_846),
+        // The Salt's close regen, 0063: 7.188_685_503_790_846 ->
+        // 7.188_604_358_823_526. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        ("kobold", 765u32, 7.188_604_358_823_526),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1782,7 +1791,10 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // present, mean 2.313_806_532_765_403 -> 2.306_935_878_954_248_7. The
         // claim still HOLDS at both species (2.787 and 2.307, both inside
         // 2-3).
-        ("goblin", 768u32, 2.787_026_517_317_707_3),
+        // The Salt's close regen, 0063: 2.787_026_517_317_707_3 ->
+        // 2.787_048_218_749_998_5. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        ("goblin", 768u32, 2.787_048_218_749_998_5),
         ("kobold", 765u32, 2.306_935_878_954_248_7),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
@@ -1906,7 +1918,10 @@ fn name_transparency_is_measured_and_pinned() {
         // lefford, 0063): the BAKE label bump nudges the mean down again
         // (present/absent unmoved at 770/230):
         // 0.807_392_672_749_351 -> 0.804_951_365_489_610_2.
-        (mean - 0.804_951_365_489_610_2).abs() < 1e-9,
+        // The Salt's close regen, 0063: 0.804_951_365_489_610_2 ->
+        // 0.804_225_380_346_752_7. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        (mean - 0.804_225_380_346_752_7).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2259,7 +2274,10 @@ fn null_control_name_length_smd_is_pinned() {
         // lefford, 0063): the BAKE label bump moves the residual again:
         // -0.012_055_568_856_886_177 -> -0.017_848_707_186_831_292. Still
         // roughly 11x inside the ±0.2 sampling-theory bound.
-        (namelen - -0.017_848_707_186_831_292).abs() < 1e-9,
+        // The Salt's close regen, 0063: -0.017_848_707_186_831_292 ->
+        // -0.018_069_698_979_322_31. The mover is ce13bae0's compass
+        // concepts, not The Salt, which touches no language code.
+        (namelen - -0.018_069_698_979_322_31).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

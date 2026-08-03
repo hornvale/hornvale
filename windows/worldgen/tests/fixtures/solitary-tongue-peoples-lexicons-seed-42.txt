@@ -33,6 +33,7 @@ die: root Toono /toono/
 dire-wolf-kind: gap (experiential): goblin has no exposure to 'dire-wolf-kind'
 drink: root Banae /banae/
 earth: root Beo /beo/
+east: root Neeba /neeba/
 eat: root Nao /nao/
 eclipse: gap (experiential): goblin has no exposure to 'eclipse'
 epipelagic: gap (experiential): no settlement in or beside epipelagic
@@ -103,6 +104,8 @@ new: root Nobee /nobee/
 night: root Neta /neta/
 nodule-field: gap (experiential): goblin has no exposure to 'nodule-field'
 north: root Nanoe /nanoe/
+north-east: compound north+east -> Nanoeneeba /nanoeneeba/
+north-west: compound north+west -> Nanoeneakea /nanoeneakea/
 old: root Tabe /tabe/
 old-growth: root Neneo /neneo/
 one: root Koebo /koebo/
@@ -147,6 +150,8 @@ smoker-field: gap (experiential): goblin has no exposure to 'smoker-field'
 snow: gap (experiential): goblin has no exposure to 'snow'
 snowfield: gap (experiential): goblin has no exposure to 'snowfield'
 south: root Taeneo /taeneo/
+south-east: compound south+east -> Taeneoneeba /taeneoneeba/
+south-west: compound south+west -> Taeneoneakea /taeneoneakea/
 spirit: root Baa /baa/
 spring: gap (experiential): goblin has no exposure to 'spring'
 spur-and-groove: gap (experiential): goblin has no exposure to 'spur-and-groove'
@@ -181,6 +186,7 @@ valley: gap (experiential): goblin has no exposure to 'valley'
 vent-plume: gap (experiential): goblin has no exposure to 'vent-plume'
 vine: gap (experiential): goblin has no exposure to 'vine'
 water: root Doebe /doebe/
+west: root Neakea /neakea/
 wheat: root Netea /netea/
 white-dragon-kind: gap (experiential): goblin has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
@@ -228,6 +234,7 @@ die: root Toono /toono/
 dire-wolf-kind: gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind'
 drink: root Ganae /ganae/
 earth: root Geo /geo/
+east: root Neeba /neeba/
 eat: root Nao /nao/
 eclipse: gap (experiential): hobgoblin has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
@@ -298,6 +305,8 @@ new: root Nobee /nobee/
 night: root Neqa /neqa/
 nodule-field: gap (experiential): hobgoblin has no exposure to 'nodule-field'
 north: root Nanoe /nanoe/
+north-east: compound north+east -> Nanoeneeba /nanoeneeba/
+north-west: compound north+west -> Nanoeneakea /nanoeneakea/
 old: root Tabe /tabe/
 old-growth: root Neneo /neneo/
 one: root Koego /koego/
@@ -342,6 +351,8 @@ smoker-field: gap (experiential): hobgoblin has no exposure to 'smoker-field'
 snow: gap (experiential): hobgoblin has no exposure to 'snow'
 snowfield: gap (experiential): hobgoblin has no exposure to 'snowfield'
 south: root Qaeneo /qaeneo/
+south-east: compound south+east -> Qaeneoneeba /qaeneoneeba/
+south-west: compound south+west -> Qaeneoneakea /qaeneoneakea/
 spirit: root Baa /baa/
 spring: gap (experiential): hobgoblin has no exposure to 'spring'
 spur-and-groove: gap (experiential): hobgoblin has no exposure to 'spur-and-groove'
@@ -376,6 +387,7 @@ valley: gap (experiential): hobgoblin has no exposure to 'valley'
 vent-plume: gap (experiential): hobgoblin has no exposure to 'vent-plume'
 vine: root Teona /teona/
 water: root Boege /boege/
+west: root Neakea /neakea/
 wheat: root Netea /netea/
 white-dragon-kind: gap (experiential): hobgoblin has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
@@ -423,6 +435,7 @@ die: root Doodo /doodo/
 dire-wolf-kind: gap (experiential): bugbear has no exposure to 'dire-wolf-kind'
 drink: root Gadao /gadao/
 earth: root Goo /goo/
+east: root Dooba /dooba/
 eat: root Dao /dao/
 eclipse: gap (experiential): bugbear has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
@@ -493,6 +506,8 @@ new: root Doboo /doboo/
 night: root Doqa /doqa/
 nodule-field: gap (experiential): bugbear has no exposure to 'nodule-field'
 north: root Dadoo /dadoo/
+north-east: compound north+east -> Dadoodooba /dadoodooba/
+north-west: compound north+west -> Dadoodoagoa /dadoodoagoa/
 old: root Dabo /dabo/
 old-growth: root Dodoo /dodoo/
 one: root Googo /googo/
@@ -537,6 +552,8 @@ smoker-field: gap (experiential): bugbear has no exposure to 'smoker-field'
 snow: gap (experiential): bugbear has no exposure to 'snow'
 snowfield: gap (experiential): bugbear has no exposure to 'snowfield'
 south: root Qaodoo /qaodoo/
+south-east: compound south+east -> Qaodoodooba /qaodoodooba/
+south-west: compound south+west -> Qaodoodoagoa /qaodoodoagoa/
 spirit: root Baa /baa/
 spring: gap (experiential): bugbear has no exposure to 'spring'
 spur-and-groove: gap (experiential): bugbear has no exposure to 'spur-and-groove'
@@ -571,6 +588,7 @@ valley: gap (experiential): bugbear has no exposure to 'valley'
 vent-plume: gap (experiential): bugbear has no exposure to 'vent-plume'
 vine: gap (experiential): bugbear has no exposure to 'vine'
 water: root Doogo /doogo/
+west: root Doagoa /doagoa/
 wheat: root Dodoa /dodoa/
 white-dragon-kind: gap (experiential): bugbear has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
@@ -618,6 +636,7 @@ die: root Raarao /raarao/
 dire-wolf-kind: gap (experiential): kobold has no exposure to 'dire-wolf-kind'
 drink: root Roroxao /roroxao/
 earth: root Roorao /roorao/
+east: root Roaraoro /roaraoro/
 eat: root Xaro /xaro/
 eclipse: gap (experiential): kobold has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
@@ -688,6 +707,8 @@ new: root Roaxoorao /roaxoorao/
 night: root Xora /xora/
 nodule-field: gap (experiential): kobold has no exposure to 'nodule-field'
 north: root Xoaxao /xoaxao/
+north-east: compound north+east -> Roaraoroxoaxao /roaraoroxoaxao/
+north-west: compound north+west -> Raorooxaaxoaxao /raorooxaaxoaxao/
 old: root Raararoo /raararoo/
 old-growth: root Roaxora /roaxora/
 one: root Xooxoa /xooxoa/
@@ -732,6 +753,8 @@ smoker-field: gap (experiential): kobold has no exposure to 'smoker-field'
 snow: gap (experiential): kobold has no exposure to 'snow'
 snowfield: gap (experiential): kobold has no exposure to 'snowfield'
 south: root Xaaraa /xaaraa/
+south-east: compound south+east -> Roaraoroxaaraa /roaraoroxaaraa/
+south-west: compound south+west -> Raorooxaaxaaraa /raorooxaaxaaraa/
 spirit: root Raoro /raoro/
 spring: root Roraaxaa /roraaxaa/
 spur-and-groove: gap (experiential): kobold has no exposure to 'spur-and-groove'
@@ -766,6 +789,7 @@ valley: gap (experiential): kobold has no exposure to 'valley'
 vent-plume: gap (experiential): kobold has no exposure to 'vent-plume'
 vine: gap (experiential): kobold has no exposure to 'vine'
 water: root Raxa /raxa/
+west: root Raorooxaa /raorooxaa/
 wheat: root Roxoa /roxoa/
 white-dragon-kind: gap (experiential): kobold has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
@@ -813,6 +837,7 @@ die: root Dzhax /dʒax/
 dire-wolf-kind: gap (experiential): gnoll has no exposure to 'dire-wolf-kind'
 drink: root Qshopznoox /qʃopznoox/
 earth: root Sma /sma/
+east: root Shmoovzhnaop /ʃmoovʒnaop/
 eat: root Pshaoxshngaap /pʃaoxʃŋaap/
 eclipse: gap (experiential): gnoll has no exposure to 'eclipse'
 epipelagic: gap (experiential): no compound recipe for 'epipelagic'
@@ -883,6 +908,8 @@ new: root Qzaov /qzaov/
 night: root Zhnoopznox /ʒnoopznox/
 nodule-field: gap (experiential): gnoll has no exposure to 'nodule-field'
 north: root Shmapdzhoav /ʃmapdʒoav/
+north-east: compound north+east -> Shmoovzhnaopshmapdzhoav /ʃmoovʒnaopʃmapdʒoav/
+north-west: compound north+west -> Zhmaxsnovshmapdzhoav /ʒmaxsnovʃmapdʒoav/
 old: root Qsaoxshngax /qsaoxʃŋax/
 old-growth: root Snaapzmoov /snaapzmoov/
 one: root Psoaznoov /psoaznoov/
@@ -927,6 +954,8 @@ smoker-field: gap (experiential): gnoll has no exposure to 'smoker-field'
 snow: gap (experiential): gnoll has no exposure to 'snow'
 snowfield: gap (experiential): gnoll has no exposure to 'snowfield'
 south: root Gsoov /gsoov/
+south-east: compound south+east -> Shmoovzhnaopgsoov /ʃmoovʒnaopgsoov/
+south-west: compound south+west -> Zhmaxsnovgsoov /ʒmaxsnovgsoov/
 spirit: root Zhnoavzmo /ʒnoavzmo/
 spring: gap (experiential): gnoll has no exposure to 'spring'
 spur-and-groove: gap (experiential): gnoll has no exposure to 'spur-and-groove'
@@ -961,6 +990,7 @@ valley: gap (experiential): gnoll has no exposure to 'valley'
 vent-plume: gap (experiential): gnoll has no exposure to 'vent-plume'
 vine: root Gzhopgshoop /gʒopgʃoop/
 water: root Zngaav /zŋaav/
+west: root Zhmaxsnov /ʒmaxsnov/
 wheat: root Qzhaovgzhoav /qʒaovgʒoav/
 white-dragon-kind: gap (experiential): gnoll has no exposure to 'white-dragon-kind'
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence

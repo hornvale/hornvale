@@ -5,9 +5,11 @@
 //! a *total function of its arguments*: no world, no global state, no
 //! replay. The deep-history bake (Task 3, run at the composition root)
 //! derives the `seed` these functions receive once per occupation, via
-//! `world.seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&id))`;
-//! these functions never derive that top-level label themselves — they
-//! only derive their own sub-labels from whatever seed they're handed.
+//! `world.seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&material_key))`
+//! — keyed on the occupation's material core (`record::material_key`), never
+//! its entity id, so derived prose does not move when an id moves (The
+//! Salt). These functions never derive that top-level label themselves —
+//! they only derive their own sub-labels from whatever seed they're handed.
 
 use crate::record::{CauseOfEnd, Function, Notability, OccupationRecord, TechHorizon};
 use crate::streams;

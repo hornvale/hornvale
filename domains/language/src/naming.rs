@@ -97,6 +97,10 @@ pub enum NameKind {
     /// An epithet: a descriptive root, optionally reduplicated and
     /// optionally honorific-prefixed (see [`MorphOptions`]).
     Epithet,
+    /// A person: the given-name element of a personal name — a bare stem,
+    /// drawn like a settlement's but off its own seed path so that adding
+    /// personal naming to a world reseeds nothing that already exists.
+    Person,
 }
 
 impl NameKind {
@@ -108,7 +112,16 @@ impl NameKind {
             NameKind::Settlement => "settlement",
             NameKind::Deity => "deity",
             NameKind::Epithet => "epithet",
+            NameKind::Person => "person",
         }
+    }
+
+    /// The seed-path label, exposed for the save-format-contract test in
+    /// `tests/anthroponym.rs`. Not part of the ordinary API.
+    /// type-audit: bare-ok(identifier-text)
+    #[doc(hidden)]
+    pub fn label_for_test(self) -> &'static str {
+        self.label()
     }
 }
 
@@ -1129,6 +1142,7 @@ impl<'a> Namer<'a> {
     ) -> GeneratedName {
         let syllables = match kind {
             NameKind::Settlement => self.draw_syllables(stream, 2, 3, false),
+            NameKind::Person => self.draw_syllables(stream, 2, 3, false),
             NameKind::Deity => self.draw_syllables(stream, 2, 3, true),
             NameKind::Epithet => {
                 let mut syllables = self.draw_syllables(stream, 1, 2, false);

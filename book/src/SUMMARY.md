@@ -293,7 +293,9 @@
 - [The Scaffold](./chronicle/the-scaffold.md)
 - [The Vernacular](./chronicle/the-vernacular.md)
 - [The Witness](./chronicle/the-witness.md)
+- [The Namesake](./chronicle/the-namesake.md)
 - [The Contour](./chronicle/the-contour.md)
+- [The Salt](./chronicle/the-salt.md)
 
 # Appendix: The Frontier
 

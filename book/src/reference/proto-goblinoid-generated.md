@@ -66,6 +66,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `dire-wolf-kind` | a dire wolf | *Penae | /penae/ |
 | `drink` | to swallow liquid | *Ganae | /ganae/ |
 | `earth` | the ground underfoot | *Geo | /geo/ |
+| `east` | the direction of increasing longitude | *Neepa | /neepa/ |
 | `eat` | to consume food | *Nao | /nao/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Ne | /ne/ |
 | `epipelagic` | a biome class | *Naenoo | /naenoo/ |
@@ -135,7 +136,9 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `new` | recently come to be | *Nopee | /nopee/ |
 | `night` | the dark half of the day-night cycle | *Neqa | /neqa/ |
 | `nodule-field` | Seafloor strewn with mineral nodules. | *Koo | /koo/ |
-| `north` | the compass point opposite south | *Nanoe | /nanoe/ |
+| `north` | toward the pole of increasing latitude | *Nanoe | /nanoe/ |
+| `north-east` | between north and east | *Doneo | /doneo/ |
+| `north-west` | between north and west | *Gea | /gea/ |
 | `old` | long in existence | *Tape | /tape/ |
 | `old-growth` | Mature forest, closed above and open beneath. | *Neneo | /neneo/ |
 | `one` | the cardinal number 1 | *Koego | /koego/ |
@@ -175,7 +178,9 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `smoker-field` | A field of hydrothermal chimneys. | *Qoge | /qoge/ |
 | `snow` | frozen precipitation | *Noanee | /noanee/ |
 | `snowfield` | An unbroken field of snow. | *Qane | /qane/ |
-| `south` | the compass point opposite north | *Qaeneo | /qaeneo/ |
+| `south` | toward the pole of decreasing latitude | *Qaeneo | /qaeneo/ |
+| `south-east` | between south and east | *Napea | /napea/ |
+| `south-west` | between south and west | *Note | /note/ |
 | `spirit` | a lesser or unseen supernatural presence | *Paa | /paa/ |
 | `spring` | where water rises from the ground | *Negao | /negao/ |
 | `spur-and-groove` | The ribbed seaward face of a reef. | *Goakoo | /goakoo/ |
@@ -209,6 +214,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `vent-plume` | Shimmering hot water rising from a vent. | *Naote | /naote/ |
 | `vine` | a staple crop | *Teona | /teona/ |
 | `water` | the drinkable liquid | *Doege | /doege/ |
+| `west` | the direction of decreasing longitude | *Neakea | /neakea/ |
 | `wheat` | a staple crop | *Netea | /netea/ |
 | `white-dragon-kind` | a white dragon | *Qo | /qo/ |
 | `wind` | moving air | *Neqoo | /neqoo/ |

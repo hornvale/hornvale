@@ -1,0 +1,193 @@
+# Retrospective — The Namesake
+
+One page of process lessons, not product. The product is in
+[the chronicle](../../book/src/chronicle/the-namesake.md): a person-descent
+graph that costs no epoch, a naming grammar derived from a society vector, and
+a preregistered criterion falsified with a named mechanism behind it.
+
+## The central lesson
+
+**Every review found a real defect, and every defect originated in the plan's
+own text. Every number taken from a live measurement survived.**
+
+Six of the seven implementation tasks came back from review with at least one
+Important finding. Not one of them was an implementer misreading a clear
+instruction; each traced to a sentence the plan or a task brief had written
+without measuring what it asserted:
+
+- Task 1's metric deduplicated rule firings by cascade *step index* while its
+  documentation promised distinct *rule kinds* — an ambiguity inherited
+  verbatim from the brief's own wording. Two of four hundred measured cases
+  differ between the readings, and one of those two was the sole occupant of
+  the published histogram's top bucket.
+- Task 2's ancestor walk was an iterated fixed permutation, so `(Seed(0),
+  RoleHandle(0))` was a fixed point and a whole lineage shared one name. Seed 0
+  is a reachable world seed; the brief's own deepest-chain test used seed 42
+  and never touched it.
+- Task 3's forebear derivation fell back to a zero generation length when the
+  species had none, which made the kinship function return *sibling* — a
+  confident claim — where the honest answer is "not derivable". The brief's own
+  comment asserted this case "stays honest". It does not.
+- Task 7's brief gave one half of a two-sided frozen criterion a metric and
+  left the other half to be "asserted in the study readout", which a readout
+  structurally cannot do.
+
+Meanwhile the three numbers this campaign *measured* before designing on them
+— the founding-gap distribution, the drift-rate uniformity across settled
+peoples, and the rule-firing battery — all survived contact with the
+implementation unchanged. The asymmetry is the lesson, and it is the same one
+the standing note "measure the edge before designing on it" states: prose in a
+plan is an untested assertion wearing the costume of a specification.
+
+## Three specifics worth carrying forward
+
+**A controller-supplied patch is a hypothesis, not a fix.** Reviewing Task 2's
+fixed point, the controller wrote the repair inline — fold the step counter
+into the mix as `k * C1`. That patch is wrong: the term is zero at `k == 0`
+and the mixing function maps zero to zero, so the collision survives at one
+step. The implementer caught it and used `(k + 1) * C1`; the re-reviewer
+reproduced both variants independently. A patch that arrives with review
+authority attached still needs the same mutation proof implementer code gets,
+and it is *more* likely to skip it, because the review frame invites it to be
+applied rather than tested.
+
+**The plan ran the type-audit lint in every task and the committed report in
+none.** The audit is two things wearing one name: `check` is a default-deny
+lint inside `make gate`, and `report` regenerates a drift-checked artifact.
+Every task ran the lint and passed. Tasks 2 and 3 were therefore reviewed and
+committed against a stale report, and Task 4 swept up the accumulated drift
+(history +7, worldgen +2, language +3 — all of it this campaign's own, though
+the first report of it implied otherwise). This is precisely the failure mode
+the standing note names: folding the type audit into the gate closed the lint
+gap and left the *committed report* freshness gap open. A plan that touches a
+public boundary in more than one task needs the report regeneration in each of
+them, or explicitly in exactly one, named as such.
+
+**A frozen two-sided criterion needs a metric per side.** The criterion read
+"the median resolves in ≥ 2 elements **and** fewer than 50% require the full
+stack". The brief allotted it one metric. A lab study readout reports
+registered metrics and nothing else, so as briefed, half of a preregistered
+criterion would have gone unmeasured over the whole battery — and it is the
+half that would have been quietly dropped, since the other half failed loudly.
+The implementer caught it and registered a fifth metric. Preregistration is
+only as strong as the instrument list it is checked against; count the
+conjuncts and count the metrics.
+
+## What worked
+
+**Measuring before designing, twice, killed two designs cheaply.** The
+campaign's opening proposal read the committed community-lineage edge as a
+parent-child link. One distribution — founding gaps of median 50 years and
+maximum 975 — ended it before any code existed, and the replacement (a descent
+edge at a derived remove) fell out of the same measurement, including sibling
+relations for free at 13% of edges. The campaign's *original headline* died
+the same way: inherited names as phonological fossils was withdrawn on two
+measurements taken before preregistration, not on taste. Both deaths cost a
+day of measurement rather than a task of implementation and a null nobody
+could interpret.
+
+**One seed was treated as an anecdote rather than a finding.** Seed 42's zero
+sound rules firing for three peoples was the evidence that killed the fossil
+claim — and it would have been an *engine* finding if general. Rather than
+report it as one, the campaign's first task built the metric the lab lacked
+and ran 200 worlds. The result inverts the reading: goblin fires a mean of
+1.305 rules and reads zero on 19% of worlds, so seed 42 sat in a one-in-five
+tail of a live distribution, not on a dead mechanism. A suspected engine-level
+defect was retired for the cost of one additive metric. The withdrawal of the
+fossil claim still stands, on its other and structural reason.
+
+**The failure was pushed on rather than reported.** Task 7's falsified
+criterion could have shipped as a bare null. Two artifact hypotheses were
+tested instead — that dropped unresolvable elements shortened names, and that
+the scope was wrong — and both were shown to fail, the first via a machine-
+checked equivalence (for any founder with ≥ 2 elements, spending exactly one
+is equivalent to its stem being world-unique, verified over 54 seeds with zero
+mismatches) that makes the maximum-fill counterfactual computable rather than
+estimable. That is what converted a null into a falsification with a named
+mechanism upstream of the thing being measured.
+
+**Nothing was retuned after unblinding, and it was verified rather than
+asserted.** The review checked `git diff --name-only` across Tasks 2–6's
+source over the measurement commits and found it empty.
+
+## Follow-ups
+
+| | |
+|---|---|
+| **F1** | **`occ-founded` is in years and doc-commented as "standard days."** Same for `Occupation::tenure` and `HISTORY_NOW`. The one place it could bite — `vestige.rs` weathering against `PERISHABLE_MAX_AGE`, documented in years — was traced and the units agree, so this is a naming inconsistency, not a live arithmetic bug. Cheap to fix; worth doing before someone reads the doc comment and divides by a day length. |
+| **F2** | **Person-name stems draw near-uniformly, and real given names do not.** The mechanism behind this campaign's falsification: an effective stem space of 5k–17k makes 62–99% of a world's given names world-unique, against a measured 0.567 collision rate for settlement and deity names in the same worlds. Real given-name distributions are steeply Zipfian, which is *why* patronymics and bynames exist. Giving the person draw a realistic frequency distribution would make the shortest-prefix rule earn its keep without changing a line of it — and it is a naming-function change, so it lands on the derived side and still costs no epoch until a toponym cites it. |
+| **F3** | **The region-scope criterion may never have been satisfiable.** §5.2(2)'s "region" resolved to every founder in the world across 2000 years of history — figures separated by centuries who would never contend for the same reference. The design's own ladder (household → settlement → region) meant something spatial and smaller. This does *not* rescue the criterion (a smaller competitor set can only push the median down), but it means the frozen criterion was measuring a different question than the one it was written for. Worth a defined spatial scope before any successor campaign re-freezes it. |
+| **F4** | **CLOSED at the merge review. A latent trap in `name_pattern`'s element-budget arithmetic** (`windows/worldgen/src/descent.rs` — the pattern derivation, *not* the descent walk, as this row originally misnamed it). The push and pop guards were mutually exclusive and therefore correct, but only because both arms compared the same `0.5` literal with strict operators — and the roster's goblin sits *exactly* on that literal. The final reviewer mutation-verified the trap: changing `< 0.5` to `<= 0.5` passed all six existing tests while silently rewriting goblin's published pattern from three elements to two. `pop()` was also positional, so any element inserted above the block would have been popped instead. Fixed by a three-way `Breadth` match that builds the tail instead of pushing-then-popping, with every people's pattern verified byte-identical and two content-level boundary tests added; the same mutation now goes RED. |
+| **F5** | **CLOSED at the merge review. `the_clan_walk_terminates_for_every_occupation` ran ~53–62 s**, over nextest's 60 s slow threshold — and the cause was a defect, not a cost: the membership check called `occupation_records` *inside* the per-occupation loop, reconstructing all ~1800 records ~1800 times. Hoisted; **53.4 s → 2.2 s**. Worth catching before merge because `make ci` writes per-test durations into a committed baseline, so shipping it would have normalised a quadratic test as a cost fact. |
+| **F6** | **`NameElement.conferred` is `None` everywhere and has no writer.** Every element the current derivation produces is conferred at birth, so the field is documented as the seam a later deed-name or coming-of-age campaign fills. Recorded rather than shipped silently: an always-`None` public field is indistinguishable from a forgotten one six months on. |
+| **F7** | **`descent::ancestor` has no callers, and `forebear_of`'s `Kinship` is discarded at its one call site.** Both were specified, planned as consumed, and hardened through a fix round, then never wired — so the element that ships in the `Relation(Parent)` slot cites the *mother community's* founder (a median of 2 and up to 32 generations back), not a parent. Disclosed in the chronicle and in both doc comments rather than fixed at the close: wiring the walk changes what the names mean and would invalidate this campaign's measurement. Successor work, not a merge blocker. |
+
+## Confidence Gradient
+
+**No bet moved.** `book/src/open-questions.md` was grepped against this
+campaign's territory — `name`, `naming`, `toponym`, `person`, `lineage`,
+`kin`, `shortest`, `disambiguat`, `collision`, `anthropon`, `genealog`,
+`founder`, `descent`, `cascade`, `sound change`, `etymolog`. Every hit was
+unrelated: the two `cascade` matches describe a conflict-collapse mechanism,
+not sound change, and the `descent` match is a chamber-derivation sentence
+from a different campaign. Checked, no re-score owed.
+
+## A note on the branch's red gate — resolved at the close
+
+For its whole working life this branch carried a known-red baseline of **34**
+failures in `hornvale-lab`, all one cause: adding metrics to the lab registry
+makes the committed census fixtures' headers disagree with the study schema,
+and those fixtures are authored on the canonical host rather than locally. The
+plan did not carry a census-refresh step, which is a real gap in it — the count
+and shape were established after the first task and carried into every
+subsequent review brief precisely so that 34 reds would not be mistaken for the
+task under review. One correction was needed along the way: the reds are **two**
+stale study fixtures, not one (31 from the main census, 3 from a second
+`"metrics": "all"` study), so a refresh covering only the first would leave
+three red.
+
+Cleared at the close by regenerating both fixtures on the canonical host
+against the merged branch head (1000 rows each, 0 refusals, 718 s wall,
+`cpu_ratio` 25.2). The branch merged with a fully green gate: **2845 tests,
+2845 passed**, artifact drift clean across gallery, reference, laboratory and
+audits.
+
+Any campaign that adds a lab metric inherits this, and should establish the
+baseline's exact count and shape at its first task rather than its last.
+
+## What the close itself cost, and why
+
+The close was the most expensive part of this campaign, and every hour of it
+traces to one omission.
+
+**F8 — the branch never absorbed main until the close.** CLAUDE.md requires
+absorption at every plan-stage boundary; this branch's first meeting with main
+was `make preflight` at the close, by which point main had moved **87 commits**
+carrying two whole campaigns (*The Contour* and *The Vernacular*). Then it moved
+**twice more** while the close was in progress — 18 commits mid-close, and 3
+more during the final gate — so the branch absorbed main three separate times
+and re-ran preflight after each. The rule exists to keep semantic drift next to
+its cause; obeying it would have turned one 87-commit reconciliation into six or
+seven cheap ones. This is the campaign's single clearest process failure.
+
+**F9 — the absorption's one conflict was the silently-wrong kind.** Both this
+campaign and *The Contour* moved the lab registry's pinned metric count off the
+same base: 172 → 175 there, 172 → 180 here. **Neither side's value is correct —
+the merged truth is 183.** Git conflicted on that exact line so it could not slip
+through, but that was luck of formatting, not a guarantee: the second absorption
+touched the same file and auto-merged clean, and the pin had to be re-verified
+by *running the test* rather than by trusting the arithmetic. A count pinned as a
+literal in a file two parallel campaigns both append to is a merge hazard by
+construction. Worth considering whether the count should be derived rather than
+pinned, or the registry split so two campaigns rarely touch one line.
+
+**F10 — a parallel campaign hit this campaign's exact defect, independently.**
+*The Contour*'s chronicle reports that "the metric that was supposed to
+adjudicate the question was specified as two halves and built as one, and the
+half that shipped was already sitting at its ceiling." That is precisely what
+happened here to §5.2(2): a two-sided criterion given a metric for only one
+side, caught during execution and fixed by adding the second. Two campaigns
+running in the same week, independently, made the same mistake. That is a
+process signal rather than a coincidence — a preregistered criterion with a
+conjunction in it needs a metric per conjunct, and nothing currently checks
+that.

@@ -71,6 +71,12 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Detail below the floor — erosion as a readout of the material buffer](#detail-below-the-floor--erosion-as-a-readout-of-the-material-buffer)
   - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
+  - [Terrain as a medium — the transfer verb and its period](#terrain-as-a-medium--the-transfer-verb-and-its-period)
+  - [The place with users — what a dungeon feature is not](#the-place-with-users--what-a-dungeon-feature-is-not)
+  - [Aurorae — the shield seen where it is struck](#aurorae--the-shield-seen-where-it-is-struck)
+  - [Betweenness — one surface, many readouts](#betweenness--one-surface-many-readouts)
+  - [Chokepoints — the bridge is the degenerate case](#chokepoints--the-bridge-is-the-degenerate-case)
+  - [The far field is low-rank — multipole summaries and one-way aggregation](#the-far-field-is-low-rank--multipole-summaries-and-one-way-aggregation)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -3935,6 +3941,558 @@ folk science ossified into false precision. The discipline that saved the
 psychology substrate is the discipline that saves this.
 
 ---
+
+## Terrain as a medium — the transfer verb and its period
+
+*(High confidence on the shape, which is a convergence rather than a
+discovery; medium on the verb roster's completeness. Prompted by a roguelike
+terrain-effect taxonomy of some forty effects across movement, character,
+item, combat and light — see [Intellectual lineage](#intellectual-lineage).)*
+
+**Forty terrain effects reduce to a shape the registry already holds twice.**
+Stripping the nouns — mud, lava, ice, brush and wall all become *a place*;
+slows, burns, destroys and blocks all become *conditions an attempted action*
+— every entry in such a taxonomy is of the form `(place, channel, body) →
+transfer verb`. That is precisely what `MAP-perceive-apertures` and
+`MAP-connectors-as-apertures` established from the perception side, with the
+collapse spelled out: an exit *is* an aperture, and passability is the `body`
+channel of the same `transmit(aperture, channel)`. A wall stops body and
+sight; a river stops body but not sight; a doorway passes both. A place is a
+**medium**, and the six categories such taxonomies use are not six kinds of
+terrain but one partition on *what crosses*.
+
+**The scalar cannot say what the roster needs.** Nine transfer verbs cover
+the forty, and a multiplier in `[0, 1]` spans only four of them — PASS,
+ATTENUATE, BLOCK, and ABSORB as its degenerate zero. The five it cannot
+express are the ones that make a place interesting rather than merely in the
+way. **AMPLIFY**: a faerie path, a killing ground that doubles a missile.
+**REDIRECT**: an ice slide, a teleport trap, refraction — what emerges leaves
+by a *different edge*. **DELAY**: mud, where passage succeeds but later.
+**TRANSFORM**: what emerges differs in kind from what entered — lava cooks
+the dropped food, a pane reddens the light, a tunnel returns a shout as an
+echo. **EMIT**: a source with no input at all, which no transfer function has
+a slot for — lava's own light, a swamp's smell, brambles' ticks. The channel
+roster is short too: the item and combat wings demand `object` (a portcullis
+passes sight and arrows but not a body or a crate) and `force` as distinct
+from `body`, and `scent` is required by `EXP-9` independently. Author M
+channels plus N verbs, never M×N — `MAP-27`'s economy applied to the place
+instead of to the object.
+
+**A transmit function with a period is a zeitgeber, and that is the half a
+roguelike cannot have.** The terrain-effect literature is almost entirely
+instantaneous and one-shot: you step on it, it resolves. Of forty effects,
+one is temporal, and it is filed under *other*. The reason is structural —
+such a game has no calendar its terrain can consult. This world has tides,
+seasons, a diurnal cycle, and an astronomy that dates all three.
+`MAP-connectors-as-apertures` names a single instance in passing, "flooded at
+this tide", as a derived Reason, and stops there. Generalised, transmission
+is a function of world-time: the tidal causeway is road twice a day and sea
+twice a day; the pass opens in summer; the river becomes a *road* when it
+freezes, a channel whose polarity inverts with the season; the night-only
+path. The payoff is not the obstacle. A periodic aperture **entrains** —
+`PSY-9`'s oscillator stack takes zeitgebers, The Quickening's people already
+walk daily routes, and a route gated by a period becomes a routine, a routine
+a market day, a market day a calendar and a pilgrimage.
+
+**Rate is the axis underneath, and it collapses a whole category.** The band
+runs instantaneous, per-step, accumulating, diurnal, tidal, seasonal,
+successional, geological. Two collapses fall out. Dwell effects — thirst in
+the desert, exposure on a peak — are transit effects *integrated over
+residence time*, not a separate category, so the taxonomy's entire character
+wing is the same function with the clock running, and `PSY-10` and `PSY-11`
+already own those homeostats. And STORE is DELAY at long rate: the bog that
+holds a body for two thousand years is the mud that slows you, one rate band
+over.
+
+**The roster is negatively skewed, and the positive pole is the one that
+generates history.** Catalogues run to BLOCK, DAMAGE, DESTROY, DRAIN because
+a roguelike prices terrain as combat friction. Flipped systematically — the
+prosease move — each has an analogue this world wants more. Blocks becomes
+**channels**: a ford, a pass, the only way through, therefore something that
+*concentrates* traffic and is an edge in `MAP-61`'s graph rather than a wall.
+Destroys becomes **preserves**; drains becomes **stores**; a hidden hazard
+becomes a hidden boon. The load-bearing one is preservation, because a bog
+that destroys what falls into it yields no archaeology while a bog that
+preserves it yields Tollund Man. `MAP-impression` grades trace durability by
+*material*; durability is equally a property of the *place*, and what
+survives is the product of the two — so anoxic bog, dry cave, ice and ash are
+the world's own long-term memory, and `MAP-30`'s palimpsest is thickest
+exactly where the negative-pole catalogue would have written "destroys
+items". Polarity is also **relational, never intrinsic** — the Gibson
+affordance point `MAP-19` already cites. Mud slows a walker and is *home* to
+a mudskipper; a wall stops a body and is a *road* to a climber. The sign of a
+transfer verb is a function of place, channel and **body**, and the body is
+already modelled.
+
+**Below full transmission the residue is error, not absence.** This is the
+channel the aperture model has no slot for, and it sits one step from
+machinery already argued: `MAP-perceive-apertures` says a hedged glimpse
+yields a low-confidence belief the planner treats as a hypothesis to verify.
+Take transmission below one and a place does not merely hide things, it makes
+observers *wrong*. Fog and dusk manufacture false identifications; a canyon
+misreports distance; an echo misreports bearing and count; a mirage
+manufactures water that is not there; still air holds a scent for hours after
+its source has left — a true perception of a false present, which is the
+DELAY verb operating in the scent channel. Under `UNI-1` belief is a fold
+over the ledger, so a systematically biased medium gives a whole region a
+shared and *derivable* folk error, and a culture whose territory contains one
+will lexicalise it. The two failure modes are worth keeping apart: a place
+that transmits **nothing**, where you know you cannot see, and a place that
+transmits **wrongly**, where you do not.
+
+The open fork, and a scale commitment `MAP-20` says to draw deliberately
+rather than by drift: whether the verb set becomes a richer return type on
+`transmit` — one function, nine outcomes — or a second function beside it,
+with `transmit` staying scalar for perception while a new `traverse` owns
+delay, redirect and transform for bodies and objects.
+
+## The place with users — what a dungeon feature is not
+
+*(High confidence on the negation and on the four-parent split; medium on how
+much of it is worth building. Prompted by ADoM's altars, herb bushes, statues
+and vaults — see [Intellectual lineage](#intellectual-lineage).)*
+
+**A classic dungeon feature is a vending machine for the protagonist.** Take
+four of them — an altar, a herb bush, a statue, a vault — and negate the
+properties that define the category. It is immobile; it is placed at
+generation; it is pointlike; it *reacts to the player*; it is known to the
+game but not to the world; its effect is authored; it affects the
+protagonist's statistics. The fourth and fifth negations are the same finding
+approached from two sides, and together they are the keystone. Every such
+feature fires only on player input, and no inhabitant has any relationship to
+it: monsters know the altar solely through a hardcoded rule about sacrificing
+whoever stands on it; nobody maintains, visits, avoids, or inherits any of
+them. The single exception proves the rule. The herb bush runs Conway's Game
+of Life whether or not anyone is watching, and it is the one feature of the
+four that generated an actual **practice** — gardening, seed planting, glider
+patterns, farming — rather than a one-shot payload. Negated, a place has
+**users**: a well someone draws from, a mill someone owns, a grove someone is
+forbidden to enter, a shrine that decays when its congregation leaves.
+
+**"Dungeon feature" is an implementation category, not a design one** — a
+thing occupying a tile that is not a monster, an item, or a wall. Walking the
+tree upward splits it into four unrelated parents, and each lands on a
+different layer of this world. A **station** is a verb you can only perform
+here (forge, altar, well) and belongs to the action layer of `MAP-27`. A
+**stock** is a renewable population with its own dynamics (the herb bush) and
+belongs to the ecology. A **monument** is a message about the past (statue,
+grave) and belongs with `MAP-impression` and `NARR-placed-content`. A
+**district** is a bounded region with a population (the vault) and belongs to
+demography. The same source further splits *forge*, a feature, from *smith*,
+an NPC; a station and its keeper should be one thing.
+
+**A place can change what agents are permitted to do rather than what
+physically happens.** The terrain-effect roster above is
+`(place, channel, body) → outcome`. An altar is
+`(place, occupant, witness, absent patron) → outcome`, and the difference is
+not a refinement but a different layer. An altar does nothing to you at all,
+yet standing on one is among the most dangerous acts available, because any
+intelligent creature that can *see* you acquires a new option — sacrifice —
+and will take it at four tiles' range, even when co-aligned. Its type is not
+intrinsic but a **match** between the place's alignment and the occupant's.
+It is **convertible by use**, contested between the user and the incumbent
+owner. Destroying one costs ten thousand piety with a party who was never
+present. Lifted, this is the **normative** twin of `MAP-19`'s physical
+commonsense ruleset, and it is culture-relative in the way physics is not: a
+stranger does not know this grove is a burial ground, and the whole dramatic
+content of trespass lives in that gap. Every input already ships — typed
+social edges in `SOC-9`, taboo and register in `LANG-25` and `LANG-34`, the
+religion domain, and a planner in `PSY-6` that can express "my available
+actions changed because you stood there". Sacredness is *believed*, so under
+`UNI-1` it is a fold over the ledger and can be locally wrong.
+
+**A stock is not a field.** The `Terrain` trait exposes `forage_value` as a
+number you read, unchanged by reading it. A herb bush is the other thing: a
+standing population that grows, spreads, dies, is damaged by harvest — an
+unskilled picker always degrades the bush — and can be deliberately
+cultivated with seeds and holy water, or exploited by anyone who has worked
+out the automaton. The empty branch is the finding. That game has exactly one
+stock, and the siblings are obvious and unbuilt: game, fish, timber, pasture,
+ore, water. This world is unusually equipped for the general case, holding
+supply fields in `BIO-35`, carrying capacity in `MAP-31`, and a trophic
+homeostat in `PSY-10` at world scale, with nothing at *room* scale to spend
+them on. Two implications. Harvest that damages the stock makes depletion and
+husbandry both possible, which is the room-scale face of `BIO-8` and of the
+extraction discount-rate family The Tithe left open. And cultivating a patch
+is `UNI-33`'s hysteresis at room scale — play committing an ordinary fact
+that conditions all future sampling — so gardening is not a minigame but the
+smallest instance of the world remembering.
+
+**Authored content is single-use, and its own community destroys it.** This
+is a third argument for derivation, orthogonal to the two the constitution
+already rests on. The statue table in that game is some two hundred
+crowdfunded entries, each a bespoke tuple of description, inscription,
+trigger and effect, and the entire experience each one delivers is a *first
+contact* — a one-shot information asymmetry between player and author. A wiki
+page ends it permanently, and the table becomes a lookup. The herb system is
+the control: eleven herbs and one cellular automaton, fully publishable, and
+knowing the rule makes it *better*, because the rule is what you play with.
+So the two poles differ not only in cost per unit but in whether the content
+survives being understood. A derived system's rules can be published in full
+and stay alive, since the instance is still new. `MAP-authoring-exchange`
+prices authored content by decay against situation prep; this prices it
+against **disclosure**, which is faster and total, and sharpens the case
+`REJ-6` and decision 0009 already settled from a direction neither argued.
+
+**A monument is placed content whose text the world can derive.** That is the
+concrete instance `NARR-placed-content` asks for, and a case where the
+authored pole is demonstrably payable in derivation. Two hundred statues were
+crowdfunded to obtain description, inscription, and a whiff of history; every
+input is held separately here already. *Who* it commemorates is a committed
+historical fact. *What it says* is the language engine at that culture's
+register and formulaic stratum. *Whether you can read it* is literacy plus
+tongue-distance, and an eroded or half-legible inscription is a **partial**
+reading rather than a coin flip — the same hedged-glimpse currency as
+`MAP-perceive-apertures`, now applied to text. *How worn it is* is age
+against material, `MAP-impression`'s durability ladder crossed with the
+preservation coefficient argued above. And what it does *not* say is the
+sharp part, since a monument is erected by a winner and its silences are
+derivable from the history it omits. Rendering, not authoring, is then the
+whole cost. One counter-case is worth keeping in view: the statue *effects* —
+kick for one point of speed — are arbitrary, and nothing here recovers them.
+A monument's payload is its **testimony**, which is the part this world can
+actually generate.
+
+## Aurorae — the shield seen where it is struck
+
+*(High confidence on the physics and on the existing-inputs claim, which was
+read off `domains/astronomy/src/anchor.rs` and `star.rs`; medium on how much
+of the cultural payoff is reachable. `SKY-11` filed aurorae as a one-line gap
+with the wrong gate.)*
+
+**The gate is magnetic latitude, not geographic.** A dipole is tilted and
+offset from the spin axis, so the auroral oval is centred on a pole the sky
+does not mark, and the oval's radius is not fixed either — harder stellar
+wind pushes it equatorward, which is exactly why a great storm is seen where
+an aurora does not belong. Three payoffs follow from the offset alone. A
+world can hold **two competing norths**, the celestial one that `SKY-circumpolar`'s
+geometry already supplies and the lodestone one, with the angle between them
+varying by where you stand: declination is therefore a genuine discovery a
+culture can make, wrong in a structured way before it is made, and the
+numeracy layer already grades who can make it. The magnetic pole **wanders**
+on a scale of centuries, so a navigational constant quietly goes stale within
+living memory — the sharpest available instance of a fact that is committed,
+true, and later false. And over deep time the field **reverses**, which the
+diachronic Book can render and which leaves a signature in rock that
+`MAP-39`'s lithology substrate could carry.
+
+**A dipole is derivable from facts the sim already commits, and half the
+worlds should have none.** A dynamo needs a convecting conductive core, which
+is a function of planet mass, spin rate and age; `Anchor.mass` at 0.5–2.0
+Earth masses, `Anchor.rotation` as `Spinning { day }` or `Locked`, and
+`Star.age` in gigayears all ship today, so the *existence* question costs no
+new draw. Stellar wind pressure likewise falls out of `Star.mass` and
+`Star.age`, which is the gap `SKY-13` names. The null is the finding, and it
+is not a shrug: a small, old, or tidally locked world has a frozen or
+sluggish core, hence no field, hence nothing deflecting the wind, hence a
+*stripped atmosphere*. "No aurora" and "no air" are one fact seen twice, and
+the pretty thing turns out to be the survival thing. That couples to
+`SKY-19`'s marginal-habitability consequences from a direction it does not
+yet argue, and gives `SKY-3`'s locked worlds a second visible cost beside the
+terminator. One caution: `Star.age` and effective temperature are documented
+as forbidden inputs to luminosity, habitable zone, insolation, orbit
+admission and climate. An aurora reads neither of those channels, but a
+campaign that let wind pressure leak into climate would breach the rule.
+
+**It is the one sky phenomenon that is not shared.** Everything else
+overhead is effectively at infinity — sun, moons, wanderers, neighbours — or
+is weather. An aurora sits *inside* the atmosphere at one to three hundred
+kilometres, which makes it the only sky object with real parallax, the only
+one that can be **below** an observer, and, the load-bearing part, the only
+one that two cultures a thousand kilometres apart do not see the same
+instance of. A shared sky is precisely what makes astronomy transmissible and
+corroborable between peoples; the aurora breaks that, and cannot be checked
+against a distant correspondent the way an eclipse can. Set beside Eclipse
+Seasons and The Long Count it is their negation on every axis: undated,
+local, unpredictable, and frequency-shaped rather than event-shaped. The
+payoff is historiographic. A great storm is **globally simultaneous but
+locally described**, so independent chronicles record that the sky burned on
+one night in mutually unrecognisable terms — and `UNI-27`'s meet-computation
+over disagreeing evidence acquires a first-class worked example in which the
+storm's date is recoverable from accounts that agree on nothing else.
+
+**Emission lines, where every other light in the world is a continuum.**
+Starlight, daylight, moonlight and surface reflectance are all broad; an
+aurora is a handful of narrow peaks — atomic oxygen green and red, molecular
+nitrogen blue-violet — so on the shipped ten-band grid from 340 to 740
+nanometres it lights two or three bands and leaves the rest dark. Two
+consequences follow at no cost. A species can be **blind to the aurora
+alone**: miss those specific lines and the rest of the sky is unaffected,
+which is the strongest and cheapest demonstration `EXP-3`'s "different
+species, different skies" will ever get, and the first case where the gap is
+a *line* rather than an acuity. And the palette **is a readout of the air** —
+change the atmospheric mix and the colour set changes, making the aurora to
+the atmosphere what `EXP-3a`'s reflectance naming is to the ground. A third
+falls out of the colour lexicon: a hue outside a culture's basic-term
+inventory gets named by its *motion* instead, which is what every Earth
+culture that saw one actually did. The dancers, the merry dancers, the fox
+fires. The aurora is named by its verb.
+
+**Three readings, from animacy, cardinality and age.** It is the only thing
+in the sky that moves unpredictably, and unpredictable self-motion is the
+classic animacy cue — everything else overhead is clockwork, which reads as
+machinery. So a world with aurorae should generate a *personal* sky-being
+where a world without generates an impersonal one, which is a derivable
+prediction over `PSY-4`'s deity valence rather than a flavour note. There are
+**two** of them, conjugate: northern and southern ovals firing simultaneously
+as magnetically linked mirror images, so a culture that establishes this has
+proved its sky is one object with two ends, an inferential step it can get
+wrong first. And the cardinality of the *field* is the health axis, because a
+dying dynamo goes multipolar — many ragged ovals is what a world losing its
+atmosphere looks like. Both terms decay with age: the pole wanders, the field
+reverses, the star's wind slackens. A world's aurora is brightest when it is
+young.
+
+**Lifted, this is a family the frontier already holds unlabelled members
+of.** An auroral oval is a magnetosphere drawing its own map at the moment of
+assault — invisible while it works, luminous exactly where the wind gets
+through, and its *shape* is the field's shape. Re-instantiated, that is one
+pattern rather than an analogy. In **belief**, `UNI-16`'s immune model makes
+doctrine legible at its heresies: a creed's edges are surveyed by the trials,
+not by the catechism. In **norms**, a taboo grove is invisible until
+trespassed and the reaction is what reveals it, which is also why `EXP-4`'s
+benign-violation humour works as a norm-*probe*. In **language**, a
+phonological rule surfaces in its repairs. In **terrain**, a BLOCK verb is
+inferred from what fails to arrive and never observed directly. The
+methodological edge is the sharp one: where a boundary is invisible by
+construction, the violation log is not a poor proxy for it — it is the *only*
+instrument, and a world with no recorded transgressions has not shown that
+its boundaries are strong.
+
+## Betweenness — one surface, many readouts
+
+*(High confidence that the readouts collapse to one computation; medium on
+the desire-path feedback claim, which is explicitly preregistered below
+rather than assumed. Prompted by Red Blob Games on all-pairs pathfinding —
+see [Intellectual lineage](#intellectual-lineage).)*
+
+**One all-pairs computation, many readouts — and betweenness is not
+traffic.** Counting how many shortest paths cross each cell yields a single
+surface off which crossroads, choke points, road placement, encounter rate,
+refuse deposition and stall rent are all *readouts* rather than separate
+systems: `MAP-27`'s M+N economy applied to the place graph. Two distinctions
+hide inside the phrase "traffic map". Betweenness assumes **uniform demand**
+— every pair of cells trades equally — whereas real traffic is betweenness
+weighted by who actually wants to go where, and this world holds populations,
+so the demand-weighted surface is a different picture entirely: all roads
+lead to the large settlement, not to the geometric middle. And **busy is not
+the same as forced**. A choke point is high betweenness with *low*
+redundancy, a Tarjan bridge or articulation point whose removal splits the
+graph; a crossroads is high betweenness with *high* redundancy. Only the
+first is worth fortifying, taxing, or besieging. Cost is the constitutional
+fit: the published demo measures a fortyfold gap between Floyd–Warshall and a
+specialised breadth-first search, which makes this a compute-once-and-commit
+quantity under decision 0009, exactly as The Waymark's `home_nav` cache is
+already a partial all-pairs.
+
+**A desire path modifies the graph it is computed from.** Betweenness is a
+function *of* a fixed graph; a desire path is positive feedback *on* it —
+use packs the ground, packing lowers cost, lower cost raises use — which is a
+categorically different object and the one place in this family where the
+quantity is not a readout. The prototype already ships and is not recognised
+as one: the globe computes a per-cell upstream `drainage` accumulation, and
+"how much flow crosses this cell" is the same shape as "how many paths cross
+this cell" with gravity supplying the destination. Channel incision is the
+identical reinforcement loop, which is why drainage networks are self-similar
+and power-law. The measured distribution is already heavy-tailed —
+`domains/terrain/src/water.rs` documents seed 42's land cells at median
+drainage 2 and ninetieth percentile 11. **The caution is earned.** The
+Tumult's sandpile and The Tithe's accumulation each predicted a power law and
+each was falsified, at sigma near 0.05 and 0.11 respectively with the shape
+staying geometric. A *spatial reinforcement* process is a structurally
+different third candidate with considerably stronger empirical backing than
+either, which is exactly the situation in which the prediction should be
+frozen before the code rather than after. The opposite-sign sibling is
+**wear**: a rut that deepens into a gully accumulates traffic's trace while
+*raising* cost, so the same input with the feedback flipped gives abandonment
+instead of a road.
+
+**A refuge is not merely a place nobody passes.** Low betweenness alone
+describes empty ground, which is most of a world. A refugium is low
+betweenness **times high detour cost from the nearest high-betweenness node**
+— nobody goes there *and* going there is expensive — which is what actually
+makes mountain valleys, marsh interiors and islands hold relict populations.
+The second term is already modelled, since The Uncommon Ground gates
+`endemic` on isolation, but the pairing is not, and it hands `MAP-22`'s
+coexistence stack a spatial mechanism for holding the weak open beside its
+price-the-might one. The **dual** is deposition: refuse concentrates as
+betweenness times *dwell* time, so a midden sits where people stop rather
+than where they pass, and what a midden yields centuries on is that product
+times the place's preservation coefficient — which is why middens are the
+richest archaeological source there is. High-traffic and no-traffic are one
+axis read from both ends.
+
+**Encounters are a product, not a sum.** You do not meet people where the
+paths are busy; you meet them where *your* path and *theirs* both go, so
+encounter rate goes as the product of two path distributions rather than as
+betweenness itself, and the surface squares. A cell everyone crosses is where
+you meet everyone, and the falloff away from it is much steeper than the
+traffic map suggests. Three things fall out of the same number. An **ambush
+predator's optimal station is the betweenness maximum** — that is what a
+highwayman is, and what a trapdoor spider is — so predation placement becomes
+derived behaviour rather than an authored spawn table, and the
+wandering-monster table is retired by a quantity the graph already implies. A
+**market stall** wants the same cell, and since not everyone can have it the
+allocation is a bid-rent equilibrium over the betweenness surface, sorting
+sellers by margin per passer: the same shape as `MAP-22`'s
+might-buys-cost-and-rarity, one scale down. And the two uses **compete for
+one cell**, which is a derivable reason a place is contested with nobody
+authoring the contest.
+
+**Derived infrastructure that the culture believes was authored.** A desire
+path is invented by its walkers collectively and chosen by none of them —
+spontaneous order, with no builder to name. But a culture arriving three
+centuries later finds a *road*, and a road implies a road-maker, so it
+attributes one: ancestors, a king, a god, giants. That is `MAP-19` and
+`MAP-20`'s folk-knowledge gap pointed at *artifice* rather than at physics,
+and it is sharper there, because a wrong belief about gravity rarely has a
+name attached while a wrong belief about a road generates a **founder
+figure**, a claim of descent, and a territorial argument. The sim knows the
+road was derived; `UNI-1`'s fold knows only what the ledger recorded; the gap
+between them is free, durable, checkable content. It generalises past roads
+to any accreted structure — a ford, a terrace, a boundary hedge, a midden
+mound built upon.
+
+## Chokepoints — the bridge is the degenerate case
+
+*(High confidence on the substitution and on the institutional split; the
+feudalism claim at the end is preregistered, with the null named. Prompted by
+Tarjan's bridge-finding algorithm read against The Twins — see
+[Intellectual lineage](#intellectual-lineage).)*
+
+**A graph bridge is boolean and a strategic chokepoint is not.** The Twins is
+the worked example precisely *because it fails the definition*: removing it
+disconnects nothing, since the Green Fork can be forded elsewhere, and House
+Frey's leverage was never "there is no other crossing" but "the other
+crossing costs three weeks and Robb has not got three weeks". So the quantity
+is **detour cost** — delete the edge, recompute, sum the path-length increase
+over the pairs that used it — and a place is strategic when that detour
+exceeds what the traveller can afford, which is a relation between the edge
+and a **budget** of time, supply, season or spoilage rather than a property
+of the edge. It is therefore **time-varying by construction**: the same ford
+is a chokepoint in flood and nothing in drought, and The Sundering already
+shipped the time-varying graph this wants. Two practical notes. Tarjan is
+O(V+E), a single depth-first search, and therefore far cheaper than the
+all-pairs half above — run it first and let it, plus the betweenness surface,
+nominate the few edges worth the expensive deletion test. And a chokepoint is
+a fact about the **modality set**, not about geography: which edges count
+depends on foot versus cart versus keel versus winter road, so *adding a mode
+destroys a chokepoint*, which is why maritime powers break land monopolies
+and which puts `MAP-55` and `MAP-11` straight onto this machinery.
+
+**A realm's natural borders are its bridges.** Tarjan's by-product is the set
+of maximal subgraphs containing no bridge: regions inside which movement is
+robust, always with two ways round, joined to their neighbours only through
+edges whose loss splits them. That is a candidate derivation of what a
+**region** *is*, replacing a Voronoi blob around a capital with a topological
+object, and it yields the march and the frontier for free, since a marcher
+lord is precisely a lord stationed at a bridge. The two graph primitives
+further split into two settlement archetypes. A bridge is an *edge*, and an
+edge-chokepoint grows a **castle** with a toll and a holding lineage. An
+articulation point is a *vertex*, and a vertex-chokepoint grows a **capital
+that cannot be bypassed**, whose fall severs a realm rather than taxing it.
+Different institutions, different failure modes, one search. Like everything
+on this graph it is scale-relative: a bridge is a door at room scale, a pass
+at cell scale, a strait at world scale.
+
+**A chokepoint is not found, it is made, and the making runs the desire-path
+loop backwards.** A natural detour-cost maximum attracts a fortification —
+nobody builds a castle where there is a way round — the fortification adds a
+toll, and the toll converts detour cost into **rent**. Set against the desire
+path above the symmetry is exact, and the pair is one mechanism at two signs:
+a desire path is *emergent* positive feedback **lowering** cost at a
+high-traffic cell, while a tollhouse is a *deliberate institution* **raising**
+cost at the same kind of cell in order to extract from it. A ford gets both
+at once — the path wears in, and someone builds a gate on it — so the same
+surface simultaneously grows infrastructure nobody authored and an
+institution somebody did. The rent is bounded by the detour, which makes the
+toll **derivable rather than authored**: charge more than the going-round
+cost and the traffic goes round, so the equilibrium toll tracks the
+second-best path and *falls* the moment a rival crossing opens. That gives
+the station-with-a-keeper argued above its first fully derived instance.
+
+**The distribution of detour costs is a knob on how feudal a world can be.**
+The null runs the argument. In a fully biconnected graph every place has two
+ways round, no place is worth holding, and the political map is flat — so
+strategic geography is not a given but a *property of the terrain the sim
+already generated*. River-cut, high-relief and archipelagic land yields many
+bridges and therefore many petty holders with real, local, non-delegated
+leverage; flat steppe yields almost none, and admits either empire or
+nothing, with no stable middle. That is a **terrain → polity** derivation
+over geometry computed today, and unlike most claims in this neighbourhood it
+is measurable: bridge count and detour-cost distribution per world are census
+metrics, testable against settlement fragmentation across the seed battery
+rather than argued. Preregistered, the prediction is a *monotone* relation
+between bridge density and polity count at fixed population, and the
+interesting outcome is the null — `MAP-61`'s graph may already be too
+well-connected at cell scale for any true bridge to exist at all.
+
+## The far field is low-rank — multipole summaries and one-way aggregation
+
+*(Medium confidence on the applications, high on the negative result and on
+the aggregation argument, which explains an existing decision from outside.
+Prompted by the Fast Multipole Method — see
+[Intellectual lineage](#intellectual-lineage).)*
+
+**The tempting application is the wrong one.** Read next to the betweenness
+essay above, the natural leap is to accelerate all-pairs shortest paths with
+it. That does not work, and the reason is worth recording so nobody spends a
+campaign discovering it. The Fast Multipole Method sums a smoothly decaying
+kernel — inverse distance, logarithmic — over many sources; shortest-path is
+min-plus algebra, and a `min` admits no multipole expansion, because there is
+no way to write "the shortest route through this distant cluster" as a
+truncated moment series. The right family for hierarchical routing is
+contraction hierarchies, hub labelling, and transit-node routing, which
+exploit hierarchy for far-field *routing* queries the way this method does
+for far-field *sums*. The two look adjacent and are not.
+
+**Where it genuinely applies, the signature is a sum over many sources of a
+distance-decaying kernel.** In this world that is the gravity-model shape,
+population times population over distance to some power, and it appears
+wherever pairwise interaction between places is computed: settlement
+interaction, migration, trade volume, cultural and language diffusion,
+contagion. All are quadratic in settlements and all are correctly
+accelerable. Thaumic flux qualifies too, if it is a sum of source
+contributions rather than a graph flow. The honest negatives matter as much:
+tides and gravity involve at most four moons and one star, and the method
+only beats direct summation above roughly a thousand sources, so it is
+strictly worse there; the same holds for the starfield at two to five
+neighbours. The speedup is not the reason to care.
+
+**A far-away many is a near-away few, to controlled precision.** That is the
+lift, and it is the part worth keeping. A multipole expansion is a
+*sufficient statistic for far-field influence*, and the truncation order buys
+a stated error bound that falls off as the distance ratio raised to that
+order. This world asks "what does a distant aggregate look like?" in at least
+four places — perception falloff through apertures, the Cartographer's
+salience-budgeted feature selection per zoom, coarse-to-fine field
+refinement, and the book's altitude hierarchy — and answers it *ad hoc* each
+time. The method says the answer has a **form** and an **error bar**, which
+reframes level of detail from a design choice into a controlled
+approximation, and that is much closer to this project's temperament than
+"it looks fine at that zoom".
+
+**The moment vocabulary renders directly as prose.** Monopole: how many.
+Dipole: which way it is shifting. Quadrupole: strung out along a line versus
+blobbed. *The Vale folk, numerous, drifting south, strung along the river* is
+a rank-three multipole readout of a population — cheap, hierarchical,
+derivable — and the truncation order is exactly the label rung in
+`NARR-altitude`'s hierarchy. A regional summary at any zoom is a truncated
+expansion, and choosing the altitude is choosing where to truncate.
+
+**Why this world is allowed to aggregate one way when the method cannot.**
+The method is bidirectional: aggregate upward, disaggregate downward.
+Decision 0038 is deliberately one-way — coarse constrains fine, and fine may
+refine but never re-quantize coarse, because a finer re-quantization would be
+an epoch. The asymmetry is not conservatism, and the reason is decomposability.
+The method's aggregate is an **associative sum**: two clusters' moments merge
+into the pair's moments exactly, which is what makes its upward pass sound.
+Coarse truth here is **categorical** — biome resolved by max-weight corner
+inheritance — and categorical aggregation is not associative, so "tundra" and
+"steppe" have no well-defined merged parent the way two dipoles have a sum.
+Decision 0038's one-way rule is forced by the algebra of what is being
+aggregated, which is a justification for it that the decision record does not
+currently give.
 
 ## Intellectual lineage
 
