@@ -120,11 +120,38 @@ pub struct NightSkyLines {
     pub alignment: Option<String>,
 }
 
+/// The people an almanac is rendered for. One world has as many almanacs as it
+/// has peoples; a committed artifact is a projection that picks one, and §3 of
+/// the campaign spec requires the document to name which.
+///
+/// The composition root fills this — a window may not reach back to the root,
+/// which is why [`AlmanacContext::place_labels`] is filled rather than derived.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(flag: sky_animate)
+#[derive(Clone, Debug)]
+pub struct Speaker {
+    /// The species whose tongue voices this document.
+    pub species: String,
+    /// That species' vocabulary.
+    pub lexicon: hornvale_language::Lexicon,
+    /// Its clause-level grammar.
+    pub grammar: hornvale_language::TongueGrammar,
+    /// Its morphology.
+    pub morph: hornvale_language::TongueMorphology,
+    /// Whether this people's day-schema is agentive, which overrides the
+    /// animacy of sky concepts. Stored as the bool rather than a closure so
+    /// the struct stays plain data; a renderer rebuilds the classifier with
+    /// `hornvale_worldgen::noun_class_with_sky(sky_animate, concept)`.
+    pub sky_animate: bool,
+}
+
 /// Everything the almanac needs, gathered by the composition root.
 /// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines), bare-ok(prose: deep_lines), bare-ok(prose: lode_lines), bare-ok(prose: vestige_lines), bare-ok(prose: place_labels)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
+    /// The people this document is voiced by, or `None` for a world with no
+    /// peoples. Filled by the composition root.
+    pub speaker: Option<Speaker>,
     /// The sky at genesis.
     pub sky: SkyReport,
     /// The climate at the world's first place.
@@ -557,6 +584,7 @@ mod tests {
     fn sample_context() -> AlmanacContext {
         AlmanacContext {
             seed: 42,
+            speaker: None,
             sky: SkyReport {
                 description: "A golden sun hangs fixed at zenith.".to_string(),
                 bodies: vec!["the sun".to_string()],
@@ -634,6 +662,18 @@ mod tests {
             genesis_notes: vec![],
             settlement_lines: vec![],
         }
+    }
+
+    /// The almanac is rendered for a particular people, so its context carries
+    /// one. The composition root fills it — a window may not reach back to the
+    /// root, the same reason `place_labels` is filled rather than derived.
+    #[test]
+    fn a_context_can_carry_a_speaker() {
+        let ctx = sample_context();
+        assert!(
+            ctx.speaker.is_none(),
+            "the hand-built sample context has no people; that must stay legal"
+        );
     }
 
     // A dry-interior site (a real diurnal amplitude, per `diurnal_amp_at`)

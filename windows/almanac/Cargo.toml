@@ -16,3 +16,4 @@ hornvale-culture = { path = "../../domains/culture" }
 hornvale-religion = { path = "../../domains/religion" }
 hornvale-species = { path = "../../domains/species" }
 hornvale-topology = { path = "../../domains/topology" }
+hornvale-language = { path = "../../domains/language" }

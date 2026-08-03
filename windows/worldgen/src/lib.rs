@@ -7328,8 +7328,43 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             hornvale_astronomy::brightening_per_gyr(&system.star) * 100.0
         ));
     }
+    // The document is voiced by the flagship people — the species peopling
+    // the world's flagship settlement, the same first-placed predicate
+    // `flagship_cell` resolves the observer's cell from. A window may not
+    // reach back to this root, so `AlmanacContext::speaker` is filled here
+    // rather than derived, the same reason `place_labels` is. `terrain` and
+    // `climate` are the Single Sculpt's already-built providers, so
+    // `lexicon_from` — "almost all of the post-name-gloss census cost" —
+    // runs once per world here, never per phenomenon. `None` if the world
+    // has no settlement, or if any of the five cannot be assembled for that
+    // species (never a partial speaker).
+    let flagship_species = hornvale_terrain::places(world)
+        .into_iter()
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
+        .and_then(|p| hornvale_species::species_of(world, p.id));
+    let speaker = flagship_species.and_then(|species| {
+        let ph = language_of(world, &species);
+        let grammar = hornvale_language::tongue_grammar(&world.seed, &species, &ph);
+        let lexicon = lexicon_from(world, &species, &terrain, &climate).ok()?;
+        let morph = tongue_morphology_of(world, &species).ok()?;
+        let sky_animate = day_schema_from(world, &species, &terrain, &climate)
+            == Some(hornvale_language::SchemaId::Agentive);
+        Some(hornvale_almanac::Speaker {
+            species,
+            lexicon,
+            grammar,
+            morph,
+            sky_animate,
+        })
+    });
     Ok(AlmanacContext {
         seed: world.seed.0,
+        speaker,
         sky: sky_report_from(
             world,
             WorldTime { day: 0.0 },
