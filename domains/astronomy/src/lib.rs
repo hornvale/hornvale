@@ -54,9 +54,9 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr, class_concept, class_display,
-    common_words, generate_star, insolation_rel, insolation_rel_at, luminosity_at,
-    main_sequence_lifetime, planet_age,
+    GYR_DAYS, SPECTRAL_CLASSES, Star, T_MAX, brightening_per_gyr, class_concept, common_words,
+    generate_star, insolation_rel, insolation_rel_at, luminosity_at, main_sequence_lifetime,
+    planet_age,
 };
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};

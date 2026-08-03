@@ -5,6 +5,16 @@
 
 use hornvale_kernel::{Seed, Value};
 
+/// Whether `id` names one of the nine spectral classes. Reads the table
+/// directly: The Vernacular retired `class_display`, the per-concept lookup
+/// this used to call, in favour of the assembled `CommonVocabulary` — whose
+/// resolution is total and so can no longer answer "is this a class?".
+fn is_a_spectral_class(id: &str) -> bool {
+    hornvale_astronomy::common_words()
+        .iter()
+        .any(|(concept, _)| *concept == id)
+}
+
 fn seed_42() -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         Seed(42),
@@ -29,7 +39,7 @@ fn the_committed_star_class_is_a_registered_concept() {
             "star-class committed {id:?}, which is not a registered concept"
         );
         assert!(
-            hornvale_astronomy::class_display(id).is_some(),
+            is_a_spectral_class(id),
             "star-class committed {id:?}, which is not a spectral class"
         );
         checked += 1;
@@ -50,7 +60,7 @@ fn the_committed_neighbor_class_is_a_registered_concept() {
             "neighbor-class committed {id:?}, which is not a registered concept"
         );
         assert!(
-            hornvale_astronomy::class_display(id).is_some(),
+            is_a_spectral_class(id),
             "neighbor-class committed {id:?}, which is not a spectral class"
         );
         checked += 1;
@@ -86,11 +96,17 @@ fn the_rendered_display_parses_back_to_the_committed_id() {
     // fragment (e.g. "orbiting a orange giant" still parses to
     // `orange-giant`). The article itself must be asserted against the
     // rendered TEXT, independently of the parse step.
+    let mut registry = hornvale_kernel::ConceptRegistry::default();
+    hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
+    let vocab = hornvale_worldgen::common_vocabulary(&registry);
     for (concept, display) in hornvale_astronomy::SPECTRAL_CLASSES {
         let value = Value::Text(concept.to_string());
-        let fragment =
-            hornvale_book::fragment_for_public(hornvale_astronomy::facts::STAR_CLASS, &value)
-                .unwrap_or_else(|| panic!("{concept:?} must render a fragment"));
+        let fragment = hornvale_book::fragment_for_public(
+            hornvale_astronomy::facts::STAR_CLASS,
+            &value,
+            &vocab,
+        )
+        .unwrap_or_else(|| panic!("{concept:?} must render a fragment"));
         let expected_fragment = format!("orbiting {} {display}", expected_article(display));
         assert_eq!(
             fragment, expected_fragment,

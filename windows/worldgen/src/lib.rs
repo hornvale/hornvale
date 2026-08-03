@@ -23,6 +23,7 @@ use hornvale_kernel::{
     RegistryError, Seed, Temperature, Value, Visibility, Void, World, WorldContext, WorldTime,
     observe,
 };
+use hornvale_language::CommonVocabulary;
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{
     BandKind, Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, TerrainPins,
@@ -313,6 +314,40 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
         domain.register_concepts(registry)?;
     }
     Ok(())
+}
+
+/// Every domain's Common-word exceptions, as the `DOMAINS` roster's smaller
+/// twin: the ids whose mechanical derivation reads wrong, each domain
+/// publishing its own (`domains/language` may not reach sideways to learn
+/// what another domain's ids are). Astronomy is the only entry today —
+/// `sun-like-star` would otherwise derive to "sun like star". A new domain
+/// with an exception adds one line here and nothing anywhere else.
+const COMMON_WORD_SOURCES: &[CommonWordSource] = &[hornvale_astronomy::common_words];
+
+/// One domain's `common_words()` accessor: id→word pairs it authored itself.
+type CommonWordSource = fn() -> &'static [(&'static str, &'static str)];
+
+/// Assemble Common's vocabulary for a world: validate `registry` against the
+/// naming convention, then layer every domain's declared exceptions on top.
+/// The root fills, the window receives — the same shape as
+/// [`AlmanacContext::place_labels`]. **Build it once per world**, not per
+/// clause.
+///
+/// [`CommonVocabulary::build`] is a *lint* on the naming convention, not the
+/// source of the vocabulary's content (it returns an empty map on success;
+/// every entry comes from `declare`). Its failure is therefore recoverable
+/// here — `word_for` is total either way — so a world whose registry somehow
+/// carries a malformed id still renders rather than panicking on save data.
+/// The commit gate is where that lint bites: `cli/tests/common_is_total.rs`
+/// asserts the composed registry passes it.
+pub fn common_vocabulary(registry: &ConceptRegistry) -> CommonVocabulary {
+    let mut vocab = CommonVocabulary::build(registry).unwrap_or_default();
+    for source in COMMON_WORD_SOURCES {
+        for (concept, word) in source() {
+            vocab.declare(concept, word);
+        }
+    }
+    vocab
 }
 
 /// Geospheres by canonical level: seed-independent, computed once per

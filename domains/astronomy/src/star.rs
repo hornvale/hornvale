@@ -111,27 +111,17 @@ pub fn class_concept(display: &str) -> Option<&'static str> {
         .map(|(c, _)| *c)
 }
 
-/// The author's-frame display for a registered concept, or `None` if the
-/// concept is not a spectral class. The render direction.
-///
-/// Superseded by [`common_words`] (The Vernacular, Task 3): a caller
-/// rendering into Common should go through the assembled `CommonVocabulary`
-/// instead, so a spectral class's word passes through the same declared-word
-/// seam as every other concept. Kept here — not deleted — because
-/// `windows/explain` and `windows/book` still call it directly; a later task
-/// migrates those call sites and retires this function.
-/// type-audit: bare-ok(identifier-text: concept), bare-ok(identifier-text: return)
-pub fn class_display(concept: &str) -> Option<&'static str> {
-    SPECTRAL_CLASSES
-        .iter()
-        .find(|(c, _)| *c == concept)
-        .map(|(_, d)| *d)
-}
-
 /// This domain's Common words: the concepts whose ids are not words, paired
 /// with the author's-frame display. The composition root declares these into
 /// the `CommonVocabulary`; a domain may not reach into `domains/language`'s
 /// map itself.
+///
+/// This is the **only** render direction now. The Vernacular's Task 4 retired
+/// `class_display`, the per-concept lookup `windows/book` and
+/// `windows/explain` used to call: a caller rendering a spectral class into
+/// Common goes through the assembled `CommonVocabulary`, so its word passes
+/// the same declared-word seam as every other concept's. [`class_concept`]
+/// remains for the parse direction, which no vocabulary provides.
 /// type-audit: bare-ok(identifier-text)
 pub fn common_words() -> &'static [(&'static str, &'static str)] {
     &SPECTRAL_CLASSES
@@ -239,8 +229,20 @@ pub fn insolation_rel_at(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    /// The render direction, as a test-local lookup. Production code goes
+    /// through the assembled `CommonVocabulary` (Task 4 retired the public
+    /// `class_display`), but these tests are about the TABLE's own
+    /// bijectivity, so they read the table directly rather than through a
+    /// vocabulary this crate may not depend on.
+    pub(crate) fn display_of(concept: &str) -> Option<&'static str> {
+        SPECTRAL_CLASSES
+            .iter()
+            .find(|(c, _)| *c == concept)
+            .map(|(_, d)| *d)
+    }
 
     #[test]
     fn star_is_deterministic_and_in_range() {
@@ -526,13 +528,13 @@ mod tests {
                 "{display:?} must parse back to {concept:?}"
             );
             assert_eq!(
-                class_display(concept),
+                display_of(concept),
                 Some(display),
                 "{concept:?} must render as {display:?}"
             );
         }
         assert_eq!(class_concept("a star"), None);
-        assert_eq!(class_display("not-a-class"), None);
+        assert_eq!(display_of("not-a-class"), None);
     }
 
     /// Every string `class_name_of_mass` can mint is registered in the table
@@ -562,7 +564,7 @@ mod tests {
             let concept = class_concept_of_mass(mass);
             let display = class_name_of_mass(mass);
             assert_eq!(
-                class_display(concept),
+                display_of(concept),
                 Some(display),
                 "mass {mass} derives concept {concept:?} and display {display:?}, which disagree"
             );

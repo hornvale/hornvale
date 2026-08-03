@@ -279,7 +279,7 @@ mod tests {
             NeighborClass::BlueGiant,
         ] {
             assert_eq!(
-                crate::star::class_display(class_concept(class)),
+                crate::star::tests::display_of(class_concept(class)),
                 Some(class_name(class)),
                 "{} derives a concept whose display disagrees with class_name",
                 class_name(class)

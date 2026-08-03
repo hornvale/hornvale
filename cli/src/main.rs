@@ -418,7 +418,8 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
         ));
     }
     let world = load_world(args)?;
-    let out = hornvale_explain::explain_sky(&world)
+    let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
+    let out = hornvale_explain::explain_sky(&world, &vocab)
         .ok_or("this world has no generated sky to explain")?;
     print!("{out}");
     Ok(())

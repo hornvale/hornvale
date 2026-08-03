@@ -13,8 +13,9 @@ use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
 /// The host star's spectral class, committed as its registered concept id
 /// (e.g. `"yellow-dwarf"`), never as Morgan-Keenan prose — no creature in
 /// this world could have invented that taxonomy. `windows/book` renders the
-/// id as the author's-frame display (`hornvale_astronomy::class_display`)
-/// and parses it back (functional, Text).
+/// id as the author's-frame display through the assembled `CommonVocabulary`
+/// (fed by [`crate::star::common_words`]) and parses it back via
+/// [`crate::star::class_concept`] (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const STAR_CLASS: &str = "star-class";
 /// The anchor world is tidally locked: no local solar day exists

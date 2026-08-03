@@ -13,6 +13,7 @@
 
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, MOON_PERIOD_RATIO, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
+use hornvale_language::CommonVocabulary;
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
@@ -184,16 +185,6 @@ fn indefinite_article(word: &str) -> &'static str {
     }
 }
 
-/// An `instance-of` collective's species complement, pluralized: a naive
-/// regular English plural (append `"s"`) — every peopled kind in today's
-/// roster (goblin, hobgoblin, kobold, bugbear) pluralizes regularly, so no
-/// irregular table exists yet. `kind` is the species `KindId` label
-/// committed as the `instance-of` fact's object (e.g. `"goblin"`).
-/// type-audit: bare-ok(identifier-text: kind)
-fn species_label(kind: &str) -> String {
-    format!("{kind}s")
-}
-
 /// Join a realized clause with its trailing independent clause(s) — the
 /// aggregation seam's shared assembly tail, used by both [`render_volume`]
 /// (forward) and [`rerender`] (the corpus law's re-realization check).
@@ -222,8 +213,9 @@ const CONSTRUCTION_ORDER: &[&str] = &[MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
 
 /// The construction table: maps a (predicate, object) pair to the fragment
 /// it contributes, or `None` if this predicate has no construction yet
-/// (leaving it on [`uncovered_predicates`]'s list).
-fn fragment_for(predicate: &str, object: &Value) -> Option<Fragment> {
+/// (leaving it on [`uncovered_predicates`]'s list). `vocab` resolves any
+/// concept id the fragment names.
+fn fragment_for(predicate: &str, object: &Value, vocab: &CommonVocabulary) -> Option<Fragment> {
     match (predicate, object) {
         (MOON_COUNT, Value::Number(n)) => {
             let count = *n as u64;
@@ -236,12 +228,14 @@ fn fragment_for(predicate: &str, object: &Value) -> Option<Fragment> {
         (STAR_CLASS, Value::Text(concept)) => {
             // The ledger holds a concept id; the author's ground-truth register
             // renders it as Morgan-Keenan taxonomy, which is the author's frame
-            // and not anything a creature says. An unknown id renders nothing
-            // rather than leaking a raw registry key into prose.
-            let display = hornvale_astronomy::class_display(concept)?;
+            // and not anything a creature says. Resolution goes through the
+            // vocabulary (Task 4 retired `class_display`) and is total, so an
+            // id with no declared word still renders as a word rather than
+            // leaking a raw registry key into prose.
+            let display = vocab.word_for(concept);
             Some(Fragment::Modifier(format!(
                 "orbiting {} {display}",
-                indefinite_article(display)
+                indefinite_article(&display)
             )))
         }
         (DAY_LENGTH_STD, Value::Number(days)) => Some(Fragment::Trailing(format!(
@@ -312,6 +306,9 @@ pub fn render_volume_from(
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
 ) -> BookVolume {
+    // The one vocabulary this volume renders through — assembled once per
+    // world at the composition root, never per clause.
+    let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
@@ -334,7 +331,7 @@ pub fn render_volume_from(
             let Some(object) = world.ledger.value_of(subject_entity, predicate) else {
                 continue;
             };
-            match fragment_for(predicate, object) {
+            match fragment_for(predicate, object, &vocab) {
                 Some(Fragment::Modifier(m)) => modifiers.push(m),
                 Some(Fragment::Trailing(t)) => trailing.push(t),
                 None => {}
@@ -342,14 +339,17 @@ pub fn render_volume_from(
         }
 
         let subject = subject_for(subject_entity, name, &mut named);
-        let line = realize_common(&ClauseSpec {
-            frame: Frame::Classify,
-            subject,
-            complement: kind.clone(),
-            number: Number::Sg,
-            definiteness: Definiteness::Indef,
-            modifiers,
-        });
+        let line = realize_common(
+            &ClauseSpec {
+                frame: Frame::Classify,
+                subject,
+                complement_concept: kind.clone(),
+                number: Number::Sg,
+                definiteness: Definiteness::Indef,
+                modifiers,
+            },
+            &vocab,
+        );
         let line = assemble_trailing(line, &trailing);
         lines.push(line);
     }
@@ -379,14 +379,19 @@ pub fn render_volume_from(
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
         let subject = subject_for(subject_entity, format!("The {name}"), &mut named);
-        let line = realize_common(&ClauseSpec {
-            frame: Frame::Classify,
-            subject,
-            complement: species_label(kind),
-            number: Number::Pl,
-            definiteness: Definiteness::Indef,
-            modifiers: Vec::new(),
-        });
+        // The kind is the complement CONCEPT; `Number::Pl` is what pluralizes
+        // it (the realizer's job since Task 4, not the caller's).
+        let line = realize_common(
+            &ClauseSpec {
+                frame: Frame::Classify,
+                subject,
+                complement_concept: kind.clone(),
+                number: Number::Pl,
+                definiteness: Definiteness::Indef,
+                modifiers: Vec::new(),
+            },
+            &vocab,
+        );
         people_by_kind.insert(kind.clone(), (name, line.clone()));
         lines.push(line);
     }
@@ -499,7 +504,7 @@ pub fn render_volume_from(
         lines,
         tongue_lines,
         tongue_gaps,
-        chorus: chorus_sections_from(world, terrain, climate),
+        chorus: chorus_sections_from(world, terrain, climate, &vocab),
         reckoning: reckoning_epochs_from(world, terrain, climate),
     }
 }
@@ -542,6 +547,7 @@ fn chorus_sections_from(
     world: &World,
     terrain: &hornvale_terrain::GeneratedTerrain,
     climate: &hornvale_climate::GeneratedClimate,
+    vocab: &CommonVocabulary,
 ) -> Vec<ChorusSection> {
     let autonyms = autonym_by_kind(world);
     let planet_name = planet_name_of(world);
@@ -549,7 +555,7 @@ fn chorus_sections_from(
         .into_iter()
         .filter_map(|voice| {
             let autonym = autonyms.get(&voice.kind)?;
-            let mut section = voice_section(&voice.kind, autonym, &voice.account, world);
+            let mut section = voice_section(&voice.kind, autonym, &voice.account, world, vocab);
             section.doctrine =
                 hornvale_worldgen::doctrine_from(world, &voice.kind, terrain, climate).map(|dv| {
                     let kind = voice.kind.as_str();
@@ -600,6 +606,7 @@ fn chorus_sections_from(
                         &voice.params,
                         &voice.account,
                         tongue_taught_line,
+                        vocab,
                     )
                 });
             Some(section)
@@ -1029,8 +1036,9 @@ fn render_world_clause(
     group: &[&AccountEntry],
     is_a_entry: &AccountEntry,
     seen: &mut BTreeSet<String>,
+    vocab: &CommonVocabulary,
 ) -> Option<String> {
-    let (complement, definiteness) = match effective(&is_a_entry.disposition) {
+    let (complement_concept, definiteness) = match effective(&is_a_entry.disposition) {
         Disposition::Kept => {
             let Value::Text(kind) = &is_a_entry.fact.object else {
                 return None;
@@ -1051,7 +1059,7 @@ fn render_world_clause(
         if !matches!(effective(&entry.disposition), Disposition::Kept) {
             continue;
         }
-        match fragment_for(&entry.fact.predicate, &entry.fact.object) {
+        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
             Some(Fragment::Modifier(m)) => modifiers.push(m),
             Some(Fragment::Trailing(t)) => trailing.push(t),
             None => {}
@@ -1060,14 +1068,17 @@ fn render_world_clause(
 
     let name = is_a_entry.fact.subject.clone();
     let subject = subject_for_text(&name, name.clone(), seen);
-    let line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement,
-        number: Number::Sg,
-        definiteness,
-        modifiers,
-    });
+    let line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement_concept,
+            number: Number::Sg,
+            definiteness,
+            modifiers,
+        },
+        vocab,
+    );
     Some(assemble_trailing(line, &trailing))
 }
 
@@ -1089,7 +1100,11 @@ fn render_world_clause(
 /// carrier clause is this, the world subject's own classification. A
 /// future culture that could lose an `instance-of` fact would need a
 /// people-margin arm added here.
-fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Option<String> {
+fn render_world_margin(
+    group: &[&AccountEntry],
+    is_a_entry: &AccountEntry,
+    vocab: &CommonVocabulary,
+) -> Option<String> {
     let world_lost = matches!(
         effective(&is_a_entry.disposition),
         Disposition::Substituted { .. } | Disposition::Lost(_)
@@ -1111,20 +1126,23 @@ fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Op
     let mut modifiers = Vec::new();
     let mut trailing = Vec::new();
     for entry in lost_fragments {
-        match fragment_for(&entry.fact.predicate, &entry.fact.object) {
+        match fragment_for(&entry.fact.predicate, &entry.fact.object, vocab) {
             Some(Fragment::Modifier(m)) => modifiers.push(m),
             Some(Fragment::Trailing(t)) => trailing.push(t),
             None => {}
         }
     }
-    let line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject: Subject::Name(is_a_entry.fact.subject.clone()),
-        complement: truth_kind.clone(),
-        number: Number::Sg,
-        definiteness: Definiteness::Indef,
-        modifiers,
-    });
+    let line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject: Subject::Name(is_a_entry.fact.subject.clone()),
+            complement_concept: truth_kind.clone(),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            modifiers,
+        },
+        vocab,
+    );
     Some(format!("In truth, {}", assemble_trailing(line, &trailing)))
 }
 
@@ -1263,13 +1281,17 @@ fn render_explanations(group: &[&AccountEntry]) -> Vec<String> {
 }
 
 /// A people subject's emic clause: the god's-eye collective construction
-/// (`species_label`, plural, indefinite), plus the stance appositive at
+/// (the kind concept, plural, indefinite), plus the stance appositive at
 /// the book layer (`" — {stance}."`, replacing the terminal `.`) — absent
 /// for `Neutral` (the identity case, byte-matching the god's-eye line).
 /// Returns `None` if this subject's `instance-of` entry is not `Kept` (see
 /// [`render_world_margin`]'s carrier-clause note: never exercised at the
 /// floor).
-fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) -> Option<String> {
+fn render_people_clause(
+    io_entry: &AccountEntry,
+    seen: &mut BTreeSet<String>,
+    vocab: &CommonVocabulary,
+) -> Option<String> {
     if !matches!(effective(&io_entry.disposition), Disposition::Kept) {
         return None;
     }
@@ -1279,14 +1301,17 @@ fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) ->
     let raw_name = io_entry.fact.subject.clone();
     let display = format!("The {raw_name}");
     let subject = subject_for_text(&raw_name, display, seen);
-    let mut line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement: species_label(kind_text),
-        number: Number::Pl,
-        definiteness: Definiteness::Indef,
-        modifiers: Vec::new(),
-    });
+    let mut line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement_concept: kind_text.clone(),
+            number: Number::Pl,
+            definiteness: Definiteness::Indef,
+            modifiers: Vec::new(),
+        },
+        vocab,
+    );
     if !matches!(io_entry.stance, Stance::Neutral) {
         line.pop();
         line.push_str(&format!(" — {}.", stance_text(io_entry.stance)));
@@ -1305,7 +1330,13 @@ fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) ->
 /// module doc's fresh-scope rule); the margin register always names its
 /// (single, world) subject fresh, independent of the emic paragraph's
 /// scope — it is a separate typographic register, not a continuation.
-fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -> ChorusSection {
+fn voice_section(
+    kind: &str,
+    autonym: &str,
+    account: &Account,
+    _world: &World,
+    vocab: &CommonVocabulary,
+) -> ChorusSection {
     let mut order: Vec<String> = Vec::new();
     let mut groups: BTreeMap<String, Vec<&AccountEntry>> = BTreeMap::new();
     for entry in &account.entries {
@@ -1325,20 +1356,20 @@ fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -
             .iter()
             .find(|e| e.fact.predicate == hornvale_kernel::world::IS_A)
         {
-            if let Some(line) = render_world_clause(group, is_a_entry, &mut seen) {
+            if let Some(line) = render_world_clause(group, is_a_entry, &mut seen, vocab) {
                 emic.push(line);
             }
             // Task 4 (C5): the because-clause explanations for this
             // subject's day/moons entries, as additional emic lines —
             // appended right after the world clause, before the margin.
             emic.extend(render_explanations(group));
-            if let Some(line) = render_world_margin(group, is_a_entry) {
+            if let Some(line) = render_world_margin(group, is_a_entry, vocab) {
                 margin.push(line);
             }
         } else if let Some(io_entry) = group
             .iter()
             .find(|e| e.fact.predicate == hornvale_kernel::INSTANCE_OF)
-            && let Some(line) = render_people_clause(io_entry, &mut seen)
+            && let Some(line) = render_people_clause(io_entry, &mut seen, vocab)
         {
             emic.push(line);
         }
@@ -1502,6 +1533,7 @@ fn doctrine_section(
     folk_params: &AccountParams,
     folk_account: &Account,
     tongue_taught_line: String,
+    vocab: &CommonVocabulary,
 ) -> DoctrineSection {
     let mut folk_by_key: BTreeMap<(String, String), &AccountEntry> = BTreeMap::new();
     for entry in &folk_account.entries {
@@ -1576,7 +1608,7 @@ fn doctrine_section(
                 .filter(|e| !revealed.contains(&e.fact.predicate))
                 .copied()
                 .collect();
-            if let Some(line) = render_world_clause(&filtered, is_a_entry, &mut seen) {
+            if let Some(line) = render_world_clause(&filtered, is_a_entry, &mut seen, vocab) {
                 emic.push(line);
             }
             for entry in group.iter() {
@@ -1606,13 +1638,13 @@ fn doctrine_section(
                 }
             }
             emic.extend(render_explanations(group));
-            if let Some(line) = render_world_margin(group, is_a_entry) {
+            if let Some(line) = render_world_margin(group, is_a_entry, vocab) {
                 margin.push(line);
             }
         } else if let Some(io_entry) = group
             .iter()
             .find(|e| e.fact.predicate == hornvale_kernel::INSTANCE_OF)
-            && let Some(line) = render_people_clause(io_entry, &mut seen)
+            && let Some(line) = render_people_clause(io_entry, &mut seen, vocab)
         {
             emic.push(line);
         }
@@ -2042,8 +2074,12 @@ pub fn fact_for_public(fragment: &str) -> Option<(String, Value)> {
 /// caller has no need of. Do not make `fragment_for` itself public — its
 /// privacy is what keeps the construction table a Book concern.
 /// type-audit: bare-ok(identifier-text: predicate), bare-ok(prose: return)
-pub fn fragment_for_public(predicate: &str, object: &Value) -> Option<String> {
-    match fragment_for(predicate, object)? {
+pub fn fragment_for_public(
+    predicate: &str,
+    object: &Value,
+    vocab: &CommonVocabulary,
+) -> Option<String> {
+    match fragment_for(predicate, object, vocab)? {
         Fragment::Modifier(text) | Fragment::Trailing(text) => Some(text),
     }
 }
@@ -2073,11 +2109,11 @@ fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<St
 }
 
 /// The closed complement set a `parse_line` call recognizes for `world`:
-/// every committed `is-a` object label, plus `species_label(kind)` for
-/// every committed `instance-of` object (the only source of a plural
-/// complement in this campaign's grammar — see [`parse_line`]'s doc for
-/// why that lets `Number::Pl` alone signal a collective on the way back),
-/// plus (C4 T4) every chorus account's `Substituted` target (e.g.
+/// every committed `is-a` object label, plus every committed `instance-of`
+/// object (the only source of a plural complement in this campaign's
+/// grammar — see [`parse_line`]'s doc for why that lets `Number::Pl` alone
+/// signal a collective on the way back), plus (C4 T4) every chorus account's
+/// `Substituted` target (e.g.
 /// `"earth"`) — a book-layer carving that never appears as a committed
 /// `is-a` object, so a chorus emic line naming it would otherwise parse as
 /// `UnknownComplement`. The closed set stays derived from the world:
@@ -2142,7 +2178,9 @@ fn parse_context_with_voices(
     }
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
         if let Value::Text(kind) = &fact.object {
-            complements.insert(species_label(kind));
+            // The CONCEPT, not the plural word — `parse_common` pluralizes it
+            // itself when the clause it is matching is plural.
+            complements.insert(kind.clone());
         }
     }
     for voice in voices {
@@ -2152,7 +2190,10 @@ fn parse_context_with_voices(
             }
         }
     }
-    ParseContext { complements }
+    ParseContext {
+        complements,
+        vocabulary: hornvale_worldgen::common_vocabulary(&world.registry),
+    }
 }
 
 /// Invert one rendered [`render_volume`] line: split on the trailing-clause
@@ -2167,13 +2208,10 @@ fn parse_context_with_voices(
 /// the fragment, so it is stripped before fragment inversion. Middle
 /// segments (more than one trailing clause) carry no punctuation at all.
 ///
-/// `ParsedLine.kind` recovers the singular: this campaign's grammar (see
-/// [`render_volume`]) renders `Number::Pl` for exactly one construction —
-/// the `instance-of` collective, whose complement `species_label` built by
-/// appending `'s'` — so a plural clause's complement minus its trailing
-/// `'s'` is always the singular kind. An `is-a` line is always `Sg`, so its
-/// complement is used as-is. A future `Pl` `is-a` construction would need
-/// to revisit this closed-world assumption.
+/// `ParsedLine.kind` is the recovered complement CONCEPT — always singular,
+/// for a `Pl` clause as much as an `Sg` one, because `parse_common` matches
+/// against each candidate concept's realized surface rather than stripping a
+/// letter off the text. A future `Pl` `is-a` construction needs nothing here.
 /// type-audit: bare-ok(prose: line)
 pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineError> {
     let segments: Vec<&str> = line.split("; ").collect();
@@ -2209,15 +2247,11 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
         Subject::Name(name) => name.clone(),
         Subject::Pronoun(p) => (*p).to_string(),
     };
-    let kind = if clause.number == Number::Pl {
-        clause
-            .complement
-            .strip_suffix('s')
-            .map(str::to_string)
-            .unwrap_or_else(|| clause.complement.clone())
-    } else {
-        clause.complement.clone()
-    };
+    // The clause layer already recovered the singular concept id: it matched
+    // the text against each candidate id's realized surface, so the plural
+    // `'s'` was undone by the same rule that added it. No suffix-stripping
+    // closed-world assumption survives here.
+    let kind = clause.complement_concept.clone();
 
     Ok(ParsedLine {
         subject,
@@ -2230,17 +2264,18 @@ pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineErro
 
 /// Re-realize a [`ParsedLine`] back to its exact surface text: the corpus
 /// law's other half. Regroups `parsed.facts` into modifiers/trailing via
-/// [`fragment_for`] (the same construction table, forward again),
-/// re-pluralizes `kind` through `species_label` for a `Pl` clause, and
-/// rebuilds the clause plus any trailing clause(s) through the same
+/// [`fragment_for`] (the same construction table, forward again) and rebuilds
+/// the clause plus any trailing clause(s) through the same
 /// [`assemble_trailing`] helper `render_volume` uses — so the two never
-/// drift apart into separate join logic.
+/// drift apart into separate join logic. Re-pluralization is no longer done
+/// here: `parsed.kind` is the complement CONCEPT and `parsed.number` is what
+/// pluralizes it, inside the realizer.
 /// type-audit: bare-ok(prose: return)
-pub fn rerender(parsed: &ParsedLine) -> String {
+pub fn rerender(parsed: &ParsedLine, vocab: &CommonVocabulary) -> String {
     let mut modifiers = Vec::new();
     let mut trailing = Vec::new();
     for (predicate, value) in &parsed.facts {
-        match fragment_for(predicate, value) {
+        match fragment_for(predicate, value, vocab) {
             Some(Fragment::Modifier(m)) => modifiers.push(m),
             Some(Fragment::Trailing(t)) => trailing.push(t),
             // fact_for only ever recovers (predicate, value) pairs that
@@ -2249,23 +2284,22 @@ pub fn rerender(parsed: &ParsedLine) -> String {
             None => {}
         }
     }
-    let complement = match parsed.number {
-        Number::Pl => species_label(&parsed.kind),
-        Number::Sg => parsed.kind.clone(),
-    };
     let subject = match parsed.subject.as_str() {
         "it" => Subject::Pronoun("it"),
         "its" => Subject::Pronoun("its"),
         other => Subject::Name(other.to_string()),
     };
-    let line = realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject,
-        complement,
-        number: parsed.number,
-        definiteness: parsed.definiteness,
-        modifiers,
-    });
+    let line = realize_common(
+        &ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement_concept: parsed.kind.clone(),
+            number: parsed.number,
+            definiteness: parsed.definiteness,
+            modifiers,
+        },
+        vocab,
+    );
     assemble_trailing(line, &trailing)
 }
 
@@ -2771,10 +2805,10 @@ pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, L
 /// [`ChorusLine::Counter`], this SAME function recursively on the wrapped
 /// line, then [`counter_annotation_line`] re-wraps it.
 /// type-audit: bare-ok(prose: return)
-pub fn rerender_chorus_line(line: &ChorusLine) -> String {
+pub fn rerender_chorus_line(line: &ChorusLine, vocab: &CommonVocabulary) -> String {
     match line {
         ChorusLine::Clause(parsed, dress) => {
-            let mut line = rerender(parsed);
+            let mut line = rerender(parsed, vocab);
             if let Some(stance) = dress.stance {
                 line.pop();
                 line.push_str(&format!(" — {stance}."));
@@ -2786,7 +2820,7 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
         }
         ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
         ChorusLine::RevealedClaim { surface } => rerender_revealed_claim(*surface),
-        ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner)),
+        ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner, vocab)),
         ChorusLine::Reckoning(reckoning) => rerender_reckoning_line(reckoning),
     }
 }
@@ -2886,6 +2920,16 @@ mod tests {
     //! sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
+
+    /// The world's Common vocabulary, exactly as `render_volume` assembles
+    /// it. Built from the composed registry rather than any particular
+    /// world's — the two are the same map, and `register_all` on a bare
+    /// registry is sub-millisecond.
+    fn vocab() -> CommonVocabulary {
+        let mut registry = hornvale_kernel::ConceptRegistry::default();
+        hornvale_worldgen::register_all(&mut registry).expect("the roster registers");
+        hornvale_worldgen::common_vocabulary(&registry)
+    }
 
     fn constant(seed: u64) -> World {
         use hornvale_astronomy::SkyPins;
@@ -3002,7 +3046,7 @@ mod tests {
     #[test]
     fn star_class_modifier_chooses_an_before_a_vowel() {
         let value = Value::Text("orange-dwarf".to_string());
-        let modifier = match fragment_for(STAR_CLASS, &value) {
+        let modifier = match fragment_for(STAR_CLASS, &value, &vocab()) {
             Some(Fragment::Modifier(m)) => m,
             _ => panic!("expected a Modifier fragment"),
         };
@@ -3446,7 +3490,7 @@ mod tests {
             for line in &volume.lines {
                 let parsed = parse_line(line, &ctx)
                     .unwrap_or_else(|e| panic!("seed {seed} line failed: {line} ({e:?})"));
-                let again = rerender(&parsed);
+                let again = rerender(&parsed, &vocab());
                 assert_eq!(&again, line, "seed {seed}: re-realization drifted");
                 for (predicate, _) in &parsed.facts {
                     predicates_exercised.insert(predicate.clone());
@@ -3473,7 +3517,7 @@ mod tests {
     fn fact_for_inverts_fragment_for_over_the_closed_space() {
         for count in 0..=13u64 {
             let value = Value::Number(count as f64);
-            let text = match fragment_for(MOON_COUNT, &value) {
+            let text = match fragment_for(MOON_COUNT, &value, &vocab()) {
                 Some(Fragment::Modifier(m)) => m,
                 _ => panic!("expected a Modifier fragment for moon-count {count}"),
             };
@@ -3488,7 +3532,7 @@ mod tests {
             let world = generated(seed);
             for fact in world.ledger.find(STAR_CLASS) {
                 let value = fact.object.clone();
-                let text = match fragment_for(STAR_CLASS, &value) {
+                let text = match fragment_for(STAR_CLASS, &value, &vocab()) {
                     Some(Fragment::Modifier(m)) => m,
                     _ => panic!("expected a Modifier fragment for {value:?}"),
                 };
@@ -3503,7 +3547,7 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let text = match fragment_for(DAY_LENGTH_STD, &value) {
+                let text = match fragment_for(DAY_LENGTH_STD, &value, &vocab()) {
                     Some(Fragment::Trailing(t)) => t,
                     _ => panic!("expected a Trailing fragment for {days}"),
                 };
@@ -3533,7 +3577,7 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let fragment = match fragment_for(DAY_LENGTH_STD, &value) {
+                let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab()) {
                     Some(Fragment::Trailing(t)) => t,
                     _ => panic!("expected a Trailing fragment for {days}"),
                 };
@@ -3564,7 +3608,7 @@ mod tests {
                 continue;
             };
             let value = Value::Number(days);
-            let fragment = match fragment_for(DAY_LENGTH_STD, &value) {
+            let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab()) {
                 Some(Fragment::Trailing(t)) => t,
                 _ => panic!("expected a Trailing fragment for {days}"),
             };
@@ -3667,7 +3711,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Woove", &account, &world);
+        let section = voice_section("goblin", "Woove", &account, &world, &vocab());
         assert_eq!(
             section.emic, vol.lines,
             "identity filters == the god's-eye volume"
@@ -3936,7 +3980,7 @@ mod tests {
                     if matches!(chorus_line, ChorusLine::Explanation(_)) {
                         explanation_seen += 1;
                     }
-                    let again = rerender_chorus_line(&chorus_line);
+                    let again = rerender_chorus_line(&chorus_line, &vocab());
                     assert_eq!(
                         &again, line,
                         "seed {seed} {}: re-realization drifted",
@@ -4044,7 +4088,7 @@ mod tests {
             &ground,
             &hornvale_language::account::identity_params(),
         );
-        let section = voice_section("goblin", "Woove", &account, &world);
+        let section = voice_section("goblin", "Woove", &account, &world, &vocab());
         for line in section.emic.iter().chain(section.margin.iter()) {
             assert!(
                 !line.contains("because"),
@@ -4371,6 +4415,7 @@ mod tests {
             &params,
             &folk_account,
             "placeholder — not under test here".to_string(),
+            &vocab(),
         );
         assert_eq!(
             section.annotations,
@@ -4470,6 +4515,7 @@ mod tests {
             &params,
             &folk_account,
             "placeholder — not under test here".to_string(),
+            &vocab(),
         );
     }
 
@@ -4593,7 +4639,7 @@ mod tests {
                     if matches!(chorus_line, ChorusLine::RevealedClaim { .. }) {
                         revealed_claim_seen += 1;
                     }
-                    let again = rerender_chorus_line(&chorus_line);
+                    let again = rerender_chorus_line(&chorus_line, &vocab());
                     assert_eq!(
                         &again, line,
                         "seed {seed} {} (doctrine): re-realization drifted",
@@ -4623,7 +4669,7 @@ mod tests {
             }
             _ => panic!("expected a ChorusLine::Counter"),
         }
-        assert_eq!(rerender_chorus_line(&parsed), annotation);
+        assert_eq!(rerender_chorus_line(&parsed, &vocab()), annotation);
     }
 
     /// T3 review, mandated carry-over #2: pin doctrine-margin sparseness
@@ -4750,6 +4796,7 @@ mod tests {
             &folk_params,
             &folk_account,
             "placeholder — not under test here".to_string(),
+            &vocab(),
         );
     }
 
@@ -5493,7 +5540,7 @@ mod tests {
                         epoch.heading
                     );
                     reckoning_seen += 1;
-                    let again = rerender_chorus_line(&chorus_line);
+                    let again = rerender_chorus_line(&chorus_line, &vocab());
                     assert_eq!(
                         &again, line,
                         "seed {seed} {}: re-realization drifted",
@@ -5514,6 +5561,7 @@ mod tests {
         // here cannot hide behind vacuous coverage.
         let ctx = ParseContext {
             complements: BTreeSet::new(),
+            vocabulary: vocab(),
         };
         let synthetic = "In truth, the darkenings of the first days number three.";
         let chorus_line = parse_chorus_line(synthetic, &ctx)
@@ -5528,7 +5576,7 @@ mod tests {
                 count: 3,
             }
         );
-        assert_eq!(rerender_chorus_line(&chorus_line), synthetic);
+        assert_eq!(rerender_chorus_line(&chorus_line, &vocab()), synthetic);
 
         // Synthetic: The Corrigendum T4's doctrine line has a
         // `crisis_live: false` arm ("None among the ⟨autonym⟩ have shown
@@ -5550,7 +5598,10 @@ mod tests {
                 crisis_live: false,
             }
         );
-        assert_eq!(rerender_chorus_line(&chorus_line), synthetic_doctrine);
+        assert_eq!(
+            rerender_chorus_line(&chorus_line, &vocab()),
+            synthetic_doctrine
+        );
     }
 
     /// C8 T2: the honest omit-the-prediction arm (`Predictive` with

@@ -6,6 +6,7 @@
 
 use hornvale_astronomy::facts;
 use hornvale_kernel::{EntityId, Value, World};
+use hornvale_language::CommonVocabulary;
 
 /// Locate the world entity: the unique subject carrying a `star-class` fact.
 fn world_entity(world: &World) -> Option<EntityId> {
@@ -33,15 +34,22 @@ fn text(world: &World, subject: EntityId, predicate: &str) -> Option<String> {
 /// `None` if the world has no generated sky. Each node is tagged with its
 /// provenance in the derivation DAG (rolled / derived / pinned) and its value
 /// read from the ledger; the join of DAG and values is the explanation.
+///
+/// `vocab` is the world's assembled Common vocabulary
+/// (`hornvale_worldgen::common_vocabulary`) — the root fills it, this window
+/// receives it, and the star class's word comes through the same declared-word
+/// seam every other concept's does.
 /// type-audit: bare-ok(artifact: return)
-pub fn explain_sky(world: &World) -> Option<String> {
+pub fn explain_sky(world: &World, vocab: &CommonVocabulary) -> Option<String> {
     let e = world_entity(world)?;
     let class_concept = text(world, e, facts::STAR_CLASS)?;
     // The ledger holds the class's registered concept id; render it through
     // the author's-frame display used everywhere else this fact surfaces
-    // (`windows/book`). An unrecognized id omits the "is a ..." clause
-    // rather than leaking the raw registry key into narration.
-    let class = hornvale_astronomy::class_display(&class_concept);
+    // (`windows/book`). Resolution is total, so — unlike the retired
+    // `class_display` lookup this replaced — there is no unrecognized-id arm
+    // to fall back to: an id with no declared word still renders as a word,
+    // never as a raw registry key.
+    let class = vocab.word_for(&class_concept);
     let star_mass = num(world, e, facts::STAR_MASS_SOLAR)?;
     let luminosity = num(world, e, facts::STAR_LUMINOSITY_SOLAR)?;
     let zone_in = num(world, e, facts::HAB_ZONE_INNER_AU)?;
@@ -74,10 +82,11 @@ pub fn explain_sky(world: &World) -> Option<String> {
         "the cool edge"
     };
 
-    let star_clause = match class {
-        Some(display) => format!("Its star is a {display}"),
-        None => "Its star".to_string(),
-    };
+    // The article stays the literal `"a"` it has always been. It is wrong for
+    // the two vowel-initial displays ("a orange dwarf (K)"), but that predates
+    // this migration and fixing it is a prose change to a committed artifact,
+    // not part of moving the lookup behind the vocabulary.
+    let star_clause = format!("Its star is a {class}");
 
     let mut out = String::new();
     out.push_str(&format!(
@@ -135,10 +144,22 @@ mod tests {
         w
     }
 
+    /// The composition root's assembly, reproduced over the one domain these
+    /// astronomy-only fixtures register. `hornvale_worldgen::common_vocabulary`
+    /// is the real thing; this window does not depend on it (it presents a
+    /// single domain and stays lean), so its callers hand the vocabulary in.
+    fn vocab_for(w: &World) -> CommonVocabulary {
+        let mut vocab = CommonVocabulary::build(&w.registry).expect("the registry resolves");
+        for (concept, word) in hornvale_astronomy::common_words() {
+            vocab.declare(concept, word);
+        }
+        vocab
+    }
+
     #[test]
     fn explain_sky_narrates_the_insolation_chain_from_the_ledger() {
         let w = world_with_sky(42);
-        let text = explain_sky(&w).expect("a world with sky facts explains");
+        let text = explain_sky(&w, &vocab_for(&w)).expect("a world with sky facts explains");
         assert!(text.contains("sunlight") || text.contains("insolation"));
         assert!(text.contains("luminosity"));
         let e = w
@@ -161,7 +182,7 @@ mod tests {
     #[test]
     fn explain_sky_is_none_without_sky_facts() {
         let w = World::new(Seed(7)); // empty ledger
-        assert!(explain_sky(&w).is_none());
+        assert!(explain_sky(&w, &vocab_for(&w)).is_none());
     }
 
     #[test]
@@ -170,6 +191,9 @@ mod tests {
         let w = world_with_sky(1);
         let json = w.to_json();
         let reloaded = World::from_json(&json).unwrap();
-        assert_eq!(explain_sky(&w), explain_sky(&reloaded));
+        assert_eq!(
+            explain_sky(&w, &vocab_for(&w)),
+            explain_sky(&reloaded, &vocab_for(&reloaded))
+        );
     }
 }

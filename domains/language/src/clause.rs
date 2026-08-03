@@ -1,6 +1,17 @@
 //! The clause layer: a language-neutral ClauseSpec and the Common realizer.
 //! Generalizes the render_line seam from a bespoke tenet spec to any clause.
+//!
+//! Both realizers take a **concept id**. [`realize_common`] resolves it
+//! through a [`CommonVocabulary`]; `realize_tongue_deep` (see `grammar`)
+//! resolves it through a people's `Lexicon`. They differ exactly where they
+//! should: Common is total, so this one is infallible; a tongue is partial, so
+//! that one returns `Result<_, TongueGap>`. Before The Vernacular they
+//! differed in the wrong place — one took a concept and one took a word, so
+//! the author's register had no seam where "is this concept sayable?" could
+//! even be asked.
 #![allow(clippy::module_name_repetitions)]
+
+use crate::common_vocab::CommonVocabulary;
 
 /// The construction a clause realizes. C1 has one: classification (`isA`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,15 +49,16 @@ pub enum Subject {
 
 /// A language-neutral clause: predicate-argument structure plus features.
 /// The per-language realizer decides how (and whether) each feature surfaces.
-/// type-audit: bare-ok(identifier-text: complement), bare-ok(prose: modifiers)
+/// type-audit: bare-ok(identifier-text: complement_concept), bare-ok(prose: modifiers)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClauseSpec {
     /// The construction.
     pub frame: Frame,
     /// The subject: a resolved name, or a pronoun for re-mention.
     pub subject: Subject,
-    /// The complement concept's Common lexeme.
-    pub complement: String,
+    /// The complement **concept id**, resolved through the
+    /// [`CommonVocabulary`] at realization (never a word the caller chose).
+    pub complement_concept: String,
     /// Subject number.
     pub number: Number,
     /// Complement definiteness.
@@ -57,6 +69,21 @@ pub struct ClauseSpec {
     /// leading `with`/`orbiting` wording lives in the modifier string
     /// itself — this layer only joins.
     pub modifiers: Vec<String>,
+}
+
+/// The complement's surface form: the concept's Common word, pluralized for
+/// [`Number::Pl`]. The plural rule is deliberately the naive regular English
+/// one (append `"s"`) — every kind the corpus pluralizes today (goblin,
+/// hobgoblin, kobold, bugbear, gnoll) is regular, and an irregular table is a
+/// separate concern from where pluralization *lives*. This is the seam it
+/// lives at: `Number` already expressed the feature, so no caller hands the
+/// realizer a pre-pluralized string.
+fn surface_complement(vocab: &CommonVocabulary, concept: &str, number: Number) -> String {
+    let word = vocab.word_for(concept);
+    match number {
+        Number::Sg => word,
+        Number::Pl => format!("{word}s"),
+    }
 }
 
 fn indefinite_article(word: &str) -> &'static str {
@@ -116,13 +143,25 @@ pub fn common_constructions() -> &'static [Construction] {
     }]
 }
 
-/// Realize a ClauseSpec as a Common (≈ limited English) sentence.
+/// Realize a ClauseSpec as a Common (≈ limited English) sentence, resolving
+/// `spec.complement_concept` through `vocab`.
+///
+/// **Infallible, and deliberately so.** Common is the author's register, not
+/// a people's tongue: [`CommonVocabulary::word_for`] is total, so there is no
+/// `CommonGap` to return. A gap therefore always means something true about
+/// the world (this people has no word for the sea) rather than an authoring
+/// hole, because only the tongue path can gap at all.
+///
+/// The article is chosen from the **resolved word**, not the id — so `an`
+/// still fires for `elemental`, and now also for a declared multi-word
+/// display.
 /// type-audit: bare-ok(prose)
-pub fn realize_common(spec: &ClauseSpec) -> String {
+pub fn realize_common(spec: &ClauseSpec, vocab: &CommonVocabulary) -> String {
     let construction = common_constructions()
         .iter()
         .find(|c| c.frame == spec.frame)
         .expect("every Frame has a construction");
+    let complement = surface_complement(vocab, &spec.complement_concept, spec.number);
     let mut out = String::new();
     for part in construction.parts {
         match part {
@@ -137,12 +176,12 @@ pub fn realize_common(spec: &ClauseSpec) -> String {
             Part::Determiner => match (spec.definiteness, spec.number) {
                 (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
-                    out.push_str(indefinite_article(&spec.complement));
+                    out.push_str(indefinite_article(&complement));
                     out.push(' ');
                 }
                 (Definiteness::Indef, Number::Pl) => {} // bare generic
             },
-            Part::Complement => out.push_str(&spec.complement),
+            Part::Complement => out.push_str(&complement),
             Part::ModifierTail => {
                 for (i, modifier) in spec.modifiers.iter().enumerate() {
                     out.push_str(if i == 0 { " " } else { ", " });
@@ -182,16 +221,21 @@ pub fn quantity(x: f64) -> String {
     format!("about {truncated:.1}")
 }
 
-/// The closed complement lexeme set a parse call recognizes, e.g. every
-/// concept name registered for the calling culture/world. Longest-match
-/// wins when one complement is a prefix of another (`"dwarf"` vs.
-/// `"yellow-white dwarf"`).
+/// The closed complement set a parse call recognizes — **concept ids**, plus
+/// the vocabulary that says how each one surfaces. Parsing is the inverse of
+/// [`realize_common`], so it recovers the id the realizer started from, not
+/// the word it ended at; both halves therefore need the same vocabulary, and
+/// carrying it here is what keeps every caller's signature a single context
+/// argument. Longest-match wins on the SURFACE form when one complement's
+/// surface is a prefix of another's (`"dwarf"` vs. `"yellow-white dwarf"`).
 /// type-audit: bare-ok(identifier-text: complements)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseContext {
-    /// The recognized complement lexemes, e.g. `"planet"`,
-    /// `"yellow-white dwarf"`.
+    /// The recognized complement concept ids, e.g. `"planet"`,
+    /// `"yellow-white-dwarf"`.
     pub complements: std::collections::BTreeSet<String>,
+    /// How each id surfaces — the same vocabulary [`realize_common`] used.
+    pub vocabulary: CommonVocabulary,
 }
 
 /// Why `parse_common` refused to invert a sentence — each variant is a
@@ -206,7 +250,7 @@ pub enum ParseError {
     /// exists.
     NoCopula,
     /// The text after the determiner doesn't match (a prefix of) any
-    /// complement in the caller's `ParseContext`.
+    /// complement surface in the caller's `ParseContext`.
     UnknownComplement {
         /// The unrecognized text following the determiner.
         after: String,
@@ -235,10 +279,16 @@ impl std::error::Error for ParseError {}
 /// entry backward — the boundaries come from the construction's shape, and
 /// the subject/copula split happens at the EARLIEST `" is "`/`" are "`
 /// occurrence (so a subject itself never contains the copula word).
-/// Complement lexemes in `ctx` must not begin with a determiner word
+/// Complement surfaces in `ctx` must not begin with a determiner word
 /// (`"a "`/`"an "`/`"the "`) — the bare-plural path would misparse them;
 /// today's vocabulary (single words and hyphenated compounds) satisfies
 /// this.
+///
+/// Returns a spec whose `complement_concept` is the **concept id**, recovered
+/// by matching the text against each candidate id's realized surface (its
+/// Common word, pluralized for a plural clause) — the exact inverse of
+/// [`realize_common`], which is why `parse_common(realize_common(s)) == s`
+/// still holds now that the realizer resolves rather than echoes.
 /// type-audit: bare-ok(prose)
 pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseError> {
     // Terminal literal first.
@@ -267,18 +317,26 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
     } else {
         (Definiteness::Indef, rest) // bare plural generic
     };
-    // Complement: longest match from the closed set.
-    let complement = ctx
+    // Complement: longest SURFACE match from the closed set of ids. Ties go
+    // to the last id in `complements`' (BTreeSet) order — deterministic, and
+    // unreachable today since no two ids share a surface.
+    let (complement_concept, surface) = ctx
         .complements
         .iter()
-        .filter(|c| {
-            after_det == c.as_str()
+        .map(|concept| {
+            (
+                concept,
+                surface_complement(&ctx.vocabulary, concept, number),
+            )
+        })
+        .filter(|(_, s)| {
+            after_det == s.as_str()
                 || after_det
-                    .strip_prefix(c.as_str())
+                    .strip_prefix(s.as_str())
                     .is_some_and(|r| r.starts_with(' '))
         })
-        .max_by_key(|c| c.len())
-        .cloned()
+        .max_by_key(|(_, s)| s.len())
+        .map(|(concept, s)| (concept.clone(), s))
         .ok_or_else(|| ParseError::UnknownComplement {
             after: after_det.to_string(),
         })?;
@@ -286,7 +344,7 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
     // above only admits candidates whose remainder is empty or starts
     // with ' ', so by construction `tail` is one of exactly those two
     // shapes — no third case exists to report.
-    let tail = &after_det[complement.len()..];
+    let tail = &after_det[surface.len()..];
     let modifiers: Vec<String> = match tail.strip_prefix(' ') {
         Some(t) => t.split(", ").map(str::to_string).collect(),
         None => Vec::new(),
@@ -294,7 +352,7 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
     Ok(ClauseSpec {
         frame: Frame::Classify,
         subject,
-        complement,
+        complement_concept,
         number,
         definiteness,
         modifiers,
@@ -305,41 +363,96 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
 mod tests {
     use super::*;
 
+    /// Common resolves its complement through the vocabulary, exactly as the
+    /// tongue path resolves through a lexicon. Symmetry is the point: before
+    /// this, the caller chose the word and no layer could ask whether the
+    /// concept was sayable at all.
+    #[test]
+    fn common_resolves_its_complement_through_the_vocabulary() {
+        let mut vocab = CommonVocabulary::default();
+        vocab.declare("yellow-white-dwarf", "yellow-white dwarf (F)");
+        let spec = ClauseSpec {
+            frame: Frame::Classify,
+            subject: Subject::Name("Elthandil".to_string()),
+            complement_concept: "yellow-white-dwarf".to_string(),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            modifiers: vec![],
+        };
+        assert_eq!(
+            realize_common(&spec, &vocab),
+            "Elthandil is a yellow-white dwarf (F)."
+        );
+    }
+
+    /// A hyphenated id never reaches prose wearing its hyphen. This is the
+    /// test that would have caught `*celestial-body*` shipping to the gallery.
+    #[test]
+    fn a_key_never_reaches_prose_as_a_key() {
+        let vocab = CommonVocabulary::default();
+        let spec = ClauseSpec {
+            frame: Frame::Classify,
+            subject: Subject::Name("X".to_string()),
+            complement_concept: "celestial-body".to_string(),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            modifiers: vec![],
+        };
+        let line = realize_common(&spec, &vocab);
+        assert_eq!(line, "X is a celestial body.");
+        assert!(
+            !line.contains('-'),
+            "a key wore its hyphen into prose: {line}"
+        );
+    }
+
     #[test]
     fn classify_singular_indefinite() {
         let s = ClauseSpec {
             frame: Frame::Classify,
             subject: Subject::Name("Elthandil".into()),
-            complement: "planet".into(),
+            complement_concept: "planet".into(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             modifiers: vec![],
         };
-        assert_eq!(realize_common(&s), "Elthandil is a planet.");
+        assert_eq!(
+            realize_common(&s, &CommonVocabulary::default()),
+            "Elthandil is a planet."
+        );
     }
     #[test]
     fn a_becomes_an_before_vowel() {
         let s = ClauseSpec {
             frame: Frame::Classify,
             subject: Subject::Name("Aoth".into()),
-            complement: "elemental".into(),
+            complement_concept: "elemental".into(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             modifiers: vec![],
         };
-        assert_eq!(realize_common(&s), "Aoth is an elemental.");
+        assert_eq!(
+            realize_common(&s, &CommonVocabulary::default()),
+            "Aoth is an elemental."
+        );
     }
+    /// The collective construction: a plural clause pluralizes the resolved
+    /// word itself (`goblin-kind` → `goblin` → `goblins`). Before The
+    /// Vernacular the caller pre-pluralized and handed the realizer a string.
     #[test]
     fn classify_generic_plural() {
         let s = ClauseSpec {
             frame: Frame::Classify,
-            subject: Subject::Name("Goblins".into()),
-            complement: "people".into(),
+            subject: Subject::Name("The Vavako".into()),
+            complement_concept: "goblin-kind".into(),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
             modifiers: vec![],
         };
-        assert_eq!(realize_common(&s), "Goblins are people.");
+        assert_eq!(
+            realize_common(&s, &CommonVocabulary::default()),
+            "The Vavako are goblins."
+        );
     }
 
     #[test]
@@ -347,7 +460,7 @@ mod tests {
         let s = ClauseSpec {
             frame: Frame::Classify,
             subject: Subject::Name("Vebe".into()),
-            complement: "planet".into(),
+            complement_concept: "planet".into(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
             modifiers: vec![
@@ -356,7 +469,7 @@ mod tests {
             ],
         };
         assert_eq!(
-            realize_common(&s),
+            realize_common(&s, &CommonVocabulary::default()),
             "Vebe is a planet with two moons, orbiting a yellow-white dwarf."
         );
     }
@@ -391,9 +504,12 @@ mod tests {
         );
     }
 
-    fn ctx(words: &[&str]) -> ParseContext {
+    /// A parse context over `concepts` (concept ids, not words) with the
+    /// bare naming convention as its vocabulary.
+    fn ctx(concepts: &[&str]) -> ParseContext {
         ParseContext {
-            complements: words.iter().map(|w| (*w).to_string()).collect(),
+            complements: concepts.iter().map(|c| (*c).to_string()).collect(),
+            vocabulary: CommonVocabulary::default(),
         }
     }
 
@@ -405,7 +521,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(spec.subject, Subject::Name("Vebe".into()));
-        assert_eq!(spec.complement, "planet");
+        assert_eq!(spec.complement_concept, "planet");
         assert_eq!(spec.number, Number::Sg);
         assert_eq!(spec.definiteness, Definiteness::Indef);
         assert_eq!(
@@ -417,10 +533,15 @@ mod tests {
         );
     }
 
+    /// The plural clause recovers the SINGULAR concept id — the parser
+    /// matches against each id's realized surface, so the `'s'` the realizer
+    /// added is undone by the same rule that added it rather than by a
+    /// caller stripping a trailing letter.
     #[test]
     fn parse_inverts_the_plural_generic() {
-        let spec = parse_common("The Vavako are goblins.", &ctx(&["goblins"])).unwrap();
+        let spec = parse_common("The Vavako are goblins.", &ctx(&["goblin"])).unwrap();
         assert_eq!(spec.subject, Subject::Name("The Vavako".into()));
+        assert_eq!(spec.complement_concept, "goblin");
         assert_eq!(spec.number, Number::Pl);
         assert_eq!(spec.definiteness, Definiteness::Indef);
         assert_eq!(spec.modifiers, Vec::<String>::new());
@@ -475,10 +596,10 @@ mod tests {
         }
     }
 
-    /// Classify a complement lexeme into the coverage axis the property
-    /// test tracks. Multi-word wins over vowel-initial so a phrase like
-    /// "ancient artifact" (both) still counts toward multi-word coverage;
-    /// "elemental" alone covers vowel-initial.
+    /// Classify a complement's RESOLVED WORD (not its id) into the coverage
+    /// axis the property test tracks. Multi-word wins over vowel-initial so a
+    /// phrase like "ancient artifact" (both) still counts toward multi-word
+    /// coverage; "elemental" alone covers vowel-initial.
     fn complement_kind(c: &str) -> &'static str {
         if c.contains(' ') {
             "multi-word"
@@ -504,38 +625,48 @@ mod tests {
     }
 
     /// Build the closed complement set a real caller would hand
-    /// `parse_common`: the spec's own complement, plus decoys that probe
-    /// longest-match — other legal complements from the same closed
-    /// vocabulary, the first word of a multi-word complement (a genuine
-    /// prefix that must lose to the full phrase), and a same-phrase-minus-
-    /// one-character truncation (must NOT match at all: the boundary check
-    /// requires the character after a matched prefix to be a space).
+    /// `parse_common`: the spec's own complement CONCEPT, plus decoys that
+    /// probe longest-match — other legal concepts from the same closed
+    /// vocabulary, a concept whose word is the first word of a multi-word
+    /// surface (a genuine prefix that must lose to the full phrase), and a
+    /// declared concept whose word is the real surface minus one character
+    /// (must NOT match at all: the boundary check requires the character
+    /// after a matched prefix to be a space).
     fn ctx_from(spec: &ClauseSpec) -> ParseContext {
+        let mut vocabulary = CommonVocabulary::default();
         let mut complements = std::collections::BTreeSet::new();
-        complements.insert(spec.complement.clone());
-        // Stock decoys: other legal complements from the closed vocabulary,
+        complements.insert(spec.complement_concept.clone());
+        // Stock decoys: other legal concepts from the closed vocabulary,
         // always present as noise the true complement must outrank.
         for stock in [
             "planet",
-            "goblins",
+            "goblin-kind",
             "elemental",
-            "yellow-white dwarf",
-            "ancient artifact",
+            "yellow-white-dwarf",
+            "ancient-artifact",
             "dwarf",
         ] {
             complements.insert(stock.to_string());
         }
-        // Prefix-of-longer probe: the first word of a multi-word complement.
-        if let Some((first, _)) = spec.complement.split_once(' ') {
+        let word = vocabulary.word_for(&spec.complement_concept);
+        // Prefix-of-longer probe: a single-word concept whose id is its own
+        // word, matching the first word of a multi-word surface.
+        if let Some((first, _)) = word.split_once(' ') {
             complements.insert(first.to_string());
         }
-        // Must-not-match probe: one character short of the real complement.
-        if spec.complement.len() > 1 {
-            let mut truncated = spec.complement.clone();
+        // Must-not-match probe: one character short of the real word. Only a
+        // DECLARED word can be a truncation, since the mechanical rules never
+        // produce one.
+        if word.len() > 1 {
+            let mut truncated = word.clone();
             truncated.pop();
-            complements.insert(truncated);
+            vocabulary.declare("truncation-decoy", &truncated);
+            complements.insert("truncation-decoy".to_string());
         }
-        ParseContext { complements }
+        ParseContext {
+            complements,
+            vocabulary,
+        }
     }
 
     #[test]
@@ -556,12 +687,15 @@ mod tests {
             Subject::Name("The Vavako".into()), // multi-word
             Subject::Pronoun("it"),
         ];
+        // Concept IDS, not words — the realizer resolves each through the
+        // context's vocabulary, so `yellow-white-dwarf` also exercises the
+        // hyphen→space rule inside the round trip.
         let complements = [
-            "planet",             // consonant-initial
-            "goblins",            // consonant-initial
-            "elemental",          // vowel-initial
-            "yellow-white dwarf", // multi-word, hyphenated first word
-            "ancient artifact",   // multi-word AND vowel-initial
+            "planet",             // -> "planet", consonant-initial
+            "goblin-kind",        // -> "goblin", consonant-initial
+            "elemental",          // -> "elemental", vowel-initial
+            "yellow-white-dwarf", // -> "yellow white dwarf", multi-word
+            "ancient-artifact",   // -> "ancient artifact", multi-word AND vowel-initial
         ];
         let modifier_pool = [
             "with two moons",
@@ -590,13 +724,13 @@ mod tests {
                             let spec = ClauseSpec {
                                 frame: Frame::Classify,
                                 subject: subject.clone(),
-                                complement: complement.to_string(),
+                                complement_concept: complement.to_string(),
                                 number,
                                 definiteness,
                                 modifiers,
                             };
-                            let text = realize_common(&spec);
                             let ctx = ctx_from(&spec);
+                            let text = realize_common(&spec, &ctx.vocabulary);
                             assert_eq!(
                                 parse_common(&text, &ctx),
                                 Ok(spec.clone()),
@@ -604,7 +738,7 @@ mod tests {
                             );
                             covered.insert((
                                 subject_kind(&spec.subject),
-                                complement_kind(&spec.complement),
+                                complement_kind(&ctx.vocabulary.word_for(&spec.complement_concept)),
                                 number_str(spec.number),
                                 definiteness_str(spec.definiteness),
                                 modifier_count,

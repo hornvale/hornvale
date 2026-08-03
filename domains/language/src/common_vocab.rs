@@ -26,7 +26,7 @@ use std::collections::BTreeMap;
 /// construct one in practice, but `Default` (mandated by the brief, and used
 /// by every test in this module) bypasses that check — it is not a second
 /// validating constructor, just the ordinary empty starting point.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CommonVocabulary {
     declared: BTreeMap<String, String>,
 }
@@ -76,6 +76,9 @@ impl CommonVocabulary {
     /// (astronomy's spectral-class displays, say) are layered on afterward by
     /// the composition root via [`declare`](Self::declare), which never
     /// re-validates.
+    ///
+    /// The live registry is checked against this in `cli/tests/common_is_total.rs`
+    /// — the only layer that can reach a fully composed registry.
     pub fn build(registry: &ConceptRegistry) -> Result<Self, MissingCommonWords> {
         let vocab = Self::default();
         let mut bad = Vec::new();
@@ -224,231 +227,27 @@ mod tests {
             .unwrap();
     }
 
-    /// Every concept id actually registered on the live world (a snapshot
-    /// taken via `hornvale concepts` while writing this module — 191 concepts,
-    /// 93 hyphenated, 28 of them `-kind` species tags). `domains/language` may
-    /// not depend on the domains that own most of these, so the ids are
-    /// reproduced here as plain string data (the same way the brief's own
-    /// `a_declared_word_wins` test above uses `sun-like-star`) rather than
-    /// built by calling another domain's `register_concepts`.
-    const LIVE_REGISTRY_SNAPSHOT: &[&str] = &[
-        "abyssal",
-        "abyssal-plain",
-        "alpine",
-        "bait-ball",
-        "barley",
-        "bathypelagic",
-        "black-dragon-kind",
-        "blood",
-        "blue",
-        "blue-giant",
-        "bone",
-        "boreal-stand",
-        "brown",
-        "bugbear-kind",
-        "burn",
-        "carrion-crawler-kind",
-        "child",
-        "closed-canopy",
-        "coast",
-        "cold",
-        "cold-upwelling",
-        "coral-head",
-        "coral-reef",
-        "crevasse-field",
-        "damp-hollow",
-        "dark",
-        "day",
-        "desert",
-        "die",
-        "dire-wolf-kind",
-        "drink",
-        "earth",
-        "eat",
-        "eclipse",
-        "epipelagic",
-        "erg",
-        "eye",
-        "felsenmeer",
-        "fire",
-        "fire-scrub",
-        "fish-shoal",
-        "foot",
-        "ford",
-        "forest-gap",
-        "frost-heave",
-        "gallery-forest",
-        "giant-constrictor-snake-kind",
-        "giant-crocodile-kind",
-        "giant-elk-kind",
-        "giant-goat-kind",
-        "giant-hyena-kind",
-        "giant-octopus-kind",
-        "giant-scorpion-kind",
-        "giant-squid-kind",
-        "gloom",
-        "gnoll-kind",
-        "goblin-kind",
-        "god",
-        "grass-sward",
-        "great",
-        "green",
-        "hadal-trench",
-        "hamada",
-        "hand",
-        "hearth",
-        "heat",
-        "high",
-        "hill",
-        "hobgoblin-kind",
-        "holdfast-tangle",
-        "home",
-        "hydrothermal-vent",
-        "ice",
-        "ice-lead",
-        "island",
-        "kelp-canopy",
-        "kelp-forest",
-        "killer-whale-kind",
-        "kobold-kind",
-        "lake",
-        "liana-forest",
-        "light",
-        "lightless-water",
-        "little",
-        "low",
-        "many",
-        "marine-snow",
-        "marsh",
-        "melt-pond",
-        "mesopelagic",
-        "millet",
-        "moon",
-        "mossy-deadfall",
-        "mountain",
-        "mouth",
-        "move",
-        "muskeg",
-        "name",
-        "new",
-        "night",
-        "nodule-field",
-        "north",
-        "old",
-        "old-growth",
-        "one",
-        "open-blue",
-        "orange-dwarf",
-        "orange-giant",
-        "otyugh-kind",
-        "over",
-        "owlbear-kind",
-        "parent",
-        "person",
-        "plankton-bloom",
-        "playa",
-        "pressure-ridge",
-        "rafted-floe",
-        "rain",
-        "red",
-        "red-dragon-kind",
-        "red-dwarf",
-        "red-giant",
-        "reef-rubble",
-        "reef-shark-kind",
-        "reg",
-        "rest",
-        "rhinoceros-kind",
-        "rice",
-        "river",
-        "rust-monster-kind",
-        "sargassum-drift",
-        "savanna",
-        "scattering-layer",
-        "sclerophyll-scrub",
-        "scoured-ice",
-        "sea",
-        "sea-ice",
-        "shadow",
-        "shrieker-kind",
-        "shrubland",
-        "sibling",
-        "sleep",
-        "smoker-field",
-        "snow",
-        "snowfield",
-        "south",
-        "spirit",
-        "spring",
-        "spur-and-groove",
-        "staghorn-stand",
-        "star",
-        "starlit",
-        "stone",
-        "sun",
-        "sun-like-star",
-        "taiga",
-        "temperate-forest",
-        "temperate-grassland",
-        "temperate-rainforest",
-        "thorn-scrub",
-        "tide",
-        "treant-kind",
-        "tree",
-        "trench-floor",
-        "trench-wall",
-        "tropical-rainforest",
-        "tropical-seasonal-forest",
-        "tuber",
-        "tubeworm-thicket",
-        "tundra",
-        "twig-blight-kind",
-        "twilight-water",
-        "two",
-        "under",
-        "upwelling",
-        "urchin-barren",
-        "valley",
-        "vent-plume",
-        "vine",
-        "water",
-        "wheat",
-        "white-dragon-kind",
-        "white-dwarf",
-        "wind",
-        "wind-scour",
-        "wooded-grassland",
-        "woolly-mammoth-kind",
-        "xorn-kind",
-        "yellow",
-        "yellow-dwarf",
-        "yellow-white-dwarf",
-    ];
-
-    /// Every id in the snapshot resolves without degenerating. This is a
-    /// smoke test over a broad, realistic sample of ids — it is NOT the
-    /// enforcement that the live registry stays total. This crate cannot
-    /// build the live, fully-composed registry (layering forbids depending
-    /// on the domains that own most of its concepts — see
-    /// `LIVE_REGISTRY_SNAPSHOT`'s doc comment), so nothing here can actually
-    /// guarantee totality over the real world. That enforcement belongs in
-    /// `cli/tests/`, which can build a full world; Task 4 adds it once the
-    /// composition root assembles a `CommonVocabulary` to check.
+    /// A synthetic multi-concept registry resolves completely. The LIVE
+    /// registry's totality is NOT checked here and cannot be: this crate may
+    /// not depend on the domains that own most of its concepts (layering), so
+    /// any list of real ids reproduced here would be a snapshot that drifts
+    /// silently. `cli/tests/common_is_total.rs` asserts it against the
+    /// composed registry instead, where a newly registered concept with no
+    /// Common word fails the commit gate.
     #[test]
-    fn the_registry_snapshot_resolves_completely() {
+    fn a_registry_of_well_formed_ids_resolves_completely() {
         let mut registry = ConceptRegistry::default();
-        for name in LIVE_REGISTRY_SNAPSHOT {
+        for name in [
+            "moon",
+            "abyssal-plain",
+            "goblin-kind",
+            "woolly-mammoth-kind",
+        ] {
             with_concept(&mut registry, name);
         }
         let vocab = CommonVocabulary::build(&registry)
             .expect("every registered concept must have a Common word");
-        for name in LIVE_REGISTRY_SNAPSHOT {
-            let w = vocab.word_for(name);
-            assert!(
-                !w.contains('-') || vocab.is_declared(name),
-                "{name} resolved to {w:?}, which still reads as a key"
-            );
-        }
+        assert_eq!(vocab.word_for("woolly-mammoth-kind"), "woolly mammoth");
     }
 
     /// A pathological id the naming convention has never had to handle on the

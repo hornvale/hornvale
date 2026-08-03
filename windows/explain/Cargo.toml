@@ -8,3 +8,4 @@ description = "Hornvale explain window: narrate a world's derivation from its le
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
+hornvale-language = { path = "../../domains/language" }
