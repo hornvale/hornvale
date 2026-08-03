@@ -147,7 +147,7 @@ pub fn generation_length_of(world: &World, species: &str) -> Option<f64> {
     let bio = wc.biosphere.get_by_label(species)?;
     hornvale_species::life_history(bio.mass, bio.metabolic_class)
         .generation_length
-        .map(|y| y.get())
+        .map(|y| y.get()) // salt-allow: y is a StdDays, not an entity
 }
 
 /// The figure `occupation`'s founder descends from — the founder of the

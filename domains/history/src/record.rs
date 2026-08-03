@@ -265,7 +265,7 @@ pub fn layer_key(
     // the site's own cell, exactly as before; `From` now orders by the
     // PREDECESSOR'S FOUNDING COORDINATES rather than its `EntityId`.
     let (from_rank, from_a, from_b, from_c) = match (r.founded_from, parent) {
-        (Founding::Genesis(c), _) => (0u8, u64::from(c.0), 0, 0),
+        (Founding::Genesis(c), _) => (0u8, u64::from(c.0), 0, 0), // salt-allow: c is a CellId, not an entity
         (Founding::From(_), Some(p)) => (
             1u8,
             u64::from(p.site.0),
