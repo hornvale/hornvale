@@ -115,7 +115,7 @@
 | `species-vowel-space` | yes | vowel-space size, 0-1 |
 | `spreading-rate` | yes | the globe's one drawn global spreading rate |
 | `star-age-gyr` | yes | the host star's age in gigayears (drawn; does not feed luminosity or the habitable zone — a deliberate containment) |
-| `star-class` | yes | the host star's descriptive spectral class |
+| `star-class` | yes | the host star's spectral class, as a registered concept id (Morgan-Keenan prose is rendered from it at read time by windows/book, never stored) |
 | `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |
 | `star-mass-solar` | yes | host star mass in solar masses |
 | `subsistence` | yes | a settlement's subsistence mode |

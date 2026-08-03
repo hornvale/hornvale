@@ -126,8 +126,11 @@ Zero committed facts, across 44 commits — verified at every task and again at
 the whole-branch review as an *ordered* fact list, not merely a set. No epoch is
 owed; decision 0084's measurement came back NO-BUMP honestly.
 
-`star-class` still commits `Value::Text("yellow dwarf (G)")`. Deleting it moves
-facts and owes its own epoch measurement, so it is part 3's. Part 2 sharpens
-the contradiction rather than creating it: the registry now declares
-`yellow-dwarf` nameable by no one while the ledger still writes the name out in
-full.
+`star-class` committed `Value::Text("yellow dwarf (G)")` through part 2. Part
+3a made the ledger commit the registered concept id instead — the author's
+ground-truth register (`SPECTRAL_CLASSES` in `domains/astronomy/src/star.rs`)
+still renders the Morgan–Keenan display back out from that id, so nothing
+downstream lost information. Six facts moved (one `star-class`, five
+`neighbor-class`) and nothing else did. No epoch was owed: a spectral class is
+a pure function of an unchanged mass draw, so only the ledger's *spelling*
+moved, not the draw that produces it — decision 0084's re-spelling case.
