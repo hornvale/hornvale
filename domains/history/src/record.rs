@@ -247,3 +247,133 @@ pub fn layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u32>,
         from,
     )
 }
+
+/// The material coordinates of a *founding* — where, when, and by whom a
+/// community was raised. Id-free by construction: every field is a fact the
+/// world states about the occupation, never a handle.
+///
+/// Used two ways, both keyed to the same causal horizon: as the ancestry hop
+/// in [`founding_key`], and as [`layer_key`]'s predecessor tie-break.
+/// `Copy` is available because `KindId` and `CellId` both are; `Occupation`
+/// itself is `Clone` only, which is why the tests below clone rather than move.
+/// type-audit: bare-ok(count: founded)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FoundingCoords {
+    /// The people who founded.
+    pub people: KindId,
+    /// The cell founded on.
+    pub site: CellId,
+    /// The standard day founded.
+    pub founded: f64,
+}
+
+/// This occupation's own founding coordinates.
+pub fn founding_coords(c: &Occupation) -> FoundingCoords {
+    FoundingCoords {
+        people: c.people,
+        site: c.site,
+        founded: c.founded,
+    }
+}
+
+/// A splitmix-style mix step. Mirrors [`crate::flesh::persona_of`]'s
+/// arithmetic so every derived handle in this crate is drawn from one space.
+/// Pure bit arithmetic — no transcendental, no `libm`, no platform dependence.
+fn mix(state: u64, x: u64) -> u64 {
+    let mut z = state ^ x;
+    z = z.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    z ^= z >> 29;
+    z = z.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z ^ (z >> 32)
+}
+
+/// Fold a label's bytes in, so `KindId`s hash by content rather than by
+/// pointer.
+fn mix_str(state: u64, s: &str) -> u64 {
+    let mut h = state;
+    for b in s.as_bytes() {
+        h = mix(h, u64::from(*b));
+    }
+    mix(h, s.len() as u64)
+}
+
+/// A derived handle for an occupation's whole material life — every fact the
+/// world states about it, and no id.
+///
+/// Feeds the flesh derivations (residue, structures), where using the *whole*
+/// core is correct: a ruin reflects the size a place reached and the way it
+/// ended, not only its founding.
+///
+/// Two occupations identical in every material fact share this key, and
+/// therefore leave identical remains. That is the intended output, not a
+/// collision to be broken — under the entity id this replaced, two identical
+/// occupations got *different* potsherds, which was entropy fabricated from
+/// mint order. Measured rate: 1.0% / 0.2% / 0.3% of occupations at seeds
+/// 42 / 7 / 1000, and **0.0% of the layers that actually render flesh** at
+/// all three.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn material_key(c: &Occupation) -> u64 {
+    let mut h = mix_str(0x5361_6C74_0000_0001, c.people.0);
+    h = mix(h, u64::from(c.site.0));
+    h = mix(h, day_key(c.founded));
+    h = match c.ended {
+        Some(d) => mix(mix(h, 1), day_key(d)),
+        None => mix(h, 0),
+    };
+    h = mix(h, u64::from(c.peak_population));
+    h = mix(h, c.tech as u64);
+    h = mix(h, c.function as u64);
+    h = match c.deity {
+        Some(k) => mix_str(mix(h, 1), k.0),
+        None => mix(h, 0),
+    };
+    h = match c.tongue {
+        Some(k) => mix_str(mix(h, 1), k.0),
+        None => mix(h, 0),
+    };
+    h = match c.cause {
+        Some(x) => mix(mix(h, 1), x as u64),
+        None => mix(h, 0),
+    };
+    mix(h, c.notability as u64)
+}
+
+/// [`founding_key`] from already-resolved coordinates, for a caller that
+/// read the founding off the ledger rather than holding a whole core.
+///
+/// This is the entry point Task 3's `founder_of` needs: it resolves founding
+/// coordinates straight off the ledger and never holds a whole `Occupation`,
+/// so it cannot call [`founding_key`] without fabricating one. A fabricated
+/// `Occupation` with placeholder `ended`/`cause` fields is exactly the kind
+/// of inert-placeholder construction this repo has been bitten by before, so
+/// this sibling exists instead of a `synthetic_core` helper.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn founding_key_from(own: FoundingCoords, parent: Option<FoundingCoords>) -> u64 {
+    let mut h = mix_str(0x5361_6C74_0000_0002, own.people.0);
+    h = mix(h, u64::from(own.site.0));
+    h = mix(h, day_key(own.founded));
+    match parent {
+        Some(p) => {
+            h = mix(h, 1);
+            h = mix_str(h, p.people.0);
+            h = mix(h, u64::from(p.site.0));
+            mix(h, day_key(p.founded))
+        }
+        None => mix(h, 0),
+    }
+}
+
+/// A derived handle for the *founding* of an occupation, plus one hop of
+/// ancestry — where, when and from whom.
+///
+/// Feeds the founder role handle behind every person name. Deliberately
+/// **excludes** everything after the founding (`ended`, `peak_population`,
+/// `cause`, `notability`): a founder's name must not be a function of how
+/// their community later died. The ancestry hop is what recovers the
+/// discrimination that exclusion costs — measured stem-collision rate
+/// 8.4% / 3.3% / 3.6% at seeds 42 / 7 / 1000, against 27.7% / 14.8% / 16.2%
+/// for the founding triple alone (spec D2, Nathan's ruling).
+/// type-audit: bare-ok(identifier-text: return)
+pub fn founding_key(c: &Occupation, parent: Option<FoundingCoords>) -> u64 {
+    founding_key_from(founding_coords(c), parent)
+}
