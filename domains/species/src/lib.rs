@@ -2547,21 +2547,37 @@ mod tests {
         }
     }
 
+    /// CHARACTERIZATION, NOT CONTRACT.
+    ///
+    /// Goblin is currently authored at exactly the manikin's values. That is
+    /// authorship, not definition: goblin was the first people written down,
+    /// and nobody ever decided that goblins are unremarkable. Nothing in the
+    /// model requires a kind to sit on the manikin, and this test does not
+    /// make it a requirement.
+    ///
+    /// It exists so that characterising goblin — giving it the impulsive,
+    /// short-horizon profile it has never actually been given — arrives as a
+    /// visible diff on this test rather than as a silent shift in every
+    /// goblin-bearing world's language envelope, culture rungs and demography
+    /// weights. When that campaign comes, DELETE this test; do not "fix" it.
+    ///
+    /// The pattern is The Vacancy's, applied in this same registry to the
+    /// `Autotroph`/Kleiber divergence.
     #[test]
-    fn goblin_is_the_baseline_vector() {
-        let psy = psyche_registry();
-        let g = psy.get(&KindId("goblin")).unwrap();
-        for v in [g.threat_response, g.deliberation_latency, g.time_horizon] {
-            assert_eq!(v, 0.5, "goblin scalars must sit exactly at baseline");
-        }
-        let soc = society_registry();
-        let g_soc = soc.get(&KindId("goblin")).unwrap();
+    fn goblin_is_currently_authored_at_the_manikin() {
+        let mind = *psyche_registry().get(&KindId("goblin")).unwrap();
         assert_eq!(
-            g_soc.in_group_radius, 0.5,
-            "goblin society sits at baseline"
+            mind,
+            MindVector::MANIKIN,
+            "goblin's mind is authored at the manikin (characterization)"
         );
-        assert_eq!(g_soc.sociality, Sociality::Hierarchic);
-        assert_eq!(g_soc.status_basis, StatusBasis::Rank);
+
+        let society = *society_registry().get(&KindId("goblin")).unwrap();
+        assert_eq!(
+            society,
+            SocietyVector::MANIKIN,
+            "goblin's society is authored at the manikin (characterization)"
+        );
     }
 
     /// The manikin is the model's reference vector: neutral on every scalar,
@@ -2954,10 +2970,21 @@ mod tests {
             .collect()
     }
 
+    /// The fallback a mixed consumer resolves is the manikin — stated without
+    /// reference to any people. Before The Manikin this test asserted the
+    /// fallback equalled *goblin's* authored society, which welded the model's
+    /// identity element to one inhabitant of the world.
     #[test]
-    fn society_baseline_equals_the_goblin_authored_society() {
-        let goblin = society_registry().get(&KindId("goblin")).copied().unwrap();
-        assert_eq!(goblin, SocietyVector::MANIKIN);
+    fn the_society_fallback_is_the_manikin() {
+        assert_eq!(
+            SocietyVector::MANIKIN,
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.5,
+            },
+            "the fallback is the manikin, and the manikin is nobody's"
+        );
     }
 
     #[test]
