@@ -3060,8 +3060,15 @@ fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
 /// is not yet migrated to the roster) followed by every domain's roster
 /// contribution ([`Domain::phenomena_source`]). Today this yields exactly
 /// `[sky, UniformClimate]` — the same set the old hardcoded fan-outs built.
-/// [`observe`] re-sorts by salience with a kind→referent tie-break, so the
-/// order within the returned list never affects output bytes.
+/// [`observe`] re-sorts by salience with a kind→referent→period→venue
+/// tie-break, which is deterministic but **not total**: some astronomy
+/// producers (wandering stars, heliacal risings/settings, night stars) emit
+/// phenomena that tie on every one of those legs, in which case the stable
+/// sort falls through to source emission order rather than to a declared
+/// field. That is still bit-identical for a given seed, but anything joining
+/// on relative position among such ties (`chorus::cyclic_beliefs_from`) is
+/// depending on this function's emission order, not on `observe`'s
+/// tie-break — see the fuller note on [`hornvale_kernel::phenomena::observe`].
 fn phenomena_sources(world: &World) -> Result<Vec<Box<dyn PhenomenaSource>>, BuildError> {
     phenomena_sources_from(world, &climate_of(world)?)
 }

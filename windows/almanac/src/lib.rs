@@ -350,6 +350,14 @@ pub fn render_weather_line(site: &str, sky: &str) -> String {
 /// irregular plurals. A third private copy rather than a shared export —
 /// the header line is the only caller here, in a different module from
 /// either sibling.
+///
+/// Takes an already-resolved word, never the raw `KindId`: the caller routes
+/// `speaker.species` through `ctx.common_vocab.word_for` first, so a
+/// hyphenated species (none of today's five peopled kinds are, but
+/// `domains/species` carries hyphenated `KindId`s for non-peopled species,
+/// e.g. `twig-blight`) reads as `twig blights`, not `twig-blights` — the same
+/// seam `phenomenon_line` uses for referents, not a second raw splice of a
+/// registry key into reader-facing prose.
 fn pluralize_people(people: &str) -> String {
     if people.ends_with('s') {
         people.to_string()
@@ -373,7 +381,7 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if let Some(speaker) = &ctx.speaker {
         doc.push_str(&format!(
             "*As reckoned among the {}.*\n\n",
-            pluralize_people(&speaker.species)
+            pluralize_people(&ctx.common_vocab.word_for(&speaker.species))
         ));
     }
 

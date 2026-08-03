@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Where a phenomenon lives, as its producer honestly knows: the day sky,
 /// the night sky, or the ambient world. Character, not cause — declaring a
 /// venue reveals nothing about which system produced the phenomenon.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Venue {
     /// Seen in the daytime sky (the sun).
     DaySky,
@@ -236,12 +236,27 @@ pub trait PhenomenaSource {
 }
 
 /// Aggregate all sources, sorted by salience descending. Ties break by
-/// kind then referent so output order never depends on source order
-/// alone being stable — determinism is constitutional, and every sort
+/// kind, then referent, then period (`None` last), then venue — every sort
 /// carries a deterministic tie-break (decision 0005). The referent is the
-/// last discriminator a phenomenon has now that it carries no text, and it
-/// is the better one: it orders by what the phenomenon is *about* rather
-/// than by an English sentence about it.
+/// discriminator a phenomenon has now that it carries no text (it orders by
+/// what the phenomenon is *about* rather than by an English sentence about
+/// it), and period/venue extend that after the-vernacular-3 made it
+/// insufficient on its own.
+///
+/// **This ordering is deterministic but not total.** Several producers
+/// (`domains/astronomy`'s wandering stars, heliacal risings/settings, and
+/// night stars) now emit multiple phenomena that tie on kind, referent,
+/// period, and venue all at once — a hardcoded salience or a shared year-long
+/// period leaves nothing left to compare. When every leg ties, `sort_by`
+/// (guaranteed stable) falls through to **source emission order**, so the
+/// output is still bit-for-bit reproducible for a given seed — just not a
+/// function of the phenomena's declared fields alone anymore. Anything that
+/// relies on the relative order of two such phenomena is relying on emission
+/// order, not on this tie-break: see
+/// `windows/worldgen::chorus::cyclic_beliefs_from`, which joins by list
+/// position and would silently mispair if `sort_by` here were ever swapped
+/// for `sort_unstable_by` (not stability-guaranteed) or a producer's
+/// emission order changed.
 pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<Phenomenon> {
     let mut all: Vec<Phenomenon> = sources.iter().flat_map(|s| s.phenomena(ctx)).collect();
     if !ctx.lens.is_identity() {
@@ -256,6 +271,13 @@ pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<P
             .total_cmp(&a.salience)
             .then_with(|| a.kind.cmp(&b.kind))
             .then_with(|| a.referent.cmp(&b.referent))
+            .then_with(|| match (a.period_days, b.period_days) {
+                (Some(x), Some(y)) => x.total_cmp(&y),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => std::cmp::Ordering::Equal,
+            })
+            .then_with(|| a.venue.cmp(&b.venue))
     });
     all
 }

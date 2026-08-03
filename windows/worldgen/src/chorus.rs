@@ -216,6 +216,16 @@ pub fn beta_of(society: &SocietyVector) -> f64 {
 /// holds no beliefs, or its phenomena can't be recomputed — callers read
 /// emptiness as "no sky religion to bind to" (ledger #2).
 ///
+/// This join depends on `phenomena.get(i)` lining up with the belief that
+/// was minted from index `i`'s phenomenon — which in turn depends on
+/// [`hornvale_kernel::phenomena::observe`]'s tie-break being deterministic,
+/// not on it being total. Several producers now tie on every declared leg
+/// (salience, kind, referent, period, venue) that `observe` sorts by, so
+/// those positions are ordered by source emission order via `sort_by`'s
+/// stability, not by a comparable field. Still safe today because emission
+/// order is itself deterministic and stable — but it means this join is
+/// implicitly coupled to `observe` staying a *stable* sort.
+///
 /// Takes an ALREADY-BUILT climate (down
 /// [`crate::observed_phenomena_as_from`]) instead of re-deriving one —
 /// threaded through [`explain`] so the census's chorus metric sculpts once
