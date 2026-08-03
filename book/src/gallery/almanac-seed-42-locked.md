@@ -8,15 +8,15 @@ This sky holds: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 
-- [0.68] *tide* — the tide, rising and falling under the vast moon
-- [0.39] *tide* — the tide, rising and falling under the small, distant moon
-- [0.30] *celestial-body* — a sun fixed forever above the day side
-- [0.27] *eclipse* — an eclipse: the vast moon devours the sun whole
-- [0.26] *tide* — spring and neap: the tides swell and slacken as the moons align and part
-- [0.22] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
-- [0.20] *ambient* — warm, still, unchanging air
-- [0.14] *heat* — oppressive heat
-- [0.14] *rain* — falling rain
+- [0.68] Daboa tide
+- [0.39] Daboa tide
+- [0.30] Doa
+- [0.27] Doa eclipse
+- [0.26] Daadoo Daboa tide
+- [0.22] Doa eclipse
+- [0.20] Doqoo
+- [0.14] heat
+- [0.14] rain
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 

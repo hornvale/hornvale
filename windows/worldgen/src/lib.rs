@@ -7400,6 +7400,9 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     Ok(AlmanacContext {
         seed: world.seed.0,
         speaker,
+        // Built ONCE per world here, never per phenomenon — the same
+        // root-fills-window shape as `speaker` and `place_labels`.
+        common_vocab: common_vocabulary(&world.registry),
         sky: sky_report_from(
             world,
             WorldTime { day: 0.0 },

@@ -11,7 +11,10 @@
 
 pub mod connections;
 pub mod history;
+pub mod phenomenon_line;
 pub mod qualify;
+
+pub use phenomenon_line::phenomenon_line;
 
 /// Re-exported so that test code assembling the `OccupationRecord` fixtures
 /// [`history::render_site`] reads can reach the history domain's types
@@ -152,6 +155,20 @@ pub struct AlmanacContext {
     /// The people this document is voiced by, or `None` for a world with no
     /// peoples. Filled by the composition root.
     pub speaker: Option<Speaker>,
+    /// Common's vocabulary for this world — the neutral register every
+    /// referent falls back to: the whole document's words when there is no
+    /// [`Self::speaker`], and one concept's words when a speaker's tongue has
+    /// no word for it (see [`phenomenon_line`]).
+    ///
+    /// Filled by the composition root (`hornvale_worldgen::common_vocabulary`),
+    /// like [`Self::speaker`] and [`Self::place_labels`]: assembling it needs
+    /// the composed `ConceptRegistry` plus every domain's declared exceptions,
+    /// and a window may not reach back to the root. `hornvale-worldgen`
+    /// depends on *this* crate (it builds the context), so the edge cannot run
+    /// the other way — an almanac→worldgen dependency would be a cycle.
+    /// `CommonVocabulary::default` is a legal (empty-exception) value: the
+    /// naming convention alone still resolves every id.
+    pub common_vocab: hornvale_language::CommonVocabulary,
     /// The sky at genesis.
     pub sky: SkyReport,
     /// The climate at the world's first place.
@@ -336,9 +353,15 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if !ctx.phenomena.is_empty() {
         doc.push_str("Salient phenomena, most attention-demanding first:\n\n");
         for p in &ctx.phenomena {
+            // Salience, then the referent in the reader's register. The kind
+            // is deliberately absent: it is a registry key, and a key in
+            // reader-facing prose was half of the leak this campaign closes
+            // (`*celestial-body*` beside a stored `a golden sun fixed at
+            // zenith`). See [`phenomenon_line`] for the other half.
             doc.push_str(&format!(
-                "- [{:.2}] *{}* — {}\n",
-                p.salience, p.kind, p.description
+                "- [{:.2}] {}\n",
+                p.salience,
+                phenomenon_line(p, ctx.speaker.as_ref(), &ctx.common_vocab)
             ));
         }
         doc.push('\n');
@@ -585,6 +608,10 @@ mod tests {
         AlmanacContext {
             seed: 42,
             speaker: None,
+            // No declared exceptions: the naming convention alone resolves
+            // every id this fixture names, which is the point — a hand-built
+            // context is not obliged to reach the composition root.
+            common_vocab: hornvale_language::CommonVocabulary::default(),
             sky: SkyReport {
                 description: "A golden sun hangs fixed at zenith.".to_string(),
                 bodies: vec!["the sun".to_string()],
@@ -755,12 +782,46 @@ mod tests {
             "60",
             "## The Gods",
             "Ever-Flame",
-            "celestial-body",
-            "a golden sun fixed at zenith",
-            "[1.00]",
+            // The phenomena bullet: salience, then the referent realized in
+            // the reader's register. It was `*celestial-body* — a golden sun
+            // fixed at zenith`, which carried both signs of the leak at once
+            // (a stored English description, and a registry key shown to a
+            // reader). The kind is gone and the prose is derived.
+            "- [1.00] the sun",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
+        // The kind no longer reaches the phenomena block. It still appears in
+        // The Gods ("derived from the phenomenon *celestial-body*"), which is
+        // a separate surface and not this change's scope — so this asserts on
+        // the bullet specifically rather than on the whole document.
+        assert!(
+            !doc.contains("- [1.00] *celestial-body*"),
+            "a registry key must never reach a phenomenon bullet:\n{doc}"
+        );
+        assert!(
+            !doc.contains("a golden sun fixed at zenith"),
+            "the stored description must no longer be rendered:\n{doc}"
+        );
+    }
+
+    /// The same phenomenon reads differently to a people that has its own
+    /// word for the referent — the point of the whole rendering change, at
+    /// the document level rather than the line level.
+    #[test]
+    fn a_speaker_changes_the_phenomena_block() {
+        let neutral = render(&sample_context());
+        let mut ctx = sample_context();
+        ctx.speaker = Some(crate::phenomenon_line::test_speaker(&["sun"]));
+        let voiced = render(&ctx);
+        assert!(
+            neutral.contains("- [1.00] the sun"),
+            "the neutral register names the sun in Common:\n{neutral}"
+        );
+        assert!(
+            !voiced.contains("- [1.00] the sun"),
+            "a speaker's almanac must not fall back to Common here:\n{voiced}"
+        );
     }
 
     #[test]

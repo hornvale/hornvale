@@ -8,20 +8,20 @@ This sky holds: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 
-- [0.68] *tide* — the tide, rising and falling under the vast moon
-- [0.39] *tide* — the tide, rising and falling under the small, distant moon
-- [0.30] *celestial-body* — the sun, a yellow dwarf (G)
-- [0.27] *eclipse* — an eclipse: the vast moon devours the sun whole
-- [0.26] *tide* — spring and neap: the tides swell and slacken as the moons align and part
-- [0.24] *eclipse* — an eclipse of the moon: the full small, distant moon darkens to a bloodred coal
-- [0.24] *eclipse* — an eclipse of the moon: the full vast moon darkens to a bloodred coal
-- [0.22] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
-- [0.20] *ambient* — warm, still, unchanging air
-- [0.20] *heat* — oppressive heat
-- [0.20] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
-- [0.19] *celestial-body* — a vast moon
-- [0.14] *celestial-body* — a small, distant moon
-- [0.14] *rain* — falling rain
+- [0.68] Daboa tide
+- [0.39] Daboa tide
+- [0.30] Doa
+- [0.27] Doa eclipse
+- [0.26] Daadoo Daboa tide
+- [0.24] Daboa eclipse
+- [0.24] Daboa eclipse
+- [0.22] Doa eclipse
+- [0.20] Doqoo
+- [0.20] heat
+- [0.20] Doo
+- [0.19] Goododo Daboa
+- [0.14] Dodoa Daboa
+- [0.14] rain
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 

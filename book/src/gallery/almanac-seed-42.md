@@ -8,10 +8,10 @@ This sky holds: the sun.
 
 Salient phenomena, most attention-demanding first:
 
-- [0.70] *celestial-body* — a golden sun fixed at zenith
-- [0.29] *heat* — oppressive heat
-- [0.17] *ambient* — warm, still, unchanging air
-- [0.05] *rain* — falling rain
+- [0.70] Doa
+- [0.29] heat
+- [0.17] Doqoo
+- [0.05] rain
 
 ## The Land
 
