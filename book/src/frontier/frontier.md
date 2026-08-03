@@ -71,6 +71,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Detail below the floor — erosion as a readout of the material buffer](#detail-below-the-floor--erosion-as-a-readout-of-the-material-buffer)
   - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
+  - [The place as medium — transmission as an operator](#the-place-as-medium--transmission-as-an-operator)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -3935,6 +3936,37 @@ folk science ossified into false precision. The discipline that saved the
 psychology substrate is the discipline that saves this.
 
 ---
+
+## The place as medium — transmission as an operator
+
+Four arguments from one ideonomy session (2026-08-03), read backwards out of
+a forty-entry roguelike terrain-effect taxonomy. They share a premise already
+half-shipped in [[MAP-perceive-apertures]] and [[MAP-connectors-as-apertures]]:
+a place is not a container but a **medium**, and what a room does to a body is
+the same kind of thing it does to light, sound and scent. Each argument pushes
+on a different limit of the scalar `transmit(aperture, channel)` those two rows
+assume.
+
+### Transmission is an operator, not a scalar
+
+**`transmit(aperture, channel)` is a scalar where the effect roster needs an OPERATOR.** [[MAP-perceive-apertures]] and [[MAP-connectors-as-apertures]] fix the right shape — a place is a *medium*, and body is just another channel — but a multiplier in `[0,1]` spans only PASS / ATTENUATE / BLOCK. A forty-entry roguelike terrain-effect taxonomy (movement / character / item / combat / light) reduces to **nine transfer verbs**, and five of them a scalar cannot express: **AMPLIFY** (a faerie path, a killing ground doubling a missile), **REDIRECT** (an ice-slide, a teleport trap, refraction — what emerges leaves by a *different edge*), **DELAY** (mud: passage succeeds, later), **TRANSFORM** (what emerges differs in KIND from what entered — lava cooks the dropped food, a pane reddens the light, a tunnel returns a shout as an echo), and **EMIT** (a source with no input: lava's own light, a swamp's smell, brambles' ticks). The scalar covers exactly the *obstructive* verbs; the missing five are the ones that make a place interesting rather than merely in the way. Widens the channel roster past the shipped four as well — **object** (a portcullis passes sight and arrows but not a body or a crate), **force/projectile** distinct from body, **scent** ([[EXP-9]] requires it), **heat**, **fluid**, and **propagule** (a species range boundary is `transmit = 0` for a *population*). Author M channels + N verbs, never M×N — [[MAP-27]]'s economy applied to the *place* instead of the object
+
+### A period makes an aperture a zeitgeber
+
+**A transmit function with a PERIOD is a zeitgeber.** The whole terrain-effect literature is instantaneous and one-shot — you step on it, it resolves — because a roguelike has no calendar its terrain can consult. Hornvale has tides, seasons, a diurnal cycle, and an astronomy that dates them. [[MAP-connectors-as-apertures]] names one instance in passing ("flooded at this tide", as a derived Reason) and does not generalise it. Generalised, transmission is a function of world-time: the tidal causeway is road twice a day and sea twice a day; the pass opens in summer; the river becomes a *road* when it freezes (a channel whose **polarity inverts** with the season); the night-only path. The payoff is not the obstacle — it is that a periodic aperture **entrains**. [[PSY-9]]'s oscillator stack takes zeitgebers, The Quickening's NPCs already walk daily routes, and a route gated by a period becomes a routine, a routine a market day, a market day a calendar and a pilgrimage. The shortest path from a movement modifier to the culture layer, and the one terrain effect a roguelike structurally cannot have. **Rate is the axis under it** — instantaneous / per-step / accumulating / diurnal / tidal / seasonal / successional / geological — and it collapses the taxonomy's whole *character* wing: DWELL effects (thirst in the desert, exposure on the peak) are transit effects INTEGRATED over residence time, not a separate category, so they are the same function with the clock running ([[PSY-10]] and [[PSY-11]] already own the homeostats)
+
+### The positive pole — a place that preserves
+
+**The terrain-effect roster is negatively skewed, and the positive pole is the one that generates history** — Gunkel's *prosease* move applied to place. Catalogues run to BLOCK / DAMAGE / DESTROY / DRAIN because a roguelike prices terrain as combat friction; flipped systematically, each has an analogue this world wants more. Blocks → **CHANNELS** (a ford, a pass: the only way through, so it *concentrates* traffic and is therefore an edge in [[MAP-61]]'s graph rather than a wall). Destroys → **PRESERVES**. Drains → **STORES**. Hidden hazard → hidden boon. The load-bearing one is preservation: a bog that destroys what falls into it yields no archaeology; a bog that preserves it yields Tollund Man. [[MAP-impression]] posits that everyone who passes leaves a trace and grades durability BY MATERIAL — this row says durability is equally a property of the PLACE, and what survives is the product of the two, so anoxic bog, dry cave, ice and ash are the world's own long-term memory and [[MAP-30]]'s palimpsest is thickest exactly where the negative-pole catalogue would have written "destroys items". Polarity is also RELATIONAL, never intrinsic (the Gibson affordance point [[MAP-19]] already cites): mud slows a walker and is *home* to a mudskipper, a wall stops a body and is a *road* to a climber — so the sign of a transfer verb is a function of (place, channel, BODY), and the body is already modelled ([[UNI-22]], [[MAP-11]])
+
+### A medium that manufactures error
+
+**A place does not only hide things — it makes observers WRONG**, and the aperture model has no slot for it. [[MAP-perceive-apertures]] carries the mechanism one step short: a hedged glimpse yields a low-confidence belief the planner treats as a hypothesis to verify. Take transmission below 1 and the residue is not absence but **error** — fog and dusk manufacture false *identifications*, a canyon misreports distance, an echo misreports bearing and count, a mirage manufactures water that is not there, and still air holds a scent for hours after its source left (a TRUE perception of a FALSE present — [[MAP-transmit-is-an-operator]]'s DELAY verb in the scent channel). Under [[UNI-1]] belief is a fold over the ledger, so a systematically-biased medium gives a whole region a shared, *derivable* folk error, and a culture whose territory has one will lexicalise it ([[MAP-19]]'s folk-physics divergence, arrived at from perception rather than from metaphysics). The crude version — the taxonomy's "hidden" terrain, quicksand and traps — is this at confidence zero. Keeps apart the two failure modes worth distinguishing: a place that transmits NOTHING (you know you cannot see) and a place that transmits WRONGLY (you do not)
+
+Taken together they say the aperture model is right in shape and thin in
+type: it needs a verb rather than a multiplier, a clock, a sign, and a slot for
+being wrong. None of it is scheduled; all of it is cheap to state now and
+expensive to re-derive later.
 
 ## Intellectual lineage
 
