@@ -296,6 +296,7 @@
 - [The Witness](./chronicle/the-witness.md)
 - [The Namesake](./chronicle/the-namesake.md)
 - [The Contour](./chronicle/the-contour.md)
+- [The Manikin](./chronicle/the-manikin.md)
 
 # Appendix: The Frontier
 
