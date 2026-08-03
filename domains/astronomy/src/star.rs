@@ -503,18 +503,21 @@ mod tests {
         assert_eq!(class_display("not-a-class"), None);
     }
 
-    /// Every display string in the table is one a producer actually emits — the
-    /// table cannot drift into naming classes the code never mints.
+    /// Every string `class_name_of_mass` can mint is registered in the table
+    /// (producer ⊆ table) — this is the direction actually tested. It does
+    /// NOT test the converse: the table may carry (and does — six of nine
+    /// entries here are minted only by `neighborhood::class_name`, never by
+    /// this crate's own mass-boundary chain) classes this function never
+    /// mints. A bogus tenth row added to `SPECTRAL_CLASSES` would pass this
+    /// test undetected.
     #[test]
     fn every_star_class_name_is_in_the_table() {
         for mass in [0.6, 0.79, 0.8, 1.04, 1.05, 1.4] {
-            let s = generate_star(Seed(1));
             let name = class_name_of_mass(mass);
             assert!(
                 class_concept(name).is_some(),
                 "star.rs mints {name:?}, which the table does not carry"
             );
-            let _ = s;
         }
     }
 }

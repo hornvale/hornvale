@@ -210,13 +210,18 @@ mod tests {
     /// tables is a panic on whatever seed first draws the orphaned variant —
     /// seed 42 draws only five of the six.
     ///
-    /// Coverage of the array below is compiler-enforced, not merely hand-kept
-    /// in sync: the `match` has no wildcard arm, so adding a `NeighborClass`
-    /// variant fails to compile right here — the same shape of guard
-    /// `class_name`'s own `match` already gives the display table, now
-    /// extended to this test instead of stopping at `class_name`. Before this
-    /// fix, a 7th variant broke `class_name` but left this array untouched
-    /// and green, testing five of six variants without complaint.
+    /// The `match` below has no wildcard arm, so adding a `NeighborClass`
+    /// variant fails to compile right here, forcing an author to visit this
+    /// test — the same shape of guard `class_name`'s own `match` already
+    /// gives the display table, now extended to this test instead of
+    /// stopping at `class_name`. That is real value, but it is narrower than
+    /// it may look: the compile error is fixed by extending the or-pattern,
+    /// which does not oblige anyone to also extend the array above. The
+    /// array itself stays hand-kept in sync — proven by mutation: deleting
+    /// `NeighborClass::BlueGiant` from the array (leaving the `match` arms
+    /// untouched) still compiles and still passes, silently testing five of
+    /// six variants. Read this test as "the compiler points you here," not
+    /// as "the array cannot drift."
     #[test]
     fn every_neighbour_class_is_in_the_spectral_table() {
         fn assert_covered(class: NeighborClass) {

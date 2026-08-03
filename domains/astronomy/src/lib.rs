@@ -593,22 +593,18 @@ mod tests {
     /// class whether or not anyone has invented spectroscopy. `Void::Unnamed` is
     /// the kernel's word for exactly that, and before this campaign no domain had
     /// ever used it.
+    ///
+    /// Iterates `SPECTRAL_CLASSES` — the same table `star.rs` mints ids from —
+    /// rather than a second hand-written list of the nine names. Before this
+    /// fix, this test carried its own copy, so a typo in the registration loop
+    /// (`lib.rs`) and this table could each be wrong about the same class and
+    /// still agree with each other.
     #[test]
     fn spectral_classes_are_registered_as_unnameable() {
         let mut registry = hornvale_kernel::ConceptRegistry::default();
         register_concepts(&mut registry).expect("astronomy registers");
 
-        for name in [
-            "orange-dwarf",
-            "yellow-dwarf",
-            "yellow-white-dwarf",
-            "red-dwarf",
-            "sun-like-star",
-            "white-dwarf",
-            "orange-giant",
-            "red-giant",
-            "blue-giant",
-        ] {
+        for (name, _display) in SPECTRAL_CLASSES {
             let manifest = registry
                 .manifest(name)
                 .unwrap_or_else(|| panic!("{name} should be registered"));
