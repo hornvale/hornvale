@@ -110,9 +110,10 @@ The kind is machine grouping; a reader gets nothing from `celestial-body` that
 - Test: `windows/almanac/src/lib.rs` (inline `mod tests`)
 
 **Interfaces:**
-- Produces: `AlmanacContext::speaker: Option<Speaker>`, where
-  `pub struct Speaker { pub species: String, pub lexicon: hornvale_language::Lexicon }`
-  lives in `windows/almanac/src/lib.rs` beside the context.
+- Produces: `AlmanacContext::speaker: Option<Speaker>`, where `Speaker` lives in
+  `windows/almanac/src/lib.rs` beside the context and carries **all five**
+  things `realize_tongue_deep` needs: `species`, `lexicon`, `grammar`, `morph`,
+  `sky_animate` (see step 3 for the exact shape and why).
 - Consumes: nothing from earlier tasks. **No rendering changes yet** — this task
   only makes a speaker *available*, so it moves no bytes.
 
@@ -157,13 +158,26 @@ In `windows/almanac/src/lib.rs`, above `AlmanacContext`:
 /// type-audit: bare-ok(identifier-text: species)
 #[derive(Clone, Debug)]
 pub struct Speaker {
-    /// The species whose lexicon voices this document.
+    /// The species whose tongue voices this document.
     pub species: String,
-    /// That species' lexicon, derived (never stored — see
-    /// `hornvale_worldgen::lexicon_from`'s doc).
+    /// That species' vocabulary.
     pub lexicon: hornvale_language::Lexicon,
+    /// Its clause-level grammar.
+    pub grammar: hornvale_language::TongueGrammar,
+    /// Its morphology.
+    pub morph: hornvale_language::TongueMorphology,
+    /// Whether this people's day-schema is agentive, which overrides the
+    /// animacy of sky concepts. Stored as the bool rather than a closure so
+    /// the struct stays plain data; a renderer rebuilds the classifier with
+    /// `hornvale_worldgen::noun_class_with_sky(sky_animate, concept)`.
+    pub sky_animate: bool,
 }
 ```
+
+**All five, not just the lexicon.** `realize_tongue_deep` — the production
+path for saying anything in a species' own words — takes
+`(clause, grammar, morph, noun_class_of, lexicon)`. A lexicon alone realizes
+nothing.
 
 and the field on `AlmanacContext`:
 
@@ -182,11 +196,24 @@ rather than working around it.
 - [ ] **Step 4: Fill it at the composition root**
 
 At `windows/worldgen/src/lib.rs:7331`, populate `speaker` from the **flagship**
-people. The peopled-kind loop above already builds lexicons; reuse one rather
-than calling `lexicon_from` again — its own doc calls it *"almost all of the
+people. **The working precedent is `windows/book/src/lib.rs:414-432`** — read
+it; it assembles exactly these five per peopled kind:
+
+```rust
+let ph = hornvale_worldgen::language_of(world, kind);
+let grammar = tongue_grammar(&world.seed, kind, &ph);
+let lexicon = hornvale_worldgen::lexicon_from(world, kind, terrain, climate)?;
+let morph = hornvale_worldgen::tongue_morphology_of(world, kind)?;
+let sky_animate = hornvale_worldgen::day_schema_from(world, kind, terrain, climate)
+    == Some(SchemaId::Agentive);
+```
+
+Reuse whatever the surrounding peopled-kind loop already built rather than
+recomputing — `lexicon_from`'s own doc calls it *"almost all of the
 post-name-gloss census cost"*, so **build it once per world, never per
-phenomenon**. If the flagship's species is not among the peopled kinds, pass
-`None` rather than picking arbitrarily.
+phenomenon**. If the flagship's species is not among the peopled kinds, or any
+of the five cannot be assembled, pass `None` for the whole speaker rather than
+picking arbitrarily or assembling a partial one.
 
 Every other `AlmanacContext { .. }` construction site (there is at least
 `windows/almanac/src/lib.rs:557`'s `sample_context`) gets `speaker: None`.
@@ -231,7 +258,8 @@ Nothing reads it yet: no facts moved, no artifact drift."
 
 **Interfaces:**
 - Consumes: `Speaker` from Task 1; `hornvale_kernel::{Phenomenon, Referent}`;
-  `hornvale_language::{ClauseSpec, Subject, Frame, Number, Definiteness, realize_common}`.
+  `hornvale_language::{TongueClause, Evidential, realize_tongue_deep, TongueGap}`
+  for the speaker path and `realize_common` for the neutral path.
 - Produces:
   `pub(crate) fn phenomenon_line(p: &Phenomenon, speaker: Option<&Speaker>) -> String`
   — the reader-facing text for one phenomenon, with **no** salience and **no**
@@ -309,61 +337,40 @@ in Task 3 — note that in your report so the reviewer knows it is deliberate.
 
 - [ ] **Step 3: Write the renderer**
 
-```rust
-use crate::Speaker;
-use hornvale_kernel::Phenomenon;
-use hornvale_language::{ClauseSpec, Definiteness, Frame, Number, Subject, realize_common};
+**Two registers, and they are structurally different — this is the heart of
+the task.** Read `windows/book/src/lib.rs:434-450` first; it is the working
+precedent.
 
-/// One phenomenon as prose, built from its referent.
-///
-/// The kind is **not** rendered: it is a registry key, and a key in
-/// reader-facing prose is the second sign of the leak this campaign closes
-/// (spec §3.1). A reader gets nothing from `celestial-body` that `the moon`
-/// does not already tell them.
-///
-/// With `speaker: None` this is the Common realization. With a speaker it is
-/// that people's — the same content, their words.
-pub(crate) fn phenomenon_line(p: &Phenomenon, speaker: Option<&Speaker>) -> String {
-    let head = lexeme_for(&p.referent.concept, speaker);
-    let modifiers = p
-        .referent
-        .qualifiers
-        .iter()
-        .map(|q| lexeme_for(q, speaker))
-        .collect::<Vec<_>>();
-    realize_common(&ClauseSpec {
-        frame: Frame::Classify,
-        subject: Subject::Name(head),
-        complement: String::new(),
-        number: Number::Sg,
-        definiteness: Definiteness::Def,
-        modifiers,
-    })
-}
-```
+- **With a speaker: the tongue path.** `realize_tongue_deep(&clause, &grammar,
+  &morph, &noun_class_of, &lexicon) -> Result<String, TongueGap>` does the
+  concept→word lookup itself, handling `LexEntry::{Root, Compound, Gap}`. You
+  build a `TongueClause` whose `complement_concept` is
+  `p.referent.concept`, and rebuild the classifier as
+  `|c: &str| hornvale_worldgen::noun_class_with_sky(speaker.sky_animate, c)`.
+- **With no speaker: the neutral path.** `realize_common(&ClauseSpec)` takes
+  `Subject::Name(String)` — a **literal string, not a concept id**. Common
+  does not go through a lexicon at all. So the neutral rendering needs a word
+  from somewhere else: use the concept's registered registry entry (its
+  `doc`/gloss). **Never the raw key.**
 
-**`lexeme_for` is the piece to get right, and it is where the campaign's
-vocabulary earns its keep.** For a concept id and an optional speaker it
-returns the word to print:
+**On a `TongueGap`, circumlocute — do not go silent and do not fall back to
+the key.** §3.1 is explicit: an absent word means the thing gets *described*,
+not refused. `TongueGap` carries `.concept` and `.reason`; the book's
+`probe_tongue` call site shows a gap being recorded rather than papered over.
+For the almanac, prefer the neutral rendering of that one concept over
+dropping the line — a reader should still learn the phenomenon is there.
 
-- With a speaker whose lexicon holds a `LexEntry::Root` or `Compound` for the
-  concept — that word's roman view.
-- With a speaker whose lexicon holds a `LexEntry::Gap` — **circumlocute, do not
-  go silent.** §3.1 is explicit: `Unnamed` means the thing must be described,
-  not refused. Use the gap's own recountable reason as the fallback shape; if
-  that reads badly, fall back to the concept's registered `doc`. Do **not**
-  print the concept id.
-- With no speaker — the concept id is not a word either. Use the registry's
-  `doc`, or the Common lexeme if the pack provides one. **Never the raw key.**
+**Qualifiers.** `Referent.qualifiers` are themselves registered concepts, so
+each renders the same way as the head. If `TongueClause` has no slot for
+modifiers, render the head through the tongue and say in your report what
+happened to the qualifiers rather than silently dropping them — a dropped
+qualifier is a content loss, which is exactly what this campaign is trying to
+stop.
 
-Read `domains/language/src/lexicon.rs`'s `LexEntry` and `WordViews` before
-writing this, and `domains/language/src/packs.rs`'s `compound_recipe` for how
-circumlocution is already done (`sea` = "many water").
-
-**If `realize_common`'s `ClauseSpec` shape does not fit a bare noun phrase**
-(it is built for `X is a Y` classification), say so in your report and render
-the noun phrase directly rather than forcing the clause layer. The point is that
-the *words* come from the lexicon, not that this particular constructor is used.
+**Signature and structure are yours to choose within that contract.** The
+requirement is that the *words come from the speaker's lexicon* and that no
+registry key reaches prose — not that any particular helper exists. Report the
+shape you landed on.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -772,13 +779,19 @@ those signatures at both commit sites.
 this campaign's briefs have twice carried a wrong claim into an implementer's
 hands:
 
-1. **`lexeme_for` is specified by behaviour, not by code.** I have not read
-   `LexEntry`'s variants closely enough to write its body, so Task 2 says what it
-   must do — circumlocute on a gap, never print a key — and tells the
-   implementer to read `lexicon.rs` and `packs.rs` first.
-2. **`ClauseSpec` may not fit a bare noun phrase.** It is built for `X is a Y`.
-   Task 2 says to render the noun phrase directly and report it if so, rather
-   than forcing the clause layer.
+1. **Task 2's renderer is specified by contract, not by code.** Its body
+   depends on whether `TongueClause` has a modifier slot, which I have not
+   confirmed. Task 2 states the contract — words come from the speaker's
+   lexicon, no key reaches prose, a gap circumlocutes — and names the working
+   precedent (`windows/book/src/lib.rs:434-450`) rather than inventing one.
+2. **Corrected after dispatching Task 1** (recorded here because the plan's
+   first draft was wrong and the diff should show why): `Speaker` originally
+   carried only `{species, lexicon}`. `realize_tongue_deep` needs
+   `(clause, grammar, morph, noun_class_of, lexicon)` — a lexicon alone
+   realizes nothing — so the struct carries all five. Related: `realize_common`
+   takes a **literal string**, not a concept id, so the neutral path cannot go
+   through a lexicon and needs the registry gloss instead. Both facts came from
+   reading `domains/language/src/grammar.rs` and `clause.rs` directly.
 3. **`provider.rs:1090` and `:1099` may be unconvertible.** Every wanderer
    carries an identical referent, so the referent cannot distinguish inner from
    outer or morning from evening. Task 3 says to assert what it can support and
