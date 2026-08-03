@@ -1537,8 +1537,8 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 986 | 98.6% |
-| false | 14 | 1.4% |
+| true | 1000 | 100.0% |
+| false | 0 | 0.0% |
 
 ### clean-outgroup-kobold — default
 
