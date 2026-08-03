@@ -1,5 +1,10 @@
 # The Manikin Implementation Plan
 
+> **STATUS: COMPLETE — all eight tasks executed, reviewed, and merged
+> 2026-08-03.** Grew from six tasks to eight during execution. Where this
+> plan's inventories disagree with the code, the code won and the
+> retrospective says why.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the goblin-anchored species baseline with a *manikin* — a named

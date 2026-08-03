@@ -1,5 +1,12 @@
 # The Manikin — design
 
+> **STATUS: COMPLETE — merged 2026-08-03.** The preregistered prediction in
+> §4 **held**: zero artifact drift (`git diff --exit-code` over the four
+> watched paths, exit 0, empty), `make gate` green. Scope was extended
+> mid-execution to a fourth vector family (see §5's amendment). Chronicle:
+> `book/src/chronicle/the-manikin.md`. Retrospective:
+> `docs/retrospectives/the-manikin.md`.
+
 A manikin is a body that is nobody: a reference figure a tailor fits cloth
 against, precisely because no customer has its proportions. Hornvale's species
 model has needed one since the first people was authored, and has been using a
