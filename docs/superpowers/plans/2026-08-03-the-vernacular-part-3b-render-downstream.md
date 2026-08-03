@@ -314,24 +314,50 @@ Same nine ids committed. Zero facts moved."
 **Interfaces:**
 - Consumes: Task 2's derivations (so `class_display` can retire as authority).
 - Produces:
-  - `pub struct CommonVocabulary` with
-    `pub fn new() -> Self`,
-    `pub fn declare(&mut self, concept: &str, word: &str)`, and
-    `pub fn word_for<'a>(&'a self, concept: &'a str) -> Option<&'a str>`.
+  - `pub struct CommonVocabulary` with `Default`,
+    `pub fn declare(&mut self, concept: &str, word: &str)`,
+    `pub fn build(registry: &Registry) -> Result<Self, MissingCommonWords>`,
+    `pub fn is_declared(&self, concept: &str) -> bool`, and
+    **`pub fn word_for(&self, concept: &str) -> String`** — infallible.
   - `pub fn common_words() -> &'static [(&'static str, &'static str)]` in
     `domains/astronomy/src/star.rs`, returning the spectral classes'
     id → display pairs.
 
-**The rule that makes absence detectable.** A concept id containing `'-'` is a
-*key*, not a word: identity must not apply to it. So `word_for` is:
+**Common is TOTAL, and it is total mechanically.** Measured on the live
+registry: 191 concepts, 93 hyphenated, of which 28 are `X-kind` species tags.
+Nearly all of the hyphenated ones become good English by replacing the hyphen
+with a space — `abyssal-plain` → "abyssal plain", `coral-reef` → "coral reef",
+`temperate-grassland` → "temperate grassland". So the resolution order is:
 
-1. a declared entry, if one exists — the exception table wins;
-2. otherwise the id itself, **only if it contains no `'-'`** (`planet`, `moon`,
-   `people` — the naming convention already makes these words);
-3. otherwise `None`.
+1. a **declared** entry, if one exists — the exception table always wins;
+2. otherwise, strip a trailing `-kind` (`goblin-kind` → `goblin`);
+3. otherwise, replace `'-'` with `' '` (`abyssal-plain` → `abyssal plain`);
+4. an id with no hyphen is already its own word (`planet`, `moon`).
 
-`None` is the detectable condition the current design lacks. `celestial-body`
-returns `None` instead of silently printing itself.
+Every concept therefore resolves. **`word_for` is infallible** — it returns
+`&str`, not `Option<&str>` — because the type is built by a *validating
+constructor* that cannot produce a vocabulary with a hole. That is the same
+discipline `Au`/`Mm`/`SolarMasses` already follow in this codebase: validate at
+construction, then the value's existence is the proof.
+
+```rust
+CommonVocabulary::build(&registry) -> Result<Self, MissingCommonWords>
+```
+
+**Why totality is the point, not a convenience.** It makes the translation
+asymmetry a *type-level* fact rather than a hope: concept → Common is total and
+infallible; concept → a people's tongue is partial and returns
+`Result<_, TongueGap>`. A gap then always means something true about the world
+(this people has no word for the sea) and never an authoring hole (nobody wrote
+down what `celestial-body` is called). Conceding `Option` here would put those
+two very different absences behind one return type.
+
+**The rules above are a starting point, not a finding.** Run them against all
+191 concepts and read the output. Where a rule produces bad English —
+`sun-like-star` → "sun like star" is the clear one, and the nine spectral
+classes already have authored displays in `SPECTRAL_CLASSES` — add a declared
+exception and **report every exception you had to add**. That list is data
+about how well the naming convention holds, and Task 7 reports its size.
 
 **Layering matters here.** `domains/language` may not depend on
 `domains/astronomy`, so the vocabulary is a **mechanism** that holds no
@@ -346,55 +372,70 @@ Create `domains/language/src/common_vocab.rs`:
 ```rust
 //! Common's vocabulary. Common is the author's register, not a people's
 //! tongue: it has no speakers, so it has no `Lexicon`. What it has instead is
-//! an id→word map that is *mostly the identity function* — the concept naming
-//! convention already yields English words — plus a declared exception for
-//! every concept whose id is not a word.
+//! a TOTAL id→word map — every registered concept has a Common word, or the
+//! vocabulary refuses to be built.
 //!
-//! The point of declaring it at all is that absence becomes **detectable**. A
-//! hyphenated id like `celestial-body` is a key, not a word; before this
-//! existed it rendered as itself and shipped into the gallery unnoticed.
+//! Totality is what makes the translation asymmetry a type-level fact rather
+//! than a hope. Concept → Common is infallible; concept → a people's tongue
+//! returns `Result<_, TongueGap>`. So a gap always means something true about
+//! the world (this people has no word for the sea) and never an authoring hole
+//! (nobody wrote down what `celestial-body` is called).
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// A single-word id IS its own Common word — the naming convention does
-    /// the work, and declaring hundreds of identities would be noise.
+    /// An id with no hyphen is already its own word — the naming convention
+    /// does the work, and declaring 98 identities would be noise.
     #[test]
     fn a_single_word_id_is_its_own_word() {
-        let v = CommonVocabulary::new();
-        assert_eq!(v.word_for("planet"), Some("planet"));
-        assert_eq!(v.word_for("moon"), Some("moon"));
+        let v = CommonVocabulary::default();
+        assert_eq!(v.word_for("moon"), "moon");
     }
 
-    /// A hyphenated id is a KEY, not a word. Identity must not apply, or the
-    /// key reaches prose — which is exactly the defect that shipped
-    /// `*celestial-body*` into the committed gallery.
+    /// A hyphen is an id-joiner, not part of the word. 93 of the registry's
+    /// 191 concepts are hyphenated and nearly all read correctly this way.
     #[test]
-    fn a_hyphenated_id_has_no_word_by_default() {
-        let v = CommonVocabulary::new();
-        assert_eq!(
-            v.word_for("celestial-body"),
-            None,
-            "a key must never render as itself"
-        );
+    fn a_hyphen_becomes_a_space() {
+        let v = CommonVocabulary::default();
+        assert_eq!(v.word_for("abyssal-plain"), "abyssal plain");
+        assert_eq!(v.word_for("temperate-grassland"), "temperate grassland");
     }
 
-    /// A declared exception supplies the word the id cannot.
+    /// The `-kind` suffix is a species tag, not part of the name. 28 concepts
+    /// carry it; "goblin kind" is not what a reader should see.
+    #[test]
+    fn a_kind_suffix_is_stripped() {
+        let v = CommonVocabulary::default();
+        assert_eq!(v.word_for("goblin-kind"), "goblin");
+        assert_eq!(v.word_for("woolly-mammoth-kind"), "woolly mammoth");
+    }
+
+    /// A declared exception always wins, for the ids the rules get wrong.
     #[test]
     fn a_declared_word_wins() {
-        let mut v = CommonVocabulary::new();
-        v.declare("yellow-white-dwarf", "yellow-white dwarf (F)");
-        assert_eq!(v.word_for("yellow-white-dwarf"), Some("yellow-white dwarf (F)"));
+        let mut v = CommonVocabulary::default();
+        v.declare("sun-like-star", "sun-like star");
+        assert_eq!(v.word_for("sun-like-star"), "sun-like star");
     }
+}
+```
 
-    /// A declaration may also override an identity — a single-word id whose
-    /// Common word differs from the id itself.
-    #[test]
-    fn a_declaration_overrides_an_identity() {
-        let mut v = CommonVocabulary::new();
-        v.declare("people", "folk");
-        assert_eq!(v.word_for("people"), Some("folk"));
+The build-time test belongs in the same file and is the one that matters:
+
+```rust
+/// Every registered concept resolves. This is the invariant the whole
+/// asymmetry rests on — if it can fail, `word_for` must return an Option and
+/// an authoring hole becomes indistinguishable from a real linguistic gap.
+#[test]
+fn the_live_registry_resolves_completely() {
+    let world = /* a seed-42 world, or the registry the CLI dumps */;
+    let vocab = CommonVocabulary::build(&world.registry)
+        .expect("every registered concept must have a Common word");
+    for c in world.registry.concepts() {
+        let w = vocab.word_for(&c.name);
+        assert!(!w.contains('-') || vocab.is_declared(&c.name),
+            "{} resolved to {w:?}, which still reads as a key", c.name);
     }
 }
 ```
@@ -409,8 +450,10 @@ Expected: FAIL to compile — `CommonVocabulary` does not exist.
 ```rust
 use std::collections::BTreeMap;
 
-/// Common's id→word map: identity for single-word ids, declared entries for
-/// everything else, `None` where no word exists.
+/// Common's TOTAL id→word map: declared exceptions first, then the naming
+/// convention's own rules. Built by [`CommonVocabulary::build`], which
+/// validates against a registry — so holding one is the proof that every
+/// concept in that registry can be said.
 /// type-audit: bare-ok(identifier-text: keys), bare-ok(prose: values)
 #[derive(Clone, Debug, Default)]
 pub struct CommonVocabulary {
@@ -418,34 +461,37 @@ pub struct CommonVocabulary {
 }
 
 impl CommonVocabulary {
-    /// An empty vocabulary: pure identity-for-single-word-ids, no exceptions.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Declare the Common word for a concept whose id is not one (or whose
-    /// word differs from its id). Re-declaring replaces.
+    /// Declare the Common word for a concept the rules get wrong. Always wins
+    /// over the rules; re-declaring replaces.
     pub fn declare(&mut self, concept: &str, word: &str) {
-        self.declared
-            .insert(concept.to_string(), word.to_string());
+        self.declared.insert(concept.to_string(), word.to_string());
     }
 
-    /// The Common word for `concept`, or `None` when Common cannot say it.
-    ///
-    /// A caller that gets `None` must **describe** the concept or omit it —
-    /// never print the id. Printing the id is the defect this type exists to
-    /// make impossible to reach by accident.
-    pub fn word_for<'a>(&'a self, concept: &'a str) -> Option<&'a str> {
+    /// Whether this concept's word was authored rather than derived.
+    pub fn is_declared(&self, concept: &str) -> bool {
+        self.declared.contains_key(concept)
+    }
+
+    /// The Common word for `concept`. Infallible: the naming convention
+    /// resolves every id, and [`build`](Self::build) has already checked that
+    /// the result reads as a word rather than a key.
+    pub fn word_for(&self, concept: &str) -> String {
         if let Some(w) = self.declared.get(concept) {
-            return Some(w.as_str());
+            return w.clone();
         }
-        if concept.contains('-') {
-            return None;
-        }
-        Some(concept)
+        let stem = concept.strip_suffix("-kind").unwrap_or(concept);
+        stem.replace('-', " ")
     }
 }
 ```
+
+`build` walks the registry, applies `word_for` to every concept, and returns
+`Err(MissingCommonWords)` naming any whose result still reads as a key rather
+than a word. **Getting that check right is the task's real content** — decide
+what "still reads as a key" means and say so in your report. `contains('-')`
+after the rules have run is the obvious first cut, but a declared exception may
+legitimately contain a hyphen (`sun-like star`), which is what `is_declared`
+exists to let the check skip.
 
 - [ ] **Step 4: Astronomy exposes its own words**
 
@@ -512,13 +558,22 @@ assembles them next task."
 - Consumes: `CommonVocabulary`, `astronomy::star::common_words()` (Task 3);
   Task 2's derivations.
 - Produces: `ClauseSpec.complement_concept: String` (renamed from
-  `complement`), `realize_common(spec: &ClauseSpec, vocab: &CommonVocabulary)
-  -> Result<String, CommonGap>`, and
-  `pub struct CommonGap { pub concept: String }`.
+  `complement`) and
+  `realize_common(spec: &ClauseSpec, vocab: &CommonVocabulary) -> String`.
 
-**This is the task that closes the asymmetry.** After it, both realizers take a
-concept id and both can fail when the register has no word — the tongue path
-with `TongueGap`, the author's path with `CommonGap`.
+**This is the task that closes the asymmetry — by making it explicit, not by
+removing it.** After it, both realizers take a **concept id**; they differ
+exactly where they should. Common is total, so `realize_common` stays
+infallible. A tongue is partial, so `realize_tongue_deep` keeps returning
+`Result<_, TongueGap>`. Before this task the two differed in the wrong place:
+one took a concept and one took a word, so the author's register had no seam
+where "is this concept sayable?" could even be asked.
+
+**There is deliberately no `CommonGap`.** An earlier draft of this plan
+introduced one; it was removed once the registry measurement showed Common can
+be total mechanically. A `CommonGap` would put an authoring hole and a real
+linguistic gap behind one return type, which is the confusion the totality
+invariant exists to prevent.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -542,16 +597,16 @@ fn common_resolves_its_complement_through_the_vocabulary() {
         modifiers: vec![],
     };
     assert_eq!(
-        realize_common(&spec, &vocab).unwrap(),
+        realize_common(&spec, &vocab),
         "Elthandil is a yellow-white dwarf (F)."
     );
 }
 
-/// An undeclared hyphenated concept GAPS rather than printing its key. This is
-/// the test that would have caught `*celestial-body*` shipping to the gallery.
+/// A hyphenated id never reaches prose wearing its hyphen. This is the test
+/// that would have caught `*celestial-body*` shipping to the gallery.
 #[test]
-fn common_gaps_rather_than_printing_a_key() {
-    let vocab = CommonVocabulary::new();
+fn a_key_never_reaches_prose_as_a_key() {
+    let vocab = CommonVocabulary::default();
     let spec = ClauseSpec {
         frame: Frame::Classify,
         subject: Subject::Name("X".to_string()),
@@ -560,9 +615,9 @@ fn common_gaps_rather_than_printing_a_key() {
         definiteness: Definiteness::Indef,
         modifiers: vec![],
     };
-    let err = realize_common(&spec, &vocab)
-        .expect_err("an unsayable concept must gap, not render its key");
-    assert_eq!(err.concept, "celestial-body");
+    let line = realize_common(&spec, &vocab);
+    assert_eq!(line, "X is a celestial body.");
+    assert!(!line.contains('-'), "a key wore its hyphen into prose: {line}");
 }
 ```
 
@@ -601,13 +656,10 @@ concern and the gallery must not move for that reason.
 - [ ] **Step 5: Migrate the six book call sites and retire `class_display`**
 
 Each of `windows/book/src/lib.rs:345, 382, 1063, 1120, 1282, 2261` passes a
-concept id (most already do) and handles the `Result`. **How a `CommonGap`
-surfaces is a judgment call**: the book already collects `tongue_gaps` for the
-tongue path, so mirroring that with a `common_gaps` list is the consistent
-move — but read the surrounding code and report what you chose. Do **not**
-`.unwrap()` a gap into a panic in a render path that the gallery depends on
-unless the surrounding code already establishes that a gap there is a violated
-invariant.
+concept id — most already do, so several call sites change only in the field's
+name. `realize_common` is infallible, so no `Result` handling is added here;
+the book's existing `tongue_gaps` collection is for the tongue path and stays
+exactly as it is.
 
 `windows/explain/src/lib.rs:44` calls `class_display` to render the star class;
 point it at the vocabulary. Then delete `class_display` and have
@@ -1001,9 +1053,11 @@ with those signatures at both commit sites. `class_display` is *retired in Task
 **Three things stated as instructions to check rather than assertions**, because
 this campaign's briefs have carried wrong claims into implementers' hands twice:
 
-1. **How a `CommonGap` should surface in `windows/book` is a judgment call.**
-   Task 4 names the consistent option (mirror `tongue_gaps`) and requires the
-   implementer to read the surrounding code and report what they chose.
+1. **What counts as "still reads as a key" in `build`'s validation is a
+   judgment call.** Task 3 gives the obvious first cut (`contains('-')` after
+   the rules run, skipping declared entries) and requires the implementer to
+   decide and report. The exception list they end up with is data about how
+   well the naming convention holds, and Task 7 reports its size.
 2. **Whether `TongueClause` has a modifier slot is unconfirmed.** Task 5 says to
    report what happened to the qualifiers rather than drop them silently.
 3. **`provider.rs:1090`/`:1099` may be unconvertible** — every wanderer carries
