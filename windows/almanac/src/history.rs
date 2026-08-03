@@ -655,15 +655,28 @@ fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
     out
 }
 
-/// The occupation-scoped seed the flesh derivations expand from. Derived purely
-/// from the world seed and the occupation entity id — a *derived* readout, so
-/// this is a rendering convention, not a save-format contract (it commits
-/// nothing). Mirrors the `history/flesh` label the domain's module doc names.
-fn flesh_seed(world: &World, entity: EntityId) -> Seed {
+/// The occupation-scoped seed the flesh derivations expand from.
+///
+/// Derived from the world seed and the occupation's **material core** —
+/// never from its entity id, which is used here only as a lookup key (The
+/// Salt). A *derived* readout: this commits nothing, but `history/flesh/v2`
+/// is a declared derivation contract all the same.
+///
+/// Returns the world-seed-only stream for an entity that is not a
+/// reconstructable occupation; no caller does that today, and failing soft
+/// keeps a render from panicking on a malformed ledger.
+///
+/// `pub` because `windows/almanac/tests/flesh_id_invariance.rs` consumes it
+/// directly to assert the id-invariance property The Salt establishes — not
+/// widened for a throwaway probe.
+pub fn flesh_seed(world: &World, entity: EntityId) -> Seed {
+    let key = record_of(world, entity)
+        .map(|r| hornvale_history::record::material_key(&r.core))
+        .unwrap_or(0);
     world
         .seed
         .derive(hornvale_history::streams::FLESH)
-        .derive(StreamLabel::dynamic(&entity.0.get().to_string()))
+        .derive(StreamLabel::dynamic(&key.to_string()))
 }
 
 /// A prose list of the structures a community raised, folded by kind ("four
