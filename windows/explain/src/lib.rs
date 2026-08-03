@@ -148,6 +148,10 @@ mod tests {
     /// astronomy-only fixtures register. `hornvale_worldgen::common_vocabulary`
     /// is the real thing; this window does not depend on it (it presents a
     /// single domain and stays lean), so its callers hand the vocabulary in.
+    ///
+    /// Keep this in step with `COMMON_WORD_SOURCES` in `windows/worldgen`: a
+    /// domain added there whose words this window renders must be declared
+    /// here too, or these fixtures stop matching the real assembly.
     fn vocab_for(w: &World) -> CommonVocabulary {
         let mut vocab = CommonVocabulary::build(&w.registry).expect("the registry resolves");
         for (concept, word) in hornvale_astronomy::common_words() {

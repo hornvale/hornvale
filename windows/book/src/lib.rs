@@ -3482,6 +3482,7 @@ mod tests {
     /// letting an unexercised construction hide behind a green gate.
     #[test]
     fn every_book_line_round_trips() {
+        let vocab = vocab();
         let mut predicates_exercised: BTreeSet<String> = BTreeSet::new();
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -3490,7 +3491,7 @@ mod tests {
             for line in &volume.lines {
                 let parsed = parse_line(line, &ctx)
                     .unwrap_or_else(|e| panic!("seed {seed} line failed: {line} ({e:?})"));
-                let again = rerender(&parsed, &vocab());
+                let again = rerender(&parsed, &vocab);
                 assert_eq!(&again, line, "seed {seed}: re-realization drifted");
                 for (predicate, _) in &parsed.facts {
                     predicates_exercised.insert(predicate.clone());
@@ -3515,9 +3516,10 @@ mod tests {
     /// coverage lesson).
     #[test]
     fn fact_for_inverts_fragment_for_over_the_closed_space() {
+        let vocab = vocab();
         for count in 0..=13u64 {
             let value = Value::Number(count as f64);
-            let text = match fragment_for(MOON_COUNT, &value, &vocab()) {
+            let text = match fragment_for(MOON_COUNT, &value, &vocab) {
                 Some(Fragment::Modifier(m)) => m,
                 _ => panic!("expected a Modifier fragment for moon-count {count}"),
             };
@@ -3532,7 +3534,7 @@ mod tests {
             let world = generated(seed);
             for fact in world.ledger.find(STAR_CLASS) {
                 let value = fact.object.clone();
-                let text = match fragment_for(STAR_CLASS, &value, &vocab()) {
+                let text = match fragment_for(STAR_CLASS, &value, &vocab) {
                     Some(Fragment::Modifier(m)) => m,
                     _ => panic!("expected a Modifier fragment for {value:?}"),
                 };
@@ -3547,7 +3549,7 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let text = match fragment_for(DAY_LENGTH_STD, &value, &vocab()) {
+                let text = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
                     Some(Fragment::Trailing(t)) => t,
                     _ => panic!("expected a Trailing fragment for {days}"),
                 };
@@ -3570,6 +3572,7 @@ mod tests {
     /// claims.
     #[test]
     fn comprehend_quantity_agrees_with_the_direct_render_at_every_rung() {
+        let vocab = vocab();
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
             for fact in world.ledger.find(DAY_LENGTH_STD) {
@@ -3577,7 +3580,7 @@ mod tests {
                     continue;
                 };
                 let value = Value::Number(days);
-                let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab()) {
+                let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
                     Some(Fragment::Trailing(t)) => t,
                     _ => panic!("expected a Trailing fragment for {days}"),
                 };
@@ -3602,13 +3605,14 @@ mod tests {
     /// surface value exactly as it did before this campaign.
     #[test]
     fn fact_for_itself_is_unchanged() {
+        let vocab = vocab();
         let world = generated(1);
         for fact in world.ledger.find(DAY_LENGTH_STD) {
             let Value::Number(days) = fact.object else {
                 continue;
             };
             let value = Value::Number(days);
-            let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab()) {
+            let fragment = match fragment_for(DAY_LENGTH_STD, &value, &vocab) {
                 Some(Fragment::Trailing(t)) => t,
                 _ => panic!("expected a Trailing fragment for {days}"),
             };
@@ -3964,6 +3968,7 @@ mod tests {
     /// explanations could otherwise hide behind a vacuously-true round-trip.
     #[test]
     fn every_chorus_line_round_trips() {
+        let vocab = vocab();
         let mut explanation_seen = 0usize;
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -3980,7 +3985,7 @@ mod tests {
                     if matches!(chorus_line, ChorusLine::Explanation(_)) {
                         explanation_seen += 1;
                     }
-                    let again = rerender_chorus_line(&chorus_line, &vocab());
+                    let again = rerender_chorus_line(&chorus_line, &vocab);
                     assert_eq!(
                         &again, line,
                         "seed {seed} {}: re-realization drifted",
@@ -4615,6 +4620,7 @@ mod tests {
     /// lines entirely.
     #[test]
     fn every_doctrine_line_round_trips() {
+        let vocab = vocab();
         let mut revealed_claim_seen = 0usize;
         for seed in 1u64..=5 {
             let world = generated(seed);
@@ -4639,7 +4645,7 @@ mod tests {
                     if matches!(chorus_line, ChorusLine::RevealedClaim { .. }) {
                         revealed_claim_seen += 1;
                     }
-                    let again = rerender_chorus_line(&chorus_line, &vocab());
+                    let again = rerender_chorus_line(&chorus_line, &vocab);
                     assert_eq!(
                         &again, line,
                         "seed {seed} {} (doctrine): re-realization drifted",
@@ -4669,7 +4675,7 @@ mod tests {
             }
             _ => panic!("expected a ChorusLine::Counter"),
         }
-        assert_eq!(rerender_chorus_line(&parsed, &vocab()), annotation);
+        assert_eq!(rerender_chorus_line(&parsed, &vocab), annotation);
     }
 
     /// T3 review, mandated carry-over #2: pin doctrine-margin sparseness
@@ -5521,6 +5527,7 @@ mod tests {
     /// vacuous coverage.
     #[test]
     fn every_reckoning_line_round_trips() {
+        let vocab = vocab();
         let mut reckoning_seen = 0usize;
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -5540,7 +5547,7 @@ mod tests {
                         epoch.heading
                     );
                     reckoning_seen += 1;
-                    let again = rerender_chorus_line(&chorus_line, &vocab());
+                    let again = rerender_chorus_line(&chorus_line, &vocab);
                     assert_eq!(
                         &again, line,
                         "seed {seed} {}: re-realization drifted",
@@ -5561,7 +5568,7 @@ mod tests {
         // here cannot hide behind vacuous coverage.
         let ctx = ParseContext {
             complements: BTreeSet::new(),
-            vocabulary: vocab(),
+            vocabulary: vocab.clone(),
         };
         let synthetic = "In truth, the darkenings of the first days number three.";
         let chorus_line = parse_chorus_line(synthetic, &ctx)
@@ -5576,7 +5583,7 @@ mod tests {
                 count: 3,
             }
         );
-        assert_eq!(rerender_chorus_line(&chorus_line, &vocab()), synthetic);
+        assert_eq!(rerender_chorus_line(&chorus_line, &vocab), synthetic);
 
         // Synthetic: The Corrigendum T4's doctrine line has a
         // `crisis_live: false` arm ("None among the ⟨autonym⟩ have shown
@@ -5599,7 +5606,7 @@ mod tests {
             }
         );
         assert_eq!(
-            rerender_chorus_line(&chorus_line, &vocab()),
+            rerender_chorus_line(&chorus_line, &vocab),
             synthetic_doctrine
         );
     }
