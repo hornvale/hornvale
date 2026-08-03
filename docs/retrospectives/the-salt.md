@@ -91,6 +91,27 @@ commit, one of them *false* (the module header still said the flesh seed
 derives from the entity id). **A re-key changes prose about the code as surely
 as it changes the code**, and the compiler checks neither.
 
+**A census refresh at the close conflates every campaign it absorbed.** The
+run picked up seventeen moved metric distributions, and only three are The
+Salt's. The other fourteen (name-length, syllables, transparency,
+collision-rate, homophony, monophyly) belong to `ce13bae0`, the language
+compass absorbed hours earlier — it added east/west and four intercardinals as
+concepts, which moves the lexicon every name is drawn from. Attribution was
+possible only because an **isolated 20-seed before/after had been taken on this
+branch alone**, before the merge, and it moved the three name-prefix columns and
+nothing else. Without that earlier run there would have been no way to divide
+the diff short of a second twelve-minute census at main's tip. **Take the
+isolated measurement before absorbing main**, or accept that the close's census
+cannot tell you whose change did what.
+
+**The canonical-host guard fired, correctly, and I had told Nathan the wrong
+thing.** `CLAUDE.md` says the census is a "~7-min LOCAL run", which means local
+to `lefford` rather than remote on AWS — not local to the Mac. I read it as the
+latter and said so out loud before `scripts/census-run.sh` refused the run on
+`MacBookPro` (decision 0063). The guard cost nothing and caught a real error;
+the phrasing that misled is worth a word in `CLAUDE.md`, since "LOCAL" there is
+doing double duty against an abandoned remote path nobody uses any more.
+
 **Book freshness sweep: no Confidence Gradient bet moved.** Grepping
 `book/src/open-questions.md` for identity / entity / stratigraphy / mint-order /
 palimpsest returned only incidental prose, never a tracked bet — the same result

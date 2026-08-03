@@ -129,17 +129,23 @@ Re-keying founder handles raises that collision rate to 8.4%, which was
 alternative keys and their costs went to Nathan as a ruling before the code was
 written, and this consequence was preregistered as a prediction to report.
 
-The prediction holds, and the magnitude is the interesting part. The share of
-founders whose name renders in exactly one element against their own site falls
-from **0.9956 to 0.9586**, and the share spending every element they carry rises
-from **0.311 to 0.343**. So the rule now fires for about one founder in
-twenty-five where before it fired for about one in two hundred and fifty — a
-tenfold increase off a near-zero base. Every one of The Namesake's preregistered
-targets keeps the same verdict: settlement scope still passes, region full-stack
-still passes, region-scope median still fails at 1.1 exactly as it did before.
+The prediction holds, and the magnitude is the interesting part. Measured over
+the census's thousand worlds, the share of founders whose name renders in
+exactly one element against their own site falls from **0.99555 to 0.96087**,
+and the share spending every element they carry rises from **0.33484 to
+0.36454**.
 
-The honest summary is that The Namesake's falsification is **softened, not
-reversed**. The rule is doing more work than it was and still very little.
+The distribution says it better than either mean. The number of worlds in which
+the shortest-prefix rule **never fires at all** — where every founder is
+distinguishable by their given name alone — drops from **553 to 114**. Before
+this campaign the rule was idle in a clear majority of worlds; now it does
+something in roughly seven of eight.
+
+That is still not much. Every one of The Namesake's preregistered targets keeps
+the same verdict: settlement scope passes, region full-stack passes,
+region-scope median fails at 1.011 exactly as it failed at 1.009. The honest
+summary is that The Namesake's falsification is **softened, not reversed** — the
+rule earns more of its keep than it did, and not yet enough to call it earned.
 
 ## One artifact that did not move, and why that needed checking
 
