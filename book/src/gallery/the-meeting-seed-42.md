@@ -26,8 +26,8 @@ to the plain constant the world used before any species substrate existed (see
 [Species](../domains/species.md)). Goblin's authored vectors currently sit at
 exactly those values — every scalar with a genuine middle at the neutral
 midpoint 0.5, and every dimension without one at its designated default: the
-three enumerations, and articulation's atonal `0.0` — so goblin reads here as
-the world as it always
+enumerations, and articulation's atonal `0.0` — so goblin reads here as the
+world as it always
 was; kobold is the world's first genuine second reading. So when the two
 diverge below, the goblin column is never the thing that moved. The kobold
 column is, and it moved by exactly the authored distance its vector sits from
