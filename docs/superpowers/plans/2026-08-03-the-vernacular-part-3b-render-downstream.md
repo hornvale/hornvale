@@ -681,12 +681,24 @@ asymmetry rests on would be unenforced exactly where it first breaks.
 
 `cli/` is this workspace's documented home for cross-cutting enforcement tests
 (layering, dep allowlist, doc drift) and the one place the fully composed
-registry is reachable. Add a test there that builds a real world, calls
-`CommonVocabulary::build(&world.registry)`, and asserts it succeeds — so
-registering a concept with no Common word fails the commit gate. Delete Task 3's
-hardcoded id list if this supersedes it; keep its synthetic malformed-id tests,
-which check different behaviour and remain the only proof `build` can reject
-anything.
+registry is reachable. Add a test there that calls
+`CommonVocabulary::build(&registry)` on the composed registry and asserts it
+succeeds — so registering a concept with no Common word fails the commit gate.
+
+**This is cheaper than building a world.** `cli/tests/the_unnameable.rs:32`
+already does `hornvale_worldgen::register_all(&mut registry)` against a bare
+`ConceptRegistry::default()` — a sub-millisecond composed registry. Follow that
+pattern; the test is three lines and adds nothing measurable to the gate. Do
+**not** call `build_world` for this.
+
+Delete Task 3's hardcoded snapshot list once this supersedes it. **Keep its
+synthetic malformed-id tests** — they check different behaviour and are the
+only proof `build` can reject anything at all.
+
+**Say plainly in the test's doc what it does and does not prove.** It proves
+every registered concept is *well-formed* — it cannot prove any of them is
+*well-worded*. `sun-like-star` → "sun like star" passes this check; only a
+declared exception fixes that, and no mechanical test can find the next one.
 
 - [ ] **Step 7: Gate, then read the artifact diff**
 
