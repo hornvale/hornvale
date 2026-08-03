@@ -126,8 +126,8 @@ pub use naming::{
     GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,
 };
 pub use packs::{
-    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,
-    is_core_concept, kin_pack, register_concepts, universal_stratum,
+    BEARINGS, PackDepths, PackEntry, bearing_compounds, body_pack, color_pack, compound_recipe,
+    concept_domain, in_ladder, is_core_concept, kin_pack, register_concepts, universal_stratum,
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,

@@ -880,6 +880,65 @@ pub enum Compass {
     Nw,
 }
 
+impl Compass {
+    /// Every bearing the exit graph can name, one per variant — the roster the
+    /// correspondence audit reconciles against the concept registry, the same
+    /// discipline The Actants applied to the GOAP action roster.
+    ///
+    /// Kept exhaustive by [`compass_variants_must_all_be_rostered`]: a new
+    /// variant fails to compile until it is listed here, so a bearing can never
+    /// enter the world without the audit noticing it has no word.
+    pub fn all() -> [Compass; 8] {
+        [
+            Compass::N,
+            Compass::Ne,
+            Compass::E,
+            Compass::Se,
+            Compass::S,
+            Compass::Sw,
+            Compass::W,
+            Compass::Nw,
+        ]
+    }
+
+    /// The concept name that would name this bearing, whether or not it is
+    /// registered. The audit reports the ones that are not. The four cardinals
+    /// are roots in language's universal stratum; the four intercardinals are
+    /// compound-only concepts, named here by the same ids the recipe table
+    /// keys on.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn concept_name(self) -> &'static str {
+        match self {
+            Compass::N => "north",
+            Compass::Ne => "north-east",
+            Compass::E => "east",
+            Compass::Se => "south-east",
+            Compass::S => "south",
+            Compass::Sw => "south-west",
+            Compass::W => "west",
+            Compass::Nw => "north-west",
+        }
+    }
+}
+
+/// Compile-time tripwire: a new [`Compass`] variant breaks this match — every
+/// variant is named and there is no `_` arm — forcing [`Compass::all`] and
+/// [`Compass::concept_name`] to be revisited. The `manifest.rs` destructure
+/// tripwire applied to an enum. Never remove, never add a wildcard arm.
+#[allow(dead_code)]
+fn compass_variants_must_all_be_rostered(c: Compass) -> &'static str {
+    match c {
+        Compass::N => "north",
+        Compass::Ne => "north-east",
+        Compass::E => "east",
+        Compass::Se => "south-east",
+        Compass::S => "south",
+        Compass::Sw => "south-west",
+        Compass::W => "west",
+        Compass::Nw => "north-west",
+    }
+}
+
 /// The traversal class of an exit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum ExitKind {

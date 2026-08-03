@@ -40,6 +40,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): black-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Sag | /sag/ | Dsak | Dsak → clustersimplify → Sag |
 | `earth` | the ground underfoot | Zhodgshod | /ʒodgʃod/ | Gjedkshed | Gjedkshed → clustersimplify → Zhodgshod |
+| `east` | the direction of increasing longitude | Zhaddsood | /ʒaddsood/ | Djabpseod | Djabpseod → clustersimplify → Zhaddsood |
 | `eat` | to consume food | Dood | /dood/ | Need | Need → no change → Dood |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): black-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
@@ -109,7 +110,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Shaag | /ʃaag/ | Gshaak | Gshaak → clustersimplify → Shaag |
 | `night` | the dark half of the day-night cycle | Dad | /dad/ | Nad | Nad → no change → Dad |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): black-dragon has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Dadgdoag | /dadgdoag/ | Bwadkweag | Bwadkweag → clustersimplify → Dadgdoag |
+| `north` | toward the pole of increasing latitude | Dadgdoag | /dadgdoag/ | Bwadkweag | Bwadkweag → clustersimplify → Dadgdoag |
+| `north-east` | between north and east | Zhaddsooddadgdoag | /ʒaddsooddadgdoag/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Daodddagdadgdoag | /daodddagdadgdoag/ | — | compound: `north` + `west` |
 | `old` | long in existence | Soddshoog | /soddʃoog/ | Dsobdshoog | Dsobdshoog → clustersimplify → Soddshoog |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): black-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Zhooddzhoog | /ʒooddʒoog/ | Bjeoppjook | Bjeoppjook → clustersimplify → Zhooddzhoog |
@@ -153,7 +156,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): black-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): black-dragon has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Shoggsad | /ʃoggsad/ | Gshegksap | Gshegksap → clustersimplify → Shoggsad |
+| `south` | toward the pole of decreasing latitude | Shoggsad | /ʃoggsad/ | Gshegksap | Gshegksap → clustersimplify → Shoggsad |
+| `south-east` | between south and east | Zhaddsoodshoggsad | /ʒaddsoodʃoggsad/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Daodddagshoggsad | /daodddagʃoggsad/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): black-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): black-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): black-dragon has no exposure to 'spur-and-groove' |
@@ -188,6 +193,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): black-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'vine' |
 | `water` | the drinkable liquid | Doddad | /doddad/ | Mopnab | Mopnab → no change → Doddad |
+| `west` | the direction of decreasing longitude | Daodddag | /daodddag/ | Pwaodpwak | Pwaodpwak → clustersimplify → Daodddag |
 | `wheat` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -236,6 +242,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): bugbear has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Gadao | /gadao/ | Ganae | Ganae → no change → Gadao |
 | `earth` | the ground underfoot | Goo | /goo/ | Geo | Geo → no change → Goo |
+| `east` | the direction of increasing longitude | Dooba | /dooba/ | Neepa | Neepa → lenition → Dooba |
 | `eat` | to consume food | Dao | /dao/ | Nao | Nao → no change → Dao |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): bugbear has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
@@ -305,7 +312,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Doboo | /doboo/ | Nopee | Nopee → lenition → Doboo |
 | `night` | the dark half of the day-night cycle | Doqa | /doqa/ | Neqa | Neqa → no change → Doqa |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): bugbear has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Dadoo | /dadoo/ | Nanoe | Nanoe → no change → Dadoo |
+| `north` | toward the pole of increasing latitude | Dadoo | /dadoo/ | Nanoe | Nanoe → no change → Dadoo |
+| `north-east` | between north and east | Dadoodooba | /dadoodooba/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Dadoodoagoa | /dadoodoagoa/ | — | compound: `north` + `west` |
 | `old` | long in existence | Dabo | /dabo/ | Tape | Tape → lenition → Dabo |
 | `old-growth` | Mature forest, closed above and open beneath. | Dodoo | /dodoo/ | Neneo | Neneo → no change → Dodoo |
 | `one` | the cardinal number 1 | Googo | /googo/ | Koego | Koego → lenition → Googo |
@@ -349,7 +358,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): bugbear has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): bugbear has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Qaodoo | /qaodoo/ | Qaeneo | Qaeneo → no change → Qaodoo |
+| `south` | toward the pole of decreasing latitude | Qaodoo | /qaodoo/ | Qaeneo | Qaeneo → no change → Qaodoo |
+| `south-east` | between south and east | Qaodoodooba | /qaodoodooba/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Qaodoodoagoa | /qaodoodoagoa/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Baa | /baa/ | Paa | Paa → lenition → Baa |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): bugbear has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): bugbear has no exposure to 'spur-and-groove' |
@@ -384,6 +395,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): bugbear has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): bugbear has no exposure to 'vine' |
 | `water` | the drinkable liquid | Doogo | /doogo/ | Doege | Doege → no change → Doogo |
+| `west` | the direction of decreasing longitude | Doagoa | /doagoa/ | Neakea | Neakea → lenition → Doagoa |
 | `wheat` | a staple crop | Dodoa | /dodoa/ | Netea | Netea → lenition → Dodoa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): bugbear has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -432,6 +444,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gnoll has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Qshopznoox | /qʃopznoox/ | Qshofznoox | Qshofznoox → fortition → Qshopznoox |
 | `earth` | the ground underfoot | Sma | /sma/ | Sma | Sma → no change → Sma |
+| `east` | the direction of increasing longitude | Shmoovzhnaop | /ʃmoovʒnaop/ | Shmoovzhnaof | Shmoovzhnaof → fortition → Shmoovzhnaop |
 | `eat` | to consume food | Pshaoxshngaap | /pʃaoxʃŋaap/ | Pshaoxshngaaf | Pshaoxshngaaf → fortition → Pshaoxshngaap |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): gnoll has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
@@ -501,7 +514,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Qzaov | /qzaov/ | Qzaov | Qzaov → no change → Qzaov |
 | `night` | the dark half of the day-night cycle | Zhnoopznox | /ʒnoopznox/ | Zhnoofznox | Zhnoofznox → fortition → Zhnoopznox |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): gnoll has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Shmapdzhoav | /ʃmapdʒoav/ | Shmafdzhoav | Shmafdzhoav → fortition → Shmapdzhoav |
+| `north` | toward the pole of increasing latitude | Shmapdzhoav | /ʃmapdʒoav/ | Shmafdzhoav | Shmafdzhoav → fortition → Shmapdzhoav |
+| `north-east` | between north and east | Shmoovzhnaopshmapdzhoav | /ʃmoovʒnaopʃmapdʒoav/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Zhmaxsnovshmapdzhoav | /ʒmaxsnovʃmapdʒoav/ | — | compound: `north` + `west` |
 | `old` | long in existence | Qsaoxshngax | /qsaoxʃŋax/ | Qsaoxshngax | Qsaoxshngax → no change → Qsaoxshngax |
 | `old-growth` | Mature forest, closed above and open beneath. | Snaapzmoov | /snaapzmoov/ | Snaafzmoov | Snaafzmoov → fortition → Snaapzmoov |
 | `one` | the cardinal number 1 | Psoaznoov | /psoaznoov/ | Psoaznoov | Psoaznoov → no change → Psoaznoov |
@@ -545,7 +560,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): gnoll has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): gnoll has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Gsoov | /gsoov/ | Gsoov | Gsoov → no change → Gsoov |
+| `south` | toward the pole of decreasing latitude | Gsoov | /gsoov/ | Gsoov | Gsoov → no change → Gsoov |
+| `south-east` | between south and east | Shmoovzhnaopgsoov | /ʃmoovʒnaopgsoov/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Zhmaxsnovgsoov | /ʒmaxsnovgsoov/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Zhnoavzmo | /ʒnoavzmo/ | Zhnoavzmo | Zhnoavzmo → no change → Zhnoavzmo |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): gnoll has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): gnoll has no exposure to 'spur-and-groove' |
@@ -580,6 +597,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): gnoll has no exposure to 'vent-plume' |
 | `vine` | a staple crop | Gzhopgshoop | /gʒopgʃoop/ | Gzhofgshoof | Gzhofgshoof → fortition → Gzhopgshoop |
 | `water` | the drinkable liquid | Zngaav | /zŋaav/ | Zngaav | Zngaav → no change → Zngaav |
+| `west` | the direction of decreasing longitude | Zhmaxsnov | /ʒmaxsnov/ | Zhmaxsnov | Zhmaxsnov → no change → Zhmaxsnov |
 | `wheat` | a staple crop | Qzhaovgzhoav | /qʒaovgʒoav/ | Qzhaovgzhoav | Qzhaovgzhoav → no change → Qzhaovgzhoav |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): gnoll has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -628,6 +646,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): goblin has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Banae | /banae/ | Ganae | Ganae → no change → Banae |
 | `earth` | the ground underfoot | Beo | /beo/ | Geo | Geo → no change → Beo |
+| `east` | the direction of increasing longitude | Neeba | /neeba/ | Neepa | Neepa → no change → Neeba |
 | `eat` | to consume food | Nao | /nao/ | Nao | Nao → no change → Nao |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): goblin has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
@@ -697,7 +716,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Nobee | /nobee/ | Nopee | Nopee → no change → Nobee |
 | `night` | the dark half of the day-night cycle | Neta | /neta/ | Neqa | Neqa → no change → Neta |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): goblin has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Nanoe | /nanoe/ | Nanoe | Nanoe → no change → Nanoe |
+| `north` | toward the pole of increasing latitude | Nanoe | /nanoe/ | Nanoe | Nanoe → no change → Nanoe |
+| `north-east` | between north and east | Nanoeneeba | /nanoeneeba/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Nanoeneakea | /nanoeneakea/ | — | compound: `north` + `west` |
 | `old` | long in existence | Tabe | /tabe/ | Tape | Tape → no change → Tabe |
 | `old-growth` | Mature forest, closed above and open beneath. | Neneo | /neneo/ | Neneo | Neneo → no change → Neneo |
 | `one` | the cardinal number 1 | Koebo | /koebo/ | Koego | Koego → no change → Koebo |
@@ -741,7 +762,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): goblin has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): goblin has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Taeneo | /taeneo/ | Qaeneo | Qaeneo → no change → Taeneo |
+| `south` | toward the pole of decreasing latitude | Taeneo | /taeneo/ | Qaeneo | Qaeneo → no change → Taeneo |
+| `south-east` | between south and east | Taeneoneeba | /taeneoneeba/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Taeneoneakea | /taeneoneakea/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Baa | /baa/ | Paa | Paa → no change → Baa |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): goblin has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): goblin has no exposure to 'spur-and-groove' |
@@ -776,6 +799,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): goblin has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): goblin has no exposure to 'vine' |
 | `water` | the drinkable liquid | Doebe | /doebe/ | Doege | Doege → no change → Doebe |
+| `west` | the direction of decreasing longitude | Neakea | /neakea/ | Neakea | Neakea → no change → Neakea |
 | `wheat` | a staple crop | Netea | /netea/ | Netea | Netea → no change → Netea |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): goblin has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -824,6 +848,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Ganae | /ganae/ | Ganae | Ganae → no change → Ganae |
 | `earth` | the ground underfoot | Geo | /geo/ | Geo | Geo → no change → Geo |
+| `east` | the direction of increasing longitude | Neeba | /neeba/ | Neepa | Neepa → no change → Neeba |
 | `eat` | to consume food | Nao | /nao/ | Nao | Nao → no change → Nao |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): hobgoblin has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
@@ -893,7 +918,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Nobee | /nobee/ | Nopee | Nopee → no change → Nobee |
 | `night` | the dark half of the day-night cycle | Neqa | /neqa/ | Neqa | Neqa → no change → Neqa |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): hobgoblin has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Nanoe | /nanoe/ | Nanoe | Nanoe → no change → Nanoe |
+| `north` | toward the pole of increasing latitude | Nanoe | /nanoe/ | Nanoe | Nanoe → no change → Nanoe |
+| `north-east` | between north and east | Nanoeneeba | /nanoeneeba/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Nanoeneakea | /nanoeneakea/ | — | compound: `north` + `west` |
 | `old` | long in existence | Tabe | /tabe/ | Tape | Tape → no change → Tabe |
 | `old-growth` | Mature forest, closed above and open beneath. | Neneo | /neneo/ | Neneo | Neneo → no change → Neneo |
 | `one` | the cardinal number 1 | Koego | /koego/ | Koego | Koego → no change → Koego |
@@ -937,7 +964,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): hobgoblin has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): hobgoblin has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Qaeneo | /qaeneo/ | Qaeneo | Qaeneo → no change → Qaeneo |
+| `south` | toward the pole of decreasing latitude | Qaeneo | /qaeneo/ | Qaeneo | Qaeneo → no change → Qaeneo |
+| `south-east` | between south and east | Qaeneoneeba | /qaeneoneeba/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Qaeneoneakea | /qaeneoneakea/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Baa | /baa/ | Paa | Paa → no change → Baa |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): hobgoblin has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): hobgoblin has no exposure to 'spur-and-groove' |
@@ -972,6 +1001,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): hobgoblin has no exposure to 'vent-plume' |
 | `vine` | a staple crop | Teona | /teona/ | Teona | Teona → no change → Teona |
 | `water` | the drinkable liquid | Boege | /boege/ | Doege | Doege → no change → Boege |
+| `west` | the direction of decreasing longitude | Neakea | /neakea/ | Neakea | Neakea → no change → Neakea |
 | `wheat` | a staple crop | Netea | /netea/ | Netea | Netea → no change → Netea |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -1020,6 +1050,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): kobold has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Roroxao | /roroxao/ | Roroxao | Roroxao → no change → Roroxao |
 | `earth` | the ground underfoot | Roorao | /roorao/ | Roorao | Roorao → no change → Roorao |
+| `east` | the direction of increasing longitude | Roaraoro | /roaraoro/ | Roaraoro | Roaraoro → no change → Roaraoro |
 | `eat` | to consume food | Xaro | /xaro/ | Xaro | Xaro → no change → Xaro |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): kobold has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
@@ -1089,7 +1120,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Roaxoorao | /roaxoorao/ | Roaxoorao | Roaxoorao → no change → Roaxoorao |
 | `night` | the dark half of the day-night cycle | Xora | /xora/ | Xora | Xora → no change → Xora |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): kobold has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Xoaxao | /xoaxao/ | Xoaxao | Xoaxao → no change → Xoaxao |
+| `north` | toward the pole of increasing latitude | Xoaxao | /xoaxao/ | Xoaxao | Xoaxao → no change → Xoaxao |
+| `north-east` | between north and east | Roaraoroxoaxao | /roaraoroxoaxao/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Raorooxaaxoaxao | /raorooxaaxoaxao/ | — | compound: `north` + `west` |
 | `old` | long in existence | Raararoo | /raararoo/ | Raararoo | Raararoo → no change → Raararoo |
 | `old-growth` | Mature forest, closed above and open beneath. | Roaxora | /roaxora/ | Roaxora | Roaxora → no change → Roaxora |
 | `one` | the cardinal number 1 | Xooxoa | /xooxoa/ | Xooxoa | Xooxoa → no change → Xooxoa |
@@ -1133,7 +1166,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): kobold has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): kobold has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Xaaraa | /xaaraa/ | Xaaraa | Xaaraa → no change → Xaaraa |
+| `south` | toward the pole of decreasing latitude | Xaaraa | /xaaraa/ | Xaaraa | Xaaraa → no change → Xaaraa |
+| `south-east` | between south and east | Roaraoroxaaraa | /roaraoroxaaraa/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Raorooxaaxaaraa | /raorooxaaxaaraa/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | Raoro | /raoro/ | Raoro | Raoro → no change → Raoro |
 | `spring` | where water rises from the ground | Roraaxaa | /roraaxaa/ | Roraaxaa | Roraaxaa → no change → Roraaxaa |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): kobold has no exposure to 'spur-and-groove' |
@@ -1168,6 +1203,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): kobold has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): kobold has no exposure to 'vine' |
 | `water` | the drinkable liquid | Raxa | /raxa/ | Raxa | Raxa → no change → Raxa |
+| `west` | the direction of decreasing longitude | Raorooxaa | /raorooxaa/ | Raorooxaa | Raorooxaa → no change → Raorooxaa |
 | `wheat` | a staple crop | Roxoa | /roxoa/ | Roxoa | Roxoa → no change → Roxoa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): kobold has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -1216,6 +1252,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): red-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Dsak | /dsak/ | Dsak | Dsak → no change → Dsak |
 | `earth` | the ground underfoot | Djodkshod | /djodkʃod/ | Gjedkshed | Gjedkshed → no change → Djodkshod |
+| `east` | the direction of increasing longitude | Djadksood | /djadksood/ | Djabpseod | Djabpseod → no change → Djadksood |
 | `eat` | to consume food | Dood | /dood/ | Need | Need → no change → Dood |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): red-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
@@ -1285,7 +1322,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Dshaak | /dʃaak/ | Gshaak | Gshaak → no change → Dshaak |
 | `night` | the dark half of the day-night cycle | Dad | /dad/ | Nad | Nad → no change → Dad |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): red-dragon has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Djadkjoad | /djadkjoad/ | Bwadkweag | Bwadkweag → no change → Djadkjoad |
+| `north` | toward the pole of increasing latitude | Djadkjoad | /djadkjoad/ | Bwadkweag | Bwadkweag → no change → Djadkjoad |
+| `north-east` | between north and east | Djadksooddjadkjoad | /djadksooddjadkjoad/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Kjaodkjakdjadkjoad | /kjaodkjakdjadkjoad/ | — | compound: `north` + `west` |
 | `old` | long in existence | Dsoddshood | /dsoddʃood/ | Dsobdshoog | Dsobdshoog → no change → Dsoddshood |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): red-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Djookkjook | /djookkjook/ | Bjeoppjook | Bjeoppjook → no change → Djookkjook |
@@ -1329,7 +1368,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): red-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): red-dragon has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
+| `south` | toward the pole of decreasing latitude | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
+| `south-east` | between south and east | Djadksooddshodksak | /djadksooddʃodksak/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Kjaodkjakdshodksak | /kjaodkjakdʃodksak/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): red-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): red-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): red-dragon has no exposure to 'spur-and-groove' |
@@ -1364,6 +1405,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): red-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'vine' |
 | `water` | the drinkable liquid | Dokdad | /dokdad/ | Mopnab | Mopnab → no change → Dokdad |
+| `west` | the direction of decreasing longitude | Kjaodkjak | /kjaodkjak/ | Pwaodpwak | Pwaodpwak → no change → Kjaodkjak |
 | `wheat` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'white-dragon-kind' |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -1412,6 +1454,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): white-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Dsak | /dsak/ | Dsak | Dsak → no change → Dsak |
 | `earth` | the ground underfoot | Dzhodkshod | /dʒodkʃod/ | Gjedkshed | Gjedkshed → no change → Dzhodkshod |
+| `east` | the direction of increasing longitude | Dzhadksood | /dʒadksood/ | Djabpseod | Djabpseod → no change → Dzhadksood |
 | `eat` | to consume food | Nood | /nood/ | Need | Need → no change → Nood |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): white-dragon has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
@@ -1481,7 +1524,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `new` | recently come to be | Dshaak | /dʃaak/ | Gshaak | Gshaak → no change → Dshaak |
 | `night` | the dark half of the day-night cycle | Nad | /nad/ | Nad | Nad → no change → Nad |
 | `nodule-field` | Seafloor strewn with mineral nodules. | — | — | — | gap (experiential): white-dragon has no exposure to 'nodule-field' |
-| `north` | the compass point opposite south | Ddadkdoad | /ddadkdoad/ | Bwadkweag | Bwadkweag → no change → Ddadkdoad |
+| `north` | toward the pole of increasing latitude | Ddadkdoad | /ddadkdoad/ | Bwadkweag | Bwadkweag → no change → Ddadkdoad |
+| `north-east` | between north and east | Ddadkdoaddzhadksood | /ddadkdoaddʒadksood/ | — | compound: `north` + `east` |
+| `north-west` | between north and west | Ddadkdoadkdaodkdak | /ddadkdoadkdaodkdak/ | — | compound: `north` + `west` |
 | `old` | long in existence | Dsoddshood | /dsoddʃood/ | Dsobdshoog | Dsobdshoog → no change → Dsoddshood |
 | `old-growth` | Mature forest, closed above and open beneath. | — | — | — | gap (experiential): white-dragon has no exposure to 'old-growth' |
 | `one` | the cardinal number 1 | Dzhookkzhook | /dʒookkʒook/ | Bjeoppjook | Bjeoppjook → no change → Dzhookkzhook |
@@ -1525,7 +1570,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `smoker-field` | A field of hydrothermal chimneys. | — | — | — | gap (experiential): white-dragon has no exposure to 'smoker-field' |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'snow' |
 | `snowfield` | An unbroken field of snow. | — | — | — | gap (experiential): white-dragon has no exposure to 'snowfield' |
-| `south` | the compass point opposite north | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
+| `south` | toward the pole of decreasing latitude | Dshodksak | /dʃodksak/ | Gshegksap | Gshegksap → no change → Dshodksak |
+| `south-east` | between south and east | Dshodksakdzhadksood | /dʃodksakdʒadksood/ | — | compound: `south` + `east` |
+| `south-west` | between south and west | Dshodksakkdaodkdak | /dʃodksakkdaodkdak/ | — | compound: `south` + `west` |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): white-dragon has no exposure to 'spirit' |
 | `spring` | where water rises from the ground | — | — | — | gap (experiential): white-dragon has no exposure to 'spring' |
 | `spur-and-groove` | The ribbed seaward face of a reef. | — | — | — | gap (experiential): white-dragon has no exposure to 'spur-and-groove' |
@@ -1560,6 +1607,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `vent-plume` | Shimmering hot water rising from a vent. | — | — | — | gap (experiential): white-dragon has no exposure to 'vent-plume' |
 | `vine` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'vine' |
 | `water` | the drinkable liquid | Noknad | /noknad/ | Mopnab | Mopnab → no change → Noknad |
+| `west` | the direction of decreasing longitude | Kdaodkdak | /kdaodkdak/ | Pwaodpwak | Pwaodpwak → no change → Kdaodkdak |
 | `wheat` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'wheat' |
 | `white-dragon-kind` | a white dragon | Nookdzhoak | /nookdʒoak/ | Noekdjeak | Noekdjeak → no change → Nookdzhoak |
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
@@ -1588,6 +1636,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `die` | to cease living | *Dsaad /dsaad/ | Saad /saad/ | Dsaad /dsaad/ | Dsaad /dsaad/ | *Dsaad → Saad / Dsaad / Dsaad |
 | `drink` | to swallow liquid | *Dsak /dsak/ | Sag /sag/ | Dsak /dsak/ | Dsak /dsak/ | *Dsak → Sag / Dsak / Dsak |
 | `earth` | the ground underfoot | *Gjedkshed /gjedkʃed/ | Zhodgshod /ʒodgʃod/ | Djodkshod /djodkʃod/ | Dzhodkshod /dʒodkʃod/ | *Gjedkshed → Zhodgshod / Djodkshod / Dzhodkshod |
+| `east` | the direction of increasing longitude | *Djabpseod /djabpseod/ | Zhaddsood /ʒaddsood/ | Djadksood /djadksood/ | Dzhadksood /dʒadksood/ | *Djabpseod → Zhaddsood / Djadksood / Dzhadksood |
 | `eat` | to consume food | *Need /need/ | Dood /dood/ | Dood /dood/ | Nood /nood/ | *Need → Dood / Dood / Nood |
 | `eye` | the organ of sight | *Madnad /madnad/ | Daddad /daddad/ | Daddad /daddad/ | Nadnad /nadnad/ | *Madnad → Daddad / Daddad / Nadnad |
 | `fire` | flame and heat | *Nebmep /nebmep/ | Doddod /doddod/ | Doddok /doddok/ | Nodnok /nodnok/ | *Nebmep → Doddod / Doddok / Nodnok |
@@ -1606,7 +1655,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `name` | a word that identifies one who bears it | *Neok /neok/ | Doog /doog/ | Dook /dook/ | Nook /nook/ | *Neok → Doog / Dook / Nook |
 | `new` | recently come to be | *Gshaak /gʃaak/ | Shaag /ʃaag/ | Dshaak /dʃaak/ | Dshaak /dʃaak/ | *Gshaak → Shaag / Dshaak / Dshaak |
 | `night` | the dark half of the day-night cycle | *Nad /nad/ | Dad /dad/ | Dad /dad/ | Nad /nad/ | *Nad → Dad / Dad / Nad |
-| `north` | the compass point opposite south | *Bwadkweag /bwadkweag/ | Dadgdoag /dadgdoag/ | Djadkjoad /djadkjoad/ | Ddadkdoad /ddadkdoad/ | *Bwadkweag → Dadgdoag / Djadkjoad / Ddadkdoad |
+| `north` | toward the pole of increasing latitude | *Bwadkweag /bwadkweag/ | Dadgdoag /dadgdoag/ | Djadkjoad /djadkjoad/ | Ddadkdoad /ddadkdoad/ | *Bwadkweag → Dadgdoag / Djadkjoad / Ddadkdoad |
 | `old` | long in existence | *Dsobdshoog /dsobdʃoog/ | Soddshoog /soddʃoog/ | Dsoddshood /dsoddʃood/ | Dsoddshood /dsoddʃood/ | *Dsobdshoog → Soddshoog / Dsoddshood / Dsoddshood |
 | `one` | the cardinal number 1 | *Bjeoppjook /bjeoppjook/ | Zhooddzhoog /ʒooddʒoog/ | Djookkjook /djookkjook/ | Dzhookkzhook /dʒookkʒook/ | *Bjeoppjook → Zhooddzhoog / Djookkjook / Dzhookkzhook |
 | `over` | above; atop | *Nakmop /nakmop/ | Dagdod /dagdod/ | Dakdok /dakdok/ | Naknok /naknok/ | *Nakmop → Dagdod / Dakdok / Naknok |
@@ -1617,7 +1666,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `shadow` | cast dark, distinct from open gloom | *Ngod /ŋod/ | God /god/ | Dod /dod/ | Ngod /ŋod/ | *Ngod → God / Dod / Ngod |
 | `sibling` | one's brother or sister | *Psaakdsheb /psaakdʃeb/ | Saagdshod /saagdʃod/ | Ksaakdshod /ksaakdʃod/ | Ksaakdshod /ksaakdʃod/ | *Psaakdsheb → Saagdshod / Ksaakdshod / Ksaakdshod |
 | `sleep` | to rest unconscious | *Kshoag /kʃoag/ | Shoag /ʃoag/ | Kshoad /kʃoad/ | Kshoad /kʃoad/ | *Kshoag → Shoag / Kshoad / Kshoad |
-| `south` | the compass point opposite north | *Gshegksap /gʃegksap/ | Shoggsad /ʃoggsad/ | Dshodksak /dʃodksak/ | Dshodksak /dʃodksak/ | *Gshegksap → Shoggsad / Dshodksak / Dshodksak |
+| `south` | toward the pole of decreasing latitude | *Gshegksap /gʃegksap/ | Shoggsad /ʃoggsad/ | Dshodksak /dʃodksak/ | Dshodksak /dʃodksak/ | *Gshegksap → Shoggsad / Dshodksak / Dshodksak |
 | `star` | a fixed point of light in the night sky | *Bwoepmoad /bwoepmoad/ | Dooddoad /dooddoad/ | Djookdoad /djookdoad/ | Ddooknoad /ddooknoad/ | *Bwoepmoad → Dooddoad / Djookdoad / Ddooknoad |
 | `starlit` | dark faintly lit by stars | *Kwagdjoeb /kwagdjoeb/ | Dagdzhood /dagdʒood/ | Kjaddjood /kjaddjood/ | Kdaddzhood /kdaddʒood/ | *Kwagdjoeb → Dagdzhood / Kjaddjood / Kdaddzhood |
 | `stone` | rock | *Gshepmoop /gʃepmoop/ | Shoddood /ʃoddood/ | Dshokdook /dʃokdook/ | Dshoknook /dʃoknook/ | *Gshepmoop → Shoddood / Dshokdook / Dshoknook |
@@ -1626,6 +1675,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `two` | the cardinal number 2 | *Kwebmaek /kwebmaek/ | Doddaog /doddaog/ | Kjoddaok /kjoddaok/ | Kdodnaok /kdodnaok/ | *Kwebmaek → Doddaog / Kjoddaok / Kdodnaok |
 | `under` | beneath; below | *Gjoebkjaob /gjoebkjaob/ | Zhoodgzhaod /ʒoodgʒaod/ | Djoodkjaod /djoodkjaod/ | Dzhoodkzhaod /dʒoodkʒaod/ | *Gjoebkjaob → Zhoodgzhaod / Djoodkjaod / Dzhoodkzhaod |
 | `water` | the drinkable liquid | *Mopnab /mopnab/ | Doddad /doddad/ | Dokdad /dokdad/ | Noknad /noknad/ | *Mopnab → Doddad / Dokdad / Noknad |
+| `west` | the direction of decreasing longitude | *Pwaodpwak /pwaodpwak/ | Daodddag /daodddag/ | Kjaodkjak /kjaodkjak/ | Kdaodkdak /kdaodkdak/ | *Pwaodpwak → Daodddag / Kjaodkjak / Kdaodkdak |
 | `wind` | moving air | *Kwok /kwok/ | Dog /dog/ | Kjok /kjok/ | Kdok /kdok/ | *Kwok → Dog / Kjok / Kdok |
 
 ### Goblinoid
@@ -1642,6 +1692,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `die` | to cease living | *Toono /toono/ | Doodo /doodo/ | Toono /toono/ | Toono /toono/ | *Toono → Doodo / Toono / Toono |
 | `drink` | to swallow liquid | *Ganae /ganae/ | Gadao /gadao/ | Banae /banae/ | Ganae /ganae/ | *Ganae → Gadao / Banae / Ganae |
 | `earth` | the ground underfoot | *Geo /geo/ | Goo /goo/ | Beo /beo/ | Geo /geo/ | *Geo → Goo / Beo / Geo |
+| `east` | the direction of increasing longitude | *Neepa /neepa/ | Dooba /dooba/ | Neeba /neeba/ | Neeba /neeba/ | *Neepa → Dooba / Neeba / Neeba |
 | `eat` | to consume food | *Nao /nao/ | Dao /dao/ | Nao /nao/ | Nao /nao/ | *Nao → Dao / Nao / Nao |
 | `eye` | the organ of sight | *Ta /ta/ | Da /da/ | Ta /ta/ | Ta /ta/ | *Ta → Da / Ta / Ta |
 | `fire` | flame and heat | *Qaa /qaa/ | Qaa /qaa/ | Taa /taa/ | Qaa /qaa/ | *Qaa → Qaa / Taa / Qaa |
@@ -1670,7 +1721,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `name` | a word that identifies one who bears it | *Noenae /noenae/ | Doodao /doodao/ | Noenae /noenae/ | Noenae /noenae/ | *Noenae → Doodao / Noenae / Noenae |
 | `new` | recently come to be | *Nopee /nopee/ | Doboo /doboo/ | Nobee /nobee/ | Nobee /nobee/ | *Nopee → Doboo / Nobee / Nobee |
 | `night` | the dark half of the day-night cycle | *Neqa /neqa/ | Doqa /doqa/ | Neta /neta/ | Neqa /neqa/ | *Neqa → Doqa / Neta / Neqa |
-| `north` | the compass point opposite south | *Nanoe /nanoe/ | Dadoo /dadoo/ | Nanoe /nanoe/ | Nanoe /nanoe/ | *Nanoe → Dadoo / Nanoe / Nanoe |
+| `north` | toward the pole of increasing latitude | *Nanoe /nanoe/ | Dadoo /dadoo/ | Nanoe /nanoe/ | Nanoe /nanoe/ | *Nanoe → Dadoo / Nanoe / Nanoe |
 | `old` | long in existence | *Tape /tape/ | Dabo /dabo/ | Tabe /tabe/ | Tabe /tabe/ | *Tape → Dabo / Tabe / Tabe |
 | `old-growth` | Mature forest, closed above and open beneath. | *Neneo /neneo/ | Dodoo /dodoo/ | Neneo /neneo/ | Neneo /neneo/ | *Neneo → Dodoo / Neneo / Neneo |
 | `one` | the cardinal number 1 | *Koego /koego/ | Googo /googo/ | Koebo /koebo/ | Koego /koego/ | *Koego → Googo / Koebo / Koego |
@@ -1683,7 +1734,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `river` | fresh water running across land | *Gootoe /gootoe/ | Goodoo /goodoo/ | Bootoe /bootoe/ | Gootoe /gootoe/ | *Gootoe → Goodoo / Bootoe / Gootoe |
 | `sibling` | one's brother or sister | *Poatea /poatea/ | Boadoa /boadoa/ | Boatea /boatea/ | Boatea /boatea/ | *Poatea → Boadoa / Boatea / Boatea |
 | `sleep` | to rest unconscious | *Noegoa /noegoa/ | Doogoa /doogoa/ | Noeboa /noeboa/ | Noegoa /noegoa/ | *Noegoa → Doogoa / Noeboa / Noegoa |
-| `south` | the compass point opposite north | *Qaeneo /qaeneo/ | Qaodoo /qaodoo/ | Taeneo /taeneo/ | Qaeneo /qaeneo/ | *Qaeneo → Qaodoo / Taeneo / Qaeneo |
+| `south` | toward the pole of decreasing latitude | *Qaeneo /qaeneo/ | Qaodoo /qaodoo/ | Taeneo /taeneo/ | Qaeneo /qaeneo/ | *Qaeneo → Qaodoo / Taeneo / Qaeneo |
 | `spirit` | a lesser or unseen supernatural presence | *Paa /paa/ | Baa /baa/ | Baa /baa/ | Baa /baa/ | *Paa → Baa / Baa / Baa |
 | `star` | a fixed point of light in the night sky | *Noe /noe/ | Doo /doo/ | Noe /noe/ | Noe /noe/ | *Noe → Doo / Noe / Noe |
 | `stone` | rock | *Poatoe /poatoe/ | Boadoo /boadoo/ | Boatoe /boatoe/ | Boatoe /boatoe/ | *Poatoe → Boadoo / Boatoe / Boatoe |
@@ -1694,6 +1745,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `two` | the cardinal number 2 | *Naanee /naanee/ | Daadoo /daadoo/ | Naanee /naanee/ | Naanee /naanee/ | *Naanee → Daadoo / Naanee / Naanee |
 | `under` | beneath; below | *Tagee /tagee/ | Dagoo /dagoo/ | Tabee /tabee/ | Tagee /tagee/ | *Tagee → Dagoo / Tabee / Tagee |
 | `water` | the drinkable liquid | *Doege /doege/ | Doogo /doogo/ | Doebe /doebe/ | Boege /boege/ | *Doege → Doogo / Doebe / Boege |
+| `west` | the direction of decreasing longitude | *Neakea /neakea/ | Doagoa /doagoa/ | Neakea /neakea/ | Neakea /neakea/ | *Neakea → Doagoa / Neakea / Neakea |
 | `wheat` | a staple crop | *Netea /netea/ | Dodoa /dodoa/ | Netea /netea/ | Netea /netea/ | *Netea → Dodoa / Netea / Netea |
 | `wind` | moving air | *Neqoo /neqoo/ | Doqoo /doqoo/ | Netoo /netoo/ | Neqoo /neqoo/ | *Neqoo → Doqoo / Netoo / Neqoo |
 | `yellow` | the color term for yellow | *Qaene /qaene/ | Qaodo /qaodo/ | Taene /taene/ | Qaene /qaene/ | *Qaene → Qaodo / Taene / Qaene |

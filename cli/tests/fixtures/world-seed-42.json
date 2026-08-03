@@ -831,6 +831,12 @@
         "kind": "Terrain",
         "doc": "the ground underfoot"
       },
+      "east": {
+        "name": "east",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the direction of increasing longitude"
+      },
       "eat": {
         "name": "eat",
         "domain": "language",
@@ -1249,7 +1255,19 @@
         "name": "north",
         "domain": "language",
         "kind": "Quality",
-        "doc": "the compass point opposite south"
+        "doc": "toward the pole of increasing latitude"
+      },
+      "north-east": {
+        "name": "north-east",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "between north and east"
+      },
+      "north-west": {
+        "name": "north-west",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "between north and west"
       },
       "old": {
         "name": "old",
@@ -1513,7 +1531,19 @@
         "name": "south",
         "domain": "language",
         "kind": "Quality",
-        "doc": "the compass point opposite north"
+        "doc": "toward the pole of decreasing latitude"
+      },
+      "south-east": {
+        "name": "south-east",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "between south and east"
+      },
+      "south-west": {
+        "name": "south-west",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "between south and west"
       },
       "spirit": {
         "name": "spirit",
@@ -1718,6 +1748,12 @@
         "domain": "language",
         "kind": "Substance",
         "doc": "the drinkable liquid"
+      },
+      "west": {
+        "name": "west",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the direction of decreasing longitude"
       },
       "wheat": {
         "name": "wheat",
