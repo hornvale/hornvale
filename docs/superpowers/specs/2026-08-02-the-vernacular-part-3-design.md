@@ -178,6 +178,26 @@ campaign's central defect in its most load-bearing form, and 3a does not remove
 it — it keeps it working while the value underneath becomes honest. Removing
 the backward edge is stage 4's job.
 
+**3b also inverts the direction of authority** (Nathan, 2026-08-03). Part 3a
+left `Star.class_name` — display *prose* — as the authority: `facts.rs`
+string-matches prose → id (`class_concept(&system.star.class_name)`, guarded by
+`.expect()`) to decide what to commit. That was the right minimal change for a
+plan gated on moving one fact, but it inverts the campaign's thesis: **the
+ledger's content is currently downstream of a rendering decision.**
+
+3b makes the **id primary and the display derived**. Concretely: the producer
+should decide the concept from the physics it already has — mass for the star,
+the `NeighborClass` variant for a neighbour — and `class_display` should be the
+only path from id to prose. `class_name` then stops being an authority and
+becomes one more rendering, which is what every other string in this campaign
+became. Two `.expect()`s disappear with it, since a `NeighborClass` maps to a
+concept totally rather than through a string that might not be in a table.
+
+Note what this does to the whole-branch review's C1: with the id derived
+directly, `SPECTRAL_CLASSES` stops being a lookup the ledger depends on and
+becomes purely a render table — so the "two hand-maintained copies" hazard that
+required a test to close is dissolved structurally rather than guarded.
+
 **3b — delete `description`; thread the speaker.** ~10 readers, ~20 producers.
 Renders through `ClauseSpec` + `numeracy`. Includes §4.2's cost measurement and
 §3's named-speaker header.
