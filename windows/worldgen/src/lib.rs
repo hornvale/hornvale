@@ -11647,7 +11647,7 @@ mod tests {
         // builds no world.
         let society_at = |radius: f64| hornvale_species::SocietyVector {
             in_group_radius: radius,
-            ..hornvale_species::SocietyVector::baseline()
+            ..hornvale_species::SocietyVector::MANIKIN
         };
         let mind_at = |horizon: f64| hornvale_species::MindVector {
             time_horizon: horizon,

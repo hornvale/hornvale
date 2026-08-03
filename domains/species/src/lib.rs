@@ -182,7 +182,7 @@ impl MindVector {
 /// The community-mind vector (spec: The Cloister): the psychology only a
 /// society has, carried solely by `Settled` kinds. A `Solitary` creature
 /// carries none; consumers needing a society reading for one resolve
-/// [`SocietyVector::baseline`]. `in_group_radius` is a bare ratio in `[0, 1]`.
+/// [`SocietyVector::MANIKIN`]. `in_group_radius` is a bare ratio in `[0, 1]`.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SocietyVector {
@@ -214,14 +214,6 @@ impl SocietyVector {
         status_basis: StatusBasis::Rank,
         in_group_radius: 0.5,
     };
-
-    /// The manikin's society reading.
-    ///
-    /// Retained only so this task stays additive; `Task 2` removes it and
-    /// migrates every caller to [`SocietyVector::MANIKIN`].
-    pub const fn baseline() -> Self {
-        Self::MANIKIN
-    }
 }
 
 /// The closed three-dimension perception vector (spec §4). Scalars are bare
@@ -2965,7 +2957,7 @@ mod tests {
     #[test]
     fn society_baseline_equals_the_goblin_authored_society() {
         let goblin = society_registry().get(&KindId("goblin")).copied().unwrap();
-        assert_eq!(goblin, SocietyVector::baseline());
+        assert_eq!(goblin, SocietyVector::MANIKIN);
     }
 
     #[test]

@@ -159,7 +159,7 @@ enum Breadth {
     /// Below the midpoint — everyone already knows everyone, so the
     /// outermost citation is dropped.
     Insular,
-    /// Exactly the midpoint, where `SocietyVector::baseline` sits.
+    /// Exactly the midpoint, where `SocietyVector::MANIKIN` sits.
     Neutral,
     /// Above the midpoint — a wide "us" needs an extra gloss to disambiguate.
     Expansive,
@@ -224,7 +224,7 @@ pub fn name_pattern(
 
     // How wide "us" is drawn decides how much disambiguation a name must
     // carry on its face. The threshold is the midpoint of the [0,1] axis,
-    // the same place `SocietyVector::baseline` sits — and the roster's most
+    // the same place `SocietyVector::MANIKIN` sits — and the roster's most
     // common value, so the boundary is load-bearing rather than theoretical
     // (goblin sits exactly on it).
     //

@@ -105,7 +105,7 @@ fn an_insular_people_carries_fewer_elements_than_an_expansive_one() {
 #[test]
 fn the_midpoint_radius_keeps_the_sociality_citation_exactly() {
     // The boundary test the length comparison above cannot make. Goblin sits
-    // at `in_group_radius` exactly 0.5 — `SocietyVector::baseline`'s value
+    // at `in_group_radius` exactly 0.5 — `SocietyVector::MANIKIN`'s value
     // and the roster's most common one — so the midpoint is where a widened
     // guard (`< 0.5` becoming `<= 0.5`) would land, dropping the clan
     // citation and rewriting the pattern the chronicle publishes.
