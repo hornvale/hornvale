@@ -25,6 +25,7 @@
   - [Terrain](./domains/terrain.md)
   - [Settlement](./domains/settlement.md)
   - [Species](./domains/species.md)
+  - [The Manikin](./domains/manikin.md)
   - [Perception](./domains/perception.md)
   - [Language](./domains/language.md)
   - [Culture](./domains/culture.md)
@@ -295,6 +296,7 @@
 - [The Witness](./chronicle/the-witness.md)
 - [The Namesake](./chronicle/the-namesake.md)
 - [The Contour](./chronicle/the-contour.md)
+- [The Manikin](./chronicle/the-manikin.md)
 - [The Salt](./chronicle/the-salt.md)
 
 # Appendix: The Frontier

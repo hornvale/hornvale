@@ -30,7 +30,7 @@ Culture's rule table stays exactly what it was, one reviewed function, and
 grows a parameter; adding a third people later edits no code that goblins or
 kobolds depend on, only a row in a registry.
 
-**The closed vector, baseline goblin.** What was authored as one closed
+**The closed vector, and the manikin.** What was authored as one closed
 six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
@@ -45,21 +45,41 @@ nomadic band would carry a society without ever settling — though today that
 set is exactly the five settling peoples, since no `Gregarious` kind is yet
 minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
 left open and recorded rather than filled, because a settlement-free people
-is unaudited everywhere downstream of a settlement. Goblin is the baseline for both: every
-scalar sits at exactly 0.5, every enum at its goblin variant, and every
-downstream formula that reads either vector is built so the baseline value
-reproduces today's behavior — not tuned to match, but constructed to match,
-by writing the formula as an expression like `0.5 + time_horizon` or
-`1.5 − threat_response` that evaluates to today's plain constant precisely
-when the vector reads "goblin." A consumer that needs a society reading for
-a kind that carries none resolves `SocietyVector::baseline()`, defined to
-equal goblin's authored society dims exactly, so a solitary creature's
-absent society reads as "goblin-shaped," never as an error or a zero. This
-is the mechanism, not merely a claim, behind the campaign's keystone test: a
-world generated with the species pin restricted to goblin must be
-byte-identical to a world generated before species existed at all, because
-"goblin" and "no species substrate" are, by construction, the same input to
-every formula in the cascade — and *The Cloister*'s own keystone test
+is unaudited everywhere downstream of a settlement.
+
+Both vectors are read against a **manikin**: a reference vector belonging to
+no creature. Every scalar is a bare ratio in `[0, 1]` whose `0.5` is the
+manikin's **neutral midpoint** — the reading that leans neither way, and the
+genuine middle of the interval. The three enumerations are a different case,
+and the asymmetry is real rather than papered over: an authority shape and a
+waking schedule have no middle, so `Hierarchic`, `Rank`, and `Diurnal` are
+the manikin's **designated defaults** — chosen because something had to be,
+not because they are neutral, average, or typical. The manikin carries no
+identifier and no registry row, and it has neither mass nor niche: it cannot
+be placed in a world, because there is no body to place. It is described at
+length in [The Manikin](./manikin.md).
+
+Goblin is currently authored at exactly the manikin's values — every scalar
+at 0.5, every enumeration at the designated default. That is a fact about
+goblin rather than a fact about the manikin: goblin was the first people
+written down, and its row was never characterised so much as left where it
+started. A characterization test pins the coincidence, so that giving goblin
+a temperament of its own later arrives as a visible change to that test
+rather than as a silent shift in every goblin-bearing world.
+
+Every downstream formula that reads either vector is built so that the
+manikin's values reproduce today's behavior — not tuned to match, but
+constructed to match, by writing the formula as an expression like
+`0.5 + time_horizon` or `1.5 − threat_response` that evaluates to today's
+plain constant precisely when the vector reads the manikin. A consumer that
+needs a society reading for a kind that carries none resolves the manikin's
+society vector, so a solitary creature's absent society reads as the
+reference figure's, never as an error or a zero. This is the mechanism, not
+merely a claim, behind the campaign's keystone test: a world generated with
+the species pin restricted to goblin must be byte-identical to a world
+generated before species existed at all, because goblin — sitting where it
+happens to sit — and "no species substrate" are, by construction, the same
+input to every formula in the cascade. *The Cloister*'s own keystone test
 extends the claim one level: cleaving the vector in two moves no byte of any
 generated world or reference artifact, verified by full regeneration and
 diff, not merely asserted.
@@ -88,26 +108,33 @@ reproduced here — only parameter derivations, paraphrased to one line each.*
 **The kobold mind card** (the three individual dims, carried by every minded
 kind — including a solitary creature with no society of its own):
 
-| Dimension | Type | Goblin (baseline) | Kobold | 5E derivation |
+| Dimension | Type | Manikin | Kobold | 5E derivation |
 |---|---|---|---|---|
 | Threat response (flee ↔ stand) | scalar `[0,1]` | 0.5 | 0.8 | cowardly in the open field, but entrenched at home behind the traps and tunnels the warren has prepared |
 | Deliberation latency | scalar `[0,1]` | 0.5 | 0.7 | communal decisions arrive by slow consensus |
 | Time horizon | scalar `[0,1]` | 0.5 | 0.8 | generational works — tunnel complexes, egg-tending — that pay off only across years |
 
+Goblin's authored mind currently coincides with the Manikin column exactly.
+
 **The kobold society card** (the three community dims, carried only by a
 `Settled` kind; a solitary creature carries none, and a consumer that needs a
-society reading for one resolves the goblin-equal baseline instead):
+society reading for one resolves the manikin's society vector instead):
 
-| Dimension | Type | Goblin (baseline) | Kobold | 5E derivation |
+| Dimension | Type | Manikin | Kobold | 5E derivation |
 |---|---|---|---|---|
 | In-group radius | scalar `[0,1]` | 0.5 | 0.2 | insular warrens; loyalty runs tight and does not extend past the pack |
 | Sociality mode | enum | Hierarchic | Communal | pack tactics and communal egg-tending, not a chief's household |
 | Status basis | enum | Rank | Knowledge | trap-cunning and craft esteemed over raw dominance |
 
+Goblin's authored society coincides with the Manikin column here too. Note
+that the two enumeration rows are designated defaults, not midpoints: only
+the in-group radius row is a genuine middle.
+
 Kobold's values are authored judgment, not a fixed translation — the
 design's requirement is only that they land somewhere meaningfully unlike
-the goblin baseline, and that 0.5 (or the goblin enum variant) always means
-goblin. A vocabulary rides alongside the vector, one word per rung: kobold's
+the manikin, and that `0.5` always means the neutral midpoint rather than
+any particular people's reading. A vocabulary rides alongside the vector,
+one word per rung: kobold's
 worker rung is always "digger" — fixed regardless of subsistence mode,
 unlike goblin's, which still names the subsistence worker itself
 (farmer/herder/fisher/forager) — and kobold's warrior, artisan, shaman, and
@@ -151,10 +178,13 @@ formula, a species-specific characteristic hour and salience lens that
 crowns the moons and the night sky over the sun. See
 [Perception](./perception.md) for the vector, the lens derivation, and what
 it let religion do with two peoples instead of one. Campaign Y2-3 (The
-Tongues) added a third: a closed six-dimension **articulation vector** —
+Tongues) added a third: a closed **articulation vector** —
 labiality, vowel-space breadth, voicing contrast, sibilance, voice
-loudness, and an exotic manner a species' anatomy affords — again authored
-at the goblin baseline and read from the same D&D 5E corpus for kobold. Since
+loudness, a tonality the phonology epoch later added, and an exotic manner a
+species' anatomy affords — again read against a manikin of its own, and read
+from the same D&D 5E corpus for kobold. That manikin is not uniformly `0.5`:
+tonality's `0.0` and the exotic manner's `None` are designated defaults, not
+midpoints. Since
 *The Dissolution* the articulation vector is owned by `domains/language`
 itself — its true home, the domain that reads it to build every name — rather
 than by `domains/species`, keyed to the same kind. See
@@ -233,7 +263,7 @@ society gates on *sociality*, a different axis, not on how far up the
 mind-perception-speech chain a kind climbs; the three chromatic dragons climb
 it all the way — each carries a mind, perceives, and speaks — and are absent
 only from Society. A consumer that needs a society reading for a solitary
-kind resolves `SocietyVector::baseline()`, the goblin-equal values.
+kind resolves the manikin's society vector.
 
 What the old `Option<PeopledTraits>`
 once guaranteed by the shape of a type — the peopled traits together or none —
@@ -293,8 +323,8 @@ dial, a centuries-long hoarder) and, since *The Vigil*, a perception vector
 Draconic tongue — see [Language](./language.md)) — but no society vector at
 all. A consumer that needs a society reading for a dragon — there is none
 among the unplaced-path consumers today, since dragons are not yet placed —
-resolves `SocietyVector::baseline()`, defined to equal the goblin row above
-exactly.
+resolves the manikin's society vector, which the goblin column above
+currently happens to match.
 
 **No drawn parameter lives on a species.** Every cell in the table above is
 authored; `stream_labels()` in `domains/species` returns an empty vector

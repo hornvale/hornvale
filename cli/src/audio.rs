@@ -34,11 +34,11 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
         }
         let species = kind;
         // The Cloister: a Solitary speaker (a dragon) carries no society
-        // vector — resolve the goblin baseline, same as the phonology page.
+        // vector — resolve the manikin, same as the phonology page.
         let society = hornvale_species::society_registry()
             .get(kind)
             .copied()
-            .unwrap_or(hornvale_species::SocietyVector::baseline());
+            .unwrap_or(hornvale_species::SocietyVector::MANIKIN);
         for (_, name) in crate::phonology::sample_names_for(&world, species.0, mind, &society) {
             let path = out_dir.join(audio_filename(&name.espeak));
             if path.exists() {

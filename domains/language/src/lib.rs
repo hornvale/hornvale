@@ -169,7 +169,8 @@ pub mod speech {
     /// An exotic manner of articulation found in a kind's phonology.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum ExoticManner {
-        /// No exotic manner (the goblin baseline).
+        /// No exotic manner — the manikin's designated default (an exotic
+        /// manner is a kind, not a quantity, so it has no neutral middle).
         None,
         /// Trill: rapid vibration of an articulator.
         Trill,
@@ -181,9 +182,10 @@ pub mod speech {
 
     /// The closed seven-dimension articulation vector (spec §5, extended by
     /// the phonology epoch with `tonality`). Scalars are bare ratios in
-    /// `[0, 1]` with 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the
-    /// humanoid default); widening the vector requires its own campaign.
-    /// Every dimension is authored — nothing drawn. Moved here from
+    /// `[0, 1]` with 0.5 ≡ the manikin's neutral midpoint (see
+    /// [`ArticulationVector::MANIKIN`], whose `tonality` is instead the
+    /// designated default 0.0 ≡ atonal); widening the vector requires its own
+    /// campaign. Every dimension is authored — nothing drawn. Moved here from
     /// `species` (ECS c3): the phonology component's owner is language.
     /// type-audit: bare-ok(ratio)
     #[derive(Clone, Copy, Debug, PartialEq)]
@@ -206,6 +208,40 @@ pub mod speech {
         pub tonality: f64,
         /// Exotic manner of articulation.
         pub exotic: ExoticManner,
+    }
+
+    impl ArticulationVector {
+        /// The manikin's voice: the reference articulation the phonology
+        /// pipeline is framed against.
+        ///
+        /// The manikin is a body that is nobody — the model's reference
+        /// figure, in the lineage of the CIE standard observer and ICRP's
+        /// "standard man". It has no `KindId` and no registry row, so it can
+        /// never be placed in a world and can never be heard speaking. The
+        /// species crate's `MindVector::MANIKIN`, `SocietyVector::MANIKIN`
+        /// and `PerceptionVector::MANIKIN` are the same construction on the
+        /// other three vector families; this const is the language-owned
+        /// fourth. (It is redeclared here rather than imported: a domain
+        /// crate depends on the kernel and never on a sibling domain.)
+        ///
+        /// Note the asymmetry, which is real and not papered over. Five
+        /// dimensions are scalars sitting at `0.5`, a principled **neutral
+        /// midpoint**. `tonality` is also a scalar, and so does have a
+        /// middle, but the reference vector deliberately does not sit at it:
+        /// `0.0` (atonal) is a designated **default**, the value every
+        /// shipped kind carries, not a neutral reading. `ExoticManner` has no
+        /// middle at all, so `None` is a designated default in the stronger
+        /// sense.
+        /// type-audit: bare-ok(ratio)
+        pub const MANIKIN: Self = Self {
+            labiality: 0.5,
+            vowel_space: 0.5,
+            voicing: 0.5,
+            sibilance: 0.5,
+            voice_loudness: 0.5,
+            tonality: 0.0,
+            exotic: ExoticManner::None,
+        };
     }
 
     /// The peopled social lexicon (stopgap vocabulary The Tongues will
@@ -232,7 +268,9 @@ pub mod speech {
 
     /// Peopled phonology, one per speaking kind. Values are the
     /// byte-identical articulation vectors formerly on the species peopled
-    /// component.
+    /// component. Goblin's row happens to sit at
+    /// [`ArticulationVector::MANIKIN`] — a fact about goblin's authorship,
+    /// not about what the manikin is.
     /// type-audit: bare-ok(identifier-text)
     pub fn articulation_registry() -> ComponentStore<KindId, ArticulationVector> {
         [
@@ -705,5 +743,44 @@ impl hornvale_kernel::Domain for Language {
     }
     fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
         crate::stream_labels()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::KindId;
+
+    /// CHARACTERIZATION, NOT CONTRACT.
+    ///
+    /// Goblin is currently authored at exactly
+    /// [`ArticulationVector::MANIKIN`]. That is authorship, not definition:
+    /// goblin was the first people written down, and nobody ever decided
+    /// that goblins speak with the reference voice. Nothing in the model
+    /// requires a kind to sit on the manikin, and this test does not make it
+    /// a requirement.
+    ///
+    /// It exists so that characterising goblin's phonology — giving it a
+    /// voice that is its own rather than the reference figure's — arrives as
+    /// a visible diff on this test rather than as a silent shift baked into
+    /// the doc comment's unpinned claim. When that campaign comes, DELETE
+    /// this test; do not "fix" it.
+    ///
+    /// The sibling in `hornvale-species`,
+    /// `goblin_is_currently_authored_at_the_manikin`, does the same for
+    /// mind/society/perception; this is the fourth vector family's half,
+    /// redeclared here rather than shared because a domain crate depends on
+    /// the kernel and never on a sibling domain.
+    #[test]
+    fn goblin_is_currently_authored_at_the_manikin() {
+        let row = articulation_registry()
+            .get(&KindId("goblin"))
+            .copied()
+            .unwrap();
+        assert_eq!(
+            row,
+            ArticulationVector::MANIKIN,
+            "goblin's articulation is authored at the manikin (characterization)"
+        );
     }
 }
