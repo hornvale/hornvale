@@ -634,11 +634,20 @@ contradictory tag**: the field is now genuinely
 "The complement **concept id**, resolved through the [`CommonVocabulary`]" — the
 old doc said "Common lexeme", which is what made the tag and the doc disagree.
 
-`realize_common` returns `Result<String, CommonGap>`. Resolve
-`spec.complement_concept` through the vocabulary; on `None`, return the gap.
-The existing article logic (`indefinite_article`) now runs on the **resolved
+`realize_common` **stays infallible** and returns `String`. Resolve
+`spec.complement_concept` through the vocabulary — `word_for` cannot fail. The
+existing article logic (`indefinite_article`) now runs on the **resolved
 word**, which is correct — `an` for `elemental` still works, and it now also
 works for a declared multi-word display.
+
+**Also invert `parse_common`.** Resolving on the render side breaks the
+round-trip unless the parser inverts it: `ParseContext.complements` becomes a
+set of concept **ids**, the context carries the vocabulary, and the parser
+matches each candidate's *realized surface* to recover the id. Doing this
+deletes `windows/book`'s trailing-`'s'`-stripping closed-world assumption.
+Remember the campaign's own lesson here — **a tolerant parser makes a
+round-trip test blind**, so assert on rendered *text*, never on a recovered
+value.
 
 - [ ] **Step 4: Fold `species_label` into the realizer**
 
@@ -725,9 +734,13 @@ concept sayable?' could be asked, which is why every leak this campaign found
 sat UPSTREAM of the clause layer.
 
 ClauseSpec.complement becomes complement_concept, resolved through the
-CommonVocabulary, and realize_common returns Result<String, CommonGap>. The
+CommonVocabulary. realize_common stays infallible because Common is total. The
 field's doc and its type-audit tag stop contradicting each other — it really is
 identifier-text now.
+
+parse_common inverts to match: ParseContext.complements holds concept ids and
+the parser recovers an id by matching realized surfaces, which retires the
+trailing-'s'-stripping closed-world assumption in windows/book.
 
 class_display retires into the vocabulary. species_label retires into
 Number::Pl, where pluralization belonged all along."
