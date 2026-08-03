@@ -672,6 +672,22 @@ The root builds one `CommonVocabulary`, declares every domain's
 `AlmanacContext::place_labels`' precedent — the root fills, the window
 receives. **Build it once per world**, not per clause.
 
+**Then enforce totality against the REAL registry, in `cli/tests/`.** Task 3
+could only test against a reproduced, test-only copy of the 191 concept ids,
+because layering forbids `domains/language` from reaching `hornvale-worldgen`
+even as a dev-dependency. That copy will drift: a domain registering a new
+concept that fails to resolve breaks nothing, and the invariant the whole
+asymmetry rests on would be unenforced exactly where it first breaks.
+
+`cli/` is this workspace's documented home for cross-cutting enforcement tests
+(layering, dep allowlist, doc drift) and the one place the fully composed
+registry is reachable. Add a test there that builds a real world, calls
+`CommonVocabulary::build(&world.registry)`, and asserts it succeeds — so
+registering a concept with no Common word fails the commit gate. Delete Task 3's
+hardcoded id list if this supersedes it; keep its synthetic malformed-id tests,
+which check different behaviour and remain the only proof `build` can reject
+anything.
+
 - [ ] **Step 7: Gate, then read the artifact diff**
 
 `make gate 2>&1 | tee /tmp/hv-3b-t4.log`, then `make rebaseline`.
