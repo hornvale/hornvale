@@ -16,8 +16,9 @@
 //! Determinism: the layers are ordered by [`hornvale_history::record::layer_key`]
 //! — material facts only (founded, then ended, then peak population, then
 //! `founded_from`), never by the occupation entity's mint order; the flesh
-//! seed is derived purely from the world seed and the occupation entity id.
-//! Same world ⇒ same prose, byte for byte.
+//! seed is derived from the world seed and the occupation's **material core**
+//! (`history/flesh/v2`), never from its entity id — The Salt, so that prose
+//! stops moving when an id moves. Same world ⇒ same prose, byte for byte.
 
 use hornvale_history::flesh::{
     Departure, Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
@@ -148,12 +149,14 @@ impl SharedLineage {
     }
 }
 
-/// One occupation layer at a site: the ledger entity that carries it, plus the
-/// reconstructed [`OccupationRecord`] the flesh derivations read.
+/// One occupation layer at a site: the reconstructed [`OccupationRecord`] the
+/// prose and the flesh derivations read.
+///
+/// It carried the layer's `EntityId` until The Salt, which re-keyed the flesh
+/// seed onto the material core and left nothing in this render reading an id's
+/// value. The record still knows its own `id`; the layer no longer needs to.
 struct Layer {
-    /// The occupation entity minted for this record at emit time.
-    entity: EntityId,
-    /// The record rebuilt from that entity's committed facts.
+    /// The record rebuilt from the layer entity's committed facts.
     record: OccupationRecord,
     /// The people's canonical label (kept alongside the resolved `KindId` for
     /// prose; equals `record.core.people.0`).
@@ -196,11 +199,7 @@ fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
             }
             let record = record_of(world, entity)?;
             let people = record.core.people.0.to_string();
-            Some(Layer {
-                entity,
-                record,
-                people,
-            })
+            Some(Layer { record, people })
         })
         .collect();
     layers.sort_by_key(|l| layer_key(&l.record));
@@ -621,7 +620,7 @@ fn migration_line(index: usize) -> String {
 /// Render the derived flesh of the last community to hold the site: the shape
 /// of the place it built, and what remains of it in the present-day grass.
 fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
-    let seed = flesh_seed(world, layer.entity);
+    let seed = flesh_seed_for(world, &layer.record.core);
     let structures = structures_of(&layer.record, seed);
     // A conqueror's abandoned seat is not a climate abandonment, and must not
     // leave the climate abandonment's assemblage (see `conquest_victim`).
@@ -673,6 +672,24 @@ pub fn flesh_seed(world: &World, entity: EntityId) -> Seed {
     let key = record_of(world, entity)
         .map(|r| hornvale_history::record::material_key(&r.core))
         .unwrap_or(0);
+    flesh_seed_of_key(world, key)
+}
+
+/// [`flesh_seed`] for a caller that already holds the occupation's core.
+///
+/// `render_flesh` is one: `layers_at` reconstructed the record a moment
+/// earlier, so routing it back through [`flesh_seed`]'s `record_of` would
+/// re-derive from the ledger something already in hand — the re-derivation
+/// decision 0092 exists to stop. The two agree by construction: `flesh_seed`
+/// is this function applied to `material_key` of the core it reconstructs.
+pub fn flesh_seed_for(world: &World, core: &hornvale_history::record::Occupation) -> Seed {
+    flesh_seed_of_key(world, hornvale_history::record::material_key(core))
+}
+
+/// The shared tail of [`flesh_seed`] and [`flesh_seed_for`] — the one place
+/// the `history/flesh/v2` derivation is spelled out, so the two entry points
+/// cannot drift apart.
+fn flesh_seed_of_key(world: &World, key: u64) -> Seed {
     world
         .seed
         .derive(hornvale_history::streams::FLESH)
