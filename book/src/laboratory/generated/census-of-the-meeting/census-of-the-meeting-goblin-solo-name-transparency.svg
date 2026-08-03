@@ -19,14 +19,14 @@
 <rect x="274.3" y="188.0" width="60.4" height="48.0" fill="#5b8dd9" rx="2" />
 <text x="304.5" y="184.0" font-size="11" fill="currentColor" text-anchor="middle">48</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[0.4, 0.6)</text>
-<rect x="345.3" y="167.0" width="60.4" height="69.0" fill="#5b8dd9" rx="2" />
-<text x="375.5" y="163.0" font-size="11" fill="currentColor" text-anchor="middle">69</text>
+<rect x="345.3" y="166.0" width="60.4" height="70.0" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="162.0" font-size="11" fill="currentColor" text-anchor="middle">70</text>
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[0.6, 0.8)</text>
-<rect x="416.3" y="139.0" width="60.4" height="97.0" fill="#5b8dd9" rx="2" />
-<text x="446.5" y="135.0" font-size="11" fill="currentColor" text-anchor="middle">97</text>
+<rect x="416.3" y="138.0" width="60.4" height="98.0" fill="#5b8dd9" rx="2" />
+<text x="446.5" y="134.0" font-size="11" fill="currentColor" text-anchor="middle">98</text>
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[0.8, 1)</text>
-<rect x="487.3" y="102.0" width="60.4" height="134.0" fill="#5b8dd9" rx="2" />
-<text x="517.5" y="98.0" font-size="11" fill="currentColor" text-anchor="middle">134</text>
+<rect x="487.3" y="104.0" width="60.4" height="132.0" fill="#5b8dd9" rx="2" />
+<text x="517.5" y="100.0" font-size="11" fill="currentColor" text-anchor="middle">132</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">&gt;= 1</text>
 <rect x="558.3" y="123.0" width="60.4" height="113.0" fill="#5b8dd9" rx="2" />
 <text x="588.5" y="119.0" font-size="11" fill="currentColor" text-anchor="middle">113</text>
