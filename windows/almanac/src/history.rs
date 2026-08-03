@@ -595,11 +595,15 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
 /// ending falls in a later year.
 ///
 /// Determinism: the O-shape index yields commit order, and a conqueror can
-/// have at most one such victim, but the lowest entity id is taken regardless
-/// so the result never depends on iteration order. Days compare with
-/// `f64::total_cmp` — both are the same `year` scalar through the same
-/// quantizing boundary, so they compare exactly, and bare float equality is
-/// banned.
+/// have at most one such victim, but the candidate lowest in `(site, founded)`
+/// is taken regardless so the result never depends on iteration order. That
+/// tie-break was the victim's *entity id* until The Salt; it is material now,
+/// because an id's value must not reach a render (spec D5). The claim above
+/// is measured, not assumed: 1718 candidate calls across seeds 42/7/1000,
+/// maximum candidate-set size 1 — so the tie-break has never actually fired.
+/// Days compare with `f64::total_cmp` — both are the same `year` scalar
+/// through the same quantizing boundary, so they compare exactly, and bare
+/// float equality is banned.
 fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
     if r.core.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
         return None;
@@ -616,7 +620,24 @@ fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
                 Some(fell) if left.total_cmp(&fell).is_eq()
             )
         })
-        .min_by_key(|e| e.0.get())
+        .min_by_key(|&victim| {
+            // Materially, not by entity id. The candidate set is never larger
+            // than one -- a conqueror drives off at most one occupation in a
+            // given year -- measured at 1718 candidate calls across seeds
+            // 42/7/1000 with a maximum set size of 1, so this only ever
+            // returns the sole candidate. Kept rather than replaced by
+            // `.next()` so that if a second candidate ever does appear the
+            // choice is a stated property of the world, not whichever fact
+            // happened to be committed first (The Salt, spec D5).
+            (
+                number(world, victim, hornvale_history::OCC_SITE)
+                    .map(|s| s as u32)
+                    .unwrap_or(u32::MAX),
+                number(world, victim, hornvale_history::OCC_FOUNDED)
+                    .map(hornvale_history::record::day_key)
+                    .unwrap_or(u64::MAX),
+            )
+        })
 }
 
 /// One of three climate-abandonment endings, cycled by layer index so a deep

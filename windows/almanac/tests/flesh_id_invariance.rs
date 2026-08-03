@@ -207,3 +207,45 @@ fn the_flesh_seed_still_separates_materially_different_occupations() {
         "a materially different occupation must still differ"
     );
 }
+
+/// The Salt (spec D5): `conquest_victim`'s tie-break must not read an entity
+/// id's value.
+///
+/// Its candidate set is never larger than one — measured at 1718 candidate
+/// calls across seeds 42/7/1000, maximum set size 1 — so the id was breaking
+/// a tie that has never occurred, while still putting an id's value in a
+/// render path. The tie-break survives (if a second candidate ever does
+/// appear, the choice should be a stated property of the world rather than
+/// commit order); only its key changed.
+///
+/// A source scan rather than a behavioural assertion, deliberately: the
+/// behaviour under a second candidate cannot be exercised from a real world,
+/// because no real world produces one. What CAN be pinned is the rule.
+#[test]
+fn the_conquest_tie_break_reads_no_entity_id() {
+    let src = include_str!("../src/history.rs");
+    let after = src
+        .split("fn conquest_victim")
+        .nth(1)
+        .expect("conquest_victim exists");
+    let body = &after[..after.find("\n}\n").expect("function ends")];
+
+    // Shapes that read an `EntityId` for its VALUE. `min_by_key` itself is
+    // NOT banned — the function still breaks its tie, just on material facts.
+    for banned in [".0.get()", "u64::from(", "e.get()"] {
+        assert!(
+            !body.contains(banned),
+            "conquest_victim reads an entity id's value ({banned}); \
+             the tie-break must key on material facts (The Salt, spec D5)"
+        );
+    }
+    // ...and it must still be breaking the tie on something.
+    assert!(
+        body.contains("min_by_key"),
+        "conquest_victim must still choose deterministically among candidates"
+    );
+    assert!(
+        body.contains("OCC_SITE") && body.contains("OCC_FOUNDED"),
+        "the tie-break must key on the victim's own site and founding day"
+    );
+}

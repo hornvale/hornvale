@@ -181,7 +181,12 @@ impl OccupationRecord {
 /// quantized, non-negative ledger today, but `BakeConfig::start_year` is a
 /// bare `pub f64` with no such validation, so the guarantee belongs in the
 /// key, not in a comment about its callers.
-fn day_key(x: f64) -> u64 {
+/// `pub` since The Salt: `windows/almanac`'s `conquest_victim` needs the same
+/// float-ordering key to break its candidate set materially rather than by
+/// entity id, and a second hand-written copy of a bit-twiddling comparator is
+/// how two decoders drift apart in the first place.
+/// type-audit: bare-ok(count: x), bare-ok(identifier-text: return)
+pub fn day_key(x: f64) -> u64 {
     let b = x.to_bits();
     if b >> 63 == 1 { !b } else { b | 1 << 63 }
 }
