@@ -25,6 +25,7 @@
   - [Terrain](./domains/terrain.md)
   - [Settlement](./domains/settlement.md)
   - [Species](./domains/species.md)
+  - [The Manikin](./domains/manikin.md)
   - [Perception](./domains/perception.md)
   - [Language](./domains/language.md)
   - [Culture](./domains/culture.md)

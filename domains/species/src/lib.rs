@@ -4,9 +4,11 @@
 //! three-dimension perception vector, and each kind's family label. Kinds are
 //! keyed by `KindId`; each component authors its own rows directly (the former
 //! authored god-struct was dissolved in ECS c3). Species are data; the
-//! social grammar stays code (spec §2). Goblin is the baseline: scalars 0.5,
-//! default enum variants; every downstream modulation is the identity function
-//! at this vector. The peopled speech data (articulation vector, lexicon,
+//! social grammar stays code (spec §2). The MANIKIN is the reference vector:
+//! scalars at the 0.5 midpoint, designated default enum variants; every
+//! downstream modulation is the identity function at this vector. It is
+//! nobody's — no `KindId`, no registry row — and a kind sitting on it does so
+//! by authorship. The peopled speech data (articulation vector, lexicon,
 //! family proto) is language-owned and lives in `hornvale-language`.
 #![warn(missing_docs)]
 
@@ -111,7 +113,7 @@ pub enum StatusBasis {
 /// When a species is awake and watching.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActivityCycle {
-    /// Awake by day (the goblin baseline).
+    /// Awake by day (the manikin's designated default schedule).
     Diurnal,
     /// Awake by night.
     Nocturnal,
@@ -152,8 +154,8 @@ impl SocialForm {
 
 /// The individual-mind vector (spec: The Cloister): the psychology every
 /// minded kind carries, whether or not it belongs to a society. Scalars are
-/// bare ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening requires
-/// its own campaign.
+/// bare ratios in `[0, 1]` with 0.5 ≡ the manikin's neutral midpoint;
+/// widening requires its own campaign.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MindVector {
@@ -217,8 +219,9 @@ impl SocietyVector {
 }
 
 /// The closed three-dimension perception vector (spec §4). Scalars are bare
-/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
-/// requires its own campaign. Every dimension is authored — nothing drawn.
+/// ratios in `[0, 1]` with 0.5 ≡ the manikin's neutral midpoint; widening the
+/// vector requires its own campaign. Every dimension is authored — nothing
+/// drawn.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PerceptionVector {
@@ -1919,8 +1922,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 }
 
 /// The individual-mind component — authored directly, present for every
-/// minded kind (the four settling peoples and the three solitary dragons;
-/// goblin is the baseline: scalars 0.5).
+/// minded kind (the four settling peoples and the three solitary dragons).
+/// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about
+/// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
 pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
     [
@@ -1963,7 +1967,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
             KindId("white-dragon"),
             MindVector {
                 threat_response: 0.95,     // an apex — stands, never flees
-                deliberation_latency: 0.5, // banked dial, baseline
+                deliberation_latency: 0.5, // banked dial, at the midpoint
                 time_horizon: 0.90,        // a centuries-long hoarder
             },
         ),
@@ -2005,8 +2009,10 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
 }
 
 /// The community-mind component — authored directly, present only for the
-/// four settling peoples (goblin is the baseline). A Solitary minded kind
-/// (a dragon) carries a MindVector but no SocietyVector.
+/// four settling peoples. A Solitary minded kind (a dragon) carries a
+/// MindVector but no SocietyVector; a mixed consumer resolves
+/// [`SocietyVector::MANIKIN`] for one. Goblin's row happens to sit at those
+/// same values — again authorship, not definition.
 /// type-audit: bare-ok(identifier-text)
 pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
     [
@@ -2061,7 +2067,7 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
         // it, is the one whose members survive the droughts between finds —
         // so what earns standing is provisioning the group, not winning it
         // by force or hoarding lore. `in_group_radius` is authored wide
-        // (0.7, above the goblin baseline) for the same reason: an
+        // (0.7, above the manikin's midpoint) for the same reason: an
         // expansive "us" is the risk-pooling network's natural shape.
         (
             KindId("gnoll"),
@@ -2083,11 +2089,12 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
 }
 
 /// The perception component — authored directly, present for every minded
-/// SPEAKING kind: the four peoples (goblin is the baseline: diurnal, 0.5/0.5)
-/// and the three chromatic dragons (The Vigil). Since The Vigil the enforced
-/// lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added without a
-/// row here fails `check_integrity` at load rather than silently perceiving
-/// like a goblin.
+/// SPEAKING kind: the four peoples and the three chromatic dragons (The
+/// Vigil). Goblin's row happens to sit at [`PerceptionVector::MANIKIN`]
+/// (`Diurnal`, 0.5/0.5) — authorship, not definition. Since The Vigil the
+/// enforced lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added
+/// without a row here fails `check_integrity` at load rather than silently
+/// falling back on goblin's row, as the pre-Vigil stopgap did.
 /// type-audit: bare-ok(identifier-text)
 pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
     [
@@ -2173,7 +2180,7 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
             KindId("gnoll"),
             PerceptionVector {
                 activity: ActivityCycle::Crepuscular,
-                // hunts at dusk/dawn/night: above the goblin baseline.
+                // hunts at dusk/dawn/night: above the manikin's midpoint.
                 night_vision: 0.75,
                 // ground-focused pack predator tracking prey and scent, not
                 // sky-rapt.
@@ -2691,8 +2698,13 @@ mod tests {
         assert_eq!(species_entity(&w, "kobold"), Some(kobold));
     }
 
+    /// CHARACTERIZATION, NOT CONTRACT — the perception half of
+    /// `goblin_is_currently_authored_at_the_manikin`. Goblin's authored
+    /// perception coincides with [`PerceptionVector::MANIKIN`]; nothing in the
+    /// model requires that, and kobold is here to show the vector genuinely
+    /// varies across the roster.
     #[test]
-    fn goblin_perception_is_the_baseline_and_kobold_contrasts() {
+    fn goblin_perception_is_authored_at_the_manikin_and_kobold_contrasts() {
         let per = perception_registry();
         let g = per.get(&KindId("goblin")).unwrap();
         assert_eq!(g.activity, ActivityCycle::Diurnal);
