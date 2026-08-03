@@ -504,7 +504,11 @@ pub fn genesis(
             fact(
                 id,
                 NEIGHBOR_CLASS,
-                Value::Text(crate::neighborhood::class_name(neighbor.class).to_string()),
+                Value::Text(
+                    crate::star::class_concept(crate::neighborhood::class_name(neighbor.class))
+                        .expect("every neighbour class name is in SPECTRAL_CLASSES")
+                        .to_string(),
+                ),
             ),
             &world.registry,
         )?;

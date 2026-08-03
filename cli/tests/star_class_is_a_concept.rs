@@ -37,6 +37,27 @@ fn the_committed_star_class_is_a_registered_concept() {
     assert!(checked > 0, "seed 42 must commit a star-class fact");
 }
 
+#[test]
+fn the_committed_neighbor_class_is_a_registered_concept() {
+    let world = seed_42();
+    let mut checked = 0;
+    for fact in world.ledger.find(hornvale_astronomy::facts::NEIGHBOR_CLASS) {
+        let Value::Text(id) = &fact.object else {
+            panic!("neighbor-class must be Text, got {:?}", fact.object)
+        };
+        assert!(
+            world.registry.concept(id).is_some(),
+            "neighbor-class committed {id:?}, which is not a registered concept"
+        );
+        assert!(
+            hornvale_astronomy::class_display(id).is_some(),
+            "neighbor-class committed {id:?}, which is not a spectral class"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "seed 42 must commit neighbor-class facts");
+}
+
 /// `"a"` or `"an"` by `word`'s first letter — the same surface rule
 /// `windows/book`'s private `indefinite_article` applies, reimplemented here
 /// (not imported) so this test is an independent check of the article
