@@ -270,11 +270,7 @@ pub fn genesis(
         fact(
             subject,
             STAR_CLASS,
-            Value::Text(
-                crate::star::class_concept(&system.star.class_name)
-                    .expect("every minted class name is in SPECTRAL_CLASSES")
-                    .to_string(),
-            ),
+            Value::Text(crate::star::class_concept_of_mass(system.star.mass.0).to_string()),
         ),
         &world.registry,
     )?;
@@ -504,11 +500,7 @@ pub fn genesis(
             fact(
                 id,
                 NEIGHBOR_CLASS,
-                Value::Text(
-                    crate::star::class_concept(crate::neighborhood::class_name(neighbor.class))
-                        .expect("every neighbour class name is in SPECTRAL_CLASSES")
-                        .to_string(),
-                ),
+                Value::Text(crate::neighborhood::class_concept(neighbor.class).to_string()),
             ),
             &world.registry,
         )?;

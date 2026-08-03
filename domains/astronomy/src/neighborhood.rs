@@ -61,6 +61,21 @@ pub fn class_name(class: NeighborClass) -> &'static str {
     }
 }
 
+/// The registered concept for a neighbour of this class. Total by
+/// construction: a new variant fails to compile here, so no call site needs a
+/// fallible lookup.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn class_concept(class: NeighborClass) -> &'static str {
+    match class {
+        NeighborClass::RedDwarf => "red-dwarf",
+        NeighborClass::SunLike => "sun-like-star",
+        NeighborClass::WhiteDwarf => "white-dwarf",
+        NeighborClass::OrangeGiant => "orange-giant",
+        NeighborClass::RedGiant => "red-giant",
+        NeighborClass::BlueGiant => "blue-giant",
+    }
+}
+
 fn class_color(class: NeighborClass) -> &'static str {
     match class {
         NeighborClass::RedDwarf => "dim red",
@@ -248,6 +263,27 @@ mod tests {
                 | NeighborClass::RedGiant
                 | NeighborClass::BlueGiant => assert_covered(class),
             }
+        }
+    }
+
+    /// Every variant maps to a concept totally — no lookup, no Option, so no
+    /// call site needs an `.expect()`.
+    #[test]
+    fn every_variant_derives_a_concept_agreeing_with_its_display() {
+        for class in [
+            NeighborClass::RedDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::BlueGiant,
+        ] {
+            assert_eq!(
+                crate::star::class_display(class_concept(class)),
+                Some(class_name(class)),
+                "{} derives a concept whose display disagrees with class_name",
+                class_name(class)
+            );
         }
     }
 }

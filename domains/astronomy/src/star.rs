@@ -134,6 +134,22 @@ fn class_name_of_mass(mass: f64) -> &'static str {
     }
 }
 
+/// The registered concept for a star of this mass — the ledger's own value,
+/// derived from the physics rather than parsed back out of a display string.
+/// Boundaries are `class_name_of_mass`'s; the two are two views of one
+/// decision, and `the_concept_and_the_display_are_derived_from_the_same_mass`
+/// pins them together.
+/// type-audit: bare-ok(ratio: mass), bare-ok(identifier-text: return)
+pub fn class_concept_of_mass(mass: f64) -> &'static str {
+    if mass < 0.8 {
+        "orange-dwarf"
+    } else if mass < 1.05 {
+        "yellow-dwarf"
+    } else {
+        "yellow-white-dwarf"
+    }
+}
+
 /// Generate the star from the astronomy domain seed.
 pub fn generate_star(astronomy_seed: Seed) -> Star {
     let mut stream = astronomy_seed.derive(streams::STAR_MASS).stream();
@@ -517,6 +533,22 @@ mod tests {
             assert!(
                 class_concept(name).is_some(),
                 "star.rs mints {name:?}, which the table does not carry"
+            );
+        }
+    }
+
+    /// The concept is derived from mass, not parsed from prose. Same boundaries as
+    /// `class_name_of_mass`, and the two must agree — the display is now derived
+    /// from the concept's side of the same physics, not the other way round.
+    #[test]
+    fn the_concept_and_the_display_are_derived_from_the_same_mass() {
+        for mass in [0.6, 0.79, 0.8, 1.04, 1.05, 1.4] {
+            let concept = class_concept_of_mass(mass);
+            let display = class_name_of_mass(mass);
+            assert_eq!(
+                class_display(concept),
+                Some(display),
+                "mass {mass} derives concept {concept:?} and display {display:?}, which disagree"
             );
         }
     }
