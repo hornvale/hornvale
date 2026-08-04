@@ -248,6 +248,30 @@ impl PerceptionVector {
     };
 }
 
+/// How widely a species spreads around its authored vectors.
+///
+/// **The authored vector is the MEAN, and this is the standard deviation of a
+/// population around it.** That choice is a fiat, not a discovery, and it is
+/// stated because leaving it unstated is precisely the frame bug The Manikin
+/// removed one level up: a datum whose frame is implicit drifts in meaning as
+/// the model grows.
+///
+/// One dispersion per vector, not per dimension. A per-dimension spread is a
+/// refinement that should be argued from a measured need (spec §8).
+///
+/// `0.0` means every member is identical — the model's behaviour before this
+/// campaign, and the value that must collapse H2's variance to zero.
+/// type-audit: bare-ok(ratio)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Dispersion {
+    /// Spread around [`MindVector`].
+    pub mind: f64,
+    /// Spread around [`SocietyVector`].
+    pub society: f64,
+    /// Spread around [`PerceptionVector`].
+    pub perception: f64,
+}
+
 /// The draconic clade's night-sky acuity. Authored once for the whole clade
 /// rather than per kind: `night_vision` is the only perception dimension that
 /// reaches language (it alone drives `pack_depths`' hue ladder), so a
@@ -1706,6 +1730,7 @@ impl Component for BiosphereTraits {}
 impl Component for MindVector {}
 impl Component for SocietyVector {}
 impl Component for PerceptionVector {}
+impl Component for Dispersion {}
 
 /// The universal biosphere component, authored directly (one row per kind).
 /// Every kind that competes for space has a biosphere row; this is the
@@ -2186,6 +2211,109 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 threat_response: 0.5,
                 deliberation_latency: 0.6,
                 time_horizon: 0.75,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// Per-kind dispersion. **Variability is itself a species trait** (spec §2's
+/// keystone): a species is a distribution, and how wide that distribution is
+/// says as much about the kind as where it is centred. Every minded kind
+/// carries a row — a kind with no society (a solitary dragon) is not exempt
+/// from a `society` field, it is authored near-zero because there is almost
+/// no society to vary.
+/// type-audit: bare-ok(identifier-text)
+pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
+    [
+        // GENERALIST-LITE: the cosmopolitan weed's widest goblinoid spread,
+        // still a notch below human's true psychological breadth.
+        (
+            KindId("goblin"),
+            Dispersion {
+                mind: 0.25,
+                society: 0.20,
+                perception: 0.15,
+            },
+        ),
+        // a disciplined knowledge-caste narrows temperament the way training
+        // narrows any specialist.
+        (
+            KindId("kobold"),
+            Dispersion {
+                mind: 0.12,
+                society: 0.08,
+                perception: 0.08,
+            },
+        ),
+        // a drilled military hierarchy is precisely a machine for
+        // suppressing individual variance.
+        (
+            KindId("hobgoblin"),
+            Dispersion {
+                mind: 0.10,
+                society: 0.06,
+                perception: 0.08,
+            },
+        ),
+        // solitary ambush hunters folded into a loose communal band: the
+        // variance a rigid hierarchy would drill out survives here.
+        (
+            KindId("bugbear"),
+            Dispersion {
+                mind: 0.20,
+                society: 0.15,
+                perception: 0.12,
+            },
+        ),
+        // The three chromatic dragons, one shared reading (mirrors
+        // psyche_registry's shared chromatic profile): solitary apex
+        // predators carry near-uniform temperament, and almost no society
+        // exists to vary — the model's narrowest kind on every axis.
+        (
+            KindId("white-dragon"),
+            Dispersion {
+                mind: 0.08,
+                society: 0.02,
+                perception: 0.05,
+            },
+        ),
+        (
+            KindId("red-dragon"),
+            Dispersion {
+                mind: 0.08,
+                society: 0.02,
+                perception: 0.05,
+            },
+        ),
+        (
+            KindId("black-dragon"),
+            Dispersion {
+                mind: 0.08,
+                society: 0.02,
+                perception: 0.05,
+            },
+        ),
+        // a frenzied, opportunistic forager's temperament swings by
+        // disposition, not doctrine — wider than the disciplined goblinoids.
+        (
+            KindId("gnoll"),
+            Dispersion {
+                mind: 0.22,
+                society: 0.15,
+                perception: 0.12,
+            },
+        ),
+        // GENERALIST: widest on every axis — this campaign's own argument
+        // that psychological breadth, not ecological breadth, is what
+        // "generalist" means.
+        (
+            KindId("human"),
+            Dispersion {
+                mind: 0.35,
+                society: 0.30,
+                perception: 0.20,
             },
         ),
     ]

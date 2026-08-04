@@ -354,3 +354,27 @@ fn autotroph_is_computed_as_an_endotherm_today() {
         "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }
+
+#[test]
+fn every_kind_with_a_mind_carries_a_dispersion() {
+    let disp = hornvale_species::dispersion_registry();
+    for (k, _) in hornvale_species::psyche_registry().iter() {
+        assert!(disp.contains(k), "minded kind {k:?} has no dispersion row");
+    }
+}
+
+#[test]
+fn dispersion_is_a_ratio_on_every_axis() {
+    for (k, d) in hornvale_species::dispersion_registry().iter() {
+        for (name, v) in [
+            ("mind", d.mind),
+            ("society", d.society),
+            ("perception", d.perception),
+        ] {
+            assert!(
+                (0.0..=1.0).contains(&v),
+                "{k:?}'s {name} dispersion {v} is not a ratio"
+            );
+        }
+    }
+}
