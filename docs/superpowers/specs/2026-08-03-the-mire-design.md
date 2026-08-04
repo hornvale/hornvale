@@ -268,6 +268,20 @@ No new crate. No new external dependency (the allowlist stays
 Frozen **before** the code that would move it (decision 0016). Nothing
 mechanical enforces this; the freeze lives here.
 
+**Amendment, 2026-08-04 — delivery mechanism only; H1/H2/H3 below are
+unchanged.** This was to ship as registered lab metrics plus a study JSON.
+It cannot: `studies/the-census.study.json` and eight other studies declare
+`"metrics": "all"`, `windows/lab/src/study.rs:225` resolves
+`MetricSelection::All(_) => Ok(reg)` (the whole registry, unfiltered), and
+`Metric` carries no cost or opt-in flag. Registering these metrics would run
+a ~3.5 s gated-graph computation on every census world — about two hours
+added to `the-census` alone — and drift nine studies' committed `rows.csv`
+and per-metric SVGs, forcing a census regen. The measurement therefore ships
+as a **heavy-tier calibration test** (`windows/lab/tests/`), the established
+pattern for expensive batteries, with the `#[ignore]` reason policed by
+`windows/lab/tests/preregistration_guard.rs`. The hypotheses, the population,
+and the success criteria are untouched.
+
 **Population.** 200 seeds, default pins, the standard icosphere mesh, **land
 cells only**, evaluated at 12 days evenly spaced across one converged annual
 trajectory. (Stating mesh + filter + seed count explicitly, per the
