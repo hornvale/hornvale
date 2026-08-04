@@ -18,6 +18,7 @@ pub mod substrate;
 pub mod temperature;
 pub mod variants;
 pub mod weather;
+pub mod wetness;
 
 pub use biome::{Biome, SeafloorFeature};
 pub use circulation::{RotationRegime, band_count_for, prevailing_wind};
@@ -41,6 +42,7 @@ pub use weather::{
     CloudType, WeatherState, cloud_type, storm_propensity, weather_phase, weather_seed,
     weather_state,
 };
+pub use wetness::{DEFAULT_WETNESS, SurfaceWetness, receptivity};
 
 use hornvale_kernel::{
     CognitiveHandle, ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest,
