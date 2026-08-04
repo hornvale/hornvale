@@ -90,6 +90,7 @@ fn metabolic_class_coverage_matches_the_table() {
                 "gnoll",
                 "goblin",
                 "hobgoblin",
+                "human",
                 "killer-whale",
                 "otyugh",
                 "owlbear",
@@ -245,7 +246,7 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Settled,
             Rung::Witnessed,
-            &["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+            &["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
         ),
     ];
     for (form, rung, witnesses) in expected {

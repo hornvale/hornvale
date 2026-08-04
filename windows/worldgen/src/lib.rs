@@ -8040,19 +8040,19 @@ mod tests {
         // the live psyche key-set (now a superset of Settled).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
-        // The `Settled` set is exactly the five peoples (The Vacancy T9 added
-        // the gnoll).
+        // The `Settled` set is exactly the six peoples (The Vacancy T9 added
+        // the gnoll; The Generalist added the human).
         let settled: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| k.0)
             .collect();
-        let five_peoples: std::collections::BTreeSet<&'static str> =
-            ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
+        let six_peoples: std::collections::BTreeSet<&'static str> =
+            ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"]
                 .into_iter()
                 .collect();
-        assert_eq!(settled, five_peoples, "Settled is exactly the five peoples");
+        assert_eq!(settled, six_peoples, "Settled is exactly the six peoples");
 
         // The wild-agentified `{Solitary, Gregarious}` set: the twenty-one
         // mobile, non-settled kinds (ten pre-Vacancy, The Vacancy T7's six,

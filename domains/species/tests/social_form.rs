@@ -48,6 +48,8 @@ fn every_kind_has_the_authored_social_form() {
         ("giant-crocodile", SocialForm::Solitary),
         // The Vacancy (T9): the fifth people.
         ("gnoll", SocialForm::Settled),
+        // The Generalist (C2-0): the sixth people.
+        ("human", SocialForm::Settled),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
@@ -62,6 +64,13 @@ fn settled_kinds_are_exactly_the_five_peoples() {
     // the original four. The Vacancy T9 adds the gnoll, a fifth. After The
     // Eremite the dragons carry a mind while staying Solitary, so psyche is a
     // SUPERSET of Settled (Settled ⊆ psyche), not equal — hence a named pin.
+    //
+    // The Generalist (C2-0) Task 2 adds the human's biosphere row (a sixth
+    // `Settled` kind) before Task 3 adds its `MindVector`, so the set below is
+    // correctly six peoples as of Task 2, but the per-member `Settled ⊆
+    // psyche` loop below is EXPECTED TO FAIL on "human" until Task 3 lands —
+    // a deliberate, documented, transient red on this branch, not a defect in
+    // Task 2 (see this campaign's task-2-report.md).
     let bio = biosphere_registry();
     let psy = psyche_registry();
     let settled: Vec<&str> = bio
@@ -71,8 +80,8 @@ fn settled_kinds_are_exactly_the_five_peoples() {
         .collect();
     assert_eq!(
         settled,
-        ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
-        "Settled is exactly the five peoples (ascending KindId)"
+        ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
+        "Settled is exactly the six peoples (ascending KindId)"
     );
     for &name in &settled {
         assert!(

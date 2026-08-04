@@ -12,10 +12,10 @@ use hornvale_worldgen::components::WorldComponents;
 #[test]
 fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
-    // biosphere = the canonical entity set (all 29 kinds today — The Vacancy
+    // biosphere = the canonical entity set (all 30 kinds today — The Vacancy
     // T7 added seven, T8 added five (four marine plus the amphibious giant
-    // crocodile), T9 added the gnoll).
-    assert_eq!(wc.biosphere.len(), 29);
+    // crocodile), T9 added the gnoll, The Generalist added the human).
+    assert_eq!(wc.biosphere.len(), 30);
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at

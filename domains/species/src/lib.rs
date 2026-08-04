@@ -1470,6 +1470,61 @@ fn gnoll_condition_niche() -> ConditionNiche {
     }
 }
 
+/// Human condition niche: the roster's first true GENERALIST — the widest,
+/// least-devoted curves on temperature and moisture of any kind.
+///
+/// Authored as a deliberate contrast to goblin, and the contrast is
+/// **devotion and width, not optimum**. Goblin is a warm-*marginal*
+/// generalist: wide, but with a real temperature lean (devotion 0.40 on its
+/// widest axis) and an elevation optimum already re-centred by The Tumult's
+/// re-datum to 1500.0 m, the settleable-land median. Human's elevation
+/// optimum sits at that SAME 1500.0 m — deliberately, not by coincidence.
+/// A wide, low-devotion curve only reads as genuine *indifference* if it is
+/// centred on the land it scores (goblin's own re-datum argument); a
+/// displaced optimum would instead hand human its own lowland or highland
+/// refuge, which contradicts the no-refuge premise the whole campaign's
+/// Gause probe rests on — this kind exists to test a competitor that
+/// out-competes nobody and holds no stronghold of its own. So the two
+/// kinds share an optimum on purpose: what makes human lose the
+/// specialists' strongholds (kobold's mountain, bugbear's rainforest) is
+/// its LOWER devotion against their high devotion, not a relocated centre.
+/// Human's width and devotion are authored strictly flatter than goblin's on
+/// every axis so the contrast is real and measurable, not nominal — Task 5
+/// tests exactly this and fails if human turns out to be goblin recentred.
+///
+/// Frame: elevation is metres above the world's sea level (see
+/// [`ConditionNiche`]). Measured over seeds 1..=30, pooled over 142593
+/// settleable cells, by `windows/worldgen/tests/generalist_baseline.rs`: the
+/// land median is 1524.6 m (p49); the optimum below is rounded to 1500.0 m
+/// to match goblin's already-authored value for the reason above.
+fn human_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 14.0,
+            width: 22.0,
+            devotion: 0.20,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.50,
+            width: 0.70,
+            devotion: 0.20,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.14,
+            width: 0.30,
+            devotion: 0.25,
+        },
+        // wide/indifferent, centred on the settleable-land median (p49 =
+        // 1524.6 m, rounded to 1500.0 m) — the same value as goblin's
+        // optimum, deliberately (see the doc comment above).
+        elevation: ConditionResponse {
+            optimum: 1500.0,
+            width: 2000.0,
+            devotion: 0.30,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1917,6 +1972,22 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 social_form: SocialForm::Settled,
             },
         ),
+        // The Generalist (C2-0): the sixth people, and the roster's first
+        // competitor with no refuge. Mass is 5E canon for a Medium humanoid.
+        // The trophic split is deliberately close to goblin's 0.50/0.50 —
+        // humans are not trophically novel, and the generalism this kind
+        // exists to test lives on the CONDITION axes, not the resource axes.
+        (
+            KindId("human"),
+            BiosphereTraits {
+                mass: Mass::new(70.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+                condition_niche: human_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -2241,6 +2312,12 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         // a label held by >= 2 kinds (goblinoid/draconic/plant, the roster's
         // only multi-member families).
         (KindId("gnoll"), "gnoll"),
+        // The Generalist (C2-0): a singleton family, following kobold's and
+        // gnoll's shape — `family_proto` in `hornvale_language` carries no
+        // "human" entry, because `check_integrity` requires a proto only for
+        // a label held by >= 2 kinds. The dwarf and elf families of C2c/C2d
+        // will be the roster's first new multi-member families.
+        (KindId("human"), "human"),
     ]
     .into_iter()
     .collect()
@@ -2305,6 +2382,8 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("killer-whale-kind", "a killer whale"),
     ("giant-squid-kind", "a giant squid"),
     ("giant-crocodile-kind", "a giant crocodile"),
+    // The Generalist (C2-0): the sixth people.
+    ("human-kind", "a human"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
@@ -2508,8 +2587,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            29,
-            "twenty-nine kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll)"
+            30,
+            "thirty kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -2621,8 +2700,9 @@ mod tests {
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples), then with The Vacancy's T7 (seven more
         // biosphere-only fauna), T8 (five more, four marine plus the
-        // amphibious giant crocodile), and T9 (the gnoll, the fifth people);
-        // ComponentStore key order is lexicographic.
+        // amphibious giant crocodile), T9 (the gnoll, the fifth people), and
+        // The Generalist (the human, the sixth people); ComponentStore key
+        // order is lexicographic.
         assert_eq!(
             names,
             vec![
@@ -2641,6 +2721,7 @@ mod tests {
                 "gnoll",
                 "goblin",
                 "hobgoblin",
+                "human",
                 "killer-whale",
                 "kobold",
                 "otyugh",
