@@ -6,6 +6,7 @@
 //! least-cost path between two cells.
 
 use hornvale_kernel::{CellId, CellMap, Geosphere, SearchSpace, astar};
+use std::collections::BTreeSet;
 
 /// A least-cost search space over `geo`'s cell adjacency: each step from a
 /// cell to one of its neighbors costs `cost`'s value for the destination
@@ -89,6 +90,54 @@ pub fn least_cost(
     Some((path, total))
 }
 
+/// Least-cost totals from `from` to **every** cell, in one sweep.
+///
+/// Exactly [`least_cost`]'s cost function evaluated everywhere at once: the
+/// cost of a step is paid on the cell entered, `from` itself is `Some(0)`, and
+/// impassable cells (`u64::MAX`) are skipped in expansion rather than summed.
+/// `None` means unreachable. There is no node budget — the sweep is bounded by
+/// the mesh, not by a search horizon.
+///
+/// **Why a sweep rather than repeated [`least_cost`]:** a caller needing
+/// distances from `S` sources to many destinations pays `S` sweeps instead of
+/// `S²` single-target searches. The result is identical; only the work is
+/// shared. Determinism comes from the `BTreeSet` frontier keyed on
+/// `(cost, CellId)` — a total order with no hash seed and no float — matching
+/// the guarantee `hornvale_kernel::astar` makes.
+/// type-audit: bare-ok(count: cost), bare-ok(count: return)
+pub fn least_cost_from(geo: &Geosphere, cost: &CellMap<u64>, from: CellId) -> CellMap<Option<u64>> {
+    let mut dist: Vec<Option<u64>> = vec![None; geo.cell_count()];
+    let mut frontier: BTreeSet<(u64, CellId)> = BTreeSet::new();
+
+    dist[from.0 as usize] = Some(0);
+    frontier.insert((0, from));
+
+    while let Some(&(d, cell)) = frontier.iter().next() {
+        frontier.remove(&(d, cell));
+        // A stale frontier entry: this cell was already settled more cheaply.
+        if dist[cell.0 as usize] != Some(d) {
+            continue;
+        }
+        for &next in geo.neighbors(cell) {
+            let step = *cost.get(next);
+            if step == u64::MAX {
+                continue;
+            }
+            let candidate = d.saturating_add(step);
+            let improved = dist[next.0 as usize].is_none_or(|old| candidate < old);
+            if improved {
+                if let Some(old) = dist[next.0 as usize] {
+                    frontier.remove(&(old, next));
+                }
+                dist[next.0 as usize] = Some(candidate);
+                frontier.insert((candidate, next));
+            }
+        }
+    }
+
+    CellMap::from_fn(geo, |c| dist[c.0 as usize])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,6 +176,46 @@ mod tests {
         let route = CellRoute::new(&geo, &cost, CellId(0));
         for cell in geo.cells() {
             assert_eq!(route.heuristic(&cell), 0);
+        }
+    }
+
+    #[test]
+    fn a_source_reaches_itself_at_zero_cost() {
+        let geo = Geosphere::new(0);
+        let cost = CellMap::from_fn(&geo, |_| 10u64);
+        let d = least_cost_from(&geo, &cost, CellId(0));
+        assert_eq!(*d.get(CellId(0)), Some(0));
+    }
+
+    #[test]
+    fn impassable_cells_are_unreachable_and_do_not_overflow() {
+        let geo = Geosphere::new(0);
+        // Everything impassable except the source itself.
+        let cost = CellMap::from_fn(&geo, |c| if c == CellId(0) { 10 } else { u64::MAX });
+        let d = least_cost_from(&geo, &cost, CellId(0));
+        assert_eq!(*d.get(CellId(0)), Some(0));
+        for c in geo.cells().filter(|&c| c != CellId(0)) {
+            assert_eq!(*d.get(c), None, "cell {c:?} should be unreachable");
+        }
+    }
+
+    #[test]
+    fn the_sweep_agrees_with_the_shipped_single_target_search() {
+        // THE KEYSTONE. `least_cost_from` is only useful if it is the same
+        // function as `least_cost`, evaluated everywhere at once. A
+        // non-uniform cost field is essential: a uniform one would let a
+        // plain hop-count agree by accident.
+        let geo = Geosphere::new(1);
+        let cost = CellMap::from_fn(&geo, |c| 10 + (c.0 as u64 % 7) * 13);
+        let from = CellId(0);
+        let swept = least_cost_from(&geo, &cost, from);
+        for to in geo.cells() {
+            let single = least_cost(&geo, &cost, from, to, 1_000_000).map(|(_, total)| total);
+            assert_eq!(
+                *swept.get(to),
+                single,
+                "sweep and single-target disagree for {to:?}"
+            );
         }
     }
 }
