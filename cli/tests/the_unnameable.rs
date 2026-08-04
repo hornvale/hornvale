@@ -54,11 +54,21 @@ fn no_unnameable_concept_is_ever_lexicalized() {
     let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain builds");
     let climate = hornvale_worldgen::climate_of(&world).expect("climate builds");
 
-    // The five peopled species in the seed-42 fixture (bugbear, gnoll,
-    // goblin, hobgoblin, kobold) — checked, not just the brief's original
-    // four, so the guard covers every lexicon the fixture actually builds.
+    // The six peopled species in the seed-42 fixture (bugbear, gnoll,
+    // goblin, hobgoblin, human, kobold) — checked, not just the brief's
+    // original four, so the guard covers every lexicon the fixture actually
+    // builds. The Generalist added human as the sixth (Fix round 1,
+    // Finding 3); this list rotted once already (the brief's four grew to
+    // five without this file noticing) and the campaign-wide fix for that
+    // is deriving rather than hand-maintaining wherever the golden's row
+    // order does not pin the list — no such constraint here, so this could
+    // read `hornvale_worldgen::placed_peoples(&world)` instead, but is kept
+    // as an explicit named roster for now to match this test's own existing
+    // idiom; the count assertion below is what actually guards against the
+    // list rotting silently a third time.
+    let species_roster = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll", "human"];
     let mut checked = 0usize;
-    for species in ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll"] {
+    for species in species_roster {
         let Ok(lexicon) = hornvale_worldgen::lexicon_from(&world, species, &terrain, &climate)
         else {
             continue;
@@ -77,9 +87,20 @@ fn no_unnameable_concept_is_ever_lexicalized() {
             );
         }
     }
-    assert!(
-        checked > 0,
-        "no species produced a lexicon at all — the check ran vacuously"
+    // Every species' lexicon is a TOTAL map over the registered concepts
+    // (established by `exposure.rs`'s own total-map guard), so the expected
+    // count is derived from the live registry rather than a second
+    // hand-maintained number — a species silently dropping out of
+    // `species_roster` (or the registry gaining/losing concepts) moves this
+    // assertion instead of leaving `checked > 0` to pass regardless.
+    assert_eq!(
+        checked,
+        species_roster.len() * world.registry.concepts().count(),
+        "expected every one of the {} listed species to contribute one entry per \
+         registered concept ({} concepts) — a species was skipped or its lexicon \
+         was not total, so this guard covered less than it claims",
+        species_roster.len(),
+        world.registry.concepts().count()
     );
 }
 

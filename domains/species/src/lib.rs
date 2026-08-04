@@ -1470,13 +1470,25 @@ fn gnoll_condition_niche() -> ConditionNiche {
     }
 }
 
-/// Human condition niche: the roster's first true GENERALIST — the widest,
-/// least-devoted curves on temperature and moisture of any kind.
+/// Human condition niche: the roster's first true GENERALIST — a settler
+/// that leans on none of its four axes.
 ///
 /// Authored as a deliberate contrast to goblin, and the contrast is
-/// **devotion and width, not optimum**. Goblin is a warm-*marginal*
-/// generalist: wide, but with a real temperature lean (devotion 0.40 on its
-/// widest axis) and an elevation optimum already re-centred by The Tumult's
+/// **devotion, not width, and not optimum**. Width is a mixed comparison,
+/// axis by axis: human is NARROWER than goblin on temperature (22.0 vs.
+/// 28.0) and elevation (2000.0 vs. 3000.0), WIDER on moisture (0.70 vs.
+/// 0.60), and EQUAL on insolation (0.30 vs. 0.30) — width alone does not
+/// separate the two kinds, and is not the claim to test. Devotion does:
+/// human's devotion is strictly lower than goblin's on all four axes
+/// (temperature 0.20 vs. 0.45, moisture 0.20 vs. 0.35, insolation 0.25 vs.
+/// 0.35, elevation 0.30 vs. 0.35) — a flatter, less-committed response
+/// curve everywhere, which is what "leans on none of its axes" means
+/// concretely. (Human is also not the widest curve on the whole roster on
+/// any one axis in isolation — xorn's temperature width, 40.0, is wider
+/// still; the claim this niche makes is about the CONTRAST with goblin
+/// specifically, not a superlative over every authored kind.)
+///
+/// Goblin's own elevation optimum was already re-centred by The Tumult's
 /// re-datum to 1500.0 m, the settleable-land median. Human's elevation
 /// optimum sits at that SAME 1500.0 m — deliberately, not by coincidence.
 /// A wide, low-devotion curve only reads as genuine *indifference* if it is
@@ -1487,10 +1499,11 @@ fn gnoll_condition_niche() -> ConditionNiche {
 /// out-competes nobody and holds no stronghold of its own. So the two
 /// kinds share an optimum on purpose: what makes human lose the
 /// specialists' strongholds (kobold's mountain, bugbear's rainforest) is
-/// its LOWER devotion against their high devotion, not a relocated centre.
-/// Human's width and devotion are authored strictly flatter than goblin's on
-/// every axis so the contrast is real and measurable, not nominal — Task 5
-/// tests exactly this and fails if human turns out to be goblin recentred.
+/// its LOWER devotion against their high devotion, not a relocated centre
+/// and not a wider curve. Task 5's vacuity/distinctness check is built on
+/// this contrast — DEVOTION, strictly lower than goblin's on every axis —
+/// and fails if human turns out to be goblin recentred (or goblin merely
+/// re-widened).
 ///
 /// Frame: elevation is metres above the world's sea level (see
 /// [`ConditionNiche`]). Measured over seeds 1..=30, pooled over 142593

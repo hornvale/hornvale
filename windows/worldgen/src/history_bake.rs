@@ -249,12 +249,24 @@ const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// vetoes the whole roster, is inert by construction and buys nothing. 0.6 is
 /// chosen to sit between the manikin's neutral midpoint — where goblin's
 /// authored temperament happens to sit (0.5) — and the assertive peoples
-/// (hobgoblin 0.7, kobold and bugbear 0.8), so
+/// (hobgoblin 0.7, kobold and bugbear 0.8, gnoll 0.85), so
 /// exactly one of the four settling peoples declines to raid. That is a choice
 /// about what the gate *means*, made against the authored roster — not one
 /// fitted to a measured outcome; the cascade metric was not consulted in
 /// picking it. A save-format constant: changing it re-fights every world's
 /// history.
+///
+/// **The Generalist consequence (disclosed, not chosen).** Human's
+/// `threat_response` is also authored at 0.5 (The Manikin's neutral
+/// midpoint — see `psyche_registry()`'s human row and its own doc comment on
+/// why 0.5 is an argued anchor there, not a default), so it falls below this
+/// gate too: **two of the six settling peoples now decline to raid, not
+/// one** — goblin and human. This is a *consequence* of human's authored
+/// temperament landing where The Manikin's model says a kind may
+/// legitimately coincide with the reference vector; it is not a decision
+/// about whether humans raid, and neither `threat_response` nor this
+/// constant moved to produce or avoid it (project owner's ruling, Fix round
+/// 1, Finding 2).
 const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// Pressure at or above which a community starves out (Famine). `pub` so the
 /// demography calibration (`windows/lab/tests/gathering_calibration.rs`) can

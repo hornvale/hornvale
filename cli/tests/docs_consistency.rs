@@ -935,7 +935,13 @@ fn the_history_page_prose_names_the_cell_it_renders() {
         .split_once("```text")
         .expect("the page has a fenced render block");
 
-    for people in ["bugbear", "hobgoblin", "kobold", "goblin", "gnoll"] {
+    // The Generalist added a sixth people (human); appended so this loop
+    // still covers every settling people if the hand-authored prose is ever
+    // edited to name one (Fix round 1, Finding 1's shape, caught by a
+    // follow-up grep rather than a live failure — the guard below only
+    // checks names the prose actually contains, so this was dormant, not
+    // red).
+    for people in ["bugbear", "hobgoblin", "kobold", "goblin", "gnoll", "human"] {
         if prose.to_lowercase().contains(people) {
             assert!(
                 block.to_lowercase().contains(people),

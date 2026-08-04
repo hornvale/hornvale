@@ -1008,3 +1008,205 @@ yellow: root Zmoazhnga /zmoaʒŋa/
 yellow-dwarf: gap (unnameable): no culture here has encountered the main sequence
 yellow-white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 
+species: human
+headedness: HeadFirst
+
+abyssal: gap (experiential): no settlement in or beside abyssal
+abyssal-plain: gap (experiential): human has no exposure to 'abyssal-plain'
+alpine: gap (experiential): no settlement in or beside alpine
+bait-ball: gap (experiential): human has no exposure to 'bait-ball'
+barley: gap (experiential): human has no exposure to 'barley'
+bathypelagic: gap (experiential): no settlement in or beside bathypelagic
+black-dragon-kind: gap (experiential): human has no exposure to 'black-dragon-kind'
+blood: root Ngeshnge /ŋeʃŋe/
+blue: root Ngego /ŋego/
+blue-giant: gap (unnameable): no culture here has encountered the main sequence
+bone: root Ngaazhnga /ŋaaʒŋa/
+boreal-stand: gap (experiential): human has no exposure to 'boreal-stand'
+brown: root Peemea /peemea/
+bugbear-kind: root Mepea /mepea/
+burn: gap (experiential): human has no exposure to 'burn'
+carrion-crawler-kind: gap (experiential): human has no exposure to 'carrion-crawler-kind'
+child: root Mea /mea/
+closed-canopy: root Ngao /ŋao/
+coast: compound earth+water -> Ngakaegame /ŋakaegame/
+cold: gap (experiential): human has no exposure to 'cold'
+cold-upwelling: gap (experiential): human has no exposure to 'cold-upwelling'
+coral-head: gap (experiential): human has no exposure to 'coral-head'
+coral-reef: gap (experiential): no compound recipe for 'coral-reef'
+crevasse-field: gap (experiential): human has no exposure to 'crevasse-field'
+damp-hollow: root Kezngoo /kezŋoo/
+dark: root Maoma /maoma/
+day: root Mashmaa /maʃmaa/
+desert: gap (experiential): no settlement in or beside desert
+die: root Moepoe /moepoe/
+dire-wolf-kind: gap (experiential): human has no exposure to 'dire-wolf-kind'
+drink: root Moaga /moaga/
+earth: root Game /game/
+east: root Toema /toema/
+eat: root Ngatao /ŋatao/
+eclipse: gap (experiential): human has no exposure to 'eclipse'
+epipelagic: gap (experiential): no compound recipe for 'epipelagic'
+erg: gap (experiential): human has no exposure to 'erg'
+eye: root Ngote /ŋote/
+felsenmeer: gap (experiential): human has no exposure to 'felsenmeer'
+fire: root Ka /ka/
+fire-scrub: gap (experiential): human has no exposure to 'fire-scrub'
+fish-shoal: gap (experiential): human has no exposure to 'fish-shoal'
+foot: root Te /te/
+ford: root Ngaato /ŋaato/
+forest-gap: gap (experiential): human has no exposure to 'forest-gap'
+frost-heave: gap (experiential): human has no exposure to 'frost-heave'
+gallery-forest: gap (experiential): human has no exposure to 'gallery-forest'
+giant-constrictor-snake-kind: gap (experiential): human has no exposure to 'giant-constrictor-snake-kind'
+giant-crocodile-kind: gap (experiential): human has no exposure to 'giant-crocodile-kind'
+giant-elk-kind: gap (experiential): human has no exposure to 'giant-elk-kind'
+giant-goat-kind: gap (experiential): human has no exposure to 'giant-goat-kind'
+giant-hyena-kind: gap (experiential): human has no exposure to 'giant-hyena-kind'
+giant-octopus-kind: gap (experiential): human has no exposure to 'giant-octopus-kind'
+giant-scorpion-kind: gap (experiential): human has no exposure to 'giant-scorpion-kind'
+giant-squid-kind: gap (experiential): human has no exposure to 'giant-squid-kind'
+gloom: root Ngenge /ŋeŋe/
+gnoll-kind: root Matoo /matoo/
+goblin-kind: root Meengoo /meeŋoo/
+god: root Kezhnge /keʒŋe/
+grass-sward: gap (experiential): human has no exposure to 'grass-sward'
+great: root Ngaateo /ŋaateo/
+green: root Nga /ŋa/
+hadal-trench: gap (experiential): no settlement in or beside hadal-trench
+hamada: gap (experiential): human has no exposure to 'hamada'
+hand: root Keezmao /keezmao/
+hearth: root Nge /ŋe/
+heat: gap (experiential): human has no exposure to 'heat'
+high: root Gaago /gaago/
+hill: gap (experiential): human has no exposure to 'hill'
+hobgoblin-kind: root Ngopoe /ŋopoe/
+holdfast-tangle: gap (experiential): human has no exposure to 'holdfast-tangle'
+home: root Ma /ma/
+human-kind: root Ngomo /ŋomo/
+hydrothermal-vent: gap (experiential): no settlement in or beside hydrothermal-vent
+ice: gap (experiential): no settlement in or beside ice
+ice-lead: gap (experiential): human has no exposure to 'ice-lead'
+island: gap (experiential): human has no exposure to 'island'
+kelp-canopy: gap (experiential): human has no exposure to 'kelp-canopy'
+kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+killer-whale-kind: gap (experiential): human has no exposure to 'killer-whale-kind'
+kobold-kind: root Meozma /meozma/
+lake: gap (experiential): human has no exposure to 'lake'
+liana-forest: root Ngo /ŋo/
+light: root Keengae /keeŋae/
+lightless-water: gap (experiential): human has no exposure to 'lightless-water'
+little: root Mashmoe /maʃmoe/
+low: root Pazhmea /paʒmea/
+many: root Ngoezhmea /ŋoeʒmea/
+marine-snow: gap (experiential): human has no exposure to 'marine-snow'
+marsh: gap (experiential): human has no exposure to 'marsh'
+melt-pond: gap (experiential): human has no exposure to 'melt-pond'
+mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
+millet: root Ngae /ŋae/
+moon: root Mao /mao/
+mossy-deadfall: gap (experiential): human has no exposure to 'mossy-deadfall'
+mountain: gap (experiential): human has no exposure to 'mountain'
+mouth: root Mo /mo/
+move: root Moaznga /moazŋa/
+muskeg: gap (experiential): human has no exposure to 'muskeg'
+name: root Mezhmao /meʒmao/
+new: root Pakaa /pakaa/
+night: root Nga /ŋa/
+nodule-field: gap (experiential): human has no exposure to 'nodule-field'
+north: root Ngoa /ŋoa/
+north-east: compound north+east -> Toemangoa /toemaŋoa/
+north-west: compound north+west -> Meazngengoa /meazŋeŋoa/
+old: root Moezhnga /moeʒŋa/
+old-growth: gap (experiential): human has no exposure to 'old-growth'
+one: root Ngo /ŋo/
+open-blue: gap (experiential): human has no exposure to 'open-blue'
+orange-dwarf: gap (unnameable): no culture here has encountered the main sequence
+orange-giant: gap (unnameable): no culture here has encountered the main sequence
+otyugh-kind: gap (experiential): human has no exposure to 'otyugh-kind'
+over: root Go /go/
+owlbear-kind: gap (experiential): human has no exposure to 'owlbear-kind'
+parent: root Ngozmeo /ŋozmeo/
+person: root Ngae /ŋae/
+plankton-bloom: gap (experiential): human has no exposure to 'plankton-bloom'
+playa: gap (experiential): human has no exposure to 'playa'
+pressure-ridge: gap (experiential): human has no exposure to 'pressure-ridge'
+rafted-floe: gap (experiential): human has no exposure to 'rafted-floe'
+rain: gap (experiential): human has no exposure to 'rain'
+red: root Ngeozme /ŋeozme/
+red-dragon-kind: gap (experiential): human has no exposure to 'red-dragon-kind'
+red-dwarf: gap (unnameable): no culture here has encountered the main sequence
+red-giant: gap (unnameable): no culture here has encountered the main sequence
+reef-rubble: gap (experiential): human has no exposure to 'reef-rubble'
+reef-shark-kind: gap (experiential): human has no exposure to 'reef-shark-kind'
+reg: gap (experiential): human has no exposure to 'reg'
+rest: root Nge /ŋe/
+rhinoceros-kind: gap (experiential): human has no exposure to 'rhinoceros-kind'
+rice: root Pee /pee/
+river: root Ngama /ŋama/
+rust-monster-kind: gap (experiential): human has no exposure to 'rust-monster-kind'
+sargassum-drift: gap (experiential): human has no exposure to 'sargassum-drift'
+savanna: gap (experiential): no compound recipe for 'savanna'
+scattering-layer: gap (experiential): human has no exposure to 'scattering-layer'
+sclerophyll-scrub: gap (experiential): human has no exposure to 'sclerophyll-scrub'
+scoured-ice: gap (experiential): human has no exposure to 'scoured-ice'
+sea: compound many+water -> Ngakaengoezhmea /ŋakaeŋoeʒmea/
+sea-ice: gap (experiential): no settlement in or beside sea-ice
+shadow: gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.15
+shrieker-kind: gap (experiential): human has no exposure to 'shrieker-kind'
+shrubland: gap (experiential): no settlement in or beside shrubland
+sibling: root Ngao /ŋao/
+sleep: root Peoshmo /peoʃmo/
+smoker-field: gap (experiential): human has no exposure to 'smoker-field'
+snow: gap (experiential): human has no exposure to 'snow'
+snowfield: gap (experiential): human has no exposure to 'snowfield'
+south: root Meopaa /meopaa/
+south-east: compound south+east -> Toemameopaa /toemameopaa/
+south-west: compound south+west -> Meazngemeopaa /meazŋemeopaa/
+spirit: root Mo /mo/
+spring: gap (experiential): human has no exposure to 'spring'
+spur-and-groove: gap (experiential): human has no exposure to 'spur-and-groove'
+staghorn-stand: gap (experiential): human has no exposure to 'staghorn-stand'
+star: root Kashnga /kaʃŋa/
+starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.15
+stone: root Ngeo /ŋeo/
+sun: root Ngoezmoe /ŋoezmoe/
+sun-like-star: gap (unnameable): no culture here has encountered the main sequence
+taiga: gap (experiential): no settlement in or beside taiga
+temperate-forest: root Nge /ŋe/
+temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
+temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
+thorn-scrub: gap (experiential): human has no exposure to 'thorn-scrub'
+tide: gap (experiential): human has no exposure to 'tide'
+treant-kind: gap (experiential): human has no exposure to 'treant-kind'
+tree: root Ngogae /ŋogae/
+trench-floor: gap (experiential): human has no exposure to 'trench-floor'
+trench-wall: gap (experiential): human has no exposure to 'trench-wall'
+tropical-rainforest: root Mengae /meŋae/
+tropical-seasonal-forest: root Kaangoa /kaaŋoa/
+tuber: gap (experiential): human has no exposure to 'tuber'
+tubeworm-thicket: gap (experiential): human has no exposure to 'tubeworm-thicket'
+tundra: gap (experiential): no settlement in or beside tundra
+twig-blight-kind: gap (experiential): human has no exposure to 'twig-blight-kind'
+twilight-water: gap (experiential): human has no exposure to 'twilight-water'
+two: root Ngeeto /ŋeeto/
+under: root Moa /moa/
+upwelling: gap (experiential): no settlement in or beside upwelling
+urchin-barren: gap (experiential): human has no exposure to 'urchin-barren'
+valley: gap (experiential): human has no exposure to 'valley'
+vent-plume: gap (experiential): human has no exposure to 'vent-plume'
+vine: gap (experiential): human has no exposure to 'vine'
+water: root Ngakae /ŋakae/
+west: root Meaznge /meazŋe/
+wheat: root Moe /moe/
+white-dragon-kind: gap (experiential): human has no exposure to 'white-dragon-kind'
+white-dwarf: gap (unnameable): no culture here has encountered the main sequence
+wind: root Kemee /kemee/
+wind-scour: gap (experiential): human has no exposure to 'wind-scour'
+wooded-grassland: gap (experiential): human has no exposure to 'wooded-grassland'
+woolly-mammoth-kind: gap (experiential): human has no exposure to 'woolly-mammoth-kind'
+xorn-kind: gap (experiential): human has no exposure to 'xorn-kind'
+yellow: root Kea /kea/
+yellow-dwarf: gap (unnameable): no culture here has encountered the main sequence
+yellow-white-dwarf: gap (unnameable): no culture here has encountered the main sequence
+
