@@ -227,13 +227,34 @@ low-dispersion ones.
 **H3 — raiding becomes a fraction, not a flag.** Humans raid at a rate strictly
 between goblin's and hobgoblin's, rather than at 0 or 1.
 
-**H4 — war tracks variance, not level.** Across settlements, raiding
-frequency correlates more strongly with the *interannual variance* of the local
-resource supply than with its *mean*. This is Ember & Ember's cross-cultural
-finding restated as a prediction about a simulated world, and it is the
-campaign's most interesting possible result **in either direction** — a null
-would say Hornvale's ecology does not reproduce the anthropological signal, and
-that is worth knowing.
+**H4 — WITHDRAWN at G3 (2026-08-04), before any code was written.** It read:
+"across settlements, raiding frequency correlates more strongly with the
+*interannual variance* of the local resource supply than with its *mean*" —
+Ember & Ember's cross-cultural finding as a prediction about a simulated world.
+
+**It cannot run, and preregistering it anyway would have been the exact trap
+this program exists to catch.** Two independent reasons, both checked against
+the code rather than assumed:
+
+1. **There is no variance to measure.** `hornvale_demography::carrying_capacity`
+   and `windows/worldgen`'s `forage_supply_field` both return
+   `CellMap<f64>` and take **no time parameter**. The supply the packer reads is
+   one static value per cell.
+2. **The nearest available quantity measures a different construct.** The Mire
+   landed a per-cell daily substrate trajectory, but `spin_up` runs a *periodic*
+   year to convergence, so it is identical every year by construction — seasonal
+   *amplitude*, not interannual *unpredictability*. Ember & Ember draw exactly
+   that distinction: predictable seasons are adapted to; it is the surprise that
+   drives conflict.
+
+The ingredients do exist — `hornvale_climate::weather_phase` is a function of
+**absolute** day, so successive years genuinely differ — but nothing aggregates
+that into a per-cell unpredictability field, and carrying capacity does not read
+it. Building it is real scope this campaign does not budget.
+
+Filed against `SOC-war-variance` with the blocker named. This is the fifth
+instance of the program's own probe-validity ladder biting, and the first caught
+at spec review rather than after the code was written.
 
 **The falsification.** If no measured outcome moves once dispersion is authored,
 the layer is decorative and should not ship — rung 2 of the program's own
