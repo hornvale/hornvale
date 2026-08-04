@@ -297,10 +297,27 @@ out wrong, that is a finding for the chronicle, not a constant to adjust.
 **Costs from sources, not per pair.** `least_cost` is single-target: it routes
 one `from` to one `to`. F1 and F2 need costs from a set of source settlements
 to many destinations, so running it per pair is `S²` searches when `S` Dijkstra
-sweeps would do. The pilot (§6) measures both — the existing per-pair
-`least_cost` and an all-targets sweep variant — and the cheaper exact one is
-used. Adding the sweep variant to `domains/topology/src/route.rs` is in scope;
-it is a generalisation of a shipped function, not a new solver.
+sweeps would do. Adding the sweep variant to `domains/topology/src/route.rs` is
+in scope; it is a generalisation of a shipped function, not a new solver.
+
+**The sweep must return predecessors, and its tie-break must be a pure
+function of the cost field.** F2 reads path *identity*, not cost, so the sweep
+has to reconstruct paths — and `least_cost`, which does return a path, is
+single-target with `heuristic() == 0`, making per-pair use ~`S²` full Dijkstras
+per sampled day. That is the reason the sweep carries predecessors rather than
+F2 falling back on the shipped function.
+
+The tie-break is load-bearing rather than incidental. F2 compares paths across
+two cost fields that differ only slightly, so a predecessor chosen by
+expansion order could return different equally-cheap paths on the two runs and
+report re-routing that never happened — the campaign would be measuring its
+router, which is the precise failure §5 already rejected hierarchical routing
+to avoid. The rule is therefore explicit and total: on a strict improvement set
+the predecessor normally; on an exact tie, keep the candidate predecessor with
+the lower `CellId`. The agreement test asserts optimality and well-formedness
+(adjacency, endpoints, summed cost equals reported cost) rather than
+cell-for-cell equality with `least_cost`'s path — both are optimal, and their
+tie-breaks legitimately differ.
 
 **Hierarchical routing is explicitly out of scope**, and not merely on cost
 grounds. A contraction hierarchy or multi-level overlay changes which of
@@ -340,6 +357,22 @@ The mitigation is procedural and it is why §4 carries no numbers:
 
 No floor in this campaign is inherited from a constant defined elsewhere. A
 floor that cannot be traced to this campaign's own pilot is a defect.
+
+**Amendment (2026-08-04, project owner's ruling): F4's floor is frozen
+separately, at the top of its own task.** Execution surfaced that F4 runs on a
+different instrument from F1–F3 — the connection graph and `defensibility`,
+which need a history bake per world — so pilot-measuring it alongside a routing
+pilot costs out of proportion to what it settles. F4's floor is therefore
+derived from a task-local pilot and frozen in its own commit at the start of
+the F4 task, before its readout exists.
+
+This is a deliberate departure from the paragraph above, not an oversight, and
+it is recorded rather than quietly taken. What it gives up: a single freeze
+point, and the tidiness of one commit that provably predates every number.
+What it preserves — and the reason it is acceptable — is the discipline that
+actually does the work: **each floor is still frozen before the number it
+gates exists.** A floor chosen after seeing its own readout would be
+metric-chasing; a floor frozen in a separate earlier commit is not.
 
 The pilot also settles the scope question the seed count depends on, which is
 why the population is not fixed here. The Mire's 200 seeds is the target for
