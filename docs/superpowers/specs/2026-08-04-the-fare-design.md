@@ -414,6 +414,90 @@ The mitigation is procedural and it is why §4 carries no numbers:
 4. **Freeze all of the above in this spec, in a commit that predates the full
    run**, and say in the chronicle that the floors were pilot-derived.
 
+## 6b. THE FREEZE (2026-08-04) — frozen before the full run
+
+The pilot is done: 5 seeds × 5 separation bands × both frames, 49.21 s in
+release. Everything below is frozen. Nothing here may be retuned after the
+full run; a falsified floor is this campaign's finding, not its failure.
+
+### A correction that changes what F1's floor can mean
+
+An earlier working note proposed anchoring F1's floor to The Mire's measured
+0.0095. **That comparison is invalid and is withdrawn.** The Mire measured
+*the fraction of land sitting in the largest reachable region*; F1 measures
+*the fractional change in the cost of one route*. They share a decimal point
+and nothing else. Comparing them numerically would have dressed an
+apples-to-oranges reading as a result — the same error, in miniature, that
+this campaign exists to correct in its predecessor.
+
+F1's floor is therefore anchored to **what would matter to a traveller**,
+derived from this campaign's own authored scale: §5a sets the surcharge so
+that fully impeded ground doubles the cost of flat terrain. A seasonal swing
+worth calling an effect on journeys should be a visible fraction of that, not
+a rounding error.
+
+### The frozen floors
+
+- **F1 — seasonal cost swing, at the 40° band: floor 0.05.**
+  Conservative against §5a's own doubling scale. The pilot measured 0.30–0.67%
+  pooled across bands, so **F1 is expected to fail, clearly rather than
+  marginally.** That expectation is recorded here, before the run, precisely so
+  that reporting the failure cannot later look like a floor chosen to be
+  cleared.
+- **F2 — re-routing fraction, at the 40° band: floor 0.10.**
+  One journey in ten changing its road across a year is a real phenomenon at
+  world scale. Pilot: 16.27% pooled at 40°.
+- **F2's redundancy band: a pair counts as having an alternative when its
+  second-best substantially-disjoint dry path costs ≤ 2.0× the best.**
+  Pilot medians ran 1.13–1.22 with maxima to 4.72, so 2.0 admits the ordinary
+  case and excludes genuine single-corridor pairs. Adjacent pairs (empty path
+  interior) are excluded from the redundancy statistic and retained in F2's
+  denominator, per §4a.
+- **F3 — the latitude ordering** is compared against The Mire's measured
+  `equatorial > temperate > polar`, on the same `BANDS` boundaries. No numeric
+  floor: the ordering is the claim.
+
+### F-mono — added at freeze time, and labelled as such
+
+**Both F1 and F2 are non-decreasing across separation bands, pooled over the
+population.** This is the direct test of §4's mechanism claim that path cost is
+a sum along a route.
+
+**This hypothesis was suggested by the pilot, not held before it**, and saying
+so is the point. The pilot found F2 rising ×5.72 and F1 ×2.21 across 5°–40°.
+Pilot-suggests-then-confirmatory-run is legitimate, but only when declared: it
+is frozen here, before the 200-seed run that tests it, and it must be reported
+as pilot-suggested in the chronicle. Per-seed it is already known to be
+imperfect — F1 is strictly monotonic in only 2 of 5 pilot seeds and drops ~22%
+at the top band in seed 4 — so the claim is explicitly about the **pooled**
+trend, not about every seed.
+
+### The frozen sampling frame
+
+- **Bands: 5°, 10°, 20°, 40°.** The 80° band is **excluded from all
+  hypotheses** — three of five pilot seeds yielded 0, 2 and 7 pairs at that
+  separation. It is still *reported*, so its under-sampling is visible rather
+  than hidden.
+- **Landmark stride** as implemented, giving ~200 source cells per seed;
+  destinations chosen by nearest angular separation to each band target from
+  the same landmark set, so the source population cannot vary by band.
+- **Population: 200 seeds (`1..=200`)**, matching The Mire so F3's comparison
+  is like-for-like. Estimated cost from the pilot's 49.21 s / 5 seeds:
+  **~33 minutes in release.** Run in release, foreground, with per-seed
+  progress logging.
+- **Both frames reported.** Geographic is primary; `PILOT-SETTLEMENT` is the
+  labelled secondary, carrying §6a's forward prediction.
+
+### The known limitation, frozen with the rest
+
+Farther-separated land-cell pairs must live on larger, better-connected
+landmasses, so **landmass composition may account for part of what F-mono
+reads as route length.** This is inherent to any geographic-separation frame
+rather than a defect, and §5a's additive surcharge already guards the separate
+terrain-slope confound. It is recorded here, before the run, so the chronicle
+reports the band curve as a measured trend with a named alternative
+explanation — not as a demonstrated causal mechanism.
+
 No floor in this campaign is inherited from a constant defined elsewhere. A
 floor that cannot be traced to this campaign's own pilot is a defect.
 
