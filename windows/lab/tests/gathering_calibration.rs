@@ -121,9 +121,16 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // the-rains moisture epoch reshapes habitable capacity by latitude — that
     // the AWS-golden lag never re-pinned; the preregistered floor of 3 still
     // clears decisively.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, reshaping every world's settlement contest and with it
+    // this capacity-by-latitude reading: 20.8640 -> 20.9646. The
+    // preregistered floor of 3 still clears decisively (nearly 7x), the
+    // claim this row exists to guard, re-checked rather than assumed.
     assert!(
-        (mean - 20.8640).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~20.8640)"
+        (mean - 20.9646).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~20.9646)"
     );
 }
 
@@ -208,9 +215,16 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // lefford, 0063): the BAKE label bump moves settlement placement again
     // (15.2716 -> 15.3350); the directional claim is untouched and still
     // clears the baseline by better than 2x.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, moving settlement placement again (15.3350 -> 15.1298);
+    // the directional claim — below the uniform-sphere baseline of 32.7 —
+    // is untouched and still clears the baseline by better than 2x,
+    // re-checked rather than assumed.
     assert!(
-        (mean - 15.3350).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.3350)"
+        (mean - 15.1298).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.1298)"
     );
 }
 
