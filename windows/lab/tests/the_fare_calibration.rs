@@ -123,6 +123,10 @@ mod transform {
     }
 }
 
+/// Days sampled across one converged annual trajectory. Matches The Mire's
+/// 12 so F3's latitude comparison is like-for-like.
+const SAMPLE_DAYS: usize = 12;
+
 /// The pilot's seeds. Deliberately small: its job is to measure cost and set
 /// the floors, not to answer F1-F4. Spec §6.
 const PILOT_SEEDS: std::ops::RangeInclusive<u64> = 1..=5;
@@ -228,6 +232,25 @@ fn weathered_cost(sample: &WorldSample, day: f64) -> CellMap<u64> {
     })
 }
 
+/// The median of a nonempty population: the middle value for an odd-length
+/// sample, the average of the two middle values for an even-length one.
+/// Matches `the_mire_calibration.rs`'s `median()` convention. A bare
+/// `sorted[len / 2]` is an *upper*-median on an even-length sample, which
+/// silently differs from this whenever the pair count is even (4 of the 5
+/// pilot seeds, in practice) — worth conforming exactly since Task 4 freezes
+/// floors from these numbers.
+fn median(values: &[f64]) -> f64 {
+    assert!(!values.is_empty(), "median of an empty population");
+    let mut sorted = values.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let n = sorted.len();
+    if n % 2 == 1 {
+        sorted[n / 2]
+    } else {
+        (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+    }
+}
+
 mod weathering {
     use super::*;
 
@@ -275,40 +298,116 @@ mod weathering {
     #[test]
     #[ignore = "heavy: the pilot builds 5 live worlds and routes over them (minutes); spec §6"]
     fn the_fares_pilot() {
+        // Measures TWO distinct quantities per seed, both labelled on the
+        // PILOT line:
+        //
+        // - `median_swing`/`max_swing`: the spec's F1 quantity (§4) — each
+        //   pair's own (max - min) of weathered path cost ACROSS the
+        //   SAMPLE_DAYS sampled days, expressed as a fraction of that pair's
+        //   dry cost. This is what Task 4 must set floors from, since it is
+        //   what Task 5 measures.
+        // - `median_markup`/`max_markup`: a fixed-day dry-vs-weathered
+        //   markup at a single day (`year_length / 4.0`), kept as a control
+        //   statistic. This is what the first version of this pilot
+        //   measured; it answers a structurally different question (a
+        //   single day's markup, not a within-year amplitude) and must not
+        //   be the thing floors are calibrated from.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         for seed in PILOT_SEEDS {
             let sample = build_sample(seed, &wc);
-            let day = sample.year_length / 4.0;
-            let wet = weathered_cost(&sample, day);
-            let sources = sample.settlements.len();
+            let n = sample.settlements.len();
 
-            // One sweep from each settlement, dry and weathered.
-            let mut swings: Vec<f64> = Vec::new();
-            for &src in &sample.settlements {
-                let d_dry = least_cost_from(&sample.geo, &sample.dry, src);
-                let d_wet = least_cost_from(&sample.geo, &wet, src);
+            // The dry sweep is day-invariant, so compute it once per source
+            // and reuse it for both the markup control and the swing.
+            let dry_sweeps: Vec<CellMap<Option<u64>>> = sample
+                .settlements
+                .iter()
+                .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
+                .collect();
+
+            // --- Control: fixed-day markup at year_length / 4.0 ---
+            let markup_day = sample.year_length / 4.0;
+            let wet_markup = weathered_cost(&sample, markup_day);
+            let mut markups: Vec<f64> = Vec::new();
+            for (i, &src) in sample.settlements.iter().enumerate() {
+                let d_wet = least_cost_from(&sample.geo, &wet_markup, src);
                 for &dst in &sample.settlements {
                     if dst == src {
                         continue;
                     }
-                    if let (Some(a), Some(b)) = (*d_dry.get(dst), *d_wet.get(dst))
+                    if let (Some(a), Some(b)) = (*dry_sweeps[i].get(dst), *d_wet.get(dst))
                         && a > 0
                     {
-                        swings.push((b as f64 - a as f64) / a as f64);
+                        markups.push((b as f64 - a as f64) / a as f64);
+                    }
+                }
+            }
+            markups.sort_by(f64::total_cmp);
+            let median_markup = if markups.is_empty() {
+                f64::NAN
+            } else {
+                median(&markups)
+            };
+            let max_markup = markups.last().copied().unwrap_or(f64::NAN);
+
+            // --- F1's quantity: each pair's (max - min) weathered cost
+            // across SAMPLE_DAYS, over its dry cost. Weathered field is
+            // built once per day (not once per source per day) and every
+            // settlement is swept from that one field.
+            let mut min_cost = vec![f64::INFINITY; n * n];
+            let mut max_cost = vec![f64::NEG_INFINITY; n * n];
+            for day_idx in 0..SAMPLE_DAYS {
+                let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
+                let wet = weathered_cost(&sample, day);
+                for (i, &src) in sample.settlements.iter().enumerate() {
+                    let d_wet = least_cost_from(&sample.geo, &wet, src);
+                    for (j, &dst) in sample.settlements.iter().enumerate() {
+                        if i == j {
+                            continue;
+                        }
+                        if let Some(c) = *d_wet.get(dst) {
+                            let c = c as f64;
+                            let idx = i * n + j;
+                            if c.total_cmp(&min_cost[idx]).is_lt() {
+                                min_cost[idx] = c;
+                            }
+                            if c.total_cmp(&max_cost[idx]).is_gt() {
+                                max_cost[idx] = c;
+                            }
+                        }
+                    }
+                }
+            }
+
+            let mut swings: Vec<f64> = Vec::new();
+            for (i, _) in sample.settlements.iter().enumerate() {
+                for (j, &dst) in sample.settlements.iter().enumerate() {
+                    if i == j {
+                        continue;
+                    }
+                    let idx = i * n + j;
+                    if !min_cost[idx].is_finite() {
+                        continue;
+                    }
+                    if let Some(a) = *dry_sweeps[i].get(dst)
+                        && a > 0
+                    {
+                        swings.push((max_cost[idx] - min_cost[idx]) / a as f64);
                     }
                 }
             }
             swings.sort_by(f64::total_cmp);
-            let median = if swings.is_empty() {
+            let median_swing = if swings.is_empty() {
                 f64::NAN
             } else {
-                swings[swings.len() / 2]
+                median(&swings)
             };
-            let max = swings.last().copied().unwrap_or(f64::NAN);
+            let max_swing = swings.last().copied().unwrap_or(f64::NAN);
+
             // Per-seed progress: The Mire lost an hour of wall-clock to a run
             // with no visible progress and nothing recoverable.
             println!(
-                "PILOT seed={seed} settlements={sources} pairs={} median_swing={median:.6} max_swing={max:.6}",
+                "PILOT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6}",
                 swings.len()
             );
         }
