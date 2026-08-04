@@ -3,7 +3,10 @@
 **Campaign:** The Mire · Weather Consequence program, C1 (places half)
 **Branch:** `the-mire`
 **Date:** 2026-08-03
-**Status:** spec, awaiting G3 review
+**Status:** shipped. The preregistered study (§6) ran at full scale and
+returned a double falsification — H1 and H2 both null, H3 confirmed. See
+[the chronicle](../../../book/src/chronicle/the-mire.md) and
+[the retrospective](../../retrospectives/the-mire.md).
 
 ---
 
