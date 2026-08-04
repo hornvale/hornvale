@@ -8,6 +8,35 @@
 [0101](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0101-geometry-and-society-are-separate-vocabularies.md),
 [0102](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0102-one-per-cell-was-an-index-artifact.md)
 
+> ## ⚠ STATUS: Task 0 stopped this campaign as specified (2026-08-04)
+>
+> Task 0 ran before any of §3 was implemented and **falsified §3's design**.
+> Full results and method: `windows/worldgen/tests/keeping_probe.rs` (module
+> doc). The two findings that matter:
+>
+> 1. **The global habitability gate is applied TWICE, and §3 targets the copy
+>    that does not bind.** `Bake::factor` checks `era.habitable`; but
+>    `carrying_capacity` *also* checks `habitable` and returns `0.0`
+>    (`domains/demography/src/carrying_capacity.rs:59`) — and that one is
+>    **upstream** of `niche_per_species_k`, so `K == 0` wherever the mask
+>    excludes. Measured over five seeds, cells with `K > 0` that the gate
+>    excludes: **0, 0, 0, 0, 0.** Rewiring `Bake::factor` alone opens *exactly
+>    zero* new ground; it would compile, pass, hold byte-identity, and do
+>    nothing.
+> 2. **§3.2 is wrong about what `niche_per_species_k` returns.** K is a
+>    dimensionless saturating suitability in `[0,1]` — the *factor*, not a
+>    capacity field. Used raw as the factor it is a 20–100× divisor, and the
+>    cells clearing the daughter bar drop to **0–5 of 40,962** for every
+>    species. A normalization decision is required and this spec contains none.
+>
+> §§1, 2, 2.1 and 4's H1–H3 remain valid and are unaffected. §3.1a's account of
+> clinging is unaffected. **§3.2 is retracted**; §3.1 is correct in intent but
+> incomplete, because it names one gate of two.
+>
+> The spec is left standing rather than rewritten so the falsification is
+> legible. A successor spec should start from the redirect in
+> [§8](#8-redirect-after-task-0).
+
 ## 1. The problem, measured
 
 Every generated world puts its settlements in a handful of tight contiguous
@@ -388,3 +417,68 @@ Interpretation, fixed in advance:
 4. **Aquatic and floating settlement** is still blocked after this campaign by a
    *different* hard gate — `K = 0` on every submerged cell for the whole roster.
    Not in scope; recorded so "creatures everywhere" is not read as delivered.
+
+## 8. Redirect after Task 0
+
+Task 0's verdict is the **stop** branch its own interpretation rules named in
+advance. What it found is not that the campaign's goal is wrong, but that the
+work is in a different place and has a different order. Recorded here so a
+successor spec starts from measurement rather than from §3.
+
+**The real gate is `carrying_capacity`.** Its signature is the obstacle:
+
+```rust
+pub struct CarryingInput {
+    pub habitable: bool,   // <- a species-blind BOOL, filled by the root
+    ...
+}
+pub fn carrying_capacity(geo, inputs: &CellMap<CarryingInput>) -> CellMap<f64>
+```
+
+Making habitability per-species means changing demography's *input type* — the
+field is a `bool` a caller supplies, so the composition root would pass a
+per-species input set, or `carrying_capacity` would take the niche. That is a
+domain API change, not a `Bake` internal, and it is where the campaign actually
+lives. Note the layering constraint: `hornvale-demography` may not import
+`hornvale-species`, so the niche must arrive as data through `CarryingInput` (or
+its successor), never as a species dependency.
+
+**Then the normalization question**, which is now unavoidable and has no default:
+if `factor` becomes per-species K, capacity collapses 20–100×. Candidates, none
+equivalent: normalize each species' K by its own global maximum (every species
+gets a best-ground factor of 1, so relative fitness only); normalize by the
+per-cell roster maximum (a contest — the best-suited species sets the scale);
+or re-scale `SETTLERS_PER_CAPACITY` to absorb it (keeps absolute fitness, moves
+a save-format constant). The choice determines whether species compete on
+*absolute* or *relative* fitness, which is a modelling decision, not a tuning
+one.
+
+**And the roster is now a co-requisite, not a follow-on.** Finding 5: the
+excluded ground is 15–59% below −5 °C and 18–32% arid, while gnoll's hot-arid
+corner is 0–4.75%. The world's extremes are **cold**-arid and no authored settler
+wants them. So even both gates fixed and normalized, the frozen wastes stay empty
+until something is authored that wants them — which is exactly Nathan's "if we
+don't have creatures capable of existing in the deep desert, deep ocean, or
+frozen wastes, we should create them," arriving as a measured requirement rather
+than an aspiration.
+
+**And MAP-22 matters more than this spec credited.** Finding 4: `hobgoblin` and
+`kobold` take essentially every best-fit cell while `goblin`, `bugbear` and
+`gnoll` win **zero** on every seed. Well-separated authored optima did not
+produce distinct territory. Adding species to a roster whose winners already
+monopolise the map will not diversify it; the coexistence stack is what makes a
+larger roster visible.
+
+**Suggested order for the successor**, cheapest-and-most-diagnostic first:
+
+1. `carrying_capacity`'s `habitable` bool → per-species tolerability (the real
+   gate), with the normalization decision made explicitly and measured.
+2. Author cold and arid specialists against the *measured* excluded bands, not
+   against intuition.
+3. MAP-22's coexistence stack, so a bigger roster shows up as territory.
+4. Only then revisit `Bake::factor`, which is a one-line follow-on once the
+   binding gate is per-species.
+
+**What this campaign keeps regardless**: decisions 0098–0102, and the probe
+itself, which is now the campaign's most valuable artifact — a repeatable,
+five-seed measurement of exactly where habitability binds.
