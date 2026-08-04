@@ -148,6 +148,7 @@ fn cfg() -> GraphConfig {
         astar_budget: 2000,
         corridor_max_cost: 500,
         water_route_max_steps: 10,
+        day: None,
     }
 }
 
