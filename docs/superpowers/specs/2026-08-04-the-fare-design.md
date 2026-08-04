@@ -99,14 +99,33 @@ conditional on placement, which a parallel campaign is about to change wholesale
 (§6a). A geographic frame is placement-independent, so the primary measurement
 neither perishes nor owes a re-run.
 
-**It removes a real sampling bias, which is the better reason.** Settlements sit
-in a handful of tight contiguous carpets on high-capacity river basins — six to
-twelve clusters per world, at a one-per-cell floor of roughly 110 km. That is a
-badly biased sample of *terrain*. Weather bites hardest on marginal ground —
-boggy lowland, snow-loaded upland — which is exactly where settlements are not.
-Measuring weather's effect on travel using only routes between clustered
-river-basin sites systematically under-samples the terrain where the effect
-lives, and would understate every readout in this spec.
+**It removes a real sampling confound, which is the better reason.**
+Settlements sit in a handful of tight contiguous carpets on high-capacity river
+basins — six to twelve clusters per world, at a one-per-cell floor of roughly
+110 km. Route length is therefore not controlled: it is whatever the placement
+happens to produce, and it varies by seed. Since this campaign's central claim
+is that the effect *grows with route length* (§4, F1), a frame that cannot hold
+length fixed cannot test it.
+
+**A prediction stated here was falsified by the pilot, and is corrected rather
+than removed.** This section originally argued the geographic frame would
+*raise* every readout, on the reasoning that weather bites hardest on marginal
+ground — boggy lowland, snow-loaded upland — which is where settlements are
+not. The measurement says otherwise: settlement-frame F1 averages ~1.31%
+against ~0.67% for geographic pairs at 40° separation, roughly **halved**, with
+F2 comparable (~17.6% against ~16.3%).
+
+The likely reason, offered as a hypothesis to check and not as a fact:
+high-capacity river basins **are** the moist ground, and routes between them
+follow lowlands where mud lives. So settlement routes are plausibly *more*
+weather-exposed, not less. The original premise was right about elevation and
+backwards about moisture, which is the axis that dominates the surcharge
+(`MUD_PENALTY 0.6`).
+
+This does not overturn the re-frame — controlling route length is the reason
+that survives, and it is the stronger one. It does mean the settlement-frame
+numbers are **not** an understatement, and nothing downstream may describe them
+as one.
 
 The frame: land cells (`!Biome::is_marine()`) drawn by a fixed deterministic
 stride, paired at a controlled great-circle separation so the population is not
