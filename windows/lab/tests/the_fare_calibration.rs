@@ -16,12 +16,24 @@
 //! Promoting it would create a `pub` item with no production consumer — the
 //! exact defect (`MAP-weather-gating-is-unconsumed`) this campaign exposes in
 //! The Mire. Spec §9 makes the production change a non-goal.
+//!
+//! ## The sampling frame (spec §4a, project owner's ruling 2026-08-04)
+//!
+//! F1/F2/F3 are measured between **deterministically sampled land cells**,
+//! not settlement pairs — settlements sit in six to twelve tight carpets on
+//! high-capacity river basins, and weather bites hardest on marginal ground
+//! (boggy lowland, snow-loaded upland) that is exactly where settlements are
+//! not. The settlement-pair routing this file measured before this ruling
+//! survives as a labelled **secondary** readout (`PILOT-SETTLEMENT` lines),
+//! never the headline. See `the_fares_pilot`'s doc comment for the geographic
+//! frame's construction.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_climate::provider::GeneratedClimate;
 use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
 use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
+use hornvale_kernel::math::acos;
 use hornvale_kernel::{CellId, CellMap, Geosphere, Seed, Value};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{CostSweep, least_cost_from};
@@ -143,7 +155,93 @@ const PILOT_SEEDS: std::ops::RangeInclusive<u64> = 1..=5;
 /// over one population instead of two differently-sized ones.
 const PATH_SAMPLE_STRIDE_TARGET: usize = 200;
 
+/// Target separations (degrees) the geographic frame sweeps — one `PILOT`
+/// line per (seed, band), never a single chosen band. The campaign's central
+/// mechanism claim is that path cost is a SUM along a route, so a longer
+/// route crosses more terrain and more distinct weather: F1 and F2 should
+/// therefore RISE with separation. Reporting one band would measure an
+/// effect; reporting the curve across two orders of magnitude tests the
+/// mechanism — a flat curve falsifies it rather than merely restating a
+/// null. Coordinator-specified set, spec §4a ("the separation band... set
+/// from the pilot").
+const SEPARATION_BANDS_DEG: &[f64] = &[5.0, 10.0, 20.0, 40.0, 80.0];
+
+/// How many land cells (`!Biome::is_marine()`, read off `dry != u64::MAX` —
+/// the same test `traversal_cost` already encodes, so no separate biome
+/// field is needed anywhere in this file) the geographic frame draws as
+/// landmarks: a deterministic stride across the whole land roster, never
+/// random — same idiom as [`PATH_SAMPLE_STRIDE_TARGET`]/
+/// `the_mire_calibration.rs`'s `H3_SAMPLE_STRIDE_TARGET`. Every landmark
+/// acts as a SOURCE for every band in [`SEPARATION_BANDS_DEG`], paired with
+/// whichever OTHER landmark's actual angular separation is closest to that
+/// band's target — so the day-sweep cost stays `landmarks × SAMPLE_DAYS`
+/// regardless of how many bands are swept: one sweep per source per day
+/// serves every band that source is used for.
+const GEO_LANDMARK_STRIDE_TARGET: usize = 200;
+
+/// The stride [`GEO_LANDMARK_STRIDE_TARGET`]'s doc comment describes.
+fn geo_landmark_stride(land_cell_count: usize) -> usize {
+    (land_cell_count / GEO_LANDMARK_STRIDE_TARGET).max(1)
+}
+
+/// Great-circle angular separation between two cells, in DEGREES. Never
+/// converted to a physical distance — this sim defines no planetary radius
+/// (spec §4a), so degrees (or [`Geosphere::hops_between`]'s hop count) is
+/// the only honest unit. Cells sit on the unit sphere (`Geosphere::
+/// position`), so the separation is just the angle between their two
+/// position vectors — no latitude/longitude wraparound edge case near a
+/// pole or the dateline the way a haversine-on-coordinates formula would
+/// carry.
+fn angular_separation_deg(geo: &Geosphere, a: CellId, b: CellId) -> f64 {
+    let pa = geo.position(a);
+    let pb = geo.position(b);
+    let dot = pa[0] * pb[0] + pa[1] * pb[1] + pa[2] * pb[2];
+    acos(dot.clamp(-1.0, 1.0)).to_degrees()
+}
+
+/// Among `landmarks` (excluding `landmarks[src_idx]` itself), the one whose
+/// angular separation from the source is closest to `target_deg`, and that
+/// achieved separation. Ties (equal `|diff|`) break on the lower `CellId` —
+/// a pure function of the mesh and the target, never of iteration order,
+/// same discipline `CostSweep`'s tie-break follows. Returns `(destination,
+/// actual_separation_deg)`.
+fn nearest_at_separation(
+    geo: &Geosphere,
+    landmarks: &[CellId],
+    src_idx: usize,
+    target_deg: f64,
+) -> (CellId, f64) {
+    let src = landmarks[src_idx];
+    let mut best: Option<(f64, CellId)> = None;
+    for (j, &candidate) in landmarks.iter().enumerate() {
+        if j == src_idx {
+            continue;
+        }
+        let diff = (angular_separation_deg(geo, src, candidate) - target_deg).abs();
+        best = Some(match best {
+            None => (diff, candidate),
+            Some((best_diff, best_cell)) => {
+                if diff.total_cmp(&best_diff).is_lt()
+                    || (diff.total_cmp(&best_diff).is_eq() && candidate < best_cell)
+                {
+                    (diff, candidate)
+                } else {
+                    (best_diff, best_cell)
+                }
+            }
+        });
+    }
+    let (_, dst) = best.expect("landmarks must hold at least 2 cells");
+    (dst, angular_separation_deg(geo, src, dst))
+}
+
 /// One built world's cached readout surface, computed exactly once per world.
+///
+/// Deliberately carries no `ungated: ConnectionGraph` field. F4 (the only
+/// readout that would have read the graph, `defensibility`, or the history
+/// bake) is dropped from this campaign entirely (spec §4, project owner's
+/// ruling) — nothing here touches any of them, and re-adding the field would
+/// resurrect a `dead_code` trap this file already paid down once.
 struct WorldSample {
     /// The mesh, kept for neighbour and coordinate reads.
     geo: Geosphere,
@@ -318,50 +416,258 @@ mod weathering {
     #[test]
     #[ignore = "heavy: the pilot builds 5 live worlds and routes over them (minutes); spec §6"]
     fn the_fares_pilot() {
-        // Measures FOUR distinct quantities per seed, all labelled on the
-        // PILOT line:
+        // TWO independent readouts per seed, each on its own labelled PILOT
+        // line, per spec §4a's re-basing (project owner's ruling
+        // 2026-08-04):
         //
-        // - `median_swing`/`max_swing`: F1 (§4) — each pair's own
-        //   (max - min) of weathered path cost ACROSS the SAMPLE_DAYS
-        //   sampled days, over that pair's dry cost. Exhaustive over every
-        //   reachable settlement pair.
-        // - `median_markup`/`max_markup`: a fixed-day dry-vs-weathered
-        //   markup at a single day (`year_length / 4.0`), kept only as a
-        //   control statistic (this is what the first version of this pilot
-        //   measured, before being corrected to F1's actual quantity).
-        // - `path_sample`/`reroute_frac`: F2 (§4) — over `path_sample`
-        //   sampled reachable pairs, the fraction whose least-cost PATH
-        //   IDENTITY differs between that pair's OWN cheapest and costliest
-        //   sampled day (per-pair argmin/argmax, never a global day).
-        // - `adjacent_pairs`/`redundancy_sample`/`median_redundancy`/
-        //   `max_redundancy`/`no_alt_count`: the redundancy control F2 needs
-        //   to be interpretable at all — a pair joined by one dominant
-        //   corridor reads zero reroute at any weather strength regardless
-        //   of whether the mechanism works. On the DRY field only: each
-        //   sampled pair's best path, its interior cells (everything except
-        //   the two endpoints) blocked to `u64::MAX` in a scratch field,
-        //   re-swept; the ratio second-best/best cost, or counted under
-        //   `no_alt_count` ("no alternative") if blocking the best path
-        //   leaves no path at all. A directly-adjacent pair (a 2-cell best
-        //   path) has an EMPTY interior — nothing to block — so the
-        //   re-sweep would trivially reproduce the same path and read
-        //   exactly `1.0`, indistinguishable from a genuine equal-cost
-        //   parallel corridor. Those pairs are counted (`adjacent_pairs`)
-        //   and EXCLUDED from `median_redundancy`/`max_redundancy`/
-        //   `no_alt_count` rather than silently folded into either —
-        //   `redundancy_sample` is the surviving population those three are
-        //   actually computed over (`path_sample - adjacent_pairs`).
+        // PRIMARY — `PILOT` lines, one per (seed, band): the geographic
+        // land-cell frame. Landmarks are a deterministic stride over land
+        // cells (`GEO_LANDMARK_STRIDE_TARGET`); every landmark pairs with
+        // whichever other landmark's actual angular separation is closest
+        // to each of `SEPARATION_BANDS_DEG`'s targets
+        // (`nearest_at_separation`). F1/F2 are reported SEPARATELY per band
+        // rather than at one chosen separation, because the campaign's
+        // mechanism claim (path cost is a SUM along a route, so a longer
+        // route crosses more terrain and more distinct weather) predicts
+        // BOTH should rise with separation — the curve tests the mechanism,
+        // a single point only measures an effect.
         //
-        // F2 and the redundancy control are measured over the SAME
-        // stride-sampled subset of reachable pairs, not the full
-        // population — see [`PATH_SAMPLE_STRIDE_TARGET`]'s doc comment.
-        // Disclosed here and on the PILOT line (`path_sample=N`) rather than
-        // silently narrowed. `reroute_frac`'s denominator is `path_sample`,
-        // NOT `redundancy_sample` — adjacent pairs stay in it (see the
-        // comment at that call site for why).
+        // SECONDARY — `PILOT-SETTLEMENT` lines, one per seed: the original
+        // settlement-pair frame, unchanged in every statistic, kept because
+        // it is where the forward prediction about The Keeping's
+        // re-placement belongs (spec §6a) — never the headline, and
+        // prefixed distinctly so the two frames can never be confused in
+        // the readout.
+        //
+        // Both frames share: the two-pass memory discipline (costs-only
+        // pass 1, sampled paths-only pass 2), F2's path-identity comparison
+        // at each pair's own argmin/argmax day (never a global day), the
+        // redundancy control with adjacent pairs excluded and counted
+        // (`adjacent_pairs`/`redundancy_sample`), `no_alt_count` counting
+        // only genuine no-alternative cases among non-adjacent pairs,
+        // `total_cmp` float ordering throughout, and the sibling `median()`
+        // convention. `reroute_frac`'s denominator KEEPS adjacent pairs in
+        // both frames — they structurally cannot re-route, so including
+        // them is conservative, never inflationary (see the comment at each
+        // frame's F2 call site).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         for seed in PILOT_SEEDS {
             let sample = build_sample(seed, &wc);
+
+            // ============ PRIMARY: geographic land-cell frame (§4a) ============
+            let land_cells: Vec<CellId> = sample
+                .geo
+                .cells()
+                .filter(|&c| *sample.dry.get(c) != u64::MAX)
+                .collect();
+            let geo_stride = geo_landmark_stride(land_cells.len());
+            let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+            let landmark_count = landmarks.len();
+            let band_count = SEPARATION_BANDS_DEG.len();
+
+            // The dry sweep is day-invariant, so compute it once per
+            // landmark and reuse it for the swing's normalization and (via
+            // `path_to`) the redundancy control's best path.
+            let landmark_dry_sweeps: Vec<CostSweep> = landmarks
+                .iter()
+                .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
+                .collect();
+
+            // Each landmark pairs with the OTHER landmark whose actual
+            // separation is closest to each band's target. `pair_dst`/
+            // `pair_sep` are flat, indexed `i * band_count + k`.
+            let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+            let mut pair_sep: Vec<f64> = Vec::with_capacity(landmark_count * band_count);
+            for i in 0..landmark_count {
+                for &target in SEPARATION_BANDS_DEG {
+                    let (dst, actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
+                    pair_dst.push(dst);
+                    pair_sep.push(actual);
+                }
+            }
+
+            // Pass 1 (costs only): per (landmark, band), track the min/max
+            // weathered cost across SAMPLE_DAYS and the DAY INDEX each
+            // extremum occurred at. One sweep per landmark per day serves
+            // EVERY band that landmark sources — day-sweep cost stays
+            // landmark_count x SAMPLE_DAYS regardless of band_count. Both
+            // the day's field and each landmark's sweep drop at the end of
+            // their scope, same discipline as the settlement frame below.
+            let mut geo_min = vec![f64::INFINITY; landmark_count * band_count];
+            let mut geo_max = vec![f64::NEG_INFINITY; landmark_count * band_count];
+            let mut geo_argmin_day = vec![0usize; landmark_count * band_count];
+            let mut geo_argmax_day = vec![0usize; landmark_count * band_count];
+            for day_idx in 0..SAMPLE_DAYS {
+                let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
+                let wet = weathered_cost(&sample, day);
+                for (i, &src) in landmarks.iter().enumerate() {
+                    let d_wet = least_cost_from(&sample.geo, &wet, src);
+                    for k in 0..band_count {
+                        let idx = i * band_count + k;
+                        if let Some(c) = d_wet.cost_to(pair_dst[idx]) {
+                            let c = c as f64;
+                            if c.total_cmp(&geo_min[idx]).is_lt() {
+                                geo_min[idx] = c;
+                                geo_argmin_day[idx] = day_idx;
+                            }
+                            if c.total_cmp(&geo_max[idx]).is_gt() {
+                                geo_max[idx] = c;
+                                geo_argmax_day[idx] = day_idx;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Per band: F1's swings, plus the reachable-landmark population
+            // (dry cost Some and > 0, geo_min finite) pass 2 walks.
+            let mut geo_swings_by_band: Vec<Vec<f64>> = vec![Vec::new(); band_count];
+            let mut geo_reachable_by_band: Vec<Vec<usize>> = vec![Vec::new(); band_count];
+            for (i, landmark_dry_sweep) in landmark_dry_sweeps.iter().enumerate() {
+                for k in 0..band_count {
+                    let idx = i * band_count + k;
+                    if !geo_min[idx].is_finite() {
+                        continue;
+                    }
+                    let dst = pair_dst[idx];
+                    if let Some(a) = landmark_dry_sweep.cost_to(dst)
+                        && a > 0
+                    {
+                        geo_swings_by_band[k].push((geo_max[idx] - geo_min[idx]) / a as f64);
+                        geo_reachable_by_band[k].push(i);
+                    }
+                }
+            }
+
+            // Pass 2 (paths): F2's re-routing fraction and the redundancy
+            // control, per band, over EVERY reachable landmark pair in that
+            // band — no further stride needed, GEO_LANDMARK_STRIDE_TARGET
+            // already bounds the population.
+            for (k, (reachable, mut swings)) in geo_reachable_by_band
+                .into_iter()
+                .zip(geo_swings_by_band)
+                .enumerate()
+            {
+                let target = SEPARATION_BANDS_DEG[k];
+                let mut rerouted = 0usize;
+                let mut adjacent_pairs = 0usize;
+                let mut redundancy_sample_count = 0usize;
+                let mut redundancy_ratios: Vec<f64> = Vec::new();
+                let mut no_alternative = 0usize;
+                for &i in &reachable {
+                    let idx = i * band_count + k;
+                    let src = landmarks[i];
+                    let dst = pair_dst[idx];
+
+                    // F2: path identity at this pair's own cheapest vs
+                    // costliest sampled day. Adjacent pairs are
+                    // DELIBERATELY KEPT in this denominator (see the
+                    // settlement frame's matching comment below for why —
+                    // same reasoning, same rule, both frames).
+                    let day_a =
+                        geo_argmin_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+                    let day_b =
+                        geo_argmax_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+                    let field_a = weathered_cost(&sample, day_a);
+                    let field_b = weathered_cost(&sample, day_b);
+                    let path_a = least_cost_from(&sample.geo, &field_a, src).path_to(dst);
+                    let path_b = least_cost_from(&sample.geo, &field_b, src).path_to(dst);
+                    assert!(
+                        path_a.is_some() && path_b.is_some(),
+                        "seed {seed} band {target} landmark {i} lost reachability \
+                         under weathering (the keystone's guarantee that weathering \
+                         never makes a passable cell impassable should preclude this)"
+                    );
+                    if path_a != path_b {
+                        rerouted += 1;
+                    }
+
+                    // Redundancy control: on the DRY field, the best path's
+                    // interior blocked, re-swept. Adjacent pairs (empty
+                    // interior) are counted and EXCLUDED — see the
+                    // settlement frame's matching comment below.
+                    let best_cost = landmark_dry_sweeps[i]
+                        .cost_to(dst)
+                        .expect("geo_reachable only holds pairs with a finite dry cost");
+                    let best_path = landmark_dry_sweeps[i]
+                        .path_to(dst)
+                        .expect("a finite dry cost implies a dry path");
+                    if best_path.len() == 2 {
+                        adjacent_pairs += 1;
+                        continue;
+                    }
+                    redundancy_sample_count += 1;
+                    let blocked: BTreeSet<CellId> =
+                        best_path[1..best_path.len() - 1].iter().copied().collect();
+                    let scratch = CellMap::from_fn(&sample.geo, |c| {
+                        if blocked.contains(&c) {
+                            u64::MAX
+                        } else {
+                            *sample.dry.get(c)
+                        }
+                    });
+                    match least_cost_from(&sample.geo, &scratch, src).cost_to(dst) {
+                        Some(second_best) => {
+                            redundancy_ratios.push(second_best as f64 / best_cost as f64);
+                        }
+                        None => no_alternative += 1,
+                    }
+                }
+                assert_eq!(
+                    redundancy_sample_count,
+                    redundancy_ratios.len() + no_alternative,
+                    "seed {seed} band {target}: every non-adjacent pair must land in \
+                     exactly one of redundancy_ratios or no_alternative"
+                );
+
+                swings.sort_by(f64::total_cmp);
+                let median_swing = if swings.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&swings)
+                };
+                let max_swing = swings.last().copied().unwrap_or(f64::NAN);
+
+                redundancy_ratios.sort_by(f64::total_cmp);
+                let median_redundancy = if redundancy_ratios.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&redundancy_ratios)
+                };
+                let max_redundancy = redundancy_ratios.last().copied().unwrap_or(f64::NAN);
+                let reroute_frac = if reachable.is_empty() {
+                    f64::NAN
+                } else {
+                    rerouted as f64 / reachable.len() as f64
+                };
+
+                let mut seps: Vec<f64> = reachable
+                    .iter()
+                    .map(|&i| pair_sep[i * band_count + k])
+                    .collect();
+                seps.sort_by(f64::total_cmp);
+                let sep_actual_median = if seps.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&seps)
+                };
+
+                // Per-(seed, band) progress: The Mire lost an hour of
+                // wall-clock to a run with no visible progress and nothing
+                // recoverable.
+                println!(
+                    "PILOT seed={seed} band_deg={target:.1} landmarks={landmark_count} \
+                     geo_pairs={} sep_actual_median_deg={sep_actual_median:.3} \
+                     median_swing={median_swing:.6} max_swing={max_swing:.6} \
+                     reroute_frac={reroute_frac:.6} adjacent_pairs={adjacent_pairs} \
+                     redundancy_sample={redundancy_sample_count} \
+                     median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} \
+                     no_alt_count={no_alternative}",
+                    reachable.len()
+                );
+            }
+
+            // ============ SECONDARY: settlement-pair frame (perishable; §4a, §6a) ============
             let n = sample.settlements.len();
 
             // The dry sweep is day-invariant, so compute it once per source
@@ -563,7 +869,7 @@ mod weathering {
             // Per-seed progress: The Mire lost an hour of wall-clock to a run
             // with no visible progress and nothing recoverable.
             println!(
-                "PILOT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6} path_sample={path_sample_count} reroute_frac={reroute_frac:.6} adjacent_pairs={adjacent_pairs} redundancy_sample={redundancy_sample_count} median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} no_alt_count={no_alternative}",
+                "PILOT-SETTLEMENT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6} path_sample={path_sample_count} reroute_frac={reroute_frac:.6} adjacent_pairs={adjacent_pairs} redundancy_sample={redundancy_sample_count} median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} no_alt_count={no_alternative}",
                 swings.len()
             );
         }
