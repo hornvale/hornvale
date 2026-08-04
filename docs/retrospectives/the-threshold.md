@@ -121,6 +121,30 @@ and the reason is always the same: parallel campaigns move the world underneath
 each other, and a pin on someone else's physics reddens for their improvements
 while saying nothing about your own claim.
 
+**Update (The Ember, 2026-08):** the lesson above held; what changed is where
+its two halves live. The full-population A/B this section describes became too
+slow to run on every commit and was replanted onto a small hand-built scene
+(same mechanism, `run_simulation`, a fraction of the cost). The *safety* half
+replanted cleanly — "a hearth never makes a creature worse" is true regardless
+of population size, so it survived onto the smaller scene and stayed in the
+gate. The *magnitude* half did not: "the delta stays near where it was
+recorded" is a bound over the real, moving population, and the small scene has
+no such population to bound against, so it was not reinstated. Decision
+[0097](../decisions/0097-assert-the-robust-half-measure-the-fragile-half.md)
+later named this split formally — assert the robust half in the gate, measure
+the fragile half in the census — and this test is its worked example. The
+magnitude watchdog is not asserted or measured anywhere today; relocating it
+to the census as a rate is filed as owed work
+(`TOOL-hearth-delta-owed-as-census-rate` in the idea registry), not done here.
+An earlier pass at this replant got the history wrong in the other direction —
+it believed the original A/B had always been a bit-identical `assert_eq!` and
+reinstated that, silently deleting both halves described above. That the
+mistake was possible at all, on a test with two module-doc paragraphs
+explaining exactly what it asserted and why, is its own lesson: a moving
+test's *history* needs the same care as its *current* assertion, and re-deriving
+"what this test proves" from the name and a skim is not enough when the test
+has already been rewritten once for a documented reason.
+
 ## Smaller notes
 
 - **A default chosen for a good reason becomes the permanent answer.**

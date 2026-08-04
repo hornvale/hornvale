@@ -36,8 +36,25 @@
 //! 4. A fourth re-run, after a real `catch_up` replay-order bug fix
 //!    (unrelated to the hearth mechanism) moved the ABSOLUTE numbers but not
 //!    the finding: `cold_live` and `cold_inert` were still exactly equal.
+//! 5. A fifth re-run, after ANOTHER campaign's history/demography work
+//!    (unrelated to the hearth mechanism) absorbed into main and moved seed
+//!    13 from 92 to 104 settlements, broke the equality — **in the
+//!    preregistered direction**: the hearth began lowering cold-built
+//!    prevalence by ~0.004, entirely within one species. This was NOT
+//!    claimed as confirmation (commit `13702ada`, "record the delta, claim
+//!    nothing — the world outlived the prediction"): the preregistration was
+//!    frozen against seed 13's 92-settlement population, that population no
+//!    longer exists, and reading a favourable delta off a changed world after
+//!    the fact is exactly the post-hoc move preregistration exists to refuse.
+//!    What the commit shipped instead was a SAFETY property (`live.prevalence
+//!    <= inert.prevalence` — a hearth must never make the population WORSE)
+//!    plus a MAGNITUDE bound (`delta < 0.05`, a watchdog against the
+//!    population moving further than the ~0.004 recorded here) — a moving
+//!    target's assertion shape, not an equality's.
 //!
-//! The conclusion, reasoned all the way through: every qualifying cold-built
+//! The conclusion, reasoned all the way through (points 1–4; point 5 is a
+//! separate, later event and is addressed on its own below): every
+//! qualifying cold-built
 //! room in seed 13 sits at a real temperature dozens of degrees past its
 //! resident species' niche tolerance (species widths run 10–28°C; seed 13's
 //! cold-built rooms range from a hair under the 5°C gate down to −73°C), so
@@ -51,26 +68,42 @@
 //! out in turn. `WARMTH_DECAY`, `FURNISHING_COLD_C`, and `INVENTORY` were
 //! never touched by any of this.
 //!
-//! **The Ember: the SAME claim, replanted.** The mechanism that measured this
-//! null was `derive_npcs(.., settlements.len(), ..)` — one NPC per
-//! settlement, on seed 13's own settlement count. That count keeps rising as
-//! other campaigns' history/demography work lands (92 → 104 → 290 across this
-//! file's own lifetime), and the test's cost is linear in it: on the
-//! canonical box it alone measured 7,260s+ against a heavy-tier slowest of
-//! 532s for everything else COMBINED — it was, on its own, the heavy tier's
-//! entire wall clock.
+//! **The Ember: the SAME mechanism, replanted — and a false premise
+//! corrected.** The mechanism that measured this claim was `derive_npcs(..,
+//! settlements.len(), ..)` — one NPC per settlement, on seed 13's own
+//! settlement count. That count keeps rising as other campaigns'
+//! history/demography work lands (92 → 104 → 290 across this file's own
+//! lifetime), and the test's cost is linear in it: on the canonical box it
+//! alone measured 7,260s+ against a heavy-tier slowest of 532s for everything
+//! else COMBINED — it was, on its own, the heavy tier's entire wall clock.
 //!
-//! But the claim being measured is a **bit-identity** null, not a
-//! distributional one: `cold_live == cold_inert`, checked exactly. Bit-
-//! identity fails on the FIRST divergence, so a wider population buys the
-//! test nothing beyond finding at least one room deep enough into the
-//! saturated-urgency regime that seed 13's full sweep already characterized
-//! (point 1 above). The wide sweep's actual and only irreplaceable job — is
-//! the joint "built and cold" condition rare? — is `cold_built_settlements_
-//! are_common_not_rare`'s job, already a separate, cheap test in this same
-//! file, unaffected by any of this.
+//! By the time of this replant, the claim being measured was **not**
+//! bit-identity: point 5 above had already turned it into a SAFETY property
+//! plus a MAGNITUDE bound (`13702ada`). This file's own plan text got that
+//! wrong the first time — it reinstated `assert_eq!(cold_live, cold_inert)`
+//! on the strength of points 1–4 alone, silently un-recording point 5's
+//! falsification — and this revision corrects it.
 //!
-//! So `the_hearths_effect_on_a_planted_cold_built_population_stays_null`
+//! Only the SAFETY half is reinstated below, and it is the ROBUST half:
+//! "never worse" holds regardless of population size, mechanism strength, or
+//! where a moving world's settlement count lands, which is exactly why it
+//! survives being replanted onto a small hand-built scenario in a way a
+//! magnitude claim would not. The MAGNITUDE half — how much better, if any,
+//! and by how much the delta may move before it means something changed — is
+//! threshold-adjacent and fragile: per decision 0097 ("assert the robust half
+//! in the gate; measure the fragile half in the census"), that half belongs
+//! in the census as a measured rate with a sampling bound, not as a gate
+//! assertion. **It is not reinstated here.** The real-population watchdog
+//! point 5 justified (`delta < 0.05` against the ~0.004 recorded on the
+//! 104-settlement world) is therefore currently ABSENT from both the gate and
+//! the census, and is OWED — filed at idea registry
+//! `TOOL-hearth-cost-scales-with-roster`, not built in this campaign.
+//!
+//! Separately, `cold_built_settlements_are_common_not_rare`'s own job — is
+//! the joint "built and cold" condition rare? — is unaffected by any of this,
+//! already a separate, cheap test in this same file.
+//!
+//! So `the_hearth_never_worsens_a_planted_cold_built_population`
 //! (below) replants the SAME mechanism — real `run_simulation`, one hearth
 //! toggle, a cold-built group and a warm-built specificity control — onto a
 //! HAND-BUILT scenario in the shape of `windows/lab/src/synthetic.rs` (a
@@ -107,7 +140,9 @@
 //! independently rediscovered the real null's own mechanism before finding
 //! parameters that step outside it. The corrected scenario reuses that
 //! test's own proven parameters verbatim rather than re-deriving them. Only
-//! with this confirmation does "the null holds" above mean anything.
+//! with this confirmation does the safety property above mean anything —
+//! without it, "never worse" could be trivially true of a harness that never
+//! registers a hearth effect at all.
 
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::{
@@ -440,8 +475,27 @@ fn plant_population() -> PlantedPopulation {
 /// scenario's chronic window matches a real health sweep's.
 const REPLANTED_TICKS: usize = 40;
 
+/// **Renamed from `..._stays_null` (The Ember).** The original name promised
+/// a null — `cold_live == cold_inert`, bit-identical — but that was never
+/// what the test this one replaces asserted at the commit it was replanted
+/// from (`8a448c3f`): absorbing main had already moved seed 13 from 92 to
+/// 104 settlements and found the hearth lowering cold-built prevalence by
+/// ~0.004 (module doc, "And then the ground moved"), so the real assertion
+/// by then was a SAFETY property (armed never worse) plus a magnitude bound
+/// (the delta stays near where it was recorded), not equality. A test whose
+/// name promises "null" while its body checks "never worse, and not too much
+/// better" is a lie with a green tick beside it the moment anyone reads only
+/// the name — so this one is named for the claim it actually makes.
+///
+/// Per decision 0097 ("assert the robust half in the gate; measure the
+/// fragile half in the census"), only the safety half is asserted here. The
+/// magnitude bound is fragile — threshold-adjacent, and the threshold moves
+/// under other campaigns' history work — so it is NOT reinstated as a gate
+/// assertion; relocating it as a measured census rate is filed as owed (see
+/// the module doc and idea registry `TOOL-hearth-cost-scales-with-roster`),
+/// not built in this campaign.
 #[test]
-fn the_hearths_effect_on_a_planted_cold_built_population_stays_null() {
+fn the_hearth_never_worsens_a_planted_cold_built_population() {
     let pop = plant_population();
     let every_room: BTreeSet<RoomAddr> = pop.temps.keys().cloned().collect();
 
@@ -486,17 +540,27 @@ fn the_hearths_effect_on_a_planted_cold_built_population_stays_null() {
     let warm_live = subgroup_report(&pop.warm_idx, &pop.npcs, &traces_live);
     let warm_inert = subgroup_report(&pop.warm_idx, &pop.npcs, &traces_inert);
 
-    // THE PINNED NULL, replanted: toggling the hearth changes NOTHING in the
-    // cold-built group's distress read — not prevalence, not chronicity, not
-    // by-cause, not even in the last representable bit. `COLD_BUILT_C` is
-    // chosen to sit in the same saturated-urgency regime the real seed-13
-    // sweep found (module doc), so this is the SAME finding on a scenario
-    // sized for the commit gate rather than a re-derivation of a different
-    // one.
-    assert_eq!(
-        cold_live, cold_inert,
-        "the hearth toggle must produce no measurable difference in the \
-         planted cold-built group: {cold_live:?} vs {cold_inert:?}"
+    // THE SAFETY PROPERTY, replanted: an armed hearth must never make the
+    // cold-built population WORSE. This is the ROBUST half of the original
+    // claim (decision 0097) — true regardless of population size, mechanism
+    // strength, or where a moving world's settlement count lands — so it
+    // belongs in the gate. The FRAGILE half (how much better, if any) is
+    // threshold-adjacent and is measured as a census rate, not asserted
+    // here; that relocation is filed as owed, not built in this campaign
+    // (module doc, idea registry `TOOL-hearth-cost-scales-with-roster`).
+    //
+    // At `COLD_BUILT_C = -40.0` this holds TRIVIALLY: thermal urgency clamps
+    // to its ceiling (`1.0`) in BOTH arms — the planted scenario sits deep in
+    // the same saturated-urgency regime the real seed-13 sweep found (module
+    // doc) — so `cold_live.prevalence` and `cold_inert.prevalence` are
+    // actually EQUAL at this point, not merely bounded. Read that as a fact
+    // about where this scenario sits, not as a hard-won finding; the bound
+    // below is what would catch a regression, not what proves the mechanism
+    // does anything at this magnitude.
+    assert!(
+        cold_live.prevalence <= cold_inert.prevalence,
+        "a hearth must never make the cold-built population WORSE: live \
+         {cold_live:?} vs inert {cold_inert:?}"
     );
 
     // THE SPECIFICITY CONTROL: warm-built creatures never draw a hearth
@@ -544,17 +608,23 @@ const MUTATION_NICHE: ConditionResponse = ConditionResponse {
 /// full comfort at the fire.
 const MUTATION_COLD_C: f64 = -19.75;
 
-/// **THE MUTATION STEP.** A null this cheap and this small is more
-/// vulnerable than the original, expensive one to a different failure mode:
-/// a harness too blunt to ever register a hearth effect, at ANY parameters,
-/// would report the same "no difference" for a reason that has nothing to do
-/// with physics. This test plants a SEPARATE, deliberately-engineered
-/// scenario — one creature, one room, a deviation from niche optimum sized
-/// to exactly match `HEARTH_WARMTH` — and asserts the two arms genuinely
-/// DIFFER, in the preregistered direction (armed helps). Without this, "the
-/// null holds" above would be unfalsifiable by construction; with it, the
-/// null is a real finding about the mechanism at realistic magnitudes, not
-/// an artifact of an instrument that can never see anything.
+/// **THE MUTATION STEP.** A safety property this cheap and this small is
+/// more vulnerable than the original, expensive measurement to a different
+/// failure mode: a harness too blunt to ever register a hearth effect, at ANY
+/// parameters, would report the same "no difference" for a reason that has
+/// nothing to do with physics. This test plants a SEPARATE,
+/// deliberately-engineered scenario — one creature, one room, `MUTATION_NICHE`
+/// WIDE enough (unlike the narrow first draft `MUTATION_NICHE`'s own doc
+/// describes and discards above) that urgency stays unsaturated at every hop
+/// from the landing anchor to the hearth — and asserts the two arms
+/// genuinely DIFFER, in the preregistered direction (armed helps). The
+/// shipped scenario's deviation from niche optimum is `25.75`°C
+/// (`MUTATION_NICHE.optimum − MUTATION_COLD_C == 6.0 − (−19.75)`), well past
+/// `HEARTH_WARMTH`'s `15.0` — it is the WIDE niche, not a matched deviation,
+/// that keeps the gradient climbable. Without this test, the safety property
+/// above would be unfalsifiable by construction; with it, "never worse" is a
+/// real finding about the mechanism at realistic magnitudes, not an artifact
+/// of an instrument that can never see anything.
 #[test]
 fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
     let room = RoomAddr::containing([0.0, 0.0, -1.0], 6);
@@ -619,9 +689,18 @@ fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
     assert_ne!(
         live, inert,
         "the harness must be able to detect A hearth effect SOMEWHERE, or \
-         the null test above proves nothing about the mechanism (only about \
-         an instrument that can never see anything): live {live:?} vs \
-         inert {inert:?}"
+         the safety property above proves nothing about the mechanism (only \
+         about an instrument that can never see anything). The likeliest \
+         cause of a future failure here is NOT the harness: the landing \
+         anchor's urgency in this scenario sits at ~0.98958, about 1% below \
+         the clamp ceiling of 1.0, close to the same saturated-urgency \
+         regime `REPLANTED_NICHE`/`COLD_BUILT_C` sit deep in. A downward \
+         recalibration of `HEARTH_WARMTH`, a higher `WARMTH_DECAY` (either \
+         shrinks the felt warmth at intermediate hops), or an extra hop added \
+         to the landing-to-hearth chain (more decay before the first step) \
+         can each tip that last ~1% to 1.0 and stall the within-room walk \
+         before it starts — look at those three constants first, not at \
+         `run_simulation` or the planner: live {live:?} vs inert {inert:?}"
     );
     assert!(
         live.prevalence < inert.prevalence,
