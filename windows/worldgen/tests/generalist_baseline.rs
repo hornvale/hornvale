@@ -363,39 +363,59 @@ fn pearson(a: &[f64], b: &[f64]) -> f64 {
     cov / (var_a * var_b).sqrt()
 }
 
-/// Report one H2 stronghold band: every people's mean fit (K) and mean
+/// Report one H2 stronghold band: every people's mean fit (K) and mean/max
 /// competitive share over `indices` (positions into the aggregated,
 /// cell-aligned `per_people_fit`/`per_people_share` vectors), the best-fit
-/// people by mean K, and the fraction of the band where human holds a
-/// majority (`> 0.5`) competitive share - the H3 question, asked locally to
-/// this band rather than only over all settleable land.
+/// people by mean K, a POSITIVE CONTROL for the `>0.5` majority-share test
+/// (fix round 1, review finding 3: the locally-dominant-by-mean-share
+/// people's own majority-share fraction, so "0.5 is crossed by nobody" and
+/// "0.5 is crossed by nobody but human specifically" can be told apart), and
+/// the fraction of the band where human holds a majority (`> 0.5`)
+/// competitive share - the H3 question, asked locally to this band rather
+/// than only over all settleable land.
 fn report_band(
     label: &str,
     indices: &[usize],
-    per_people_fit: &BTreeMap<&'static str, Vec<f64>>,
-    per_people_share: &BTreeMap<&'static str, Vec<f64>>,
+    per_people_fit: &PeopleSamples,
+    per_people_share: &PeopleSamples,
 ) {
     println!("H2 band {label}: n = {}", indices.len());
     if indices.is_empty() {
         println!("H2 band {label}: EMPTY - no cells in this band, nothing to report");
         return;
     }
-    let mut best: Option<(&str, f64)> = None;
+    let mut best_fit: Option<(&str, f64)> = None;
     for (name, vals) in per_people_fit {
         let mean = indices.iter().map(|&i| vals[i]).sum::<f64>() / indices.len() as f64;
         println!("H2 band {label}: mean fit (K) {name} = {mean:.6}");
-        if best.is_none_or(|(_, m)| mean > m) {
-            best = Some((name, mean));
+        if best_fit.is_none_or(|(_, m)| mean > m) {
+            best_fit = Some((name, mean));
         }
     }
     println!(
         "H2 band {label}: best-fit by mean K = {}",
-        best.expect("per_people_fit is non-empty").0
+        best_fit.expect("per_people_fit is non-empty").0
     );
+    let mut best_share: Option<(&str, f64)> = None;
     for (name, vals) in per_people_share {
         let mean = indices.iter().map(|&i| vals[i]).sum::<f64>() / indices.len() as f64;
-        println!("H2 band {label}: mean competitive share {name} = {mean:.6}");
+        let max = indices
+            .iter()
+            .map(|&i| vals[i])
+            .fold(f64::NEG_INFINITY, f64::max);
+        println!("H2 band {label}: mean competitive share {name} = {mean:.6}, max = {max:.6}");
+        if best_share.is_none_or(|(_, m)| mean > m) {
+            best_share = Some((name, mean));
+        }
     }
+    let (dominant_name, dominant_mean) = best_share.expect("per_people_share is non-empty");
+    let dominant_share = &per_people_share[dominant_name];
+    let dominant_majority = indices.iter().filter(|&&i| dominant_share[i] > 0.5).count();
+    println!(
+        "H3 band {label}: positive control - {dominant_name} (locally dominant, mean share {dominant_mean:.6}) holds majority share (>0.5) on {:.6} ({dominant_majority}/{})",
+        dominant_majority as f64 / indices.len() as f64,
+        indices.len()
+    );
     let human_share = &per_people_share["human"];
     let human_majority = indices.iter().filter(|&&i| human_share[i] > 0.5).count();
     println!(
@@ -532,6 +552,16 @@ fn report_the_preregistered_gause_readout() {
         let mean = vals.iter().sum::<f64>() / vals.len() as f64;
         println!("mean competitive share {name} = {mean:.6}");
     }
+    // Positive control for the majority-share (`>0.5`) test below (fix round
+    // 1, review finding 3): the max competitive share ANY cell gives each
+    // people, over all settleable land. Without this, "0/142593 cells cross
+    // 0.5" cannot be told apart from "nothing in this dataset ever crosses
+    // 0.5, for any people, regardless of dominance" - the max establishes
+    // whether the threshold is reachable at all.
+    for (name, vals) in &per_people_share {
+        let max = vals.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        println!("max competitive share {name} = {max:.6}");
+    }
 
     // H1 - the ecotone prediction: human takes marginal/ecotone ground and
     // competes hardest with goblin, i.e. the human-goblin pair should rank
@@ -608,7 +638,18 @@ fn report_the_preregistered_gause_readout() {
 
     // H3 - the falsification: the fraction of ALL settleable land (not only
     // the stronghold bands, which `report_band` already covers) where human
-    // holds a majority (> 0.5) competitive share.
+    // holds a majority (> 0.5) competitive share. Positive control (fix round
+    // 1, review finding 3) alongside it: the same test applied to hobgoblin,
+    // the roster's actual dominant specialist (highest mean fit AND mean
+    // share of the six, see above) - if hobgoblin also never crosses 0.5,
+    // that says the threshold itself is the wrong instrument for this
+    // dataset, not that human specifically failed to dominate anything.
+    let hobgoblin_share = &per_people_share["hobgoblin"];
+    let hobgoblin_majority_all = (0..n).filter(|&i| hobgoblin_share[i] > 0.5).count();
+    println!(
+        "H3 all-settleable-land: positive control - fraction hobgoblin holds majority share (>0.5) = {:.6} ({hobgoblin_majority_all}/{n})",
+        hobgoblin_majority_all as f64 / n as f64
+    );
     let human_share = &per_people_share["human"];
     let human_majority_all = (0..n).filter(|&i| human_share[i] > 0.5).count();
     println!(
