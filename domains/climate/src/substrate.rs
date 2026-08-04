@@ -15,6 +15,8 @@
 //! trajectory repeats within a tolerance. Substrates that never converge are
 //! reported, not errors — permanent accumulation *is* a glacier.
 
+use hornvale_kernel::CellId;
+
 /// The per-day environmental reads a substrate integrates.
 /// type-audit: bare-ok(diagnostic-value: precip_mm), bare-ok(ratio: snow_fraction), bare-ok(diagnostic-value: mean_temp_c), bare-ok(ratio: cloud_fraction)
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -118,6 +120,65 @@ pub fn spin_up<S: Substrate + ?Sized>(
         years_run,
     }
 }
+
+/// A substrate evaluated over every cell and every day of the converged year
+/// — derived on demand and **never committed**, exactly like the connection
+/// graph. Computing it is opt-in, so a world that never asks pays nothing and
+/// `GeneratedClimate::generate` is untouched.
+#[derive(Clone, Debug)]
+pub struct SubstrateField {
+    trajectories: Vec<Vec<f64>>,
+    converged: Vec<bool>,
+    year_days: usize,
+}
+
+impl SubstrateField {
+    /// Spin `substrate` up against every cell's own periodic year.
+    pub fn compute<S: Substrate + ?Sized>(
+        climate: &crate::provider::GeneratedClimate,
+        substrate: &S,
+    ) -> SubstrateField {
+        let mut trajectories = Vec::new();
+        let mut converged = Vec::new();
+        let mut year_days = 0usize;
+        for cell in climate.geosphere().cells() {
+            let year = climate.year_of_day_contexts(cell);
+            year_days = year.len();
+            let out = spin_up(substrate, &year, CONVERGENCE_TOLERANCE);
+            trajectories.push(out.trajectory);
+            converged.push(out.converged);
+        }
+        SubstrateField {
+            trajectories,
+            converged,
+            year_days,
+        }
+    }
+
+    /// The substrate's value at `cell` on `day`, wrapping the year.
+    /// type-audit: bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+    pub fn at(&self, cell: CellId, day: f64) -> f64 {
+        if self.year_days == 0 {
+            return 0.0;
+        }
+        let idx = (day.floor() as i64).rem_euclid(self.year_days as i64) as usize;
+        self.trajectories
+            .get(cell.0 as usize)
+            .and_then(|t| t.get(idx))
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    /// How many cells never reached a fixed point — the glacier count. A
+    /// reported quantity, not an error.
+    /// type-audit: bare-ok(count: return)
+    pub fn non_convergent_cells(&self) -> usize {
+        self.converged.iter().filter(|c| !**c).count()
+    }
+}
+
+/// Year-over-year movement below this counts as a fixed point.
+const CONVERGENCE_TOLERANCE: f64 = 1e-6;
 
 #[cfg(test)]
 mod tests {
@@ -267,5 +328,42 @@ mod tests {
             last, 10.0,
             "the threshold sink did not lock onto its exact fixed point: {last}"
         );
+    }
+
+    #[test]
+    fn a_cells_year_of_contexts_reproduces_its_annual_climatology() {
+        // The invariant from Task 1, now asserted against REAL worlds rather
+        // than a synthetic year - H3 of the preregistration.
+        let climate = crate::provider::test_support::sample_climate();
+        for cell in climate.geosphere().cells().take(64) {
+            let year = climate.year_of_day_contexts(cell);
+            let summed: f64 = year.iter().map(|c| c.precip_mm).sum();
+            let annual = climate.precip_at(cell).get();
+            assert!(
+                (summed - annual).abs() <= annual.abs() * 1e-6 + 1e-6,
+                "cell {cell:?}: daily precip summed to {summed}, climatology is {annual}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_substrate_field_is_deterministic_for_a_seed() {
+        let climate = crate::provider::test_support::sample_climate();
+        let a = SubstrateField::compute(&climate, &crate::wetness::DEFAULT_WETNESS);
+        let b = SubstrateField::compute(&climate, &crate::wetness::DEFAULT_WETNESS);
+        for cell in climate.geosphere().cells().take(64) {
+            for day in [0.0, 90.0, 180.0, 270.0] {
+                assert_eq!(a.at(cell, day), b.at(cell, day));
+            }
+        }
+    }
+
+    #[test]
+    fn a_substrate_field_wraps_the_year() {
+        let climate = crate::provider::test_support::sample_climate();
+        let f = SubstrateField::compute(&climate, &crate::wetness::DEFAULT_WETNESS);
+        let cell = climate.geosphere().cells().next().expect("non-empty mesh");
+        let year = climate.year_length_std();
+        assert_eq!(f.at(cell, 3.0), f.at(cell, 3.0 + year));
     }
 }

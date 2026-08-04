@@ -13,8 +13,10 @@ use crate::facets::BiomeExpr;
 use crate::habitability;
 use crate::moisture::{moisture_field, upwind_neighbor};
 use crate::precipitation::{
-    PrecipRegime, cloud_fraction, precip_mm_yr, precip_regime, snow_fraction,
+    PrecipRegime, cloud_fraction, daily_precip_mm, daily_weight, precip_mm_yr, precip_regime,
+    snow_fraction,
 };
+use crate::substrate::DayContext;
 use crate::temperature::{
     continentality, diurnal_amplitude_field, mean_temperature, temperature_at,
 };
@@ -22,7 +24,7 @@ use crate::weather::{CloudType, WeatherState};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
     CellId, CellMap, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource, Phenomenon,
-    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue,
+    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, math,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -440,6 +442,76 @@ impl GeneratedClimate {
     pub fn habitable_fraction(&self) -> f64 {
         habitability::habitable_fraction(&self.habitability)
     }
+
+    /// One whole year of [`DayContext`]s for `cell` — the periodic forcing a
+    /// substrate is spun up against. The daily precipitation is the cell's
+    /// annual climatology redistributed by each day's sky, so summing
+    /// `precip_mm` over the returned year reproduces
+    /// [`Self::precip_at`] exactly (the "coarse constrains fine" contract).
+    ///
+    /// `mean_temp_c` deliberately does **not** sample [`Self::temperature_at`]
+    /// directly. On a `Spinning` world that function adds a diurnal term
+    /// phased on `day.rem_euclid(1.0)`, which is always exactly `0.0` for an
+    /// integer `day` — a single, fixed point of the intraday cycle, not an
+    /// average over it. Its own zero-mean invariant
+    /// (`daily_mean_is_unchanged_by_the_diurnal_term` in `temperature.rs`)
+    /// says the true daily mean is `mean + swing · sin(τ · phase)` — the
+    /// diurnal term integrates to ~0 over a rotation, so it must be omitted,
+    /// not sampled at an arbitrary instant. Feeding the biased instantaneous
+    /// sample into a degree-day sink (snowpack's melt, wetness's freeze gate)
+    /// would apply the same fixed per-cell offset to every day of the year.
+    /// `Locked` worlds have no diurnal term at all (`temperature_at`'s
+    /// `Locked` branch never reads the diurnal amplitude), so `temperature_at`
+    /// is already the correct per-day mean there.
+    pub fn year_of_day_contexts(&self, cell: CellId) -> Vec<DayContext> {
+        let days = self.year_length_std().max(1.0).round() as usize;
+        let states: Vec<WeatherState> =
+            (0..days).map(|d| self.weather_at(cell, d as f64)).collect();
+        let weight_sum: f64 = states.iter().map(|s| daily_weight(*s)).sum();
+        let annual = self.precip_at(cell);
+        let snow_fraction = self.snow_fraction_at(cell);
+        let cloud_fraction = self.cloud_fraction_at(cell);
+        let mean = self.mean_temperature_at(cell).get();
+        let swing = self.seasonal_swing_at(cell);
+        let year_length = self.year_length_std();
+
+        states
+            .iter()
+            .enumerate()
+            .map(|(d, state)| {
+                let mean_temp_c = match self.regime {
+                    RotationRegime::Locked => self.temperature_at(cell, d as f64).get(),
+                    RotationRegime::Spinning { .. } => {
+                        let phase = if year_length > 0.0 {
+                            (d as f64 / year_length + self.year_phase_offset).rem_euclid(1.0)
+                        } else {
+                            0.0
+                        };
+                        mean + swing * math::sin(std::f64::consts::TAU * phase)
+                    }
+                };
+                DayContext {
+                    precip_mm: daily_precip_mm(
+                        annual,
+                        daily_weight(*state),
+                        weight_sum,
+                        days as f64,
+                    ),
+                    snow_fraction,
+                    mean_temp_c,
+                    cloud_fraction,
+                }
+            })
+            .collect()
+    }
+
+    /// Whether `cell` is at or below freezing on `day` — the threshold that
+    /// makes every substrate sink nonlinear. Not a substrate itself: it has
+    /// no integral.
+    /// type-audit: bare-ok(diagnostic-value: day), bare-ok(flag: return)
+    pub fn is_frozen_at(&self, cell: CellId, day: f64) -> bool {
+        self.temperature_at(cell, day).get() <= 0.0
+    }
 }
 
 // Felt weather decouples TWO thresholds (The Elements, Stage 2, G3-refined):
@@ -604,12 +676,21 @@ pub fn summarize(climate: &GeneratedClimate) -> ClimateSummary {
     }
 }
 
+/// Shared test fixtures for `domains/climate` — a single `GeneratedClimate`
+/// construction that every task's test module (substrate, wetness, snowpack,
+/// and this crate's own) builds on, so no second or third copy of
+/// `ClimateInputs { .. }` drifts from this one.
 #[cfg(test)]
-mod tests {
-    use super::*;
+pub mod test_support {
+    use super::{CellMap, ClimateInputs, GeneratedClimate, ReferenceElevation, Seed};
+    use crate::biome::SeafloorFeature;
+    use crate::circulation::RotationRegime;
     use hornvale_kernel::Geosphere;
 
-    fn inputs<'a>(
+    /// Build [`ClimateInputs`] for a small test geosphere — a fixed seed and
+    /// default-ish scalar inputs, varying only the mesh, elevation, seafloor,
+    /// and rotation regime the caller supplies.
+    pub fn inputs<'a>(
         geo: &'a Geosphere,
         elev: &'a CellMap<ReferenceElevation>,
         sea: &'a CellMap<SeafloorFeature>,
@@ -628,6 +709,30 @@ mod tests {
             seed: Seed(1),
         }
     }
+
+    /// A small mixed land/ocean, spinning world — the shape every other
+    /// provider test builds by hand.
+    pub fn sample_climate() -> GeneratedClimate {
+        let geo = Geosphere::new(4);
+        let elev = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[2] > 0.0 {
+                300.0
+            } else {
+                -1000.0
+            };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::Geosphere;
+    use test_support::inputs;
 
     #[test]
     fn provider_answers_every_query_and_is_deterministic() {
@@ -1036,22 +1141,7 @@ mod tests {
         }
     }
 
-    /// A small mixed land/ocean world, matching the shape the other provider
-    /// tests build.
-    fn sample_climate() -> GeneratedClimate {
-        let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |c| {
-            let m = if geo.position(c)[2] > 0.0 {
-                300.0
-            } else {
-                -1000.0
-            };
-            ReferenceElevation::new(m).unwrap()
-        });
-        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
-        let regime = RotationRegime::Spinning { day_std: 1.0 };
-        GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime))
-    }
+    use test_support::sample_climate;
 
     #[test]
     fn the_expression_and_the_legacy_biome_agree_at_every_cell() {
