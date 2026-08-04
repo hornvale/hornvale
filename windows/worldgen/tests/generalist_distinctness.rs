@@ -38,14 +38,17 @@
 //! review). The initial hypothesis was that human's uniformly LOWER
 //! devotion (0.20-0.30 vs goblin's 0.35-0.45 on every axis) would flatten
 //! its response curves enough to produce LOWER dispersion than goblin's.
-//! Measured reality is the opposite: `cv(human) ≈ 1.046 × cv(goblin)`
-//! (human MORE dispersed), because devotion is not the only axis-by-axis
-//! difference - human is also NARROWER than goblin on temperature (22.0 vs
-//! 28.0) and elevation (2000.0 vs 3000.0), and a narrower Gaussian sigma
-//! steepens the fall-off in `z` for a given physical distance from the
-//! optimum by more than a lower devotion flattens the peak amplitude.
-//! Devotion alone predicts flatter; devotion-and-width together (the niches
-//! as actually authored) predict sharper on two of four axes.
+//! Measured reality, BEFORE the Task 5b re-authoring below, was the
+//! opposite: `cv(human) ≈ 1.046 × cv(goblin)` (human MORE dispersed),
+//! because devotion was not the only axis-by-axis difference - human was
+//! also NARROWER than goblin on temperature (22.0 vs 28.0) and elevation
+//! (2000.0 vs 3000.0) at the time, and a narrower Gaussian sigma steepens
+//! the fall-off in `z` for a given physical distance from the optimum by
+//! more than a lower devotion flattens the peak amplitude. Devotion alone
+//! predicted flatter; devotion-and-width together (the niche as authored at
+//! Task 2) predicted sharper on two of four axes - the opposite of the
+//! design intent stated in `human_condition_niche()`'s doc comment at the
+//! time.
 //!
 //! **A CRITICAL blind spot this statistic has, found at review, proved
 //! algebraically, and left in rather than quietly patched over: elevation's
@@ -65,31 +68,46 @@
 //! nonzero sovereignty floor and are NOT scale-invariant this way, because a
 //! nonzero additive floor breaks the pure-multiplier property - see
 //! `sovereignty_floor` and each axis's `eval` call in
-//! `niche_per_species_k`.) Consequence: the measured 0.0462 gap could in
-//! principle be carried entirely by WIDTH (which `human_condition_niche()`'s
-//! doc comment explicitly disclaims as "not the claim to test") rather than
-//! by devotion on the other three axes, and this statistic alone cannot
-//! rule that out. `human_condition_niche()`'s doc comment now records the
-//! same algebraic fact.
+//! `niche_per_species_k`.) This is a structural fact about the statistic,
+//! unaffected by the Task 5b re-authoring below; it stays true of the
+//! current niche too.
 //!
-//! **The width-only attribution reading, added to answer that - measured,
-//! and NOT the reassuring answer it might have been.** A third measurement -
-//! human's devotions and optima kept, all four widths replaced by goblin's -
+//! **The width-only attribution reading.** A third measurement - human's
+//! devotions and optima kept, all four widths replaced by goblin's -
 //! isolates what devotion alone contributes once width's difference is
 //! removed. Reported, not gated (a devotion-only-differing human is still a
 //! genuinely different niche, so nothing asserts this variant's gap must
-//! collapse): `cv_ratio = 0.9766`, gap `0.0234` - ABOVE the `0.02` floor
-//! (17% margin), so devotion alone IS detectable, and in the direction its
-//! own mechanism predicts (lower devotion → lower dispersion, `0.9766 < 1`).
-//! But the REAL case's gap (`0.0462`, `cv_ratio 1.0462 > 1`) points the
-//! OPPOSITE direction - width's contribution is larger than devotion's and
-//! the two do not add, they oppose, with width winning the sign. So the
-//! vacuity gate's real-case pass is width-dominated, not primarily a
-//! devotion measurement, even though devotion alone is independently
-//! visible to this statistic. See
-//! `substituting_goblins_niche_for_humans_is_detected`'s body for the full
-//! reading and `human_condition_niche()`'s doc comment
-//! (`domains/species/src/lib.rs`) for the correction this forced there.
+//! collapse).
+//!
+//! **Task 5b re-authoring (2026-08-04) changed the real-case reading.** The
+//! width-attribution finding above (real gap width-dominated and pointing
+//! the OPPOSITE direction from the devotion-only reading) is what the owner
+//! directed be fixed: `human_condition_niche()` was re-authored so every
+//! width is at least as wide as the measurement-grounded floor derived in
+//! its doc comment, and verified wider than every other people's width on
+//! every axis (`domains/species/src/lib.rs`). Measured after that change,
+//! seeds 1..=30:
+//!
+//! | case | cv(variant) | cv(goblin) | cv_ratio | gap | n cells |
+//! |---|---|---|---|---|---|
+//! | real (human's own niche, post re-authoring) | 0.4641 | 0.4871 | 0.9528 | **0.0472** | 142,587 |
+//! | mutated (human's `condition_niche` ← goblin's) | 0.4813 | 0.4871 | 0.9882 | **0.0118** | 142,590 |
+//! | width-only (human devotions+optima, goblin widths) | 0.4747 | 0.4871 | 0.9747 | **0.0253** | 142,587 |
+//!
+//! Devotion and width now push the SAME direction: both the real case and
+//! the width-only reading have `cv_ratio < 1` (human less dispersed than
+//! goblin), where before re-authoring they disagreed in sign
+//! (`cv_ratio` 1.0462 real vs. 0.9766 width-only). The real gap also grew
+//! (`0.0462` → `0.0472`), consistent with the two effects reinforcing
+//! rather than fighting. `CV_RATIO_GAP_FLOOR` (`0.02`) is still cleared with
+//! comfortable margin by both the real case (136% above floor) and the
+//! width-only reading (27% above floor); the mutated gap is unchanged
+//! (goblin's own niche substituted wholesale, independent of human's
+//! widths) and still stays below the floor, so the mutation is still
+//! detected. See `substituting_goblins_niche_for_humans_is_detected`'s body
+//! for the full reading and `human_condition_niche()`'s doc comment
+//! (`domains/species/src/lib.rs`) for the width-authoring rule that produced
+//! this.
 //!
 //! World-building idiom (decision 0092 test-fixture posture) and the
 //! `niche_per_species_k` build-local-index contract are reused verbatim from
@@ -136,19 +154,21 @@ const MIN_SETTLEABLE_CELLS: usize = 100_000;
 /// default `Geosphere` subdivision - 40,962 cells/world, ~110 km
 /// resolution; seeds 1..=30; cell filter: pooled over cells where EITHER
 /// compared kind's `niche_per_species_k` output clears
-/// [`VIABILITY_FLOOR`]):
+/// [`VIABILITY_FLOOR`]). Superseded by the Task 5b re-authoring
+/// (2026-08-04, `domains/species/src/lib.rs`'s `human_condition_niche()`) -
+/// current numbers:
 ///
 /// | case | cv(human variant) | cv(goblin) | cv_ratio | \|ratio − 1\| | n cells |
 /// |---|---|---|---|---|---|
-/// | real (human's own niche) | 0.5096 | 0.4871 | 1.0462 | **0.0462** | 142,587 |
+/// | real (human's own niche) | 0.4641 | 0.4871 | 0.9528 | **0.0472** | 142,587 |
 /// | mutated (human's `condition_niche` ← goblin's) | 0.4813 | 0.4871 | 0.9882 | **0.0118** | 142,590 |
 ///
 /// `0.02` sits strictly between the two measured gaps, with margin on both
-/// sides (real is 131% above the floor; mutated is 41% below it) - see
+/// sides (real is 136% above the floor; mutated is 41% below it) - see
 /// `substituting_goblins_niche_for_humans_is_detected` for the mutation
 /// proof this margin is drawn from, and this file's module doc comment for
 /// why elevation's `devotion` specifically cannot be part of what widened
-/// the real gap.
+/// the real gap, and for the width-only reading's own numbers.
 const CV_RATIO_GAP_FLOOR: f64 = 0.02;
 
 /// Population coefficient of variation (stddev / mean) of `vals`.
@@ -368,43 +388,38 @@ fn substituting_goblins_niche_for_humans_is_detected() {
          resource-niche vector first - see the comment above this assertion)"
     );
 
-    // The width-only attribution reading (CRITICAL finding at review):
-    // human's devotions and optima kept, all four widths replaced by
-    // goblin's. NOT asserted to collapse - a devotion-only-differing human
-    // is still a genuinely different niche from goblin's, so there is no
-    // "correct" direction to gate here. Reported so the campaign knows,
-    // before Task 6, whether the real 0.0462 gap is carried by devotion (the
-    // documented, intended contrast) or by width (which
-    // `human_condition_niche()`'s doc comment explicitly disclaims as "not
-    // the claim to test").
+    // The width-only attribution reading: human's devotions and optima
+    // kept, all four widths replaced by goblin's. NOT asserted to collapse -
+    // a devotion-only-differing human is still a genuinely different niche
+    // from goblin's, so there is no "correct" direction to gate here.
+    // Reported so the campaign knows whether the real gap is carried by
+    // devotion (the documented, intended contrast) or by width.
     let width_only = cv_ratio_human_vs_goblin(Some(human_niche_with_goblins_widths()));
     let width_only_gap = (width_only - 1.0).abs();
     println!(
         "cv_ratio width-only (human devotions+optima, goblin widths) = {width_only:.4} (gap {width_only_gap:.4})"
     );
-    // Reading, measured: width_only
-    // = 0.9766, gap 0.0234 - ABOVE CV_RATIO_GAP_FLOOR (17% margin), so
+    // Reading, measured post Task 5b re-authoring (2026-08-04,
+    // `domains/species/src/lib.rs`'s `human_condition_niche()`): width_only
+    // = 0.9747, gap 0.0253 - ABOVE CV_RATIO_GAP_FLOOR (27% margin), so
     // devotion ALONE (widths matched to goblin's, removing width's
-    // contribution entirely) does produce a detectable, gate-clearing
-    // signal, and in the direction devotion's own mechanism predicts
-    // (lower devotion -> lower relative dispersion: 0.9766 < 1). That
-    // addresses the review's core question - devotion is not inert.
+    // contribution entirely) still produces a detectable, gate-clearing
+    // signal, in the direction devotion's own mechanism predicts (lower
+    // devotion -> lower relative dispersion: 0.9747 < 1).
     //
-    // But the DIRECTION is the opposite of the real case (real cv_ratio
-    // 1.0462 > 1; width-only 0.9766 < 1), and swapping from goblin's widths
-    // (this variant) to human's own narrower-on-two-axes widths (the real
-    // case) swings cv_ratio by ~0.070 and flips the net sign. So the real
-    // 0.0462 gap is NOT primarily devotion's doing - width contributes MORE
-    // than devotion does, and the two pull in opposite directions rather
-    // than adding. `human_condition_niche()`'s doc-comment claim that the
-    // vacuity check is "built on... DEVOTION" describes what was
-    // deliberately AUTHORED (the devotion values were chosen on purpose;
-    // the width differences were each axis's own, separately-argued
-    // authoring choice, not tuned to this statistic) but is not an accurate
-    // description of what makes the gate's real-case gap CLEAR THE FLOOR -
-    // that gap's magnitude and sign are width-dominated. Reported as a
-    // finding for the campaign, not hidden: Task 6 should treat "human is a
-    // low-devotion generalist" as the authored intent, verified by the
-    // width-only reading above, while knowing the vacuity gate's headline
-    // number is not a clean devotion-only measurement.
+    // BEFORE re-authoring this pointed the OPPOSITE direction from the real
+    // case (real cv_ratio 1.0462 > 1; width-only 0.9766 < 1) - width's
+    // contribution was larger than devotion's and the two fought, with
+    // width winning the sign. That was the finding that triggered the
+    // re-authoring: `human_condition_niche()`'s widths were unargued and
+    // came out narrower than goblin's on two axes, contradicting the
+    // niche's own stated design intent. After re-authoring every width from
+    // a measurement-grounded floor (see that function's doc comment) and
+    // verifying human is the roster's widest curve on all four axes, the
+    // REAL case now ALSO reads cv_ratio 0.9528 < 1 - the SAME direction as
+    // the width-only reading, and the real gap grew (0.0462 -> 0.0472)
+    // rather than shrank. Devotion and width now reinforce each other
+    // instead of opposing: "human is a low-devotion, wide-tolerance
+    // generalist" is both the authored intent and what the gate's
+    // real-case number measures.
 }

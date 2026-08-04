@@ -1471,89 +1471,122 @@ fn gnoll_condition_niche() -> ConditionNiche {
 }
 
 /// Human condition niche: the roster's first true GENERALIST — a settler
-/// that leans on none of its four axes.
+/// that leans on none of its four axes and is authored to be
+/// simultaneously the LEAST-DEVOTED and the WIDEST curve on every axis in
+/// the roster, so "no refuge" is true in both senses that could otherwise
+/// pull apart.
 ///
-/// Authored as a deliberate contrast to goblin, and the contrast is
-/// **devotion, not width, and not optimum**. Width is a mixed comparison,
-/// axis by axis: human is NARROWER than goblin on temperature (22.0 vs.
-/// 28.0) and elevation (2000.0 vs. 3000.0), WIDER on moisture (0.70 vs.
-/// 0.60), and EQUAL on insolation (0.30 vs. 0.30) — width alone does not
-/// separate the two kinds, and is not the claim to test. Devotion does:
-/// human's devotion is strictly lower than goblin's on all four axes
-/// (temperature 0.20 vs. 0.45, moisture 0.20 vs. 0.35, insolation 0.25 vs.
-/// 0.35, elevation 0.30 vs. 0.35) — a flatter, less-committed response
-/// curve everywhere, which is what "leans on none of its axes" means
-/// concretely. (Human is also not the widest curve on the whole roster on
-/// any one axis in isolation — xorn's temperature width, 40.0, is wider
-/// still; the claim this niche makes is about the CONTRAST with goblin
-/// specifically, not a superlative over every authored kind.)
+/// **Task 5b re-authoring (2026-08-04): a re-derivation, not the original
+/// authoring.** The niche shipped by Task 2 stated its contrast with goblin
+/// as devotion alone ("Width is a mixed comparison... Devotion does [carry
+/// the contrast]") while its widths were, in fact, unargued: narrower than
+/// goblin's on temperature (22.0 vs. 28.0) and elevation (2000.0 vs.
+/// 3000.0). A shape-attribution reading in
+/// `windows/worldgen/tests/generalist_distinctness.rs` then measured that
+/// the vacuity gate's real-case dispersion gap was WIDTH-dominated, not
+/// devotion-dominated, and pointed the opposite direction from what the
+/// doc claimed. The owner directed a re-authoring so the claim and the
+/// numbers agree: human's widths are now derived from a stated,
+/// measurement-grounded rule rather than chosen by eye, and every axis is
+/// verified wider than every other people's.
+///
+/// **The rule.** On each axis, human's response must vary by no more than
+/// 20% of its peak across the measured p5–p95 span of settleable land
+/// (`windows/worldgen/tests/generalist_baseline.rs`'s Task 5b extension,
+/// seeds 1..=30, 142593 settleable cells — the same population, same
+/// [`hornvale_worldgen::Substrate`] frame,
+/// [`crate::ConditionResponse::eval`] scores). Since
+/// `bump = exp(-0.5 z²)`, `bump >= 0.80` requires `|z| <= 0.6680`, so a
+/// FLOOR on width follows directly from the optimum's distance to the
+/// farther of p5/p95:
+///
+/// ```text
+/// width_floor = max(|optimum - p5|, |optimum - p95|) / 0.6680
+/// ```
+///
+/// This is a lower bound, not a target — a wider curve is still
+/// "indifferent," only more so. Where an axis's already-authored width
+/// already cleared both this floor and every other people's width on that
+/// axis, it is left unchanged (moisture); where it did not, it is raised —
+/// to the floor where the floor itself is the binding constraint
+/// (temperature, elevation), or modestly above the floor where the
+/// binding constraint is instead being strictly wider than the roster
+/// (insolation, whose floor is tiny because the settleable insolation band
+/// is narrow, but which tied goblin's width before this pass).
+///
+/// **Measured p5/p50/p95 (settleable land, same population as
+/// `human_condition_niche`'s elevation frame below) and the resulting
+/// floors:**
+///
+/// | axis | optimum | p5 | p50 | p95 | width floor | authored width | why |
+/// |---|---|---|---|---|---|---|---|
+/// | temperature (°C) | 14.0 (kept, 4% off p50) | 3.27 | 14.59 | 31.59 | 26.33 | **29.0** | floor-bound, rounded above goblin's 28.0 |
+/// | moisture | 0.50 (kept, 3% off p50) | 0.24 | 0.49 | 0.70 | 0.39 | **0.70 (unchanged)** | already clears the floor and every people's width |
+/// | insolation | **0.25 (recentred; was 0.14, 43% off p50)** | 0.19 | 0.25 | 0.31 | 0.09 | **0.45** | floor is tiny (narrow settleable band); raised past bugbear's 0.40 to stay widest |
+/// | elevation (m) | 1500.0 (fixed — see below) | 0.0 | 1561.2 | 4148.1 | 3964.1 | **4000.0** | floor-bound, comfortably above goblin's 3000.0 |
+///
+/// Optima: kept where within 10% of the measured p50 (temperature,
+/// moisture); recentred on p50 where not (insolation, 0.14 → 0.25 — the
+/// original value was authored before this measurement existed and landed
+/// well off the land the axis is actually scored against). Elevation's
+/// optimum is a deliberate exception, held at 1500.0 rather than the
+/// measured p50 (1561.2) — see the paragraph below.
+///
+/// **Sanity check, verified rather than assumed: human is now the widest
+/// curve of the SIX peoples on all four axes** (temperature 29.0 > goblin's
+/// 28.0; moisture 0.70 > goblin/kobold's 0.60; insolation 0.45 > bugbear's
+/// 0.40; elevation 4000.0 > goblin's 3000.0) — the property this
+/// re-authoring exists to restore. Devotion is UNCHANGED (0.20/0.20/0.25/
+/// 0.30 — see below) and remains the roster's lowest on every axis, so
+/// "widest and least devoted" is now true in both senses on every axis, not
+/// mixed axis by axis as the original authoring left it.
 ///
 /// Goblin's own elevation optimum was already re-centred by The Tumult's
-/// re-datum to 1500.0 m, the settleable-land median. Human's elevation
-/// optimum sits at that SAME 1500.0 m — deliberately, not by coincidence —
-/// and moisture's two optima also coincide (0.50, both). A wide,
-/// low-devotion curve only reads as genuine *indifference* if it is centred
-/// on the land it scores (goblin's own re-datum argument); a displaced
-/// optimum would instead hand human its own lowland or highland refuge,
-/// which contradicts the no-refuge premise the whole campaign's Gause probe
-/// rests on — this kind exists to test a competitor that out-competes
-/// nobody and holds no stronghold of its own. So the two kinds share an
-/// optimum on purpose: what makes human lose the specialists' strongholds
-/// (kobold's mountain, bugbear's rainforest) is its LOWER devotion against
-/// their high devotion, not a relocated centre and not a wider curve.
+/// re-datum to 1500.0 m, the settleable-land median at the time. Human's
+/// elevation optimum sits at that SAME 1500.0 m — deliberately, not by
+/// coincidence, and held there through this re-authoring even though the
+/// freshly measured p50 (1561.2 m) has drifted slightly since — the terrain
+/// mesh's land distribution is not perfectly stable seed-family to
+/// seed-family, and re-chasing a ~40 m drift would decouple human's
+/// optimum from goblin's shared-optimum argument for no ecological gain. A
+/// wide, low-devotion curve only reads as genuine *indifference* if it is
+/// centred on the land it scores (goblin's own re-datum argument); a
+/// displaced optimum would instead hand human its own lowland or highland
+/// refuge, which contradicts the no-refuge premise the whole campaign's
+/// Gause probe rests on — this kind exists to test a competitor that
+/// out-competes nobody and holds no stronghold of its own. So the two kinds
+/// share an optimum on purpose: what makes human lose the specialists'
+/// strongholds (kobold's mountain, bugbear's rainforest) is its LOWER
+/// devotion against their high devotion, reinforced (not contradicted) by
+/// this pass's wider curves.
 ///
-/// **Correction (Task 5 fix round 1, post-review): the sentence that used
-/// to end this paragraph — "Task 5's vacuity/distinctness check is built on
-/// this contrast — DEVOTION... and fails if human turns out to be goblin
-/// recentred" — overstated what the shipped check measures, in two ways
-/// found by measurement, not by re-reading the formula alone:**
+/// Devotion is unchanged by this re-authoring — it is the roster's lowest
+/// on every axis (temperature 0.20 vs. goblin's 0.45, moisture 0.20 vs.
+/// 0.35, insolation 0.25 vs. 0.35, elevation 0.30 vs. 0.35), the argued
+/// contrast from Task 2 that measurement never called into question.
 ///
-/// 1. **Elevation's devotion is algebraically invisible to the shipped
-///    statistic.** `niche_per_species_k` evaluates elevation with a HARD
-///    floor of `0.0` (sovereignty buffers physiology, never geometry), which
-///    reduces [`ConditionResponse::eval`] to exactly
-///    `devotion_E * bump_E(cell)` — devotion multiplying every cell's fit by
-///    the SAME positive constant. `windows/worldgen/tests/
-///    generalist_distinctness.rs`'s coefficient-of-variation statistic is
-///    scale-invariant under a positive constant multiplier, so elevation's
-///    devotion (0.30 vs goblin's 0.35) contributes exactly zero to it, in
-///    isolation. Only the other three axes' devotions (which use a nonzero
-///    sovereignty floor and so are NOT pure multipliers) are visible this
-///    way.
-/// 2. **Measured, not assumed: the shipped statistic's real-case gap is
-///    width-dominated, not devotion-dominated.** An attribution reading
-///    (human's devotions and optima kept, all four widths replaced by
-///    goblin's) measured `cv_ratio = 0.9766` — devotion ALONE is detectable
-///    and points the direction this doc's mechanism predicts (flatter →
-///    less dispersed). But the real, fully-authored pair measures
-///    `cv_ratio = 1.0462` — the OPPOSITE direction — because human's
-///    narrower widths on temperature and elevation contribute MORE than
-///    devotion does, and the two effects oppose rather than add. So "human
-///    leans on none of its axes" (devotion) is what was deliberately
-///    authored and remains true of the niche as designed, but the vacuity
-///    gate's headline pass is carried mostly by width, which this very
-///    paragraph disclaims as "not the claim to test." Full numbers and
-///    reasoning: `windows/worldgen/tests/generalist_distinctness.rs`'s module
-///    doc comment and `substituting_goblins_niche_for_humans_is_detected`.
-///
-/// The vacuity/distinctness check still fails if human turns out to be
-/// goblin recentred or merely re-widened (both collapse the measured gap
-/// below its floor, confirmed by that file's mutation test) — that claim
-/// stands. What does not stand is that the check's passing is *proof* the
-/// devotion contrast specifically is what separates the two kinds; it is
-/// proof the niches are shaped differently, by whatever mixture of devotion
-/// and width the two carry.
+/// **History: the vacuity/distinctness check and its width-attribution
+/// finding.** `windows/worldgen/tests/generalist_distinctness.rs`'s
+/// coefficient-of-variation statistic is scale-invariant under a positive
+/// constant multiplier, so elevation's devotion is algebraically invisible
+/// to it (elevation's hard `floor(0.0)` makes `eval` a pure multiplier
+/// there); the other three axes' devotions are visible because their
+/// nonzero sovereignty floor is additive, not multiplicative. Before this
+/// re-authoring, the real-case gap (`cv_ratio = 1.0462`) was measured
+/// WIDTH-dominated and pointed opposite to a devotion-only attribution
+/// reading (`cv_ratio = 0.9766`) — full numbers and reasoning in that
+/// file's module doc comment, which predates this pass and is retained as
+/// the record of the finding that motivated it. That file's own doc comment
+/// and the design spec's §4 amendment carry the post-re-authoring numbers;
+/// see them for the current reading rather than re-deriving it here.
 ///
 /// Frame: elevation is metres above the world's sea level (see
-/// [`ConditionNiche`]). Measured over seeds 1..=30, pooled over 142593
-/// settleable cells, by `windows/worldgen/tests/generalist_baseline.rs`: the
-/// land median is 1524.6 m (p49); the optimum below is rounded to 1500.0 m
-/// to match goblin's already-authored value for the reason above.
+/// [`ConditionNiche`]).
 fn human_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
             optimum: 14.0,
-            width: 22.0,
+            width: 29.0,
             devotion: 0.20,
         },
         moisture: ConditionResponse {
@@ -1561,17 +1594,20 @@ fn human_condition_niche() -> ConditionNiche {
             width: 0.70,
             devotion: 0.20,
         },
+        // recentred on the measured settleable-land p50 (0.2468, rounded to
+        // 0.25) - the original 0.14 sat 43% off it, outside the 10% keep
+        // band (see the doc comment above).
         insolation: ConditionResponse {
-            optimum: 0.14,
-            width: 0.30,
+            optimum: 0.25,
+            width: 0.45,
             devotion: 0.25,
         },
-        // wide/indifferent, centred on the settleable-land median (p49 =
-        // 1524.6 m, rounded to 1500.0 m) — the same value as goblin's
+        // wide/indifferent, held at 1500.0 m rather than re-chased to the
+        // freshly measured p50 (1561.2 m) - the same value as goblin's
         // optimum, deliberately (see the doc comment above).
         elevation: ConditionResponse {
             optimum: 1500.0,
-            width: 2000.0,
+            width: 4000.0,
             devotion: 0.30,
         },
     }

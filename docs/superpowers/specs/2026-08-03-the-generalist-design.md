@@ -103,6 +103,27 @@ over a seed family, not chosen here; §6 makes the measurement a gate. Authoring
 a quantile without stating the population it came from is a documented way to
 give a wrong number the authority of evidence.
 
+**Post-hoc amendment (Task 5b, 2026-08-04) — "widest, least-devoted" was only
+half true, and the fix.** The niche as first shipped (Task 2) stated the
+contrast above as devotion alone, but its widths were in fact unargued:
+narrower than goblin's on temperature (22.0 vs. 28.0) and elevation (2000.0
+vs. 3000.0) — the opposite of "widest... curves in the roster" for those two
+axes. Task 5's shape-attribution reading (see the §4 amendment below and
+`windows/worldgen/tests/generalist_distinctness.rs`'s module doc comment)
+measured that the vacuity gate's real-case dispersion gap was WIDTH-dominated
+and pointed the opposite direction from a devotion-only reading — the
+contradiction this paragraph originally disclaimed as "not the claim to test"
+turned out to be carrying the claim. The owner directed a re-authoring:
+`human_condition_niche()`'s widths are now each derived from a stated,
+measurement-grounded floor (on each axis, response must vary by no more than
+20% of its peak across the measured p5–p95 span of settleable land —
+`windows/worldgen/tests/generalist_baseline.rs`'s Task 5b extension) and
+verified, axis by axis, wider than every other people's width in the roster.
+Full numbers, the per-axis rule, and which axes changed vs. were already
+correct live in `human_condition_niche()`'s doc comment
+(`domains/species/src/lib.rs`). Devotion was untouched — it was already the
+argued, correct half of the contrast.
+
 **D4 — Humans sit below the manikin on night vision, and the exact value is a
 step-function decision.** This is The Manikin's deferred call, and the argument
 for it is sound: the peoples' authored night vision runs goblin 0.5, hobgoblin
@@ -235,16 +256,25 @@ the check itself.
 The shipped statistic is instead each kind's coefficient of variation (CV =
 population stddev / mean) of per-cell fit, compared as
 `cv(human) / cv(goblin)`, gated on `|cv_ratio - 1|` clearing a floor of
-`0.02` — full reasoning, measured values (real gap 0.0462, mutated gap
-0.0118), and a width-vs-devotion attribution reading (finding: the real
-gap is width-dominated, not devotion-dominated, contrary to this
-section's and `human_condition_niche()`'s framing of the *intended*
-contrast) live in `windows/worldgen/tests/generalist_distinctness.rs`'s
-module doc comment and `human_condition_niche()`'s doc comment
-(`domains/species/src/lib.rs`). This is a correction to this section's
-frozen wording, made explicit here rather than silently rewritten — the
-original criterion was never satisfied by any implementation, so no
-measurement made under it is being retroactively reinterpreted.
+`0.02`. This is a correction to this section's frozen wording, made explicit
+here rather than silently rewritten — the original criterion was never
+satisfied by any implementation, so no measurement made under it is being
+retroactively reinterpreted.
+
+**Second post-hoc amendment (Task 5b, 2026-08-04) — the width-vs-devotion
+attribution finding, and its resolution.** At the time §3's original wording
+was corrected above, the measured real gap (`0.0462`) was found
+width-dominated, not devotion-dominated, and pointed the OPPOSITE direction
+from a devotion-only attribution reading (`cv_ratio` 1.0462 real vs. 0.9766
+width-only) — contrary to this section's and `human_condition_niche()`'s
+framing of the *intended* contrast, because human's widths were narrower
+than goblin's on two axes (see §3 D3's own post-hoc amendment). The owner
+directed a re-authoring of `human_condition_niche()`'s widths from a stated,
+measurement-grounded rule; after it, both readings agree in direction
+(`cv_ratio` 0.9528 real, 0.9747 width-only — both `< 1`) and the real gap
+grew to `0.0472`. Full reasoning and the measured table live in
+`windows/worldgen/tests/generalist_distinctness.rs`'s module doc comment and
+`human_condition_niche()`'s doc comment (`domains/species/src/lib.rs`).
 
 ## 5. Non-goals
 

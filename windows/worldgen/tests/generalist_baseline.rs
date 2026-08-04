@@ -2,6 +2,16 @@
 //! authored against, and the pre-human per-people fit baseline the campaign's
 //! preregistered readout compares to.
 //!
+//! **Task 5b extension (the re-authoring, 2026-08-04):** Task 1 measured only
+//! elevation. An attribution run showed human's authored widths were
+//! *narrower* than goblin's on temperature and elevation, contradicting the
+//! "widest curve in the roster" claim, so the widths needed re-authoring
+//! against measured quantiles on all four axes, not just elevation. This
+//! file now reports p5/p15/p50/p85/p95 for temperature, moisture,
+//! insolation, and elevation, all four read from the identical
+//! [`hornvale_worldgen::Substrate`] `niche_per_species_k` scores a
+//! `ConditionNiche` against - see [`AxisSamples`]'s doc comment.
+//!
 //! Ignored: builds 30 worlds. Reason token `heavy:` puts it in the heavy tier
 //! (cli/tests/heavy_tier.rs), not the commit gate.
 //!
@@ -38,7 +48,7 @@ use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, niche_per_species_k,
-    sky_of, terrain_of,
+    sky_of, substrate_field, terrain_of,
 };
 use std::collections::BTreeMap;
 
@@ -58,17 +68,42 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 /// measuring "settleable" against the whole 29-kind fauna+peoples roster.
 const PEOPLES: [&str; 5] = ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"];
 
-/// Build `seed` to full depth and return `(elevations, per_people_fits)` over
-/// the cells settleable by at least one of the five pre-human peoples.
+/// The four condition axes, sampled over the settleable-cell population, in
+/// the identical frame `niche_per_species_k` scores a `ConditionNiche`
+/// against - each field is a direct per-cell read of
+/// [`hornvale_worldgen::Substrate`] (via [`substrate_field`]), the exact
+/// struct `niche_per_species_k` builds internally and reads as `s.temperature_c`/
+/// `s.moisture`/`s.insolation`/`s.elevation` (`windows/worldgen/src/lib.rs`,
+/// `niche_per_species_k`'s body). Task 5b (The Generalist re-authoring):
+/// elevation was already read this way by Task 1; temperature/moisture/
+/// insolation are new here, from the same source rather than a hand-rederived
+/// stand-in, so a unit mismatch ("a unit is not a frame") cannot creep in
+/// between what this harness measures and what the response curve sees.
+struct AxisSamples {
+    /// Mean annual temperature, deg C - `Substrate::temperature_c` verbatim.
+    temperature: Vec<f64>,
+    /// Moisture in `[0, 1]` - `Substrate::moisture` verbatim.
+    moisture: Vec<f64>,
+    /// Annual-mean top-of-atmosphere insolation, relative to the planet's
+    /// global scalar - `Substrate::insolation` verbatim.
+    insolation: Vec<f64>,
+    /// Height above this world's sea level, metres - `Substrate::elevation`
+    /// verbatim (the same `elevation_at(cell) - sea_level()` The Tumult's
+    /// re-datum performs).
+    elevation: Vec<f64>,
+}
+
+/// Build `seed` to full depth and return `(axes, per_people_fits)` over the
+/// cells settleable by at least one of the five pre-human peoples.
 ///
-/// `elevations` is that cell set's height above sea level (metres; The
-/// Tumult's re-datum - `terrain.elevation_at(cell) - terrain.sea_level()`,
-/// the identical subtraction `substrate_field` performs). `per_people_fits`
-/// maps each people's name to its own per-cell K (the raw `niche_per_species_k`
-/// output, not a coexistence share) over that exact same cell set, one entry
-/// per settleable cell - so every people's vector is the same length as
-/// `elevations` and indexed the same way, cell for cell.
-fn measure_one(seed: Seed) -> (Vec<f64>, BTreeMap<&'static str, Vec<f64>>) {
+/// `axes` is that cell set's four condition-axis readings, in the identical
+/// frame [`niche_per_species_k`] scores a `ConditionNiche` against - see
+/// [`AxisSamples`]. `per_people_fits` maps each people's name to its own
+/// per-cell K (the raw `niche_per_species_k` output, not a coexistence
+/// share) over that exact same cell set, one entry per settleable cell - so
+/// every people's vector, and every `axes` field, is the same length and
+/// indexed the same way, cell for cell.
+fn measure_one(seed: Seed) -> (AxisSamples, BTreeMap<&'static str, Vec<f64>>) {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     // The build-local dense index -> KindId mapping, built from the exact
     // same `wc.biosphere` ordering (filtered to PEOPLES, so still
@@ -103,7 +138,7 @@ fn measure_one(seed: Seed) -> (Vec<f64>, BTreeMap<&'static str, Vec<f64>>) {
     let system = sky
         .system()
         .unwrap_or_else(|| panic!("{seed:?} has a generated star system"));
-    let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
+    let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => {
@@ -113,11 +148,33 @@ fn measure_one(seed: Seed) -> (Vec<f64>, BTreeMap<&'static str, Vec<f64>>) {
     };
 
     let ks = niche_per_species_k(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+        geo,
+        &terrain,
+        &climate,
+        obliquity,
+        insolation_scalar,
+        &regime,
+        &bios,
     );
-    let sea_level = terrain.sea_level();
+    // The exact substrate `niche_per_species_k` builds internally (same
+    // geo/terrain/climate/obliquity/insolation_scalar/regime) - not a
+    // hand-rederived stand-in, so `axes` is guaranteed to be in the frame the
+    // response curve sees.
+    let substrate = substrate_field(
+        geo,
+        &terrain,
+        &climate,
+        obliquity,
+        insolation_scalar,
+        &regime,
+    );
 
-    let mut elevations: Vec<f64> = Vec::new();
+    let mut axes = AxisSamples {
+        temperature: Vec::new(),
+        moisture: Vec::new(),
+        insolation: Vec::new(),
+        elevation: Vec::new(),
+    };
     let mut per_people: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
 
     for cell in geo.cells() {
@@ -125,34 +182,62 @@ fn measure_one(seed: Seed) -> (Vec<f64>, BTreeMap<&'static str, Vec<f64>>) {
         if !settleable {
             continue;
         }
-        elevations.push(terrain.elevation_at(cell) - sea_level);
+        let s = substrate.get(cell);
+        axes.temperature.push(s.temperature_c);
+        axes.moisture.push(s.moisture);
+        axes.insolation.push(s.insolation);
+        axes.elevation.push(s.elevation);
         for (tag, k) in &ks {
             let name = kinds[*tag as usize].0;
             per_people.entry(name).or_default().push(*k.get(cell));
         }
     }
 
-    (elevations, per_people)
+    (axes, per_people)
+}
+
+/// `p`-th percentile of a pre-sorted, non-empty `vals` (same integer-division
+/// indexing Task 1 used for elevation, reused verbatim for the other three
+/// axes so all four quantile reports are computed identically).
+fn percentile_of_sorted(vals: &[f64], p: u32) -> f64 {
+    let idx = (vals.len() * p as usize) / 100;
+    vals[idx]
 }
 
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_land_distribution_and_pre_human_fits() {
+    let mut temperature: Vec<f64> = Vec::new();
+    let mut moisture: Vec<f64> = Vec::new();
+    let mut insolation: Vec<f64> = Vec::new();
     let mut elevations: Vec<f64> = Vec::new();
     let mut per_people: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
 
     for seed in SEEDS {
-        let (elev, fits) = measure_one(Seed(seed));
-        elevations.extend(elev);
+        let (axes, fits) = measure_one(Seed(seed));
+        temperature.extend(axes.temperature);
+        moisture.extend(axes.moisture);
+        insolation.extend(axes.insolation);
+        elevations.extend(axes.elevation);
         for (kind, vals) in fits {
             per_people.entry(kind).or_default().extend(vals);
         }
     }
 
+    temperature.sort_by(f64::total_cmp);
+    moisture.sort_by(f64::total_cmp);
+    insolation.sort_by(f64::total_cmp);
     elevations.sort_by(f64::total_cmp);
-    for p in [15u32, 22, 49, 79, 95] {
-        let idx = (elevations.len() * p as usize) / 100;
-        println!("elevation p{p} = {:.1} m", elevations[idx]);
+
+    for (axis, vals) in [
+        ("temperature_c", &temperature),
+        ("moisture", &moisture),
+        ("insolation", &insolation),
+        ("elevation_m", &elevations),
+    ] {
+        for p in [5u32, 15, 50, 85, 95] {
+            println!("{axis} p{p} = {:.4}", percentile_of_sorted(vals, p));
+        }
     }
     for (kind, vals) in &per_people {
         let mean = vals.iter().sum::<f64>() / vals.len() as f64;
