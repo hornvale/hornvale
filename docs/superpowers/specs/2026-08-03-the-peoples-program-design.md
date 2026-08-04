@@ -109,21 +109,30 @@ descendant of the finding that produced this document.
 ## 4. The sequence
 
 ```
-        (no new dependencies)
-       /          |          \
-    C2-0         C2a         C2b        C2t
-  GENERALIST   DEEP REALM   LONG AGE   THE TOLERANCE
-  human x1     Underdark    lifespan   dispersion +
-                 \           /         population tier
-                  \         /               |
-               +-------+-------+            |
-               |               |            |
-             C2c             C2d <----------+
-          THE DELVERS     THE RADIATION   HARD DEPENDENCY
-          dwarf x5        elf x6 + LANG-53
+    C2-0  THE GENERALIST   human x1
+      |
+      v
+    C2t   THE TOLERANCE    dispersion; warlikeness becomes DERIVED
+      |                    (added mid-C2-0; moved ahead of C2a/C2b)
+      +-----------+-----------+
+      |           |           |
+      v           v           |
+    C2a         C2b           |
+  DEEP REALM   LONG AGE       |
+  Underdark    lifespan       |
+      \           /           |
+       \         /            |
+    +-------+-------+         |
+    |               |         |
+   C2c             C2d <------+
+ THE DELVERS   THE RADIATION   HARD DEPENDENCY:
+ dwarf x5      elf x6          selection needs a distribution
 ```
 
-**C2t was added on 2026-08-03, mid-C2-0, and its finding is why.** See §4b.
+**C2t was added on 2026-08-03, mid-C2-0.** C2-0, C2a and C2b were originally
+three independent roots; C2t now precedes C2a and C2b, because every people
+authored before it is authored in a frame it changes — authoring five dwarves
+and six elves first would mean authoring eleven peoples twice. See §4b.
 
 **C2-0 — The Generalist.** Humans, one kind, surface only. No new mechanism.
 Full spec: `2026-08-03-the-generalist-design.md`.
