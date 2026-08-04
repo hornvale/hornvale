@@ -14,6 +14,7 @@ pub mod provider;
 pub mod render;
 pub mod streams;
 pub mod substellar;
+pub mod substrate;
 pub mod temperature;
 pub mod variants;
 pub mod weather;
@@ -33,6 +34,7 @@ pub use streams::stream_labels;
 pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
 };
+pub use substrate::{DayContext, SpinUp, Substrate, spin_up};
 pub use temperature::locked_temperature_at_position;
 pub use variants::{GroundKind, Variant, VariantEntry, variant_at_cell, variant_pool};
 pub use weather::{
