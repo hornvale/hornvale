@@ -389,13 +389,36 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
+            // The Generalist (C2-0). Humans are authored at the envelope's
+            // neutral settings, and this is the ONE vector family where that
+            // is an argument rather than a default: the phonology envelope is
+            // built on IPA, a human-calibrated inventory, so a human anchor
+            // here is better founded than any other kind's (The Manikin §2).
+            //
+            // These values coincide with goblin's, which are legacy — goblin
+            // sits at 0.5 because it was the baseline, not because anyone
+            // decided goblins sound unremarkable. The collision is a known
+            // artifact of a deferred campaign (goblin characterization) and
+            // resolves when goblin moves, not when human does.
+            (
+                KindId("human"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.5,
+                    sibilance: 0.5,
+                    voice_loudness: 0.5,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
         ]
         .into_iter()
         .collect()
     }
 
     /// Peopled lexicon, one per speaking kind. Byte-identical to the former
-    /// species peopled component's noun + rung words for the four peoples;
+    /// species peopled component's noun + rung words for the six peoples;
     /// The Solitary Tongue adds a shared stopgap row for the three
     /// dragons (a solitary hoarder has no settlement or castes — these
     /// words are placeholders satisfying the `articulation.ids ==
@@ -495,6 +518,18 @@ pub mod speech {
                     artisan: "fletcher",
                     shaman: "bonecaster",
                     top: "packlord",
+                },
+            ),
+            // The Generalist (C2-0): a settled agricultural people's rungs.
+            (
+                KindId("human"),
+                Lexicon {
+                    noun: "town",
+                    worker_override: Some("farmer"),
+                    warrior: "guard",
+                    artisan: "wright",
+                    shaman: "priest",
+                    top: "steward",
                 },
             ),
         ]

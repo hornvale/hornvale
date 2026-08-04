@@ -296,8 +296,16 @@ fn river_exposure_tracks_real_proximity() {
 /// renamed and rewritten again, to the same exact-partition idiom `hill`
 /// and `valley` already use rather than the saturated shape this file
 /// carried between the two absorbs.
+///
+/// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
+/// a sixth competitor, redeciding seed 42's settlement placement once more —
+/// kobold's flagship no longer has exposure to a spring cell either.
+/// `spring` is saturated again: a Gap for every placed people (0/6 Root,
+/// 6/6 Gap), the shape `river`/`ford` already carry. Renamed to match, per
+/// this test's own established policy of renaming to the shape rather than
+/// asserting a "discriminates" claim that is no longer true.
 #[test]
-fn spring_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it() {
+fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -315,13 +323,13 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("kobold", "Roraaxaa".to_string())],
-        "at seed 42 exactly one people roots 'spring' — kobold"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 no placed people roots 'spring'"
     );
 }
 
@@ -358,8 +366,15 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_
 /// Gap), the shape it had before The Contour's own re-pin. Renamed to
 /// match; this is a real geographic fact about this derivation of seed 42,
 /// re-measured rather than assumed.
+///
+/// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
+/// a sixth competitor, which redecides seed 42's settlement placement once
+/// more — kobold's flagship now sits at hill's strict local elevation
+/// maximum, rooting it as `Roxoro`. `hill` splits again (1/6 Root, 5/6 Gap,
+/// human among the gappers), the same shape family this test's own history
+/// already carries; renamed to name the new sole rooter.
 #[test]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
+fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -381,13 +396,13 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human"],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 no placed people roots 'hill'"
+        vec![("kobold", "Roxoro".to_string())],
+        "at seed 42 exactly one people roots 'hill' — kobold"
     );
 }
 
@@ -416,6 +431,11 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
 /// of `hill`'s move at this same regen). Renamed to match; this is a real
 /// geographic fact about this derivation of seed 42, re-measured rather
 /// than assumed.
+///
+/// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
+/// a sixth competitor; the partition shape is unchanged (still a Gap for
+/// every placed people) but the roster gains "human" alongside the other
+/// five.
 #[test]
 fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
@@ -435,7 +455,7 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
     assert_eq!(
@@ -469,8 +489,15 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
 /// partition, by name, the same discipline `hill`/`valley`/`spring`
 /// already use, for the same reason: the exception is not noise to route
 /// around.
+///
+/// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
+/// a sixth competitor, redeciding seed 42's settlement placement once more —
+/// bugbear's flagship now has exposure to a marsh cell after all (rooting it
+/// as `Qadoo`), and human's flagship is the new sole gapper. `marsh` keeps
+/// the same 5/6-Root, 1/6-Gap shape, just with a different exception;
+/// renamed to name it.
 #[test]
-fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_bugbear_which_gaps_it() {
+fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_human_which_gaps_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -488,18 +515,19 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_bugbear_which_gaps_
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear"],
+        vec!["human"],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
         rooted,
         vec![
+            ("bugbear", "Qadoo".to_string()),
             ("gnoll", "Gshoovzngaov".to_string()),
             ("goblin", "Taneo".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 four of the five placed peoples root 'marsh'"
+        "at seed 42 five of the six placed peoples root 'marsh'"
     );
 }
 
@@ -963,4 +991,23 @@ fn the_bearing_exposure_check_runs_over_a_real_roster() {
         8,
         "the bearing roster should be the full eight points"
     );
+}
+
+/// The Generalist (Task 4): human's poor night vision (`night_vision =
+/// 0.15`, Task 3) buys the deepest hue ladder and the shallowest luminance
+/// ladder `pack_depths` offers — the depth-5 hue witness this campaign's
+/// human addition is meant to exercise.
+#[test]
+fn human_is_the_hue_ladders_deepest_witness() {
+    let wc = hornvale_worldgen::components::WorldComponents::assemble().unwrap();
+    let p = *wc
+        .perception
+        .get(&hornvale_kernel::KindId("human"))
+        .unwrap();
+    let d = pack_depths(&p);
+    assert_eq!(
+        d.hue, 5,
+        "human's poor night vision buys the deepest hue ladder"
+    );
+    assert_eq!(d.luminance, 1, "and the shallowest luminance ladder");
 }
