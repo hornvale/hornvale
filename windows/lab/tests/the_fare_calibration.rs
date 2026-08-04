@@ -30,6 +30,7 @@ use hornvale_worldgen::{
     BASE_COST, BuildDepth, SettlementPins, SkyChoice, WorldComponents,
     build_world_to_with_artifacts, traversal_cost,
 };
+use std::collections::BTreeSet;
 
 /// AUTHORED (spec §5a), **not calibrated**: the floor
 /// `weather_conductance_factor`'s output is clamped to before inversion.
@@ -130,6 +131,17 @@ const SAMPLE_DAYS: usize = 12;
 /// The pilot's seeds. Deliberately small: its job is to measure cost and set
 /// the floors, not to answer F1-F4. Spec §6.
 const PILOT_SEEDS: std::ops::RangeInclusive<u64> = 1..=5;
+
+/// How many reachable settlement pairs F2's re-routing check and the
+/// redundancy control sample per seed — a deterministic stride over the
+/// ordered reachable-pair list, same idiom as `the_mire_calibration.rs`'s
+/// `H3_SAMPLE_STRIDE_TARGET`. The redundancy control needs a blocked
+/// re-sweep PER PAIR (a fresh `CellMap` plus a fresh `least_cost_from`), so
+/// running it over every reachable pair (up to ~62k for one pilot seed)
+/// would dominate the pilot's cost; F2 is measured over the same sampled
+/// subset rather than exhaustively, so the two numbers are read together
+/// over one population instead of two differently-sized ones.
+const PATH_SAMPLE_STRIDE_TARGET: usize = 200;
 
 /// One built world's cached readout surface, computed exactly once per world.
 struct WorldSample {
@@ -251,6 +263,14 @@ fn median(values: &[f64]) -> f64 {
     }
 }
 
+/// The stride F2/the redundancy control walk the reachable-pair list at: at
+/// most every pair, but no finer than needed to land roughly
+/// [`PATH_SAMPLE_STRIDE_TARGET`] samples across the whole reachable-pair
+/// population. Same shape as `the_mire_calibration.rs`'s `h3_stride`.
+fn path_sample_stride(pair_count: usize) -> usize {
+    (pair_count / PATH_SAMPLE_STRIDE_TARGET).max(1)
+}
+
 mod weathering {
     use super::*;
 
@@ -298,27 +318,44 @@ mod weathering {
     #[test]
     #[ignore = "heavy: the pilot builds 5 live worlds and routes over them (minutes); spec §6"]
     fn the_fares_pilot() {
-        // Measures TWO distinct quantities per seed, both labelled on the
+        // Measures FOUR distinct quantities per seed, all labelled on the
         // PILOT line:
         //
-        // - `median_swing`/`max_swing`: the spec's F1 quantity (§4) — each
-        //   pair's own (max - min) of weathered path cost ACROSS the
-        //   SAMPLE_DAYS sampled days, expressed as a fraction of that pair's
-        //   dry cost. This is what Task 4 must set floors from, since it is
-        //   what Task 5 measures.
+        // - `median_swing`/`max_swing`: F1 (§4) — each pair's own
+        //   (max - min) of weathered path cost ACROSS the SAMPLE_DAYS
+        //   sampled days, over that pair's dry cost. Exhaustive over every
+        //   reachable settlement pair.
         // - `median_markup`/`max_markup`: a fixed-day dry-vs-weathered
-        //   markup at a single day (`year_length / 4.0`), kept as a control
-        //   statistic. This is what the first version of this pilot
-        //   measured; it answers a structurally different question (a
-        //   single day's markup, not a within-year amplitude) and must not
-        //   be the thing floors are calibrated from.
+        //   markup at a single day (`year_length / 4.0`), kept only as a
+        //   control statistic (this is what the first version of this pilot
+        //   measured, before being corrected to F1's actual quantity).
+        // - `path_sample`/`reroute_frac`: F2 (§4) — over `path_sample`
+        //   sampled reachable pairs, the fraction whose least-cost PATH
+        //   IDENTITY differs between that pair's OWN cheapest and costliest
+        //   sampled day (per-pair argmin/argmax, never a global day).
+        // - `median_redundancy`/`max_redundancy`/`no_alt_count` (same
+        //   `path_sample` pairs): the redundancy control F2 needs to be
+        //   interpretable at all — a pair joined by one dominant corridor
+        //   reads zero reroute at any weather strength regardless of
+        //   whether the mechanism works. On the DRY field only: each
+        //   sampled pair's best path, its interior cells (everything except
+        //   the two endpoints) blocked to `u64::MAX` in a scratch field,
+        //   re-swept; the ratio second-best/best cost, `None` ("no
+        //   alternative") if blocking the best path leaves no path at all.
+        //
+        // F2 and the redundancy control are measured over the SAME
+        // stride-sampled subset of reachable pairs, not the full
+        // population — see [`PATH_SAMPLE_STRIDE_TARGET`]'s doc comment.
+        // Disclosed here and on the PILOT line (`path_sample=N`) rather than
+        // silently narrowed.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         for seed in PILOT_SEEDS {
             let sample = build_sample(seed, &wc);
             let n = sample.settlements.len();
 
             // The dry sweep is day-invariant, so compute it once per source
-            // and reuse it for both the markup control and the swing.
+            // and reuse it for the markup control, the swing, and (via
+            // `path_to`) the redundancy control's best path.
             let dry_sweeps: Vec<CostSweep> = sample
                 .settlements
                 .iter()
@@ -350,12 +387,18 @@ mod weathering {
             };
             let max_markup = markups.last().copied().unwrap_or(f64::NAN);
 
-            // --- F1's quantity: each pair's (max - min) weathered cost
-            // across SAMPLE_DAYS, over its dry cost. Weathered field is
-            // built once per day (not once per source per day) and every
-            // settlement is swept from that one field.
+            // --- Pass 1 (costs only): F1's per-pair (max - min) weathered
+            // cost across SAMPLE_DAYS, plus the DAY INDEX each extremum
+            // occurred at (pass 2 needs this to know which two days to
+            // re-sweep for F2's path comparison). Weathered field built once
+            // per day, every settlement swept against that one field, both
+            // dropped at the end of the day's scope — never all
+            // SAMPLE_DAYS x settlements sweeps held at once, only O(n^2)
+            // scalars.
             let mut min_cost = vec![f64::INFINITY; n * n];
             let mut max_cost = vec![f64::NEG_INFINITY; n * n];
+            let mut argmin_day = vec![0usize; n * n];
+            let mut argmax_day = vec![0usize; n * n];
             for day_idx in 0..SAMPLE_DAYS {
                 let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
                 let wet = weathered_cost(&sample, day);
@@ -370,9 +413,11 @@ mod weathering {
                             let idx = i * n + j;
                             if c.total_cmp(&min_cost[idx]).is_lt() {
                                 min_cost[idx] = c;
+                                argmin_day[idx] = day_idx;
                             }
                             if c.total_cmp(&max_cost[idx]).is_gt() {
                                 max_cost[idx] = c;
+                                argmax_day[idx] = day_idx;
                             }
                         }
                     }
@@ -380,7 +425,8 @@ mod weathering {
             }
 
             let mut swings: Vec<f64> = Vec::new();
-            for (i, _) in sample.settlements.iter().enumerate() {
+            let mut reachable_pairs: Vec<(usize, usize)> = Vec::new();
+            for (i, dry_sweep) in dry_sweeps.iter().enumerate() {
                 for (j, &dst) in sample.settlements.iter().enumerate() {
                     if i == j {
                         continue;
@@ -389,10 +435,11 @@ mod weathering {
                     if !min_cost[idx].is_finite() {
                         continue;
                     }
-                    if let Some(a) = dry_sweeps[i].cost_to(dst)
+                    if let Some(a) = dry_sweep.cost_to(dst)
                         && a > 0
                     {
                         swings.push((max_cost[idx] - min_cost[idx]) / a as f64);
+                        reachable_pairs.push((i, j));
                     }
                 }
             }
@@ -404,10 +451,81 @@ mod weathering {
             };
             let max_swing = swings.last().copied().unwrap_or(f64::NAN);
 
+            // --- Pass 2 (paths, sampled): F2's re-routing fraction and the
+            // redundancy control, over a deterministic stride sample of
+            // `reachable_pairs`.
+            let stride = path_sample_stride(reachable_pairs.len());
+            let mut path_sample_count = 0usize;
+            let mut rerouted = 0usize;
+            let mut redundancy_ratios: Vec<f64> = Vec::new();
+            let mut no_alternative = 0usize;
+            for &(i, j) in reachable_pairs.iter().step_by(stride) {
+                path_sample_count += 1;
+                let src = sample.settlements[i];
+                let dst = sample.settlements[j];
+                let idx = i * n + j;
+
+                // F2: path identity at this pair's own cheapest vs costliest
+                // sampled day. Re-sweeps at exactly those two days — never
+                // all SAMPLE_DAYS again.
+                let day_a = argmin_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+                let day_b = argmax_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+                let field_a = weathered_cost(&sample, day_a);
+                let field_b = weathered_cost(&sample, day_b);
+                let path_a = least_cost_from(&sample.geo, &field_a, src).path_to(dst);
+                let path_b = least_cost_from(&sample.geo, &field_b, src).path_to(dst);
+                assert!(
+                    path_a.is_some() && path_b.is_some(),
+                    "seed {seed} pair ({i},{j}) lost reachability under weathering \
+                     (the keystone's guarantee that weathering never makes a \
+                     passable cell impassable should preclude this)"
+                );
+                if path_a != path_b {
+                    rerouted += 1;
+                }
+
+                // Redundancy control: on the DRY field, the best path's
+                // interior cells (everything but the two endpoints) blocked
+                // to u64::MAX in a scratch field, re-swept.
+                let best_cost = dry_sweeps[i]
+                    .cost_to(dst)
+                    .expect("reachable_pairs only holds pairs with a finite dry cost");
+                let best_path = dry_sweeps[i]
+                    .path_to(dst)
+                    .expect("a finite dry cost implies a dry path");
+                let blocked: BTreeSet<CellId> =
+                    best_path[1..best_path.len() - 1].iter().copied().collect();
+                let scratch = CellMap::from_fn(&sample.geo, |c| {
+                    if blocked.contains(&c) {
+                        u64::MAX
+                    } else {
+                        *sample.dry.get(c)
+                    }
+                });
+                match least_cost_from(&sample.geo, &scratch, src).cost_to(dst) {
+                    Some(second_best) => {
+                        redundancy_ratios.push(second_best as f64 / best_cost as f64);
+                    }
+                    None => no_alternative += 1,
+                }
+            }
+            redundancy_ratios.sort_by(f64::total_cmp);
+            let median_redundancy = if redundancy_ratios.is_empty() {
+                f64::NAN
+            } else {
+                median(&redundancy_ratios)
+            };
+            let max_redundancy = redundancy_ratios.last().copied().unwrap_or(f64::NAN);
+            let reroute_frac = if path_sample_count == 0 {
+                f64::NAN
+            } else {
+                rerouted as f64 / path_sample_count as f64
+            };
+
             // Per-seed progress: The Mire lost an hour of wall-clock to a run
             // with no visible progress and nothing recoverable.
             println!(
-                "PILOT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6}",
+                "PILOT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6} path_sample={path_sample_count} reroute_frac={reroute_frac:.6} median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} no_alt_count={no_alternative}",
                 swings.len()
             );
         }
