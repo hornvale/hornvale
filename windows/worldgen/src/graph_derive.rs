@@ -434,8 +434,14 @@ fn add_land_routes(
     sorted.dedup();
 
     for (i, &a) in sorted.iter().enumerate() {
+        // The bare-adjacency reachable set from `a`, out to
+        // `cfg.land_route_radius` hops, computed ONCE for `a` rather than
+        // re-walked per candidate `b` (see `cells_within_hops`'s doc comment
+        // -- this is the same predicate `Geosphere::hops_between(a, b,
+        // radius).is_some()` would answer per pair, batched).
+        let reachable = cells_within_hops(geo, a, cfg.land_route_radius);
         for &b in &sorted[i + 1..] {
-            if geo.hops_between(a, b, cfg.land_route_radius).is_none() {
+            if !reachable.contains(&b) {
                 continue;
             }
             let Some((_, total)) = least_cost(geo, cost, a, b, cfg.astar_budget) else {
@@ -455,6 +461,40 @@ fn add_land_routes(
             );
         }
     }
+}
+
+/// Every cell reachable from `from` within `radius` hops of `geo`'s bare
+/// mesh adjacency -- the batched form of [`Geosphere::hops_between`]'s
+/// per-target bounded BFS. `hops_between(from, b, radius).is_some()` iff `b`
+/// is in this set: bare-adjacency reachability within a hop bound is a pure
+/// function of `(from, radius)` alone, not of which target is being asked
+/// about, and the frontier expansion below is the identical BFS
+/// `hops_between` runs (same `visited`/`frontier` bookkeeping, same
+/// depth bound, same early-break on an exhausted frontier) -- it just
+/// answers the predicate for every candidate at once instead of re-walking
+/// the same bounded neighborhood from scratch per candidate. `add_land_routes`
+/// calls this once per `a`, replacing what was previously one
+/// `hops_between` call per `(a, b)` pair -- a genuine reduction in repeated
+/// work, not a change to which pairs pass the filter.
+fn cells_within_hops(geo: &Geosphere, from: CellId, radius: u32) -> BTreeSet<CellId> {
+    let mut visited: BTreeSet<CellId> = BTreeSet::new();
+    visited.insert(from);
+    let mut frontier: Vec<CellId> = vec![from];
+    for _ in 1..=radius {
+        let mut next: Vec<CellId> = Vec::new();
+        for &c in &frontier {
+            for &n in geo.neighbors(c) {
+                if visited.insert(n) {
+                    next.push(n);
+                }
+            }
+        }
+        if next.is_empty() {
+            break;
+        }
+        frontier = next;
+    }
+    visited
 }
 
 #[cfg(test)]
