@@ -155,6 +155,56 @@ impl SubstrateField {
         }
     }
 
+    /// Spin two substrates up together, computing each cell's periodic year
+    /// of [`DayContext`]s **once** and reusing it for both, rather than
+    /// once per substrate.
+    ///
+    /// `climate.year_of_day_contexts(cell)` is a pure function of
+    /// `(climate, cell)` alone -- it never reads `a` or `b` -- so calling
+    /// [`Self::compute`] twice (once per substrate) rebuilds the identical
+    /// `Vec<DayContext>` for every cell a second time. This shares that one
+    /// build across both spin-ups instead. Each substrate's own
+    /// [`spin_up`] call is otherwise byte-for-byte what [`Self::compute`]
+    /// would run over the same year, and the two spin-ups do not share any
+    /// mutable state, so the pair returned here is arithmetically identical
+    /// to `(SubstrateField::compute(climate, a), SubstrateField::compute(climate, b))`
+    /// -- a pure restructuring, not a behaviour change.
+    pub fn compute_pair<A: Substrate + ?Sized, B: Substrate + ?Sized>(
+        climate: &crate::provider::GeneratedClimate,
+        a: &A,
+        b: &B,
+    ) -> (SubstrateField, SubstrateField) {
+        let mut trajectories_a = Vec::new();
+        let mut converged_a = Vec::new();
+        let mut trajectories_b = Vec::new();
+        let mut converged_b = Vec::new();
+        let mut year_days = 0usize;
+        for cell in climate.geosphere().cells() {
+            let year = climate.year_of_day_contexts(cell);
+            year_days = year.len();
+
+            let out_a = spin_up(a, &year, CONVERGENCE_TOLERANCE);
+            trajectories_a.push(out_a.trajectory);
+            converged_a.push(out_a.converged);
+
+            let out_b = spin_up(b, &year, CONVERGENCE_TOLERANCE);
+            trajectories_b.push(out_b.trajectory);
+            converged_b.push(out_b.converged);
+        }
+        (
+            SubstrateField {
+                trajectories: trajectories_a,
+                converged: converged_a,
+                year_days,
+            },
+            SubstrateField {
+                trajectories: trajectories_b,
+                converged: converged_b,
+                year_days,
+            },
+        )
+    }
+
     /// The substrate's value at `cell` on `day`, wrapping the year.
     /// type-audit: bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
     pub fn at(&self, cell: CellId, day: f64) -> f64 {

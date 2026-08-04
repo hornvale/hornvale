@@ -211,9 +211,13 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
         // Computed ONCE per call, never per edge -- each spins up every
         // cell's periodic year (Task 5 measured ~90-105ms per field at
         // 2562 cells), so re-deriving inside the per-edge closure below
-        // would be the same mistake in miniature.
-        let wetness_field = SubstrateField::compute(&climate, &DEFAULT_WETNESS);
-        let snow_field = SubstrateField::compute(&climate, &DEFAULT_SNOWPACK);
+        // would be the same mistake in miniature. `compute_pair` additionally
+        // shares each cell's `year_of_day_contexts` build across both
+        // substrates rather than rebuilding it once per field (the-mire-perf
+        // follow-up, change 2) -- arithmetically identical to two separate
+        // `SubstrateField::compute` calls, just without the duplicate year.
+        let (wetness_field, snow_field) =
+            SubstrateField::compute_pair(&climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
         let factor_at = |cell: CellId| -> f64 {
             let wetness_mm = wetness_field.at(cell, day);
             let snow_mm = snow_field.at(cell, day);
