@@ -333,21 +333,32 @@ mod weathering {
         //   sampled reachable pairs, the fraction whose least-cost PATH
         //   IDENTITY differs between that pair's OWN cheapest and costliest
         //   sampled day (per-pair argmin/argmax, never a global day).
-        // - `median_redundancy`/`max_redundancy`/`no_alt_count` (same
-        //   `path_sample` pairs): the redundancy control F2 needs to be
-        //   interpretable at all — a pair joined by one dominant corridor
-        //   reads zero reroute at any weather strength regardless of
-        //   whether the mechanism works. On the DRY field only: each
+        // - `adjacent_pairs`/`redundancy_sample`/`median_redundancy`/
+        //   `max_redundancy`/`no_alt_count`: the redundancy control F2 needs
+        //   to be interpretable at all — a pair joined by one dominant
+        //   corridor reads zero reroute at any weather strength regardless
+        //   of whether the mechanism works. On the DRY field only: each
         //   sampled pair's best path, its interior cells (everything except
         //   the two endpoints) blocked to `u64::MAX` in a scratch field,
-        //   re-swept; the ratio second-best/best cost, `None` ("no
-        //   alternative") if blocking the best path leaves no path at all.
+        //   re-swept; the ratio second-best/best cost, or counted under
+        //   `no_alt_count` ("no alternative") if blocking the best path
+        //   leaves no path at all. A directly-adjacent pair (a 2-cell best
+        //   path) has an EMPTY interior — nothing to block — so the
+        //   re-sweep would trivially reproduce the same path and read
+        //   exactly `1.0`, indistinguishable from a genuine equal-cost
+        //   parallel corridor. Those pairs are counted (`adjacent_pairs`)
+        //   and EXCLUDED from `median_redundancy`/`max_redundancy`/
+        //   `no_alt_count` rather than silently folded into either —
+        //   `redundancy_sample` is the surviving population those three are
+        //   actually computed over (`path_sample - adjacent_pairs`).
         //
         // F2 and the redundancy control are measured over the SAME
         // stride-sampled subset of reachable pairs, not the full
         // population — see [`PATH_SAMPLE_STRIDE_TARGET`]'s doc comment.
         // Disclosed here and on the PILOT line (`path_sample=N`) rather than
-        // silently narrowed.
+        // silently narrowed. `reroute_frac`'s denominator is `path_sample`,
+        // NOT `redundancy_sample` — adjacent pairs stay in it (see the
+        // comment at that call site for why).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
         for seed in PILOT_SEEDS {
             let sample = build_sample(seed, &wc);
@@ -457,6 +468,8 @@ mod weathering {
             let stride = path_sample_stride(reachable_pairs.len());
             let mut path_sample_count = 0usize;
             let mut rerouted = 0usize;
+            let mut adjacent_pairs = 0usize;
+            let mut redundancy_sample_count = 0usize;
             let mut redundancy_ratios: Vec<f64> = Vec::new();
             let mut no_alternative = 0usize;
             for &(i, j) in reachable_pairs.iter().step_by(stride) {
@@ -467,7 +480,14 @@ mod weathering {
 
                 // F2: path identity at this pair's own cheapest vs costliest
                 // sampled day. Re-sweeps at exactly those two days — never
-                // all SAMPLE_DAYS again.
+                // all SAMPLE_DAYS again. Adjacent pairs (see the redundancy
+                // control below) are DELIBERATELY KEPT in this denominator,
+                // unlike the redundancy control, which excludes them: an
+                // adjacent pair structurally cannot re-route (there is only
+                // ever the one edge, weathered or not, so `path_a == path_b`
+                // always), so counting it here makes `reroute_frac`
+                // conservative — a slight undercount, never an inflation.
+                // Do not "fix" this by excluding them too.
                 let day_a = argmin_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
                 let day_b = argmax_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
                 let field_a = weathered_cost(&sample, day_a);
@@ -486,13 +506,25 @@ mod weathering {
 
                 // Redundancy control: on the DRY field, the best path's
                 // interior cells (everything but the two endpoints) blocked
-                // to u64::MAX in a scratch field, re-swept.
+                // to u64::MAX in a scratch field, re-swept. A directly
+                // adjacent pair's best path has NO interior to block — the
+                // re-sweep would trivially reproduce the same path and read
+                // exactly 1.0, indistinguishable from a genuine equal-cost
+                // parallel corridor — so it is counted and EXCLUDED here,
+                // never folded into the ratio distribution or into
+                // `no_alternative` (it was never tested, so it is neither
+                // "has an alternative" nor "has none").
                 let best_cost = dry_sweeps[i]
                     .cost_to(dst)
                     .expect("reachable_pairs only holds pairs with a finite dry cost");
                 let best_path = dry_sweeps[i]
                     .path_to(dst)
                     .expect("a finite dry cost implies a dry path");
+                if best_path.len() == 2 {
+                    adjacent_pairs += 1;
+                    continue;
+                }
+                redundancy_sample_count += 1;
                 let blocked: BTreeSet<CellId> =
                     best_path[1..best_path.len() - 1].iter().copied().collect();
                 let scratch = CellMap::from_fn(&sample.geo, |c| {
@@ -509,6 +541,12 @@ mod weathering {
                     None => no_alternative += 1,
                 }
             }
+            assert_eq!(
+                redundancy_sample_count,
+                redundancy_ratios.len() + no_alternative,
+                "seed {seed}: every non-adjacent sampled pair must land in \
+                 exactly one of redundancy_ratios or no_alternative"
+            );
             redundancy_ratios.sort_by(f64::total_cmp);
             let median_redundancy = if redundancy_ratios.is_empty() {
                 f64::NAN
@@ -525,7 +563,7 @@ mod weathering {
             // Per-seed progress: The Mire lost an hour of wall-clock to a run
             // with no visible progress and nothing recoverable.
             println!(
-                "PILOT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6} path_sample={path_sample_count} reroute_frac={reroute_frac:.6} median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} no_alt_count={no_alternative}",
+                "PILOT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6} path_sample={path_sample_count} reroute_frac={reroute_frac:.6} adjacent_pairs={adjacent_pairs} redundancy_sample={redundancy_sample_count} median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} no_alt_count={no_alternative}",
                 swings.len()
             );
         }
