@@ -138,17 +138,69 @@ fn vacant_for(&self, era: &EraClimate, cell: CellId, people: usize) -> bool
 uses, never serialized. Every call site has a people available:
 `self.records[c.record].core.people` is a `KindId` throughout.
 
-New `factor` semantics:
+New `factor` semantics — **graded, resolved at review**:
 
 - **Ice still zeroes the cell for everyone.** A glacier is not a niche
   disagreement.
-- Otherwise the value is **this people's own niche fit** at that cell, drawn
-  from per-species capacity rather than a global boolean. A cell with zero fit
-  for a people is uninhabitable *to that people* and freely habitable to
-  another.
+- Otherwise the value is **this people's own graded niche fit**, taken from
+  per-species capacity rather than a global boolean.
 
-So `factor` stops being `{0,1}` and becomes graded, which is what makes
-`eff_capacity` meaningful per people rather than a shared ranking.
+`factor` stops being `{0,1}`, which is what makes `eff_capacity` meaningful per
+people rather than a shared ranking. **No new fit function is written**: the fit
+is exactly what `niche_per_species_k` already composes —
+`ConditionResponse::eval` per axis against the `substrate_field` reading, with
+the axis semantics already authored (`lib.rs:1028`):
+
+```
+  temperature / moisture / insolation   buffer-able, floored by the species'
+                                        sovereignty_floor(mass, potency)
+  elevation                             HARD (floor 0.0)
+                                        "sovereignty buffers physiology but
+                                         not geometry"
+```
+
+### 3.1a Clinging to hostile ground is already modelled
+
+The requirement that a people be able to **hang on where it has no better
+choice** does not need new machinery. `ConditionResponse::eval` is
+`floor + (1 - floor) · devotion · exp(-z²/2)` — a Gaussian that decays but never
+reaches zero, lifted by a floor that
+`sovereignty_floor(mass, potency) = 0.95 · (1 - e^{-(0.15·ln mass + potency)})`
+derives from body mass and magical potency. Bigger and more magical bodies
+buffer environmental extremes; small mundane ones do not. Computed for the
+settling six:
+
+```
+  kobold      13.6 kg   floor 0.308
+  goblin      18.1 kg   floor 0.335
+  human       70.0 kg   floor 0.448
+  hobgoblin   74.8 kg   floor 0.453
+  bugbear    132.0 kg   floor 0.493
+  gnoll      136.1 kg   floor 0.495
+```
+
+So each retains **31–50% of peak suitability on its worst temperature, moisture
+and insolation** — a physiological account of why humanity hangs on in places it
+plainly should not. Two properties fall out that the design should not disturb:
+
+- **Differentiation survives the floors**, because elevation is unbuffered.
+  Kobold's 3000 m stronghold stays exclusive on the one axis no body mass can
+  argue with.
+- **Gnoll is the best-buffered of the six** (136 kg), so the roster's arid
+  specialist becomes widely persistent the moment the global moisture floor stops
+  excluding arid land — §2.1's bug and this campaign's fix meet at the same
+  species.
+
+**The one genuinely new constraint** is the famine threshold. `step_community`
+closes a community with `CauseOfEnd::Famine` when
+`pressure = population · NEED / eff_capacity >= COLLAPSE_PRESSURE` (2.0), and it
+does so *before* `grow` runs — so there is no negative-population hazard, but
+there is a floor below which nothing can cling: a community of population *p*
+survives only where `eff_capacity > p · NEED / 2`. Clinging is therefore possible
+exactly where graded fit leaves capacity above that bar, and impossible below it.
+That is the right shape — precarious, not immortal — and Task 0 must report where
+the bar actually falls, because it, not the niche, is what decides whether a
+remnant persists.
 
 ### 3.2 Per-species capacity replaces the shared field
 
@@ -166,11 +218,20 @@ reasons in (`pressure = population / eff_capacity`) is unchanged in units.
 - **One community per cell stays.** 0102 makes relaxing it free of design
   argument, but bundling it here would confound the measurement in §4 and
   double the blast radius. Separate campaign.
-- **`is_habitable` / `habitability_map` keep their definitions** and remain the
-  Lab's habitable-fraction metric and the embark seam. They stop being a
-  *placement gate*. This is a semantics change for a shipped metric and must be
-  said in the chronicle: "habitable" now means "habitable to a generic vale
-  dweller", not "somewhere anyone lives".
+- **`is_habitable` / `habitability_map` keep their definitions and their names —
+  for now — but stop gating placement.** Nathan's ruling at review: a global
+  tolerability rule "doesn't make any sense at all… it should have been based on
+  per-species tolerability from the very beginning," and the *name* is wrong.
+  Both accepted. The rename is nonetheless **deferred to its own campaign**, and
+  §7 q3 records why and corrects my earlier reasoning for deferring it.
+  Meanwhile the chronicle must say plainly that "habitable" now names *"land a
+  generic vale dweller would tolerate"* — a geographic statistic — and no longer
+  *"somewhere anyone lives."*
+- **The ocean stays closed to everyone.** `niche_per_species_k` yields
+  `K = 0` on every submerged cell for the whole roster (`lib.rs:1034`), so
+  aquatic and floating settlement remains impossible after this campaign. That is
+  a separate hard gate from the one being fixed here, and it is the remaining
+  blocker on "underwater, floating on the ocean" — flagged, not addressed.
 - **`demography_report_from`** and the Lab coexistence readout are untouched.
 - **No new stream labels, no new draws.** The gate does not roll dice; it reads
   fields. Stream consumption order is unchanged, so the pin-isolation tests
@@ -227,6 +288,15 @@ niches want. **Before** the rewire, over the probe seeds, measure:
    informative figure available before any code changes.
 3. The same for cells above 3000 m (kobold) and for ice-free cells outside the
    `-5..35 °C` band.
+4. **The clinging bar.** For each settling species, the count of land cells where
+   graded `eff_capacity` exceeds `NEED` (a lone survivor's famine threshold at
+   `pressure < 2`) but falls below what a daughter needs
+   (`DAUGHTER_MAX_PRESSURE = 0.7`). That band **is** the hang-on zone §3.1a
+   describes; if it is empty, marginal persistence is theoretical.
+5. **The expansion magnitude.** Total land cells with non-negligible fit for *at
+   least one* species, against today's habitable count. With sovereignty floors
+   of 0.31–0.50 this could approach *all unglaciated land*, so this number sizes
+   the risk in §6 and the cost in §5.
 
 Interpretation, fixed in advance:
 
@@ -255,11 +325,25 @@ Interpretation, fixed in advance:
 
 ## 6. Risks
 
-- **Graded `factor` changes pressure arithmetic.** `pressure = population /
-  eff_capacity` with a graded rather than binary factor may push communities
-  into collapse or runaway where the binary gate did not. The
-  `COLLAPSE_PRESSURE` runaway detector is the tripwire; watch the bake's
-  `collapsed`/`grew` tallies on the probe seeds before trusting any H1 result.
+- **The settleable set may balloon, and that grows the one accumulating layer.**
+  This is now the primary risk. Sovereignty floors of 0.31–0.50 mean every
+  settling species retains a third to a half of peak suitability on its worst
+  buffer-able axis, so *nearly all unglaciated land above sea level* may become
+  settleable at reduced capacity. That is the stated goal, but committed
+  settlements are the only layer that accumulates (decision 0100, corollary 4),
+  and they drive bake CPU and census hours. Task 0 item 5 sizes it **before** the
+  rewire. If the expansion is very large, the correct response is *not* to
+  re-tighten the gate but to raise the bar for *committing* a settlement — the
+  condensation threshold and `VIABLE_MIN` are the knobs, and
+  `SOC-settlement-tiers`' "commit the contingent, derive the regular" is the
+  principle.
+- **Graded `factor` changes pressure arithmetic**, though less dangerously than I
+  first assumed. `step_community` closes on `pressure >= COLLAPSE_PRESSURE`
+  *before* `grow` runs, so the `1 + GROWTH_RATE·(1 - pressure)` term can never
+  drive population negative. The live risk is a *rate* shift: many more
+  communities living near the famine bar means many more `CauseOfEnd::Famine`
+  closures and a ruin-heavy world. Watch the bake's `collapsed`/`grew`/`founded`
+  tallies on the probe seeds before trusting any H1 result.
 - **Founder-floor interaction.** `demography::founder::condense_tagged` already
   guarantees each species its strongest attractor. A per-species gate may make
   that floor load-bearing far more often; its "one deliberate exception to
@@ -270,20 +354,37 @@ Interpretation, fixed in advance:
   felt at every campaign close. Measure the world-build time on a probe seed
   (baseline: **1.96 s** release) before and after.
 
-## 7. Open questions for review
+## 7. Questions — resolved at review (2026-08-04)
 
-1. **Should `factor` return graded fit, or a boolean threshold on fit?** Graded
-   is more expressive and is what makes per-species ranking work; boolean is a
-   smaller change to the pressure arithmetic and less likely to destabilise §6's
-   first risk. Recommendation: graded, with the collapse tallies watched.
+1. **Graded or boolean `factor`? → GRADED** (Nathan). §3.1 and §3.1a are written
+   to it. Consequence: the fit comes from `niche_per_species_k`'s existing
+   `eval`/`sovereignty_floor` composition rather than any new function, and
+   marginal persistence becomes expressible rather than needing separate
+   machinery.
 2. **What is "non-negligible fit"** for Task 0's cell counts and for the gate's
    zero? A hard zero makes exclusion crisp; an epsilon avoids a cliff at the
    niche margin. Recommendation: pick it in Task 0 from the measured fit
    distribution rather than authoring a constant blind.
-3. **Does `HABITABLE_MIN_MOISTURE` survive at all?** §2.1 shows it excluding an
-   authored specialist from its own optimum. Once the gate is per-species the
-   floor has no remaining job in *placement*, but it still defines the Lab's
-   habitable-fraction metric and the embark seam. Recommendation: leave the
-   constant and its metric alone, and simply stop consulting them at the gate —
-   changing the metric's definition and the placement path in one campaign would
-   make the §4 measurement unreadable.
+3. **Does the global habitability rule survive? → NOT AS A GATE** (Nathan): it
+   "doesn't make any sense at all… it should have been based on per-species
+   tolerability from the very beginning," and its *name* makes no sense either.
+   Both accepted; §3.3 records it.
+
+   **The rename is deferred to its own campaign, and my earlier reason for
+   deferring it was wrong.** I argued that renaming would "make the §4
+   measurement unreadable." That is false — a rename is behaviour-neutral and
+   cannot move a measurement. The real reasons are size and reviewability:
+   **578 occurrences of "habitable"** across the repo, and `"habitable-fraction"`
+   is a **Lab metric name**, hence a census column, hence live in
+   `golden-pins.sql`, the analysis harness, and six published study pages. That
+   is a bounded mechanical campaign of its own, and bundling it here would bury a
+   behavioural change under several hundred lines of prose churn.
+
+   For the successor campaign: the honest name is in the module's own doc
+   comment, which already calls it *"where a vale-like place could be"* — so
+   `is_vale_like` / `vale_fraction`, keeping the measurement (a world's supply of
+   temperate wet lowland is genuinely worth knowing) and dropping the claim that
+   it bounds where anyone can live.
+4. **Aquatic and floating settlement** is still blocked after this campaign by a
+   *different* hard gate — `K = 0` on every submerged cell for the whole roster.
+   Not in scope; recorded so "creatures everywhere" is not read as delivered.
