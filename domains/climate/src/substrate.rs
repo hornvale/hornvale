@@ -35,6 +35,10 @@ pub struct DayContext {
 /// A material that accumulates weather and loses it over time.
 pub trait Substrate {
     /// What this substrate gains on this day.
+    ///
+    /// Implementations must return a non-negative value. The driver clamps
+    /// `sink`'s result to `[0.0, present + gained]`; a negative `gained`
+    /// would push that upper bound below the lower one and panic.
     /// type-audit: bare-ok(diagnostic-value: return)
     fn source(&self, ctx: &DayContext) -> f64;
 
@@ -42,9 +46,11 @@ pub trait Substrate {
     ///
     /// `present` is the argument that makes this a recurrence: a sink that
     /// reads the substrate's own state cannot be folded into a convolution
-    /// kernel. Implementations must return a non-negative loss and must not
-    /// exceed `present` (the driver clamps, but a correct sink does not rely
-    /// on that).
+    /// kernel. Implementations must return a non-negative loss; the driver
+    /// clamps the result to at most `present` **plus this day's `source`
+    /// gain** (not `present` alone), since the loss is applied after the
+    /// gain lands. A correct sink should not rely on the clamp, but may
+    /// return up to that looser bound.
     /// type-audit: bare-ok(diagnostic-value: present), bare-ok(diagnostic-value: return)
     fn sink(&self, ctx: &DayContext, present: f64) -> f64;
 
@@ -217,8 +223,24 @@ mod tests {
     fn a_state_dependent_sink_is_honoured() {
         // The property that forced a recurrence over a convolution: a sink
         // that switches on the substrate's OWN state cannot be expressed as a
-        // weighted sum over past forcing. Here the sink is off below a
-        // threshold, so the substrate parks ABOVE what a linear model gives.
+        // weighted sum over past forcing. With `present` genuinely threaded
+        // through, Thresholded locks onto a period-5 cycle once it crosses
+        // the threshold: present after each day runs ...10 -> 6 -> 7 -> 8 ->
+        // 9 -> 10 -> 6 -> ... . Year 1's climb from zero (days 1-10 rising
+        // 1..10) is a transient that year 2 does not repeat, but years 2 and
+        // 3 land on the identical cycle (both start their year at
+        // present == 10.0), so convergence fires at years_run == 3. Because
+        // 360 is divisible by the cycle's period of 5, the final day of
+        // every post-transient year is exactly the cycle's peak, 10.0.
+        //
+        // A driver that silently discards `present` (e.g. always evaluating
+        // the sink against 0.0, as a mutation test on `spin_up` did) turns
+        // Thresholded into an unbounded accumulator: it never converges, and
+        // its last day is some ever-growing value strictly greater than
+        // 10.0 -- a bare `>= 10.0` cannot distinguish that from the correct,
+        // convergent, EXACTLY-10.0 fixed point. Pinning `converged`,
+        // `years_run`, and the exact value together is what makes the two
+        // worlds distinguishable.
         struct Thresholded;
         impl Substrate for Thresholded {
             fn source(&self, _ctx: &DayContext) -> f64 {
@@ -232,10 +254,18 @@ mod tests {
             }
         }
         let out = spin_up(&Thresholded, &flat_year(360), 1e-9);
-        let last = *out.trajectory.last().expect("non-empty");
         assert!(
-            last >= 10.0,
-            "the threshold sink did not hold the floor: {last}"
+            out.converged,
+            "a correctly-threaded sink locks onto a period-5 cycle and converges"
+        );
+        assert_eq!(
+            out.years_run, 3,
+            "year 1 is a transient; years 2 and 3 must match exactly"
+        );
+        let last = *out.trajectory.last().expect("non-empty");
+        assert_eq!(
+            last, 10.0,
+            "the threshold sink did not lock onto its exact fixed point: {last}"
         );
     }
 }
