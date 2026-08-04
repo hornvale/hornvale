@@ -378,6 +378,40 @@ The pilot also settles the scope question the seed count depends on, which is
 why the population is not fixed here. The Mire's 200 seeds is the target for
 F3 comparability; whether F1/F2 can afford it is a measured question.
 
+## 6a. What these measurements are conditional on (added 2026-08-04)
+
+**Every readout here is measured between settlement pairs, so every readout is
+conditional on the settlement geography.** That geography is scheduled to
+change. The parallel campaign **The Keeping** targets the species-blind
+habitability gate; its §5 states that every seed re-places, and its H1/H3
+predict *more* settlements in *more* clusters than today's 6–12. The Fare's
+pilot measured 189–375 settlements per seed at the one-per-cell ~110 km floor
+(decision 0102 records that floor as an index artifact, separately removable).
+
+This is a semantic collision `make preflight` cannot detect — it compares
+ancestry, not meaning. It is recorded here rather than discovered later.
+
+**The Fare is not blocked on it, for two reasons.** The Keeping is currently
+stopped: its own Task 0 falsified its §3, and its successor lattice puts the
+world-identity-moving step (B+C, per-species capacity desaturated) behind a
+naming pass and ahead of three more. And under decision 0099 re-placement is a
+cost rather than a corruption, so there is no epoch ritual coupling the two.
+
+**The mechanism finding should outlive the geography, and that is stated here
+as a prediction so it can be wrong.** F2 measures whether weather changes which
+road is cheapest. Scattering settlements lengthens the median route, and a
+longer route crosses more terrain and more distinct weather. So if The Keeping
+lands and re-places settlements more widely, **F2's re-routing fraction should
+rise, not fall** — and F1's cost swing should rise with it, for the
+correlation-length reason §4 already gives. A post-Keeping re-run that finds F2
+*falling* would falsify the mechanism this campaign proposes, not merely
+restate it on new ground.
+
+The honest statement for the chronicle: The Fare's numbers are a measurement of
+*this* world's settlement geography, and its *mechanism* is a claim about
+terrain and weather that should survive re-placement. The first is perishable;
+the second is the finding.
+
 ## 7. Operational constraints
 
 - **The Mac is the gate box; lefford is the heavy/census box** (decision
