@@ -79,6 +79,44 @@ the niche stack survives only as a **report**. Consequences today:
   they pile into the same few high-capacity river basins — which is what the
   carpets are.
 
+### 2.1 The gnoll case — the bug is already live and has a name
+
+The six settling species' authored optima are not near-clones. They are well
+separated on every axis:
+
+```
+  species     temp °C      moisture      insolation    elevation m
+  kobold       6.0 ±14     0.45 ±0.60    0.04 ±0.12    3000 ±1100
+  hobgoblin   13.0 ±10     0.35 ±0.30    0.19 ±0.13     600 ±1400
+  human       14.0 ±29     0.50 ±0.70    0.25 ±0.45    1500 ±4000
+  goblin      18.0 ±28     0.50 ±0.60    0.13 ±0.30    1500 ±3000
+  bugbear     21.0 ±11     0.82 ±0.20    0.15 ±0.40     150 ±1200
+  gnoll       29.0 ±9      0.12 ±0.12    0.08 ±0.10     500 ±1300
+```
+
+Four specialists in distinct corners — cold dark highland (kobold), cool dry
+lowland (hobgoblin), hot wet lowland (bugbear), hot **arid** lowland (gnoll) —
+plus two deliberate generalists carrying the wide response curves (goblin,
+human). A 23 °C temperature ladder and a moisture range spanning arid to
+saturated.
+
+Now put that beside the global gate's aridity floor:
+
+```
+  HABITABLE_MIN_MOISTURE = 0.2      (domains/climate/src/habitability.rs:13)
+  gnoll moisture optimum  = 0.12, width 0.12
+```
+
+**The gnoll's optimum is below the floor.** Its ideal ground is classified
+uninhabitable — for everyone — by a threshold that has never heard of gnolls.
+Meaningful fit runs roughly 0.0–0.24 and the gate admits only ≥ 0.2, so the
+roster's arid specialist is confined permanently to the wettest sliver of its own
+niche.
+
+This is not a coarse approximation to be refined later. It is an authored species
+excluded from the conditions it was authored for, and it is the clearest single
+statement of why this campaign exists.
+
 ## 3. Design
 
 ### 3.1 The gate becomes per-species
@@ -155,24 +193,48 @@ authored stronghold predicts them.
 
 **H3 — count.** Total settlements rises. No target: the direction is the claim.
 
-**H4 — the null, stated in advance.** Only **6 of 30** authored species are
-`SocialForm::Settled` (bugbear, gnoll, goblin, hobgoblin, kobold, human) — five
-goblinoids and a generalist. **If their niches substantially overlap, making the
-gate species-aware will barely move H1–H3**, and the finding is that *the
-roster*, not the gate, is the binding constraint on diversity. That is a real
-possible outcome, it would be the campaign's headline, and it must not be
-rescued by retuning a niche after unblinding.
+**H4 — the null, stated in advance.** Spread *optima* do not guarantee the
+*world* offers cells in those corners. **If a typical world has little or no
+land at (29 °C, moisture ≈ 0.12), gnolls stay rare after the rewire for a
+geographic reason rather than a gate reason** — and likewise for kobold above
+3000 m, whose stronghold the niche doc comment reports at p79 of settleable
+land. If H1–H3 barely move, the finding is that *the world's supply of extreme
+ground*, not the gate, bounds diversity — pointing at terrain and climate rather
+than at placement. That is a real possible outcome, it would be the campaign's
+headline, and it must not be rescued by retuning a niche or a threshold after
+unblinding.
 
-### Task 0 — the cheap pre-check that can redirect the campaign
+*An earlier draft of H4 predicted the opposite risk — that the six settling
+species' niches would substantially overlap, making a species-aware gate a
+no-op. §2.1 falsified that by inspection before the rewire was written: the
+optima are well separated on every axis. The hypothesis is replaced rather than
+deleted, because the residual risk is real and is a different claim.*
 
-**Before** the rewire, measure pairwise niche overlap across the six settling
-species over a probe seed's settleable cells: for each pair, the fraction of
-cells where both have non-negligible fit, and each species' best-fit cell count.
+### Task 0 — the field half of the pre-check
 
-- **Overlap low** (species stake distinct ground) → H1–H3 are live; proceed.
-- **Overlap high** (all six want the same cells) → **stop and report.** The
-  campaign becomes a roster campaign, the rewire is still correct but is not the
-  unlock, and Nathan chooses. This is a genuine gate, not a formality.
+The **static half is done** and is recorded in §2.1: the authored optima are well
+separated, so the original overlap worry is closed and needs no measurement.
+
+What remains is the field half — whether the *world* supplies the ground those
+niches want. **Before** the rewire, over the probe seeds, measure:
+
+1. Per settling species, the count of land cells whose fit is non-negligible, and
+   the count where it is the **best-fit** species (the frame the kobold niche's
+   own validation already uses).
+2. The land-cell count at gnoll's corner (moisture < 0.2, temp > 25 °C) — ground
+   that is currently uninhabitable *by definition* and would become gnoll
+   country. **This number is the campaign's headroom**, and it is the single most
+   informative figure available before any code changes.
+3. The same for cells above 3000 m (kobold) and for ice-free cells outside the
+   `-5..35 °C` band.
+
+Interpretation, fixed in advance:
+
+- **Headroom large** → H1–H3 are live; proceed to the rewire.
+- **Headroom small** (the world has little extreme ground) → **stop and report.**
+  The rewire is still correct, but the unlock is upstream in terrain/climate, and
+  Nathan chooses whether to continue. This remains a genuine gate, not a
+  formality.
 
 ## 5. Blast radius
 
@@ -214,7 +276,14 @@ cells where both have non-negligible fit, and each species' best-fit cell count.
    is more expressive and is what makes per-species ranking work; boolean is a
    smaller change to the pressure arithmetic and less likely to destabilise §6's
    first risk. Recommendation: graded, with the collapse tallies watched.
-2. **What is "non-negligible fit"** for Task 0's overlap measure and for the
-   gate's zero? A hard zero makes exclusion crisp; an epsilon avoids a cliff at
-   the niche margin. Recommendation: pick it in Task 0 from the measured fit
+2. **What is "non-negligible fit"** for Task 0's cell counts and for the gate's
+   zero? A hard zero makes exclusion crisp; an epsilon avoids a cliff at the
+   niche margin. Recommendation: pick it in Task 0 from the measured fit
    distribution rather than authoring a constant blind.
+3. **Does `HABITABLE_MIN_MOISTURE` survive at all?** §2.1 shows it excluding an
+   authored specialist from its own optimum. Once the gate is per-species the
+   floor has no remaining job in *placement*, but it still defines the Lab's
+   habitable-fraction metric and the embark seam. Recommendation: leave the
+   constant and its metric alone, and simply stop consulting them at the gate —
+   changing the metric's definition and the placement path in one campaign would
+   make the §4 measurement unreadable.
