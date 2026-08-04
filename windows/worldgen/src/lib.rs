@@ -4521,8 +4521,10 @@ pub fn family_daughters(
 /// regime freezes to the isolate rate ([`CascadeRegime::new`]`(0, 1)`)
 /// instead of the historical `SETTLED` rate. Authored comfortably between
 /// two bracketing values computed from `hornvale_species::lifespan` at the
-/// registry's authored masses: the longest-lived of the four settling
-/// peoples, bugbear at ~80.9 yr (132.0 kg, `Endotherm`), and the
+/// registry's authored masses: the longest-lived of the six settling
+/// peoples, gnoll at ~81.5 yr (136.1 kg, `Endotherm` — heavier than bugbear's
+/// 132.0 kg/~80.9 yr, which held this rank until The Vacancy added gnoll;
+/// human's 70.0 kg/~69.0 yr does not challenge it), and the
 /// shortest-lived dragon, white/black-dragon at ~163.4 yr (2200.0 kg,
 /// `Endotherm`). Also clear of the wild `Solitary` beasts
 /// (otyugh/xorn/rust-monster/owlbear), which top out around ~110 yr and so
@@ -7798,18 +7800,25 @@ mod tests {
     /// seed 42's world went 367 -> 362 glossed names with all three 48s
     /// unchanged, so the sky-occlusion invariant this test exists to guard
     /// held; only the corroborating gloss count moved.
+    ///
+    /// The Generalist re-pin (2026-08-03): human is the sixth Settled people
+    /// at seed 42's default roster, and a sixth peopled pantheon forms — all
+    /// three 48s move to 58 in lockstep (one new people, one new pantheon),
+    /// which is exactly the shape this test guards: the pantheon must not
+    /// SHRINK, and growing by one people's belief-set is expected, not a
+    /// regression. `name-gloss` moved 196 -> 275 for the same reason this
+    /// test's own history already documents (a roster change redecides
+    /// settlement survival and naming); re-pinned rather than dropped, per
+    /// this test's stated policy of re-pinning an exact count over weakening
+    /// it.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 48);
-        assert_eq!(count("deity-name"), 48);
-        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
-        // lefford, 0063): the BAKE label bump reseats settlements, moving
-        // the glossed-name count from 362 to 196. The pantheon-size counts
-        // above (48 each) are unmoved — only settlement-derived naming did.
-        assert_eq!(count("name-gloss"), 196);
+        assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 58);
+        assert_eq!(count("deity-name"), 58);
+        assert_eq!(count("name-gloss"), 275);
     }
 
     #[test]
@@ -8040,19 +8049,19 @@ mod tests {
         // the live psyche key-set (now a superset of Settled).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
-        // The `Settled` set is exactly the five peoples (The Vacancy T9 added
-        // the gnoll).
+        // The `Settled` set is exactly the six peoples (The Vacancy T9 added
+        // the gnoll; The Generalist added the human).
         let settled: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| k.0)
             .collect();
-        let five_peoples: std::collections::BTreeSet<&'static str> =
-            ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
+        let six_peoples: std::collections::BTreeSet<&'static str> =
+            ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"]
                 .into_iter()
                 .collect();
-        assert_eq!(settled, five_peoples, "Settled is exactly the five peoples");
+        assert_eq!(settled, six_peoples, "Settled is exactly the six peoples");
 
         // The wild-agentified `{Solitary, Gregarious}` set: the twenty-one
         // mobile, non-settled kinds (ten pre-Vacancy, The Vacancy T7's six,
@@ -8111,10 +8120,10 @@ mod tests {
     fn cascade_regime_of_matches_the_authored_regime_map() {
         // THE SOLITARY TONGUE (Task 2): cascade_regime_of is a total, pure
         // function of a biosphere row (no world/seed needed). Each of the
-        // four peoples (Settled) draws at the historical SETTLED rate; each
+        // six peoples (Settled) draws at the historical SETTLED rate; each
         // dragon (Solitary, long-lived) freezes to the isolate rate.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-        for people in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+        for people in ["goblin", "kobold", "hobgoblin", "bugbear", "gnoll", "human"] {
             let bio = wc
                 .biosphere
                 .get_by_label(people)
@@ -8928,9 +8937,16 @@ mod tests {
         // The Tumult (predation epoch, 2026-07-26): predation reseats the
         // flagship onto a cell whose vantage observes two salient phenomena —
         // re-pinned 1 -> 2 on the same "incidental count" basis.
+        //
+        // The Generalist re-pin (2026-08-03): human joining the coexistence
+        // stack redecides which species dominates which attractor at this
+        // seed, which reseats the flagship again — its vantage now observes
+        // one salient phenomenon. Re-pinned 2 -> 1 on the same "incidental
+        // count, the cascade running is what matters" basis this test's own
+        // comment already states.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            2
+            1
         );
     }
 

@@ -382,6 +382,10 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "south-west",
         "north-west",
     ],
+    // Epoch 8 — The Generalist (2026-08-03): the sixth people, human. A
+    // single-concept cohort, appended per this module's absolute rule rather
+    // than folded into any earlier peopled-kind cohort (0, 2).
+    &["human-kind"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

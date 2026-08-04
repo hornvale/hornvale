@@ -374,21 +374,23 @@ Tithe](../chronicle/the-tithe.md).
   (`pays-tribute-to`) over the ledger's existing entity-to-entity fact
   envelope, and no new fact shape, cause of ending, or stream label.
 
-Seed 42 under a spinning sky now grows **329 settlements** as the present
+Seed 42 under a spinning sky now grows **232 settlements** as the present
 frame of its derived history (the field-condensation model above supplies the
 substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
-competitive niche-K stack, five peoples share the landscape — the four
+competitive niche-K stack, six peoples share the landscape — the four
 goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The
-Branches](../chronicle/the-branches.md) gave them two new members) and the
-gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added —
-but history now separates them into distinct territories and each holds its own
-chief settlement: the hobgoblin **Feamjeafeoqoanoagoo** (127 souls,
+Branches](../chronicle/the-branches.md) gave them two new members), the
+gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added,
+and the human, the no-refuge generalist [The
+Generalist](../chronicle/the-generalist.md) added — but history now separates
+them into distinct territories and each holds its own
+chief settlement: the hobgoblin **Geoboegetoanaoka** (127 souls,
 tropical-rainforest) is the world flagship, with the gnoll
-**Gzaadmzhooqdsootngsootqzhoof** (119, tropical-rainforest), the bugbear
-**Qvooshtvoagootao** (118, tropical-seasonal-forest), the goblin
-**Fneksvotngetnoaboo** (118, tropical-rainforest), and the kobold
-**Roqrrarogxok** (110, temperate-forest) each holding their own — real,
+**Pzopdzhaxgzavshmo** (119, tropical-rainforest), the human **Kezngomo**
+(119, temperate-forest), the bugbear **Goodogododaga** (118,
+tropical-seasonal-forest), the goblin **Nakano** (118, tropical-rainforest),
+and the kobold **Roo** (90, temperate-forest) each holding their own — real,
 phonology-drawn names
 (Campaign Y2-3, The Tongues; Campaign 27, The Words). One selection rule is
 worth stating because it is easy to misread: a *people's* chief settlement is
@@ -403,7 +405,7 @@ the equilibrium snapshot's, because a settlement's headcount is now something
 that *grew* there over the history rather than a single field readout. The
 gallery holds the exit-demo pair: [The
 Peoples of Seed 42](../gallery/settlement-seed-42.md) against [its
-tidally-locked twin](../gallery/settlement-seed-42-locked.md) (250
+tidally-locked twin](../gallery/settlement-seed-42-locked.md) (224
 settlements), where habitability's collapse toward the terminator ring
 (Campaign 3c's biome map already predicted it) reshapes the same globe. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md) and [Campaign Y2-0, Firm

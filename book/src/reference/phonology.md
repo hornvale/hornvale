@@ -186,6 +186,43 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Settlement | Tenjaveng | /tenjaveŋ/ | `[[t'enjaveN]]` | <audio controls preload="none" src="../audio/6afe0c78.mp3"></audio> |
 | Deity | Tongxong | /toŋxoŋ/ | `[[t'oNxoN]]` | <audio controls preload="none" src="../audio/ad90da74.mp3"></audio> |
 
+## Human
+
+### Inventory
+
+| Segment | Romanization | IPA | Features |
+|---|---|---|---|
+| Labial/Stop/voiceless | `p` | `p` | voiceless labial stop |
+| Alveolar/Stop/voiceless | `t` | `t` | voiceless alveolar stop |
+| Velar/Stop/voiceless | `k` | `k` | voiceless velar stop |
+| Velar/Stop/voiced | `g` | `g` | voiced velar stop |
+| Labial/Fricative/voiceless | `f` | `f` | voiceless labial fricative |
+| Labial/Fricative/voiced | `v` | `v` | voiced labial fricative |
+| Velar/Fricative/voiceless | `x` | `x` | voiceless velar fricative |
+| Alveolar/Sibilant/voiced | `z` | `z` | voiced alveolar sibilant |
+| Postalveolar/Sibilant/voiceless | `sh` | `ʃ` | voiceless postalveolar sibilant |
+| Postalveolar/Sibilant/voiced | `zh` | `ʒ` | voiced postalveolar sibilant |
+| Labial/Nasal/voiced | `m` | `m` | voiced labial nasal |
+| Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
+| Mid/Front/unrounded | `e` | `e` | mid front vowel |
+| Low/Central/unrounded | `a` | `a` | low central vowel |
+| Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
+
+### Phonotactics
+
+- **Onsets:** nasal, stop, sibilant+nasal
+- **Nuclei:** v, v+v
+- **Codas:** ∅, ∅
+
+### Sample names
+
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Maagaga | /maagaga/ | `[[m'aagaga]]` | <audio controls preload="none" src="../audio/da22e431.mp3"></audio> |
+| Settlement | Teaznga | /teazŋa/ | `[[t'eazNa]]` | <audio controls preload="none" src="../audio/ae45a83f.mp3"></audio> |
+| Settlement | Zhngazhnge | /ʒŋaʒŋe/ | `[[ZN'aZNe]]` | <audio controls preload="none" src="../audio/3e8ea916.mp3"></audio> |
+| Deity | Ngeota | /ŋeota/ | `[[N'eota]]` | <audio controls preload="none" src="../audio/90a8fb56.mp3"></audio> |
+
 ## Kobold
 
 ### Inventory

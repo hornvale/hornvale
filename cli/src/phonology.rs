@@ -38,8 +38,9 @@ pub fn render_phonology() -> String {
 
     // Speaker-only: the phonology page needs language, so it covers exactly the
     // minded kinds that speak. The psyche registry can hold a minded non-speaker,
-    // so skip any kind absent from the articulation registry; the four peoples
-    // and the three dragons (speakers since The Solitary Tongue) are all covered.
+    // so skip any kind absent from the articulation registry; the six settling
+    // peoples and the three dragons (speakers since The Solitary Tongue) are all
+    // covered.
     // `iter()` is `KindId`-ascending, byte-identical to the old
     // registry-then-filter order.
     let speakers = hornvale_language::articulation_registry();

@@ -7,6 +7,7 @@ The Booxo are bugbears.
 The Kabja are gnolls.
 The Woove are goblins.
 The Boove are hobgoblins.
+The Ngeevnao are humans.
 The Ngosho are kobolds.
 
 ### Tongues
@@ -19,6 +20,8 @@ Sa Woowoo Woove. (in the goblin tongue: "The Woove are goblins.")
 Sa Weveawea Pao. (in the goblin tongue: "Pao is the earth.")
 Boove Beebo Boa Boo. (in the hobgoblin tongue: "The Boove are hobgoblins.")
 Pao Veabea Boa Be. (in the hobgoblin tongue: "Pao is the earth.")
+Ngeevnao Vavneozhoa Voosaa. (in the human tongue: "The Ngeevnao are humans.")
+Pao Saseo Voosaa. (in the human tongue: "Pao is the earth.")
 Ngosho Ngod Nga. (in the kobold tongue: "The Ngosho are kobolds.")
 Pao Ngod Ngotngo. (in the kobold tongue: "Pao is the earth.")
 
@@ -26,6 +29,7 @@ bugbear: gap — planet (no entry in this lexicon)
 gnoll: gap — planet (no entry in this lexicon)
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
+human: gap — planet (no entry in this lexicon)
 kobold: gap — planet (no entry in this lexicon)
 
 ### The Chorus
@@ -36,6 +40,7 @@ The Booxo are bugbears — ourselves.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
+The Ngeevnao are humans — rivals.
 The Ngosho are kobolds — rivals.
 Pao is the earth with two moons.
 The moons cross because they are Boko's kin.
@@ -51,6 +56,7 @@ The Booxo are bugbears — ourselves.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
+The Ngeevnao are humans — rivals.
 The Ngosho are kobolds — rivals.
 Pao is the earth with two moons.
 The moons cross because Boko walks the sky, slowly.
@@ -66,6 +72,7 @@ The Booxo are bugbears — neighbors.
 The Kabja are gnolls — ourselves.
 The Woove are goblins — neighbors.
 The Boove are hobgoblins — neighbors.
+The Ngeevnao are humans — neighbors.
 The Ngosho are kobolds — neighbors.
 Pao is the earth with two moons.
 The moons cross because they are Ja's kin.
@@ -81,6 +88,7 @@ The Booxo are bugbears — neighbors.
 The Kabja are gnolls — ourselves.
 The Woove are goblins — neighbors.
 The Boove are hobgoblins — neighbors.
+The Ngeevnao are humans — neighbors.
 The Ngosho are kobolds — neighbors.
 Pao is the earth with two moons.
 The moons cross because Ja walks the sky, slowly.
@@ -96,6 +104,7 @@ The Booxo are bugbears — neighbors.
 The Kabja are gnolls — neighbors.
 The Woove are goblins — ourselves.
 The Boove are hobgoblins — neighbors.
+The Ngeevnao are humans — neighbors.
 The Ngosho are kobolds — neighbors.
 Pao is the earth.
 The day returns because the sky must be crossed.
@@ -110,6 +119,7 @@ The Booxo are bugbears — neighbors.
 The Kabja are gnolls — neighbors.
 The Woove are goblins — ourselves.
 The Boove are hobgoblins — neighbors.
+The Ngeevnao are humans — neighbors.
 The Ngosho are kobolds — neighbors.
 Pao is the earth.
 The moons are counted and known to the priesthood.
@@ -124,6 +134,7 @@ The Booxo are bugbears — rivals.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — ourselves.
+The Ngeevnao are humans — rivals.
 The Ngosho are kobolds — rivals.
 Pao is the earth.
 The day returns, as all things return.
@@ -138,11 +149,42 @@ The Booxo are bugbears — rivals.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — ourselves.
+The Ngeevnao are humans — rivals.
 The Ngosho are kobolds — rivals.
 Pao is the earth.
 The moons are counted and known to the priesthood.
 The moons cross because Koonkem strides the sky, slowly.
 The day returns because Vooboo strides the sky, briskly.
+
+*In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+
+#### As the Ngeevnao tell it
+
+Pao is the earth.
+The day returns because the sky must be crossed.
+The Booxo are bugbears — neighbors.
+The Kabja are gnolls — neighbors.
+The Woove are goblins — neighbors.
+The Boove are hobgoblins — neighbors.
+The Ngeevnao are humans — ourselves.
+The Ngosho are kobolds — neighbors.
+
+*In truth, Pao is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+
+##### As the priesthood of the Ngeevnao teach it
+
+Pao Saseo Voovaa. ("Pao is the earth — as it is taught.")
+
+Pao is the earth.
+The moons are counted and known to the priesthood.
+The moons cross because Vaezho strides the sky, slowly.
+The day returns to keep the balance.
+The Booxo are bugbears — neighbors.
+The Kabja are gnolls — neighbors.
+The Woove are goblins — neighbors.
+The Boove are hobgoblins — neighbors.
+The Ngeevnao are humans — ourselves.
+The Ngosho are kobolds — neighbors.
 
 *In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -155,6 +197,7 @@ The Booxo are bugbears — rivals.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
+The Ngeevnao are humans — rivals.
 The Ngosho are kobolds — ourselves.
 
 *In truth, Pao is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -170,6 +213,7 @@ The Booxo are bugbears — rivals.
 The Kabja are gnolls — rivals.
 The Woove are goblins — rivals.
 The Boove are hobgoblins — rivals.
+The Ngeevnao are humans — rivals.
 The Ngosho are kobolds — ourselves.
 
 — though the folk say The moons cross because they answer Ngotsa.
@@ -200,6 +244,10 @@ Among the Boove, the sky has darkened, now and again.
 The priesthood of the Boove numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
 The Boove's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Ngeevnao, the sky has darkened, now and again.
+The priesthood of the Ngeevnao numbers the darkenings: 4010.
+The next darkening, it teaches, comes on day 36531.
+The Ngeevnao's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Ngosho, the sky has darkened, now and again.
 The priesthood of the Ngosho numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
@@ -209,6 +257,7 @@ The Ngosho's own priesthood taught wrongly, and could be shown wrong by any who 
 *In truth, the Kabja's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Woove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Boove's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Ngeevnao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
@@ -219,6 +268,7 @@ The Bobboo are bugbears.
 The Loshjo are gnolls.
 The Mepmee are goblins.
 The Webwee are hobgoblins.
+The Foetjee are humans.
 The Dngooqdngo are kobolds.
 
 ### Tongues
@@ -231,6 +281,8 @@ Mepmee Maa. (in the goblin tongue: "The Mepmee are goblins.")
 Boaboo Moameo. (in the goblin tongue: "Boaboo is the earth.")
 Webwee Gwobwee Wo. (in the hobgoblin tongue: "The Webwee are hobgoblins.")
 Boaboo Woowoaweo Wo. (in the hobgoblin tongue: "Boaboo is the earth.")
+Foetjee Veabjoo. (in the human tongue: "The Foetjee are humans.")
+Boaboo Vevee. (in the human tongue: "Boaboo is the earth.")
 Dngooqdngo Dngaa. (in the kobold tongue: "The Dngooqdngo are kobolds.")
 Boaboo Dngashgsho. (in the kobold tongue: "Boaboo is the earth.")
 
@@ -238,6 +290,7 @@ bugbear: gap — planet (no entry in this lexicon)
 gnoll: gap — planet (no entry in this lexicon)
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
+human: gap — planet (no entry in this lexicon)
 kobold: gap — planet (no entry in this lexicon)
 
 ### The Chorus
@@ -248,6 +301,7 @@ The Bobboo are bugbears — ourselves.
 The Loshjo are gnolls — rivals.
 The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — rivals.
+The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
 Boaboo is the earth with one moon.
 The moon crosses because Bao walks the sky, slowly.
@@ -263,6 +317,7 @@ The Bobboo are bugbears — ourselves.
 The Loshjo are gnolls — rivals.
 The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — rivals.
+The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
 Boaboo is the earth with one moon.
 The moon crosses because Bao walks the sky, slowly.
@@ -276,6 +331,7 @@ The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — ourselves.
 The Mepmee are goblins — neighbors.
 The Webwee are hobgoblins — neighbors.
+The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
 Boaboo is the earth with one moon.
 The moon crosses because it is Jokjo's kin.
@@ -291,6 +347,7 @@ The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — ourselves.
 The Mepmee are goblins — neighbors.
 The Webwee are hobgoblins — neighbors.
+The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
 Boaboo is the earth with one moon.
 The moon crosses because it answers Jokjo.
@@ -306,6 +363,7 @@ The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — neighbors.
 The Mepmee are goblins — ourselves.
 The Webwee are hobgoblins — neighbors.
+The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
 Boaboo is the earth.
 The day returns, as all things return.
@@ -320,6 +378,7 @@ The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — neighbors.
 The Mepmee are goblins — ourselves.
 The Webwee are hobgoblins — neighbors.
+The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
 Boaboo is the earth.
 The moon is counted and known to the priesthood.
@@ -334,6 +393,7 @@ The Bobboo are bugbears — rivals.
 The Loshjo are gnolls — rivals.
 The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — ourselves.
+The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
 Boaboo is the earth.
 The day returns, as all things return.
@@ -348,11 +408,42 @@ The Bobboo are bugbears — rivals.
 The Loshjo are gnolls — rivals.
 The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — ourselves.
+The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
 Boaboo is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Woadngeq's kin.
 The day returns to keep the balance.
+
+*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
+#### As the Foetjee tell it
+
+Boaboo is the earth.
+The day returns to keep the balance.
+The Bobboo are bugbears — neighbors.
+The Loshjo are gnolls — neighbors.
+The Mepmee are goblins — neighbors.
+The Webwee are hobgoblins — neighbors.
+The Foetjee are humans — ourselves.
+The Dngooqdngo are kobolds — neighbors.
+
+*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
+##### As the priesthood of the Foetjee teach it
+
+Boaboo Vevee. ("Boaboo is the earth — as it is taught.")
+
+Boaboo is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because Pjoefofa walks the sky, slowly.
+The day returns to keep the balance.
+The Bobboo are bugbears — neighbors.
+The Loshjo are gnolls — neighbors.
+The Mepmee are goblins — neighbors.
+The Webwee are hobgoblins — neighbors.
+The Foetjee are humans — ourselves.
+The Dngooqdngo are kobolds — neighbors.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -365,6 +456,7 @@ The Bobboo are bugbears — rivals.
 The Loshjo are gnolls — rivals.
 The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — rivals.
+The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — ourselves.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
@@ -380,6 +472,7 @@ The Bobboo are bugbears — rivals.
 The Loshjo are gnolls — rivals.
 The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — rivals.
+The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — ourselves.
 
 *In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
@@ -408,6 +501,10 @@ Among the Webwee, the sky has darkened, now and again.
 The priesthood of the Webwee numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36337.
 The Webwee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Foetjee, the sky has darkened, now and again.
+The priesthood of the Foetjee numbers the darkenings: 49.
+The next darkening, it teaches, comes on day 36337.
+The Foetjee's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Dngooqdngo, the sky has darkened, now and again.
 The priesthood of the Dngooqdngo numbers the darkenings: 81.
 The next darkening, it teaches, comes on day 36337.
@@ -417,6 +514,7 @@ The Dngooqdngo's own priesthood taught wrongly, and could be shown wrong by any 
 *In truth, the Loshjo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Mepmee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Webwee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Foetjee's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the Dngooqdngo's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the darkenings of the first hundred years number 81.*
 
@@ -427,6 +525,7 @@ The Zooqsha are bugbears.
 The Pjojpjoj are gnolls.
 The Zhooqsa are goblins.
 The Zhooqsha are hobgoblins.
+The Shoammoem are humans.
 The Jaojjao are kobolds.
 
 ### Tongues
@@ -439,6 +538,8 @@ Zhooqsa Zhaek Sog. (in the goblin tongue: "The Zhooqsa are goblins.")
 Pjajpjaj Zaeg Sog. (in the goblin tongue: "Pjajpjaj is the earth.")
 Zhooqsha Qjoo Zhoazhae. (in the hobgoblin tongue: "The Zhooqsha are hobgoblins.")
 Pjajpjaj Qjoo Shoezae. (in the hobgoblin tongue: "Pjajpjaj is the earth.")
+Shoammoem Zhaamshoam Zhem. (in the human tongue: "The Shoammoem are humans.")
+Pjajpjaj Sheamshem Zhem. (in the human tongue: "Pjajpjaj is the earth.")
 Jaojjao Jodzo. (in the kobold tongue: "The Jaojjao are kobolds.")
 Pjajpjaj Xoadzhaoxoa. (in the kobold tongue: "Pjajpjaj is the earth.")
 
@@ -446,6 +547,7 @@ bugbear: gap — planet (no entry in this lexicon)
 gnoll: gap — planet (no entry in this lexicon)
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
+human: gap — planet (no entry in this lexicon)
 kobold: gap — planet (no entry in this lexicon)
 
 ### The Chorus
@@ -456,6 +558,7 @@ The Zooqsha are bugbears — ourselves.
 The Pjojpjoj are gnolls — rivals.
 The Zhooqsa are goblins — rivals.
 The Zhooqsha are hobgoblins — rivals.
+The Shoammoem are humans — rivals.
 The Jaojjao are kobolds — rivals.
 Pjajpjaj is the earth with one moon.
 The moon crosses because Zoo walks the sky, slowly.
@@ -471,6 +574,7 @@ The Zooqsha are bugbears — ourselves.
 The Pjojpjoj are gnolls — rivals.
 The Zhooqsa are goblins — rivals.
 The Zhooqsha are hobgoblins — rivals.
+The Shoammoem are humans — rivals.
 The Jaojjao are kobolds — rivals.
 Pjajpjaj is the earth with one moon.
 The moon crosses because it answers Zoo.
@@ -486,6 +590,7 @@ The Zooqsha are bugbears — neighbors.
 The Pjojpjoj are gnolls — ourselves.
 The Zhooqsa are goblins — neighbors.
 The Zhooqsha are hobgoblins — neighbors.
+The Shoammoem are humans — neighbors.
 The Jaojjao are kobolds — neighbors.
 Pjajpjaj is the earth with one moon.
 The moon crosses because Najpjaj strides the sky, slowly.
@@ -501,6 +606,7 @@ The Zooqsha are bugbears — neighbors.
 The Pjojpjoj are gnolls — ourselves.
 The Zhooqsa are goblins — neighbors.
 The Zhooqsha are hobgoblins — neighbors.
+The Shoammoem are humans — neighbors.
 The Jaojjao are kobolds — neighbors.
 Pjajpjaj is the earth with one moon.
 The moon crosses because it answers Najpjaj.
@@ -516,6 +622,7 @@ The Zooqsha are bugbears — neighbors.
 The Pjojpjoj are gnolls — neighbors.
 The Zhooqsa are goblins — ourselves.
 The Zhooqsha are hobgoblins — neighbors.
+The Shoammoem are humans — neighbors.
 The Jaojjao are kobolds — neighbors.
 Pjajpjaj is the earth.
 The day returns to keep the balance.
@@ -530,6 +637,7 @@ The Zooqsha are bugbears — neighbors.
 The Pjojpjoj are gnolls — neighbors.
 The Zhooqsa are goblins — ourselves.
 The Zhooqsha are hobgoblins — neighbors.
+The Shoammoem are humans — neighbors.
 The Jaojjao are kobolds — neighbors.
 Pjajpjaj is the earth.
 The moon is counted and known to the priesthood.
@@ -544,6 +652,7 @@ The Zooqsha are bugbears — rivals.
 The Pjojpjoj are gnolls — rivals.
 The Zhooqsa are goblins — rivals.
 The Zhooqsha are hobgoblins — ourselves.
+The Shoammoem are humans — rivals.
 The Jaojjao are kobolds — rivals.
 Pjajpjaj is the earth.
 The day returns because the sky must be crossed.
@@ -558,11 +667,42 @@ The Zooqsha are bugbears — rivals.
 The Pjojpjoj are gnolls — rivals.
 The Zhooqsa are goblins — rivals.
 The Zhooqsha are hobgoblins — ourselves.
+The Shoammoem are humans — rivals.
 The Jaojjao are kobolds — rivals.
 Pjajpjaj is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Zhjoozhjo strides the sky, slowly.
 The day returns to keep the balance.
+
+*In truth, Pjajpjaj is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+
+#### As the Shoammoem tell it
+
+Pjajpjaj is the earth.
+The day returns because the sky must be crossed.
+The Zooqsha are bugbears — neighbors.
+The Pjojpjoj are gnolls — neighbors.
+The Zhooqsa are goblins — neighbors.
+The Zhooqsha are hobgoblins — neighbors.
+The Shoammoem are humans — ourselves.
+The Jaojjao are kobolds — neighbors.
+
+*In truth, Pjajpjaj is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+
+##### As the priesthood of the Shoammoem teach it
+
+Pjajpjaj Sheamshem Zheom. ("Pjajpjaj is the earth — as it is taught.")
+
+Pjajpjaj is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because Maomsammam walks the sky, slowly.
+The day returns because Soom strides the sky, briskly.
+The Zooqsha are bugbears — neighbors.
+The Pjojpjoj are gnolls — neighbors.
+The Zhooqsa are goblins — neighbors.
+The Zhooqsha are hobgoblins — neighbors.
+The Shoammoem are humans — ourselves.
+The Jaojjao are kobolds — neighbors.
 
 *In truth, Pjajpjaj is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -575,6 +715,7 @@ The Zooqsha are bugbears — rivals.
 The Pjojpjoj are gnolls — rivals.
 The Zhooqsa are goblins — rivals.
 The Zhooqsha are hobgoblins — rivals.
+The Shoammoem are humans — rivals.
 The Jaojjao are kobolds — ourselves.
 
 *In truth, Pjajpjaj is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
@@ -590,6 +731,7 @@ The Zooqsha are bugbears — rivals.
 The Pjojpjoj are gnolls — rivals.
 The Zhooqsa are goblins — rivals.
 The Zhooqsha are hobgoblins — rivals.
+The Shoammoem are humans — rivals.
 The Jaojjao are kobolds — ourselves.
 
 *In truth, Pjajpjaj is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
@@ -618,6 +760,10 @@ Among the Zhooqsha, the sky has darkened, now and again.
 The priesthood of the Zhooqsha numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36125.
 The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+Among the Shoammoem, the sky has darkened, now and again.
+The priesthood of the Shoammoem numbers the darkenings: 32.
+The next darkening, it teaches, comes on day 36125.
+The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Jaojjao, the sky has darkened, now and again.
 The priesthood of the Jaojjao numbers the darkenings: 53.
 The next darkening, it teaches, comes on day 36125.
@@ -627,5 +773,6 @@ The Jaojjao's own priesthood taught wrongly, and could be shown wrong by any who
 *In truth, the Pjojpjoj's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zhooqsa's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Zhooqsha's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Shoammoem's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the Jaojjao's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the darkenings of the first hundred years number 53.*

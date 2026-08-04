@@ -450,6 +450,14 @@ fn hobgoblin_condition_niche() -> ConditionNiche {
 /// only the corrected frame to mean it. Measured: bugbear's mean fit on land
 /// below 500 m is 0.264, against 0.0038 above 3000 m — the sharpest
 /// lowland/highland split of the four, as a rainforest species should have.
+///
+/// **Contradicted by a later measurement, undiagnosed (The Generalist, Task
+/// 6):** a re-run read bugbear's mean fit below 500 m as 0.017563, ~15x below
+/// the figure above, with the whole kobold-highland comparison also an order
+/// of magnitude down and goblin/hobgoblin rank-swapped. Whether the
+/// populations, mesh, or frame differ between the two runs has not been
+/// investigated; neither number has been corrected. See
+/// `BIO-generalist-remeasure` in the idea registry.
 fn bugbear_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -1470,6 +1478,152 @@ fn gnoll_condition_niche() -> ConditionNiche {
     }
 }
 
+/// Human condition niche: the roster's first true GENERALIST — a settler
+/// that leans on none of its four axes and is authored to be
+/// simultaneously the LEAST-DEVOTED and the WIDEST curve on every axis
+/// among the peoples, so "no refuge" is true in both senses that could
+/// otherwise pull apart.
+///
+/// **Task 5b re-authoring (2026-08-04): a re-derivation, not the original
+/// authoring.** The niche shipped by Task 2 stated its contrast with goblin
+/// as devotion alone ("Width is a mixed comparison... Devotion does [carry
+/// the contrast]") while its widths were, in fact, unargued: narrower than
+/// goblin's on temperature (22.0 vs. 28.0) and elevation (2000.0 vs.
+/// 3000.0). A shape-attribution reading in
+/// `windows/worldgen/tests/generalist_distinctness.rs` then measured that
+/// the vacuity gate's real-case dispersion gap was WIDTH-dominated, not
+/// devotion-dominated, and pointed the opposite direction from what the
+/// doc claimed. The owner directed a re-authoring so the claim and the
+/// numbers agree: human's widths are now derived from a stated,
+/// measurement-grounded rule rather than chosen by eye, and every axis is
+/// verified wider than every other people's.
+///
+/// **The rule.** On each axis, human's response must vary by no more than
+/// 20% of its peak across the measured p5–p95 span of settleable land
+/// (`windows/worldgen/tests/generalist_baseline.rs`'s Task 5b extension,
+/// seeds 1..=30, 142593 settleable cells — the same population, same
+/// [`hornvale_worldgen::Substrate`] frame,
+/// [`crate::ConditionResponse::eval`] scores). Since
+/// `bump = exp(-0.5 z²)`, `bump >= 0.80` requires `|z| <= 0.6680`, so a
+/// FLOOR on width follows directly from the optimum's distance to the
+/// farther of p5/p95:
+///
+/// ```text
+/// width_floor = max(|optimum - p5|, |optimum - p95|) / 0.6680
+/// ```
+///
+/// This is a lower bound, not a target — a wider curve is still
+/// "indifferent," only more so. Where an axis's already-authored width
+/// already cleared both this floor and every other people's width on that
+/// axis, it is left unchanged (moisture); where it did not, it is raised —
+/// to the floor where the floor itself is the binding constraint
+/// (temperature, elevation), or modestly above the floor where the
+/// binding constraint is instead being strictly wider than the roster
+/// (insolation, whose floor is tiny because the settleable insolation band
+/// is narrow, but which tied goblin's width before this pass).
+///
+/// **Measured p5/p50/p95 (settleable land, same population as
+/// `human_condition_niche`'s elevation frame below) and the resulting
+/// floors:**
+///
+/// | axis | optimum | p5 | p50 | p95 | width floor | authored width | why |
+/// |---|---|---|---|---|---|---|---|
+/// | temperature (°C) | 14.0 (kept, 4% off p50) | 3.27 | 14.59 | 31.59 | 26.33 | **29.0** | floor-bound, rounded above goblin's 28.0 |
+/// | moisture | 0.50 (kept, 3% off p50) | 0.24 | 0.49 | 0.70 | 0.39 | **0.70 (unchanged)** | already clears the floor and every people's width |
+/// | insolation | **0.25 (recentred; was 0.14, 43% off p50)** | 0.19 | 0.25 | 0.31 | 0.09 | **0.45** | floor is tiny (narrow settleable band); raised past bugbear's 0.40 to stay widest |
+/// | elevation (m) | 1500.0 (fixed — see below) | 0.0 | 1561.2 | 4148.1 | 3964.1 | **4000.0** | floor-bound, comfortably above goblin's 3000.0 |
+///
+/// Optima: kept where within 10% of the measured p50 (temperature,
+/// moisture); recentred on p50 where not (insolation, 0.14 → 0.25 — the
+/// original value was authored before this measurement existed and landed
+/// well off the land the axis is actually scored against). Elevation's
+/// optimum is a deliberate exception, held at 1500.0 rather than the
+/// measured p50 (1561.2) — see the paragraph below.
+///
+/// **Sanity check, verified rather than assumed: human is now the widest
+/// curve of the SIX peoples on all four axes** (temperature 29.0 > goblin's
+/// 28.0; moisture 0.70 > goblin/kobold's 0.60; insolation 0.45 > bugbear's
+/// 0.40; elevation 4000.0 > goblin's 3000.0) — the property this
+/// re-authoring exists to restore. Devotion is UNCHANGED (0.20/0.20/0.25/
+/// 0.30 — see below) and remains the lowest of the six peoples on every
+/// axis, so "widest and least devoted" is now true in both senses on every
+/// axis, not mixed axis by axis as the original authoring left it.
+///
+/// Goblin's own elevation optimum was already re-centred by The Tumult's
+/// re-datum to 1500.0 m, the settleable-land median at the time. Human's
+/// elevation optimum sits at that SAME 1500.0 m — deliberately, not by
+/// coincidence, and held there through this re-authoring even though the
+/// freshly measured p50 (1561.2 m) has drifted slightly since — the terrain
+/// mesh's land distribution is not perfectly stable seed-family to
+/// seed-family, and re-chasing a ~40 m drift would decouple human's
+/// optimum from goblin's shared-optimum argument for no ecological gain. A
+/// wide, low-devotion curve only reads as genuine *indifference* if it is
+/// centred on the land it scores (goblin's own re-datum argument); a
+/// displaced optimum would instead hand human its own lowland or highland
+/// refuge, which contradicts the no-refuge premise the whole campaign's
+/// Gause probe rests on — this kind exists to test a competitor that
+/// out-competes nobody and holds no stronghold of its own. So the two kinds
+/// share an optimum on purpose: what makes human lose the specialists'
+/// strongholds (kobold's mountain, bugbear's rainforest) is its LOWER
+/// devotion against their high devotion, reinforced (not contradicted) by
+/// this pass's wider curves.
+///
+/// Devotion is unchanged by this re-authoring — it is the lowest of the six
+/// PEOPLES on every axis (temperature 0.20 vs. goblin's 0.45, moisture 0.20
+/// vs. 0.35, insolation 0.25 vs. 0.35, elevation 0.30 vs. 0.35), the argued
+/// contrast from Task 2 that measurement never called into question. Scoped
+/// to the peoples, not the whole roster: xorn is lower on all four
+/// (0.10/0.10/0.20/0.10), being the indifferent elemental this niche is
+/// deliberately a peoples-appropriate echo of.
+///
+/// **History: the vacuity/distinctness check and its width-attribution
+/// finding.** `windows/worldgen/tests/generalist_distinctness.rs`'s
+/// coefficient-of-variation statistic is scale-invariant under a positive
+/// constant multiplier, so elevation's devotion is algebraically invisible
+/// to it (elevation's hard `floor(0.0)` makes `eval` a pure multiplier
+/// there); the other three axes' devotions are visible because their
+/// nonzero sovereignty floor is additive, not multiplicative. Before this
+/// re-authoring, the real-case gap (`cv_ratio = 1.0462`) was measured
+/// WIDTH-dominated and pointed opposite to a devotion-only attribution
+/// reading (`cv_ratio = 0.9766`) — full numbers and reasoning in that
+/// file's module doc comment, which predates this pass and is retained as
+/// the record of the finding that motivated it. That file's own doc comment
+/// and the design spec's §4 amendment carry the post-re-authoring numbers;
+/// see them for the current reading rather than re-deriving it here.
+///
+/// Frame: elevation is metres above the world's sea level (see
+/// [`ConditionNiche`]).
+fn human_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 14.0,
+            width: 29.0,
+            devotion: 0.20,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.50,
+            width: 0.70,
+            devotion: 0.20,
+        },
+        // recentred on the measured settleable-land p50 (0.2468, rounded to
+        // 0.25) - the original 0.14 sat 43% off it, outside the 10% keep
+        // band (see the doc comment above).
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.45,
+            devotion: 0.25,
+        },
+        // wide/indifferent, held at 1500.0 m rather than re-chased to the
+        // freshly measured p50 (1561.2 m) - the same value as goblin's
+        // optimum, deliberately (see the doc comment above).
+        elevation: ConditionResponse {
+            optimum: 1500.0,
+            width: 4000.0,
+            devotion: 0.30,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1559,9 +1713,9 @@ impl Component for PerceptionVector {}
 /// utilization profile over the resource-axis basis; each kind's climate-tile
 /// rationale lives in its `*_condition_niche` helper above. Potency is the
 /// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
-/// supernatural set (dragons, treant, xorn); mundane beasts and the four
+/// supernatural set (dragons, treant, xorn); mundane beasts and the six
 /// peoples carry 0. `social_form` is the universal social-organization axis
-/// (spec §3.1, The Eremite): `Settled` for the four peoples, `Sessile` for
+/// (spec §3.1, The Eremite): `Settled` for the six peoples, `Sessile` for
 /// the rooted autotrophs, `Gregarious` for the herding beasts, `Solitary`
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
@@ -1913,7 +2067,23 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // bugbear's 0.85 ANIMAL_PREY lean).
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 0.65), (PLANT_FORAGE, 0.35)]).unwrap(),
                 condition_niche: gnoll_condition_niche(),
-                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other four peoples
+                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other five peoples
+                social_form: SocialForm::Settled,
+            },
+        ),
+        // The Generalist (C2-0): the sixth people, and the roster's first
+        // competitor with no refuge. Mass is 5E canon for a Medium humanoid.
+        // The trophic split is deliberately close to goblin's 0.50/0.50 —
+        // humans are not trophically novel, and the generalism this kind
+        // exists to test lives on the CONDITION axes, not the resource axes.
+        (
+            KindId("human"),
+            BiosphereTraits {
+                mass: Mass::new(70.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+                condition_niche: human_condition_niche(),
+                potency: 0.0,
                 social_form: SocialForm::Settled,
             },
         ),
@@ -1923,7 +2093,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 }
 
 /// The individual-mind component — authored directly, present for every
-/// minded kind (the four settling peoples and the three solitary dragons).
+/// minded kind (the six settling peoples and the three solitary dragons).
 /// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about
 /// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
@@ -2004,13 +2174,27 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.2,
             },
         ),
+        // The Generalist (C2-0). `threat_response` sits AT the manikin by
+        // authorship, not by default: humans genuinely both flee and stand,
+        // and The Manikin moved the model to the rung where a kind may
+        // coincide with the reference vector. Stated explicitly because a
+        // people welded to the identity element is the bug that campaign
+        // removed.
+        (
+            KindId("human"),
+            MindVector {
+                threat_response: 0.5,
+                deliberation_latency: 0.6,
+                time_horizon: 0.75,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The community-mind component — authored directly, present only for the
-/// four settling peoples. A Solitary minded kind (a dragon) carries a
+/// six settling peoples. A Solitary minded kind (a dragon) carries a
 /// MindVector but no SocietyVector; a mixed consumer resolves
 /// [`SocietyVector::MANIKIN`] for one. Goblin's row happens to sit at those
 /// same values — again authorship, not definition.
@@ -2084,13 +2268,25 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 in_group_radius: 0.7,
             },
         ),
+        // The Generalist (C2-0). `in_group_radius` 0.8 is the widest in the
+        // roster, above gnoll's 0.7: an expansive "us" is the social twin of
+        // a broad niche, and is what a no-refuge generalist looks like from
+        // the inside.
+        (
+            KindId("human"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.8,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The perception component — authored directly, present for every minded
-/// SPEAKING kind: the four peoples and the three chromatic dragons (The
+/// SPEAKING kind: the six peoples and the three chromatic dragons (The
 /// Vigil). Goblin's row happens to sit at [`PerceptionVector::MANIKIN`]
 /// (`Diurnal`, 0.5/0.5) — authorship, not definition. Since The Vigil the
 /// enforced lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added
@@ -2188,6 +2384,28 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 sky_attention: 0.3,
             },
         ),
+        // The Generalist (C2-0). Night vision sits BELOW the manikin, and
+        // below every other people (goblin 0.5 .. kobold 0.9) — the call The
+        // Manikin identified and deferred to this campaign: human scotopic
+        // vision is genuinely poor, so authoring it at 0.5 would have made
+        // "typical" mean "weak" and silently rescaled kobold's 0.9.
+        //
+        // 0.15 rather than 0.25 is deliberate and visible. `pack_depths` is a
+        // step function, `hue = 2 + ((1 - night_vision) * 3).round()`: 0.25
+        // yields depth 4, TIED with goblin, while <= 0.166 yields depth 5 and
+        // makes human the only kind at the ladder's deepest rung. The hue
+        // ladder is Berlin & Kay's, derived from human languages; a model
+        // whose colour hierarchy is human-derived and then denies humans its
+        // deepest rung is incoherent. Luminance is 1 either way — the shallow
+        // dark-vocabulary is the cost side of the same trade.
+        (
+            KindId("human"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.15,
+                sky_attention: 0.65,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -2241,6 +2459,12 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         // a label held by >= 2 kinds (goblinoid/draconic/plant, the roster's
         // only multi-member families).
         (KindId("gnoll"), "gnoll"),
+        // The Generalist (C2-0): a singleton family, following kobold's and
+        // gnoll's shape — `family_proto` in `hornvale_language` carries no
+        // "human" entry, because `check_integrity` requires a proto only for
+        // a label held by >= 2 kinds. The dwarf and elf families of C2c/C2d
+        // will be the roster's first new multi-member families.
+        (KindId("human"), "human"),
     ]
     .into_iter()
     .collect()
@@ -2305,6 +2529,8 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("killer-whale-kind", "a killer whale"),
     ("giant-squid-kind", "a giant squid"),
     ("giant-crocodile-kind", "a giant crocodile"),
+    // The Generalist (C2-0): the sixth people.
+    ("human-kind", "a human"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
@@ -2499,8 +2725,8 @@ mod tests {
         // With the god-struct gone, the four registries author independently.
         // The cross-registry invariants the world relies on: biosphere and
         // family cover the SAME full kind set, and psyche/perception share
-        // exactly one key-set — the four peoples — every one of which also
-        // carries a biosphere row.
+        // exactly one key-set — the six peoples plus the three minded
+        // dragons — every one of which also carries a biosphere row.
         let bio = biosphere_registry();
         let fam = family_of();
         let psy = psyche_registry();
@@ -2508,8 +2734,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            29,
-            "twenty-nine kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll)"
+            30,
+            "thirty kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -2517,19 +2743,19 @@ mod tests {
 
         // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
         // psyche, and since The Vigil every minded SPEAKER also perceives, so
-        // the two stores again share one key-set — seven kinds, not the four
-        // peoples.
+        // the two stores again share one key-set — nine kinds, not the six
+        // peoples alone.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 8, "five peoples + three minded dragons");
+        assert_eq!(psy.len(), 9, "six peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            8,
-            "perception is the five peoples + the three dragons (The Vigil)"
+            9,
+            "perception is the six peoples + the three dragons (The Vigil)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -2621,8 +2847,9 @@ mod tests {
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples), then with The Vacancy's T7 (seven more
         // biosphere-only fauna), T8 (five more, four marine plus the
-        // amphibious giant crocodile), and T9 (the gnoll, the fifth people);
-        // ComponentStore key order is lexicographic.
+        // amphibious giant crocodile), T9 (the gnoll, the fifth people), and
+        // The Generalist (the human, the sixth people); ComponentStore key
+        // order is lexicographic.
         assert_eq!(
             names,
             vec![
@@ -2641,6 +2868,7 @@ mod tests {
                 "gnoll",
                 "goblin",
                 "hobgoblin",
+                "human",
                 "killer-whale",
                 "kobold",
                 "otyugh",
@@ -2860,7 +3088,7 @@ mod tests {
         let goblin = bio.get(&KindId("goblin")).unwrap();
         assert_eq!(goblin.mass, Mass::new(18.1).unwrap());
         assert_eq!(goblin.potency, 0.0);
-        // the four peoples all speak/settle (carry a psyche row)
+        // these four (of today's six) peoples all speak/settle (carry a psyche row)
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
             assert!(psy.contains(&KindId(name)), "{name} must carry a psyche");
         }
@@ -3013,7 +3241,7 @@ mod tests {
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
         assert_eq!(
             society,
-            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
+            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"]
         );
         // dragons are minded (psyche) but not Settled — no society vector
         assert!(society_registry().get(&KindId("red-dragon")).is_none());

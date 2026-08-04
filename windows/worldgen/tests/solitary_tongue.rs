@@ -430,7 +430,12 @@ fn render_lexicon_snapshot(lex: &Lexicon) -> String {
 /// rather than derived because the golden's row order is part of the pinned
 /// bytes; a derived ordering would be `KindId`-ascending and re-sort the file
 /// for no gain. If a sixth people arrives, it goes here.
-const PEOPLES: [&str; 5] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll"];
+///
+/// It rotted a second time: The Generalist added a sixth people (human) and
+/// this array again did not notice (Tasks 2-4 gate review, Fix round 1,
+/// Finding 1) — the fourth instance of this campaign's count-baked-into-a-
+/// list defect. Extended, not derived, for the same reason as above.
+const PEOPLES: [&str; 6] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll", "human"];
 
 /// Claim (c), BYTE-IDENTITY: every settled people's full lexicon at seed 42
 /// (a real derived, settled world) equals the golden captured in this

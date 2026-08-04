@@ -291,9 +291,16 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // lefford, 0063): the BAKE stream label bump re-mints every draw on top
     // of position-aware conflict's own effect, re-seating flagships again:
     // (149, 39) -> (150, 40).
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, reseating flagships again: (150, 40) -> (148, 40). The
+    // invariant this test exists to guard — a tidally-locked world's head is
+    // never `cyclic` — never fired (that branch panics loudly if it does);
+    // the locked-ambient count is unmoved at 40, only locked-eternal falls.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (150, 40),
+        (148, 40),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -301,8 +308,13 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The Living Community epoch (history-first placement) re-placed every
     // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
     // 2 -> 9.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): 11 -> 9. Same roster-competition cause as the
+    // locked-head split above (human is a sixth competitor for every
+    // settlement contest); this is a recorded count, not a guarded claim.
     assert_eq!(
-        spinning_eternal, 11,
+        spinning_eternal, 9,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -511,8 +523,15 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
     // lefford, 0063): the BAKE label bump re-mints every draw, re-seating
     // flagships again: 548 -> 554 coastal, 218 -> 214 inland.
-    assert_eq!(coastal, 554, "coastal flagship count drifted");
-    assert_eq!(inland, 214, "inland flagship count drifted");
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, re-seating flagships again: 554 -> 559 coastal, 214 -> 207
+    // inland (559 + 207 = 766, matching goblin's present-row count elsewhere
+    // in this file — no `Absent` rows introduced). This is a recorded
+    // witness, not a guarded directional claim.
+    assert_eq!(coastal, 559, "coastal flagship count drifted");
+    assert_eq!(inland, 207, "inland flagship count drifted");
 }
 
 #[test]
@@ -695,12 +714,21 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
     // lefford, 0063): the BAKE label bump moves the pool again (34 -> 33
     // solar, 60 -> 62 lunar).
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, which changes which worlds field a kobold head — the
+    // moonless-spinning pool moves 62 -> 61 lunar; solar is unmoved at 33.
+    // Both structural invariants above this pool (a mooned kobold head is
+    // always lunar; goblin's head is always solar; a locked-world kobold
+    // head is always solar) never fired — this is a recorded row, not a
+    // guarded claim.
     assert_eq!(
         moonless_solar, 33,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 62,
+        moonless_lunar, 61,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -826,8 +854,18 @@ fn blind_attribution_beats_chance_decisively() {
     // lefford, 0063): the BAKE label bump moves the pool again (761 -> 763
     // total, 694 -> 697 correct); accuracy 0.9119 -> 0.9135, still
     // decisively above the 0.75 floor.
-    assert_eq!(correct, 697, "blind-attribution count drifted");
-    assert_eq!(total, 763, "attributable-pair count drifted");
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, shifting which worlds field an attributable goblin/kobold
+    // pair (763 -> 759 total) and which side a few land on (697 -> 693
+    // correct); accuracy 0.9135 -> 0.9130434782608696, still decisively
+    // above the 0.75 floor asserted above — the directional claim this test
+    // guards (blind attribution beats chance decisively) HOLDS, re-checked
+    // rather than assumed. The mooned-pair invariant below (perfect
+    // attribution among spinning, mooned pairs) never fired either.
+    assert_eq!(correct, 693, "blind-attribution count drifted");
+    assert_eq!(total, 759, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1024,14 +1062,25 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
     // lefford, 0063): the BAKE label bump reseats settlements again: goblin
     // 766/234 -> 768/232 true/absent, kobold 763/237 -> 765/235 false/absent.
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, moving which worlds hold a flagship pantheon: goblin
+    // 768/232 -> 766/234 true/absent, kobold 765/235 -> 762/238 false/absent.
+    // The claim this row guards is untouched and re-checked, not assumed:
+    // the goblin-false population is still exactly empty (the assertion
+    // above this comment did not fire), so the detector still reads true on
+    // every goblin world with a pantheon, and the inner `assert!` above
+    // confirms it still reads false on every one of the 762 kobold worlds
+    // that hold one.
     assert_eq!(
         (g_true, g_absent),
-        (768, 232),
+        (766, 234),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (765, 235),
+        (762, 238),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1388,8 +1437,17 @@ fn name_collision_rate_is_measured_and_pinned() {
     // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
     // lefford, 0063): the BAKE label bump reseats settlements again: 3 -> 4
     // zero-collision, 767 -> 766 nonzero; absent unmoved at 230.
-    assert_eq!(zero, 4, "zero-collision world count drifted");
-    assert_eq!(nonzero, 766, "nonzero-collision world count drifted");
+    //
+    // The Generalist's close regen (2026-08-04, canonical census on lefford
+    // at 02172e96, 0063/0079): human joins the roster as a sixth settlement
+    // competitor, which reshuffles which settlements are named at all: 4 ->
+    // 3 zero-collision, 766 -> 767 nonzero; absent unmoved at 230 for the
+    // fifth regen running (3 + 767 + 230 = 1000). This row carries no
+    // directional claim (H4 already failed and is recorded as such above),
+    // so nothing to re-verify beyond the three-way partition still summing
+    // to 1000.
+    assert_eq!(zero, 3, "zero-collision world count drifted");
+    assert_eq!(nonzero, 767, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1461,7 +1519,14 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Salt's close regen, 0063: 0.560_567_825_485_714_4 ->
         // 0.560_572_844_615_584_4. The mover is ce13bae0's compass
         // concepts, not The Salt, which touches no language code.
-        (mean - 0.560_572_844_615_584_4).abs() < 1e-6,
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, so the name space is drawn from
+        // differently across every world: 0.560_572_844_615_584_4 ->
+        // 0.528_593_255_324_676. Same roster-competition cause as the
+        // zero/nonzero re-pin above; this row carries no directional claim.
+        (mean - 0.528_593_255_324_676).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1633,7 +1698,14 @@ fn name_length_distributions_are_measured_and_pinned() {
         // The Salt's close regen, 0063: 8.688_230_827_083_34 ->
         // 8.687_525_197_786_464. The mover is ce13bae0's compass
         // concepts, not The Salt, which touches no language code.
-        ("goblin", 768u32, 8.687_525_197_786_464),
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reseating flagships again: 768 ->
+        // 766 present, mean 8.687_525_197_786_464 -> 8.657_123_104_960_824.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7), re-checked rather than assumed.
+        ("goblin", 766u32, 8.657_123_104_960_824),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1685,7 +1757,16 @@ fn name_length_distributions_are_measured_and_pinned() {
         // The Salt's close regen, 0063: 7.188_685_503_790_846 ->
         // 7.188_604_358_823_526. The mover is ce13bae0's compass
         // concepts, not The Salt, which touches no language code.
-        ("kobold", 765u32, 7.188_604_358_823_526),
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reseating flagships again: 765 ->
+        // 762 present, mean 7.188_604_358_823_526 -> 7.189_805_441_863_518
+        // — essentially unmoved (kobold's mean barely shifts this time,
+        // unlike every prior roster/bake change, where it usually moved
+        // further than goblin's). Still comfortably below the campaign's
+        // own <10-character claim (spec §7), re-checked rather than assumed.
+        ("kobold", 762u32, 7.189_805_441_863_518),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1794,8 +1875,19 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // The Salt's close regen, 0063: 2.787_026_517_317_707_3 ->
         // 2.787_048_218_749_998_5. The mover is ce13bae0's compass
         // concepts, not The Salt, which touches no language code.
-        ("goblin", 768u32, 2.787_048_218_749_998_5),
-        ("kobold", 765u32, 2.306_935_878_954_248_7),
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reseating flagships again: goblin
+        // 768 -> 766 present, mean 2.787_048_218_749_998_5 ->
+        // 2.763_782_961_879_896; kobold 765 -> 762 present, mean
+        // 2.306_935_878_954_248_7 -> 2.305_631_764_829_393. Present counts
+        // agree with the name-length row's re-pin above (766 / 762), as the
+        // structural relation this test also asserts requires. The claim
+        // still HOLDS at both species — 2.764 and 2.306, both inside 2-3 —
+        // re-checked, not assumed.
+        ("goblin", 766u32, 2.763_782_961_879_896),
+        ("kobold", 762u32, 2.305_631_764_829_393),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -1894,9 +1986,9 @@ fn name_transparency_is_measured_and_pinned() {
             ref other => panic!("seed {}: name-transparency not a flag: {other:?}", row.seed),
         }
     }
+    let mean = sum / f64::from(present);
     assert_eq!(present, 770, "name-transparency present-row count drifted");
     assert_eq!(absent, 230, "name-transparency absent-row count drifted");
-    let mean = sum / f64::from(present);
     assert!(
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
         // 0.826_729_134_389_610_3 -> 0.793_035_961_411_688_3, present/absent
@@ -1921,7 +2013,16 @@ fn name_transparency_is_measured_and_pinned() {
         // The Salt's close regen, 0063: 0.804_951_365_489_610_2 ->
         // 0.804_225_380_346_752_7. The mover is ce13bae0's compass
         // concepts, not The Salt, which touches no language code.
-        (mean - 0.804_225_380_346_752_7).abs() < 1e-9,
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): human joins the roster as a
+        // sixth settlement competitor, reshaping every world's naming draws;
+        // present/absent are unmoved at 770/230 (naming does not decide
+        // which worlds seat a flagship, same as the name-length rows), and
+        // the mean falls: 0.804_225_380_346_752_7 -> 0.785_500_964_077_923.
+        // Still emphatically NOT 1.0 — the claim this row exists to guard —
+        // re-checked rather than assumed.
+        (mean - 0.785_500_964_077_923).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -1934,7 +2035,14 @@ fn name_transparency_is_measured_and_pinned() {
         // reading this row exists to preserve. A mean of 0.816 with a floor of
         // 0.154 and a ceiling of 1.0 is a real distribution over worlds, not
         // the uniformity defect in a new costume.
-        (min - 0.076923077).abs() < 1e-8,
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): the floor RISES 0.076_923_077 ->
+        // 0.142_857_14 while the ceiling stays pegged at 1.0 (asserted
+        // below, unmoved) — the spread narrows a little but stays a real
+        // distribution over worlds, not the uniformity defect the row exists
+        // to catch.
+        (min - 0.142_857_14).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2277,7 +2385,32 @@ fn null_control_name_length_smd_is_pinned() {
         // The Salt's close regen, 0063: -0.017_848_707_186_831_292 ->
         // -0.018_069_698_979_322_31. The mover is ce13bae0's compass
         // concepts, not The Salt, which touches no language code.
-        (namelen - -0.018_069_698_979_322_31).abs() < 1e-9,
+        //
+        // The Generalist's close regen (2026-08-04, canonical census on
+        // lefford at 02172e96, 0063/0079): `census-of-the-meeting`'s two pin
+        // sets are `goblin-solo` and `goblin-twin-solo` — human is not
+        // itself present in either build, so this is NOT the direct
+        // roster-competition effect the rest of this file's re-pins record.
+        // The mechanism is `register_concepts` (domains/species/src/lib.rs)
+        // registering all of `KIND_CONCEPTS` unconditionally rather than
+        // filtered by roster: adding `human-kind` grows the registered
+        // concept set, and every lexicon is a total map over registered
+        // concepts (asserted by this branch's own
+        // `cli/tests/the_unnameable.rs`), so even a goblin-solo world's
+        // lexeme space grows by one word and perturbs the name draws.
+        // Confirmed by measurement: exactly one seed of 500 moved. Both solo
+        // builds moved alike in structure (the sibling
+        // `null_control_distributions_are_within_the_sampling_bound` test,
+        // unaffected by this regen, confirms head-domain/cult-form/
+        // pantheon-size TVD/SMD are all unmoved), so only the residual
+        // name-length gap shifted:
+        // -0.018_069_698_979_322_31 -> -0.017_807_448_465_414_44. Moves an
+        // order of magnitude less than its own scale, staying ~11x inside
+        // the ±0.2 sampling-theory bound — the null hypothesis this row
+        // exists to witness (INDISTINGUISHABLE FROM ZERO) reads, if
+        // anything, slightly MORE true than before, re-checked rather than
+        // assumed.
+        (namelen - -0.017_807_448_465_414_44).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

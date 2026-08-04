@@ -223,6 +223,7 @@
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `holdfast-tangle` | climate | substance | The anchored base of a kelp forest. |
 | `home` | settlement | social | one's dwelling |
+| `human-kind` | species | living | a human |
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
 | `ice-lead` | climate | substance | A channel of open water through sea ice. |

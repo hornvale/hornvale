@@ -90,6 +90,7 @@ fn metabolic_class_coverage_matches_the_table() {
                 "gnoll",
                 "goblin",
                 "hobgoblin",
+                "human",
                 "killer-whale",
                 "otyugh",
                 "owlbear",
@@ -144,7 +145,15 @@ fn status_basis_coverage_matches_the_table() {
             Rung::Witnessed,
             &["bugbear", "goblin", "hobgoblin"],
         ),
-        (StatusBasis::Knowledge, Rung::Witnessed, &["kobold"]),
+        // The Generalist (C2-0) gives Knowledge its SECOND witness. Human
+        // standing rests on craft and lore rather than dominance, which is
+        // also what distinguishes the sixth people from the Rank-heavy
+        // goblinoids.
+        (
+            StatusBasis::Knowledge,
+            Rung::Witnessed,
+            &["human", "kobold"],
+        ),
         // WITNESSED as of The Vacancy T9: the gnoll, the campaign's headline
         // promotion. Justified from the ecology (a scarce, high-variance
         // desert forage base rewards windfall-sharing), not from lore — see
@@ -169,7 +178,7 @@ fn activity_cycle_coverage_matches_the_table() {
         (
             ActivityCycle::Diurnal,
             Rung::Witnessed,
-            &["goblin", "hobgoblin", "red-dragon"],
+            &["goblin", "hobgoblin", "human", "red-dragon"],
         ),
         (
             ActivityCycle::Nocturnal,
@@ -245,7 +254,7 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Settled,
             Rung::Witnessed,
-            &["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+            &["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
         ),
     ];
     for (form, rung, witnesses) in expected {

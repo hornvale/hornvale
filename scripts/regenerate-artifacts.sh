@@ -166,11 +166,20 @@ rm -f "$possess_ot_tmp"
 # occurrence of the same drift class, from the label bump alone rather than
 # from the mechanism itself — cell 28414 emptied again. Repointed at cell
 # 1400, chosen because it is the richest single-people stratigraphy in the
-# new world (20 gnoll layers, year 500 to year 1950, still occupied) and
-# because its shape is a small showcase of the mechanism this whole campaign
-# adds: 8 of its 19 completed layers ended not in cold but in eviction by a
-# RIVAL gnoll band wanting the same defensible ground — a people fighting
-# only itself over position, which a single strength scalar could not do.
+# new world and because its shape is a small showcase of the mechanism this
+# whole campaign adds: several of its completed layers ended not in cold but
+# in eviction by a RIVAL gnoll band wanting the same defensible ground — a
+# people fighting only itself over position, which a single strength scalar
+# could not do.
+#
+# The Generalist (human joins the roster): a FOURTH occurrence of the same
+# drift class, from a new competing people entering the settlement packer's
+# roster rather than from any label or mechanism change — cell 1400 is still
+# the richest single-people (all-gnoll) stratigraphy, but the packer's
+# resolution against a sixth competitor shifted its stratigraphy from 20
+# layers (year 500-1950) to 16 (year 550, still standing at the time of this
+# regen). The counts below are read off the live block each time this
+# comment is touched, not carried forward from memory of the last count.
 history_site=1400
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
@@ -182,20 +191,17 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and twenty\n' "$history_site"
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and sixteen\n' "$history_site"
     printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 500 down to the year 1950. The first held the\n'
-    printf 'ground a hundred seventy-five years before its own people turned\n'
-    printf 'conqueror, driving a rival gnoll band off a neighbouring clearing and\n'
-    printf 'carrying the settlement onto that ground instead — two more of the\n'
-    printf 'twenty would go on to do the same. Winter took most of the rest: the\n'
-    printf 'ice crept down the valley, or the seasons shortened past what the\n'
+    printf 'last, from the year 550 down to the present. Winter took most of them:\n'
+    printf 'the ice crept down the valley, or the seasons shortened past what the\n'
     printf 'ground could still feed, and the survivors moved on rather than\n'
-    printf 'starve. But eight of the nineteen completed layers ended a different\n'
+    printf 'starve. But six of the fifteen completed layers ended a different\n'
     printf 'way — put to flight not by cold but by another gnoll band wanting the\n'
     printf 'same defensible ground for itself, a people with only itself to fight.\n'
-    printf 'The twentieth was founded in the year 1950 and stands yet, fifty years\n'
-    printf 'on: eleven souls, a hut and a granary, and no ruin yet to read.\n\n'
+    printf 'The sixteenth was founded in the year 1575 and stands yet, four\n'
+    printf 'hundred twenty-five years on: some forty souls, a hut and a granary,\n'
+    printf 'and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

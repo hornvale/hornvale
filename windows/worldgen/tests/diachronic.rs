@@ -189,6 +189,11 @@ type Row = (
 // seed 1..=5 and its witnessed count matches bugbear/kobold's exactly at
 // every seed (measured live, not assumed — it joins the lunar-witnessing
 // group, now three members not two).
+//
+// The Generalist re-pin (2026-08-03): human places at every seed 1..=5 too
+// and its witnessed count matches goblin/hobgoblin's exactly at every seed
+// (measured live) — it joins the solar-only pair, now a trio, not the
+// lunar-witnessing group. The world-global predicted day is unchanged.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -217,6 +222,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         1,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         4010,
@@ -257,6 +270,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         2,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        49,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         49,
@@ -297,6 +318,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         3,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        32,
+        Some(36125.669504115634),
+    ),
+    (
+        3,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
@@ -337,6 +366,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        2067,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         2067,
@@ -377,6 +414,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         5,
         "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        304,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "human",
         LadderRung::Unknown,
         LadderRung::Predictive,
         304,

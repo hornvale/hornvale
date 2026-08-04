@@ -530,10 +530,25 @@ fn homophony_count_is_measured_and_pinned() {
     // Bugbear stays highest among the goblinoid daughters by better than
     // 3x (3.52x over goblin, 3.84x over hobgoblin), which is the claim
     // this row guards; these re-pin the witnesses, not the observation.
-    assert!((mg - 3.605).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 3.300).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 12.674).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 4.016).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Generalist's close regen (2026-08-04, canonical census on lefford at
+    // 02172e96, 0063/0079): goblin 3.605 -> 3.693, hobgoblin 3.300 -> 3.337,
+    // bugbear 12.674 -> 13.227, kobold 4.016 -> 4.237. The mover is the sixth
+    // people: `human` joins the roster, so every world's settlement contest is
+    // decided among six competitors rather than five, which reshapes each
+    // daughter's periphery homophony draws exactly the way each previous
+    // roster or bake change in this comment's history did. Note all four rise
+    // together — this is not one daughter moving against the others. No epoch
+    // accompanies it: no seed-derivation label, hash constant or noise
+    // constant changed anywhere in the campaign, so no derivation moved
+    // (decision 0084) and what shifted is roster-competition data against
+    // unchanged algorithms. Bugbear stays highest among the goblinoid
+    // daughters by better than 3x (3.58x over goblin, 3.96x over hobgoblin),
+    // which is the claim this row guards; these re-pin the witnesses, not the
+    // observation.
+    assert!((mg - 3.693).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 3.337).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 13.227).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 4.237).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
