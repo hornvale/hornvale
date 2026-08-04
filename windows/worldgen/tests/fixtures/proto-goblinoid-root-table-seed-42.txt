@@ -69,6 +69,7 @@ hill: Nootea /nootea/
 hobgoblin-kind: Qage /qage/
 holdfast-tangle: Qa /qa/
 home: Doe /doe/
+human-kind: Pege /pege/
 hydrothermal-vent: Teo /teo/
 ice: Na /na/
 ice-lead: Kea /kea/

@@ -73,7 +73,10 @@ fn a_genesis_occupation_is_its_own_clan_root_and_has_no_forebear() {
             )
         })
         .collect();
-    assert_eq!(genesis.len(), 17, "seed 42 has 17 genesis roots");
+    // The Generalist re-pin (2026-08-03): human joins the coexistence stack
+    // as a sixth genesis-seeded people, moving the genesis-root count from
+    // 17 to 21.
+    assert_eq!(genesis.len(), 21, "seed 42 has 21 genesis roots");
     for o in genesis {
         assert_eq!(clan_root_of(&w, o.id), o.id);
         assert!(forebear_of(&w, o.id).is_none());

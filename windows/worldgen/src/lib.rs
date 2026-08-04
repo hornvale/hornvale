@@ -7798,18 +7798,25 @@ mod tests {
     /// seed 42's world went 367 -> 362 glossed names with all three 48s
     /// unchanged, so the sky-occlusion invariant this test exists to guard
     /// held; only the corroborating gloss count moved.
+    ///
+    /// The Generalist re-pin (2026-08-03): human is the sixth Settled people
+    /// at seed 42's default roster, and a sixth peopled pantheon forms — all
+    /// three 48s move to 58 in lockstep (one new people, one new pantheon),
+    /// which is exactly the shape this test guards: the pantheon must not
+    /// SHRINK, and growing by one people's belief-set is expected, not a
+    /// regression. `name-gloss` moved 196 -> 275 for the same reason this
+    /// test's own history already documents (a roster change redecides
+    /// settlement survival and naming); re-pinned rather than dropped, per
+    /// this test's stated policy of re-pinning an exact count over weakening
+    /// it.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 48);
-        assert_eq!(count("deity-name"), 48);
-        // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
-        // lefford, 0063): the BAKE label bump reseats settlements, moving
-        // the glossed-name count from 362 to 196. The pantheon-size counts
-        // above (48 each) are unmoved — only settlement-derived naming did.
-        assert_eq!(count("name-gloss"), 196);
+        assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 58);
+        assert_eq!(count("deity-name"), 58);
+        assert_eq!(count("name-gloss"), 275);
     }
 
     #[test]
@@ -8928,9 +8935,16 @@ mod tests {
         // The Tumult (predation epoch, 2026-07-26): predation reseats the
         // flagship onto a cell whose vantage observes two salient phenomena —
         // re-pinned 1 -> 2 on the same "incidental count" basis.
+        //
+        // The Generalist re-pin (2026-08-03): human joining the coexistence
+        // stack redecides which species dominates which attractor at this
+        // seed, which reseats the flagship again — its vantage now observes
+        // one salient phenomenon. Re-pinned 2 -> 1 on the same "incidental
+        // count, the cascade running is what matters" basis this test's own
+        // comment already states.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            2
+            1
         );
     }
 

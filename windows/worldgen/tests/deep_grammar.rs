@@ -177,21 +177,29 @@ fn depth_landscape_measured() {
     // seed 2). The Vacancy T9 adds a fifth people (the gnoll), which also
     // places at every seed 1..=3; the landscape is now the full 15-row (5
     // peoples x 3 seeds) grid — re-measured and re-pinned exactly below.
+    //
+    // The Generalist re-pin (2026-08-03): human is a sixth Settled people
+    // and places at every seed 1..=3 too, growing the grid to the full
+    // 18-row (6 peoples x 3 seeds) landscape — re-measured and re-pinned
+    // exactly below.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
         (1, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
+        (1, "human", MorphDepth::Affix, MorphDepth::Affix),
         (1, "kobold", MorphDepth::None, MorphDepth::None),
         (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
         (2, "gnoll", MorphDepth::None, MorphDepth::Particle),
         (2, "goblin", MorphDepth::None, MorphDepth::None),
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
+        (2, "human", MorphDepth::None, MorphDepth::None),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
         (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
         (3, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
+        (3, "human", MorphDepth::Particle, MorphDepth::None),
         (3, "kobold", MorphDepth::None, MorphDepth::Affix),
     ];
     assert_eq!(

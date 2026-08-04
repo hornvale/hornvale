@@ -111,7 +111,7 @@ that is the difference.
 
 ## Supply
 
-292 registered tokens no situation in this corpus requires.
+293 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -190,6 +190,7 @@ missing half before this list can serve it.
 - `concept:hobgoblin-kind` (species)
 - `concept:holdfast-tangle` (climate)
 - `concept:home` (settlement)
+- `concept:human-kind` (species)
 - `concept:hydrothermal-vent` (climate)
 - `concept:ice` (climate)
 - `concept:ice-lead` (climate)

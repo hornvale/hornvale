@@ -7189,9 +7189,14 @@ mod tests {
         // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
         // lefford, 0063): the BAKE label bump reseats settlements again,
         // moving goblin from 2.724_637_681_159_420_4 to exactly 2.6.
+        //
+        // The Generalist re-pin (2026-08-03): human joins the coexistence
+        // stack as a sixth competitor, redeciding seed 42's settlement
+        // placement once more — goblin moves 2.6 -> 67/28
+        // (2.392_857_142_857_143).
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.6)
+            MetricValue::Number(67.0 / 28.0)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -7218,9 +7223,14 @@ mod tests {
         // lefford, 0063): 344/137 -> 56/23. The BAKE label bump reseats
         // settlements again, moving both the syllable total and the
         // denominator.
+        //
+        // The Generalist re-pin (2026-08-03): human joins the coexistence
+        // stack as a sixth competitor, redeciding seed 42's settlement
+        // placement once more — 56/23 -> 254/97, moving both the syllable
+        // total and the denominator.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(56.0 / 23.0)
+            MetricValue::Number(254.0 / 97.0)
         );
     }
 
@@ -7306,7 +7316,12 @@ mod tests {
         // settlements again, moving both the glossed-name total and the
         // denominator. Still strictly between 0 and 1, so the distribution
         // claim above holds unweakened.
-        assert_eq!(share, 93.0 / 158.0, "seed 42 transparency drifted");
+        //
+        // The Generalist re-pin (2026-08-03): human joins the coexistence
+        // stack as a sixth competitor, redeciding seed 42's settlement
+        // placement once more — 93/158 -> 97/232. Still strictly between 0
+        // and 1.
+        assert_eq!(share, 97.0 / 232.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it

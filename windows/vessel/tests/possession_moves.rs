@@ -532,7 +532,13 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
 /// `history/bake/v2`): the BAKE label bump re-mints the cascade again,
 /// `Goodogododaga` -> `Godogododaga` (one fewer `o`). Same seven NPCs at the
 /// same entity ids, re-verified from `book/src/gallery/possession-seed-42.md`.
-const GRIEVANCE_NPC: &str = "bugbear of Godogododaga";
+///
+/// Re-pinned once more by The Generalist (2026-08-03): human joins the
+/// coexistence stack as a sixth competitor, redeciding seed 42's settlement
+/// placement once more, which re-mints the flagship's name again:
+/// `Godogododaga` -> `Goodogododaga` (one more `o`, back to the pre-Contour
+/// spelling by coincidence of the draw, not a reversion of the epoch).
+const GRIEVANCE_NPC: &str = "bugbear of Goodogododaga";
 
 #[test]
 fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {

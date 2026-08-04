@@ -4160,14 +4160,16 @@ mod tests {
     /// kobold/Ngongngo) at seed 1, all above the organized rung — matching
     /// the regenerated `book/src/gallery/the-book.md`. The Vacancy T9 adds a
     /// fifth people (gnoll/Jakdaod), which also organizes at that same
-    /// seed. Goblin's exact measured surface is verified against the
-    /// merged world: heading names the priesthood; the emic carries the
-    /// `RevealedClaim` exoteric formula for the moons (folk capability loses
-    /// `moon-count`, doctrine's boosted capability clears the threshold and
-    /// keeps it) and a day explanation whose bound agent is the doctrine's
-    /// own measured deity, Vooboo (re-pinned at Task 8b, The Witness; folk's
-    /// own day explanation is agentless `PathJourney`, so this is genuinely a
-    /// doctrine-only causal story, not an echo of folk's).
+    /// seed. The Generalist adds a sixth people (human), which also
+    /// organizes at that same seed. Goblin's exact measured surface is
+    /// verified against the merged world: heading names the priesthood; the
+    /// emic carries the `RevealedClaim` exoteric formula for the moons (folk
+    /// capability loses `moon-count`, doctrine's boosted capability clears
+    /// the threshold and keeps it) and a day explanation whose bound agent
+    /// is the doctrine's own measured deity, Vooboo (re-pinned at Task 8b,
+    /// The Witness; folk's own day explanation is agentless `PathJourney`,
+    /// so this is genuinely a doctrine-only causal story, not an echo of
+    /// folk's).
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
@@ -4181,13 +4183,13 @@ mod tests {
             .collect();
         assert_eq!(
             organized,
-            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
-            "seed-1: all five placed peoples are organized after the merge re-placement"
+            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
+            "seed-1: all six placed peoples are organized after the merge re-placement"
         );
         assert_eq!(
             peoples.len(),
-            5,
-            "seed-1: five peoples are placed, all organized"
+            6,
+            "seed-1: six peoples are placed, all organized"
         );
 
         let goblin = vol
@@ -4551,6 +4553,14 @@ mod tests {
     /// stances (`neighbors`/`ourselves`), same sentence frames, and the
     /// closing "The day returns because the sky must be crossed." is
     /// byte-identical.
+    ///
+    /// The Generalist re-pin (2026-08-03): human joins the coexistence stack
+    /// as a sixth people, organized alongside the other five at seed 1
+    /// (matching `seed_1_doctrine_sections_render` above) — the folk emic
+    /// gains one more peoples-line, "The Ngeevnao are humans — neighbors."
+    /// The C6 null-effect property this test exists to guard is unchanged;
+    /// only the ground truth grew by one more peoples-line, same as every
+    /// prior re-pin in this test's history.
     #[test]
     fn folk_sections_are_byte_unchanged() {
         let vol = render_volume(&generated(1));
@@ -4566,6 +4576,7 @@ mod tests {
                 "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Ngeevnao are humans — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Pao is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -4592,6 +4603,7 @@ mod tests {
                 "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Ngeevnao are humans — rivals.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Pao is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
@@ -4971,9 +4983,13 @@ mod tests {
     /// arms (folk line, cardinal, prediction, taught-wrongly) plus a per-
     /// culture crisis margin and the world shortfall line. The Vacancy T9
     /// adds a fifth people (gnoll/Jakdaod), also organized at every seed
-    /// 1..=3, rendering a fifth priesthood arm. The values below are the
-    /// merged live measurement (they match `book/src/gallery/the-book.md`
-    /// and `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`'s day-numbers).
+    /// 1..=3, rendering a fifth priesthood arm. The Generalist adds a sixth
+    /// people (human), also organized at every seed 1..=3, rendering a
+    /// sixth priesthood arm — it joins the solar-only pair (goblin,
+    /// hobgoblin), matching `windows/worldgen/tests/diachronic.rs::
+    /// LADDER_TABLE`'s per-seed witnessed counts for human. The values below
+    /// are the merged live measurement (they match
+    /// `book/src/gallery/the-book.md` and `LADDER_TABLE`'s day-numbers).
     #[test]
     fn the_reckoning_renders_the_epoch_pair() {
         for seed in [1u64, 2, 3] {
@@ -5027,6 +5043,12 @@ mod tests {
                 "The Boove's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                "Among the Ngeevnao, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngeevnao numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Ngeevnao's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Ngosho, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Ngosho numbers the darkenings: 6472.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
@@ -5034,8 +5056,8 @@ mod tests {
                  any who kept their own count."
                     .to_string(),
             ],
-            "seed 1: five organized priesthoods; the lunar-witnessing group (bugbear, gnoll, \
-             kobold) numbers 6472, the solar-only pair (goblin, hobgoblin) 4010"
+            "seed 1: six organized priesthoods; the lunar-witnessing group (bugbear, gnoll, \
+             kobold) numbers 6472, the solar-only trio (goblin, hobgoblin, human) 4010"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
@@ -5052,6 +5074,9 @@ mod tests {
                 "In truth, the Boove's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
+                "In truth, the Ngeevnao's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
                 "In truth, the Ngosho's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
@@ -5061,10 +5086,10 @@ mod tests {
              count (6472) exceeds the solar-only cultures' held count"
         );
 
-        // Seed 2: five organized peoples (Booqboo, Klalsha, Meepmoe, Weeqwoe,
-        // Ngka); the lunar-witnessing group (bugbear/Booqboo,
-        // gnoll/Klalsha, kobold/Ngka) numbers 81, the solar-only pair
-        // (goblin/Meepmoe, hobgoblin/Weeqwoe) 49.
+        // Seed 2: six organized peoples (Booqboo, Klalsha, Meepmoe, Weeqwoe,
+        // Foetjee, Ngka); the lunar-witnessing group (bugbear/Booqboo,
+        // gnoll/Klalsha, kobold/Ngka) numbers 81, the solar-only trio
+        // (goblin/Meepmoe, hobgoblin/Weeqwoe, human/Foetjee) 49.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -5093,6 +5118,12 @@ mod tests {
                 "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                "Among the Foetjee, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Foetjee numbers the darkenings: 49.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Foetjee's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Dngooqdngo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Dngooqdngo numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
@@ -5116,6 +5147,9 @@ mod tests {
                 "In truth, the Webwee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
+                "In truth, the Foetjee's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
                 "In truth, the Dngooqdngo's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
@@ -5123,10 +5157,11 @@ mod tests {
             ]
         );
 
-        // Seed 3: five organized peoples (Tashoo, Jpajjpa, Ztasoe,
-        // Ztashoeg, Sqaojxo); the lunar-witnessing group (bugbear/Tashoo,
-        // gnoll/Jpajjpa, kobold/Sqaojxo) numbers 53, the solar-only pair
-        // (goblin/Ztasoe, hobgoblin/Ztashoeg) 32.
+        // Seed 3: six organized peoples (Tashoo, Jpajjpa, Ztasoe,
+        // Ztashoeg, Shoammoem, Sqaojxo); the lunar-witnessing group
+        // (bugbear/Tashoo, gnoll/Jpajjpa, kobold/Sqaojxo) numbers 53, the
+        // solar-only trio (goblin/Ztasoe, hobgoblin/Ztashoeg,
+        // human/Shoammoem) 32.
         //
         // Re-pinned at F7 (The Witness, 2026-07-30): gating `Tonogenesis` on
         // a prior merger reseeds every cascade — bugbear `Doozka` ->
@@ -5177,6 +5212,12 @@ mod tests {
                 "The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                "Among the Shoammoem, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Shoammoem numbers the darkenings: 32.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Shoammoem's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Jaojjao, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Jaojjao numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
@@ -5184,8 +5225,8 @@ mod tests {
                  who kept their own count."
                     .to_string(),
             ],
-            "seed 3: five organized priesthoods; the lunar-witnessing group numbers 53, the \
-             solar-only pair 32"
+            "seed 3: six organized priesthoods; the lunar-witnessing group numbers 53, the \
+             solar-only trio 32"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
@@ -5200,6 +5241,9 @@ mod tests {
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Zhooqsha's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
+                "In truth, the Shoammoem's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Jaojjao's priesthood taught the darkening would come on day \
@@ -5260,8 +5304,9 @@ mod tests {
                 // epoch phrase at all (unlike the shortfall line below), so
                 // they are byte-identical to the fixed pair's own margin
                 // lines pinned in `the_reckoning_renders_the_epoch_pair`.
-                // Merge re-placement, then The Vacancy T9: five organized
-                // priesthoods now, each with its own live crisis.
+                // Merge re-placement, then The Vacancy T9, then The
+                // Generalist: six organized priesthoods now, each with its
+                // own live crisis.
                 "In truth, the Booxo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
@@ -5272,6 +5317,9 @@ mod tests {
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Boove's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Ngeevnao's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Ngosho's priesthood taught the darkening would come on day \
@@ -5301,6 +5349,15 @@ mod tests {
     /// `folk_sections_are_byte_unchanged`), widened here to cover every
     /// pre-C8 `BookVolume` field at seed 1, not just the chorus folk
     /// registers.
+    ///
+    /// The Generalist re-pin (2026-08-03): human joins the coexistence
+    /// stack as a sixth people, organized at seed 1 alongside the other
+    /// five — `vol.lines`, `vol.tongue_lines`, `vol.tongue_gaps` and
+    /// `goblin.emic` each gain one more human-authored entry ("The Ngeevnao
+    /// are humans."/its human-tongue rendering/"human: gap — planet"/"The
+    /// Ngeevnao are humans — neighbors."). The additivity property this
+    /// test guards is unchanged; only the ground truth grew by one more
+    /// peoples-line, same as every prior re-pin in this file's history.
     #[test]
     fn the_additivity_law() {
         let vol = render_volume(&generated(1));
@@ -5315,6 +5372,7 @@ mod tests {
                 "The Kabja are gnolls.".to_string(),
                 "The Woove are goblins.".to_string(),
                 "The Boove are hobgoblins.".to_string(),
+                "The Ngeevnao are humans.".to_string(),
                 "The Ngosho are kobolds.".to_string(),
             ]
         );
@@ -5364,6 +5422,9 @@ mod tests {
                 "Boove Beebo Boa Boo. (in the hobgoblin tongue: \"The Boove are hobgoblins.\")"
                     .to_string(),
                 "Pao Veabea Boa Be. (in the hobgoblin tongue: \"Pao is the earth.\")".to_string(),
+                "Ngeevnao Vavneozhoa Voosaa. (in the human tongue: \"The Ngeevnao are humans.\")"
+                    .to_string(),
+                "Pao Saseo Voosaa. (in the human tongue: \"Pao is the earth.\")".to_string(),
                 "Ngosho Ngod Nga. (in the kobold tongue: \"The Ngosho are kobolds.\")".to_string(),
                 "Pao Ngod Ngotngo. (in the kobold tongue: \"Pao is the earth.\")".to_string(),
             ]
@@ -5375,6 +5436,7 @@ mod tests {
                 "gnoll: gap — planet (no entry in this lexicon)".to_string(),
                 "goblin: gap — planet (no entry in this lexicon)".to_string(),
                 "hobgoblin: gap — planet (no entry in this lexicon)".to_string(),
+                "human: gap — planet (no entry in this lexicon)".to_string(),
                 "kobold: gap — planet (no entry in this lexicon)".to_string(),
             ]
         );
@@ -5391,6 +5453,7 @@ mod tests {
                 "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Ngeevnao are humans — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Pao is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -5422,6 +5485,7 @@ mod tests {
                 "The Kabja are gnolls — neighbors.".to_string(),
                 "The Woove are goblins — ourselves.".to_string(),
                 "The Boove are hobgoblins — neighbors.".to_string(),
+                "The Ngeevnao are humans — neighbors.".to_string(),
                 "The Ngosho are kobolds — neighbors.".to_string(),
                 "Pao is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
@@ -5464,6 +5528,7 @@ mod tests {
                 "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Ngeevnao are humans — rivals.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Pao is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
@@ -5494,6 +5559,7 @@ mod tests {
                 "The Kabja are gnolls — rivals.".to_string(),
                 "The Woove are goblins — rivals.".to_string(),
                 "The Boove are hobgoblins — ourselves.".to_string(),
+                "The Ngeevnao are humans — rivals.".to_string(),
                 "The Ngosho are kobolds — rivals.".to_string(),
                 "Pao is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),

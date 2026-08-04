@@ -496,6 +496,19 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // founding coordinates are themselves equal, so the key is doing
     // exactly what its definition says, not silently colliding two
     // occupations the world actually distinguishes.
+    //
+    // The Generalist re-pin (2026-08-03): human joining the coexistence
+    // stack redecided deep-history settlement survival at all three seeds,
+    // which moved which occupations tie under the material key. Re-measured
+    // on the live corpus: 3 tying pairs total -- 0 at seed 42 (the
+    // hobgoblin founder/flee chain no longer ties), 1 at seed 7 (newly
+    // ties), 2 at seed 1000 (the gnoll chain still ties, plus one more).
+    // Re-read, not assumed: this task's own diff touches no code this test
+    // exercises (`layer_key`, `legacy_layer_key`, `occupations_by_cell` are
+    // all outside `domains/language`), so the movement is entirely a
+    // consequence of human's biosphere/niche rows redeciding settlement
+    // placement, the same class of collateral this file's own history
+    // already documents for The Salt.
     let mut pairs = 0u64;
     let mut ties = 0u64;
     for seed in [42u64, 7, 1000] {
@@ -538,8 +551,8 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
          until at least one site restacks (pairs={pairs})"
     );
     assert_eq!(
-        ties, 5,
-        "measured 4 (seed 42) + 0 (seed 7) + 1 (seed 1000) = 5 tying pairs on the live \
+        ties, 3,
+        "measured 0 (seed 42) + 1 (seed 7) + 2 (seed 1000) = 3 tying pairs on the live \
          corpus; a different count means the key's tie conditions changed"
     );
 }
@@ -581,9 +594,14 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// `EntityId` and onto its founding coordinates changes the rendered order at
 /// exactly one site across seeds 42, 7 and 1000 -- measured before
 /// implementation (spec §4, V3).
+///
+/// The Generalist re-pin (2026-08-03): human joining the coexistence stack
+/// redecided seed 42's deep-history settlement outcome, and a second site
+/// there now restacks under the material key — seed 42's count moves 0 -> 1.
+/// Seeds 7 and 1000 are unmoved.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 0usize), (7, 1), (1000, 0)] {
+    for (seed, expected) in [(42u64, 1usize), (7, 1), (1000, 0)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

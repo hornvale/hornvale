@@ -326,8 +326,9 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// re-pinned 2 -> 4 (measured on the epoch; this is a placement-provider
 /// change, orthogonal to T2's per-axis supply thesis). The Vacancy T9 adds a
 /// fifth people (the gnoll), measured at seed 42 to also place a settlement —
-/// re-pinned 4 -> 5.
-const BASELINE_PEOPLED_KINDS_42: usize = 5;
+/// re-pinned 4 -> 5. The Generalist adds a sixth people (human), measured at
+/// seed 42 to also place a settlement — re-pinned 5 -> 6.
+const BASELINE_PEOPLED_KINDS_42: usize = 6;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -516,10 +517,15 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // desert people, contributing more to the tropical sum than the polar
     // one), moving the ratio to 30.8158 — still far above the preregistered
     // floor of 3.
+    //
+    // The Generalist re-pin (2026-08-03): human is a sixth Settled kind
+    // (a temperate/subtropical generalist, per its own condition niche),
+    // and by this test's own construction is a new term in `trop_sum`/
+    // `pole_sum` — moving the ratio to 31.0099.
     assert!(
-        (ratio - 30.8158).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~30.8158, the post-T9 \
-         merged-tree scalar-path reading) — something outside the-demesne's per-axis \
+        (ratio - 31.0099).abs() < 1e-3,
+        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0099, the post-Generalist \
+         scalar-path reading) — something outside the-demesne's per-axis \
          supply fields moved this K"
     );
 }
