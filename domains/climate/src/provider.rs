@@ -81,6 +81,18 @@ pub struct GeneratedClimate {
     /// every `weather_at`/`cloud_type_at` call — see `weather::weather_fbm`'s
     /// doc comment. Bit-identical to constructing fresh per call.
     weather_fbm: Fbm,
+    /// The `Spinning`-regime seasonal sine term, `sin(τ · phase(d))`, for
+    /// each day `d` of the year — cell-independent (phase depends only on
+    /// `d`, `year_length_std`, and `year_phase_offset`, all climate-level
+    /// constants; see `year_of_day_contexts`'s doc comment), so computed
+    /// ONCE here (the derive-once pattern, like `weather_fbm` above) rather
+    /// than once per cell per day inside `year_of_day_contexts`'s per-cell
+    /// loop (The Mire Glacier campaign, change A). Bit-identical to the
+    /// inline per-cell computation it replaces — same `math::sin` call,
+    /// same argument, just shared. Indexed only from `year_of_day_contexts`'s
+    /// `Spinning` branch; sized to the same `days` count that function uses,
+    /// so every index `0..days` it reads is in bounds.
+    seasonal_sine: Vec<f64>,
     current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     biome_expr: CellMap<BiomeExpr>,
@@ -128,6 +140,26 @@ fn is_upwelling(
     let wind = prevailing_wind(geo, cell, bands);
     // Offshore wind: wind opposes the toward-land direction.
     wind[0] * toward[0] + wind[1] * toward[1] + wind[2] * toward[2] < 0.0
+}
+
+/// Precompute one year's cell-independent seasonal sine term,
+/// `sin(τ · phase(d))`, for each day `d` in `0..days` — the exact same
+/// `phase` formula `year_of_day_contexts`'s `Spinning` branch evaluates
+/// inline, lifted out because it never depends on `cell` (see that
+/// function's doc comment). Calling `math::sin` with the identical argument
+/// in the identical order this replaces makes the result bit-identical to
+/// the per-cell computation, just computed once instead of once per cell.
+fn seasonal_sine_table(days: usize, year_length: f64, year_phase_offset: f64) -> Vec<f64> {
+    (0..days)
+        .map(|d| {
+            let phase = if year_length > 0.0 {
+                (d as f64 / year_length + year_phase_offset).rem_euclid(1.0)
+            } else {
+                0.0
+            };
+            math::sin(std::f64::consts::TAU * phase)
+        })
+        .collect()
 }
 
 /// The local along-wind terrain rise at `cell`, meters: the elevation gained
@@ -196,6 +228,9 @@ impl GeneratedClimate {
         });
         let weather_seed = crate::weather::weather_seed(inputs.seed);
         let weather_fbm = crate::weather::weather_fbm(weather_seed);
+        let days = inputs.year_length_std.max(1.0).round() as usize;
+        let seasonal_sine =
+            seasonal_sine_table(days, inputs.year_length_std, inputs.year_phase_offset);
         let current = ocean_current_field(geo, &is_ocean, band_count);
         // The faceted expression is the truth; the legacy `Biome` map is
         // derived from it in the same pass, so the two views cannot diverge and
@@ -236,6 +271,7 @@ impl GeneratedClimate {
             cloud_fraction: cloud_frac,
             weather_propensity,
             weather_fbm,
+            seasonal_sine,
             current,
             biome,
             biome_expr,
@@ -486,7 +522,6 @@ impl GeneratedClimate {
         let cloud_fraction = self.cloud_fraction_at(cell);
         let mean = self.mean_temperature_at(cell).get();
         let swing = self.seasonal_swing_at(cell);
-        let year_length = self.year_length_std();
 
         states
             .iter()
@@ -494,14 +529,7 @@ impl GeneratedClimate {
             .map(|(d, state)| {
                 let mean_temp_c = match self.regime {
                     RotationRegime::Locked => self.temperature_at(cell, d as f64).get(),
-                    RotationRegime::Spinning { .. } => {
-                        let phase = if year_length > 0.0 {
-                            (d as f64 / year_length + self.year_phase_offset).rem_euclid(1.0)
-                        } else {
-                            0.0
-                        };
-                        mean + swing * math::sin(std::f64::consts::TAU * phase)
-                    }
+                    RotationRegime::Spinning { .. } => mean + swing * self.seasonal_sine[d],
                 };
                 DayContext {
                     precip_mm: daily_precip_mm(
