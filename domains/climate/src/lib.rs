@@ -12,11 +12,14 @@ pub mod moisture;
 pub mod precipitation;
 pub mod provider;
 pub mod render;
+pub mod snowpack;
 pub mod streams;
 pub mod substellar;
+pub mod substrate;
 pub mod temperature;
 pub mod variants;
 pub mod weather;
+pub mod wetness;
 
 pub use biome::{Biome, SeafloorFeature};
 pub use circulation::{RotationRegime, band_count_for, prevailing_wind};
@@ -25,18 +28,23 @@ pub use currents::{ocean_current, ocean_current_field};
 pub use diurnal::{diurnal_amplitude, diurnal_anomaly, diurnal_waveform};
 pub use facets::{Access, BiomeExpr, Formation, Medium, Realm, Stratum};
 pub use habitability::{habitable_fraction, is_habitable};
-pub use precipitation::{PrecipRegime, precip_mm_yr, precip_regime, snow_fraction};
+pub use precipitation::{
+    PrecipRegime, daily_precip_mm, daily_weight, precip_mm_yr, precip_regime, snow_fraction,
+};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
+pub use snowpack::{DEFAULT_SNOWPACK, Snowpack};
 pub use streams::stream_labels;
 pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
 };
+pub use substrate::{DayContext, SpinUp, Substrate, spin_up};
 pub use temperature::locked_temperature_at_position;
 pub use variants::{GroundKind, Variant, VariantEntry, variant_at_cell, variant_pool};
 pub use weather::{
     CloudType, WeatherState, cloud_type, storm_propensity, weather_phase, weather_seed,
     weather_state,
 };
+pub use wetness::{DEFAULT_WETNESS, SurfaceWetness, receptivity};
 
 use hornvale_kernel::{
     CognitiveHandle, ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest,

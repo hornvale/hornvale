@@ -663,6 +663,50 @@ that could not, by construction, reflect the layer being changed, and four
 stages of evidence were vacuous before anyone noticed. The check that a
 measurement can move at all belongs beside the measurement, not after it.
 
+[The Mire](./chronicle/the-mire.md) exercised the same discipline on a bet
+about weather and world structure that no earlier chapter entry had staked,
+and it too came back **no** — a double falsification rather than a single
+one. It froze, before any code existed, that a weather-gated modifier on the
+connection graph's edge conductance (mud and snowpack lowering it, frozen
+ground raising it back) would move the passable fraction of the world's
+connection graph by a global, latitude-graded amount: at least a 5% median
+swing across two hundred generated worlds (the systemic-effect bet), growing
+toward the poles where weather is harshest (the where-it-shows-up bet).
+Neither held. The measured median swing is **0.95%**, an order of magnitude
+under the floor, and the swing that does exist runs backward: equatorial
+cells swing furthest (0.0224), temperate cells less (0.0021), and polar
+cells swing **exactly zero** — not merely small, zero on the nose, across
+every sampled seed.
+
+The mechanism is the durable part, and it generalizes past this one
+measurement: **seasonal variation lives where conditions alternate, not
+where they are extreme.** A permanently frozen polar cell has one season,
+all year, so it never crosses the conductance threshold in either
+direction; an equatorial cell, wet in one season and dry in the next, is
+exactly the alternation the instrument can detect. Extremity without
+alternation is stasis. Two checks confirmed the null was real rather than
+the instrument being blind: a synthetic all-or-nothing probe (every land
+edge fully open one day, fully closed the next) registered swings ten to
+twenty times the measured median when an effect of that size was
+deliberately manufactured, and across a full year only about 4% of real
+land edges ever cross the passability threshold at all — most of the graph
+is simply always-open or always-closed, regardless of season, which is the
+mechanistic reason the systemic swing is small. This null joins the
+chapter's growing record of preregistered predictions that came back no —
+alongside the fire-warmth bet above and the conflict-cascade criticality
+bet below — each recorded as a finding rather than a failure, because a
+chapter that only reports confirmations is measuring taste, not the world.
+
+What the null does not settle is stated in the chronicle rather than
+smoothed over. The measured quantity is **passability** — whether a route
+is open at all — not **cost**, how much slower or harder a route becomes
+while it stays open; a large seasonal cost effect could sit entirely
+beneath this instrument's threshold-crossing view and be invisible to it.
+And the result is a claim about **land only**: water edges were
+deliberately left ungated this campaign, so "the poles do not vary" may be
+true for land and false for the sea ice that borders it, on coastlines
+whose land itself never varies because it is permanently frozen.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,

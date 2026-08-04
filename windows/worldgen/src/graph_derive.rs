@@ -15,6 +15,9 @@
 
 use crate::traversal::traversal_cost;
 use hornvale_climate::Biome;
+use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
+use hornvale_climate::substrate::SubstrateField;
+use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Value, World};
 use hornvale_topology::route::least_cost;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
@@ -27,8 +30,8 @@ use std::collections::BTreeSet;
 /// water-current trace may take before giving up. Coarse-tuned (not
 /// census-calibrated), like `traversal::BASE_COST`/`SLOPE_SCALE` -- see
 /// [`GraphConfig::default`].
-/// type-audit: bare-ok(count: land_route_radius), bare-ok(count: astar_budget), bare-ok(count: corridor_max_cost), bare-ok(count: water_route_max_steps)
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// type-audit: bare-ok(count: land_route_radius), bare-ok(count: astar_budget), bare-ok(count: corridor_max_cost), bare-ok(count: water_route_max_steps), bare-ok(diagnostic-value: day)
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GraphConfig {
     /// Settlement pairs farther than this many hops apart over the bare
     /// mesh adjacency (`Geosphere::hops_between`, cost-blind) are never even
@@ -45,6 +48,10 @@ pub struct GraphConfig {
     /// The maximum number of ocean-cell hops a current-following water-route
     /// trace may take before giving up on reaching another coastal cell.
     pub water_route_max_steps: u32,
+    /// The day to gate conductance on, if any. `None` -- the default and
+    /// what every pre-Mire caller gets -- derives the unweathered graph,
+    /// byte-identically to before this campaign.
+    pub day: Option<f64>,
 }
 
 impl Default for GraphConfig {
@@ -55,16 +62,47 @@ impl Default for GraphConfig {
     /// by a real peak's slope surcharge, which dwarfs `BASE_COST` per the
     /// same reasoning `traversal::SLOPE_SCALE`'s doc comment gives), and a
     /// 20-step current trace. Deferred until a consumer needs census-tuned
-    /// values, exactly as Task 3 deferred `BASE_COST`/`SLOPE_SCALE`.
+    /// values, exactly as Task 3 deferred `BASE_COST`/`SLOPE_SCALE`. `day`
+    /// defaults to `None`: no weather gating unless a caller opts in.
     fn default() -> Self {
         GraphConfig {
             land_route_radius: 12,
             astar_budget: 2000,
             corridor_max_cost: 600,
             water_route_max_steps: 20,
+            day: None,
         }
     }
 }
+
+/// How much weather's memory in the ground impedes travel, `[0,1]` -- a
+/// multiplier on an edge's conductance.
+///
+/// Mud and lying snow each impede. A **frozen** mire recovers most of what
+/// its wetness cost, because hard ground travels well; that asymmetry is
+/// deliberate and is what distinguishes this from a monotone penalty
+/// wearing a physics costume.
+/// type-audit: bare-ok(ratio: wetness), bare-ok(diagnostic-value: snow_mm), bare-ok(flag: frozen), bare-ok(ratio: return)
+pub fn weather_conductance_factor(wetness: f64, snow_mm: f64, frozen: bool) -> f64 {
+    let w = wetness.clamp(0.0, 1.0);
+    let mud = if frozen {
+        w * MUD_PENALTY * FROZEN_RELIEF
+    } else {
+        w * MUD_PENALTY
+    };
+    let snow = (snow_mm.max(0.0) / SNOW_IMPEDING_MM).clamp(0.0, 1.0) * SNOW_PENALTY;
+    (1.0 - mud - snow).clamp(0.0, 1.0)
+}
+
+/// Saturated unfrozen ground costs this share of an edge's conductance.
+const MUD_PENALTY: f64 = 0.6;
+/// Freezing returns most of the mud penalty -- hard ground travels well.
+const FROZEN_RELIEF: f64 = 0.15;
+/// Lying snow at or above this depth (mm water equivalent) costs the full
+/// snow penalty.
+const SNOW_IMPEDING_MM: f64 = 300.0;
+/// A fully snowed-in edge costs this share of its conductance.
+const SNOW_PENALTY: f64 = 0.7;
 
 /// Derive the world's [`ConnectionGraph`] from real geography: bare mesh
 /// adjacency, ocean-current sailing lanes, and bounded least-cost land
@@ -130,6 +168,14 @@ pub fn connection_graph_at(
 /// this function is only the adapter, so it never duplicates
 /// `connection_graph`'s edge-assembly.
 ///
+/// If `cfg.day` is `Some(day)` (The Mire, Task 6), the assembled graph is
+/// then weather-gated: two `SubstrateField`s (surface wetness, snowpack) are
+/// computed once -- never per edge -- and every `Adjacency`/`LandRoute`
+/// edge's conductance is scaled by the mean of its two endpoints'
+/// [`weather_conductance_factor`]. `WaterRoute` edges are left untouched
+/// (sea ice is a future consumer's business). `cfg.day == None` is
+/// byte-identical to the pre-Mire behaviour -- the scaling pass never runs.
+///
 /// # Panics
 ///
 /// `world` must have been built through at least `BuildDepth::Settlements`
@@ -159,7 +205,38 @@ pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph 
         )
         .collect();
 
-    connection_graph(geo, elevation, &biome, &current, &settlements, cfg)
+    let mut graph = connection_graph(geo, elevation, &biome, &current, &settlements, cfg);
+
+    if let Some(day) = cfg.day {
+        // Computed ONCE per call, never per edge -- each spins up every
+        // cell's periodic year (Task 5 measured ~90-105ms per field at
+        // 2562 cells), so re-deriving inside the per-edge closure below
+        // would be the same mistake in miniature. `compute_pair` additionally
+        // shares each cell's `year_of_day_contexts` build across both
+        // substrates rather than rebuilding it once per field (the-mire-perf
+        // follow-up, change 2) -- arithmetically identical to two separate
+        // `SubstrateField::compute` calls, just without the duplicate year.
+        let (wetness_field, snow_field) =
+            SubstrateField::compute_pair(&climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
+        let factor_at = |cell: CellId| -> f64 {
+            let wetness_mm = wetness_field.at(cell, day);
+            let snow_mm = snow_field.at(cell, day);
+            let frozen = climate.is_frozen_at(cell, day);
+            weather_conductance_factor(
+                receptivity(wetness_mm, DEFAULT_WETNESS.field_capacity_mm),
+                snow_mm,
+                frozen,
+            )
+        };
+        graph.scale_conductance(|from, edge| match edge.kind {
+            EdgeKind::WaterRoute => 1.0,
+            EdgeKind::Adjacency | EdgeKind::LandRoute => {
+                (factor_at(from) + factor_at(edge.to)) / 2.0
+            }
+        });
+    }
+
+    graph
 }
 
 /// The number of settlement pairs [`connection_graph`]'s land-route
@@ -361,8 +438,14 @@ fn add_land_routes(
     sorted.dedup();
 
     for (i, &a) in sorted.iter().enumerate() {
+        // The bare-adjacency reachable set from `a`, out to
+        // `cfg.land_route_radius` hops, computed ONCE for `a` rather than
+        // re-walked per candidate `b` (see `cells_within_hops`'s doc comment
+        // -- this is the same predicate `Geosphere::hops_between(a, b,
+        // radius).is_some()` would answer per pair, batched).
+        let reachable = cells_within_hops(geo, a, cfg.land_route_radius);
         for &b in &sorted[i + 1..] {
-            if geo.hops_between(a, b, cfg.land_route_radius).is_none() {
+            if !reachable.contains(&b) {
                 continue;
             }
             let Some((_, total)) = least_cost(geo, cost, a, b, cfg.astar_budget) else {
@@ -381,5 +464,168 @@ fn add_land_routes(
                 },
             );
         }
+    }
+}
+
+/// Every cell reachable from `from` within `radius` hops of `geo`'s bare
+/// mesh adjacency -- the batched form of [`Geosphere::hops_between`]'s
+/// per-target bounded BFS. `hops_between(from, b, radius).is_some()` iff `b`
+/// is in this set: bare-adjacency reachability within a hop bound is a pure
+/// function of `(from, radius)` alone, not of which target is being asked
+/// about, and the frontier expansion below is the identical BFS
+/// `hops_between` runs (same `visited`/`frontier` bookkeeping, same
+/// depth bound, same early-break on an exhausted frontier) -- it just
+/// answers the predicate for every candidate at once instead of re-walking
+/// the same bounded neighborhood from scratch per candidate. `add_land_routes`
+/// calls this once per `a`, replacing what was previously one
+/// `hops_between` call per `(a, b)` pair -- a genuine reduction in repeated
+/// work, not a change to which pairs pass the filter.
+fn cells_within_hops(geo: &Geosphere, from: CellId, radius: u32) -> BTreeSet<CellId> {
+    let mut visited: BTreeSet<CellId> = BTreeSet::new();
+    visited.insert(from);
+    let mut frontier: Vec<CellId> = vec![from];
+    for _ in 1..=radius {
+        let mut next: Vec<CellId> = Vec::new();
+        for &c in &frontier {
+            for &n in geo.neighbors(c) {
+                if visited.insert(n) {
+                    next.push(n);
+                }
+            }
+        }
+        if next.is_empty() {
+            break;
+        }
+        frontier = next;
+    }
+    visited
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Seed 42, built to `BuildDepth::Settlements` -- deep enough for
+    /// `connection_graph_of` to reconstruct terrain, climate, and read every
+    /// committed settlement's `cell-id` fact. Mirrors
+    /// `windows/worldgen/tests/graph_byte_identity.rs`'s `build_settlements`
+    /// exactly (that file is a separate compilation unit -- an integration
+    /// test -- so its helper is not reachable from here).
+    fn sample_world() -> World {
+        let wc = crate::WorldComponents::assemble().expect("canonical registries are well-formed");
+        crate::build_world_to(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            crate::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &crate::SettlementPins::default(),
+            &wc,
+            crate::BuildDepth::Settlements,
+        )
+        .expect("seed 42 builds to Settlements")
+    }
+
+    #[test]
+    fn dry_ground_is_unmodified() {
+        assert_eq!(weather_conductance_factor(0.0, 0.0, false), 1.0);
+    }
+
+    #[test]
+    fn mud_and_snow_each_impede_travel() {
+        let dry = weather_conductance_factor(0.0, 0.0, false);
+        let muddy = weather_conductance_factor(1.0, 0.0, false);
+        let snowy = weather_conductance_factor(0.0, 400.0, false);
+        assert!(muddy < dry, "mud did not impede travel");
+        assert!(snowy < dry, "snow did not impede travel");
+    }
+
+    #[test]
+    fn a_frozen_mire_travels_better_than_a_wet_one() {
+        // THE asymmetry. If the modifier were a monotone penalty dressed up
+        // as physics, freezing saturated ground would change nothing. Hard
+        // ground travels well, and that is the specific guard against a
+        // debuff wearing a physics costume.
+        let wet = weather_conductance_factor(1.0, 0.0, false);
+        let frozen = weather_conductance_factor(1.0, 0.0, true);
+        assert!(
+            frozen > wet,
+            "a frozen mire ({frozen}) did not out-travel a wet one ({wet})"
+        );
+    }
+
+    #[test]
+    fn the_factor_never_leaves_the_unit_interval() {
+        for wetness in [0.0, 0.5, 1.0] {
+            for snow in [0.0, 100.0, 5000.0] {
+                for frozen in [false, true] {
+                    let f = weather_conductance_factor(wetness, snow, frozen);
+                    assert!((0.0..=1.0).contains(&f), "factor {f} out of range");
+                }
+            }
+        }
+    }
+
+    #[test]
+    // Named construction site (decision 0092): this test's own reference
+    // graph re-sculpts/re-fits, mirroring `connection_graph_of`'s own
+    // allow, to build an independent comparison graph.
+    #[allow(clippy::disallowed_methods)]
+    fn a_day_less_config_leaves_the_graph_byte_identical() {
+        // The compatibility guard: every existing caller passes no day, and
+        // must get exactly the graph it got before this campaign -- i.e.
+        // exactly what the un-gated `connection_graph` itself produces from
+        // the same inputs, not merely two `day: None` `connection_graph_of`
+        // calls agreeing with EACH OTHER. That weaker comparison cannot
+        // fail even if the gating pass ran unconditionally regardless of
+        // `cfg.day` (both `day: None` variants would drift identically) --
+        // caught by mutation-testing this test itself, so the reference
+        // graph here is built independently, by reconstructing terrain and
+        // climate exactly as `connection_graph_of` does and calling the
+        // low-level `connection_graph` directly.
+        let world = sample_world();
+        let cfg = GraphConfig::default();
+
+        let terrain = crate::terrain_of(&world).expect("world built with terrain");
+        let climate = crate::climate_from(&world, &terrain).expect("world built with climate");
+        let geo = terrain.geosphere();
+        let elevation = &terrain.globe().elevation;
+        let biome = climate.biome_map();
+        let current = CellMap::from_fn(geo, |c| climate.current_at(c));
+        let settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+            .iter()
+            .map(
+                |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
+                    Some(Value::Number(n)) => CellId(*n as u32),
+                    _ => panic!("settlement {} has no cell-id fact", s.id.0),
+                },
+            )
+            .collect();
+        let reference = connection_graph(geo, elevation, &biome, &current, &settlements, &cfg);
+
+        let adapted = connection_graph_of(&world, &cfg);
+        for cell in reference.nodes() {
+            assert_eq!(
+                reference.edges(cell),
+                adapted.edges(cell),
+                "cell {cell:?} drifted"
+            );
+        }
+    }
+
+    #[test]
+    fn gating_on_a_day_changes_some_edge_conductance() {
+        // The reader actually reads. A gated graph that equals the ungated
+        // one would mean the substrate is still latent.
+        let world = sample_world();
+        let plain = connection_graph_of(&world, &GraphConfig::default());
+        let winter = connection_graph_of(
+            &world,
+            &GraphConfig {
+                day: Some(0.0),
+                ..GraphConfig::default()
+            },
+        );
+        let changed = plain.nodes().any(|c| plain.edges(c) != winter.edges(c));
+        assert!(changed, "weather gating altered no edge in the whole world");
     }
 }
