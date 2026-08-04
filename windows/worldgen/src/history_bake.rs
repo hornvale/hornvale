@@ -250,7 +250,8 @@ const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// chosen to sit between the manikin's neutral midpoint — where goblin's
 /// authored temperament happens to sit (0.5) — and the assertive peoples
 /// (hobgoblin 0.7, kobold and bugbear 0.8, gnoll 0.85), so
-/// exactly one of the four settling peoples declines to raid. That is a choice
+/// exactly one of the five settling peoples declined to raid on the
+/// pre-human roster. That is a choice
 /// about what the gate *means*, made against the authored roster — not one
 /// fitted to a measured outcome; the cascade metric was not consulted in
 /// picking it. A save-format constant: changing it re-fights every world's
@@ -585,13 +586,16 @@ pub struct BakeConfig {
     /// axis, NOT zero, which would mean "strip to the floor" and is the
     /// harshest patron in the family rather than an unaffected one.
     ///
-    /// **Only three values are reachable patron-side on the shipped roster.**
-    /// The four settling peoples are authored bugbear 0.3 / goblin 0.5 /
-    /// hobgoblin 0.5 / kobold 0.8, and goblin's `threat_response` (0.5) sits
-    /// under `RAID_DISPOSITION_MIN`, so a goblin community never takes the
-    /// initiative and therefore never becomes a patron. The variety this rule
-    /// can produce is bounded by that: three horizons, two of them distinct
-    /// from the neutral middle.
+    /// **Only four values are reachable patron-side on the shipped roster.**
+    /// The six settling peoples are authored bugbear 0.3 / goblin 0.5 /
+    /// hobgoblin 0.5 / kobold 0.8 / gnoll 0.2 / human 0.75, and goblin's and
+    /// human's `threat_response` (both 0.5) sit under `RAID_DISPOSITION_MIN`,
+    /// so a goblin or human community never takes the initiative and
+    /// therefore never becomes a patron (this was already true of goblin
+    /// alone before The Vacancy added gnoll — gnoll's `threat_response`,
+    /// 0.85, clears the gate). The variety this rule can produce is bounded
+    /// by that: four horizons (bugbear 0.3, hobgoblin 0.5, kobold 0.8, gnoll
+    /// 0.2), three of them distinct from the neutral middle.
     pub time_horizon: BTreeMap<KindId, f64>,
 }
 

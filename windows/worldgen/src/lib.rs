@@ -4521,8 +4521,10 @@ pub fn family_daughters(
 /// regime freezes to the isolate rate ([`CascadeRegime::new`]`(0, 1)`)
 /// instead of the historical `SETTLED` rate. Authored comfortably between
 /// two bracketing values computed from `hornvale_species::lifespan` at the
-/// registry's authored masses: the longest-lived of the four settling
-/// peoples, bugbear at ~80.9 yr (132.0 kg, `Endotherm`), and the
+/// registry's authored masses: the longest-lived of the six settling
+/// peoples, gnoll at ~81.5 yr (136.1 kg, `Endotherm` — heavier than bugbear's
+/// 132.0 kg/~80.9 yr, which held this rank until The Vacancy added gnoll;
+/// human's 70.0 kg/~69.0 yr does not challenge it), and the
 /// shortest-lived dragon, white/black-dragon at ~163.4 yr (2200.0 kg,
 /// `Endotherm`). Also clear of the wild `Solitary` beasts
 /// (otyugh/xorn/rust-monster/owlbear), which top out around ~110 yr and so
@@ -8118,10 +8120,10 @@ mod tests {
     fn cascade_regime_of_matches_the_authored_regime_map() {
         // THE SOLITARY TONGUE (Task 2): cascade_regime_of is a total, pure
         // function of a biosphere row (no world/seed needed). Each of the
-        // four peoples (Settled) draws at the historical SETTLED rate; each
+        // six peoples (Settled) draws at the historical SETTLED rate; each
         // dragon (Solitary, long-lived) freezes to the isolate rate.
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-        for people in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+        for people in ["goblin", "kobold", "hobgoblin", "bugbear", "gnoll", "human"] {
             let bio = wc
                 .biosphere
                 .get_by_label(people)

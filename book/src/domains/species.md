@@ -35,14 +35,14 @@ six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
 deliberation latency, time horizon) — is carried by every minded kind: the
-five settling peoples and, since *The Eremite*, the three solitary dragons
+six settling peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
 knowledge, or generosity) — is carried by a minded kind that lives
 *socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
 creature (a dragon) carries none. The gate is sociality, not settlement — a
 nomadic band would carry a society without ever settling — though today that
-set is exactly the five settling peoples, since no `Gregarious` kind is yet
+set is exactly the six settling peoples, since no `Gregarious` kind is yet
 minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
 left open and recorded rather than filled, because a settlement-free people
 is unaudited everywhere downstream of a settlement.
@@ -226,11 +226,11 @@ one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
 the **perception** (3) component is carried by every kind that *speaks* — a
 chain, not a settlement gate: speech presupposes perception presupposes a
-mind — so the three chromatic dragons carry it alongside the five settling
+mind — so the three chromatic dragons carry it alongside the six settling
 peoples, though nothing settles a dragon does. The **society** vector (3 —
 sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
-`Gregarious` or `Settled` kind) carries it, which today is exactly the four
+`Gregarious` or `Settled` kind) carries it, which today is exactly the six
 settling peoples — a `Solitary` dragon carries none.
 `domains/language` authors the **articulation** (6) and the social
 **lexicon** — the speech a kind that speaks carries. Since *The Vigil*, a
@@ -349,8 +349,8 @@ Two things follow that are worth recording here rather than only in
 [Settlement](./settlement.md). First, the gate produces an **asymmetric**
 aversion structure with no pairwise machinery whatever — each people gates on
 its *own* authored number, so one people can decline a fight its neighbour is
-happy to pick — and on the shipped roster it means the goblin, at 0.5, never
-raids anyone while the other four may. Second, and more pointed at the time:
+happy to pick — and on the shipped roster it means the goblin and the human,
+both at 0.5, never raid while the other four may. Second, and more pointed at the time:
 threat response was for one campaign the **only** per-species input the bake
 received, so every people-to-people asymmetry the deep past produced ran
 through a single scalar.
@@ -366,8 +366,9 @@ at 0.7 least. The patron's **`MindVector.time_horizon`** is read as a
 community grows logistically, maximum sustainable yield sits at half of
 capacity, so a generational patron holds its vassal near that peak while an
 immediate one strips it. On the shipped roster the patrons order gnoll (0.2),
-bugbear (0.3), hobgoblin (0.5), kobold (0.8) — the goblin's horizon is 0.5 but
-its threat response bars it from raiding at all, so it never becomes a patron —
+bugbear (0.3), hobgoblin (0.5), kobold (0.8) — the goblin's and the human's
+horizons are 0.5 and 0.75 respectively, but both threat responses (0.5) bar
+them from raiding at all, so neither ever becomes a patron —
 and extraction rate and relation lifetime are both monotone in that order. It
 is also the mechanism by which a subjugated people can be extinguished at all,
 since extermination is optimal exactly when the discount rate exceeds intrinsic
@@ -491,7 +492,7 @@ religion across more than a pair, once a third people exists to make
 variation, both per-species and eventually per-individual, in place of one
 authored point per people; a physiology this vector does not yet have, so
 habitat affinity and temperance stay shared rather than species-derived;
-inter-species politics, trade, and conflict; and, past five, however many
+inter-species politics, trade, and conflict; and, past six, however many
 further peoples the registry is asked to hold.
 
 One limit is now measured rather than suspected. Carrying capacity is a supply

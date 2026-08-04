@@ -106,6 +106,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `hobgoblin-kind` | a hobgoblin | *Qage | /qage/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Qa | /qa/ |
 | `home` | one's dwelling | *Doe | /doe/ |
+| `human-kind` | a human | *Pege | /pege/ |
 | `hydrothermal-vent` | a biome class | *Teo | /teo/ |
 | `ice` | frozen water | *Na | /na/ |
 | `ice-lead` | A channel of open water through sea ice. | *Kea | /kea/ |

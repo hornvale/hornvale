@@ -14,47 +14,47 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 738918402, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Godogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
 [room 738918402, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Godogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [819] bugbear of Godogododaga
-  [820] hobgoblin of Geoboegetoanaoka
-  [821] gnoll of Pzopdzhaxgzavshmo
-  [822] a wild rust-monster
-  [823] a wild otyugh
-  [824] a wild xorn
-  [825] a wild carrion-crawler
+  [1020] bugbear of Goodogododaga
+  [1021] hobgoblin of Geoboegetoanaoka
+  [1022] kobold of Roxo
+  [1023] a wild rust-monster
+  [1024] a wild otyugh
+  [1025] a wild xorn
+  [1026] a wild carrion-crawler
 > needs
-The bugbear of Godogododaga seems content.
+The bugbear of Goodogododaga seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
 [room 738918402, day 5]
-Tropical seasonal forest — buttressed canopy — in the lands of Godogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Godogododaga settles down to rest.
+The bugbear of Goodogododaga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (17 stirred).
+Time passes. You sense movement nearby (16 stirred).
 > look
 [room 738918402, day 6]
-Tropical seasonal forest — buttressed canopy — in the lands of Godogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Godogododaga settles down to rest.
+The bugbear of Goodogododaga settles down to rest.
 > wait 1
 Time passes. You sense movement nearby (16 stirred).
 > look
 [room 738918402, day 7]
-Tropical seasonal forest — buttressed canopy — in the lands of Godogododaga. The sky above: Night. The sky is a low grey rain-deck.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The sky is a low grey rain-deck.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Godogododaga grows restless.
+The bugbear of Goodogododaga grows restless.
 > why hobgoblin
 hobgoblin of Geoboegetoanaoka:
 - canonical name of an entity: hobgoblin of Geoboegetoanaoka (asserted by the-quickening)
@@ -62,13 +62,13 @@ hobgoblin of Geoboegetoanaoka:
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (338 stirred).
+Time passes. You sense movement nearby (350 stirred).
 > look
 [room 738918402, day 97]
-Tropical seasonal forest — buttressed canopy — in the lands of Godogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Godogododaga grows restless.
+The bugbear of Goodogododaga grows restless.
 > release
 You let go.
 ```

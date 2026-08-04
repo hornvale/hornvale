@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Godogododaga
-===============================
+The connections of Goodogododaga
+================================
 
-Godogododaga opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
+A natural route runs to Gododaga and Daoga, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Godogododaga sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+Goodogododaga sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -30,13 +30,13 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Nenato
-=========================
+The connections of Raxarora (17.2°N, 104.2°W)
+=============================================
 
-Nenato is linked by sea-lane to Dodadodo, cell 28374, and Geoge -- a current-borne crossing, not a road.
-A natural route runs to Geobogebo and Geoge, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Raxarora (17.2°N, 104.2°W) is linked by sea-lane to Xoraxa, cell 28374, and Raxarora (16.2°N, 104.6°W) -- a current-borne crossing, not a road.
+A natural route runs to Neteabo, Raxarora (16.2°N, 104.6°W), Geoboge, and Roxoxoxa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Nenato's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+Raxarora (17.2°N, 104.2°W)'s region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum

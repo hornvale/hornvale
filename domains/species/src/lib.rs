@@ -1702,9 +1702,9 @@ impl Component for PerceptionVector {}
 /// utilization profile over the resource-axis basis; each kind's climate-tile
 /// rationale lives in its `*_condition_niche` helper above. Potency is the
 /// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
-/// supernatural set (dragons, treant, xorn); mundane beasts and the four
+/// supernatural set (dragons, treant, xorn); mundane beasts and the six
 /// peoples carry 0. `social_form` is the universal social-organization axis
-/// (spec §3.1, The Eremite): `Settled` for the four peoples, `Sessile` for
+/// (spec §3.1, The Eremite): `Settled` for the six peoples, `Sessile` for
 /// the rooted autotrophs, `Gregarious` for the herding beasts, `Solitary`
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
@@ -2056,7 +2056,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 // bugbear's 0.85 ANIMAL_PREY lean).
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 0.65), (PLANT_FORAGE, 0.35)]).unwrap(),
                 condition_niche: gnoll_condition_niche(),
-                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other four peoples
+                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other five peoples
                 social_form: SocialForm::Settled,
             },
         ),
@@ -3077,7 +3077,7 @@ mod tests {
         let goblin = bio.get(&KindId("goblin")).unwrap();
         assert_eq!(goblin.mass, Mass::new(18.1).unwrap());
         assert_eq!(goblin.potency, 0.0);
-        // the four peoples all speak/settle (carry a psyche row)
+        // these four (of today's six) peoples all speak/settle (carry a psyche row)
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
             assert!(psy.contains(&KindId(name)), "{name} must carry a psyche");
         }
