@@ -3,57 +3,43 @@
 **Status:** spec, awaiting G3 review.
 **Date:** 2026-08-03
 **Program:** the peoples program
-(`2026-08-03-the-peoples-program-design.md`). Inserted after this document's
-§6 argument; **must precede C2d**.
+(`2026-08-03-the-peoples-program-design.md`). **Runs immediately after C2-0,
+before C2a and C2b** (§7).
 
 A manikin is the reference figure a tailor fits cloth against. A *tolerance* is
 the spread the tailor is allowed around it. Hornvale has the first and not the
-second: every people is authored as a single point, and the model has no way to
-say that one people spreads further around its point than another.
+second: every people is authored as a single point, and the model cannot say
+that one people spreads further around its point than another.
 
 ## 1. Why — the finding that exposed it
 
 The Generalist authored humans with `threat_response = 0.5`, on the argued
-ground that humans genuinely both flee and stand. A code review then found that
+ground that humans genuinely both flee and stand. A review then found that
 `RAID_DISPOSITION_MIN = 0.6` (`windows/worldgen/src/history_bake.rs`) gates
 raiding on that dimension — so **no human raids in any world's deep history**.
 
-The owner's reaction was that this is shocking, and it is. But the sentence
-itself is the tell. *"Humans do not raid"* is only a **sayable** sentence
-because every human in every world is one human. The finding is a symptom; the
-disease is that a people has no interior.
+The sentence is the tell. *"Humans do not raid"* is only **sayable** because
+every human in every world is one human. The finding is a symptom; the disease
+is that a people has no interior.
 
 ## 2. What is wrong
 
-**The lift: Hornvale has a representative agent.** Strip the specifics and the
-shape is that a type is being used as its own only instance — the species row is
-simultaneously the type description and the sole exemplar. That shape has a name
-in another field. Macroeconomics' *representative agent* draws exactly one
-standing critique: a model with one agent cannot produce the phenomena that come
-from heterogeneity. Hornvale has a representative-goblin.
+**The lift: Hornvale has a representative agent.** A type is being used as its
+own only instance — the species row is at once the type description and the sole
+exemplar. Macroeconomics named this and its standing critique is *predictive*:
+it says in advance which phenomena a one-agent model cannot produce, instead of
+letting us find them one accident at a time.
 
-The critique earns its keep by being **predictive**. It says in advance which
-phenomena are unreachable, instead of letting us discover them one accident at a
-time, which is how raiding surfaced:
+- **Already bitten** — raiding, and a `RAID_DISPOSITION_MIN` disclosure whose
+  wording only parses if peoples are uniform.
+- **Silently absent, no failing test** — deviance; the exceptional individual;
+  **sorting** (risk-takers to the frontier, the cautious to the interior, so two
+  settlements of one people differ); lineage drift.
+- **Blocks C2d** — a radiation splits a population under selection, selection
+  acts on a distribution, a point has no tails.
 
-- **Already bitten** — raiding; and a `RAID_DISPOSITION_MIN` disclosure whose
-  wording ("exactly one of the four settling peoples declines to raid") only
-  parses if peoples are uniform.
-- **Silently absent, with no failing test** — deviance (crime, dissent,
-  heresy: behaviour off the modal value); the exceptional individual (a leader,
-  a prophet, a traitor drawn from the tail); **sorting** (risk-takers to the
-  frontier, the cautious to the interior — which would make two settlements of
-  one people differ from each other, something the model cannot currently
-  express); lineage drift within a people.
-- **Blocks a planned campaign** — **C2d, the elf radiation.** A population
-  splits and adapts under selection, and selection acts on a *distribution*. A
-  point has no tails, so there is nothing to select on and nothing to diverge.
-  The campaign the owner is most invested in is blocked by this, and neither the
-  program metaplan nor its author noticed.
-
-**The weld: one number serves five consumers that want different scopes.** This
-is The Manikin's "four distinct things welded into one word" recurring exactly
-one level down, which is itself worth noticing.
+**The weld: one number serves five consumers wanting different scopes.** This is
+The Manikin's "four things welded into one word" recurring one level down.
 
 ```
   consumer                     wants          reads today
@@ -65,168 +51,256 @@ one level down, which is itself worth noticing.
   narration ("humans are...")  species mean   species  OK
 ```
 
-Three of five are correct. The two that are wrong are precisely the two that
-produced the shock.
+**The keystone: variability is itself a species trait.** A eusocial insect has
+near-zero behavioural variance; a generalist has high variance. So the thing
+that makes humans generalists is *psychological* breadth — not the ecological
+breadth C2-0 measures.
 
-**The keystone: variability is itself a species trait.** The owner's phrasing —
-humans are *capable of tremendous variability* — is not the claim that humans
-vary and others do not. A eusocial insect has near-zero behavioural variance; a
-generalist has high variance. Dispersion is a per-species, per-trait authored
-quantity.
+## 3. What already exists
 
-That reframes the campaign this one interrupts. **The Generalist measures
-ecological breadth; the wide *psychological* niche is the part that is actually
-human**, and it is the part nothing models.
+`hornvale_species::instance_biosphere` implements prototype inheritance — an
+instance's effective trait is *its own latest override fact, else its kind's
+authored default* — and `tests/instance_lens.rs` proves overrides survive a kind
+change. **It is the workspace's only instance lens**, covering `SPECIES_MASS_KG`
+and `SPECIES_POTENCY`. The body varies per individual; the mind cannot. This
+campaign completes a pattern already committed to.
 
-## 3. What already exists, which makes this far cheaper than it looks
+`domains/culture/src/structure.rs:103` already crosses environment with
+psychology (`env.threat > 0.4 * (1.5 - psych.threat_response)`). That is a crude
+**elective affinity** and the right shape; §4 generalises it.
 
-`hornvale_species::instance_biosphere` already implements prototype
-inheritance — an instance's effective trait is *its own latest override fact,
-else its kind's authored default* — and `tests/instance_lens.rs` proves
-overrides even survive a kind change.
+## 4. What determines what
 
-**It is the only instance lens in the workspace.** It covers `SPECIES_MASS_KG`
-and `SPECIES_POTENCY`. The body can vary per individual; the mind, society and
-perception vectors cannot. This campaign completes a pattern the codebase
-already committed to rather than introducing one.
+The owner's question: are a people's beliefs downstream of its disposition, or
+its disposition downstream of its beliefs?
 
-## 4. Design decisions
+**Today the answer is neither, and that is the deeper bug.** Beliefs derive from
+perceived phenomena (`religion::genesis`, per decision 0003's appearances-not-
+sources); culture derives from environment × psychology. But **nothing
+determines psychology.** It is authored, static, and upstream of everything — an
+unmoved mover.
 
-**D1 — A trait is authored as a location *and* a dispersion.** Not a scalar. The
-existing authored value becomes the location; a new per-species, per-vector (not
-necessarily per-dimension — see §7) dispersion is added beside it.
+### What the discipline says
 
-**D2 — The species value's meaning must be stated, not assumed.** Mean, median,
-or modal typical member? Today it is ambiguous, and the ambiguity is exactly the
-bug The Manikin removed one level up: a datum whose frame is unstated drifts in
-meaning as the model grows. Pick one, state it in the vector's doc, and make the
-draw consistent with it.
+Both directions are attested, and the argument is 150 years old:
+
+- **Marx; Harris's cultural materialism** — infrastructure → structure →
+  superstructure. Harris explained warfare materially. One-way, and what
+  Hornvale half-implements.
+- **Weber** — the deliberate counter-case (belief → economic order), but his
+  actual position is *elective affinity* (**Wahlverwandtschaft**): ideas and
+  material interests **select each other**, neither causing the other.
+- **Durkheim** — social morphology → collective representations; the *form* of a
+  belief mirrors the *form* of the society. A hierarchic people should get a
+  hierarchical pantheon by derivation, not by authoring.
+- **Geertz** — religion as a "model **of**" reality and a "model **for**" it.
+  Bidirectional by construction.
+
+**On war specifically**, the cross-cultural literature offers a finding built
+for a world that already has a climate model: **Ember & Ember** found warfare
+predicted not by chronic scarcity but by **unpredictable resource shocks and the
+fear of them** — war tracks *variance*, not *level*. **Ibn Khaldun** and Turchin
+supply the cyclic half: asabiyyah forged at frontiers, decaying over roughly
+four generations of comfort.
+
+### The resolution: it is not a direction, it is a rate difference
+
+The question presumes one arrow. The honest answer is a coupled system whose
+components move at different speeds — and Hornvale already models exactly this
+shape in climate. **Beliefs are the ocean; behaviour is the weather.** Nobody
+asks whether the atmosphere causes the ocean; the ocean is the slow variable
+setting boundary conditions the fast one fluctuates around. And a warm ocean
+keeps throwing storms after the season that warmed it has passed.
+
+```
+  TIMELINE — one people, 600 years, which variable leads
+
+  yr 0    drought variance rises        STRUCTURAL   (fast, reversible)
+  yr 40   raiding begins                BEHAVIOUR    lags conditions
+  yr 90   martial display earns rank    ORGANIZATION status_basis shifts
+  yr 160  doctrine sanctifies the raid  IDEATIONAL   (slow)
+  yr 300  climate stabilises            STRUCTURAL   the cause is GONE
+  yr 300+ they keep raiding             <-- HYSTERESIS
+  yr 480  asabiyyah decays in comfort   the cycle turns
+```
+
+Sample at year 100 and conditions cause beliefs. Sample at year 320 and beliefs
+cause behaviour. Both readings are correct; they differ in where the ruler is
+put. The loop closes by something evolution already named — the **Baldwin
+effect**: what a population learns under pressure becomes constitutive of it
+over deep time.
+
+**So: do not author the arrow. Author the loop, and let the time constants
+produce the arrow.** That is sim-first, and it is MAP-69's own rule — a
+mechanism whose output *resembles* the trope, never an authored trope.
+
+## 5. Design decisions
+
+**D1 — A trait is authored as a location *and* a dispersion.** The existing
+value becomes the location; a per-species, per-vector dispersion is added beside
+it.
+
+**D2 — The species value's meaning must be stated.** Mean, median, or modal
+typical member? Today it is ambiguous, which is the bug The Manikin removed one
+level up: a datum whose frame is unstated drifts as the model grows. Pick one,
+state it in the vector's doc, make the draw consistent with it.
 
 **D3 — An individual's deviation must NOT be derived from its `EntityId`.**
 
-This is the trap, and it is only visible because The Salt already ratified the
-rule: an `EntityId` may be stored, compared, and looked up, but **never read for
-its value**. `Ledger::mint_entity` assigns sequentially, so seeding a
-personality draw on the id means inserting one earlier entity silently
-reshuffles the psychology of every individual in the world. It would be
-deterministic, reproducible, and catastrophically wrong — the exact failure
-class The Salt was fought over.
-
-The draw is therefore keyed on a **stable semantic identity**, never a
-positional one. The resolution order becomes:
+The trap, visible only because The Salt already ratified the rule: an
+`EntityId` may be stored, compared and looked up, but **never read for its
+value**. `Ledger::mint_entity` assigns sequentially, so an id-keyed draw means
+inserting one earlier entity silently reshuffles the psychology of every
+individual in the world — deterministic, reproducible, and catastrophic. Key on
+a **stable semantic identity**. Resolution order:
 
 ```
-  own override fact           (exists today; authored or event-driven)
-    else derived draw          keyed on a STABLE SEMANTIC key
-    else kind location         (today's behaviour)
+  own override fact            (exists today)
+    else derived draw           keyed on a STABLE SEMANTIC key
+    else kind location          (today's behaviour)
 ```
 
-**D4 — Ship the POPULATION tier; defer the INDIVIDUAL tier.** This is the
-campaign's main scoping call and it falls out of §2's matrix. The raid consumer
-wants population scope, and a population draw is **one draw per settlement**,
-not one per inhabitant. That fixes the presenting symptom, gives settlements of
-one people genuine character (the sorting phenomenon), costs a settlement-keyed
-stream label, and needs no per-individual storage at all.
+**D4 — Ship the POPULATION tier; defer the INDIVIDUAL tier.** The raid consumer
+wants population scope, and a population draw is **one draw per settlement**.
+That fixes the presenting symptom, produces the sorting phenomenon, and clears
+C2d's blocker at the level selection acts on anyway.
 
-The individual tier is real and wanted — the exceptional person, the deviant —
-but it belongs with the game layer that has individuals to vary, and it can
-reuse the same authored dispersions when it arrives. Shipping the population
-tier first also means the elf radiation's blocker clears at the population
-level, which is the level selection acts on anyway.
+**D5 — Warlikeness becomes derived, time-varying and place-specific.** It stops
+being a species constant:
 
-**D5 — The raid gate reads the wrong axis, and this campaign says so without
-fixing it.** `threat_response` is *defensive* (flee ↔ stand); raiding is
-*proactive*. Gating a proactive behaviour on a defensive disposition would
-misclassify any people, not just humans. Fixing it moves raid behaviour for
-every people at once and belongs in its own campaign; this one documents the
-mismatch and files it.
+```
+  per settlement, per era:
+    structural pressure = f(resource VARIANCE, strife field, frontier)
+    disposition         = draw from the people's distribution   (D1)
+    organization        = grid/group quadrant                   (D6)
+    warlike             = f(pressure, disposition, organization)
+```
 
-## 5. Preregistration
+Resource **variance**, not level — the Ember & Ember finding, and the reason
+this is falsifiable against the climate model rather than merely plausible.
+MAP-32's strife field is the already-designed structural term.
+
+**D6 — `SocietyVector` IS a grid/group instrument, and the spec says so.**
+
+```
+              LOW GROUP            HIGH GROUP
+  HIGH GRID   fatalist             hierarchy
+  LOW  GRID   individualist        egalitarian / sect
+
+  grid  = how rule-bound a life is   ~=  SocietyVector.sociality
+  group = how bounded "us" is        ~=  SocietyVector.in_group_radius
+```
+
+Douglas's four biases each carry published predictions about cosmology, risk
+perception, and stance toward outsiders. Adopting the framework means those are
+**derived from the quadrant** rather than authored per people — falsifiable
+structure for free, and adding a people becomes a matter of placing it on two
+axes rather than inventing its culture. This is a real theoretical commitment,
+taken deliberately.
+
+**D7 — The slow feedback edges are deferred, but their shape is stated here so
+the successor is designed for rather than retrofitted.** Sustained raiding
+should shift `status_basis`; doctrine should ratchet and **not** decay when
+pressure does. That hysteresis is what gives belief *autonomy* — the capacity to
+outlive its cause and be wrong about its own world. It needs deep-time history
+bake to integrate over and is its own campaign. §8 files it.
+
+**D8 — The raid gate reads the wrong axis, and this campaign fixes it as a
+consequence of D5 rather than by touching the constant.** `threat_response` is
+*defensive* (flee ↔ stand); raiding is *proactive*. Once warlikeness is derived
+from pressure × disposition × organization, the gate stops borrowing a defensive
+axis and the mismatch dissolves. The owner's earlier disclose-don't-fix ruling
+was made when the alternative was editing the constant in a roster campaign;
+D5 supersedes it by removing the constant's role.
+
+## 6. Preregistration
 
 Frozen before implementation.
 
-**H1 — the mean survives.** With dispersion authored and population draws live,
-each people's *mean* behaviour over many settlements matches its pre-Tolerance
-point behaviour. If the mean moves, the draw is biased and the layer is wrong.
+**H1 — the mean survives.** Each people's *mean* behaviour over many settlements
+matches its pre-Tolerance point behaviour. If the mean moves, the draw is biased.
 
-**H2 — the variance appears where authored.** Settlements of a high-dispersion
-people differ measurably from one another; settlements of a low-dispersion
-people do not. Measured as between-settlement variance in the gated behaviours,
-per people.
+**H2 — the variance appears where authored.** Between-settlement variance in the
+gated behaviours is high for high-dispersion peoples and near-zero for
+low-dispersion ones.
 
-**H3 — raiding becomes a fraction, not a flag.** Some proportion of human
-settlements raid, and that proportion is a function of dispersion and the
-distance from the mean to the gate. The specific prediction: **humans raid at a
-rate strictly between goblin's and hobgoblin's**, rather than at 0 or 1.
+**H3 — raiding becomes a fraction, not a flag.** Humans raid at a rate strictly
+between goblin's and hobgoblin's, rather than at 0 or 1.
+
+**H4 — war tracks variance, not level.** Across settlements, raiding
+frequency correlates more strongly with the *interannual variance* of the local
+resource supply than with its *mean*. This is Ember & Ember's cross-cultural
+finding restated as a prediction about a simulated world, and it is the
+campaign's most interesting possible result **in either direction** — a null
+would say Hornvale's ecology does not reproduce the anthropological signal, and
+that is worth knowing.
 
 **The falsification.** If no measured outcome moves once dispersion is authored,
-the layer is decorative and should not ship. That is a real possibility worth
-naming: if every consumer downstream of these vectors happens to threshold in a
-way that swallows the spread, we will have added a parameter nobody reads —
-rung 2 of the peoples program's own probe-validity ladder.
+the layer is decorative and should not ship — rung 2 of the program's own
+probe-validity ladder.
 
-**The mutation step** (the program's shared criterion): a test that goes RED if
-the dispersion parameter is ignored — i.e. if setting a people's dispersion to
-zero does not collapse its between-settlement variance.
+**The mutation step.** A test that goes RED if the dispersion parameter is
+ignored: setting a people's dispersion to zero must collapse its
+between-settlement variance.
 
-## 6. Sequencing
+## 7. Sequencing
 
 ```
-    C2-0  THE GENERALIST   human x1              <- in flight, nearly done
-    C2t   THE TOLERANCE    dispersion + pop tier <- THIS
+    C2-0  THE GENERALIST   human x1              <- in flight
+    C2t   THE TOLERANCE    dispersion + derived  <- THIS, moved earlier
+                           warlikeness
     C2a   THE DEEP REALM   the Underdark
     C2b   THE LONG AGE     lifespan curve
     C2c   THE DELVERS      dwarf x5
-    C2d   THE RADIATION    elf x6 + LANG-53      <- HARD dependency on C2t
+    C2d   THE RADIATION    elf x6 + LANG-53      <- HARD dependency
 ```
 
-**This does not stop The Generalist.** Human-as-a-point is a defensible first
-approximation, Tasks 5–7 measure ecological breadth honestly, and the raid
-disclosure is a fair interim statement. Finishing it also keeps its census diff
-attributable to "a sixth people was added" rather than mixing in a new
-psychological layer.
+**Moved ahead of C2a and C2b at the owner's direction (2026-08-03).** The
+argument: if dispersion is what "generalist" means, every people authored before
+this campaign is authored in a frame it changes — so authoring five dwarves and
+six elves first would mean authoring eleven peoples twice.
 
-**It must precede C2d** — the radiation has nothing to select on without it.
+**It does not stop C2-0.** Human-as-a-point is a defensible first approximation,
+and finishing it keeps its census diff attributable to "a sixth people was
+added" rather than mixing in a new psychological layer.
 
-**There is a case for placing it before C2a and C2b**, stronger than it looked
-an hour ago: if dispersion is what "generalist" actually means, then The
-Generalist's own headline is incomplete until this lands, and every people
-authored in the meantime is authored in a frame this campaign changes. Against
-that: it is a new epoch on top of one just paid, and C2a/C2b are already
-specified. **Flagged for the owner rather than decided here.**
+## 8. Non-goals
 
-## 7. Non-goals
-
-- **The individual tier.** D4.
-- **Fixing the raid gate's axis mismatch.** D5 — documented and filed.
-- **Per-dimension dispersion.** Start with one dispersion per vector; a
-  per-dimension spread is a refinement that should be argued from a measured
-  need, not assumed at the outset.
-- **Widening any vector**, or adding dimensions. Each vector type's doc reserves
-  widening to its own campaign; that stands.
-- **Culture and language consumers.** They read the species mean and are correct
-  to (§2's matrix). This campaign does not touch them.
+- **The individual tier** (D4) and **the slow feedback edges** (D7) — the
+  organization drift and the doctrine ratchet. Filed as their own campaign; the
+  hysteresis is the payoff and deserves a preregistration spanning centuries of
+  simulated time rather than a corner of this one.
+- **Per-dimension dispersion.** One dispersion per vector to start; per-dimension
+  spread should be argued from a measured need.
+- **Widening any vector**, or adding dimensions.
 - **Re-authoring existing peoples' locations.** Only dispersions are added.
   Moving goblin remains its own deferred campaign.
+- **Deriving the full Douglas cosmology.** D6 adopts the framework and derives
+  outsider-stance; the complete "model of / model for" build-out of pantheon
+  shape from quadrant is a religion-domain campaign.
 
-## 8. Flagged for review
+## 9. Flagged for review
 
-1. **An epoch and a census regen.** Population draws consume a new stream label,
-   which moves every world with settlements. Carve-out; authorization requested
-   at that campaign's close, not here.
-2. **A new stream label is a permanent save-format contract.** Declared as a
-   `pub const` in the owning crate's `streams` module, published through
-   `stream_labels()` into the generated manifest, and never renamed — an epoch
-   suffix if it is ever regenerated.
-3. **D3 is the campaign's highest-risk decision.** Keying a draw on `EntityId`
-   would be deterministic, reproducible, and catastrophically wrong, and it is
-   the obvious implementation. The Salt's rule is what catches it; the stable
-   semantic key must be chosen and defended explicitly in the plan.
-4. **H1 is a byte-identity-adjacent claim** and should be checked by measurement,
-   not argued. The mean surviving is what makes this a refinement rather than a
-   contradiction of every world that exists today.
-5. **The placement question in §6** — before or after C2a/C2b — is the owner's.
-6. **The name is reversible.** "Tolerance" reads as engineering (permitted spread
-   around a nominal) and continues The Manikin's tailoring lineage, but it also
-   reads as social tolerance. Surfaced deliberately, as The Manikin surfaced its
-   own name risk.
+1. **An epoch and a census regen.** Population draws consume a new stream label
+   and warlikeness becomes derived, so every world with settlements moves.
+   Carve-out; authorization requested at that campaign's close.
+2. **A new stream label is a permanent save-format contract** — a `pub const` in
+   the owning crate's `streams` module, published via `stream_labels()`, never
+   renamed.
+3. **D3 is the highest-risk decision.** Keying on `EntityId` is the obvious
+   implementation and is catastrophic. The stable semantic key must be chosen
+   and defended in the plan.
+4. **D6 imports a theoretical framework.** Grid/group is well-established but
+   has its own contested literature, and adopting it constrains how every future
+   people is authored. Taken deliberately at the owner's direction; flagged
+   because it is the kind of commitment that is expensive to reverse.
+5. **D8 supersedes an earlier owner ruling** (disclose-don't-fix on the raid
+   gate). That ruling was correct given its alternatives; D5 changes the
+   alternatives. Called out so the reversal is visible rather than silent.
+6. **H4 may falsify against our own ecology.** If raiding tracks mean supply
+   rather than its variance, either the climate model does not produce the
+   right kind of shock or the anthropological finding does not transfer. Both
+   are findings; neither is a defect.
+7. **The name is reversible.** "Tolerance" reads as engineering (permitted
+   spread around a nominal) and continues The Manikin's tailoring lineage, but
+   also reads as social tolerance.
