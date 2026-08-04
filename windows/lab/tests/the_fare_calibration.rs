@@ -17,7 +17,19 @@
 //! exact defect (`MAP-weather-gating-is-unconsumed`) this campaign exposes in
 //! The Mire. Spec §9 makes the production change a non-goal.
 
-use hornvale_worldgen::BASE_COST;
+use hornvale_astronomy::SkyPins;
+use hornvale_climate::provider::GeneratedClimate;
+use hornvale_climate::snowpack::DEFAULT_SNOWPACK;
+use hornvale_climate::substrate::SubstrateField;
+use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
+use hornvale_kernel::{CellId, CellMap, Geosphere, Seed, Value};
+use hornvale_terrain::TerrainPins;
+use hornvale_topology::least_cost_from;
+use hornvale_worldgen::graph_derive::weather_conductance_factor;
+use hornvale_worldgen::{
+    BASE_COST, BuildDepth, SettlementPins, SkyChoice, WorldComponents,
+    build_world_to_with_artifacts, traversal_cost,
+};
 
 /// AUTHORED (spec §5a), **not calibrated**: the floor
 /// `weather_conductance_factor`'s output is clamped to before inversion.
@@ -107,6 +119,198 @@ mod transform {
                 "factor {f} raised the surcharge to {s} from {previous}"
             );
             previous = s;
+        }
+    }
+}
+
+/// The pilot's seeds. Deliberately small: its job is to measure cost and set
+/// the floors, not to answer F1-F4. Spec §6.
+const PILOT_SEEDS: std::ops::RangeInclusive<u64> = 1..=5;
+
+/// One built world's cached readout surface, computed exactly once per world.
+struct WorldSample {
+    /// The mesh, kept for neighbour and coordinate reads.
+    geo: Geosphere,
+    /// The **dry** traversal-cost field — the one production plans over.
+    dry: CellMap<u64>,
+    /// Every settlement's cell, ascending and deduplicated.
+    settlements: Vec<CellId>,
+    /// The converged annual period, standard days.
+    year_length: f64,
+    /// Surface wetness's converged annual trajectory, every cell.
+    wetness: SubstrateField,
+    /// Snowpack's converged annual trajectory, every cell.
+    snow: SubstrateField,
+    /// The reconstructed climate, for `is_frozen_at` reads.
+    climate: GeneratedClimate,
+}
+
+/// Build one world to `BuildDepth::Settlements` and assemble everything
+/// [`WorldSample`] caches. Panics loudly if a seed fails to build — a silent
+/// skip would quietly shrink the preregistered population.
+///
+/// Uses `build_world_to_with_artifacts` (which hands back the terrain and
+/// climate the build already produced) rather than re-deriving either a
+/// second time. Same caching discipline as `the_mire_calibration.rs`.
+fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
+    let artifacts = build_world_to_with_artifacts(
+        Seed(seed),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        wc,
+        BuildDepth::Settlements,
+    )
+    .unwrap_or_else(|e| panic!("seed {seed} failed to build to BuildDepth::Settlements: {e:?}"));
+
+    let world = artifacts.world;
+    let terrain = artifacts
+        .terrain
+        .expect("BuildDepth::Settlements builds terrain");
+    let climate = artifacts
+        .climate
+        .expect("BuildDepth::Settlements builds climate");
+
+    let geo = terrain.geosphere().clone();
+    let elevation = &terrain.globe().elevation;
+    let biome = climate.biome_map();
+
+    let mut settlements: Vec<CellId> = hornvale_settlement::all_settlements(&world)
+        .iter()
+        .map(
+            |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => CellId(*n as u32),
+                _ => panic!("settlement {} has no cell-id fact", s.id.0),
+            },
+        )
+        .collect();
+    settlements.sort();
+    settlements.dedup();
+
+    let dry = traversal_cost(&geo, elevation, &biome);
+    let (wetness, snow) =
+        SubstrateField::compute_pair(&climate, &DEFAULT_WETNESS, &DEFAULT_SNOWPACK);
+    let year_length = climate.year_length_std();
+
+    WorldSample {
+        geo,
+        dry,
+        settlements,
+        year_length,
+        wetness,
+        snow,
+        climate,
+    }
+}
+
+/// The dry traversal-cost field plus this day's weather surcharge, per cell.
+///
+/// Reads exactly the substrate state `graph_derive`'s own `factor_at` closure
+/// reads, so the cost instrument and the conductance instrument agree on the
+/// world and differ only in transform. Marine cells stay `u64::MAX` untouched:
+/// weather never creates or removes impassability (spec §5a).
+fn weathered_cost(sample: &WorldSample, day: f64) -> CellMap<u64> {
+    CellMap::from_fn(&sample.geo, |cell| {
+        let base = *sample.dry.get(cell);
+        if base == u64::MAX {
+            return u64::MAX;
+        }
+        let factor = weather_conductance_factor(
+            receptivity(
+                sample.wetness.at(cell, day),
+                DEFAULT_WETNESS.field_capacity_mm,
+            ),
+            sample.snow.at(cell, day),
+            sample.climate.is_frozen_at(cell, day),
+        );
+        base.saturating_add(weather_surcharge(factor))
+    })
+}
+
+mod weathering {
+    use super::*;
+
+    #[test]
+    #[ignore = "heavy: builds a live world (tens of seconds); deferred from the commit gate"]
+    fn weathering_raises_cost_somewhere_and_never_makes_a_cell_impassable() {
+        // THE KEYSTONE for this task. Two failure modes it must catch: a
+        // weathered field that is byte-identical to the dry one (the
+        // substrate never reaching the cost field at all — the latent-
+        // mechanism failure The Mire's own Task 6 test guarded against), and
+        // a weathered field that turns a passable cell impassable (which
+        // would silently drop pairs from F1's sample).
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let sample = build_sample(1, &wc);
+        let day = sample.year_length / 4.0;
+        let wet = weathered_cost(&sample, day);
+
+        let mut raised = 0usize;
+        for cell in sample.geo.cells() {
+            let dry = *sample.dry.get(cell);
+            let w = *wet.get(cell);
+            assert!(
+                w >= dry,
+                "weathering lowered cost at {cell:?}: {dry} -> {w}"
+            );
+            if dry == u64::MAX {
+                assert_eq!(
+                    w,
+                    u64::MAX,
+                    "a marine cell stopped being marine at {cell:?}"
+                );
+            } else {
+                assert_ne!(w, u64::MAX, "weathering made {cell:?} impassable");
+                if w > dry {
+                    raised += 1;
+                }
+            }
+        }
+        assert!(
+            raised > 0,
+            "weathering raised no cell's cost in the whole world"
+        );
+    }
+
+    #[test]
+    #[ignore = "heavy: the pilot builds 5 live worlds and routes over them (minutes); spec §6"]
+    fn the_fares_pilot() {
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        for seed in PILOT_SEEDS {
+            let sample = build_sample(seed, &wc);
+            let day = sample.year_length / 4.0;
+            let wet = weathered_cost(&sample, day);
+            let sources = sample.settlements.len();
+
+            // One sweep from each settlement, dry and weathered.
+            let mut swings: Vec<f64> = Vec::new();
+            for &src in &sample.settlements {
+                let d_dry = least_cost_from(&sample.geo, &sample.dry, src);
+                let d_wet = least_cost_from(&sample.geo, &wet, src);
+                for &dst in &sample.settlements {
+                    if dst == src {
+                        continue;
+                    }
+                    if let (Some(a), Some(b)) = (*d_dry.get(dst), *d_wet.get(dst))
+                        && a > 0
+                    {
+                        swings.push((b as f64 - a as f64) / a as f64);
+                    }
+                }
+            }
+            swings.sort_by(f64::total_cmp);
+            let median = if swings.is_empty() {
+                f64::NAN
+            } else {
+                swings[swings.len() / 2]
+            };
+            let max = swings.last().copied().unwrap_or(f64::NAN);
+            // Per-seed progress: The Mire lost an hour of wall-clock to a run
+            // with no visible progress and nothing recoverable.
+            println!(
+                "PILOT seed={seed} settlements={sources} pairs={} median_swing={median:.6} max_swing={max:.6}",
+                swings.len()
+            );
         }
     }
 }
