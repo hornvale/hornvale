@@ -23,8 +23,8 @@ use crate::temperature::{
 use crate::weather::{CloudType, WeatherState};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
-    CellId, CellMap, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource, Phenomenon,
-    Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, math,
+    CellId, CellMap, Fbm, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource,
+    Phenomenon, Precipitation, ReferenceElevation, Referent, Seed, Temperature, Venue, math,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -76,7 +76,11 @@ pub struct GeneratedClimate {
     precip_regime: CellMap<PrecipRegime>,
     cloud_fraction: CellMap<f64>,
     weather_propensity: CellMap<f64>,
-    weather_seed: Seed,
+    /// The weather-phase Fbm sampler, built once from the world's derived
+    /// weather seed (the derive-once pattern) rather than reconstructed on
+    /// every `weather_at`/`cloud_type_at` call — see `weather::weather_fbm`'s
+    /// doc comment. Bit-identical to constructing fresh per call.
+    weather_fbm: Fbm,
     current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     biome_expr: CellMap<BiomeExpr>,
@@ -191,6 +195,7 @@ impl GeneratedClimate {
             crate::weather::storm_propensity(*moisture.get(cell), rising, mean_c, ocean_adjacent)
         });
         let weather_seed = crate::weather::weather_seed(inputs.seed);
+        let weather_fbm = crate::weather::weather_fbm(weather_seed);
         let current = ocean_current_field(geo, &is_ocean, band_count);
         // The faceted expression is the truth; the legacy `Biome` map is
         // derived from it in the same pass, so the two views cannot diverge and
@@ -230,7 +235,7 @@ impl GeneratedClimate {
             precip_regime: precip_regime_field,
             cloud_fraction: cloud_frac,
             weather_propensity,
-            weather_seed,
+            weather_fbm,
             current,
             biome,
             biome_expr,
@@ -381,8 +386,12 @@ impl GeneratedClimate {
     /// type-audit: pending(wave-2: day)
     pub fn weather_at(&self, cell: CellId, day: f64) -> WeatherState {
         let coord = self.geosphere.coord(cell);
-        let phase =
-            crate::weather::weather_phase(self.weather_seed, coord.longitude, coord.latitude, day);
+        let phase = crate::weather::weather_phase_with_fbm(
+            &self.weather_fbm,
+            coord.longitude,
+            coord.latitude,
+            day,
+        );
         crate::weather::weather_state(*self.weather_propensity.get(cell), phase)
     }
     /// The cloud type worn at a cell on a day — the projection of
@@ -391,8 +400,12 @@ impl GeneratedClimate {
     pub fn cloud_type_at(&self, cell: CellId, day: f64) -> CloudType {
         let coord = self.geosphere.coord(cell);
         let prop = *self.weather_propensity.get(cell);
-        let phase =
-            crate::weather::weather_phase(self.weather_seed, coord.longitude, coord.latitude, day);
+        let phase = crate::weather::weather_phase_with_fbm(
+            &self.weather_fbm,
+            coord.longitude,
+            coord.latitude,
+            day,
+        );
         let state = crate::weather::weather_state(prop, phase);
         let cirrus = crate::weather::cirrus_present(prop, phase);
         crate::weather::cloud_type(state, cirrus)

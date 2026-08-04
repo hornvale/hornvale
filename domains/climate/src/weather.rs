@@ -81,18 +81,45 @@ pub fn storm_propensity(
     (m * warmth * uplift * source).clamp(0.0, 1.0)
 }
 
-/// The drifting weather-phase at a place and day, `[-1,1]`. A single static Fbm
-/// sampled in a frame that drifts with time: `x = (longitude - day*DRIFT)`, so
-/// the pattern appears to move and day-to-day is smooth, while space is smooth
-/// because longitude/latitude are continuous. Deterministic in `(seed, lon,
-/// lat, day)`; nothing integrates.
-/// type-audit: bare-ok(diagnostic-value: longitude_deg), bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
-pub fn weather_phase(weather_seed: Seed, longitude_deg: f64, latitude_deg: f64, day: f64) -> f64 {
-    let fbm = Fbm::new(weather_seed, WEATHER_OCTAVES);
+/// Build the weather-phase [`Fbm`] sampler for a world's `weather_seed` —
+/// the derive-once pattern (`kernel/CLAUDE.md`, "Noise: build a sampler
+/// once, sample many"): a caller sampling many `(cell, day)` pairs against
+/// the same fixed seed (`GeneratedClimate::year_of_day_contexts` calls
+/// `weather_at` once per day per cell — 360 x 40,962 cells at production
+/// mesh) builds this once and reuses it via [`weather_phase_with_fbm`],
+/// rather than paying `Fbm::new`'s per-octave derivation on every call.
+pub(crate) fn weather_fbm(weather_seed: Seed) -> Fbm {
+    Fbm::new(weather_seed, WEATHER_OCTAVES)
+}
+
+/// [`weather_phase`]'s math over a prebuilt [`Fbm`] (see [`weather_fbm`]).
+/// Bit-identical to `weather_phase`, which is now a thin wrapper calling this
+/// with a freshly constructed sampler — same seed, same octave count, same
+/// accumulation, so hoisting the construction out of a hot loop changes
+/// nothing about the result.
+pub(crate) fn weather_phase_with_fbm(
+    fbm: &Fbm,
+    longitude_deg: f64,
+    latitude_deg: f64,
+    day: f64,
+) -> f64 {
     let x = (longitude_deg - day * DRIFT_DEG_PER_DAY) / SPATIAL_SCALE_DEG;
     let y = latitude_deg / SPATIAL_SCALE_DEG;
     // Fbm::sample returns [0,1); center it to [-1,1].
     (fbm.sample(x, y) * 2.0 - 1.0).clamp(-1.0, 1.0)
+}
+
+/// The drifting weather-phase at a place and day, `[-1,1]`. A single static Fbm
+/// sampled in a frame that drifts with time: `x = (longitude - day*DRIFT)`, so
+/// the pattern appears to move and day-to-day is smooth, while space is smooth
+/// because longitude/latitude are continuous. Deterministic in `(seed, lon,
+/// lat, day)`; nothing integrates. A thin wrapper over [`weather_phase_with_fbm`]
+/// for callers with no prebuilt sampler (tests, one-off reads) — a hot loop
+/// over a fixed seed should build a [`Fbm`] once via [`weather_fbm`] instead.
+/// type-audit: bare-ok(diagnostic-value: longitude_deg), bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+pub fn weather_phase(weather_seed: Seed, longitude_deg: f64, latitude_deg: f64, day: f64) -> f64 {
+    let fbm = weather_fbm(weather_seed);
+    weather_phase_with_fbm(&fbm, longitude_deg, latitude_deg, day)
 }
 
 /// Classify the sky: combine the slow propensity with the fast phase into an
