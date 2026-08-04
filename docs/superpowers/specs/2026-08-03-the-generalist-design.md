@@ -205,14 +205,46 @@ human's niche until H2 passes — if H2 fails, it fails, and the retune is a
 separate argued decision made after the null is recorded.
 
 **The vacuity check, run before the readout counts.** Human's condition niche
-must be shown measurably distinct from goblin's: their per-cell fit vectors must
-not be a monotone rescaling of one another across the seed family. If they are,
-the campaign has authored a synonym and H1–H3 are meaningless. This is the
-program's ladder applied to its own first campaign.
+must be shown measurably distinct from goblin's. If it is not, the campaign
+has authored a synonym and H1–H3 are meaningless. This is the program's
+ladder applied to its own first campaign.
 
 **The mutation step.** A test that goes RED if human's `ConditionNiche` is
 replaced by goblin's — proving the readout can tell the two apart. A green
 suite proves the code ran; only the mutation proves the axis is visible.
+
+**Post-hoc amendment (Task 5, before Task 6 unblinded anything) — the
+statistic actually shipped, and why it differs from this section's original
+wording.** This section originally froze the criterion as: "their per-cell
+fit vectors must not be a monotone rescaling of one another across the seed
+family" (i.e. a Spearman rank-correlation ceiling). Task 5 found that
+wording **algebraically invalid as a gate**, not merely risky, before
+building anything against it: `ConditionResponse::eval`
+(`kernel/src/ecology.rs`) is a strictly monotone-decreasing function of
+`|field - optimum|` for a fixed optimum, regardless of `devotion` or
+`width`. Human and goblin share TWO axis optima by deliberate design —
+elevation (1500.0 m) and moisture (0.50), both argued in
+`human_condition_niche()`'s doc comment — so on those two axes the two
+kinds' per-cell fit is rank-identical BY CONSTRUCTION, no matter what
+`devotion`/`width` values are authored. Rank correlation is invariant under
+a monotone transform, so a ceiling near "expected for two genuine
+generalists" could not fail on half the niche's axes regardless of what was
+authored there — the exact vacuity the check exists to catch, built into
+the check itself.
+
+The shipped statistic is instead each kind's coefficient of variation (CV =
+population stddev / mean) of per-cell fit, compared as
+`cv(human) / cv(goblin)`, gated on `|cv_ratio - 1|` clearing a floor of
+`0.02` — full reasoning, measured values (real gap 0.0462, mutated gap
+0.0118), and a width-vs-devotion attribution reading (finding: the real
+gap is width-dominated, not devotion-dominated, contrary to this
+section's and `human_condition_niche()`'s framing of the *intended*
+contrast) live in `windows/worldgen/tests/generalist_distinctness.rs`'s
+module doc comment and `human_condition_niche()`'s doc comment
+(`domains/species/src/lib.rs`). This is a correction to this section's
+frozen wording, made explicit here rather than silently rewritten — the
+original criterion was never satisfied by any implementation, so no
+measurement made under it is being retroactively reinterpreted.
 
 ## 5. Non-goals
 

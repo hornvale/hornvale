@@ -1490,20 +1490,59 @@ fn gnoll_condition_niche() -> ConditionNiche {
 ///
 /// Goblin's own elevation optimum was already re-centred by The Tumult's
 /// re-datum to 1500.0 m, the settleable-land median. Human's elevation
-/// optimum sits at that SAME 1500.0 m — deliberately, not by coincidence.
-/// A wide, low-devotion curve only reads as genuine *indifference* if it is
-/// centred on the land it scores (goblin's own re-datum argument); a
-/// displaced optimum would instead hand human its own lowland or highland
-/// refuge, which contradicts the no-refuge premise the whole campaign's
-/// Gause probe rests on — this kind exists to test a competitor that
-/// out-competes nobody and holds no stronghold of its own. So the two
-/// kinds share an optimum on purpose: what makes human lose the
-/// specialists' strongholds (kobold's mountain, bugbear's rainforest) is
-/// its LOWER devotion against their high devotion, not a relocated centre
-/// and not a wider curve. Task 5's vacuity/distinctness check is built on
-/// this contrast — DEVOTION, strictly lower than goblin's on every axis —
-/// and fails if human turns out to be goblin recentred (or goblin merely
-/// re-widened).
+/// optimum sits at that SAME 1500.0 m — deliberately, not by coincidence —
+/// and moisture's two optima also coincide (0.50, both). A wide,
+/// low-devotion curve only reads as genuine *indifference* if it is centred
+/// on the land it scores (goblin's own re-datum argument); a displaced
+/// optimum would instead hand human its own lowland or highland refuge,
+/// which contradicts the no-refuge premise the whole campaign's Gause probe
+/// rests on — this kind exists to test a competitor that out-competes
+/// nobody and holds no stronghold of its own. So the two kinds share an
+/// optimum on purpose: what makes human lose the specialists' strongholds
+/// (kobold's mountain, bugbear's rainforest) is its LOWER devotion against
+/// their high devotion, not a relocated centre and not a wider curve.
+///
+/// **Correction (Task 5 fix round 1, post-review): the sentence that used
+/// to end this paragraph — "Task 5's vacuity/distinctness check is built on
+/// this contrast — DEVOTION... and fails if human turns out to be goblin
+/// recentred" — overstated what the shipped check measures, in two ways
+/// found by measurement, not by re-reading the formula alone:**
+///
+/// 1. **Elevation's devotion is algebraically invisible to the shipped
+///    statistic.** `niche_per_species_k` evaluates elevation with a HARD
+///    floor of `0.0` (sovereignty buffers physiology, never geometry), which
+///    reduces [`ConditionResponse::eval`] to exactly
+///    `devotion_E * bump_E(cell)` — devotion multiplying every cell's fit by
+///    the SAME positive constant. `windows/worldgen/tests/
+///    generalist_distinctness.rs`'s coefficient-of-variation statistic is
+///    scale-invariant under a positive constant multiplier, so elevation's
+///    devotion (0.30 vs goblin's 0.35) contributes exactly zero to it, in
+///    isolation. Only the other three axes' devotions (which use a nonzero
+///    sovereignty floor and so are NOT pure multipliers) are visible this
+///    way.
+/// 2. **Measured, not assumed: the shipped statistic's real-case gap is
+///    width-dominated, not devotion-dominated.** An attribution reading
+///    (human's devotions and optima kept, all four widths replaced by
+///    goblin's) measured `cv_ratio = 0.9766` — devotion ALONE is detectable
+///    and points the direction this doc's mechanism predicts (flatter →
+///    less dispersed). But the real, fully-authored pair measures
+///    `cv_ratio = 1.0462` — the OPPOSITE direction — because human's
+///    narrower widths on temperature and elevation contribute MORE than
+///    devotion does, and the two effects oppose rather than add. So "human
+///    leans on none of its axes" (devotion) is what was deliberately
+///    authored and remains true of the niche as designed, but the vacuity
+///    gate's headline pass is carried mostly by width, which this very
+///    paragraph disclaims as "not the claim to test." Full numbers and
+///    reasoning: `windows/worldgen/tests/generalist_distinctness.rs`'s module
+///    doc comment and `substituting_goblins_niche_for_humans_is_detected`.
+///
+/// The vacuity/distinctness check still fails if human turns out to be
+/// goblin recentred or merely re-widened (both collapse the measured gap
+/// below its floor, confirmed by that file's mutation test) — that claim
+/// stands. What does not stand is that the check's passing is *proof* the
+/// devotion contrast specifically is what separates the two kinds; it is
+/// proof the niches are shaped differently, by whatever mixture of devotion
+/// and width the two carry.
 ///
 /// Frame: elevation is metres above the world's sea level (see
 /// [`ConditionNiche`]). Measured over seeds 1..=30, pooled over 142593
