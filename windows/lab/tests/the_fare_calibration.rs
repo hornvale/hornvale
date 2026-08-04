@@ -24,7 +24,7 @@ use hornvale_climate::substrate::SubstrateField;
 use hornvale_climate::wetness::{DEFAULT_WETNESS, receptivity};
 use hornvale_kernel::{CellId, CellMap, Geosphere, Seed, Value};
 use hornvale_terrain::TerrainPins;
-use hornvale_topology::least_cost_from;
+use hornvale_topology::{CostSweep, least_cost_from};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
 use hornvale_worldgen::{
     BASE_COST, BuildDepth, SettlementPins, SkyChoice, WorldComponents,
@@ -319,7 +319,7 @@ mod weathering {
 
             // The dry sweep is day-invariant, so compute it once per source
             // and reuse it for both the markup control and the swing.
-            let dry_sweeps: Vec<CellMap<Option<u64>>> = sample
+            let dry_sweeps: Vec<CostSweep> = sample
                 .settlements
                 .iter()
                 .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
@@ -335,7 +335,7 @@ mod weathering {
                     if dst == src {
                         continue;
                     }
-                    if let (Some(a), Some(b)) = (*dry_sweeps[i].get(dst), *d_wet.get(dst))
+                    if let (Some(a), Some(b)) = (dry_sweeps[i].cost_to(dst), d_wet.cost_to(dst))
                         && a > 0
                     {
                         markups.push((b as f64 - a as f64) / a as f64);
@@ -365,7 +365,7 @@ mod weathering {
                         if i == j {
                             continue;
                         }
-                        if let Some(c) = *d_wet.get(dst) {
+                        if let Some(c) = d_wet.cost_to(dst) {
                             let c = c as f64;
                             let idx = i * n + j;
                             if c.total_cmp(&min_cost[idx]).is_lt() {
@@ -389,7 +389,7 @@ mod weathering {
                     if !min_cost[idx].is_finite() {
                         continue;
                     }
-                    if let Some(a) = *dry_sweeps[i].get(dst)
+                    if let Some(a) = dry_sweeps[i].cost_to(dst)
                         && a > 0
                     {
                         swings.push((max_cost[idx] - min_cost[idx]) / a as f64);

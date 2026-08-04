@@ -6,4 +6,4 @@ pub mod graph;
 pub mod route;
 
 pub use graph::{ConnectionGraph, Edge, EdgeKind};
-pub use route::{CellRoute, least_cost, least_cost_from};
+pub use route::{CellRoute, CostSweep, least_cost, least_cost_from};
