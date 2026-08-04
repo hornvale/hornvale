@@ -19,17 +19,17 @@ fn assemble_holds_every_kind_and_passes_integrity() {
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at
-    // eight; the subset assertion is kept (not replaced by equality) because a
+    // nine; the subset assertion is kept (not replaced by equality) because a
     // future non-speaking perceiver — an owl with eyes and no words — must
     // stay expressible.
     for k in wc.perception.ids() {
         assert!(wc.psyche.contains(k), "perceiver {k:?} carries a mind");
     }
-    assert_eq!(wc.psyche.len(), 8, "five peoples + three minded dragons");
+    assert_eq!(wc.psyche.len(), 9, "six peoples + three minded dragons");
     assert_eq!(
         wc.perception.len(),
-        8,
-        "the five peoples + the three dragons perceive (The Vigil)"
+        9,
+        "the six peoples + the three dragons perceive (The Vigil)"
     );
     for k in wc.psyche.ids() {
         assert!(

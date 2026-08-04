@@ -1994,7 +1994,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 }
 
 /// The individual-mind component — authored directly, present for every
-/// minded kind (the four settling peoples and the three solitary dragons).
+/// minded kind (the six settling peoples and the three solitary dragons).
 /// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about
 /// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
@@ -2075,13 +2075,27 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.2,
             },
         ),
+        // The Generalist (C2-0). `threat_response` sits AT the manikin by
+        // authorship, not by default: humans genuinely both flee and stand,
+        // and The Manikin moved the model to the rung where a kind may
+        // coincide with the reference vector. Stated explicitly because a
+        // people welded to the identity element is the bug that campaign
+        // removed.
+        (
+            KindId("human"),
+            MindVector {
+                threat_response: 0.5,
+                deliberation_latency: 0.6,
+                time_horizon: 0.75,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The community-mind component — authored directly, present only for the
-/// four settling peoples. A Solitary minded kind (a dragon) carries a
+/// six settling peoples. A Solitary minded kind (a dragon) carries a
 /// MindVector but no SocietyVector; a mixed consumer resolves
 /// [`SocietyVector::MANIKIN`] for one. Goblin's row happens to sit at those
 /// same values — again authorship, not definition.
@@ -2155,13 +2169,25 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 in_group_radius: 0.7,
             },
         ),
+        // The Generalist (C2-0). `in_group_radius` 0.8 is the widest in the
+        // roster, above gnoll's 0.7: an expansive "us" is the social twin of
+        // a broad niche, and is what a no-refuge generalist looks like from
+        // the inside.
+        (
+            KindId("human"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.8,
+            },
+        ),
     ]
     .into_iter()
     .collect()
 }
 
 /// The perception component — authored directly, present for every minded
-/// SPEAKING kind: the four peoples and the three chromatic dragons (The
+/// SPEAKING kind: the six peoples and the three chromatic dragons (The
 /// Vigil). Goblin's row happens to sit at [`PerceptionVector::MANIKIN`]
 /// (`Diurnal`, 0.5/0.5) — authorship, not definition. Since The Vigil the
 /// enforced lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added
@@ -2257,6 +2283,28 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 // ground-focused pack predator tracking prey and scent, not
                 // sky-rapt.
                 sky_attention: 0.3,
+            },
+        ),
+        // The Generalist (C2-0). Night vision sits BELOW the manikin, and
+        // below every other people (goblin 0.5 .. kobold 0.9) — the call The
+        // Manikin identified and deferred to this campaign: human scotopic
+        // vision is genuinely poor, so authoring it at 0.5 would have made
+        // "typical" mean "weak" and silently rescaled kobold's 0.9.
+        //
+        // 0.15 rather than 0.25 is deliberate and visible. `pack_depths` is a
+        // step function, `hue = 2 + ((1 - night_vision) * 3).round()`: 0.25
+        // yields depth 4, TIED with goblin, while <= 0.166 yields depth 5 and
+        // makes human the only kind at the ladder's deepest rung. The hue
+        // ladder is Berlin & Kay's, derived from human languages; a model
+        // whose colour hierarchy is human-derived and then denies humans its
+        // deepest rung is incoherent. Luminance is 1 either way — the shallow
+        // dark-vocabulary is the cost side of the same trade.
+        (
+            KindId("human"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.15,
+                sky_attention: 0.65,
             },
         ),
     ]
@@ -2578,8 +2626,8 @@ mod tests {
         // With the god-struct gone, the four registries author independently.
         // The cross-registry invariants the world relies on: biosphere and
         // family cover the SAME full kind set, and psyche/perception share
-        // exactly one key-set — the four peoples — every one of which also
-        // carries a biosphere row.
+        // exactly one key-set — the six peoples plus the three minded
+        // dragons — every one of which also carries a biosphere row.
         let bio = biosphere_registry();
         let fam = family_of();
         let psy = psyche_registry();
@@ -2596,19 +2644,19 @@ mod tests {
 
         // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
         // psyche, and since The Vigil every minded SPEAKER also perceives, so
-        // the two stores again share one key-set — seven kinds, not the four
-        // peoples.
+        // the two stores again share one key-set — nine kinds, not the six
+        // peoples alone.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 8, "five peoples + three minded dragons");
+        assert_eq!(psy.len(), 9, "six peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            8,
-            "perception is the five peoples + the three dragons (The Vigil)"
+            9,
+            "perception is the six peoples + the three dragons (The Vigil)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -3094,7 +3142,7 @@ mod tests {
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
         assert_eq!(
             society,
-            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
+            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"]
         );
         // dragons are minded (psyche) but not Settled — no society vector
         assert!(society_registry().get(&KindId("red-dragon")).is_none());
