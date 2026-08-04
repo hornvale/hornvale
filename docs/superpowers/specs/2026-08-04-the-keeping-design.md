@@ -453,14 +453,61 @@ a save-format constant). The choice determines whether species compete on
 *absolute* or *relative* fitness, which is a modelling decision, not a tuning
 one.
 
-**And the roster is now a co-requisite, not a follow-on.** Finding 5: the
-excluded ground is 15–59% below −5 °C and 18–32% arid, while gnoll's hot-arid
-corner is 0–4.75%. The world's extremes are **cold**-arid and no authored settler
-wants them. So even both gates fixed and normalized, the frozen wastes stay empty
-until something is authored that wants them — which is exactly Nathan's "if we
-don't have creatures capable of existing in the deep desert, deep ocean, or
-frozen wastes, we should create them," arriving as a measured requirement rather
-than an aspiration.
+**And the roster is PRIMARY, not a co-requisite — and the requirement is trophic,
+not thermal.** *(Revised 2026-08-04 after three ideonomy passes; the previous
+wording called it a co-requisite and understated it.)* Chasing "why is the cold
+empty" past the gates:
+
+```
+  forage = base_carrying x FORAGE_FRACTION
+  prey   = forage x PREY_FRACTION           <- BOTH collapse with base_carrying
+  mineral / detritus   gated on is_ocean ONLY -- alive in the cold
+  marine_forage        ocean only
+```
+
+and every settling species' resource niche:
+
+```
+  kobold     PLANT_FORAGE 0.55, ANIMAL_PREY 0.45
+  goblin     PLANT_FORAGE 0.50, ANIMAL_PREY 0.50
+  hobgoblin  PLANT_FORAGE 0.65, ANIMAL_PREY 0.35
+  bugbear    PLANT_FORAGE 0.15, ANIMAL_PREY 0.85
+  gnoll      ANIMAL_PREY  0.65, PLANT_FORAGE 0.35
+  human      PLANT_FORAGE 0.55, ANIMAL_PREY 0.45
+```
+
+**All six settlers are 100% photosynthate-derived.** Not one touches MINERAL,
+DETRITUS or MARINE_FORAGE (`xorn` is `MINERAL 1.0` and is not a settler). Since
+`forage` and `prey` are pure functions of `base_carrying`, removing *every*
+habitability gate would leave the cold empty anyway.
+
+So the requirement is precise and was not obvious: **a cold-tolerant farmer still
+starves.** A species for the frozen wastes needs a resource niche weighted to
+MINERAL / DETRITUS / MARINE_FORAGE — the axes that do not collapse with
+productivity. That is what "create creatures for the frozen wastes" means
+mechanically, and it makes the roster the *primary* constraint rather than a
+parallel one.
+
+**This also answers the normalization question rather than choosing among
+candidates.** `saturation = supply / (1.0 + supply)` is precisely what discards
+the magnitude, which is why K cannot serve as a capacity. So: **do not normalize
+K — desaturate.** A per-species capacity is
+`axis_supply(niche, per_axis) × Π conditions × SETTLERS_PER_CAPACITY`, which keeps
+headcount units *and* lets a lithovore's mineral supply carry real capacity where
+productivity is zero. The three candidates the earlier draft listed
+(per-species max, per-cell roster max, rescale `SETTLERS_PER_CAPACITY`) all
+preserve the saturation and are therefore all wrong; they are recorded as
+discarded rather than deleted.
+
+**And the naming/typing pass moves to the front.** Ratified as
+[0103](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0103-suitability-and-headcount-are-distinct-types.md):
+a dimensionless suitability and a headcount capacity are distinct types, a
+`CellMap`'s payload is inside the type-audit's remit, and the transposed
+names — `bake_history_from` calls the *capacity* `suitability` while the function
+named `_k` returns the *suitability* — are corrected as part of the fix. It costs
+no rebaseline and no world-identity change, so it is both the cheapest step and
+the one that makes every later step harder to get wrong. F9 (the
+`is_habitable` → `is_vale_like` rename) folds into it.
 
 **And MAP-22 matters more than this spec credited.** Finding 4: `hobgoblin` and
 `kobold` take essentially every best-fit cell while `goblin`, `bugbear` and
@@ -469,15 +516,36 @@ produce distinct territory. Adding species to a roster whose winners already
 monopolise the map will not diversify it; the coexistence stack is what makes a
 larger roster visible.
 
-**Suggested order for the successor**, cheapest-and-most-diagnostic first:
+**Order for the successor** — a dependency lattice, not a list. Two facts the
+lattice makes visible: **A is the unique bottom** and the only step with zero
+world-identity impact, and **G is incomparable with everything**, so it may run in
+parallel whenever the political texture is wanted.
 
-1. `carrying_capacity`'s `habitable` bool → per-species tolerability (the real
-   gate), with the normalization decision made explicitly and measured.
-2. Author cold and arid specialists against the *measured* excluded bands, not
-   against intuition.
-3. MAP-22's coexistence stack, so a bigger roster shows up as territory.
-4. Only then revisit `Bake::factor`, which is a one-line follow-on once the
-   binding gate is per-species.
+```
+              E MAP-22 coexistence          G relax one-per-cell (0102)
+                  |                           -- incomparable, any time
+              D non-photosynthate settlers
+                  |
+              C per-species capacity (DESATURATED)
+                  |
+              B delete the habitable hard-cut
+                  |
+              A NAMING + TYPES (0103, + F9)   <- unique bottom, no rebaseline
+```
+
+1. **A — naming and types** (0103). Mechanical, reversible, no census cost.
+2. **B + C as one campaign** — they are one measurement: delete
+   `carrying_capacity`'s `if !i.habitable { return 0.0 }`, and derive per-species
+   capacity without the saturation. Note the layering constraint:
+   `hornvale-demography` may not import `hornvale-species`, so a niche must arrive
+   as **data** through `CarryingInput` or its successor, never as a dependency.
+   Also note `temp_response` is zero below 2 °C (`22 − 20`), a *third* place the
+   cold is closed — B alone does not open it.
+3. **D — author non-photosynthetic settlers** against the measured bands.
+4. **E — MAP-22's coexistence stack**, so a larger roster shows as territory
+   rather than being monopolised by whoever wins today.
+5. **F — `Bake::factor`**, a one-line follow-on once the binding gate is
+   per-species.
 
 **What this campaign keeps regardless**: decisions 0098–0102, and the probe
 itself, which is now the campaign's most valuable artifact — a repeatable,

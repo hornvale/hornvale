@@ -142,3 +142,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0100](0100-fact-phenomenon-myth.md) | Fact, phenomenon, myth — the three registers, and what may be written where | Accepted |
 | [0101](0101-geometry-and-society-are-separate-vocabularies.md) | Geometry and society are separate vocabularies — locale/site/chamber, community/settlement | Accepted |
 | [0102](0102-one-per-cell-was-an-index-artifact.md) | The one-community-per-cell rule is an index artifact, not a design position | Accepted |
+| [0103](0103-suitability-and-headcount-are-distinct-types.md) | Dimensionless suitability and headcount capacity are distinct types | Accepted |
