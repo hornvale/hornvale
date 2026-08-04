@@ -287,9 +287,24 @@ cells only**, evaluated at 12 days evenly spaced across one converged annual
 trajectory. (Stating mesh + filter + seed count explicitly, per the
 measure-the-population-you-apply-to rule; one world is an anecdote.)
 
+**Amendment 2, 2026-08-04 — the threshold this spec left unspecified, now
+frozen BEFORE the readout.** H1 below said "at the default `min_conductance`".
+There is no meaningful default: `reachable_regions` takes a caller-chosen
+threshold, and the campaign's first pick (0.05, derived from
+`traversal::BASE_COST`) was measured in a 5-seed pilot to **exceed the maximum
+observed `Adjacency` conductance of 0.0417** — every edge already impassable,
+the instrument structurally incapable of registering any swing. The threshold
+is therefore fixed at **`min_conductance = 0.002`**, the pooled median real
+edge conductance measured in that pilot. This is disclosed pilot calibration
+of a broken instrument, not a post-hoc adjustment: it is frozen here before
+the 200-seed run, and it is not one of the constants (`MUD_PENALTY`,
+`SNOW_PENALTY`, `SNOW_IMPEDING_MM`, the substrate defaults) that are off-limits
+by preregistration. The pilot's own H1/H2 numbers are reported in the
+chronicle as an anecdote, not as the study.
+
 **H1 — the swing exists, and is not absurd.**
-The passable fraction of the connection graph at the default
-`min_conductance`, computed per day and reduced to `(max − min)` across the
+The passable fraction of the connection graph at `min_conductance = 0.002`,
+computed per day and reduced to `(max − min)` across the
 12 sample days, has a **median across seeds between 5% and 60%**.
 
 - Below 5%: weather-gated conductance does not move world topology, and the
