@@ -290,12 +290,12 @@ fn print_approach_ease_quantiles() {
 
         // "Habitable" == non-zero capacity, the same field the deep-history
         // bake feeds communities from (`bake_history_from`'s `capacity`).
-        let suitability = hornvale_demography::carrying_capacity(
+        let productivity = hornvale_demography::carrying_capacity(
             geo,
             &carrying_inputs_of(geo, &terrain, &climate),
         );
-        let capacity =
-            hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
+        // `scaled` keeps this a capacity by construction (decision 0103).
+        let capacity = productivity.scaled(SETTLERS_PER_CAPACITY).into_cell_map();
 
         let graph = connection_graph_of(&artifacts.world, &GraphConfig::default());
 

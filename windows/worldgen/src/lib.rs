@@ -956,7 +956,7 @@ pub fn mineral_supply_field(
 
 /// The mineral supply field's amplitude (BIO-35 Stage 1: The Demesne, task
 /// T2) — the one calibration knob for [`mineral_supply_field`]'s `scale`
-/// argument as consumed by [`niche_per_species_k`]. Re-fit in a later task
+/// argument as consumed by [`per_species_suitability`]. Re-fit in a later task
 /// (T3) once the emergence keystone's measured diversification is read
 /// against a wider seed sample; frozen here at parity with `MINERAL`'s
 /// pre-repoint contribution magnitude (chosen, not fit — see the emergence
@@ -1042,7 +1042,7 @@ pub fn axis_supply(
 /// authored onto the `MARINE_FORAGE` axis would get a non-zero K at sea from
 /// this same product, unchanged.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
-pub fn niche_per_species_k(
+pub fn per_species_suitability(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
@@ -1065,7 +1065,7 @@ pub fn niche_per_species_k(
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
     let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
-    let forage = forage_supply_field(geo, &base_carrying);
+    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
     let prey = prey_supply_field(geo, &forage);
@@ -1084,7 +1084,7 @@ pub fn niche_per_species_k(
                     ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
                 let per_axis = [
-                    (PHOTOSYNTHATE, *base_carrying.get(cell)),
+                    (PHOTOSYNTHATE, base_carrying.at(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
                     (MINERAL, *mineral.get(cell)),
                     (DETRITUS, *detritus.get(cell)),
@@ -1092,6 +1092,13 @@ pub fn niche_per_species_k(
                     (MARINE_FORAGE, *marine.get(cell)),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
+                // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
+                // Michaelis-Menten saturation maps a supply magnitude onto
+                // `[0, 1)`, so everything below is a *dimensionless suitability*
+                // and NOT a capacity, however much the function's old `_k` name
+                // suggested otherwise. A per-species capacity — which The
+                // Keeping's §8 identifies as the successor's real need — is this
+                // product WITHOUT the saturation, so the supply's units survive.
                 let saturated = supply / (1.0 + supply);
                 saturated
                     * cn.temperature.eval(s.temperature_c, floor_buf)
@@ -1110,7 +1117,7 @@ pub fn niche_per_species_k(
 /// species' field, since no pin is reconstructed here), against an
 /// EXPLICITLY supplied `beta`/`floor` rather than the frozen
 /// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
-/// Assembles the report from [`niche_per_species_k`] (The Niche's
+/// Assembles the report from [`per_species_suitability`] (The Niche's
 /// differentiated K) using demography's pub building blocks, mirroring
 /// [`hornvale_demography::report`]'s body. Since The Seam's cutover,
 /// settlement genesis packs the same niche-K stack (peopled species only),
@@ -1147,13 +1154,13 @@ pub(crate) fn demography_report_with_beta_from(
         stellar_inputs(&sky);
     // Biosphere per kind, read from the world's component set (ECS c3) in
     // ascending-`KindId` order — the build-local dense index the `tag`s below
-    // and `niche_per_species_k`'s returned `u32` share. This is the WHOLE
+    // and `per_species_suitability`'s returned `u32` share. This is the WHOLE
     // component set (fauna included), matching the report's "whole roster"
     // contract; the order equals the default roster's `registry()`-key order.
     let species_biosphere: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, bio)| bio).collect();
 
-    let per_species_k = niche_per_species_k(
+    let per_species_k = per_species_suitability(
         geo,
         terrain,
         climate,
@@ -1163,7 +1170,7 @@ pub(crate) fn demography_report_with_beta_from(
         &species_biosphere,
     );
     // `tag as u32` here is the same build-local dense index documented on
-    // `niche_per_species_k` — never serialized, never identity.
+    // `per_species_suitability` — never serialized, never identity.
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> =
         species_biosphere
             .iter()
@@ -5271,10 +5278,15 @@ fn bake_history_from(
         }
     };
 
-    let suitability =
+    // NOT named `suitability` (decision 0103): this is a people-DENSITY with
+    // units, and calling it a suitability is half of the transposition that let
+    // The Keeping's spec §3.2 propose swapping it for `per_species_suitability`'s
+    // dimensionless [0,1] output — a silent 20-100x rescale nothing objected to.
+    let productivity =
         hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
-    let capacity =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
+    // `scaled` keeps this a capacity by construction; the unwrap is explicit
+    // because the bake still takes a bare `CellMap<f64>`.
+    let capacity = productivity.scaled(SETTLERS_PER_CAPACITY).into_cell_map();
     let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
@@ -8811,7 +8823,7 @@ mod tests {
         // The Confluence re-pointed `carrying_inputs_of`'s freshwater term at
         // `river_proximity` (settlements condense near rivers); The Rains
         // (precipitation epoch) rewrote the moisture field, shifting biomes and
-        // the settlement layout; The Demesne replaced `niche_per_species_k`'s
+        // the settlement layout; The Demesne replaced `per_species_suitability`'s
         // `base_carrying × Σuptake` scalar supply with the per-axis dot product
         // (`axis_supply`), redistributing catchments again. The value below is
         // MEASURED on the fully-merged tree (all three), not any branch's alone.
@@ -11226,7 +11238,7 @@ mod tests {
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
         let bio: Vec<&hornvale_species::BiosphereTraits> =
             wc.biosphere.iter().map(|(_, b)| b).collect();
-        let ks = niche_per_species_k(
+        let ks = per_species_suitability(
             geo,
             &terrain,
             &climate,
@@ -11286,7 +11298,7 @@ mod tests {
         let wc = WorldComponents::assemble().unwrap();
         let bio: Vec<&hornvale_species::BiosphereTraits> =
             wc.biosphere.iter().map(|(_, b)| b).collect();
-        let ks = niche_per_species_k(
+        let ks = per_species_suitability(
             geo,
             &terrain,
             &climate,
@@ -11327,7 +11339,7 @@ mod tests {
     /// full 16-species HABITAT stack (fauna included — distinct from the
     /// peopled-only SETTLEMENT stack `species_pin_isolation` etc. probe)
     /// show the menagerie breaking the goblinoid "oatmeal"? Packs the whole
-    /// roster through the exact `niche_per_species_k` -> `coexist::pack`
+    /// roster through the exact `per_species_suitability` -> `coexist::pack`
     /// pipeline settlement genesis and `demography_report_from` share (same
     /// frozen `BETA`/`FLOOR`), then reads the per-cell DOMINANT species —
     /// the greatest realized individual density, tie-broken to the lowest
@@ -11375,7 +11387,7 @@ mod tests {
     /// Full breakdown, per-species max-density trace, and the calibration
     /// writeup: `.superpowers/sdd/task-6-report.md`.
     ///
-    /// UPDATE (BIO-35, the-demesne T2): `niche_per_species_k` no longer
+    /// UPDATE (BIO-35, the-demesne T2): `per_species_suitability` no longer
     /// scales one shared `base_carrying` field by each species' summed
     /// uptake — it now dot-products the uptake vector against per-axis
     /// supply fields (`axis_supply`; `windows/worldgen/tests/demesne.rs`).
@@ -11394,7 +11406,7 @@ mod tests {
     /// UPDATE (BIO-35, the-demesne T3): re-measured after T3's settlement-
     /// count investigation (`FORAGE_FRACTION` swept 0.5..3.0, kept at 0.5 —
     /// see `windows/worldgen/tests/confluence.rs`'s settlement-count test
-    /// for the full writeup; the sweep left `niche_per_species_k`'s
+    /// for the full writeup; the sweep left `per_species_suitability`'s
     /// per-cell dominance unchanged from T2's reading). The breakdown is
     /// BYTE-IDENTICAL to T2's: `[xorn: 29136, rust-monster: 9551,
     /// twig-blight: 1328, goblin: 947]`, 4 distinct dominants. Splitting

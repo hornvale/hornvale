@@ -1674,7 +1674,7 @@ pub fn registry() -> Vec<Metric> {
                             continue;
                         }
                         let lat = geo.coord(cell).latitude.abs();
-                        let kv = *k.get(cell);
+                        let kv = k.at(cell);
                         if lat < 30.0 {
                             trop_sum += kv;
                             trop_n += 1;
@@ -3751,7 +3751,7 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
             continue;
         }
         defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
-        caps.push(*capacity.get(cell));
+        caps.push(capacity.at(cell));
     }
     if defs.len() < 2 {
         return MetricValue::Absent;

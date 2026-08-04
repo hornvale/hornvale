@@ -4,6 +4,7 @@
 //! calibrated once (the-gathering, Task 8) against the real biomass-by-
 //! latitude gradient and are now frozen as save-format constants.
 
+use hornvale_kernel::ecology::CapacityMap;
 use hornvale_kernel::{CellId, CellMap, Geosphere};
 
 /// The bare per-cell climate/terrain inputs the composition root assembles.
@@ -50,9 +51,13 @@ fn temp_response(t: f64) -> f64 {
 
 /// The carrying-capacity field: `0.0` on uninhabitable cells, else the NPP
 /// proxy scaled by freshwater, coast, and hostility terms.
-/// type-audit: bare-ok(count: return)
-pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> CellMap<f64> {
-    CellMap::from_fn(geo, |c: CellId| {
+///
+/// Returns a [`CapacityMap`] — a people-DENSITY with units — rather than a bare
+/// `CellMap<f64>`, per decision 0103. The type is what stops this field being
+/// interchanged with a dimensionless suitability, which is a 20–100× silent
+/// rescale that no guard in the workspace previously caught.
+pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> CapacityMap {
+    let raw = CellMap::from_fn(geo, |c: CellId| {
         let i = inputs.get(c);
         if !i.habitable {
             return 0.0;
@@ -64,7 +69,11 @@ pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> Ce
             + if i.coastal { COAST_BONUS } else { 0.0 };
         let k = BASE * npp * bonus * (1.0 - i.hostility.clamp(0.0, 1.0));
         k.max(0.0)
-    })
+    });
+    // `k.max(0.0)` above establishes the invariant the constructor validates, so
+    // this cannot fail; the constructor is still the only way in, so a future
+    // change to the formula is caught here rather than downstream.
+    CapacityMap::new(raw).expect("carrying capacity is non-negative and finite by construction")
 }
 
 #[cfg(test)]
@@ -93,12 +102,12 @@ mod tests {
             _ => input(true, 40.0, 0.05, 0.05, false, 0.8),
         });
         let k = carrying_capacity(&geo, &inputs);
-        assert_eq!(*k.get(CellId(0)), 0.0, "uninhabitable supports nobody");
+        assert_eq!(k.at(CellId(0)), 0.0, "uninhabitable supports nobody");
         assert!(
-            *k.get(CellId(1)) > *k.get(CellId(2)),
+            k.at(CellId(1)) > k.at(CellId(2)),
             "wet-temperate beats desert"
         );
-        assert!(*k.get(CellId(1)) >= 0.0 && *k.get(CellId(2)) >= 0.0);
+        assert!(k.at(CellId(1)) >= 0.0 && k.at(CellId(2)) >= 0.0);
     }
 
     #[test]
@@ -111,7 +120,7 @@ mod tests {
         });
         let k = carrying_capacity(&geo, &inputs);
         assert!(
-            *k.get(CellId(0)) < *k.get(CellId(1)),
+            k.at(CellId(0)) < k.at(CellId(1)),
             "the scarce factor caps K"
         );
     }

@@ -51,18 +51,39 @@ referent.
 
 0008 mandates newtypes for "coherent physical units crossing API boundaries", and
 a people-density per cell is such a unit. 0028's rubric requires a verdict tag on
-every primitive at a `pub` boundary. Both passed, because **the audit tags the
-outer primitive of a signature and a container's payload is never reached**:
+every primitive at a `pub` boundary. Both passed:
 
 ```
 carrying_capacity    -> bare-ok(count: return)     a headcount density
-niche_per_species_k  -> bare-ok(index: return)     describes the u32 species tag,
-                                                   not the CellMap's f64 at all
+niche_per_species_k  -> bare-ok(index: return)     describes the u32 species tag
 ```
 
-One field is a ratio, the other a density, and the audit assigned a verdict to
-**neither of their elements**. `bare-ok(index: return)` is not even wrong — it
-correctly describes the tuple's `u32`. The `f64` simply has no entry.
+> **CORRECTION (2026-08-04, same day, before this record reached main).** This
+> section first claimed the audit "never reaches a container's payload." **That
+> is wrong, and the tool says so**: implementing §1 immediately produced four
+> findings of exactly that shape —
+>
+> ```
+> kernel:311: untagged primitive at values (new)          <- CellMap<f64> param
+> kernel:352: untagged primitive at values (new)
+> kernel:387: untagged primitive at return (as_cell_map)  <- &CellMap<f64>
+> kernel:392: untagged primitive at return (into_cell_map)
+> ```
+>
+> The audit reaches `CellMap<f64>` at a `pub` boundary and demands a verdict.
+> The real blind spot is **granularity, not reach**: it wants one verdict per
+> *named position*, so a compound return like `Vec<(u32, CellMap<f64>)>` gets a
+> single tag for `return`, and `bare-ok(index: return)` — a true statement about
+> the tuple's `u32` — satisfied the checker while the `f64` beside it went
+> undescribed. **One tag cannot describe two primitives in one position.**
+>
+> The decision below is unchanged; only the diagnosis is. §2's rule is now
+> "a *compound* position needs a verdict per primitive it contains", which is a
+> narrower and more tractable tool change than "teach it to see through
+> containers" — it already can.
+
+So one field is a ratio and the other a density, and the position that held both
+a species tag and a suitability got one verdict describing only the tag.
 
 ## The decision
 
@@ -70,10 +91,13 @@ correctly describes the tuple's `u32`. The `f64` simply has no entry.
    newtypes**, with validating constructors, wherever either crosses a `pub`
    boundary. The product typechecks (`Headcount × Suitability -> Headcount`); the
    substitution `capacity := suitability` does not compile.
-2. **A `CellMap<T>`'s payload is within the type-audit's remit.** A
-   `CellMap<f64>` at a `pub` boundary needs a verdict for its element, not only
-   for the signature's outer primitives. Whether the tool can see through the
-   container today is an implementation question; the *rule* is settled here.
+2. **A compound position needs a verdict per primitive it contains.** The audit
+   already reaches a `CellMap<f64>` at a `pub` boundary (see the correction
+   above); what it cannot yet express is *two* primitives in one named position,
+   so `Vec<(u32, CellMap<f64>)>` must carry a verdict for the `u32` **and** for
+   the `f64`, not one for `return`. Until the tool supports that, a compound
+   position's tag names the payload that carries units, because that is the one a
+   substitution can silently rescale.
 3. **The transposed names are corrected at the same time** — the variable that
    holds a capacity is not called `suitability`, and a function returning a
    suitability is not called `_k`. Renaming is part of the fix, not a follow-up,

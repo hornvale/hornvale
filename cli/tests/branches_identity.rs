@@ -260,7 +260,7 @@ fn goblin_names_are_rebaselined_not_frozen() {
 /// dominant species does, via `peopled-by`), so this recomputes the same
 /// coexistence stack genesis built via `hornvale_worldgen::demography_report_from`
 /// — the pure, deterministic accessor that mirrors genesis's own
-/// `niche_per_species_k` → `coexist::pack` → `stack_condense::condense_stack`
+/// `per_species_suitability` → `coexist::pack` → `stack_condense::condense_stack`
 /// pipeline byte-for-byte at the frozen `BETA`/`FLOOR` constants — over the
 /// same peopled-only roster filter genesis's unpinned path applies.
 ///

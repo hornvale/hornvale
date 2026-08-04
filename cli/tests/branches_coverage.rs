@@ -74,7 +74,7 @@ fn settlements_by_cell(world: &World, species: &str) -> BTreeMap<u32, EntityId> 
 /// coexistence stack (decision-ledger #49): a species pin now selects a
 /// **deterministic restricted roster**, not a population-preserving mask.
 /// Because settlement genesis packs species competitively against a
-/// shared per-cell capacity (`niche_per_species_k`), pinning `--species X`
+/// shared per-cell capacity (`per_species_suitability`), pinning `--species X`
 /// removes X's competitors and legitimately changes X's own density on
 /// cells it still holds — the old "population unchanged vs. unpinned"
 /// contract no longer holds by construction, and asserting it would be

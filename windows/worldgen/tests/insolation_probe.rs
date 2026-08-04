@@ -29,7 +29,7 @@
 //!    only its `insolation` term for the corrected Locked formula — every
 //!    other axis (temperature, moisture, elevation) is untouched and
 //!    already regime-aware upstream.
-//! 3. Run the SAME per-species suitability product `niche_per_species_k`
+//! 3. Run the SAME per-species suitability product `per_species_suitability`
 //!    computes (replicated here as `niche_k_over`, since that function
 //!    builds its own internal `Substrate` and cannot take an injected one)
 //!    over the corrected substrate, for the PEOPLED kinds only (the four
@@ -170,11 +170,11 @@ fn substrate_with_corrected_insolation(
     })
 }
 
-/// Mirrors `hornvale_worldgen::niche_per_species_k`'s suitability product
+/// Mirrors `hornvale_worldgen::per_species_suitability`'s suitability product
 /// exactly (supply term × temperature × moisture × insolation × elevation
 /// condition responses), but reads every axis off a caller-supplied
 /// `Substrate` field instead of rebuilding one internally — the injection
-/// seam this probe needs and `niche_per_species_k` does not expose.
+/// seam this probe needs and `per_species_suitability` does not expose.
 fn niche_k_over(
     geo: &Geosphere,
     base_carrying: &CellMap<f64>,
@@ -313,7 +313,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
         .filter(|(k, _)| wc.psyche.contains(k))
         .collect();
     let peopled: Vec<&BiosphereTraits> = peopled_kinds.iter().map(|(_, bio)| *bio).collect();
-    let per_species_k = niche_k_over(geo, &base_carrying, &substrate, &peopled);
+    let per_species_k = niche_k_over(geo, base_carrying.as_cell_map(), &substrate, &peopled);
     let habitable = climate.habitability();
 
     // The world-dominant species: highest total K summed over habitable

@@ -29,8 +29,10 @@
 //!
 //! The first run of this probe reported `K × SETTLERS_PER_CAPACITY` as a
 //! headcount capacity, inheriting the spec's §3.2 assumption that
-//! `niche_per_species_k` returns a field on the same footing as the bake's
-//! `capacity`. **It does not.** Its last statement is
+//! `niche_per_species_k` — as it was named then; **renamed to
+//! `per_species_suitability` by decision 0103**, because the `_k` was half the
+//! error — returns a field on the same footing as the bake's `capacity`.
+//! **It does not.** Its last statement is
 //!
 //! ```text
 //! let saturated = supply / (1.0 + supply);   // <= 1 always
@@ -64,7 +66,7 @@
 //!                               (domains/demography/src/carrying_capacity.rs:59)
 //! ```
 //!
-//! The second is **upstream** of `niche_per_species_k` — `base_carrying` is its
+//! The second is **upstream** of `per_species_suitability` — `base_carrying` is its
 //! `PHOTOSYNTHATE` supply — so `K == 0` wherever the global mask says
 //! uninhabitable. Measured consequence, all five seeds:
 //!
@@ -126,7 +128,7 @@ use hornvale_kernel::CellMap;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
     SETTLERS_PER_CAPACITY, SettlementPins, SkyChoice, build_world, carrying_inputs_of, climate_of,
-    niche_per_species_k, sky_of, terrain_of,
+    per_species_suitability, sky_of, terrain_of,
 };
 
 /// The settling roster — `SocialForm::Settled`, verified as exactly these six.
@@ -203,7 +205,7 @@ fn probe_seed(seed: u64) {
     let bio: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
 
-    let ks = niche_per_species_k(
+    let ks = per_species_suitability(
         geo,
         &terrain,
         &climate,
@@ -219,10 +221,10 @@ fn probe_seed(seed: u64) {
     // dimensionless factor in [0,1]; this is what carries the headcount units.
     let base =
         hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, &terrain, &climate));
-    let capacity = hornvale_kernel::CellMap::from_fn(geo, |c| *base.get(c) * SETTLERS_PER_CAPACITY);
+    // `scaled` keeps this a capacity by construction (decision 0103).
+    let capacity = base.scaled(SETTLERS_PER_CAPACITY);
     // eff_capacity as the rewired bake would compute it: base x per-species K.
-    let eff =
-        |c: hornvale_kernel::CellId, tag: u32| -> f64 { *capacity.get(c) * *k_of(tag).get(c) };
+    let eff = |c: hornvale_kernel::CellId, tag: u32| -> f64 { capacity.at(c) * *k_of(tag).get(c) };
 
     let sea = terrain.sea_level();
     let cells: Vec<_> = geo.cells().collect();
@@ -299,7 +301,7 @@ fn probe_seed(seed: u64) {
     // --- Item 1/4/5: per-species capacity over land ------------------------
     // Scale baseline: today's eff_capacity on a habitable cell IS `capacity`
     // (factor == 1), so this is the frame the bake reasons in right now.
-    let mut caps: Vec<f64> = habitable.iter().map(|c| *capacity.get(*c)).collect();
+    let mut caps: Vec<f64> = habitable.iter().map(|c| capacity.at(*c)).collect();
     caps.sort_by(f64::total_cmp);
     if !caps.is_empty() {
         println!(

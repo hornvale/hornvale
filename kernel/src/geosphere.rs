@@ -62,6 +62,21 @@ impl<T> CellMap<T> {
         &self.values[id.0 as usize]
     }
 
+    /// Build a new `CellMap` by mapping every `(CellId, &value)` pair. Length-
+    /// preserving by construction, so the result spans the same geosphere
+    /// without needing one passed in — which is what lets a typed field
+    /// (`ecology::CapacityMap`) combine with another without unwrapping.
+    pub fn map_indexed<U>(&self, mut f: impl FnMut(CellId, &T) -> U) -> CellMap<U> {
+        CellMap {
+            values: self
+                .values
+                .iter()
+                .enumerate()
+                .map(|(i, v)| f(CellId(i as u32), v))
+                .collect(),
+        }
+    }
+
     /// The number of cells.
     /// type-audit: bare-ok(count)
     pub fn len(&self) -> usize {

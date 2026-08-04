@@ -85,9 +85,14 @@ pub fn report(
     floor: f64,
     threshold: f64,
 ) -> DemographyReport {
+    // `_k` is accurate here — these ARE capacities, one per species' inputs.
+    // The unwrap is explicit because `condense_tagged` / `coexist::pack` /
+    // `byproducts` still take bare `CellMap<f64>`; typing them through is
+    // follow-on work, and decision 0103's guarantee is at the demography →
+    // worldgen boundary, which `carrying_capacity`'s return type now holds.
     let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
         .iter()
-        .map(|(tag, inputs)| (*tag, carrying_capacity(geo, inputs)))
+        .map(|(tag, inputs)| (*tag, carrying_capacity(geo, inputs).into_cell_map()))
         .collect();
     let settlements = condense_tagged(&per_species_k, geo, threshold);
 
