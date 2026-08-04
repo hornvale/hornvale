@@ -111,17 +111,19 @@ descendant of the finding that produced this document.
 ```
         (no new dependencies)
        /          |          \
-    C2-0         C2a         C2b
-  GENERALIST   DEEP REALM   LONG AGE
-  human x1     Underdark    lifespan curve
-                 \           /
-                  \         /
-               +-------+-------+
-               |               |
-             C2c             C2d
-          THE DELVERS     THE RADIATION
+    C2-0         C2a         C2b        C2t
+  GENERALIST   DEEP REALM   LONG AGE   THE TOLERANCE
+  human x1     Underdark    lifespan   dispersion +
+                 \           /         population tier
+                  \         /               |
+               +-------+-------+            |
+               |               |            |
+             C2c             C2d <----------+
+          THE DELVERS     THE RADIATION   HARD DEPENDENCY
           dwarf x5        elf x6 + LANG-53
 ```
+
+**C2t was added on 2026-08-03, mid-C2-0, and its finding is why.** See §4b.
 
 **C2-0 — The Generalist.** Humans, one kind, surface only. No new mechanism.
 Full spec: `2026-08-03-the-generalist-design.md`.
@@ -150,6 +152,39 @@ are multi-member families. First people to live in the Deep Realm.
 proto sits at), High (the family's only *social* rather than environmental
 divergence), Drow (Underdark), Sea (Waterworld), Desert, Snow. Plus derived
 divergence and LANG-53.
+
+### 4b. C2t — The Tolerance, and the finding that added it
+
+**A people has no interior, and the program did not notice until a code review
+found that no human raids.**
+
+The Generalist authored humans at `threat_response = 0.5`; `RAID_DISPOSITION_MIN
+= 0.6` gates raiding on that dimension. The sentence *"humans do not raid"* is
+only sayable because every human in every world is one human.
+
+The diagnosis generalises past the symptom. A type is being used as its own only
+instance — the species row is at once the type description and the sole
+exemplar. That is macroeconomics' **representative agent**, and its standing
+critique is predictive rather than merely descriptive: it names in advance the
+phenomena a one-agent model cannot produce. Here those are deviance, the
+exceptional individual, sorting (two settlements of one people differing from
+each other), lineage drift — **and selection**, which is why this blocks C2d.
+A radiation splits a population under selection; selection acts on a
+distribution; a point has no tails.
+
+The keystone is that **variability is itself a species trait**. A eusocial
+insect has near-zero behavioural variance and a generalist has high variance, so
+dispersion is authored per species. Which also means the thing that makes humans
+generalists in the sense the owner intends is *psychological* breadth, not the
+ecological breadth C2-0 measures.
+
+Cheaper than it appears: `instance_biosphere` already implements prototype
+inheritance and is the workspace's **only** instance lens — the body can vary
+per individual, the mind cannot. C2t completes a pattern already committed to.
+
+Full spec: `2026-08-03-the-tolerance-design.md`. Its §6 flags an open placement
+question — whether C2t should also precede C2a and C2b, since every people
+authored before it is authored in a frame it changes.
 
 ### The sequencing rule
 
@@ -272,6 +307,24 @@ Each of the five follows the same shape:
 - `MAP-11` — the habitat-medium axis referenced at `windows/worldgen/src/lib.rs`
   as "a real habitat-medium axis (MAP-11) would state this"; C2a should say
   whether the Deep Realm supersedes it or sits beside it.
+- `PSY-dispersion` — **new row.** A species is a distribution, not a point;
+  dispersion is itself a per-species trait. Carries the representative-agent
+  diagnosis and the list of phenomena a point-valued psychology forecloses.
+  Cross-link `BIO-17` (is species a type or a position in a continuous space?),
+  `PSY-five-is-lexical`, decision 0064 (personhood is a *region* of
+  component-space — ratified for the personhood boundary, then contradicted by
+  authoring every people as a point inside it), and C2d.
+- `PSY-raid-gate-axis` — **new row.** `RAID_DISPOSITION_MIN` gates a *proactive*
+  behaviour on `threat_response`, a *defensive* axis (flee ↔ stand). It would
+  misclassify any people, not only humans. Owner ruled 2026-08-03 to disclose
+  rather than fix, because fixing moves raid behaviour for all six peoples
+  inside a roster campaign and destroys its attribution.
+- `BIO-instance-lens-gap` — **new row.** `instance_biosphere` is the workspace's
+  only instance lens: mass and potency vary per individual, mind/society/
+  perception cannot. The prototype-inheritance mechanism is built and tested;
+  only the body is wired to it. Subsumed by `PSY-dispersion`'s individual tier
+  but worth its own row, since it is a *completed pattern left half-applied*
+  rather than a missing design.
 
 ## 10. Flagged for review
 
