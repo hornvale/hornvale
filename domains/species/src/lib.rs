@@ -1568,10 +1568,13 @@ fn gnoll_condition_niche() -> ConditionNiche {
 /// devotion against their high devotion, reinforced (not contradicted) by
 /// this pass's wider curves.
 ///
-/// Devotion is unchanged by this re-authoring — it is the roster's lowest
-/// on every axis (temperature 0.20 vs. goblin's 0.45, moisture 0.20 vs.
-/// 0.35, insolation 0.25 vs. 0.35, elevation 0.30 vs. 0.35), the argued
-/// contrast from Task 2 that measurement never called into question.
+/// Devotion is unchanged by this re-authoring — it is the lowest of the six
+/// PEOPLES on every axis (temperature 0.20 vs. goblin's 0.45, moisture 0.20
+/// vs. 0.35, insolation 0.25 vs. 0.35, elevation 0.30 vs. 0.35), the argued
+/// contrast from Task 2 that measurement never called into question. Scoped
+/// to the peoples, not the whole roster: xorn is lower on all four
+/// (0.10/0.10/0.20/0.10), being the indifferent elemental this niche is
+/// deliberately a peoples-appropriate echo of.
 ///
 /// **History: the vacuity/distinctness check and its width-attribution
 /// finding.** `windows/worldgen/tests/generalist_distinctness.rs`'s
