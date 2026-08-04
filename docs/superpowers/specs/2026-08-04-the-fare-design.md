@@ -82,14 +82,49 @@ It is a control, never a result.
 
 Per decision 0016 and the project's preregistration discipline, the freeze
 lives here in the spec — a study JSON carries no hypothesis field. The
-numeric floors in F1, F2 and F4 are deliberately **not stated yet**; see §6.
+numeric floors in F1 and F2 are deliberately **not stated yet**; see §6.
+F4 is dropped — see its heading below.
+
+### 4a. The sampling frame — geographic pairs, not settlement pairs
+
+**Revised 2026-08-04, project owner's ruling.** F1, F2 and F3 are measured
+between **deterministically sampled land-cell pairs**, not between settlement
+pairs. Settlement-pair routing is retained as a clearly labelled *secondary*
+readout.
+
+Two independent reasons, and the second is the stronger one.
+
+**It removes a cross-campaign dependency.** Every settlement-pair readout is
+conditional on placement, which a parallel campaign is about to change wholesale
+(§6a). A geographic frame is placement-independent, so the primary measurement
+neither perishes nor owes a re-run.
+
+**It removes a real sampling bias, which is the better reason.** Settlements sit
+in a handful of tight contiguous carpets on high-capacity river basins — six to
+twelve clusters per world, at a one-per-cell floor of roughly 110 km. That is a
+badly biased sample of *terrain*. Weather bites hardest on marginal ground —
+boggy lowland, snow-loaded upland — which is exactly where settlements are not.
+Measuring weather's effect on travel using only routes between clustered
+river-basin sites systematically under-samples the terrain where the effect
+lives, and would understate every readout in this spec.
+
+The frame: land cells (`!Biome::is_marine()`) drawn by a fixed deterministic
+stride, paired at a controlled great-circle separation so the population is not
+dominated by trivially short or unroutable pairs. Never random. The stride, the
+separation band, and the realised pair count are set from the pilot and frozen
+with the floors in §6.
+
+**The settlement-pair readout survives as the perishable one**, and that is
+where §6a's forward prediction belongs: scattering settlements should raise
+F2 on settlement pairs. Reported alongside, never as the headline.
 
 ### F1 — magnitude
 
 *Does weather move the cost of a real journey?*
 
-Least-cost path cost between settlement pairs over the **weathered cost
-field** (§5) versus the dry one, sampled across days of the converged year.
+Least-cost path cost between §4a's sampled land-cell pairs over the
+**weathered cost field** (§5) versus the dry one, sampled across days of the
+converged year.
 The seasonal swing is the max-minus-min across sampled days, expressed as a
 fraction of the dry cost.
 
@@ -111,9 +146,9 @@ wrong.
 
 *Does weather make travellers take a different road?*
 
-The fraction of settlement pairs whose least-cost **path identity** changes
-between the cheapest and costliest sampled day, routed over the weathered cost
-field.
+The fraction of §4a's sampled pairs whose least-cost **path identity** changes
+between that pair's **own** cheapest and costliest sampled day, routed over the
+weathered cost field.
 
 This is the qualitatively new phenomenon and it cannot be read off the
 per-cell weather term under any transformation — a *uniform* penalty on every
@@ -171,19 +206,24 @@ a permanently frozen cell has constant conductance, so its cost is constant
 too, and constancy is instrument-independent. F3 is therefore a genuine test
 of that mechanism rather than a re-description of it.
 
-### F4 — the consequence readout
+### F4 — DROPPED (project owner's ruling, 2026-08-04)
 
-*Would wiring this into the world change anything?*
+F4 was to recompute `defensibility()` under weathered conductance for the
+ordered pairs that actually contested a raid, and report what fraction would
+resolve differently against `RAID_MARGIN` — a pure read answering whether the
+wiring campaign is worth running.
 
-For the ordered pairs that actually contested a raid during a world's history
-bake, recompute `defensibility()` under weathered conductance and report the
-fraction whose comparison against `RAID_MARGIN` would resolve differently.
+**It is dropped from this campaign, not abandoned.** It reads pairs that
+contested a raid during the history bake, so it is placement-dependent all the
+way down and cannot be re-based on the geographic sampling frame §4a adopts. It
+would have been the one part of The Fare still hostage to a parallel campaign's
+re-placement of every settlement (§6a), and its purpose was always to justify
+the wiring campaign — so it belongs to that campaign, measured against whatever
+placement is current when it runs.
 
-**This is a pure read.** It changes no production code path, constructs no
-weathered graph in world generation, and does not touch `DEF_CENTER`. It
-answers whether the follow-up campaign that *would* wire it (and would
-therefore have to recalibrate a save-format constant) is worth running — before
-anyone pays for it.
+Consequence: this campaign touches `defensibility`, `DEF_CENTER`,
+`RAID_MARGIN`, and the history bake **not at all**. Recorded as a registry row
+at close.
 
 ### H-control — the per-edge ratio
 
@@ -331,10 +371,10 @@ a licence to approximate. Captured as `MAP-hierarchical-routing`.
 `SubstrateField`s per world (via `compute_pair`) and holds the day-sampling
 harness. The Fare extends it rather than standing up a parallel instrument.
 
-**F4 keeps the graph.** `defensibility()` reads `Edge.conductance` and nothing
-else, so F4 is computed against the weathered `ConnectionGraph` exactly as The
-Mire built it. F1–F3 use the cost field; F4 uses the graph. The two are not
-interchangeable and the plan must not let an implementer conflate them.
+**Nothing in this campaign reads the graph.** F4 was the only readout that
+would have, and it is dropped (§4). Every surviving readout routes over the
+cost field. The `ConnectionGraph`, `defensibility`, and `DEF_CENTER` are
+untouched.
 
 ## 6. The pilot, and why the floors are blank
 
@@ -349,8 +389,8 @@ The mitigation is procedural and it is why §4 carries no numbers:
 
 1. Run a pilot of 5–10 seeds.
 2. From the pilot's own distributions, set: the F1 swing floor, the F2
-   fraction floor, the F4 flip-fraction floor, the source-settlement sample
-   policy, and the seed count for the full run.
+   fraction floor, the F2 redundancy band, the §4a geographic sampling frame
+   (stride, separation band, realised pair count), and the seed count.
 3. Record the pilot's measured per-world cost for both routing approaches.
 4. **Freeze all of the above in this spec, in a commit that predates the full
    run**, and say in the chronicle that the floors were pilot-derived.
@@ -358,21 +398,14 @@ The mitigation is procedural and it is why §4 carries no numbers:
 No floor in this campaign is inherited from a constant defined elsewhere. A
 floor that cannot be traced to this campaign's own pilot is a defect.
 
-**Amendment (2026-08-04, project owner's ruling): F4's floor is frozen
-separately, at the top of its own task.** Execution surfaced that F4 runs on a
-different instrument from F1–F3 — the connection graph and `defensibility`,
-which need a history bake per world — so pilot-measuring it alongside a routing
-pilot costs out of proportion to what it settles. F4's floor is therefore
-derived from a task-local pilot and frozen in its own commit at the start of
-the F4 task, before its readout exists.
-
-This is a deliberate departure from the paragraph above, not an oversight, and
-it is recorded rather than quietly taken. What it gives up: a single freeze
-point, and the tidiness of one commit that provably predates every number.
-What it preserves — and the reason it is acceptable — is the discipline that
-actually does the work: **each floor is still frozen before the number it
-gates exists.** A floor chosen after seeing its own readout would be
-metric-chasing; a floor frozen in a separate earlier commit is not.
+**Superseded (2026-08-04): F4 is dropped entirely (§4), so the separate
+freeze point it needed is moot.** An earlier amendment moved F4's floor to the
+top of its own task, on the grounds that F4 ran on a different and costlier
+instrument. Dropping F4 removes the exception with it, and every surviving
+floor is frozen once, here, in Task 4. The earlier amendment is recorded as
+superseded rather than deleted, because the reasoning that produced it — a
+floor may be frozen in its own commit provided it predates the number it
+gates — remains sound and may be wanted again.
 
 The pilot also settles the scope question the seed count depends on, which is
 why the population is not fixed here. The Mire's 200 seeds is the target for
@@ -442,10 +475,13 @@ commit with a byte-identity assertion, not folded into a measurement commit.
 
 ## 9. Non-goals
 
-- **Wiring the weathered graph into production.** F4 is a read, not a change.
-  If F4 says the effect is material, the wiring is a separate campaign with
-  its own spec — because it recalibrates `DEF_CENTER`, a save-format constant,
-  and that decision deserves its own G3.
+- **Wiring the weathered graph into production.** A separate campaign with
+  its own spec, because it recalibrates `DEF_CENTER`, a save-format constant,
+  and that decision deserves its own G3. F4 — the read that would have sized
+  its warrant — now belongs to that campaign too (§4).
+- **F4, and with it the whole `defensibility` / history-bake surface.** Dropped
+  to the wiring campaign (§4). This campaign does not read `DEF_CENTER`,
+  `RAID_MARGIN`, or the bake at all.
 - **Sea ice.** `EdgeKind::WaterRoute` stays hard-coded at conductance 1.0.
   `MAP-polar-zero-is-a-land-result` remains open and is the strongest
   candidate to follow this campaign. Note the ordering constraint: sea ice
@@ -470,14 +506,15 @@ commit with a byte-identity assertion, not folded into a measurement commit.
 
 ## 10. Definition of done
 
-- F1–F4 measured on the frozen population, with pilot-derived floors.
+- F1–F3 measured on the frozen §4a geographic population, with pilot-derived
+  floors, plus the secondary settlement-pair readout.
 - A chronicle entry (`book/src/chronicle/the-fare.md`) and a retrospective
   (`docs/retrospectives/the-fare.md`).
 - Registry rows updated: `CLIM-cost-not-passability` flipped from `raw` to
   `shipped` and repointed; `MAP-weather-gating-is-unconsumed` repointed;
   `MAP-hierarchical-routing` added.
 - A freshness sweep of `book/src/open-questions.md` — the Confidence Gradient
-  is re-scored if F3 or F4 moves a bet.
+  is re-scored if F3 moves a bet.
 - **If F3 collapses the latitude reversal, The Mire's chronicle is amended**,
   not silently superseded.
 - The bundled `lithology.rs` fix, in its own commit, with byte-identity
