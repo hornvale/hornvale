@@ -450,6 +450,14 @@ fn hobgoblin_condition_niche() -> ConditionNiche {
 /// only the corrected frame to mean it. Measured: bugbear's mean fit on land
 /// below 500 m is 0.264, against 0.0038 above 3000 m — the sharpest
 /// lowland/highland split of the four, as a rainforest species should have.
+///
+/// **Contradicted by a later measurement, undiagnosed (The Generalist, Task
+/// 6):** a re-run read bugbear's mean fit below 500 m as 0.017563, ~15x below
+/// the figure above, with the whole kobold-highland comparison also an order
+/// of magnitude down and goblin/hobgoblin rank-swapped. Whether the
+/// populations, mesh, or frame differ between the two runs has not been
+/// investigated; neither number has been corrected. See
+/// `BIO-generalist-remeasure` in the idea registry.
 fn bugbear_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -1472,9 +1480,9 @@ fn gnoll_condition_niche() -> ConditionNiche {
 
 /// Human condition niche: the roster's first true GENERALIST — a settler
 /// that leans on none of its four axes and is authored to be
-/// simultaneously the LEAST-DEVOTED and the WIDEST curve on every axis in
-/// the roster, so "no refuge" is true in both senses that could otherwise
-/// pull apart.
+/// simultaneously the LEAST-DEVOTED and the WIDEST curve on every axis
+/// among the peoples, so "no refuge" is true in both senses that could
+/// otherwise pull apart.
 ///
 /// **Task 5b re-authoring (2026-08-04): a re-derivation, not the original
 /// authoring.** The niche shipped by Task 2 stated its contrast with goblin
@@ -1537,9 +1545,9 @@ fn gnoll_condition_niche() -> ConditionNiche {
 /// 28.0; moisture 0.70 > goblin/kobold's 0.60; insolation 0.45 > bugbear's
 /// 0.40; elevation 4000.0 > goblin's 3000.0) — the property this
 /// re-authoring exists to restore. Devotion is UNCHANGED (0.20/0.20/0.25/
-/// 0.30 — see below) and remains the roster's lowest on every axis, so
-/// "widest and least devoted" is now true in both senses on every axis, not
-/// mixed axis by axis as the original authoring left it.
+/// 0.30 — see below) and remains the lowest of the six peoples on every
+/// axis, so "widest and least devoted" is now true in both senses on every
+/// axis, not mixed axis by axis as the original authoring left it.
 ///
 /// Goblin's own elevation optimum was already re-centred by The Tumult's
 /// re-datum to 1500.0 m, the settleable-land median at the time. Human's

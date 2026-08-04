@@ -191,9 +191,10 @@ Cheaper than it appears: `instance_biosphere` already implements prototype
 inheritance and is the workspace's **only** instance lens — the body can vary
 per individual, the mind cannot. C2t completes a pattern already committed to.
 
-Full spec: `2026-08-03-the-tolerance-design.md`. Its §6 flags an open placement
-question — whether C2t should also precede C2a and C2b, since every people
-authored before it is authored in a frame it changes.
+Full spec: `2026-08-03-the-tolerance-design.md`. Its §7 records the
+placement, resolved at the owner's direction on 2026-08-03: C2t precedes C2a
+and C2b, since every people authored before it is authored in a frame it
+changes.
 
 ### The sequencing rule
 

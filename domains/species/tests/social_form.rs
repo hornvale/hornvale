@@ -57,20 +57,14 @@ fn every_kind_has_the_authored_social_form() {
 }
 
 #[test]
-fn settled_kinds_are_exactly_the_five_peoples() {
+fn settled_kinds_are_exactly_the_six_peoples() {
     // The byte-identity keystone: the settlement roster (and every gate re-keyed
     // off the retired "has a psyche" proxy onto `Settled`) is exactly the
     // settling peoples — the same set the pre-Eremite psyche key-set held for
-    // the original four. The Vacancy T9 adds the gnoll, a fifth. After The
-    // Eremite the dragons carry a mind while staying Solitary, so psyche is a
-    // SUPERSET of Settled (Settled ⊆ psyche), not equal — hence a named pin.
-    //
-    // The Generalist (C2-0) Task 2 adds the human's biosphere row (a sixth
-    // `Settled` kind) before Task 3 adds its `MindVector`, so the set below is
-    // correctly six peoples as of Task 2, but the per-member `Settled ⊆
-    // psyche` loop below is EXPECTED TO FAIL on "human" until Task 3 lands —
-    // a deliberate, documented, transient red on this branch, not a defect in
-    // Task 2 (see this campaign's task-2-report.md).
+    // the original four. The Vacancy T9 adds the gnoll, a fifth, and The
+    // Generalist (C2-0) adds the human, a sixth. After The Eremite the
+    // dragons carry a mind while staying Solitary, so psyche is a SUPERSET of
+    // Settled (Settled ⊆ psyche), not equal — hence a named pin.
     let bio = biosphere_registry();
     let psy = psyche_registry();
     let settled: Vec<&str> = bio

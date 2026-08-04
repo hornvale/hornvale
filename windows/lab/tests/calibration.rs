@@ -2390,12 +2390,20 @@ fn null_control_name_length_smd_is_pinned() {
         // lefford at 02172e96, 0063/0079): `census-of-the-meeting`'s two pin
         // sets are `goblin-solo` and `goblin-twin-solo` — human is not
         // itself present in either build, so this is NOT the direct
-        // roster-competition effect the rest of this file's re-pins record;
-        // recorded as measured, not explained. Both solo builds moved alike
-        // in structure (the sibling `null_control_distributions_are_within_
-        // the_sampling_bound` test, unaffected by this regen, confirms
-        // head-domain/cult-form/pantheon-size TVD/SMD are all unmoved), so
-        // only the residual name-length gap shifted:
+        // roster-competition effect the rest of this file's re-pins record.
+        // The mechanism is `register_concepts` (domains/species/src/lib.rs)
+        // registering all of `KIND_CONCEPTS` unconditionally rather than
+        // filtered by roster: adding `human-kind` grows the registered
+        // concept set, and every lexicon is a total map over registered
+        // concepts (asserted by this branch's own
+        // `cli/tests/the_unnameable.rs`), so even a goblin-solo world's
+        // lexeme space grows by one word and perturbs the name draws.
+        // Confirmed by measurement: exactly one seed of 500 moved. Both solo
+        // builds moved alike in structure (the sibling
+        // `null_control_distributions_are_within_the_sampling_bound` test,
+        // unaffected by this regen, confirms head-domain/cult-form/
+        // pantheon-size TVD/SMD are all unmoved), so only the residual
+        // name-length gap shifted:
         // -0.018_069_698_979_322_31 -> -0.017_807_448_465_414_44. Moves an
         // order of magnitude less than its own scale, staying ~11x inside
         // the ±0.2 sampling-theory bound — the null hypothesis this row

@@ -415,8 +415,8 @@ fn substituting_goblins_niche_for_humans_is_detected() {
     // came out narrower than goblin's on two axes, contradicting the
     // niche's own stated design intent. After re-authoring every width from
     // a measurement-grounded floor (see that function's doc comment) and
-    // verifying human is the roster's widest curve on all four axes, the
-    // REAL case now ALSO reads cv_ratio 0.9528 < 1 - the SAME direction as
+    // verifying human is the widest curve of the six peoples on all four
+    // axes, the REAL case now ALSO reads cv_ratio 0.9528 < 1 - the SAME direction as
     // the width-only reading, and the real gap grew (0.0462 -> 0.0472)
     // rather than shrank. Devotion and width now reinforce each other
     // instead of opposing: "human is a low-devotion, wide-tolerance

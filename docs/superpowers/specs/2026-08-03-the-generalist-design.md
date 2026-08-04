@@ -52,6 +52,14 @@ A human is the case Gause's principle actually speaks to: a broad niche with no
 refuge. Whether the stack survives one is the campaign's question, and it is
 worth asking before C2c and C2d add ten more kinds to it.
 
+**Post-hoc note (Task 6 readout):** the kobold and bugbear figures above
+predate this campaign's own re-measurement, which disagrees with them —
+bugbear's mean fit below 500 m read 0.017563 against the 0.264 quoted here,
+and the whole kobold-highland comparison read an order of magnitude lower
+with goblin and hobgoblin rank-swapped. The two runs' populations may differ;
+neither figure has been corrected pending diagnosis. See
+`BIO-generalist-remeasure` in the idea registry.
+
 ## 3. Design decisions
 
 **D1 — Humans are one kind, and stay one kind.** No subspecies. The Gause

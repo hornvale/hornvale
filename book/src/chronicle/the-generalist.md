@@ -123,8 +123,8 @@ tuning surviving contact with exactly the competitor built to stress it. It
 does not survive contact with the control this campaign added alongside it:
 the same test, applied to the roster's strongest, most locally dominant
 specialist, in that specialist's own best cells, also never crosses the
-threshold. Its own maximum share anywhere in the sample sits at not much more
-than a sixth of the way there — barely above what six equally-matched
+threshold. Its own maximum share anywhere in the sample sits at roughly a
+third of the way there — barely above what six equally-matched
 competitors splitting a cell evenly would each get. The threshold this
 campaign's third prediction was built against turns out to be unreachable by
 anything in a six-way contest at this scale, which means a null result against
