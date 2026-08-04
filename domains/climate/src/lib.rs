@@ -12,6 +12,7 @@ pub mod moisture;
 pub mod precipitation;
 pub mod provider;
 pub mod render;
+pub mod snowpack;
 pub mod streams;
 pub mod substellar;
 pub mod substrate;
@@ -31,6 +32,7 @@ pub use precipitation::{
     PrecipRegime, daily_precip_mm, daily_weight, precip_mm_yr, precip_regime, snow_fraction,
 };
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
+pub use snowpack::{DEFAULT_SNOWPACK, Snowpack};
 pub use streams::stream_labels;
 pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
