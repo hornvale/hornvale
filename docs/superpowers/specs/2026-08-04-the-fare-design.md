@@ -97,6 +97,16 @@ Non-definitional because it depends on whether a world's cheap routes are the
 weather-exposed ones. A world whose corridors run through permanently frozen
 or permanently dry ground will show a small swing at any gating strength.
 
+**Why F1 may beat The Mire's 0.95% despite a modest per-cell surcharge.** Path
+cost is a *sum along a route*, and the substrate is spatially correlated — a
+route crossing a wet region pays the surcharge at every cell of the crossing.
+The path-level effect therefore grows with the substrate's correlation length
+relative to the route, rather than staying at the per-cell scale. This is the
+mechanism that a threshold instrument reading one edge at a time is least able
+to see, and it is the specific reason to expect the cost instrument to
+disagree with the passability one. Stated as a prediction so that it can be
+wrong.
+
 ### F2 — re-routing
 
 *Does weather make travellers take a different road?*
@@ -116,6 +126,31 @@ than delays. It is `DESIGN-weather-is-journey-scale` made testable.
 `ConnectionGraph` instead, its ceiling would be set by corridors surveyed on
 dry ground — the instrument, not the world. That is a subtler instance of §3's
 trap and it is why this campaign routes one layer lower than The Mire did.
+
+**F2 requires a redundancy control, or a zero is uninterpretable.** Re-instantiating
+this problem in road-traffic routing and in airline networks gives the same
+answer in both: congestion reroutes traffic only where a *comparable
+alternative already exists*, and the re-routing rate is governed by the density
+of near-optimal alternatives rather than by the size of the penalty. A pair
+joined by one dominant corridor will show `F2 = 0` at any weather strength.
+
+That is the same structural zero as The Mire's polar band — a place that
+*cannot* vary, reported as a place that *does not* — and shipping it
+uncritically would repeat the exact error this campaign exists to correct. So
+F2 is reported **conditioned on route redundancy**: for each pair, the ratio of
+the second-best substantially-disjoint dry path's cost to the best. A pair with
+no alternative within a preregistered redundancy band is excluded from F2's
+denominator and reported separately as a count.
+
+A world where most pairs have no alternative is itself a finding — it says
+weather cannot produce detours *in this geography*, which is a claim about
+terrain and belongs in the chronicle as one.
+
+**Sampling is per-pair, not global.** The swing is each pair's own max-minus-min
+across sampled days. The substrate year is periodic but its phase is not
+globally aligned — a monsoon peak differs by latitude and longitude — so a
+single global "wettest day" would understate every pair whose own peak falls
+elsewhere.
 
 ### F3 — does the latitude reversal survive a better instrument?
 
@@ -201,13 +236,63 @@ existing `least_cost`. This:
   production path are untouched. The weathered field lives and dies inside the
   study.
 
-**The substrate term is authored, and its authoring is a preregistered
-choice.** It must be specified in this spec before the pilot runs, derived from
-the same substrate reads `weather_conductance_factor` already uses (wetness
-receptivity, snow depth, frozen), and it must be stated in cost units rather
-than as a conductance multiplier — the field is an additive integer cost, not a
-reciprocal. A `-ln` of the existing conductance factor is *not* automatically
-the right transform here and must not be assumed to be.
+### 5a. The substrate→cost transform (authored, frozen here)
+
+The project owner's ruling: the algorithm matters, the constants do not need to
+be physically precise. These are therefore **AUTHORED**, and must carry the
+`/// AUTHORED` doc-comment convention `history_bake.rs` already uses to
+distinguish an authored prior from a calibrated one. No later reader should be
+able to mistake these for measured numbers.
+
+**Anchor: difficult terrain costs double movement** (tabletop convention). That
+fixes the scale with a citable reference rather than an arbitrary one.
+
+**Form: an additive surcharge, not a multiplier.** The field is
+`BASE_COST (10) + slope_term`, where the slope term reaches the hundreds or
+thousands on an escarpment. Multiplying the whole cost by a weather factor
+would make weather's *absolute* contribution scale with slope — largest on
+mountains, smallest on the flat routes travellers actually use. That is a
+terrain effect wearing a weather costume, and it would corrupt F1 and F2 in the
+same direction. An additive surcharge keeps weather's contribution independent
+of relief, so it bites hardest where terrain is cheap, which is where roads go.
+
+**Definition.** Reusing `weather_conductance_factor`'s own inputs, so both
+instruments read identical substrate state and differ only in transform:
+
+```
+surcharge(f) = round(BASE_COST * (1 / max(f, WEATHER_FACTOR_FLOOR) - 1))
+```
+
+`1/f` is thus the movement-rate multiplier: `f = 0.5` yields `+10`, exactly
+doubling flat ground — difficult terrain. The weathered field is
+`traversal_cost(..) + surcharge(..)` per cell, saturating, and marine cells
+stay `u64::MAX` untouched.
+
+**`WEATHER_FACTOR_FLOOR = 0.25`, and weather never returns `u64::MAX`.** This
+is the load-bearing clause, not a rounding detail. `weather_conductance_factor`
+clamps to `[0,1]` and its penalties sum past 1.0 — a saturated *and* snowed
+unfrozen cell yields `1 - 0.6 - 0.7 → 0.0` exactly. Without a floor the
+surcharge diverges; mapping it to `u64::MAX` instead would be worse in a
+specific way:
+
+- it would conflate "muddy" with "ocean", which is the passability threshold
+  The Mire **already measured** — reintroducing it defeats the campaign's thesis;
+- `least_cost` returns `None` for an unreachable pair, so weather-impassable
+  cells would silently **drop pairs from the sample**, biasing F1 toward the
+  pairs that happened to stay connected. A measurement that discards its hardest
+  cases and reports the mean of the rest is the failure The Mire's chronicle
+  calls "the metric can register a landmass-identity switch as a seasonal
+  swing", in a new costume.
+
+At `0.25` the cap is `4x` flat ground and it binds only in the combined
+mud-plus-snow extreme — the regime where the underlying physics is least
+trustworthy anyway. The ordinary cases sit well inside it: saturated unfrozen
+(`f = 0.4`) gives `2.5x`, fully snowed (`f = 0.3`) gives `3.3x`.
+
+**This transform is frozen by this spec.** It is not a pilot-derived floor; it
+is an authored model choice, and retuning it after seeing F1 or F2 is the
+metric-chasing the preregistration discipline exists to prevent. If it turns
+out wrong, that is a finding for the chronicle, not a constant to adjust.
 
 **Costs from sources, not per pair.** `least_cost` is single-target: it routes
 one `from` to one `to`. F1 and F2 need costs from a set of source settlements
