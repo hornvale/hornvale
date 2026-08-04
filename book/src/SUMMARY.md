@@ -298,6 +298,7 @@
 - [The Contour](./chronicle/the-contour.md)
 - [The Manikin](./chronicle/the-manikin.md)
 - [The Salt](./chronicle/the-salt.md)
+- [The Mire](./chronicle/the-mire.md)
 
 # Appendix: The Frontier
 
