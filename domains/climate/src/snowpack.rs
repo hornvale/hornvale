@@ -57,6 +57,18 @@ impl Substrate for Snowpack {
     fn spin_up_years(&self) -> u32 {
         12
     }
+
+    /// At or below freezing, `degree_days` (`sink`'s own
+    /// `ctx.mean_temp_c.max(0.0)`) is exactly `0.0`, so `sink` returns
+    /// `(0.0 * melt_per_degree_day_mm).min(post_gain.max(0.0))` — `0.0`
+    /// regardless of `present`, since `0.0.min(x)` is `0.0` for any `x >=
+    /// 0.0` and `post_gain.max(0.0)` is always `>= 0.0`. This restates that
+    /// condition verbatim (`ctx.mean_temp_c <= 0.0`), the exact threshold
+    /// `sink` itself branches on — the contract `Substrate::
+    /// sink_is_certainly_zero` requires of any override.
+    fn sink_is_certainly_zero(&self, ctx: &DayContext) -> bool {
+        ctx.mean_temp_c <= 0.0
+    }
 }
 
 #[cfg(test)]

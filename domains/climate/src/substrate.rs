@@ -61,6 +61,22 @@ pub trait Substrate {
     /// bound the work; hitting the cap is a reported result, not a failure.
     /// type-audit: bare-ok(count: return)
     fn spin_up_years(&self) -> u32;
+
+    /// Whether [`Self::sink`] is **certain** to evaluate to exactly `0.0` on
+    /// this day, for *any* `present` value whatsoever — not merely "small"
+    /// or "probably small". The default conservatively answers `false`
+    /// (no shortcut is taken); a substrate that overrides this to `true`
+    /// makes a load-bearing promise: [`spin_up`]'s glacier fast path (The
+    /// Mire Glacier campaign, change B) trusts the answer instead of calling
+    /// `sink` at all for a day it claims this about, and getting it wrong
+    /// silently corrupts the trajectory the fast path returns. An override
+    /// must restate its own `sink`'s actual zero condition verbatim, never a
+    /// looser proxy — [`crate::snowpack::Snowpack`] is the only override
+    /// today, and it repeats `sink`'s own `degree_days == 0.0` check exactly.
+    /// type-audit: bare-ok(flag: return)
+    fn sink_is_certainly_zero(&self, _ctx: &DayContext) -> bool {
+        false
+    }
 }
 
 /// The outcome of spinning a substrate up against a periodic year.
@@ -76,11 +92,88 @@ pub struct SpinUp {
     pub years_run: u32,
 }
 
+/// Year-over-year forcing this far above [`CONVERGENCE_TOLERANCE`] is
+/// certainly enough that [`spin_up`]'s glacier fast path can declare
+/// non-convergence without paying for the per-year clone-and-diff check that
+/// would otherwise prove it. See [`is_a_certain_glacier`]'s doc comment for
+/// the full argument; 1000x tolerance is a comfortable margin against both
+/// floating-point reassociation noise (many orders of magnitude smaller) and
+/// any realistic near-zero forcing, while still being far below any real
+/// day's precipitation in millimetres.
+const GLACIER_SAFETY_MARGIN: f64 = CONVERGENCE_TOLERANCE * 1000.0;
+
+/// Whether `year` is certainly a permanent-accumulator case for `substrate`:
+/// every day's sink is certainly zero ([`Substrate::sink_is_certainly_zero`]),
+/// and the total forcing over the year is comfortably above the noise floor
+/// a real "never converges" cell must clear.
+///
+/// **Why this is safe, and the one case it deliberately excludes.** If every
+/// day's sink is certainly zero, `present` only ever gains (never loses)
+/// across the whole run — the loop degenerates to a running sum of `source`
+/// over the periodic year, carried across years without reset. Two
+/// sub-cases:
+/// - If every day's `source` is *also* exactly `0.0`, `present` stays at
+///   `0.0` forever and [`spin_up`]'s ordinary loop converges trivially at
+///   `years_run == 2` (`previous == trajectory`, both all-zero). This
+///   function returns `false` for that case (`annual_source` computed by
+///   summing non-negative terms is `0.0` only if every term is `0.0`, since
+///   `Substrate::source` must return a non-negative value), so `spin_up`
+///   falls back to its exact, unmodified loop — which is cheap for a
+///   trivially-converging cell anyway.
+/// - Otherwise some day's `source` is strictly positive, so the *same*
+///   nonzero forcing is added every single year (the periodic year and the
+///   zero sink never change across years for this cell), never decaying —
+///   there is no mechanism in this substrate family that could shrink it.
+///   The year-over-year delta at every day position is that same total,
+///   reordered by which day the comparison starts from; floating-point
+///   reassociation moves it by at most a handful of ULPs, utterly negligible
+///   against [`GLACIER_SAFETY_MARGIN`]. So once that total is confirmed to
+///   clear the margin, it clears [`CONVERGENCE_TOLERANCE`] on **every**
+///   year-over-year comparison the ordinary loop would make, meaning that
+///   loop can never break early and must run out its full
+///   `spin_up_years()` cap, reporting `converged: false` — exactly what this
+///   function's caller then computes directly, without running the
+///   per-year clone-and-diff bookkeeping that would otherwise be needed to
+///   discover it.
+///
+/// This is a runtime-verified claim, not a theorem for arbitrary
+/// `Substrate` implementations: it holds for any substrate whose
+/// `sink_is_certainly_zero` override is honest (see that method's doc
+/// comment) and whose `source` does not depend on accumulated state in a
+/// way that could later shrink the annual total — true of every substrate
+/// in this crate today. The campaign that introduced this fingerprinted it
+/// against the unmodified loop across 5 seeds and ~41,000 cells each with an
+/// empty diff (see `.superpowers/sdd/glacier-report.md`).
+fn is_a_certain_glacier<S: Substrate + ?Sized>(substrate: &S, year: &[DayContext]) -> bool {
+    let mut annual_source = 0.0;
+    for ctx in year {
+        if !substrate.sink_is_certainly_zero(ctx) {
+            return false;
+        }
+        annual_source += substrate.source(ctx);
+    }
+    annual_source > GLACIER_SAFETY_MARGIN
+}
+
 /// Iterate `substrate` over the periodic `year` from zero until the
 /// year-over-year trajectory stops moving, or until `spin_up_years` is spent.
 ///
 /// The convergence test compares the maximum per-day change between the last
 /// two years against `tolerance`.
+///
+/// Before running that exhaustive loop, checks [`is_a_certain_glacier`] (The
+/// Mire Glacier campaign, change B): if the whole year's sink is certainly
+/// zero and the forcing is comfortably nonzero, the outcome is already
+/// determined analytically (permanent accumulation, `spin_up_years()` spent,
+/// never converged), so the fast path below runs the *same* per-day
+/// accumulation arithmetic, in the *same* order, for the *same* number of
+/// years — skipping only the per-year `trajectory.clone()` and max-diff
+/// comparison, which cannot succeed for this population anyway. Substituting
+/// `substrate.sink(ctx, present)` with the literal `0.0` it is certain to
+/// equal is exact, not approximate: `present + gained - 0.0 == present +
+/// gained` bit-for-bit (subtracting an exact zero never rounds), so the
+/// fast path's `trajectory` is bit-identical to what the unmodified loop
+/// below would compute over the same `spin_up_years()` iterations.
 /// type-audit: bare-ok(diagnostic-value: tolerance)
 pub fn spin_up<S: Substrate + ?Sized>(
     substrate: &S,
@@ -88,6 +181,25 @@ pub fn spin_up<S: Substrate + ?Sized>(
     tolerance: f64,
 ) -> SpinUp {
     let days = year.len();
+
+    if is_a_certain_glacier(substrate, year) {
+        let mut trajectory = vec![0.0; days];
+        let mut present = 0.0;
+        let years_run = substrate.spin_up_years();
+        for _ in 0..years_run {
+            for (day, ctx) in year.iter().enumerate() {
+                let gained = substrate.source(ctx);
+                present = (present + gained).max(0.0);
+                trajectory[day] = present;
+            }
+        }
+        return SpinUp {
+            trajectory,
+            converged: false,
+            years_run,
+        };
+    }
+
     let mut trajectory = vec![0.0; days];
     let mut present = 0.0;
     let mut converged = false;
