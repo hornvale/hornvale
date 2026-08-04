@@ -45,7 +45,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0003](0003-trace-protocol-is-the-only-cross-domain-channel.md) | The trace protocol is the only cross-domain channel | Accepted |
 | [0004](0004-no-new-dependencies.md) | No new dependencies beyond serde | Accepted |
 | [0005](0005-deterministic-collections-and-sorts.md) | Deterministic collections and sorts | Accepted |
-| [0006](0006-seed-labels-are-permanent-contracts.md) | Seed-derivation labels are permanent contracts | Accepted |
+| [0006](0006-seed-labels-are-permanent-contracts.md) | Seed-derivation labels are permanent contracts | Superseded by 0099 |
 | [0007](0007-seed-is-identity.md) | The seed is a world's identity | Accepted |
 | [0008](0008-typed-quantities.md) | Typed quantities at API boundaries | Accepted |
 | [0009](0009-models-author-dice-roll.md) | Models author, dice roll | Accepted |
@@ -121,7 +121,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0079](0079-census-goldens-are-authored-on-one-enforced-host.md) | Census goldens are authored on one host, and it is enforced | Accepted |
 | [0080](0080-chronicity-is-a-diagnostic-the-alarm-is-stuck.md) | `chronicity` is a diagnostic; the population-health alarm is `stuck` | Accepted |
 | [0081](0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md) | One heavy writer per box, claimed at the write seam | Accepted |
-| [0082](0082-locale-chamber-place.md) | Locale, chamber, place — "room" unqualified is retired | Accepted |
+| [0082](0082-locale-chamber-place.md) | Locale, chamber, place — "room" unqualified is retired | Superseded by 0101 |
 | [0083](0083-a-label-per-algorithm-and-never-in-advance.md) | A seed-derivation label is declared per *algorithm*, and never in advance | Accepted |
 | [0084](0084-an-epoch-is-declared-only-when-a-derivation-moved.md) | An epoch is declared only when a derivation moved — `room/furnishing` stays at v1 | Accepted |
 | [0085](0085-derived-geometry-reads-the-durable-signal.md) | Derived geometry reads the durable signal, not the living one | Accepted |
@@ -137,3 +137,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0095](0095-a-corpus-is-an-instrument-never-a-standard.md) | A trope corpus is a provenance-stamped instrument, never a standard | Accepted |
 | [0096](0096-diversity-is-terminal-and-rubberbanding-is-multi-axis.md) | Peoples-diversity is a terminal value; rubberbanding is multi-axis contest, never handicap | Accepted |
 | [0097](0097-assert-the-robust-half-measure-the-fragile-half.md) | Assert the robust half in the gate; measure the fragile half in the census | Accepted |
+| [0098](0098-hornvale-is-single-player.md) | Hornvale is single-player, forever | Accepted |
+| [0099](0099-worlds-are-version-locked.md) | Worlds are version-locked to the code that generated them | Accepted |
+| [0100](0100-fact-phenomenon-myth.md) | Fact, phenomenon, myth — the three registers, and what may be written where | Accepted |
+| [0101](0101-geometry-and-society-are-separate-vocabularies.md) | Geometry and society are separate vocabularies — locale/site/chamber, community/settlement | Accepted |
+| [0102](0102-one-per-cell-was-an-index-artifact.md) | The one-community-per-cell rule is an index artifact, not a design position | Accepted |
