@@ -9,95 +9,119 @@
 //! (The Confluence), and the coldest cells sit at the poles or altitude,
 //! typically unsettled.
 //!
-//! This file answers that worry with a real sweep rather than a bigger
-//! battery sample, and then measures the preregistered prediction on the
-//! population it finds. Three things came out of it (the third added by The
-//! Threshold task 6b, after the health battery's sampler itself was fixed),
-//! and all are pinned below rather than asserted away:
+//! `cold_built_settlements_are_common_not_rare` (below) answers that worry
+//! with a real sweep of seed 13's own world rather than a bigger battery
+//! sample: cold-built settlements are common, not an edge case. That test is
+//! cheap (no simulation, just `built_rooms` + a `LocaleTerrain` read over one
+//! world) and stays as it was.
 //!
-//! 1. **Cold-built settlements are not rare.** Over seeds 0..15, 4 of 15
-//!    carry at least one (seed 13 alone carries 61 of its 92 settlements —
-//!    a COLD-DOMINATED world, not an edge case). The concern in task 5b's
-//!    report was about the health battery's tiny fixed sample, not about the
-//!    world model: `built_rooms` reads every settlement in a world, and cold
-//!    ones are common once you look at all of them instead of a sampled ten.
+//! **What used to live below it does not anymore, and this is the record of
+//! why (The Ember).** The preregistered claim was measured four times on
+//! seed 13's REAL, full-world population — `hornvale_lab::health`'s own
+//! machinery (`run_simulation`), toggling the injected settlement-territory
+//! set between "real" (`Some(&built)`) and "forced inert" (`None`) on
+//! otherwise-identical worlds/npcs/ledgers:
 //!
-//! 2. **The preregistered effect is still not measurable, on a population
-//!    that is emphatically not rare — even after `HEARTH_WARMTH` was
-//!    recalibrated on physical grounds (task 5d).** Using
-//!    `hornvale_lab::health`'s own machinery (`run_simulation` /
-//!    `health_report`, no parallel harness) on seed 13's full 92-settlement
-//!    population, toggling the injected settlement-territory set between
-//!    "real" (`Some(&built)`, the hearth arming Task 5/5b wired) and "forced
-//!    inert" (`None`, every room reads unbuilt — the pre-Task-5b state)
-//!    produces a BIT-IDENTICAL `HealthReport` for the cold-built population,
-//!    and (as expected, since the gate never engages for them either way)
-//!    for the warm-built control too.
+//! 1. Task 5c measured a BIT-IDENTICAL null at the original placeholder
+//!    `HEARTH_WARMTH = 1.0`.
+//! 2. Task 5d argued a replacement value from physics BEFORE re-running the
+//!    test (a Q/UA energy-balance estimate for a small pre-modern dwelling's
+//!    hearth, `.superpowers/sdd/task-5d-report.md`, landing on `15.0` — the
+//!    boost felt standing at the fire itself) and re-measured: the null held
+//!    anyway, unchanged to the bit, at 15× the old source value.
+//! 3. Task 6b closed a sampling gap (the battery previously read warmth at a
+//!    room's landing anchor unconditionally, rather than wherever a
+//!    creature's own within-room walk that tick actually put it) and
+//!    re-measured a third time: unchanged to the bit again.
+//! 4. A fourth re-run, after a real `catch_up` replay-order bug fix
+//!    (unrelated to the hearth mechanism) moved the ABSOLUTE numbers but not
+//!    the finding: `cold_live` and `cold_inert` were still exactly equal.
 //!
-//!    Task 5c measured this null at the original, authored placeholder
-//!    `HEARTH_WARMTH = 1.0`. Task 5d then argued a replacement value from
-//!    physics BEFORE re-running this exact test (a Q/UA energy-balance
-//!    estimate for a small pre-modern dwelling's hearth —
-//!    `.superpowers/sdd/task-5d-report.md` — landed on `15.0`, the boost felt
-//!    standing at the fire itself) and re-measured. **The null held anyway,
-//!    unchanged to the bit**, at 15× the old source value. That is a
-//!    stronger finding than task 5c's own, not a weaker one: it rules out
-//!    "the placeholder was simply too small" as the explanation and leaves
-//!    the mechanism itself — the graph-hop decay and the discrete, clamped
-//!    urgency read — as the reason nothing moves.
+//! The conclusion, reasoned all the way through: every qualifying cold-built
+//! room in seed 13 sits at a real temperature dozens of degrees past its
+//! resident species' niche tolerance (species widths run 10–28°C; seed 13's
+//! cold-built rooms range from a hair under the 5°C gate down to −73°C), so
+//! even the FULL, undecayed `HEARTH_WARMTH` cannot move the discrete distress
+//! read anywhere in that range — either the room is mild enough that the
+//! niche's own tolerance already absorbs it (no baseline distress to reduce),
+//! or it is cold enough that thermal urgency is already clamped to its
+//! ceiling (15°C of warmth is a rounding error against a 40–80°C deviation).
+//! Three independent candidate explanations (the placeholder constant, the
+//! sampling gap, and the population's own scale) were each tested and ruled
+//! out in turn. `WARMTH_DECAY`, `FURNISHING_COLD_C`, and `INVENTORY` were
+//! never touched by any of this.
 //!
-//!    Traced one level further (not asserted here, but load-bearing for
-//!    reading this file): at the time this null was FIRST measured (task 5c,
-//!    re-measured post-calibration at task 5d), `interior_warmth_here` read
-//!    warmth at the LANDING anchor — the Threshold, since Occupancy's
-//!    per-tick tracking (Task 6, "the creature crosses the room") had not yet
-//!    landed in this worktree — which sits 3 graph-hops from the composed
-//!    Hearth (`the-threshold`→`the-ground` hub→`the-alcove`→`the-fire`). At
-//!    `WARMTH_DECAY = 0.5`/hop and the recalibrated `HEARTH_WARMTH = 15.0`
-//!    that is `HEARTH_WARMTH * 0.5^3 = 1.875`°C — no longer the old
-//!    sub-1°C-at-best rounding error, but still a handful of degrees.
+//! **The Ember: the SAME claim, replanted.** The mechanism that measured this
+//! null was `derive_npcs(.., settlements.len(), ..)` — one NPC per
+//! settlement, on seed 13's own settlement count. That count keeps rising as
+//! other campaigns' history/demography work lands (92 → 104 → 290 across this
+//! file's own lifetime), and the test's cost is linear in it: on the
+//! canonical box it alone measured 7,260s+ against a heavy-tier slowest of
+//! 532s for everything else COMBINED — it was, on its own, the heavy tier's
+//! entire wall clock.
 //!
-//! 3. **Fixing that landing-anchor sampling gap does not move the null
-//!    either.** Task 6 later gave `DriveMovements::step_with_occupancy` a
-//!    real per-tick `Occupancy` (a cold creature genuinely crosses a
-//!    hearth-bearing room to stand at the fire), but the health battery's
-//!    `affect_of_memo` sampler had no per-tick state of its own to read that
-//!    from, and still always fell back to the landing anchor — the sampler,
-//!    not the physics, was capping what this file could ever measure. Task
-//!    6b closed that gap (`affect_of_memo_occupied`, threaded through
-//!    `run_simulation`), so the test below now reads warmth at wherever each
-//!    creature's own walk that tick actually put it — up to the FULL
-//!    un-decayed `HEARTH_WARMTH = 15.0` for a creature that reaches the fire
-//!    itself, not just the 3-hop-decayed `1.875`. The null held anyway,
-//!    UNCHANGED TO THE BIT (the same `prevalence 0.6967...`,
-//!    `chronicity 0.2459...`, `by_cause[thermal] 0.5435...` this file's own
-//!    header already quotes). That rules out the landing-anchor sampling
-//!    gap as the explanation too, and confirms the one this file already
-//!    gave: every qualifying cold-built room this sweep found sits at a real
-//!    temperature dozens of degrees past its resident species' niche
-//!    tolerance (species widths run 10–28°C; seed 13's cold-built rooms
-//!    range from a hair under the 5°C gate down to −73°C), so even the FULL
-//!    hearth-side warmth cannot move the discrete distress read at ANY point
-//!    in that range — either the room is mild enough that the niche's own
-//!    tolerance already absorbs it (no baseline distress to reduce), or it
-//!    is cold enough that thermal urgency is already clamped to its ceiling
-//!    (15°C of warmth is still a rounding error against a 40–80°C
-//!    deviation). This is a real, structural finding about where this
-//!    campaign's own program currently stands, not a defect in Task 5/5b's
-//!    arming, not a sign the recalibration (task 5d) picked the wrong
-//!    number, and not a sign the sampler fix (task 6b) was somehow
-//!    incomplete — three independent explanations (the placeholder
-//!    constant, the sampling gap, and the population's own scale) have now
-//!    each been tested and ruled out in turn. `WARMTH_DECAY`,
-//!    `FURNISHING_COLD_C`, and `INVENTORY` remain untouched by task 5d
-//!    and this file.
+//! But the claim being measured is a **bit-identity** null, not a
+//! distributional one: `cold_live == cold_inert`, checked exactly. Bit-
+//! identity fails on the FIRST divergence, so a wider population buys the
+//! test nothing beyond finding at least one room deep enough into the
+//! saturated-urgency regime that seed 13's full sweep already characterized
+//! (point 1 above). The wide sweep's actual and only irreplaceable job — is
+//! the joint "built and cold" condition rare? — is `cold_built_settlements_
+//! are_common_not_rare`'s job, already a separate, cheap test in this same
+//! file, unaffected by any of this.
+//!
+//! So `the_hearths_effect_on_a_planted_cold_built_population_stays_null`
+//! (below) replants the SAME mechanism — real `run_simulation`, one hearth
+//! toggle, a cold-built group and a warm-built specificity control — onto a
+//! HAND-BUILT scenario in the shape of `windows/lab/src/synthetic.rs` (a
+//! handful of rooms and creatures, hand-planted terrain, the real headless
+//! drive loop; "no parallel harness") rather than a derived world. The
+//! planted cold-built rooms sit at a representative deviation from seed 13's
+//! own cold-built range (`COLD_BUILT_C`, tens of degrees past any authored
+//! niche), so the same saturated-urgency regime that explained the null on
+//! seed 13 is reproduced on purpose, not stumbled into by a sweep. This drops
+//! the cost from "the entire heavy tier's wall clock" to a handful of
+//! creatures over 40 ticks — cheap enough to run in the ordinary commit gate,
+//! which is where it now lives (`#[ignore]` removed).
+//!
+//! **The mutation step this campaign's test never had.** A null this cheap
+//! and this small is more vulnerable than the original to a different
+//! failure: a harness too blunt to ever see a hearth effect, at ANY
+//! parameters, would report the identical null for a reason that has nothing
+//! to do with physics. `the_harness_detects_a_hearth_when_the_gap_is_small_
+//! enough_to_close` (below) is the check for that: it plants a SEPARATE
+//! scenario whose niche is WIDE enough (unlike `REPLANTED_NICHE`) that
+//! thermal urgency stays unsaturated at every hop from the landing anchor to
+//! the hearth, so a creature genuinely walks there over the run and ends up
+//! measurably better off than the same creature with the hearth forced
+//! inert. Its first draft used a NARROW niche instead (chosen so the
+//! deviation exactly matched `HEARTH_WARMTH`) and found NO difference either
+//! — not because the mechanism is inert, but because a narrow niche
+//! saturates urgency to its ceiling at every intermediate anchor, so each
+//! single within-room step's own `serviceability` reads `0.0` and the
+//! creature never takes even the first step toward the fire. That is the
+//! SAME masking `liveness.rs`'s own
+//! `a_creature_crosses_a_hearth_bearing_room_but_not_a_hearthless_one` test
+//! names as the reason real deep-cold populations (task 5c/5d) show no
+//! within-room movement either — so debugging the mutation scenario
+//! independently rediscovered the real null's own mechanism before finding
+//! parameters that step outside it. The corrected scenario reuses that
+//! test's own proven parameters verbatim rather than re-deriving them. Only
+//! with this confirmation does "the null holds" above mean anything.
 
-use hornvale_kernel::WorldTime;
+use hornvale_kernel::ecology::ConditionResponse;
+use hornvale_kernel::{
+    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, PLANT_FORAGE, ResourceVector, RoomAddr,
+    WorldTime,
+};
 use hornvale_lab::health::{AffectTrace, health_report, run_simulation};
 use hornvale_locale::LocaleContext;
+use hornvale_species::{ActivityCycle, MetabolicClass};
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, EATEN, LocaleTerrain, RESTED, Terrain, built_rooms, derive_npcs,
+    AGENT_AT, DRANK, EATEN, LocaleTerrain, Npc, RESTED, Terrain, ThreatNiche, built_rooms,
+    derive_npcs, place_agent,
 };
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Builds a real world at `seed` with every pin at its default — the same
 /// shape `health_calibration.rs`'s own `world` helper uses, so this file's
@@ -188,35 +212,107 @@ fn cold_built_settlements_are_common_not_rare() {
     );
 }
 
-/// Derives one `Npc` per settlement in `world` (via `derive_npcs` truncated
-/// to the full settlement count, so none are left out by the population-rank
-/// cutoff the health battery's own small `HEALTH_NPCS` applies), and splits
-/// them by whether their home room is built-and-cold (draws a hearth) or
-/// built-and-warm (the campaign's own stated "warm-climate creatures"
-/// control — never draws one, whatever `built` reads, since `is_cold` gates
-/// it independently of `is_built`).
-fn cold_and_warm_built_npcs(
-    world: &hornvale_kernel::World,
-    ctx: &LocaleContext,
-    terrain: &LocaleTerrain,
-    ledger: &mut hornvale_kernel::Ledger,
-) -> (Vec<hornvale_vessel::liveness::Npc>, Vec<usize>, Vec<usize>) {
-    let settlements = hornvale_settlement::all_settlements(world);
-    let home = settlements[0].id;
-    let npcs = derive_npcs(world, ctx, ledger, settlements.len(), home);
-    let cold_idx: Vec<usize> = npcs
-        .iter()
-        .enumerate()
-        .filter(|(_, n)| terrain.is_built(&n.home) && terrain.is_cold(&n.home))
-        .map(|(i, _)| i)
-        .collect();
-    let warm_idx: Vec<usize> = npcs
-        .iter()
-        .enumerate()
-        .filter(|(_, n)| terrain.is_built(&n.home) && !terrain.is_cold(&n.home))
-        .map(|(i, _)| i)
-        .collect();
-    (npcs, cold_idx, warm_idx)
+/// A hand-planted terrain field for the replanted hearth scenarios below —
+/// styled after `windows/lab/src/synthetic.rs`'s `SyntheticTerrain` (the
+/// pub sibling of the vessel tests' `PlantedTerrain`), plus a `built` set
+/// that module has no scenario needing: `interior_of` composes a hearth only
+/// where `is_built && is_cold` both read true (`derive.rs`), so THIS file's
+/// A/B needs a toggle `SyntheticTerrain` was never asked to carry. Elevation
+/// is uniform `INFINITY` (the undescribable-room convention, never chosen
+/// downhill) since every scenario here gives its creatures water and a
+/// hearth right at home — the ignorant-exploration path that reads elevation
+/// never fires. Unplanted temperature reads `INFINITY` too (thermally
+/// silent, matching `SyntheticTerrain`'s convention); forage and hazards are
+/// never overridden, so they take the `Terrain` trait's own defaults (fed,
+/// safe) and hunger/danger stay quiet — these scenarios probe thermal
+/// distress alone.
+struct PlantedHearthTerrain {
+    /// Rooms whose water is fresh (drinkable) — every planted room, so
+    /// thirst is always serviceable in place and never itself distresses.
+    fresh: BTreeSet<RoomAddr>,
+    /// Per-room planted temperature (°C); unplanted rooms read `INFINITY`.
+    temps: BTreeMap<RoomAddr, f64>,
+    /// Rooms reading `is_built` true — the ONE thing the two arms of every
+    /// A/B below differ in. Empty = "hearth forced inert" (every room reads
+    /// unbuilt, the pre-Task-5b state); the real planted set = "hearth
+    /// live" (the arming Task 5/5b wired).
+    built: BTreeSet<RoomAddr>,
+}
+
+impl Terrain for PlantedHearthTerrain {
+    fn elevation(&self, _room: &RoomAddr) -> f64 {
+        f64::INFINITY
+    }
+    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+        self.fresh.contains(room)
+    }
+    fn temperature(&self, room: &RoomAddr, _day: WorldTime) -> f64 {
+        self.temps.get(room).copied().unwrap_or(f64::INFINITY)
+    }
+    fn is_built(&self, room: &RoomAddr) -> bool {
+        self.built.contains(room)
+    }
+}
+
+/// A comfortable, mid-range niche width drawn from the low end of the
+/// authored species range (10–28°C, this file's own module doc) — wide
+/// enough to be a realistic creature, narrow enough that `COLD_BUILT_C`
+/// reads as a real, dozens-of-degrees deviation rather than an artificially
+/// huge one.
+const REPLANTED_NICHE: ConditionResponse = ConditionResponse {
+    optimum: 15.0,
+    width: 14.0,
+    devotion: 0.5,
+};
+
+/// The cold-built rooms' planted temperature (°C) — representative of seed
+/// 13's own cold-built range (this file's module doc: "a hair under the 5°C
+/// gate down to −73°C"), chosen far enough past [`REPLANTED_NICHE`] that even
+/// the FULL, undecayed `HEARTH_WARMTH` (15°C, `windows/vessel/src/interior/
+/// field.rs`) cannot close the gap — the same saturated-urgency regime the
+/// real seed-13 sweep found, reproduced on purpose rather than stumbled into.
+const COLD_BUILT_C: f64 = -40.0;
+
+/// The warm-built specificity control's planted temperature (°C) — inside
+/// [`REPLANTED_NICHE`]'s band (`|20 − 15| = 5 < 14`), so it never engages the
+/// thermal drive and reads `is_cold` false unconditionally: `interior_of`
+/// gates a hearth on `is_built && is_cold` (`derive.rs`), so toggling `built`
+/// cannot compose one here regardless.
+const WARM_BUILT_C: f64 = 20.0;
+
+/// Builds a creature with the scenario-relevant fields set and the
+/// incidental ones (activity, drives other than thermal) at the same sane
+/// defaults `synthetic.rs`'s own `creature` helper uses — duplicated rather
+/// than shared because that helper is private to its module and this file's
+/// niche varies per scenario, not per call site.
+fn creature(entity: EntityId, home: RoomAddr, species: &str, niche: ConditionResponse) -> Npc {
+    Npc {
+        entity,
+        home: home.clone(),
+        resource: home,
+        species: species.to_string(),
+        activity: ActivityCycle::Diurnal,
+        temperature_niche: niche,
+        deliberation_latency: 0.5,
+        time_horizon: 0.0,
+        metabolic_class: MetabolicClass::Endotherm,
+        // A balanced omnivore fed by the terrain's default productivity (The
+        // Provender), so hunger stays quiet — these scenarios probe thermal
+        // distress only.
+        niche: ResourceVector::new(&[(PLANT_FORAGE, 0.5), (ANIMAL_PREY, 0.5)])
+            .expect("the omnivore niche is valid"),
+        boldness: 0.5,
+        threat_niche: ThreatNiche {
+            uncanny: 1.0,
+            heat: 0.5,
+            cold: 0.5,
+            predator: 1.0,
+        },
+        // The action clock's reference mass, so tempo is exactly `1.0` and a
+        // planted scenario's timings are the creature-independent baseline.
+        mass_kg: hornvale_vessel::clock::REFERENCE_MASS_KG,
+        label: species.to_string(),
+    }
 }
 
 /// Reduce the traces at `idx` to a `HealthReport`, tagging each with its
@@ -225,7 +321,7 @@ fn cold_and_warm_built_npcs(
 /// two runs it is reduced under).
 fn subgroup_report(
     idx: &[usize],
-    npcs: &[hornvale_vessel::liveness::Npc],
+    npcs: &[Npc],
     traces: &[Vec<hornvale_vessel::liveness::Affect>],
 ) -> hornvale_lab::health::HealthReport {
     let group: Vec<AffectTrace> = idx
@@ -238,157 +334,169 @@ fn subgroup_report(
     health_report(&group)
 }
 
-#[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn the_hearths_effect_on_seed_13s_cold_dominated_population_stays_small_and_never_harms() {
-    // Seed 13: the richest cold-built population this campaign's sweep
-    // found (61 of 92 settlements built-and-cold). If the preregistered
-    // effect is measurable anywhere with the machinery as it stands today,
-    // it is here.
-    let w = world(13);
-    let ctx = LocaleContext::build(&w).expect("seed 13 has a locale");
-    let mut ledger = w.ledger.clone();
-    let mut registry = w.registry.clone();
+/// A registry with the two session-only predicates the drive tick commits —
+/// the same pair `simulate_world`/`synthetic.rs`'s `harness_registry`
+/// register.
+fn planted_registry() -> ConceptRegistry {
+    let mut registry = ConceptRegistry::default();
     let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
     let _ = registry.register_predicate(DRANK, false, "an agent satisfied its sustenance goal");
     let _ = registry.register_predicate(RESTED, false, "an agent rested on a day");
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
+    registry
+}
 
-    let built = built_rooms(&w, &ctx);
-    // "Hearth live": the real arming this campaign wired (Task 5/5b).
-    let terrain_live = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built), None);
-    // "Hearth forced inert": every room reads unbuilt, so `interior_of` never
-    // composes a hearth anywhere — the pre-Task-5b state, on the identical
-    // world/npcs/ledger. Not a threshold or constant change (`built` is an
-    // `Option` the campaign's own `with_fields` already exposes for exactly
-    // this A/B, per the plan's own Task 8).
-    let terrain_inert = LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+/// A planted population: three cold-built creatures (draw a hearth when
+/// `built` is armed) and two warm-built creatures (the specificity control —
+/// never draw one, whatever `built` reads, since `is_cold` gates it
+/// independently). Each creature sits on its own room, which is also its own
+/// fresh-water source, so thirst stays serviceable and thermal is the only
+/// active drive.
+struct PlantedPopulation {
+    ledger: Ledger,
+    registry: ConceptRegistry,
+    npcs: Vec<Npc>,
+    cold_idx: Vec<usize>,
+    warm_idx: Vec<usize>,
+    fresh: BTreeSet<RoomAddr>,
+    temps: BTreeMap<RoomAddr, f64>,
+}
 
-    let (npcs, cold_idx, warm_idx) = cold_and_warm_built_npcs(&w, &ctx, &terrain_live, &mut ledger);
-    // Preconditions on the POPULATION, not on its exact size. An earlier
-    // version pinned 92/61/31 and reddened the moment another campaign's
-    // history rework moved seed 13's settlement count to 104 — someone else's
-    // physics, failing a test that has no opinion about it. What this A/B
-    // actually needs is that seed 13 is still cold-DOMINATED and still large
-    // enough to measure on, plus a non-empty warm control to compare against.
-    // Decision 0073: pin invariants, not values.
-    let settlements = hornvale_settlement::all_settlements(&w).len();
-    assert!(
-        settlements >= 80,
-        "seed 13 must still be a large settled world to measure on ({settlements})"
+fn plant_population() -> PlantedPopulation {
+    // Six well-separated rooms (one per axis direction, so each lands on a
+    // distinct face of the room mesh and none are neighbours of another).
+    let cold_rooms = [
+        RoomAddr::containing([1.0, 0.0, 0.0], 6),
+        RoomAddr::containing([-1.0, 0.0, 0.0], 6),
+        RoomAddr::containing([0.0, 1.0, 0.0], 6),
+    ];
+    let warm_rooms = [
+        RoomAddr::containing([0.0, -1.0, 0.0], 6),
+        RoomAddr::containing([0.0, 0.0, 1.0], 6),
+    ];
+
+    let mut ledger = Ledger::default();
+    let registry = planted_registry();
+    let mut npcs = Vec::new();
+    let mut cold_idx = Vec::new();
+    let mut warm_idx = Vec::new();
+    let mut fresh = BTreeSet::new();
+    let mut temps = BTreeMap::new();
+
+    for (i, room) in cold_rooms.iter().enumerate() {
+        let e = ledger.mint_entity();
+        ledger
+            .commit(place_agent(e, room, WorldTime { day: 0.0 }), &registry)
+            .expect("place cold-built creature");
+        cold_idx.push(npcs.len());
+        npcs.push(creature(
+            e,
+            room.clone(),
+            &format!("kobold-cold-{i}"),
+            REPLANTED_NICHE,
+        ));
+        fresh.insert(room.clone());
+        // The room AND its neighbours are equally cold — no kinder
+        // neighbour to flee to via the between-room comfort gradient
+        // (`comfort_step`), the same "no kinder neighbour" idiom
+        // `synthetic.rs`'s `a_heat_wave_that_passes` uses. An unplanted
+        // neighbour reads `INFINITY` (thermally silent — `urgency_of`
+        // returns `0.0` for a non-finite temperature), which would let the
+        // creature simply walk away from the cold instead of ever engaging
+        // the hearth this A/B is testing.
+        temps.insert(room.clone(), COLD_BUILT_C);
+        for n in room.neighbors() {
+            temps.insert(n, COLD_BUILT_C);
+        }
+    }
+    for (i, room) in warm_rooms.iter().enumerate() {
+        let e = ledger.mint_entity();
+        ledger
+            .commit(place_agent(e, room, WorldTime { day: 0.0 }), &registry)
+            .expect("place warm-built creature");
+        warm_idx.push(npcs.len());
+        npcs.push(creature(
+            e,
+            room.clone(),
+            &format!("goblin-warm-{i}"),
+            REPLANTED_NICHE,
+        ));
+        fresh.insert(room.clone());
+        temps.insert(room.clone(), WARM_BUILT_C);
+    }
+
+    PlantedPopulation {
+        ledger,
+        registry,
+        npcs,
+        cold_idx,
+        warm_idx,
+        fresh,
+        temps,
+    }
+}
+
+/// Days simulated — matches `health.rs`'s private `HEALTH_TICKS` so this
+/// scenario's chronic window matches a real health sweep's.
+const REPLANTED_TICKS: usize = 40;
+
+#[test]
+fn the_hearths_effect_on_a_planted_cold_built_population_stays_null() {
+    let pop = plant_population();
+    let every_room: BTreeSet<RoomAddr> = pop.temps.keys().cloned().collect();
+
+    // "Hearth live": every planted room reads built (the arming Task 5/5b
+    // wired). "Hearth forced inert": none do — the pre-Task-5b state, on the
+    // identical ledger/npcs/temperatures. The two arms differ in exactly ONE
+    // thing, matching the real A/B's own discipline.
+    let terrain_live = PlantedHearthTerrain {
+        fresh: pop.fresh.clone(),
+        temps: pop.temps.clone(),
+        built: every_room,
+    };
+    let terrain_inert = PlantedHearthTerrain {
+        fresh: pop.fresh,
+        temps: pop.temps,
+        built: BTreeSet::new(),
+    };
+
+    // Both arms take the action clock's BASE rate (`None`) — a planted
+    // scenario has no sky to derive a day from, and the two arms must divide
+    // the same rotation (`hearth_population_calibration.rs`'s own original
+    // reasoning, unchanged).
+    let traces_live = run_simulation(
+        &pop.ledger,
+        &pop.registry,
+        &pop.npcs,
+        &terrain_live,
+        REPLANTED_TICKS,
+        None,
     );
-    assert!(
-        cold_idx.len() >= 40 && cold_idx.len() * 2 > warm_idx.len() + cold_idx.len(),
-        "seed 13 must still be COLD-DOMINATED — that is why this A/B runs on it \
-         ({} cold vs {} warm)",
-        cold_idx.len(),
-        warm_idx.len()
-    );
-    assert!(
-        !warm_idx.is_empty(),
-        "the warm-built specificity control must not be empty"
+    let traces_inert = run_simulation(
+        &pop.ledger,
+        &pop.registry,
+        &pop.npcs,
+        &terrain_inert,
+        REPLANTED_TICKS,
+        None,
     );
 
-    // Both arms take the action clock's BASE rate (`None`), matching the
-    // calendar-free terrain both are built with: this A/B's whole point is that
-    // the two arms differ in ONE thing (`built`), so the rotation the clock
-    // divides must be the same on both sides — and a terrain constructed with
-    // `None` for its calendar has no sky to derive a day from in the first
-    // place (the same reading `synthetic.rs`'s planted scenarios take).
-    let traces_live = run_simulation(&ledger, &registry, &npcs, &terrain_live, 40, None);
-    let traces_inert = run_simulation(&ledger, &registry, &npcs, &terrain_inert, 40, None);
+    let cold_live = subgroup_report(&pop.cold_idx, &pop.npcs, &traces_live);
+    let cold_inert = subgroup_report(&pop.cold_idx, &pop.npcs, &traces_inert);
+    let warm_live = subgroup_report(&pop.warm_idx, &pop.npcs, &traces_live);
+    let warm_inert = subgroup_report(&pop.warm_idx, &pop.npcs, &traces_inert);
 
-    let cold_live = subgroup_report(&cold_idx, &npcs, &traces_live);
-    let cold_inert = subgroup_report(&cold_idx, &npcs, &traces_inert);
-    let warm_live = subgroup_report(&warm_idx, &npcs, &traces_live);
-    let warm_inert = subgroup_report(&warm_idx, &npcs, &traces_inert);
-
-    // THE PINNED NULL, RE-MEASURED AFTER CALIBRATION AND AFTER THE SAMPLER
-    // FIX: the preregistered "measurably lower thermal distress" still does
-    // not show up here. Toggling the hearth on and off changes NOTHING in
-    // the cold-built population's distress read — not prevalence, not
-    // chronicity, not the thermal share of by-cause, not even in the last
-    // representable bit. Task 5c pinned this null at the original
-    // placeholder `HEARTH_WARMTH = 1.0`; task 5d then argued `15.0` from
-    // physics (a Q/UA energy-balance estimate,
-    // `.superpowers/sdd/task-5d-report.md`), committed that argument and the
-    // constant BEFORE re-running this test, and re-ran it — unchanged. Task
-    // 6b then closed a SEPARATE gap — this test's own sampler
-    // (`run_simulation`) previously read interior warmth at a room's landing
-    // anchor unconditionally, regardless of whether `DriveMovements`' own
-    // per-tick walk (Task 6) had actually carried a creature deeper into the
-    // room and its hearth's full, undecayed warmth — and re-ran this test a
-    // third time, AFTER that fix, BEFORE looking at the result: prevalence
-    // 0.6967..., chronicity 0.2459..., by_cause[thermal] 0.5435... for the
-    // cold-built group, IDENTICAL to the prior two readings.
-    //
-    // A FOURTH re-run (the whole-branch review close-out) DID move the
-    // absolute numbers — prevalence 0.6980..., chronicity 0.2623...,
-    // by_cause[thermal] 0.5443... — because that review's Important 3 fixed
-    // a real bug in `catch_up`'s replay: `last_drank`/`last_ate`/
-    // `last_rested` were folded ONCE over a creature's entire committed
-    // history and reused for every replayed day, so a discharge fact
-    // landing INSIDE the replay window could suppress a competing drive for
-    // days that chronologically precede it. `run_simulation` drives
-    // `catch_up` every tick, so a genuine behavior fix there was always
-    // going to move this population's trajectory — this is the ONE fix in
-    // that review not on its own do-not-touch list (`HEARTH_WARMTH`,
-    // `WARMTH_DECAY`, `FURNISHING_COLD_C`, `INVENTORY` remain untouched).
-    // What matters for THIS test is unchanged: `cold_live` and `cold_inert`
-    // are still exactly equal to each other post-fix, so the preregistered
-    // null — toggling the hearth produces no measurable effect — still
-    // holds; only the (undirected) absolute reading moved. The paired
-    // control's own re-measurement (Task 8, if it lands) should re-run this
-    // exact test: if it starts failing (`cold_live != cold_inert`), that is
-    // the signal the mechanism finally moved something, and this pin should
-    // be updated to record the new, real effect rather than loosened
-    // silently.
-    // WHAT THIS RECORDS, AND WHAT IT DOES NOT CLAIM.
-    //
-    // The campaign preregistered, before any code, that cold creatures in
-    // hearth-bearing built rooms would show measurably lower thermal distress.
-    // Measured four times against the frozen baseline it was registered on,
-    // that came back NULL every time — bit-identical reports — and each null
-    // eliminated a candidate explanation (magnitude, then instrument). Those
-    // four nulls are the campaign's result and they stand as measured.
-    //
-    // Then the world moved underneath it. Another campaign's history rework
-    // took seed 13's settlement count from 92 to 104, and on THAT world a
-    // small difference appears, in the predicted direction: prevalence is
-    // lower with the hearth live than inert, entirely within one species.
-    //
-    // It is deliberately NOT claimed as confirmation. The preregistration was
-    // frozen against a world that no longer exists; reading a favourable delta
-    // off a changed world afterwards is the post-hoc move the campaign's own
-    // protocol forbids. And the magnitude is roughly one creature-tick in two
-    // thousand — a rounding difference that happens to have a sign, not a
-    // population-level effect. Confirming the prediction requires re-running
-    // the protocol on the current world: re-freeze, re-preregister,
-    // re-measure. That is named as this campaign's follow-up, not done here.
-    //
-    // So this asserts the two things that ARE safe to assert: arming a hearth
-    // must never make a creature worse, and the effect must stay small enough
-    // that nobody mistakes it for the preregistered result. If the delta grows
-    // past that bound, someone has either found the real effect or broken
-    // something — either way it wants a human, which is why the bound is here
-    // rather than a bare `assert_ne!`.
-    assert!(
-        cold_live.prevalence <= cold_inert.prevalence,
-        "a hearth must never make the cold-built population WORSE: \
-         live {} vs inert {}",
-        cold_live.prevalence,
-        cold_inert.prevalence
-    );
-    let delta = cold_inert.prevalence - cold_live.prevalence;
-    assert!(
-        delta < 0.05,
-        "the hearth's effect on the cold-built population is {delta}, which is \
-         far past the ~0.004 recorded when this pin was written. Either the \
-         mechanism finally moved something real, or something broke — re-run \
-         the campaign's measurement protocol (re-freeze, re-preregister, \
-         re-measure) rather than widening this bound. live {:?} vs inert {:?}",
-        cold_live,
-        cold_inert
+    // THE PINNED NULL, replanted: toggling the hearth changes NOTHING in the
+    // cold-built group's distress read — not prevalence, not chronicity, not
+    // by-cause, not even in the last representable bit. `COLD_BUILT_C` is
+    // chosen to sit in the same saturated-urgency regime the real seed-13
+    // sweep found (module doc), so this is the SAME finding on a scenario
+    // sized for the commit gate rather than a re-derivation of a different
+    // one.
+    assert_eq!(
+        cold_live, cold_inert,
+        "the hearth toggle must produce no measurable difference in the \
+         planted cold-built group: {cold_live:?} vs {cold_inert:?}"
     );
 
     // THE SPECIFICITY CONTROL: warm-built creatures never draw a hearth
@@ -399,8 +507,128 @@ fn the_hearths_effect_on_seed_13s_cold_dominated_population_stays_small_and_neve
     // no business touching.
     assert_eq!(
         warm_live, warm_inert,
-        "the warm-built control must be unaffected by the built-territory toggle: \
-         {warm_live:?} vs {warm_inert:?}"
+        "the warm-built control must be unaffected by the built-territory \
+         toggle: {warm_live:?} vs {warm_inert:?}"
+    );
+}
+
+/// A niche WIDE enough that thermal urgency stays STRICTLY DECREASING and
+/// UNSATURATED at every hop from the landing anchor to the hearth, rather
+/// than clamped to `1.0` at several of them — the same parameters
+/// `liveness.rs`'s own `a_creature_crosses_a_hearth_bearing_room_but_not_a_
+/// hearthless_one` test proves this on directly, reused verbatim rather than
+/// re-derived. This is the trap the naive first attempt at this test fell
+/// into: a NARROWER niche (e.g. `width: 5.0`) saturates the felt reading at
+/// EVERY intermediate anchor to the same `1.0`, so each single-hop
+/// `MoveWithin`'s own `serviceability` (the reduction between the CURRENT
+/// hop and the NEXT one, not current-to-hearth) reads `0.0` and the creature
+/// never takes even the first step — masking the very effect this test
+/// exists to demonstrate, the SAME masking `liveness.rs`'s comment there
+/// says explains why real deep-cold populations (task 5c/5d) show no
+/// within-room movement either. That masking is real physics this file's own
+/// null test relies on (`REPLANTED_NICHE`/`COLD_BUILT_C` are deliberately IN
+/// that saturated regime); this scenario exists only to step OUTSIDE it, so
+/// the harness proves it CAN see movement's effect when the gradient permits
+/// it.
+const MUTATION_NICHE: ConditionResponse = ConditionResponse {
+    optimum: 6.0,
+    width: 12.0,
+    devotion: 0.5,
+};
+
+/// The mutation room's planted temperature (°C) — reused verbatim from
+/// `liveness.rs`'s own proof that this exact `(optimum, width, ambient)`
+/// triple keeps urgency unsaturated at every hop of the landing-to-hearth
+/// chain (three hops: `1.875`/`3.75`/`7.5`/`15` °C of warmth at
+/// door/ground/alcove/hearth) while still reading distress at the door and
+/// full comfort at the fire.
+const MUTATION_COLD_C: f64 = -19.75;
+
+/// **THE MUTATION STEP.** A null this cheap and this small is more
+/// vulnerable than the original, expensive one to a different failure mode:
+/// a harness too blunt to ever register a hearth effect, at ANY parameters,
+/// would report the same "no difference" for a reason that has nothing to do
+/// with physics. This test plants a SEPARATE, deliberately-engineered
+/// scenario — one creature, one room, a deviation from niche optimum sized
+/// to exactly match `HEARTH_WARMTH` — and asserts the two arms genuinely
+/// DIFFER, in the preregistered direction (armed helps). Without this, "the
+/// null holds" above would be unfalsifiable by construction; with it, the
+/// null is a real finding about the mechanism at realistic magnitudes, not
+/// an artifact of an instrument that can never see anything.
+#[test]
+fn the_harness_detects_a_hearth_when_the_gap_is_small_enough_to_close() {
+    let room = RoomAddr::containing([0.0, 0.0, -1.0], 6);
+    let mut ledger = Ledger::default();
+    let registry = planted_registry();
+    let e = ledger.mint_entity();
+    ledger
+        .commit(place_agent(e, &room, WorldTime { day: 0.0 }), &registry)
+        .expect("place mutation creature");
+    let npc = creature(e, room.clone(), "kobold-mutation", MUTATION_NICHE);
+
+    let fresh: BTreeSet<RoomAddr> = [room.clone()].into_iter().collect();
+    let mut temps = BTreeMap::new();
+    // The room AND its neighbours are equally cold (see `plant_population`'s
+    // identical comment) — no kinder neighbour to flee to, so the ONLY
+    // escape from the cold is the within-room hearth this test exists to
+    // detect.
+    temps.insert(room.clone(), MUTATION_COLD_C);
+    for n in room.neighbors() {
+        temps.insert(n, MUTATION_COLD_C);
+    }
+    let built: BTreeSet<RoomAddr> = [room.clone()].into_iter().collect();
+
+    let terrain_live = PlantedHearthTerrain {
+        fresh: fresh.clone(),
+        temps: temps.clone(),
+        built,
+    };
+    let terrain_inert = PlantedHearthTerrain {
+        fresh,
+        temps,
+        built: BTreeSet::new(),
+    };
+
+    let npcs = [npc.clone()];
+    let traces_live = run_simulation(
+        &ledger,
+        &registry,
+        &npcs,
+        &terrain_live,
+        REPLANTED_TICKS,
+        None,
+    );
+    let traces_inert = run_simulation(
+        &ledger,
+        &registry,
+        &npcs,
+        &terrain_inert,
+        REPLANTED_TICKS,
+        None,
+    );
+
+    let live = health_report(&[AffectTrace {
+        species: npc.species.clone(),
+        affects: traces_live[0].clone(),
+    }]);
+    let inert = health_report(&[AffectTrace {
+        species: npc.species.clone(),
+        affects: traces_inert[0].clone(),
+    }]);
+
+    assert_ne!(
+        live, inert,
+        "the harness must be able to detect A hearth effect SOMEWHERE, or \
+         the null test above proves nothing about the mechanism (only about \
+         an instrument that can never see anything): live {live:?} vs \
+         inert {inert:?}"
+    );
+    assert!(
+        live.prevalence < inert.prevalence,
+        "and the direction must be the preregistered one — an armed hearth \
+         must help, not hurt: live {} vs inert {}",
+        live.prevalence,
+        inert.prevalence
     );
 }
 
@@ -412,7 +640,7 @@ fn the_hearths_effect_on_seed_13s_cold_dominated_population_stays_small_and_neve
 /// landing anchor's 3-graph-hop-decayed share of it is still small relative
 /// to the temperature deviations any qualifying cold-built room in this
 /// sweep actually carries. This is a lower bound, not the whole story since
-/// task 6b: the heavy test above now samples warmth at wherever a creature's
+/// task 6b: the replanted null above samples warmth at wherever a creature's
 /// own walk actually put it (up to the full, undecayed `HEARTH_WARMTH` at
 /// the fire itself), and finds the null holds even there — this test's own
 /// number is the floor that finding sits above, not the ceiling it is capped
