@@ -6,6 +6,7 @@
 //! `precip_at`/`snow_fraction_at`/`regime_at`.
 
 use crate::circulation::is_rising_band;
+use crate::weather::WeatherState;
 use hornvale_kernel::{Precipitation, math};
 
 /// Map dimensionless moisture `[0, 1]` to an Earth-ranged annual
@@ -113,6 +114,37 @@ pub fn cloud_fraction(moisture: f64, uplift_m: f64, rising_band: bool) -> f64 {
     let rising = if rising_band { 1.0 } else { 0.0 };
     let uplift_term = CLOUD_UPLIFT_K * (uplift_m.max(0.0) / CLOUD_UPLIFT_SCALE_M);
     (m * (CLOUD_BASE + CLOUD_RISING * rising + uplift_term)).clamp(0.0, 1.0)
+}
+
+/// The share of a year's precipitation a single day claims, by its sky.
+/// Dimensionless and unnormalized — [`daily_precip_mm`] divides by the year's
+/// total. Dry skies claim nothing; the wet rungs claim progressively more,
+/// so a storm day delivers several times an overcast day's drizzle.
+/// type-audit: bare-ok(ratio: return)
+pub fn daily_weight(state: WeatherState) -> f64 {
+    match state {
+        WeatherState::Clear | WeatherState::Fair => 0.0,
+        WeatherState::Overcast => 0.25,
+        WeatherState::Rain => 1.0,
+        WeatherState::Storm => 3.0,
+    }
+}
+
+/// One day's precipitation in mm, as this day's share of the cell's annual
+/// climatology. `weight_sum` is the sum of [`daily_weight`] over every day of
+/// the cell's year, so summing this over that year reproduces `annual`
+/// exactly — the "coarse constrains fine" contract with [`precip_mm_yr`].
+///
+/// `weight_sum == 0.0` (a cell whose sky is never wetter than `Fair` all
+/// year) would otherwise divide by zero and silently discard the cell's
+/// climatological rainfall. Such a cell falls back to a uniform spread:
+/// the annual total is preserved, delivered thinly across every day.
+/// type-audit: bare-ok(ratio: weight), bare-ok(ratio: weight_sum), bare-ok(count: year_days), bare-ok(diagnostic-value: return)
+pub fn daily_precip_mm(annual: Precipitation, weight: f64, weight_sum: f64, year_days: f64) -> f64 {
+    if weight_sum <= 0.0 {
+        return annual.get() / year_days.max(1.0);
+    }
+    annual.get() * weight / weight_sum
 }
 
 #[cfg(test)]
@@ -264,5 +296,53 @@ mod tests {
         let rising = cloud_fraction(0.6, 500.0, true);
         let sinking = cloud_fraction(0.6, 500.0, false);
         assert!(rising > sinking);
+    }
+
+    #[test]
+    fn daily_weight_is_zero_for_dry_skies_and_rises_with_the_ladder() {
+        assert_eq!(daily_weight(WeatherState::Clear), 0.0);
+        assert_eq!(daily_weight(WeatherState::Fair), 0.0);
+        assert!(daily_weight(WeatherState::Overcast) > 0.0);
+        assert!(daily_weight(WeatherState::Rain) > daily_weight(WeatherState::Overcast));
+        assert!(daily_weight(WeatherState::Storm) > daily_weight(WeatherState::Rain));
+    }
+
+    #[test]
+    fn a_years_daily_precipitation_sums_to_the_annual_climatology() {
+        // A synthetic year: 200 dry days, 100 rain days, 60 storm days.
+        let annual = Precipitation::new(800.0).expect("valid");
+        let states: Vec<WeatherState> = std::iter::repeat_n(WeatherState::Clear, 200)
+            .chain(std::iter::repeat_n(WeatherState::Rain, 100))
+            .chain(std::iter::repeat_n(WeatherState::Storm, 60))
+            .collect();
+        let year_days = states.len() as f64;
+        let sum: f64 = states.iter().map(|s| daily_weight(*s)).sum();
+
+        let total: f64 = states
+            .iter()
+            .map(|s| daily_precip_mm(annual, daily_weight(*s), sum, year_days))
+            .sum();
+
+        assert!(
+            (total - annual.get()).abs() < 1e-6,
+            "daily precipitation summed to {total}, annual climatology is {}",
+            annual.get()
+        );
+    }
+
+    #[test]
+    fn a_perpetually_clear_cell_still_receives_its_annual_total() {
+        // The zero-weight-sum edge case: a cell whose sky is never wet would
+        // divide by zero and silently LOSE its climatological rainfall. The
+        // honest fallback is uniform — preserve the total, spread it thin.
+        let annual = Precipitation::new(120.0).expect("valid");
+        let year_days = 360.0;
+        let total: f64 = (0..360)
+            .map(|_| daily_precip_mm(annual, 0.0, 0.0, year_days))
+            .sum();
+        assert!(
+            (total - annual.get()).abs() < 1e-6,
+            "a never-wet cell lost its annual total: got {total}"
+        );
     }
 }

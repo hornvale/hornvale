@@ -25,7 +25,9 @@ pub use currents::{ocean_current, ocean_current_field};
 pub use diurnal::{diurnal_amplitude, diurnal_anomaly, diurnal_waveform};
 pub use facets::{Access, BiomeExpr, Formation, Medium, Realm, Stratum};
 pub use habitability::{habitable_fraction, is_habitable};
-pub use precipitation::{PrecipRegime, precip_mm_yr, precip_regime, snow_fraction};
+pub use precipitation::{
+    PrecipRegime, daily_precip_mm, daily_weight, precip_mm_yr, precip_regime, snow_fraction,
+};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
 pub use streams::stream_labels;
 pub use substellar::{
