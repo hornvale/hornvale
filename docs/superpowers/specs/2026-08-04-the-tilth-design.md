@@ -6,7 +6,11 @@
 overturned twice by measurement · **Builds on:** decisions
 [0100](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0100-fact-phenomenon-myth.md),
 [0103](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0103-suitability-and-headcount-are-distinct-types.md),
-and The Keeping's step B (`CarryingInput.is_land`)
+and The Keeping's step B (`CarryingInput.is_land`) · **Amended by:**
+[stage 6, the unfloored axis](2026-08-05-the-unfloored-axis-design.md) — §3.3's
+Liebig minimum turned the one axis that is passed `floor 0.0` (elevation) from a
+scale factor into a veto, and measurement found it binding on 100% of land for
+three of the six settling peoples
 
 ## 1. The thesis
 
