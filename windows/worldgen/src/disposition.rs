@@ -203,12 +203,27 @@ pub fn drawn_threat_response(
 ///    `Bake::best_home`, taken once, on a band that is about to stop existing.
 ///    It never grows, never takes a vassal, and never commits a settlement
 ///    fact, so the correlation cannot reach the ledger.
-/// 3. **It cannot reach the campaign's instrument.** H1 and H2 are measured
-///    over settlements alive at `now`, where the key IS unique; a
-///    zero-tenure transient is not in that population, and Task 5's mutation
-///    proof (zero dispersion ⇒ zero between-settlement variance) holds
-///    identically whether or not two dead records shared an offset — at spread
-///    0 every draw returns its people's authored location regardless of key.
+/// 3. **It cannot bias the campaign's instrument** — though it does reach it.
+///    **Corrected at Task 6.** An earlier draft of this reason claimed H1 and
+///    H2 were measured over settlements alive at `now`, where the key IS
+///    unique, so transients were outside the measured population. That was
+///    already false at Task 5 and is false at Task 6:
+///    `tolerance_mutation.rs` and
+///    `tolerance_baseline.rs::report_the_preregistered_readout` both measure
+///    **every** occupation record, ruins included, and deliberately so — the
+///    gate reads a community's drawn disposition from the moment it opens, so
+///    a ruin was gated on its own draw exactly as a standing settlement was,
+///    and excluding ruins would drop most of the raiding the campaign is
+///    about. What survives the correction is the *conclusion*, on the strength
+///    of reasons 1 and 2 rather than on exclusion: a colliding pair contributes
+///    two legitimate draws from the authored distribution, so the collision
+///    lowers the effective *n* (a correlation between two records) without
+///    displacing any mean or inflating any spread. Task 6 therefore measures
+///    the collision rate **on its own population** and reports it beside the
+///    figures whose precision it bounds, instead of inheriting
+///    `tolerance_draw.rs`'s two-seed 3–15%. Task 5's mutation proof is
+///    untouched either way: at spread 0 every draw returns its people's
+///    authored location regardless of key.
 ///
 /// The alternative — inventing a third key component to decorrelate a pair that
 /// makes one throwaway decision each — would buy nothing measurable and would

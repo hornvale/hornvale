@@ -315,9 +315,11 @@ fn report_pre_dispersion_raid_rates() {
 /// The authored per-people inputs, resolved from **the same two sources the
 /// composition root resolves them from** (`lib.rs::bake_history_from`): the
 /// location off `WorldComponents::psyche`, the spread off
-/// `hornvale_species::dispersion_registry()`. Mirrors
-/// `tolerance_mutation.rs`'s function of the same name so the readout and the
-/// mutation proof cannot read different authored values.
+/// `hornvale_species::dispersion_registry()`. Mirrors `tolerance_mutation.rs`'s
+/// `authored` (same body, different name — this file already has an
+/// `authored`-shaped concept in Task 1's `threat_response` map, so the longer
+/// name keeps the two readable side by side) so the readout and the mutation
+/// proof cannot read different authored values.
 fn authored_inputs(wc: &WorldComponents) -> (BTreeMap<KindId, f64>, BTreeMap<KindId, f64>) {
     let dispersion = hornvale_species::dispersion_registry();
     let mut locations = BTreeMap::new();
@@ -386,6 +388,17 @@ struct Coverage {
     seeds_with_no_records: u64,
     /// Seeds whose world ended with no settlement alive.
     seeds_with_no_alive: u64,
+    /// `census().raided` summed over every world — the world-level counter the
+    /// initiator-side reconstruction is cross-checked against.
+    census_raided: u64,
+    /// Occupation records sharing a `(site, founded-year)` draw key with an
+    /// earlier record in the same world, summed over worlds. Measured **on
+    /// this readout's own population** rather than inherited: `tolerance_draw.rs`
+    /// reports 3–15% from seeds 1 and 42, and this readout pools thirty seeds.
+    records_sharing_key: u64,
+    /// The same count restricted to records still alive at the end of the bake
+    /// — expected 0, since `Bake.node_index` holds one alive community per cell.
+    alive_records_sharing_key: u64,
 }
 
 /// Build every seed in [`SEEDS`] and reduce each occupation record of the six
@@ -404,6 +417,9 @@ fn readout_population(
         alive_total: 0,
         seeds_with_no_records: 0,
         seeds_with_no_alive: 0,
+        census_raided: 0,
+        records_sharing_key: 0,
+        alive_records_sharing_key: 0,
     };
 
     for seed in SEEDS {
@@ -426,6 +442,27 @@ fn readout_population(
         cov.alive_total += alive;
         if alive == 0 {
             cov.seeds_with_no_alive += 1;
+        }
+        cov.census_raided += census(&history).raided;
+
+        // The draw-key collision rate, measured on THIS population (see
+        // `Coverage::records_sharing_key`). Grouped exactly as
+        // `tolerance_draw.rs` groups it: `(site, occupation_draw_key(founded))`,
+        // over all occupation records, with the alive-only restriction reported
+        // separately.
+        let mut key_groups: BTreeMap<(u32, i64), (u64, u64)> = BTreeMap::new();
+        for rec in &history.records {
+            let entry = key_groups
+                .entry((rec.core.site.0, occupation_draw_key(rec.core.founded)))
+                .or_default();
+            entry.0 += 1;
+            if rec.core.is_alive() {
+                entry.1 += 1;
+            }
+        }
+        for (total, alive_in_group) in key_groups.values() {
+            cov.records_sharing_key += total - 1;
+            cov.alive_records_sharing_key += alive_in_group.saturating_sub(1);
         }
 
         // The initiator side (Task 5's technique). One pass over the victims
@@ -513,6 +550,37 @@ fn discordant_pairs(stats: &[(&'static str, f64, f64)]) -> usize {
 /// Two readings of H1 are printed, because the prediction is ambiguous between
 /// them and the ambiguity is the finding — see the readout's own commentary
 /// block at the end of the output.
+///
+/// # The gate-open column is a RE-DERIVATION, not an observation
+///
+/// `Community.disposition` is private and is never committed, so the value the
+/// bake actually gated on is unobservable from outside the crate. The
+/// `gate-open` column therefore **redoes the bake's procedure** — the same
+/// `drawn_threat_response(seed, site, occupation_draw_key(founded), location,
+/// spread)` call, on the keys real worlds produced — rather than reading a
+/// recorded outcome. That is the right way round (redo the procedure, never
+/// restate the definition), and it is checked from two directions: at spread 0
+/// it reduces to the authored location exactly
+/// (`tolerance_mutation.rs::every_zeroed_draw_is_the_authored_location`), and
+/// the numbers it produces reproduce `tolerance_mutation.rs`'s **committed**
+/// table to every printed digit — two independently written harnesses over the
+/// same population agreeing to ten digits. The *live* columns
+/// (`initiator rate`, `victim rate`) are observations proper, and the
+/// `census().raided` cross-check above is asserted, so the re-derived column and
+/// the observed ones can be read against each other.
+///
+/// # The population is ALL occupation records, and that is deliberate
+///
+/// Not only the settlements alive at `now`: the gate reads a community's drawn
+/// disposition from the moment it opens, so a ruin was gated on its own draw
+/// exactly as a standing settlement was, and excluding ruins would drop most of
+/// the raiding this campaign is about. `disposition.rs`'s accepted-collision
+/// reasoning was corrected alongside this task to say so — its earlier reason 3
+/// asserted the instrument measured only alive settlements, which stopped being
+/// true at Task 5 and is not true here. The collision rate is measured on this
+/// exact population above rather than inherited from `tolerance_draw.rs`'s
+/// two-seed figure, so the effective *n* behind every "that is noise" claim
+/// below is a stated number rather than an assumption.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_the_preregistered_readout() {
@@ -545,6 +613,22 @@ fn report_the_preregistered_readout() {
         sampled.len(),
         6,
         "all six peoples measured; got {sampled:?}"
+    );
+    // GUARD, not a hypothesis: the initiator-side reconstruction must account
+    // for every raid the bake's own counter recorded, exactly once. This is the
+    // same self-consistency discipline `measure_one` applies to the VICTIM-side
+    // proxy one function above, moved to the offense side — without it the
+    // cross-check exists only as a human comparing two lines of one log, and a
+    // regression in the `rec.community` lookup would print a wrong number
+    // silently.
+    let raids_reconstructed: f64 = rows.iter().map(|r| r.raids_initiated).sum();
+    assert_eq!(
+        raids_reconstructed as u64, cov.census_raided,
+        "initiator-side reconstruction attributed {raids_reconstructed} raids but \
+         census().raided summed to {} over the same worlds — `Ended::By(raider)` no \
+         longer names exactly one occupation record, so every initiator rate below \
+         is wrong",
+        cov.census_raided
     );
 
     // Per-people columns, collected once.
@@ -592,7 +676,21 @@ fn report_the_preregistered_readout() {
     );
     println!(
         "gate: RAID_DISPOSITION_MIN = {RAID_DISPOSITION_MIN}; the baseline arm is \
-         dispersion 0 measured on these same settlements (matched pair, one run)"
+         dispersion 0 measured on these same occupation records (matched pair, one run)"
+    );
+    println!(
+        "draw-key collisions on THIS population: {} of {} records ({:.4}%) share a \
+         (site, founded-year) key with an earlier record; {} of the {} ALIVE records do",
+        cov.records_sharing_key,
+        cov.records_total,
+        100.0 * cov.records_sharing_key as f64 / cov.records_total as f64,
+        cov.alive_records_sharing_key,
+        cov.alive_total
+    );
+    println!(
+        "initiator reconstruction cross-check: {raids_reconstructed} raids attributed \
+         = {} census().raided (asserted above, as a guard)",
+        cov.census_raided
     );
 
     // ---- H1 -------------------------------------------------------------
@@ -681,6 +779,31 @@ fn report_the_preregistered_readout() {
             discordant_pairs(&stats)
         );
     }
+    // What those four rows can and cannot say. THREE of them are binary
+    // per-settlement indicators (gate-open, initiated, was-raided), so their
+    // between-settlement variance is identically `p(1-p)` — a function of the
+    // column's OWN mean, not an independent second moment. Printed rather than
+    // argued, so a reader can check it: `p(1-p)` against the measured variance.
+    println!(
+        "  the three binary columns have variance pinned to their own mean \
+         (var = p(1-p), and every rate here is below 0.5, where p(1-p) is monotone \
+         in p) — so their 'discordant pairs' counts measure RATE ordering, not \
+         spread. Only the drawn-disposition row can test H2's ordering claim:"
+    );
+    for (label, col) in [
+        ("gate-open", &gate),
+        ("initiated", &initiated),
+        ("was raided", &victim),
+    ] {
+        let residual: f64 = PEOPLES_WITH_HUMAN
+            .iter()
+            .map(|n| {
+                let p = mean(&col[n]);
+                (variance(&col[n]) - p * (1.0 - p)).abs()
+            })
+            .fold(0.0, f64::max);
+        println!("    {label}: max |var - p(1-p)| over the six peoples = {residual:.3e}");
+    }
 
     // ---- H3 -------------------------------------------------------------
     println!();
@@ -704,11 +827,12 @@ fn report_the_preregistered_readout() {
             mean(&victim[name]),
         );
     }
-    let total_raids: f64 = raids.values().flatten().sum();
     println!(
-        "  roster totals: {total_raids} raids initiated by the six settling peoples \
-         across {} settlements over seeds {SEEDS:?}",
-        rows.len()
+        "  roster totals: {raids_reconstructed} raids initiated by the six settling \
+         peoples across {} occupation records ({} of them alive at the end of the \
+         bake) over seeds {SEEDS:?}",
+        rows.len(),
+        cov.alive_total
     );
     for stat in ["gate-open", "initiator rate"] {
         let col = if stat == "gate-open" {
