@@ -685,7 +685,7 @@ ice: gap (experiential): no settlement in or beside ice
 ice-lead: gap (experiential): kobold has no exposure to 'ice-lead'
 island: gap (experiential): kobold has no exposure to 'island'
 kelp-canopy: gap (experiential): kobold has no exposure to 'kelp-canopy'
-kelp-forest: gap (experiential): no settlement in or beside kelp-forest
+kelp-forest: gap (experiential): no compound recipe for 'kelp-forest'
 killer-whale-kind: gap (experiential): kobold has no exposure to 'killer-whale-kind'
 kobold-kind: root Raoroa /raoroa/
 lake: compound little+water -> Raxaroxooro /raxaroxooro/
@@ -770,7 +770,7 @@ sun: root Roaroora /roaroora/
 sun-like-star: gap (unnameable): no culture here has encountered the main sequence
 taiga: root Xoaxoroo /xoaxoroo/
 temperate-forest: root Roo /roo/
-temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
+temperate-grassland: root Xooxo /xooxo/
 temperate-rainforest: root Xaara /xaara/
 thorn-scrub: gap (experiential): kobold has no exposure to 'thorn-scrub'
 tide: gap (experiential): kobold has no exposure to 'tide'
@@ -782,7 +782,7 @@ tropical-rainforest: root Rooraa /rooraa/
 tropical-seasonal-forest: root Xoaroa /xoaroa/
 tuber: root Xaaroa /xaaroa/
 tubeworm-thicket: gap (experiential): kobold has no exposure to 'tubeworm-thicket'
-tundra: gap (experiential): no settlement in or beside tundra
+tundra: gap (experiential): no compound recipe for 'tundra'
 twig-blight-kind: gap (experiential): kobold has no exposure to 'twig-blight-kind'
 twilight-water: gap (experiential): kobold has no exposure to 'twilight-water'
 two: root Roaroo /roaroo/
@@ -799,7 +799,7 @@ white-dragon-kind: gap (experiential): kobold has no exposure to 'white-dragon-k
 white-dwarf: gap (unnameable): no culture here has encountered the main sequence
 wind: root Xaaro /xaaro/
 wind-scour: gap (experiential): kobold has no exposure to 'wind-scour'
-wooded-grassland: gap (experiential): kobold has no exposure to 'wooded-grassland'
+wooded-grassland: root Xooroa /xooroa/
 woolly-mammoth-kind: gap (experiential): kobold has no exposure to 'woolly-mammoth-kind'
 xorn-kind: gap (experiential): kobold has no exposure to 'xorn-kind'
 yellow: gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9

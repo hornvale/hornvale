@@ -661,7 +661,10 @@ pub fn carrying_inputs_of(
         let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
         let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
-            habitable: *climate.habitability().get(cell),
+            // LAND, not habitability (step B): the habitability mask conflated
+            // land with a temperate band and a moisture floor, and the latter two
+            // are already graded by `npp`/`hostility` inside `carrying_capacity`.
+            is_land: !terrain.is_ocean(cell),
             temperature_c: climate.mean_temperature_at(cell).get(),
             moisture,
             freshwater,

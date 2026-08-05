@@ -522,9 +522,17 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // (a temperate/subtropical generalist, per its own condition niche),
     // and by this test's own construction is a new term in `trop_sum`/
     // `pole_sum` — moving the ratio to 31.0099.
+    // The Keeping step B re-pin (2026-08-04): `CarryingInput.habitable`
+    // decomposed to `is_land`, so the arid and very-hot bands the old conflated
+    // flag excluded outright now carry (low) scalar K — 31.0099 -> 31.0649.
+    // The DIRECTION is the check that this is the intended mechanism and not
+    // contamination: hot-and-arid ground is tropical/subtropical, never polar
+    // (the poles stay closed by `temp_response`, zero below 2 C), so opening it
+    // must add more to `trop_sum` than to `pole_sum` and the ratio must RISE.
+    // It rose, by 0.18%. The preregistered floor of 3 still clears tenfold.
     assert!(
-        (ratio - 31.0099).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0099, the post-Generalist \
+        (ratio - 31.0649).abs() < 1e-3,
+        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0649, the post-Keeping-B \
          scalar-path reading) — something outside the-demesne's per-axis \
          supply fields moved this K"
     );

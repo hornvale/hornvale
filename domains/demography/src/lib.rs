@@ -131,7 +131,7 @@ mod tests {
     fn report_holds_k_fields_and_settlements() {
         let geo = Geosphere::new(3);
         let inputs = CellMap::from_fn(&geo, |c| CarryingInput {
-            habitable: true,
+            is_land: true,
             temperature_c: 20.0,
             moisture: 0.7,
             freshwater: 0.6,
@@ -154,7 +154,7 @@ mod tests {
         );
         assert!(
             !rep.settlements.is_empty(),
-            "a habitable world condenses settlements"
+            "a land world condenses settlements"
         );
     }
 }
