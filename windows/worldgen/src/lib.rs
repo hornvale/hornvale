@@ -1013,9 +1013,24 @@ pub fn axis_supply(
 /// **binding** axis limits, exactly as `carrying_capacity` takes
 /// `min(temperature, precipitation)`.
 ///
-/// **EVERY axis is buffered by the species' `sovereignty_floor`, including
-/// elevation. Never pass `0.0` here** (stage 6; spec
+/// **Moisture, insolation and elevation are buffered by the species'
+/// `sovereignty_floor`. Temperature is NOT** (stages 6 and 7; spec
 /// `2026-08-05-the-unfloored-axis-design.md`).
+///
+/// The asymmetry is deliberate and the two halves argue in opposite directions,
+/// so neither is a default:
+///
+/// - **Elevation is buffered** because it is a geometric *proxy*. It has no
+///   lethal value of its own; what altitude actually does to a body is colder air
+///   and thinner oxygen, and temperature is modelled here directly. An unfloored
+///   proxy under a minimum vetoes the real axes — see below.
+/// - **Temperature is not buffered** because it is the one axis with a genuine
+///   physiological limit. Sovereignty models homeostatic buffering, which is
+///   exactly right for "prefers warmth, tolerates less" and exactly wrong for
+///   −50 °C. Floored, it let an unmagical 30 kg goblin (floor 0.335, from mass
+///   alone) read capacity ~37 on a −50 °C cell, and left the capacity field and
+///   the bake's −10 °C era mask contradicting each other over roughly half the
+///   planet.
 ///
 /// Elevation *was* passed `0.0`, on the reading that sovereignty buffers
 /// physiology but not geometry. That reading is defensible and the consequence
@@ -1042,7 +1057,7 @@ pub fn axis_supply(
 /// cannot drift apart on the one rule they must agree about.
 fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
     cn.temperature
-        .eval(s.temperature_c, floor_buf)
+        .eval(s.temperature_c, 0.0)
         .min(cn.moisture.eval(s.moisture, floor_buf))
         .min(cn.insolation.eval(s.insolation, floor_buf))
         .min(cn.elevation.eval(s.elevation, floor_buf))

@@ -194,7 +194,14 @@ fn report(seed_value: u64) {
     // test had been changed to buffer elevation — a measurement that could not
     // see the thing it was measuring. Printing both makes the comparison the
     // point rather than an assumption.
-    for (label, elev_floored) in [("elevation floor 0.0", false), ("elevation buffered", true)] {
+    // (label, temperature floored?, elevation floored?). The LIVE row must match
+    // `tolerance_liebig`'s current form or this probe is measuring a model the
+    // library no longer has — the exact failure its first version had.
+    for (label, temp_floored, elev_floored) in [
+        ("pre-stage-6: temp floored, elev UNfloored", true, false),
+        ("stage 6.1: everything floored", true, true),
+        ("stage 7 LIVE: temp UNfloored, elev floored", false, true),
+    ] {
         println!();
         println!("-- binding axis, {label} --");
         println!(
@@ -205,12 +212,13 @@ fn report(seed_value: u64) {
             let bio = biosphere[i];
             let floor = sovereignty_floor(bio.mass, bio.potency);
             let elev_floor = if elev_floored { floor } else { 0.0 };
+            let temp_floor = if temp_floored { floor } else { 0.0 };
             let cn = &bio.condition_niche;
             let mut counts = [0u32; 4];
             for &c in &land {
                 let s = substrate.get(c);
                 let terms = [
-                    cn.temperature.eval(s.temperature_c, floor),
+                    cn.temperature.eval(s.temperature_c, temp_floor),
                     cn.moisture.eval(s.moisture, floor),
                     cn.insolation.eval(s.insolation, floor),
                     cn.elevation.eval(s.elevation, elev_floor),
@@ -223,14 +231,35 @@ fn report(seed_value: u64) {
                 }
                 counts[best] += 1;
             }
+            // Does the WINNING axis actually vary, or is it an inert constant?
+            // A binding share near 100% means opposite things in the two cases:
+            // stage 6's elevation won because it was a flat ~0.35 that nothing
+            // could dip below, while a genuinely limiting axis wins by varying
+            // and being low where conditions are bad. Share alone cannot tell
+            // them apart, so print the spread of the Liebig minimum itself.
+            let mut tol: Vec<f64> = land
+                .iter()
+                .map(|&c| {
+                    let s = substrate.get(c);
+                    cn.temperature
+                        .eval(s.temperature_c, temp_floor)
+                        .min(cn.moisture.eval(s.moisture, floor))
+                        .min(cn.insolation.eval(s.insolation, floor))
+                        .min(cn.elevation.eval(s.elevation, elev_floor))
+                })
+                .collect();
+            tol.sort_by(f64::total_cmp);
             let n = land.len() as f64;
             println!(
-                "{:<10} {:>9.1}% {:>9.1}% {:>9.1}% {:>9.1}%",
+                "{:<10} {:>9.1}% {:>9.1}% {:>9.1}% {:>9.1}%   tol p05/p50/p95 {:.3}/{:.3}/{:.3}",
                 name,
                 f64::from(counts[0]) / n * 100.0,
                 f64::from(counts[1]) / n * 100.0,
                 f64::from(counts[2]) / n * 100.0,
-                f64::from(counts[3]) / n * 100.0
+                f64::from(counts[3]) / n * 100.0,
+                pct(&tol, 0.05),
+                pct(&tol, 0.50),
+                pct(&tol, 0.95)
             );
         }
     }
