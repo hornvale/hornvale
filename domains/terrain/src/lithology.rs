@@ -33,7 +33,7 @@ use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
 use crate::plates::{Plate, dot, normalize, sub, velocity_at};
 use hornvale_kernel::color::{Mixture, Reflectance};
-use hornvale_kernel::{CellId, CellMap, Geosphere, math, noise::fbm_2d};
+use hornvale_kernel::{CellId, CellMap, Fbm, Geosphere, math};
 
 /// Regolith thickness in metres.
 /// type-audit: newtype
@@ -489,6 +489,16 @@ pub(crate) fn carbonate_at(continental: bool, thickness_km: f64, lat: f64) -> f6
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
 /// the globe's boundary-distance and drainage fields. No draws.
 pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<MaterialBuffer> {
+    // Built once, not per cell: the seed (`globe.lithology_noise_seed()`)
+    // does not vary by cell, so `Fbm::new` (which precomputes per-octave
+    // seeds from the base seed) constructing a fresh instance on every one
+    // of `CellMap::from_fn`'s per-cell calls was pure waste. `Fbm::sample`
+    // is byte-identical to `fbm_2d` with the same seed/octaves (`kernel/
+    // src/noise.rs`'s `fbm_2d` is literally `Fbm::new(seed,
+    // octaves).sample(x, y)`), so hoisting the construction changes no
+    // output. Same "build the sampler once above the loop" discipline
+    // `domains/terrain/CLAUDE.md` documents for `SphereFbm`.
+    let lithology_noise = Fbm::new(globe.lithology_noise_seed(), 3);
     CellMap::from_fn(geo, |cell| {
         let thickness = *globe.crust.get(cell);
         let continental = thickness >= crate::crust::CONTINENTAL_THRESHOLD_KM;
@@ -525,7 +535,7 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         };
 
         // Sub-cell patchiness from existing noise (no draws): perturb silica.
-        let patch = fbm_2d(globe.lithology_noise_seed(), p[0] * 6.0, p[1] * 6.0, 3) - 0.5;
+        let patch = lithology_noise.sample(p[0] * 6.0, p[1] * 6.0) - 0.5;
         let silica = (base_silica + 0.15 * patch).clamp(0.0, 1.0);
 
         // Carbonate favors warm shallow shelves — same pre-elevation
