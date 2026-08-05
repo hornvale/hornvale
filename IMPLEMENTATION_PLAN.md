@@ -252,3 +252,88 @@ brought rather than decided (autopilot carve-out: accuracy tradeoffs always come
 to Nathan). If unintended, removing the aridity term from `hostility` is the
 single highest-leverage change available to make arid ground actually livable —
 and it would land naturally with C.
+
+---
+
+# FINDING: `carrying_capacity` is not the Miami model it cites
+
+Nathan, 2026-08-04: *"that carrying_capacity calculation seems suspect to me.
+Looks made up."* Checked against the published model the module doc claims.
+
+`domains/demography/src/carrying_capacity.rs` opens: *"grounded in a Miami-model
+net-primary-productivity proxy (Lieth)."* Lieth's Miami model is
+
+```
+NPP_temp   = 3000 / (1 + exp(1.315 - 0.119 T))     g/m2/yr
+NPP_precip = 3000 * (1 - exp(-0.000664 P))         P in mm/yr
+NPP        = min(NPP_temp, NPP_precip)             <- the Liebig minimum
+```
+
+Only the Liebig minimum survives in Hornvale. The temperature term does not:
+
+```
+   T(C)   Miami NPP   Miami %of40C   Hornvale temp_response
+    -20         73           2.5%                 0.00
+    -10        227           7.8%                 0.00
+      0        635          21.8%                 0.00
+      2        762          26.2%                 0.00
+     22       2359          81.1%                 1.00
+     30       2715          93.4%                 0.60
+     40       2907         100.0%                 0.10
+```
+
+Three departures, and each matters:
+
+1. **Miami has no temperature optimum.** It is monotone increasing and
+   saturating. Hornvale's `temp_response` is a symmetric triangular tent peaking
+   at 22 °C, so **above 22 °C the two models move in opposite directions** —
+   Miami rises 81% → 100%, Hornvale falls 1.00 → 0.10.
+2. **Miami never reaches zero.** 21.8% of maximum at 0 °C, 7.8% at −10 °C, 2.5%
+   at −20 °C. Hornvale is *exactly* 0 below 2 °C. **The hard zero that closes the
+   frozen wastes is a departure from the cited model, not a consequence of it.**
+3. **A tent is a tolerance curve, not a productivity curve** — and per-species
+   tolerance curves already exist as `ConditionNiche.temperature`. So the base
+   field carries a **species-blind temperature optimum of 22 °C that no species
+   chose**: precisely the "habitability is a relation, not a property" error, one
+   layer below where step B just fixed it.
+
+## The calibration could not have caught it
+
+`capacity-by-abs-latitude`'s own doc: *"the polar mean floored at POLE_FLOOR (1%
+of …) … ratio rather than a division blowup."* The polar mean is **exactly zero**
+often enough to need a floor. So the headline reading (~20.96, preregistered floor
+3, "clears decisively ~7x") is largely `tropical / 0.01·baseline` — **guaranteed
+by the hard zero it was meant to validate.** Circular, and the circularity is
+written down in the metric.
+
+## This overturns Task 0's finding 5, and the §8 step order
+
+Finding 5 said the excluded ground is cold and *"no settler wants it."* **Wrong.**
+Evaluating `ConditionResponse::eval` instead of reading the optimum:
+
+```
+kobold temperature suitability:  -20C 0.407   -10C 0.596   -5C 0.715
+                                   0C 0.813     6C 0.862   22C 0.596
+```
+
+**Kobold prefers −5 °C to +22 °C** and holds 41% suitability at −20 °C. The roster
+*already has* a cold-adapted people. The cold is empty because productivity is
+exactly zero there — a model bug — not because nobody wants it.
+
+So the frozen wastes are **not** a roster problem (§8 step D). Fixing
+`temp_response` to Lieth's monotone-saturating form is upstream of D, and may
+populate the cold with the roster as it stands.
+
+**My own error, third of this class:** I read a *parameter* (kobold's 6 °C
+optimum) and inferred behaviour, instead of *evaluating the function*. Same shape
+as reading `_k` and inferring a capacity. The lesson generalises: in a model built
+from response curves, never reason from an optimum — evaluate the curve.
+
+## Not decided here
+
+This is a fidelity/accuracy question and a save-format constant, so it is
+Nathan's call (autopilot carve-out), and it wants its own decision + spec rather
+than a patch inside C. The options are not equivalent: adopt Lieth properly
+(monotone, saturating, never zero); keep a tent but move it into per-species
+niches where it belongs; or keep the tent and drop only the hard zero. Each
+changes world identity and needs a census.
