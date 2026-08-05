@@ -227,9 +227,11 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         let r = rate(k);
         assert!(
             r <= NONRAIDER_MAX,
-            "{k:?} does not raid (threat_response < {RAID_DISPOSITION_MIN}) yet \
-             re-seated its flagship on {r:.3} of worlds, above the \
-             {NONRAIDER_MAX} bound"
+            "{k:?} is authored BELOW the gate on the mean \
+             (threat_response < {RAID_DISPOSITION_MIN}), so most of its \
+             settlements should decline — yet it re-seated its flagship on \
+             {r:.3} of worlds, above the {NONRAIDER_MAX} bound (set from a \
+             pre-Tolerance measurement; see this module's doc)"
         );
         worst_abstainer = worst_abstainer.max(r);
     }
@@ -238,8 +240,10 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         let r = rate(k);
         assert!(
             r >= RAIDER_MIN,
-            "{k:?} raids (threat_response >= {RAID_DISPOSITION_MIN}) yet re-seated \
-             its flagship on only {r:.3} of worlds, below the {RAIDER_MIN} bound"
+            "{k:?} is authored ABOVE the gate on the mean \
+             (threat_response >= {RAID_DISPOSITION_MIN}), so most of its \
+             settlements should take the initiative — yet it re-seated its \
+             flagship on only {r:.3} of worlds, below the {RAIDER_MIN} bound"
         );
         weakest_raider = weakest_raider.min(r);
     }
