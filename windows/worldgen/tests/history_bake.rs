@@ -58,6 +58,14 @@ fn peoples() -> Vec<KindId> {
 /// people as well would add a second independent variable to each test and make
 /// a failure ambiguous between "the rule moved" and "the fixture disagrees about
 /// who likes what". The niche-differentiation behaviour has its own coverage.
+/// One capacity field PER ERA, for fixtures whose hostility oscillates.
+fn caps_per_era(
+    fields: &[CellMap<f64>],
+    peoples: &[KindId],
+) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
+    fields.iter().map(|f| per_people(f, peoples)).collect()
+}
+
 fn caps_of(
     field: &CellMap<f64>,
     peoples: &[KindId],
@@ -112,11 +120,12 @@ fn per_people(
 ///
 /// The `seed` argument is unused (the world is fixed; only the bake `Seed`
 /// varies between runs), and is kept so callers read `fixture(42)`.
+#[allow(clippy::type_complexity)]
 fn fixture(
     _seed: u64,
 ) -> (
     Geosphere,
-    CellMap<f64>,
+    Vec<CellMap<f64>>,
     CellMap<f64>,
     Vec<EraClimate>,
     CellMap<bool>,
@@ -142,19 +151,33 @@ fn fixture(
     // driven into the refuge by a glacial onset arrives over-capacity — the
     // pressure that drives the growth damping and, at the extreme, famine.
     // It never drives a raid: crowding is not a conflict trigger.
-    let capacity = CellMap::from_fn(&geo, |c| if refuge.contains(&c) { 60.0 } else { 120.0 });
+    // HOSTILITY IS NOW CAPACITY, NOT A MASK (The Tense, step 4). The era mask no
+    // longer excludes anything, so a region is made uninhabitable this era by
+    // giving it zero capacity — which is what the model itself now does when
+    // ground goes cold. The oscillation, the disjointness, and the 60-vs-120
+    // gradient are all preserved exactly; only the mechanism expressing them
+    // changed.
+    let capacity_at = |glacial: bool| {
+        CellMap::from_fn(&geo, |c| match (refuge.contains(&c), glacial) {
+            (true, true) => 60.0,    // refuge, alive in the cold
+            (false, false) => 120.0, // lowland, alive in the warm
+            _ => 0.0,                // the other region is dead this era
+        })
+    };
 
-    // Warm ⇒ lowlands (non-refuge) habitable; glacial ⇒ refuge habitable.
+    // The mask is now uniformly permissive: it is kept in the fixture only
+    // because `EraClimate` still carries the field, and it binds nothing.
     let era = |day: f64, glacial: bool| EraClimate {
         day,
         ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| refuge.contains(&c) == glacial),
+        habitable: CellMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: if glacial { 0.6 } else { 0.0 },
     };
     // Eight eras across the two millennia: warm/glacial alternating, four
     // glacial cycles.
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
+    let capacity: Vec<CellMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
 
     // River proximity is uniformly zero here (Task 5b): the fixture tests the
     // era-swing displacement mechanism, not the freshwater bias, so the river
@@ -173,7 +196,7 @@ fn same_seed_bakes_byte_identical_history() {
     let a = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -184,7 +207,7 @@ fn same_seed_bakes_byte_identical_history() {
     let b = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -204,7 +227,7 @@ fn different_seeds_diverge() {
     let a = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -215,7 +238,7 @@ fn different_seeds_diverge() {
     let b = bake(
         Seed(43),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -241,7 +264,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
     let h = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -492,9 +515,10 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
 /// saturate and stabilise, then a hostile span that evicts cell 0 with no
 /// vacant refuge anywhere. Capacity is uniform across the cluster, so there
 /// is nothing to covet either — the trapped community has no way out.
+#[allow(clippy::type_complexity)]
 fn saturating_fixture() -> (
     Geosphere,
-    CellMap<f64>,
+    Vec<CellMap<f64>>,
     CellMap<f64>,
     Vec<EraClimate>,
     CellMap<bool>,
@@ -507,26 +531,32 @@ fn saturating_fixture() -> (
     }
     // Uniform capacity across the cluster; the rest of the world is worthless
     // AND uninhabitable in every era, so the cluster is the whole playfield.
-    let capacity = CellMap::from_fn(&geo, |c| if hab.contains(&c) { 100.0 } else { 0.0 });
     let refugia = CellMap::from_fn(&geo, |_| false);
     let river_prox = CellMap::from_fn(&geo, |_| 0.0);
-    // Warm: the whole cluster is habitable. Hostile: cell 0 turns hostile with
-    // the rest of the cluster still habitable AND occupied — no vacant refuge.
-    let warm = EraClimate {
-        day: 0.0,
+    // HOSTILITY IS NOW CAPACITY (The Tense, step 4). Warm: the whole cluster
+    // feeds people. Hostile: cell 0's capacity goes to zero while the rest of
+    // the cluster stays alive AND occupied — so its community is squeezed out
+    // with no vacant refuge anywhere, which is the trap this fixture exists to
+    // set. The mask is uniformly permissive and binds nothing.
+    let capacity_at = |cell_zero_alive: bool| {
+        CellMap::from_fn(&geo, |c| {
+            // Outside the cluster is dead in every era; cell 0 additionally
+            // dies in the hostile one, which is the squeeze this fixture sets.
+            let alive = hab.contains(&c) && (c.0 != 0 || cell_zero_alive);
+            if alive { 100.0 } else { 0.0 }
+        })
+    };
+    let era = |day: f64| EraClimate {
+        day,
         ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| hab.contains(&c)),
+        habitable: CellMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: 0.0,
     };
-    let hostile = EraClimate {
-        day: 1000.0,
-        ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| hab.contains(&c) && c.0 != 0),
-        sea_level: e(0.0),
-        ice_fraction: 0.0,
-    };
-    (geo, capacity, river_prox, vec![warm, hostile], refugia)
+    // Materialise before moving `geo` out: the closures borrow it.
+    let caps = vec![capacity_at(true), capacity_at(false)];
+    let eras = vec![era(0.0), era(1000.0)];
+    (geo, caps, river_prox, eras, refugia)
 }
 
 #[test]
@@ -543,7 +573,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -571,7 +601,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h2 = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people, eras.len()),
+        &caps_per_era(&cap, &people),
         &river,
         &eras,
         &refugia,

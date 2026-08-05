@@ -1325,40 +1325,32 @@ impl<'a> Bake<'a> {
         chosen
     }
 
-    /// This era's **geometric-and-thermal admissibility** of a cell: 1.0 if the
-    /// era's masks admit it at all, else 0.0. Species-blind by construction —
-    /// what this gates on is true of the ground for everybody.
+    /// The one exclusion that is **not** a relation between a species and a
+    /// cell: ice. A glacier is not a niche disagreement — nothing negotiates
+    /// with a kilometre of it — so it stays species-blind, and it is the only
+    /// thing left here that is.
     ///
-    /// **It stayed binary, and stayed on `habitable`, deliberately.** The Tilth's
-    /// handoff proposed reducing this to ice alone, on the reading that a glacier
-    /// is not a niche disagreement while habitability is. That is right about the
-    /// concepts and wrong about *this* codebase, measurably:
+    /// **The thermal habitability test is gone** (The Tense, step 4). It asked
+    /// "is this cell habitable" with no *for whom*, against a global
+    /// `FREEZE_C = -10 °C`, which is a glaciation snowline borrowed for a
+    /// question it cannot answer. Habitability is a relation between a species
+    /// and a cell; decision 0103 established that for capacity, and this was the
+    /// last place the species-blind form survived. Cold ground is now *poor* —
+    /// each species' own temperature response scores it — rather than *forbidden*
+    /// to everyone alike.
     ///
-    /// - `era.ice` is **identically empty on every production path**. Both
-    ///   `bake_eras` branches fill it `from_fn(|_| false)` and fold the snowline
-    ///   into `habitable` instead (its own doc says so). An ice-only factor is
-    ///   therefore `≡ 1.0`, not a narrower mask.
-    /// - So `habitable` is the *only* era-varying input reaching this function,
-    ///   and it carries two things per-species capacity cannot supply: land above
-    ///   **this era's** sea level (a glacial low-stand exposes shelf that the
-    ///   present-day capacity field reads as ocean), and the snowline swing that
-    ///   is the entire deep-time climate signal the bake replays.
-    /// - Measured on seed 42: ice-only moves records 640 → 812 and *raises*
-    ///   deepest column 16 → 17, but climate displacement stops firing at all —
-    ///   the churn re-sources entirely to conquest (raids 173 → 288, migrations
-    ///   142 → 97). Every era becomes identical, exactly the constant-sky
-    ///   degenerate case `bake_eras` documents.
+    /// Measured before the cutover (`tense_shadow.rs`): the mask and per-species
+    /// capacity disagreed about **29.4% of seed 42's land**, almost entirely in
+    /// the direction of the mask being stricter. That land is now settleable by
+    /// whichever people can actually feed itself on it, and by nobody else.
     ///
-    /// Narrowing this is The Fallow's job, not The Tilth's: the hard zero here
-    /// should be replaced by a *gradient* that still varies with era, which needs
-    /// an era-varying capacity term to replace it with. Removing the cliff before
-    /// building the ramp deletes deep time rather than explaining it.
+    /// **Currently inert**: `bake_eras` fills `era.ice` all-false on every
+    /// production path, folding the snowline into `habitable` instead — which is
+    /// exactly the conflation just removed. The term is kept because ice is the
+    /// right *kind* of exclusion to be species-blind, so a future campaign that
+    /// models real glaciation has the seam it needs.
     fn factor(era: &EraClimate, cell: CellId) -> f64 {
-        if *era.ice.get(cell) || !*era.habitable.get(cell) {
-            0.0
-        } else {
-            1.0
-        }
+        if *era.ice.get(cell) { 0.0 } else { 1.0 }
     }
 
     /// What a cell is worth **to one people** this era: that people's headcount
@@ -2886,18 +2878,27 @@ impl<'a> Bake<'a> {
         }
         let site = self.communities[idx].site;
         let pidx = self.communities[idx].people_idx;
-        let eff = self.eff_capacity(era, site, pidx);
 
-        // Climate eviction: migrate to a vacant refuge, or starve. No conflict.
+        // **A people that cannot feed itself tries to leave before it dies.**
         //
-        // **This exact-zero test is the hard cliff the arc is aimed at**, and it
-        // still fires only through [`Bake::factor`]'s binary era mask: a
-        // per-people capacity is a continuous field, so it reaches exactly 0.0
-        // only where a people has no niche at all, never as a gradual failure.
-        // Replacing this test with a *gradient* — ground that grows poor rather
-        // than switching off — is The Fallow's `h(tilth)`, and it needs the stock
-        // term to have something to be a gradient in.
-        if eff == 0.0 {
+        // This used to test `eff == 0.0` — an exact zero, which only the binary
+        // era mask could produce. With the mask gone (The Tense, step 4) capacity
+        // is continuous, that test almost never fired, and a community facing
+        // starvation simply starved *in place*: `migration_fires_at_volume` went
+        // from 34 events to 3 on seed 42 and turned red, which is exactly the
+        // inertness it was written to catch.
+        //
+        // The trigger is now unsustainable **pressure**, and it subsumes the old
+        // one: `pressure_of` divides by `eff`, so a zero-capacity cell yields
+        // `+inf` and still routes here. Below this line the behaviour is
+        // unchanged — walk to the nearest refuge this people can actually live
+        // on, and starve where there is none.
+        //
+        // The result is that "the cold drove them on" survives the mask's
+        // deletion, but as a consequence of the land going poor rather than of a
+        // constant declaring the cell uninhabitable to everyone alike.
+        let pressure = self.pressure_of(idx, era);
+        if pressure >= COLLAPSE_PRESSURE {
             let (record, pop, lineage, offset, migrant_id) = {
                 let c = &self.communities[idx];
                 (c.record, c.population, c.lineage, c.tech_offset, c.id)
@@ -2940,13 +2941,9 @@ impl<'a> Bake<'a> {
             return;
         }
 
-        let pressure = self.pressure_of(idx, era);
-
-        if pressure >= COLLAPSE_PRESSURE {
-            self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
-            self.tally.collapsed += 1;
-            return;
-        }
+        // (The standalone collapse branch that used to sit here is gone: the
+        // pressure test above now owns that outcome, and reaches it only after
+        // the community has failed to find anywhere to go.)
 
         self.grow(idx, era, year, pressure);
 

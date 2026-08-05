@@ -2463,9 +2463,15 @@ fn bake_eras(
         stellar_inputs(&sky);
     let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
 
-    // A cell is livable this era iff its absolute temperature is at or above the
-    // snowline. **The land test that used to be conjoined here is gone** (The
-    // Tense, step 2): `carrying_inputs_at` now takes `is_land` against the era's
+    // The era's snowline. **The bake no longer reads this** (The Tense, step 4):
+    // `Bake::factor` gates on ice alone, and whether a cell can hold a people is
+    // now asked of that people's own capacity there. This is kept, and kept
+    // honest, as a DIAGNOSTIC — the value is real and anything inspecting an
+    // `EraClimate` still gets the snowline it claims to carry — but it binds
+    // nothing.
+    //
+    // Historical note, since the two halves went separately. **The land test
+    // that used to be conjoined here went at step 2**: `carrying_inputs_at` now takes `is_land` against the era's
     // own sea level, so a cell that is sea this era already has zero base
     // carrying capacity, zero forage and zero prey — and therefore zero
     // per-species capacity, which `vacant_for` and `eff_capacity` both gate on.
