@@ -14,8 +14,9 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_worldgen::{
-    EraAdjust, SettlementPins, SkyChoice, build_world, climate_of, insolation_field, sky_of,
-    substrate_field, substrate_field_at, terrain_of,
+    EraAdjust, EraInvariantSupply, SettlementPins, SkyChoice, build_world, climate_of,
+    insolation_field, per_species_capacity, per_species_capacity_at, sky_of, substrate_field,
+    substrate_field_at, terrain_of,
 };
 
 /// Rebuild the pieces a substrate needs for one seed.
@@ -150,4 +151,66 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
         newly_exposed > 0,
         "a 120 m low-stand should expose continental shelf as land; exposed {newly_exposed}"
     );
+}
+
+/// The same no-op guarantee one layer up: `per_species_capacity_at` at the
+/// present era must reproduce `per_species_capacity` bit-for-bit.
+///
+/// This is the layer that matters for worlds — capacity is what settlement
+/// placement and the whole deep-history bake read — so "close enough" is not a
+/// category that exists here.
+#[test]
+fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
+    let wc = hornvale_worldgen::components::WorldComponents::assemble().expect("components");
+    for seed in [42, 1234] {
+        let (terrain, climate, obliquity_deg, insolation_scalar, regime) = parts(seed);
+        let geo = terrain.geosphere();
+        let biosphere: Vec<&hornvale_species::BiosphereTraits> =
+            ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll", "human"]
+                .iter()
+                .map(|n| {
+                    wc.biosphere
+                        .get(&hornvale_kernel::KindId(n))
+                        .expect("settler has biosphere traits")
+                })
+                .collect();
+
+        let direct = per_species_capacity(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+            &biosphere,
+        );
+        let hoisted = EraInvariantSupply::build(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+        let via_era = per_species_capacity_at(
+            geo,
+            &terrain,
+            &climate,
+            &hoisted,
+            &EraAdjust::present(&terrain),
+            &biosphere,
+        );
+
+        assert_eq!(direct.len(), via_era.len(), "seed {seed}: species count");
+        for ((ta, a), (tb, b)) in direct.iter().zip(via_era.iter()) {
+            assert_eq!(ta, tb, "seed {seed}: dense index order moved");
+            for cell in geo.cells() {
+                assert_eq!(
+                    a.at(cell).to_bits(),
+                    b.at(cell).to_bits(),
+                    "seed {seed} species {ta} cell {cell:?}: capacity moved"
+                );
+            }
+        }
+    }
 }

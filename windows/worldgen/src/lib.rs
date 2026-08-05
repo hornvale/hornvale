@@ -643,6 +643,38 @@ pub fn carrying_inputs_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    carrying_inputs_at(geo, terrain, climate, &EraAdjust::present(terrain))
+}
+
+/// [`carrying_inputs_of`] at one era (The Tense §3.1).
+///
+/// Two of the inputs move with the era and the rest do not:
+///
+/// - **`temperature_c`** gains the era's albedo-cooling offset. This is the term
+///   that makes an ice age reduce productivity instead of switching cells off.
+/// - **`is_land` and `coastal`** are taken against the era's sea level rather
+///   than today's, so a glacial low-stand exposes continental shelf *as land
+///   that grows food* — matching [`substrate_field_at`]'s elevation re-datum, so
+///   the two cannot disagree about where the coast is.
+///
+/// Moisture, precipitation, river proximity and unrest stay era-invariant,
+/// because no era term for them exists (see [`EraAdjust`]). Precipitation riding
+/// present moisture while temperature moves is a known asymmetry, recorded rather
+/// than hidden: a colder world should also be a drier one, and that is the
+/// successor to this stage.
+///
+/// At [`EraAdjust::present`] this is bit-identical to the unparameterised form —
+/// `is_ocean` is defined as `elevation_at < sea_level`, which is exactly what the
+/// era comparison reduces to when the era's sea level is today's.
+/// type-audit: bare-ok(count: return)
+pub fn carrying_inputs_at(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    adjust: &EraAdjust,
+) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    let is_ocean_at = |c: hornvale_kernel::CellId| terrain.elevation_at(c) < adjust.sea_level;
+
     // The Confluence: freshwater rides proximity to the real river network,
     // not a smooth drainage/moisture proxy — so K spikes near rivers and
     // settlements condense there (emergent). A moisture floor keeps
@@ -651,7 +683,7 @@ pub fn carrying_inputs_of(
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let coastal = geo.neighbors(cell).iter().any(|n| is_ocean_at(*n));
         let moisture = climate.moisture_at(cell);
         // Seawater is not freshwater: coastal access is priced by the
         // coast bonus in carrying_capacity, not smuggled in here.
@@ -670,8 +702,8 @@ pub fn carrying_inputs_of(
             // LAND, not habitability (step B): the habitability mask conflated
             // land with a temperate band and a moisture floor, and the latter two
             // are already graded by `npp`/`hostility` inside `carrying_capacity`.
-            is_land: !terrain.is_ocean(cell),
-            temperature_c: climate.mean_temperature_at(cell).get(),
+            is_land: !is_ocean_at(cell),
+            temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
             // The REAL annual total, not normalised moisture: `precip_at` already
             // maps the moisture field to Earth-ranged mm/yr with its provenance
             // cited, and Lieth's precipitation term is defined on that total.
@@ -1221,9 +1253,7 @@ pub fn per_species_capacity(
     regime: &RotationRegime,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
 ) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
-    let base_carrying =
-        hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
-    let substrate = substrate_field(
+    let hoisted = EraInvariantSupply::build(
         geo,
         terrain,
         climate,
@@ -1231,10 +1261,94 @@ pub fn per_species_capacity(
         insolation_scalar,
         regime,
     );
-    let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
+    per_species_capacity_at(
+        geo,
+        terrain,
+        climate,
+        &hoisted,
+        &EraAdjust::present(terrain),
+        species_biosphere,
+    )
+}
+
+/// The parts of the capacity pipeline that do **not** move with the era, built
+/// once and reused across a whole era series (The Tense §3.1).
+///
+/// This is the campaign's affordability, in a struct. Measured, per call:
+/// insolation 160 ms, mineral 0.3 ms, detritus 0.0 ms, against ~2 ms for
+/// everything the era does move. Hoisting these turns a 25-era replay from ~25x
+/// into ~1.1x.
+///
+/// `marine` is here on a narrower argument than the other three. It reads
+/// `climate.biome_map()`, which *would* move with a properly era-adjusted
+/// climate — but no era biome recomputation exists, and no shipped kind weights
+/// the `MARINE_FORAGE` axis, so it is inert either way. It is hoisted because
+/// today it cannot vary, not because it never could; a marine people or an era
+/// biome model would move it out of this struct.
+///
+/// Every field is a dimensionless per-cell supply or insolation ratio, which is
+/// what the axis dot product in [`axis_supply`] consumes.
+/// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine)
+#[derive(Debug, Clone)]
+pub struct EraInvariantSupply {
+    /// Annual-mean insolation per cell — ~100% of the pipeline's cost, and a
+    /// pure function of latitude and obliquity, neither of which the era series
+    /// varies.
+    pub insolation: hornvale_kernel::CellMap<f64>,
+    /// Mineral supply — terrain only.
+    pub mineral: hornvale_kernel::CellMap<f64>,
+    /// Detritus supply — terrain only.
+    pub detritus: hornvale_kernel::CellMap<f64>,
+    /// Marine forage supply — see the caveat above.
+    pub marine: hornvale_kernel::CellMap<f64>,
+}
+
+impl EraInvariantSupply {
+    /// Build the hoisted fields once for a world.
+    /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
+    #[must_use]
+    pub fn build(
+        geo: &Geosphere,
+        terrain: &GeneratedTerrain,
+        climate: &GeneratedClimate,
+        obliquity_deg: f64,
+        insolation_scalar: f64,
+        regime: &RotationRegime,
+    ) -> Self {
+        Self {
+            insolation: insolation_field(geo, obliquity_deg, insolation_scalar, regime),
+            mineral: mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE),
+            detritus: detritus_supply_field(geo, terrain),
+            marine: marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE),
+        }
+    }
+}
+
+/// [`per_species_capacity`] at one era, reusing hoisted era-invariant supply.
+///
+/// Everything rebuilt here genuinely moves with the era: the substrate (via the
+/// temperature offset and the sea-level re-datum), the base carrying capacity
+/// (whose NPP is a function of that temperature), and the two supply fields that
+/// ride it — `forage` off carrying, `prey` off forage.
+///
+/// At [`EraAdjust::present`] this is bit-identical to [`per_species_capacity`],
+/// which is what makes the seam safe to introduce ahead of the behaviour change
+/// that will use it (`era_substrate.rs` asserts it).
+/// type-audit: bare-ok(index: return)
+pub fn per_species_capacity_at(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    hoisted: &EraInvariantSupply,
+    adjust: &EraAdjust,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
+) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    let base_carrying = hornvale_demography::carrying_capacity(
+        geo,
+        &carrying_inputs_at(geo, terrain, climate, adjust),
+    );
+    let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
     let forage = forage_supply_field(geo, base_carrying.as_cell_map());
-    let detritus = detritus_supply_field(geo, terrain);
-    let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
     let prey = prey_supply_field(geo, &forage);
 
     species_biosphere
@@ -1251,10 +1365,10 @@ pub fn per_species_capacity(
                 let per_axis = [
                     (PHOTOSYNTHATE, base_carrying.at(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
-                    (MINERAL, *mineral.get(cell)),
-                    (DETRITUS, *detritus.get(cell)),
+                    (MINERAL, *hoisted.mineral.get(cell)),
+                    (DETRITUS, *hoisted.detritus.get(cell)),
                     (ANIMAL_PREY, *prey.get(cell)),
-                    (MARINE_FORAGE, *marine.get(cell)),
+                    (MARINE_FORAGE, *hoisted.marine.get(cell)),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
                 let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);

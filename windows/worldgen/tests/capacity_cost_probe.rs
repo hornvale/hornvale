@@ -20,8 +20,8 @@
 
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, per_species_capacity, sky_of,
-    substrate_field, terrain_of,
+    EraAdjust, EraInvariantSupply, SettlementPins, SkyChoice, build_world, climate_of,
+    per_species_capacity, per_species_capacity_at, sky_of, substrate_field, terrain_of,
 };
 // A benchmark harness measuring the cost of a derivation, not sim logic: it
 // never reads `WorldTime`, never touches a fact, and never reaches an artifact,
@@ -364,5 +364,142 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
     println!(
         "memoisation ratio      {:.1}x   (exact, byte-identical)",
         total as f64 / lats.len() as f64
+    );
+}
+
+/// **The payoff measurement.** Does the hoist actually deliver, end to end?
+///
+/// Times a 25-era replay two ways: naive (`per_species_capacity` per era, which
+/// rebuilds insolation every time) against hoisted (`EraInvariantSupply` once,
+/// then `per_species_capacity_at` per era). H4 wants the whole change inside
+/// 1.5x of the pre-campaign per-world cost.
+#[test]
+#[ignore = "probe: measurement only, run explicitly"]
+fn hoisted_era_replay_versus_naive() {
+    let (geo, terrain, climate, obliquity_deg, insolation_scalar, regime, biosphere, _wc) = setup();
+
+    macro_rules! ms {
+        ($e:expr) => {{
+            #[allow(clippy::disallowed_types)] // benchmark harness, not sim logic
+            let t = Instant::now();
+            let v = $e;
+            std::hint::black_box(&v);
+            t.elapsed().as_secs_f64() * 1000.0
+        }};
+    }
+
+    // The pre-campaign baseline: one present-day capacity build.
+    let baseline = ms!(per_species_capacity(
+        geo,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+        &biosphere
+    ));
+
+    // A 25-era replay, each era offset a little so nothing can be cached away.
+    let eras: Vec<EraAdjust> = (0..CLIMATE_ERAS)
+        .map(|i| EraAdjust {
+            temp_offset: hornvale_kernel::TempAnomaly::from_offset_c(-(i as f64) * 0.3),
+            sea_level: hornvale_kernel::ReferenceElevation::new(
+                terrain.sea_level().get() - (i as f64) * 4.0,
+            )
+            .expect("finite"),
+        })
+        .collect();
+
+    let naive = ms!({
+        let mut last = None;
+        for _ in &eras {
+            last = Some(per_species_capacity(
+                geo,
+                &terrain,
+                &climate,
+                obliquity_deg,
+                insolation_scalar,
+                &regime,
+                &biosphere,
+            ));
+        }
+        last
+    });
+
+    let hoisted = ms!({
+        let supply = EraInvariantSupply::build(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+        let mut last = None;
+        for adjust in &eras {
+            last = Some(per_species_capacity_at(
+                geo, &terrain, &climate, &supply, adjust, &biosphere,
+            ));
+        }
+        last
+    });
+
+    println!("pre-campaign baseline (1 build)   {baseline:>9.1} ms");
+    println!(
+        "naive  {CLIMATE_ERAS}-era replay           {naive:>9.1} ms   ({:.1}x baseline)",
+        naive / baseline
+    );
+    println!(
+        "HOISTED {CLIMATE_ERAS}-era replay          {hoisted:>9.1} ms   ({:.1}x baseline)",
+        hoisted / baseline
+    );
+    println!("speedup from hoisting             {:.1}x", naive / hoisted);
+    println!(
+        "H4 budget is 1.5x baseline -> {}",
+        if hoisted / baseline <= 1.5 {
+            "MET"
+        } else {
+            "MISSED"
+        }
+    );
+}
+
+/// The denominator H4 is actually stated against: a **full world build**, not
+/// the capacity pipeline alone. A ratio on the pipeline is the wrong frame if
+/// the pipeline is a small share of the build.
+#[test]
+#[ignore = "probe: measurement only, run explicitly"]
+fn full_world_build_cost() {
+    // Warm the components once so the timing is the build, not the roster load.
+    let wc = WorldComponents::assemble().expect("components assemble");
+    let build = |seed: u64| {
+        build_world(
+            hornvale_kernel::Seed(seed),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed builds")
+    };
+    std::hint::black_box(build(7));
+    let _ = &wc;
+
+    #[allow(clippy::disallowed_types)] // benchmark harness, not sim logic
+    let t = Instant::now();
+    let w = build(42);
+    let ms = t.elapsed().as_secs_f64() * 1000.0;
+    std::hint::black_box(&w);
+
+    println!("full build_world(seed 42)  {ms:>9.1} ms");
+    println!(
+        "capacity pipeline today       145.3 ms  ({:.0}% of the build)",
+        145.3 / ms * 100.0
+    );
+    println!("capacity, hoisted 25 eras     533.5 ms");
+    println!(
+        "=> projected build            {:>9.1} ms   ({:.2}x)",
+        ms + 533.5 - 145.3,
+        (ms + 533.5 - 145.3) / ms
     );
 }
