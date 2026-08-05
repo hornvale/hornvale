@@ -1787,22 +1787,104 @@ pub fn substrate_field(
     insolation_scalar: f64,
     regime: &RotationRegime,
 ) -> hornvale_kernel::CellMap<Substrate> {
-    let sea_level = terrain.sea_level();
+    let insolation = insolation_field(geo, obliquity_deg, insolation_scalar, regime);
+    substrate_field_at(
+        geo,
+        terrain,
+        climate,
+        &insolation,
+        &EraAdjust::present(terrain),
+    )
+}
+
+/// The per-cell insolation field, split out of [`substrate_field`] so it can be
+/// **hoisted** (The Tense §3.1).
+///
+/// It is ~100% of `substrate_field`'s cost and ~82% of the whole capacity
+/// pipeline's: `annual_mean_insolation` integrates 48 orbital samples with ~9
+/// libm transcendentals each, about 430 per cell and 17.6M per field, while
+/// temperature, moisture and elevation together measure 0.0 ms.
+///
+/// It is also **era-invariant under the era model that exists**: `bake_eras`
+/// varies exactly the albedo temperature offset and eustatic sea level per era,
+/// never obliquity, and this is a pure function of `(latitude, obliquity,
+/// insolation_scalar)`. So a 25-era replay builds this once, and the marginal
+/// cost of an era is the ~2 ms of everything else. If a later campaign makes
+/// obliquity vary per era — orbital forcing does change it — this becomes
+/// era-varying and the cost returns; memoising the integral on the exact
+/// latitude bit pattern would recover ~4× of it byte-identically (40,962 cells
+/// carry only 10,301 distinct latitudes).
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(ratio: return)
+pub fn insolation_field(
+    geo: &Geosphere,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+    regime: &RotationRegime,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| match regime {
+        RotationRegime::Spinning { .. } => {
+            annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
+        }
+        RotationRegime::Locked => {
+            insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
+        }
+    })
+}
+
+/// What one era changes about the world the habitat model reads (The Tense
+/// §3.1). Exactly the two quantities `bake_eras` already derives per era, named
+/// so a caller cannot supply one and forget the other.
+///
+/// Deliberately NOT a moisture offset. A colder world is also a drier one, but
+/// `bake_eras` models no such term today, and inventing one here would be a
+/// physics change smuggled into a threading change. Recorded as the natural
+/// successor.
+/// type-audit: bare-ok(diagnostic-value: temp_offset), bare-ok(diagnostic-value: sea_level)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EraAdjust {
+    /// The era's albedo-cooling offset, added to the present mean temperature.
+    pub temp_offset: hornvale_kernel::TempAnomaly,
+    /// The era's sea level: present plus its eustatic change.
+    pub sea_level: hornvale_kernel::ReferenceElevation,
+}
+
+impl EraAdjust {
+    /// The present day — a zero offset at today's sea level. The identity, and
+    /// what [`substrate_field`] passes so its output is byte-for-byte what it
+    /// was before the era parameter existed.
+    #[must_use]
+    pub fn present(terrain: &GeneratedTerrain) -> Self {
+        Self {
+            temp_offset: hornvale_kernel::TempAnomaly::from_offset_c(0.0),
+            sea_level: terrain.sea_level(),
+        }
+    }
+}
+
+/// [`substrate_field`] at one era, given a pre-built (hoisted) insolation field.
+///
+/// **The `EraAdjust::present` path is a no-op seam**: adding a zero anomaly and
+/// subtracting today's sea level reproduce the pre-Tense arithmetic exactly, so
+/// a present-day world serializes byte-for-byte as it did. That is asserted, not
+/// hoped — see `windows/worldgen/tests/era_substrate.rs`.
+/// type-audit: bare-ok(ratio: insolation)
+pub fn substrate_field_at(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    insolation: &hornvale_kernel::CellMap<f64>,
+    adjust: &EraAdjust,
+) -> hornvale_kernel::CellMap<Substrate> {
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
-        temperature_c: climate.mean_temperature_at(cell).get(),
+        temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
         moisture: climate.moisture_at(cell),
-        insolation: match regime {
-            RotationRegime::Spinning { .. } => {
-                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
-            }
-            RotationRegime::Locked => {
-                insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
-            }
-        },
+        insolation: *insolation.get(cell),
         // The re-datum: `ReferenceElevation - ReferenceElevation` is the
         // kernel's own typed subtraction, whose output is the signed metre
-        // difference — height above sea level. Negative on ocean cells.
-        elevation: terrain.elevation_at(cell) - sea_level,
+        // difference — height above sea level. Negative on ocean cells. At an
+        // era, this is height above THAT era's sea level, so a glacial low-stand
+        // exposes shelf as land without any mask saying so.
+        elevation: terrain.elevation_at(cell) - adjust.sea_level,
     })
 }
 
