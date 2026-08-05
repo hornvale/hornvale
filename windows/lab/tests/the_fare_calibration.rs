@@ -369,6 +369,531 @@ fn path_sample_stride(pair_count: usize) -> usize {
     (pair_count / PATH_SAMPLE_STRIDE_TARGET).max(1)
 }
 
+// ============================================================================
+// Task 5: the preregistered readout at full population (spec §6b, THE
+// FREEZE, commit a6e28e5e — frozen before this run, and the sole authority
+// for every number below).
+// ============================================================================
+
+/// The population Task 5's preregistered readout runs over (spec §6b):
+/// matches The Mire's 200 seeds so F3's latitude-ordering comparison is
+/// like-for-like.
+const PREREGISTERED_SEEDS: std::ops::RangeInclusive<u64> = 1..=200;
+
+/// `|latitude|` band edges in degrees: equatorial, temperate, polar.
+/// Redeclared VERBATIM from `the_mire_calibration.rs:151` — test crates do
+/// not share constants, per spec §6b's explicit F3 instruction.
+const LAT_BANDS: [(f64, f64); 3] = [(0.0, 30.0), (30.0, 60.0), (60.0, 90.0)];
+
+/// F1's frozen floor (spec §6b): pooled median seasonal cost swing at the
+/// 40-degree separation band (index [`HEADLINE_BAND_IDX`] into
+/// [`SEPARATION_BANDS_DEG`]). AUTHORED, anchored to §5a's own doubling
+/// scale — NOT to The Mire's passability metric, an earlier working note's
+/// withdrawn comparison ("they share a decimal point and nothing else").
+/// **The pilot measured 0.30–0.67% pooled across bands, so this floor is
+/// EXPECTED TO FAIL, clearly rather than marginally — recorded in the spec
+/// before this run precisely so the failure cannot look like a floor chosen
+/// to be cleared. Do not raise, lower, or retune this constant after seeing
+/// the 200-seed result; a falsified floor is this campaign's finding.**
+const F1_FLOOR_AT_40_DEG: f64 = 0.05;
+
+/// F2's frozen floor (spec §6b): pooled re-routing fraction at the
+/// 40-degree separation band. Pilot: 16.27% pooled, well above this floor.
+const F2_FLOOR_AT_40_DEG: f64 = 0.10;
+
+/// F2's redundancy band (spec §6b): a pair counts as having an alternative
+/// when its second-best substantially-disjoint dry path costs at most this
+/// multiple of the best. **Reporting-only in this test** — the frozen text's
+/// only concrete instruction about F2's own denominator is that adjacent
+/// pairs stay in it ("retained in F2's denominator, per §4a"); nothing in
+/// §6b says a pair beyond this band is removed from F2's denominator too, so
+/// this test does not filter F2 by it. It instead adds one new diagnostic
+/// count, `beyond_redundancy_band` (pairs with a finite ratio > 2.0, on top
+/// of the already-existing `no_alt_count` for pairs with NO alternative at
+/// all), so the "2.0× admits the ordinary case" framing in §6b is visible in
+/// the readout even though it gates nothing. Flagged in the task report as a
+/// judgment call given the ambiguity, so it can be corrected if wrong.
+const REDUNDANCY_BAND: f64 = 2.0;
+
+/// Index into [`SEPARATION_BANDS_DEG`] of the frozen headline band (40
+/// degrees) F1 and F2's floors are measured at.
+const HEADLINE_BAND_IDX: usize = 3;
+
+/// How many of [`SEPARATION_BANDS_DEG`]'s leading entries feed F1, F2, F3,
+/// and F-mono. The 80-degree band (index 4) is measured and reported
+/// exactly like every other band but excluded from every hypothesis per
+/// spec §6b: three of five pilot seeds yielded 0, 2, and 7 pairs there.
+const HYPOTHESIS_BAND_COUNT: usize = 4;
+
+/// F3's latitude-band index for `lat_abs` (already `.abs()`d by the
+/// caller), using [`LAT_BANDS`]' boundaries with the LAST band inclusive of
+/// its upper bound (90°) — same idiom `the_mire_calibration.rs`'s own
+/// `land_by_band` construction uses (`lat >= lo && (lat < hi ||
+/// is_last_band)`), so a cell at exactly the pole is not dropped by every
+/// band's exclusive-upper-bound test.
+fn lat_band_index(lat_abs: f64) -> usize {
+    for (idx, &(lo, hi)) in LAT_BANDS.iter().enumerate() {
+        let is_last_band = idx == LAT_BANDS.len() - 1;
+        if lat_abs >= lo && (lat_abs < hi || is_last_band) {
+            return idx;
+        }
+    }
+    unreachable!("latitude {lat_abs} (already abs) outside every LAT_BANDS bucket")
+}
+
+/// One seed's full preregistered readout: every quantity
+/// `the_fares_preregistered_readout` needs, computed exactly once per world
+/// (same caching discipline as `the_fares_pilot` and `the_mire_calibration.rs`).
+struct FullSeedReadout {
+    /// Per [`SEPARATION_BANDS_DEG`] index: this seed's median weathered-cost
+    /// swing among reachable geographic pairs at that band (F1's per-seed
+    /// value). `f64::NAN` if this seed had no reachable pair at that band
+    /// (mirrors the pilot's fallback; `seed=5 band=80°` in the pilot hit
+    /// this exactly).
+    geo_median_swing: [f64; 5],
+    /// Per band: this seed's re-routing fraction among reachable geographic
+    /// pairs at that band (F2's per-seed value). Adjacent pairs stay in the
+    /// denominator (see the comment at the F2 call site in
+    /// `build_full_readout` for why).
+    geo_reroute_frac: [f64; 5],
+    /// Per band: how many reachable geographic pairs this seed contributed
+    /// at that band — diagnostic, matches the pilot's `geo_pairs`.
+    geo_pairs: [usize; 5],
+    /// Per band: this seed's median redundancy ratio (adjacent pairs
+    /// excluded, per fix round 3 / spec §6b).
+    geo_median_redundancy: [f64; 5],
+    /// Per band: this seed's max redundancy ratio.
+    geo_max_redundancy: [f64; 5],
+    /// Per band: how many of this band's reachable pairs were directly
+    /// adjacent (excluded from the redundancy statistic, retained in F2's
+    /// denominator).
+    geo_adjacent_pairs: [usize; 5],
+    /// Per band: the surviving redundancy-tested population
+    /// (`geo_pairs - geo_adjacent_pairs`).
+    geo_redundancy_sample: [usize; 5],
+    /// Per band: pairs with NO alternative at all after blocking the best
+    /// path.
+    geo_no_alt_count: [usize; 5],
+    /// Per band: among the redundancy-tested (non-adjacent) pairs, how many
+    /// have a finite ratio exceeding [`REDUNDANCY_BAND`] (2.0×) — reporting
+    /// only, per that constant's doc comment; does not affect F2.
+    geo_beyond_redundancy_band: [usize; 5],
+    /// F3: this seed's median swing, POOLED ACROSS THE FOUR INCLUDED
+    /// SEPARATION BANDS (`SEPARATION_BANDS_DEG[..HYPOTHESIS_BAND_COUNT]`,
+    /// i.e. 5°/10°/20°/40° — the 80° band is excluded here too, per §6b),
+    /// split by [`LAT_BANDS`] on the swing's SOURCE landmark cell's
+    /// `|latitude|`. `None` if this seed contributed no reachable pair to
+    /// that latitude band across all four included separation bands.
+    /// Bucketing on the SOURCE cell (rather than the destination, or some
+    /// midpoint) is a judgment call the task report names explicitly: F3's
+    /// instruction says "partitioned on `geo.coord(c).latitude.abs()`"
+    /// without specifying which cell `c` is for a two-endpoint pair.
+    f3_band_swings: [Option<f64>; 3],
+    /// Secondary settlement-pair frame (§4a, §6a): this seed's median swing.
+    settlement_median_swing: f64,
+    /// Secondary frame: this seed's max swing.
+    settlement_max_swing: f64,
+    /// Secondary frame: this seed's re-routing fraction.
+    settlement_reroute_frac: f64,
+    /// Secondary frame: this seed's median redundancy ratio (adjacent pairs
+    /// excluded, same rule as the geographic frame).
+    settlement_median_redundancy: f64,
+    /// Secondary frame: this seed's max redundancy ratio.
+    settlement_max_redundancy: f64,
+    /// Secondary frame: how many of this seed's sampled settlement pairs
+    /// were directly adjacent (excluded from the redundancy statistic).
+    settlement_adjacent_pairs: usize,
+    /// Secondary frame: the surviving redundancy-tested population
+    /// (`path_sample - adjacent_pairs`).
+    settlement_redundancy_sample: usize,
+    /// Secondary frame: pairs with NO alternative at all after blocking the
+    /// best path (a stronger condition than `beyond_redundancy_band`).
+    settlement_no_alt_count: usize,
+    /// Secondary frame: the realised stride-sampled pair count F2/the
+    /// redundancy control ran over.
+    settlement_path_sample: usize,
+    /// Secondary frame: this seed's settlement count.
+    settlement_settlements: usize,
+    /// Secondary frame: this seed's exhaustive reachable-pair count (F1's
+    /// own population, before the pass-2 stride).
+    settlement_pairs: usize,
+}
+
+/// Builds one seed's [`FullSeedReadout`]. Mirrors `the_fares_pilot`'s
+/// per-seed body (which is left untouched per the task instruction — this
+/// is a deliberate, disclosed duplication rather than a refactor of an
+/// already-committed, already-reported test) but aggregates into a struct
+/// instead of printing, and additionally buckets F1's swings by latitude
+/// for F3.
+fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
+    let sample = build_sample(seed, wc);
+
+    // ---------- Geographic frame (primary) ----------
+    let land_cells: Vec<CellId> = sample
+        .geo
+        .cells()
+        .filter(|&c| *sample.dry.get(c) != u64::MAX)
+        .collect();
+    let geo_stride = geo_landmark_stride(land_cells.len());
+    let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+    let landmark_count = landmarks.len();
+    let band_count = SEPARATION_BANDS_DEG.len();
+
+    let landmark_dry_sweeps: Vec<CostSweep> = landmarks
+        .iter()
+        .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
+        .collect();
+
+    let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+    for i in 0..landmark_count {
+        for &target in SEPARATION_BANDS_DEG {
+            let (dst, _actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
+            pair_dst.push(dst);
+        }
+    }
+
+    let mut geo_min = vec![f64::INFINITY; landmark_count * band_count];
+    let mut geo_max = vec![f64::NEG_INFINITY; landmark_count * band_count];
+    let mut geo_argmin_day = vec![0usize; landmark_count * band_count];
+    let mut geo_argmax_day = vec![0usize; landmark_count * band_count];
+    for day_idx in 0..SAMPLE_DAYS {
+        let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
+        let wet = weathered_cost(&sample, day);
+        for (i, &src) in landmarks.iter().enumerate() {
+            let d_wet = least_cost_from(&sample.geo, &wet, src);
+            for k in 0..band_count {
+                let idx = i * band_count + k;
+                if let Some(c) = d_wet.cost_to(pair_dst[idx]) {
+                    let c = c as f64;
+                    if c.total_cmp(&geo_min[idx]).is_lt() {
+                        geo_min[idx] = c;
+                        geo_argmin_day[idx] = day_idx;
+                    }
+                    if c.total_cmp(&geo_max[idx]).is_gt() {
+                        geo_max[idx] = c;
+                        geo_argmax_day[idx] = day_idx;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut geo_swings_by_band: Vec<Vec<f64>> = vec![Vec::new(); band_count];
+    let mut geo_reachable_by_band: Vec<Vec<usize>> = vec![Vec::new(); band_count];
+    for (i, landmark_dry_sweep) in landmark_dry_sweeps.iter().enumerate() {
+        for k in 0..band_count {
+            let idx = i * band_count + k;
+            if !geo_min[idx].is_finite() {
+                continue;
+            }
+            let dst = pair_dst[idx];
+            if let Some(a) = landmark_dry_sweep.cost_to(dst)
+                && a > 0
+            {
+                geo_swings_by_band[k].push((geo_max[idx] - geo_min[idx]) / a as f64);
+                geo_reachable_by_band[k].push(i);
+            }
+        }
+    }
+
+    let mut geo_median_swing = [f64::NAN; 5];
+    let mut geo_reroute_frac = [f64::NAN; 5];
+    let mut geo_pairs = [0usize; 5];
+    let mut geo_median_redundancy = [f64::NAN; 5];
+    let mut geo_max_redundancy = [f64::NAN; 5];
+    let mut geo_adjacent_pairs = [0usize; 5];
+    let mut geo_redundancy_sample = [0usize; 5];
+    let mut geo_no_alt_count = [0usize; 5];
+    let mut geo_beyond_redundancy_band = [0usize; 5];
+    let mut f3_lat_swings: [Vec<f64>; 3] = Default::default();
+
+    for (k, (reachable, swings)) in geo_reachable_by_band
+        .into_iter()
+        .zip(geo_swings_by_band)
+        .enumerate()
+    {
+        geo_pairs[k] = reachable.len();
+
+        // F3: bucket this band's swings by the SOURCE landmark's |latitude|
+        // — only for the four bands that feed the hypotheses (§6b excludes
+        // 80° from F3 the same as F1/F2/F-mono).
+        if k < HYPOTHESIS_BAND_COUNT {
+            for (&i, &s) in reachable.iter().zip(swings.iter()) {
+                let lat_abs = sample.geo.coord(landmarks[i]).latitude.abs();
+                f3_lat_swings[lat_band_index(lat_abs)].push(s);
+            }
+        }
+
+        if !swings.is_empty() {
+            let mut sorted = swings;
+            sorted.sort_by(f64::total_cmp);
+            geo_median_swing[k] = median(&sorted);
+        }
+
+        // F2 + the redundancy control, over every reachable pair in this
+        // band (GEO_LANDMARK_STRIDE_TARGET already bounds the population,
+        // no further stride needed — matches the pilot exactly).
+        let mut rerouted = 0usize;
+        let mut adjacent = 0usize;
+        let mut redundancy_sample = 0usize;
+        let mut redundancy_ratios: Vec<f64> = Vec::new();
+        let mut no_alt = 0usize;
+        let mut beyond_band = 0usize;
+        for &i in &reachable {
+            let idx = i * band_count + k;
+            let src = landmarks[i];
+            let dst = pair_dst[idx];
+
+            // F2: path identity at this pair's own cheapest vs costliest
+            // sampled day. Adjacent pairs are DELIBERATELY KEPT in this
+            // denominator — same rule the settlement frame below follows,
+            // and the pilot (fix round 3) established: an adjacent pair
+            // structurally cannot re-route (only one edge exists), so
+            // keeping it makes reroute_frac conservative, never inflated.
+            // Do not exclude it here to "match" the redundancy control's
+            // exclusion, which is unrelated.
+            let day_a = geo_argmin_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+            let day_b = geo_argmax_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+            let field_a = weathered_cost(&sample, day_a);
+            let field_b = weathered_cost(&sample, day_b);
+            let path_a = least_cost_from(&sample.geo, &field_a, src).path_to(dst);
+            let path_b = least_cost_from(&sample.geo, &field_b, src).path_to(dst);
+            assert!(
+                path_a.is_some() && path_b.is_some(),
+                "seed {seed} geo band {k} landmark {i} lost reachability under weathering \
+                 (the keystone's guarantee that weathering never makes a passable cell \
+                 impassable should preclude this)"
+            );
+            if path_a != path_b {
+                rerouted += 1;
+            }
+
+            // Redundancy control: on the DRY field, the best path's
+            // interior blocked, re-swept. Adjacent pairs (empty interior)
+            // counted and EXCLUDED, per fix round 3.
+            let best_cost = landmark_dry_sweeps[i]
+                .cost_to(dst)
+                .expect("geo_reachable only holds pairs with a finite dry cost");
+            let best_path = landmark_dry_sweeps[i]
+                .path_to(dst)
+                .expect("a finite dry cost implies a dry path");
+            if best_path.len() == 2 {
+                adjacent += 1;
+                continue;
+            }
+            redundancy_sample += 1;
+            let blocked: BTreeSet<CellId> =
+                best_path[1..best_path.len() - 1].iter().copied().collect();
+            let scratch = CellMap::from_fn(&sample.geo, |c| {
+                if blocked.contains(&c) {
+                    u64::MAX
+                } else {
+                    *sample.dry.get(c)
+                }
+            });
+            match least_cost_from(&sample.geo, &scratch, src).cost_to(dst) {
+                Some(second_best) => {
+                    let ratio = second_best as f64 / best_cost as f64;
+                    if ratio.total_cmp(&REDUNDANCY_BAND).is_gt() {
+                        beyond_band += 1;
+                    }
+                    redundancy_ratios.push(ratio);
+                }
+                None => no_alt += 1,
+            }
+        }
+        assert_eq!(
+            redundancy_sample,
+            redundancy_ratios.len() + no_alt,
+            "seed {seed} geo band {k}: every non-adjacent pair must land in exactly one \
+             of redundancy_ratios or no_alt"
+        );
+        geo_reroute_frac[k] = if reachable.is_empty() {
+            f64::NAN
+        } else {
+            rerouted as f64 / reachable.len() as f64
+        };
+        geo_adjacent_pairs[k] = adjacent;
+        geo_redundancy_sample[k] = redundancy_sample;
+        geo_no_alt_count[k] = no_alt;
+        geo_beyond_redundancy_band[k] = beyond_band;
+        if !redundancy_ratios.is_empty() {
+            geo_median_redundancy[k] = median(&redundancy_ratios);
+            redundancy_ratios.sort_by(f64::total_cmp);
+            geo_max_redundancy[k] = redundancy_ratios.last().copied().unwrap_or(f64::NAN);
+        }
+    }
+
+    let f3_band_swings: [Option<f64>; 3] = std::array::from_fn(|b| {
+        if f3_lat_swings[b].is_empty() {
+            None
+        } else {
+            Some(median(&f3_lat_swings[b]))
+        }
+    });
+
+    // ---------- Settlement-pair frame (secondary; §4a, §6a) ----------
+    let n = sample.settlements.len();
+    let dry_sweeps: Vec<CostSweep> = sample
+        .settlements
+        .iter()
+        .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
+        .collect();
+
+    let mut settlement_min = vec![f64::INFINITY; n * n];
+    let mut settlement_max = vec![f64::NEG_INFINITY; n * n];
+    let mut settlement_argmin_day = vec![0usize; n * n];
+    let mut settlement_argmax_day = vec![0usize; n * n];
+    for day_idx in 0..SAMPLE_DAYS {
+        let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
+        let wet = weathered_cost(&sample, day);
+        for (i, &src) in sample.settlements.iter().enumerate() {
+            let d_wet = least_cost_from(&sample.geo, &wet, src);
+            for (j, &dst) in sample.settlements.iter().enumerate() {
+                if i == j {
+                    continue;
+                }
+                if let Some(c) = d_wet.cost_to(dst) {
+                    let c = c as f64;
+                    let idx = i * n + j;
+                    if c.total_cmp(&settlement_min[idx]).is_lt() {
+                        settlement_min[idx] = c;
+                        settlement_argmin_day[idx] = day_idx;
+                    }
+                    if c.total_cmp(&settlement_max[idx]).is_gt() {
+                        settlement_max[idx] = c;
+                        settlement_argmax_day[idx] = day_idx;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut swings: Vec<f64> = Vec::new();
+    let mut reachable_pairs: Vec<(usize, usize)> = Vec::new();
+    for (i, dry_sweep) in dry_sweeps.iter().enumerate() {
+        for (j, &dst) in sample.settlements.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+            let idx = i * n + j;
+            if !settlement_min[idx].is_finite() {
+                continue;
+            }
+            if let Some(a) = dry_sweep.cost_to(dst)
+                && a > 0
+            {
+                swings.push((settlement_max[idx] - settlement_min[idx]) / a as f64);
+                reachable_pairs.push((i, j));
+            }
+        }
+    }
+    let settlement_pairs = swings.len();
+    let settlement_median_swing = if swings.is_empty() {
+        f64::NAN
+    } else {
+        median(&swings)
+    };
+    swings.sort_by(f64::total_cmp);
+    let settlement_max_swing = swings.last().copied().unwrap_or(f64::NAN);
+
+    let stride = path_sample_stride(reachable_pairs.len());
+    let mut path_sample_count = 0usize;
+    let mut rerouted = 0usize;
+    let mut adjacent_pairs = 0usize;
+    let mut redundancy_sample_count = 0usize;
+    let mut redundancy_ratios: Vec<f64> = Vec::new();
+    let mut no_alternative = 0usize;
+    for &(i, j) in reachable_pairs.iter().step_by(stride) {
+        path_sample_count += 1;
+        let src = sample.settlements[i];
+        let dst = sample.settlements[j];
+        let idx = i * n + j;
+
+        let day_a = settlement_argmin_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+        let day_b = settlement_argmax_day[idx] as f64 * sample.year_length / SAMPLE_DAYS as f64;
+        let field_a = weathered_cost(&sample, day_a);
+        let field_b = weathered_cost(&sample, day_b);
+        let path_a = least_cost_from(&sample.geo, &field_a, src).path_to(dst);
+        let path_b = least_cost_from(&sample.geo, &field_b, src).path_to(dst);
+        assert!(
+            path_a.is_some() && path_b.is_some(),
+            "seed {seed} settlement pair ({i},{j}) lost reachability under weathering"
+        );
+        if path_a != path_b {
+            rerouted += 1;
+        }
+
+        let best_cost = dry_sweeps[i]
+            .cost_to(dst)
+            .expect("reachable_pairs only holds pairs with a finite dry cost");
+        let best_path = dry_sweeps[i]
+            .path_to(dst)
+            .expect("a finite dry cost implies a dry path");
+        if best_path.len() == 2 {
+            adjacent_pairs += 1;
+            continue;
+        }
+        redundancy_sample_count += 1;
+        let blocked: BTreeSet<CellId> = best_path[1..best_path.len() - 1].iter().copied().collect();
+        let scratch = CellMap::from_fn(&sample.geo, |c| {
+            if blocked.contains(&c) {
+                u64::MAX
+            } else {
+                *sample.dry.get(c)
+            }
+        });
+        match least_cost_from(&sample.geo, &scratch, src).cost_to(dst) {
+            Some(second_best) => {
+                redundancy_ratios.push(second_best as f64 / best_cost as f64);
+            }
+            None => no_alternative += 1,
+        }
+    }
+    assert_eq!(
+        redundancy_sample_count,
+        redundancy_ratios.len() + no_alternative,
+        "seed {seed} settlement frame: every non-adjacent sampled pair must land in \
+         exactly one of redundancy_ratios or no_alternative"
+    );
+    let settlement_median_redundancy = if redundancy_ratios.is_empty() {
+        f64::NAN
+    } else {
+        median(&redundancy_ratios)
+    };
+    redundancy_ratios.sort_by(f64::total_cmp);
+    let settlement_max_redundancy = redundancy_ratios.last().copied().unwrap_or(f64::NAN);
+    let settlement_reroute_frac = if path_sample_count == 0 {
+        f64::NAN
+    } else {
+        rerouted as f64 / path_sample_count as f64
+    };
+
+    FullSeedReadout {
+        geo_median_swing,
+        geo_reroute_frac,
+        geo_pairs,
+        geo_median_redundancy,
+        geo_max_redundancy,
+        geo_adjacent_pairs,
+        geo_redundancy_sample,
+        geo_no_alt_count,
+        geo_beyond_redundancy_band,
+        f3_band_swings,
+        settlement_median_swing,
+        settlement_max_swing,
+        settlement_reroute_frac,
+        settlement_median_redundancy,
+        settlement_max_redundancy,
+        settlement_adjacent_pairs: adjacent_pairs,
+        settlement_redundancy_sample: redundancy_sample_count,
+        settlement_no_alt_count: no_alternative,
+        settlement_path_sample: path_sample_count,
+        settlement_settlements: n,
+        settlement_pairs,
+    }
+}
+
 mod weathering {
     use super::*;
 
@@ -871,6 +1396,373 @@ mod weathering {
             println!(
                 "PILOT-SETTLEMENT seed={seed} settlements={n} pairs={} median_swing={median_swing:.6} max_swing={max_swing:.6} median_markup={median_markup:.6} max_markup={max_markup:.6} path_sample={path_sample_count} reroute_frac={reroute_frac:.6} adjacent_pairs={adjacent_pairs} redundancy_sample={redundancy_sample_count} median_redundancy={median_redundancy:.6} max_redundancy={max_redundancy:.6} no_alt_count={no_alternative}",
                 swings.len()
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "heavy: the full 200-seed preregistered readout (~33 minutes in release); spec §6b"]
+    fn the_fares_preregistered_readout() {
+        // THE FREEZE (spec §6b, commit a6e28e5e — frozen before this run,
+        // the sole authority for every floor and boundary below). Four
+        // hypotheses, all at the geographic (primary) frame unless noted:
+        //
+        // F1 (§6b): pooled median seasonal cost swing at the 40° band
+        //           (SEPARATION_BANDS_DEG[HEADLINE_BAND_IDX]) >= 0.05.
+        //           EXPECTED TO FAIL -- the pilot measured 0.30-0.67%
+        //           pooled across bands, and that expectation is frozen in
+        //           the spec BEFORE this run so the failure cannot look
+        //           like a floor chosen to be cleared. Do not weaken this
+        //           floor, do not invert the assertion, do not #[ignore]
+        //           the failing case, and do not "fix" it by touching
+        //           WEATHER_FACTOR_FLOOR, the surcharge formula,
+        //           MUD_PENALTY, SNOW_PENALTY, or either substrate default.
+        //           A falsified preregistered hypothesis is this
+        //           campaign's finding, not a bug to chase.
+        // F2 (§6b): pooled re-routing fraction at the 40° band >= 0.10.
+        //           Pilot: 16.27% pooled -- expected to pass comfortably.
+        // F3 (§6b, unchanged from the original spec): the latitude
+        //           ordering (equatorial > temperate > polar), on
+        //           LAT_BANDS's boundaries (redeclared verbatim from
+        //           the_mire_calibration.rs:151), pooled across the four
+        //           included separation bands, compared against The
+        //           Mire's measured equatorial 0.0224 > temperate 0.0021 >
+        //           polar 0.0000. No numeric floor -- the ORDERING is the
+        //           claim.
+        // F-mono (§6b, added at freeze time, labelled PILOT-SUGGESTED not
+        //           pre-held): pooled F1 and pooled F2 are each
+        //           non-decreasing across the four included bands
+        //           (5/10/20/40 degrees). POOLED ONLY -- §6b records that
+        //           per-seed monotonicity is already known to be
+        //           imperfect (F1 was strictly monotonic in only 2 of 5
+        //           pilot seeds, and dropped ~22% at the top band in seed
+        //           4), so this is not asserted per seed.
+        //
+        // The 80° band (index 4) is measured and reported exactly like
+        // every other band but excluded from all four hypotheses (§6b:
+        // three of five pilot seeds yielded 0, 2, and 7 pairs there).
+        //
+        // "Pooled" follows the_mire_calibration.rs's own H1 convention:
+        // one statistic per seed, then the MEDIAN of those 200 values --
+        // never a raw pool of every underlying pair across every seed, and
+        // never an unweighted mean (which is what this campaign's earlier
+        // 5-seed pilot report used informally; the frozen hypotheses use
+        // the established median-of-per-seed-statistics convention
+        // instead, for consistency with The Mire's own H1/H2).
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let mut readouts: Vec<FullSeedReadout> = Vec::with_capacity(200);
+        for seed in PREREGISTERED_SEEDS {
+            readouts.push(build_full_readout(seed, &wc));
+            // Per-seed progress: The Mire (and this campaign's own pilot
+            // rounds) lost real wall-clock to runs with no visible progress
+            // and nothing recoverable. Mandatory per spec §7 / the task
+            // brief.
+            eprintln!("PROGRESS seed={seed}/200 done");
+        }
+
+        let band_count = SEPARATION_BANDS_DEG.len();
+
+        // Pooled F1/F2, per band: median across seeds of each seed's
+        // per-band statistic, skipping seeds that had no reachable pair at
+        // that band (NaN).
+        let pooled_f1: Vec<f64> = (0..band_count)
+            .map(|k| {
+                let vals: Vec<f64> = readouts
+                    .iter()
+                    .map(|r| r.geo_median_swing[k])
+                    .filter(|v| !v.is_nan())
+                    .collect();
+                if vals.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&vals)
+                }
+            })
+            .collect();
+        let pooled_f2: Vec<f64> = (0..band_count)
+            .map(|k| {
+                let vals: Vec<f64> = readouts
+                    .iter()
+                    .map(|r| r.geo_reroute_frac[k])
+                    .filter(|v| !v.is_nan())
+                    .collect();
+                if vals.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&vals)
+                }
+            })
+            .collect();
+        let total_geo_pairs: Vec<usize> = (0..band_count)
+            .map(|k| readouts.iter().map(|r| r.geo_pairs[k]).sum())
+            .collect();
+
+        // Redundancy diagnostics, per band: pooled ratio (median across
+        // seeds of each seed's median), totals for the count fields.
+        let pooled_redundancy: Vec<f64> = (0..band_count)
+            .map(|k| {
+                let vals: Vec<f64> = readouts
+                    .iter()
+                    .map(|r| r.geo_median_redundancy[k])
+                    .filter(|v| !v.is_nan())
+                    .collect();
+                if vals.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&vals)
+                }
+            })
+            .collect();
+        let pooled_max_redundancy: Vec<f64> = (0..band_count)
+            .map(|k| {
+                let vals: Vec<f64> = readouts
+                    .iter()
+                    .map(|r| r.geo_max_redundancy[k])
+                    .filter(|v| !v.is_nan())
+                    .collect();
+                if vals.is_empty() {
+                    f64::NAN
+                } else {
+                    median(&vals)
+                }
+            })
+            .collect();
+        let total_adjacent: Vec<usize> = (0..band_count)
+            .map(|k| readouts.iter().map(|r| r.geo_adjacent_pairs[k]).sum())
+            .collect();
+        let total_redundancy_sample: Vec<usize> = (0..band_count)
+            .map(|k| readouts.iter().map(|r| r.geo_redundancy_sample[k]).sum())
+            .collect();
+        let total_no_alt: Vec<usize> = (0..band_count)
+            .map(|k| readouts.iter().map(|r| r.geo_no_alt_count[k]).sum())
+            .collect();
+        let total_beyond_band: Vec<usize> = (0..band_count)
+            .map(|k| {
+                readouts
+                    .iter()
+                    .map(|r| r.geo_beyond_redundancy_band[k])
+                    .sum()
+            })
+            .collect();
+
+        // F3: pooled median swing per latitude band (median across seeds
+        // of each seed's per-latitude-band median, pooled over the four
+        // included separation bands within each seed already).
+        let f3_pooled: [f64; 3] = std::array::from_fn(|b| {
+            let vals: Vec<f64> = readouts
+                .iter()
+                .filter_map(|r| r.f3_band_swings[b])
+                .collect();
+            if vals.is_empty() {
+                f64::NAN
+            } else {
+                median(&vals)
+            }
+        });
+
+        // Secondary settlement-pair frame: pooled median swing/reroute,
+        // reported alongside (never a hypothesis).
+        let settlement_swings: Vec<f64> = readouts
+            .iter()
+            .map(|r| r.settlement_median_swing)
+            .filter(|v| !v.is_nan())
+            .collect();
+        let pooled_settlement_swing = if settlement_swings.is_empty() {
+            f64::NAN
+        } else {
+            median(&settlement_swings)
+        };
+        let settlement_max_swings: Vec<f64> = readouts
+            .iter()
+            .map(|r| r.settlement_max_swing)
+            .filter(|v| !v.is_nan())
+            .collect();
+        let pooled_settlement_max_swing = if settlement_max_swings.is_empty() {
+            f64::NAN
+        } else {
+            median(&settlement_max_swings)
+        };
+        let settlement_reroutes: Vec<f64> = readouts
+            .iter()
+            .map(|r| r.settlement_reroute_frac)
+            .filter(|v| !v.is_nan())
+            .collect();
+        let pooled_settlement_reroute = if settlement_reroutes.is_empty() {
+            f64::NAN
+        } else {
+            median(&settlement_reroutes)
+        };
+        let settlement_median_redundancies: Vec<f64> = readouts
+            .iter()
+            .map(|r| r.settlement_median_redundancy)
+            .filter(|v| !v.is_nan())
+            .collect();
+        let pooled_settlement_median_redundancy = if settlement_median_redundancies.is_empty() {
+            f64::NAN
+        } else {
+            median(&settlement_median_redundancies)
+        };
+        let settlement_max_redundancies: Vec<f64> = readouts
+            .iter()
+            .map(|r| r.settlement_max_redundancy)
+            .filter(|v| !v.is_nan())
+            .collect();
+        let pooled_settlement_max_redundancy = if settlement_max_redundancies.is_empty() {
+            f64::NAN
+        } else {
+            median(&settlement_max_redundancies)
+        };
+        let total_settlements: usize = readouts.iter().map(|r| r.settlement_settlements).sum();
+        let total_settlement_pairs: usize = readouts.iter().map(|r| r.settlement_pairs).sum();
+        let total_settlement_adjacent: usize =
+            readouts.iter().map(|r| r.settlement_adjacent_pairs).sum();
+        let total_settlement_redundancy_sample: usize = readouts
+            .iter()
+            .map(|r| r.settlement_redundancy_sample)
+            .sum();
+        let total_settlement_no_alt: usize =
+            readouts.iter().map(|r| r.settlement_no_alt_count).sum();
+        let total_settlement_path_sample: usize =
+            readouts.iter().map(|r| r.settlement_path_sample).sum();
+
+        // ---------------- The readout block ----------------
+        eprintln!("=== The Fare: preregistered readout (200 seeds) ===");
+        eprintln!(
+            "F1 floor = {F1_FLOOR_AT_40_DEG} at band_deg={:.1} (spec §6b, EXPECTED TO FAIL)",
+            SEPARATION_BANDS_DEG[HEADLINE_BAND_IDX]
+        );
+        eprintln!(
+            "F2 floor = {F2_FLOOR_AT_40_DEG} at band_deg={:.1} (spec §6b)",
+            SEPARATION_BANDS_DEG[HEADLINE_BAND_IDX]
+        );
+        eprintln!("redundancy band = {REDUNDANCY_BAND}x (spec §6b, reporting-only in this test)");
+        for k in 0..SEPARATION_BANDS_DEG.len() {
+            let hypothesis_note = if k < HYPOTHESIS_BAND_COUNT {
+                ""
+            } else {
+                " (excluded from all hypotheses, §6b)"
+            };
+            eprintln!(
+                "band_deg={:.1}{hypothesis_note}: pooled_F1(median_swing)={:.6} \
+                 pooled_F2(reroute_frac)={:.6} total_geo_pairs={} \
+                 pooled_median_redundancy={:.6} pooled_max_redundancy={:.6} \
+                 total_adjacent={} total_redundancy_sample={} total_no_alt={} \
+                 total_beyond_{REDUNDANCY_BAND}x={}",
+                SEPARATION_BANDS_DEG[k],
+                pooled_f1[k],
+                pooled_f2[k],
+                total_geo_pairs[k],
+                pooled_redundancy[k],
+                pooled_max_redundancy[k],
+                total_adjacent[k],
+                total_redundancy_sample[k],
+                total_no_alt[k],
+                total_beyond_band[k],
+            );
+        }
+        eprintln!(
+            "F3 (pooled across 5/10/20/40 deg bands): equatorial={:.6} temperate={:.6} \
+             polar={:.6} (The Mire: equatorial 0.0224 > temperate 0.0021 > polar 0.0000)",
+            f3_pooled[0], f3_pooled[1], f3_pooled[2]
+        );
+        eprintln!(
+            "F-mono: pooled_F1 by band = {:?}",
+            &pooled_f1[..HYPOTHESIS_BAND_COUNT]
+        );
+        eprintln!(
+            "F-mono: pooled_F2 by band = {:?}",
+            &pooled_f2[..HYPOTHESIS_BAND_COUNT]
+        );
+        eprintln!(
+            "PILOT-SETTLEMENT (secondary, {total_settlements} settlements pooled, \
+             {total_settlement_pairs} pairs pooled, {total_settlement_path_sample} \
+             path-sampled): pooled_median_swing={pooled_settlement_swing:.6} \
+             pooled_max_swing={pooled_settlement_max_swing:.6} \
+             pooled_reroute_frac={pooled_settlement_reroute:.6} \
+             pooled_median_redundancy={pooled_settlement_median_redundancy:.6} \
+             pooled_max_redundancy={pooled_settlement_max_redundancy:.6} \
+             total_adjacent={total_settlement_adjacent} \
+             total_redundancy_sample={total_settlement_redundancy_sample} \
+             total_no_alt={total_settlement_no_alt}"
+        );
+
+        // ---------------- F1: EXPECTED TO FAIL ----------------
+        let f1_measured = pooled_f1[HEADLINE_BAND_IDX];
+        assert!(
+            f1_measured >= F1_FLOOR_AT_40_DEG,
+            "F1 floor: pooled median seasonal cost swing at the 40-degree band was \
+             {f1_measured:.6}, short of the preregistered floor {F1_FLOOR_AT_40_DEG} -- \
+             THIS IS A FINDING, NOT A BUG. Spec §6b recorded this exact expectation \
+             before the 200-seed run: the 5-seed pilot measured 0.30-0.67% pooled \
+             across bands, well under a floor anchored to §5a's own doubling scale, \
+             so failure here was predicted in the spec BEFORE this run rather than \
+             discovered after it. Do not weaken this floor, do not invert this \
+             assertion, do not #[ignore] this test to quiet it, and do not retune \
+             WEATHER_FACTOR_FLOOR, the surcharge formula, MUD_PENALTY, SNOW_PENALTY, \
+             or either substrate default to rescue it -- weather's cost effect on a \
+             single route, even pooled over a full year and 200 worlds, is real but \
+             small relative to journeys' overall cost, and that is the headline."
+        );
+
+        // ---------------- F2 ----------------
+        let f2_measured = pooled_f2[HEADLINE_BAND_IDX];
+        assert!(
+            f2_measured >= F2_FLOOR_AT_40_DEG,
+            "F2 floor: pooled re-routing fraction at the 40-degree band was \
+             {f2_measured:.6}, short of the preregistered floor {F2_FLOOR_AT_40_DEG} -- \
+             a real finding, not a test bug: weather may not produce enough spatial \
+             structure relative to terrain to change which road is cheapest at \
+             population scale, even though the 5-seed pilot measured 16.27% pooled."
+        );
+
+        // ---------------- F3: the ordering is the claim, no numeric floor ----------------
+        let f3_ordering_holds = f3_pooled[0] > f3_pooled[1] && f3_pooled[1] > f3_pooled[2];
+        eprintln!(
+            "F3 verdict: {} (measured equatorial={:.6} temperate={:.6} polar={:.6})",
+            if f3_ordering_holds {
+                "HOLDS"
+            } else {
+                "FALSIFIED"
+            },
+            f3_pooled[0],
+            f3_pooled[1],
+            f3_pooled[2]
+        );
+        assert!(
+            f3_ordering_holds,
+            "F3 (the latitude ordering): measured equatorial={:.6} temperate={:.6} \
+             polar={:.6} does not reproduce The Mire's equatorial > temperate > polar \
+             ordering on the cost instrument -- a real finding about whether the \
+             polar zero was a property of the world or of The Mire's threshold, not \
+             a test bug. §5a's mechanism (a permanently frozen cell has constant \
+             conductance, hence constant cost) predicted this ordering SHOULD survive \
+             a better instrument; if it does not, that prediction is falsified and \
+             belongs in the chronicle as such.",
+            f3_pooled[0], f3_pooled[1], f3_pooled[2]
+        );
+
+        // ---------------- F-mono: POOLED ONLY, both F1 and F2 ----------------
+        for w in pooled_f1[..HYPOTHESIS_BAND_COUNT].windows(2) {
+            assert!(
+                w[0].total_cmp(&w[1]).is_le(),
+                "F-mono (F1 half) falsified: pooled median swing did not rise \
+                 monotonically across the included separation bands -- pooled_F1 by \
+                 band = {:?}. This was PILOT-SUGGESTED (the 5-seed pilot found F1 \
+                 rising x2.21 from 5 to 40 degrees), stated as a pooled claim BECAUSE \
+                 per-seed monotonicity was already known to be imperfect (strictly \
+                 monotonic in only 2 of 5 pilot seeds). A falsified pooled trend at \
+                 200 seeds is a genuine finding about the mechanism, not a bug.",
+                &pooled_f1[..HYPOTHESIS_BAND_COUNT]
+            );
+        }
+        for w in pooled_f2[..HYPOTHESIS_BAND_COUNT].windows(2) {
+            assert!(
+                w[0].total_cmp(&w[1]).is_le(),
+                "F-mono (F2 half) falsified: pooled re-routing fraction did not rise \
+                 monotonically across the included separation bands -- pooled_F2 by \
+                 band = {:?}. Same PILOT-SUGGESTED, pooled-only status as the F1 half \
+                 above.",
+                &pooled_f2[..HYPOTHESIS_BAND_COUNT]
             );
         }
     }
