@@ -14,7 +14,7 @@
 //! World-building idiom reused verbatim from `demesne.rs`/`waterline_probe.rs`
 //! (`hornvale_worldgen::build_world`, `WorldComponents::assemble`,
 //! `terrain_of`/`climate_of`/`sky_of` "reconstruct, never store"). The
-//! per-species K comes from [`hornvale_worldgen::niche_per_species_k`],
+//! per-species K comes from [`hornvale_worldgen::per_species_suitability`],
 //! whose returned `u32` is a **build-local dense index, not identity** (see
 //! its doc comment) — it is the position in the `species_biosphere` slice
 //! passed in, so the index -> [`hornvale_kernel::KindId`] mapping here is
@@ -37,7 +37,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed, quantize};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, niche_per_species_k,
+    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
     sky_of, terrain_of,
 };
 use std::collections::BTreeMap;
@@ -78,8 +78,8 @@ fn percentile(sorted: &[f64], p: f64) -> f64 {
 fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     // The build-local dense index -> KindId mapping, built ONCE from the
-    // exact same `wc.biosphere` ordering passed to `niche_per_species_k`
-    // below (ascending-KindId order, per `niche_per_species_k`'s doc
+    // exact same `wc.biosphere` ordering passed to `per_species_suitability`
+    // below (ascending-KindId order, per `per_species_suitability`'s doc
     // comment) so every seed's returned `u32` tags resolve to the correct
     // kind. Verified below in the mandatory inspection step (kobold ->
     // highland, no kind -> predominantly marine).
@@ -124,7 +124,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
             hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
         };
 
-        let ks = niche_per_species_k(
+        let ks = per_species_suitability(
             geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
         );
         let biome_map = climate.biome_map();

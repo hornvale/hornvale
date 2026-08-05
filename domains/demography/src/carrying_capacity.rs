@@ -4,15 +4,30 @@
 //! calibrated once (the-gathering, Task 8) against the real biomass-by-
 //! latitude gradient and are now frozen as save-format constants.
 
+use hornvale_kernel::ecology::CapacityMap;
 use hornvale_kernel::{CellId, CellMap, Geosphere};
 
 /// The bare per-cell climate/terrain inputs the composition root assembles.
 /// Demography never imports those domains; it sees only this.
-/// type-audit: bare-ok(flag: habitable), pending(wave-3: temperature_c), bare-ok(ratio: moisture), bare-ok(ratio: freshwater), bare-ok(flag: coastal), bare-ok(ratio: hostility)
+/// type-audit: bare-ok(flag: is_land), pending(wave-3: temperature_c), bare-ok(ratio: moisture), bare-ok(ratio: freshwater), bare-ok(flag: coastal), bare-ok(ratio: hostility)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CarryingInput {
-    /// Whether the cell is habitable (land, water, tolerable season).
-    pub habitable: bool,
+    /// Whether the cell is dry land (elevation at or above sea level).
+    ///
+    /// **This is the ONLY hard gate on productivity** (decision 0103's
+    /// decomposition applied to a conflated flag). It was `habitable`, carrying
+    /// `is_habitable`'s three conjuncts at once — land AND a temperate band AND
+    /// a moisture floor — which made a hard cut out of two predicates that the
+    /// formula below *already grades smoothly*: `npp` is `min(temp_response,
+    /// moisture)` and aridity rides `hostility`. Only land genuinely admits no
+    /// gradient, so only land stays a flag.
+    ///
+    /// The deeper reason the old name was wrong: **habitability is a relation
+    /// between a species and a location, not a property of the location alone.**
+    /// Whether ground is dry IS a property of the ground, so it belongs here as a
+    /// flag; whether ground is *livable* depends on who is asking, so it belongs
+    /// in the per-species suitability term and nowhere else.
+    pub is_land: bool,
     /// Annual-mean temperature, °C.
     pub temperature_c: f64,
     /// Moisture in `[0, 1]`.
@@ -48,13 +63,24 @@ fn temp_response(t: f64) -> f64 {
     (1.0 - (t - TEMP_OPTIMUM_C).abs() / TEMP_TOLERANCE_C).clamp(0.0, 1.0)
 }
 
-/// The carrying-capacity field: `0.0` on uninhabitable cells, else the NPP
-/// proxy scaled by freshwater, coast, and hostility terms.
-/// type-audit: bare-ok(count: return)
-pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> CellMap<f64> {
-    CellMap::from_fn(geo, |c: CellId| {
+/// The carrying-capacity field: `0.0` at sea, else the NPP proxy scaled by
+/// freshwater, coast, and hostility terms.
+///
+/// **Land is the only hard gate.** Temperature and moisture grade to zero on
+/// their own (`npp = min(temp_response, moisture)`, zero outside 2–42 °C and at
+/// zero moisture; aridity rides `hostility`), so the arid and very-hot bands the
+/// old `habitable` flag excluded outright are now *reachable at low capacity*
+/// rather than forbidden. The cold is still closed, by `temp_response` rather
+/// than by any flag — see [`temp_response`].
+///
+/// Returns a [`CapacityMap`] — a people-DENSITY with units — rather than a bare
+/// `CellMap<f64>`, per decision 0103. The type is what stops this field being
+/// interchanged with a dimensionless suitability, which is a 20–100× silent
+/// rescale that no guard in the workspace previously caught.
+pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> CapacityMap {
+    let raw = CellMap::from_fn(geo, |c: CellId| {
         let i = inputs.get(c);
-        if !i.habitable {
+        if !i.is_land {
             return 0.0;
         }
         // Miami NPP proxy: Liebig minimum of temperature and moisture responses.
@@ -64,7 +90,11 @@ pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> Ce
             + if i.coastal { COAST_BONUS } else { 0.0 };
         let k = BASE * npp * bonus * (1.0 - i.hostility.clamp(0.0, 1.0));
         k.max(0.0)
-    })
+    });
+    // `k.max(0.0)` above establishes the invariant the constructor validates, so
+    // this cannot fail; the constructor is still the only way in, so a future
+    // change to the formula is caught here rather than downstream.
+    CapacityMap::new(raw).expect("carrying capacity is non-negative and finite by construction")
 }
 
 #[cfg(test)]
@@ -72,9 +102,9 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
-    fn input(hab: bool, t: f64, m: f64, fw: f64, coast: bool, host: f64) -> CarryingInput {
+    fn input(land: bool, t: f64, m: f64, fw: f64, coast: bool, host: f64) -> CarryingInput {
         CarryingInput {
-            habitable: hab,
+            is_land: land,
             temperature_c: t,
             moisture: m,
             freshwater: fw,
@@ -84,21 +114,21 @@ mod tests {
     }
 
     #[test]
-    fn uninhabitable_is_zero_and_wet_temperate_beats_desert() {
+    fn sea_is_zero_and_wet_temperate_beats_desert() {
         let geo = Geosphere::new(2);
-        // cell 0 uninhabitable, 1 wet-temperate, 2 hot desert.
+        // cell 0 at sea, 1 wet-temperate land, 2 hot desert land.
         let inputs = CellMap::from_fn(&geo, |c| match c.0 {
             0 => input(false, 15.0, 0.8, 0.9, true, 0.0),
             1 => input(true, 15.0, 0.8, 0.9, true, 0.0),
             _ => input(true, 40.0, 0.05, 0.05, false, 0.8),
         });
         let k = carrying_capacity(&geo, &inputs);
-        assert_eq!(*k.get(CellId(0)), 0.0, "uninhabitable supports nobody");
+        assert_eq!(k.at(CellId(0)), 0.0, "the sea supports no settlers");
         assert!(
-            *k.get(CellId(1)) > *k.get(CellId(2)),
+            k.at(CellId(1)) > k.at(CellId(2)),
             "wet-temperate beats desert"
         );
-        assert!(*k.get(CellId(1)) >= 0.0 && *k.get(CellId(2)) >= 0.0);
+        assert!(k.at(CellId(1)) >= 0.0 && k.at(CellId(2)) >= 0.0);
     }
 
     #[test]
@@ -111,7 +141,7 @@ mod tests {
         });
         let k = carrying_capacity(&geo, &inputs);
         assert!(
-            *k.get(CellId(0)) < *k.get(CellId(1)),
+            k.at(CellId(0)) < k.at(CellId(1)),
             "the scarce factor caps K"
         );
     }

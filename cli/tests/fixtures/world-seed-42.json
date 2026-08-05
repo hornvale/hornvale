@@ -114475,7 +114475,7 @@
         "subject": 880,
         "predicate": "occ-site",
         "object": {
-          "Number": 11981.0
+          "Number": 13023.0
         },
         "place": 880,
         "day": 1950.0,
@@ -114565,7 +114565,7 @@
         "subject": 880,
         "predicate": "cell-id",
         "object": {
-          "Number": 11981.0
+          "Number": 13023.0
         },
         "place": 880,
         "day": 1950.0,
@@ -121038,6 +121038,16 @@
           "Entity": 749
         },
         "place": 878,
+        "day": 1975.0,
+        "provenance": "history/bake/v2"
+      },
+      {
+        "subject": 880,
+        "predicate": "pays-tribute-to",
+        "object": {
+          "Entity": 134
+        },
+        "place": 880,
         "day": 1975.0,
         "provenance": "history/bake/v2"
       },
@@ -132555,7 +132565,7 @@
         "subject": 880,
         "predicate": "name",
         "object": {
-          "Text": "Rooraxarora"
+          "Text": "Xoraxa"
         },
         "place": 880,
         "day": 0.0,
@@ -132575,7 +132585,7 @@
         "subject": 880,
         "predicate": "biome",
         "object": {
-          "Text": "temperate-forest"
+          "Text": "temperate-grassland"
         },
         "place": 880,
         "day": 0.0,
@@ -132585,7 +132595,7 @@
         "subject": 880,
         "predicate": "latitude",
         "object": {
-          "Number": 18.091794
+          "Number": 30.220048
         },
         "place": 880,
         "day": 0.0,
@@ -132595,7 +132605,7 @@
         "subject": 880,
         "predicate": "longitude",
         "object": {
-          "Number": 103.78825
+          "Number": 101.14293
         },
         "place": 880,
         "day": 0.0,
@@ -132605,7 +132615,7 @@
         "subject": 880,
         "predicate": "name-gloss",
         "object": {
-          "Text": "coast-temperate-forest"
+          "Text": "river"
         },
         "place": null,
         "day": 0.0,
@@ -136975,7 +136985,7 @@
         "subject": 880,
         "predicate": "founding-solstice-azimuth-degrees",
         "object": {
-          "Number": 88.990795
+          "Number": 88.889802
         },
         "place": null,
         "day": 0.0,

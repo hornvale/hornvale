@@ -16,7 +16,7 @@ The chief kobold settlement, Roo, holds 90 souls amid temperate-forest.
                                                                         
                                                                         
                                                                         
-                                                                        
+                                                        o               
               o                                        oo               
               oo                  ooo oo               ooo           o  
              oooo                     o           o                     

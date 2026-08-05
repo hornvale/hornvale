@@ -9,7 +9,7 @@
 //! against measured quantiles on all four axes, not just elevation. This
 //! file now reports p5/p15/p50/p85/p95 for temperature, moisture,
 //! insolation, and elevation, all four read from the identical
-//! [`hornvale_worldgen::Substrate`] `niche_per_species_k` scores a
+//! [`hornvale_worldgen::Substrate`] `per_species_suitability` scores a
 //! `ConditionNiche` against - see [`AxisSamples`]'s doc comment.
 //!
 //! **Task 6 extension (the preregistered readout, 2026-08-04):** the campaign's
@@ -21,7 +21,7 @@
 //! assertions). Two distinct quantities are measured and reported separately,
 //! per the task's ruling on not conflating them:
 //!
-//! - **Fit (K)** - `niche_per_species_k`'s raw per-species score, computed
+//! - **Fit (K)** - `per_species_suitability`'s raw per-species score, computed
 //!   independently per species. "Best-fit people on a stronghold" (H2) is a
 //!   comparison of this quantity.
 //! - **Competitive share** - `hornvale_demography::coexist::cell_share`'s
@@ -65,14 +65,14 @@
 //! `windows/worldgen/tests/non_void_roster.rs` (`hornvale_worldgen::build_world`,
 //! `WorldComponents::assemble`, `terrain_of`/`climate_of`/`sky_of`
 //! "reconstruct, never store"). The per-species K comes from
-//! [`hornvale_worldgen::niche_per_species_k`], whose returned `u32` is a
+//! [`hornvale_worldgen::per_species_suitability`], whose returned `u32` is a
 //! **build-local dense index, not identity** (see its doc comment) - it is
 //! the position in the `species_biosphere` slice passed in, so the index ->
 //! [`hornvale_kernel::KindId`] mapping here is rebuilt fresh, per seed, from
 //! that exact same `wc.biosphere.iter()` ordering.
 //!
 //! **"Settleable land"** is not a second, independently-chosen filter: K is 0
-//! on every submerged cell for the whole roster today (`niche_per_species_k`'s
+//! on every submerged cell for the whole roster today (`per_species_suitability`'s
 //! own doc, The Tumult's land mask), so "does at least one of the peoples
 //! passed to `measure_one` clear [`VIABILITY_FLOOR`] here" already separates
 //! occupiable land from both ocean and the uninhabitable land the condition
@@ -96,7 +96,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, niche_per_species_k,
+    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
     sky_of, substrate_field, terrain_of,
 };
 use std::collections::BTreeMap;
@@ -113,7 +113,7 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 /// The pre-human roster: `wc.biosphere` holds all 29 kinds (fauna and
 /// peoples together), but Task 1's baseline is about the five **peoples**
 /// human joins - so `measure_one` filters `wc.biosphere` down to exactly
-/// these before ever calling `niche_per_species_k`, rather than measuring
+/// these before ever calling `per_species_suitability`, rather than measuring
 /// "settleable" against the whole 29-kind fauna+peoples roster. Frozen as
 /// Task 1 shipped it; Task 6's readout uses [`PEOPLES_WITH_HUMAN`] instead,
 /// never this constant, so this population and its "settleable land" never
@@ -128,12 +128,12 @@ const PEOPLES_WITH_HUMAN: [&str; 6] =
     ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"];
 
 /// The four condition axes, sampled over the settleable-cell population, in
-/// the identical frame `niche_per_species_k` scores a `ConditionNiche`
+/// the identical frame `per_species_suitability` scores a `ConditionNiche`
 /// against - each field is a direct per-cell read of
 /// [`hornvale_worldgen::Substrate`] (via [`substrate_field`]), the exact
-/// struct `niche_per_species_k` builds internally and reads as `s.temperature_c`/
+/// struct `per_species_suitability` builds internally and reads as `s.temperature_c`/
 /// `s.moisture`/`s.insolation`/`s.elevation` (`windows/worldgen/src/lib.rs`,
-/// `niche_per_species_k`'s body). Task 5b (The Generalist re-authoring):
+/// `per_species_suitability`'s body). Task 5b (The Generalist re-authoring):
 /// elevation was already read this way by Task 1; temperature/moisture/
 /// insolation are new here, from the same source rather than a hand-rederived
 /// stand-in, so a unit mismatch ("a unit is not a frame") cannot creep in
@@ -156,9 +156,9 @@ struct AxisSamples {
 /// over the cells settleable by at least one of `peoples`.
 ///
 /// `axes` is that cell set's four condition-axis readings, in the identical
-/// frame [`niche_per_species_k`] scores a `ConditionNiche` against - see
+/// frame [`per_species_suitability`] scores a `ConditionNiche` against - see
 /// [`AxisSamples`]. `per_people_fits` maps each people's name to its own
-/// per-cell K (the raw `niche_per_species_k` output, computed independently
+/// per-cell K (the raw `per_species_suitability` output, computed independently
 /// per species - NOT a coexistence share) over that exact same cell set, one
 /// entry per settleable cell. `per_people_shares` maps each people's name to
 /// its own per-cell overlap-weighted competitive share
@@ -178,7 +178,7 @@ fn measure_one(
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     // The build-local dense index -> KindId mapping, built from the exact
     // same `wc.biosphere` ordering (filtered to `peoples`, so still
-    // ascending-KindId order) passed to `niche_per_species_k` below, per its
+    // ascending-KindId order) passed to `per_species_suitability` below, per its
     // doc comment, so the returned `u32` tags resolve to the correct kind.
     let kinds: Vec<KindId> = wc
         .biosphere
@@ -218,7 +218,7 @@ fn measure_one(
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
-    let ks = niche_per_species_k(
+    let ks = per_species_suitability(
         geo,
         &terrain,
         &climate,
@@ -227,7 +227,7 @@ fn measure_one(
         &regime,
         &bios,
     );
-    // The exact substrate `niche_per_species_k` builds internally (same
+    // The exact substrate `per_species_suitability` builds internally (same
     // geo/terrain/climate/obliquity/insolation_scalar/regime) - not a
     // hand-rederived stand-in, so `axes` is guaranteed to be in the frame the
     // response curve sees.

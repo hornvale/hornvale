@@ -1,6 +1,7 @@
 # 0006. Seed-derivation labels are permanent contracts
 
-**Status:** Accepted (2026-07-05) · **Decider:** Nathan
+**Status:** Superseded by [0099](0099-worlds-are-version-locked.md) (2026-08-04) ·
+**Decider:** Nathan
 
 In the context of a hierarchical seed system where each derivation is keyed by
 a string label, facing the reality that changing a label silently changes

@@ -290,6 +290,137 @@ pub fn sovereignty_floor(mass: Mass, potency: f64) -> f64 {
     SOVEREIGNTY_FLOOR_MAX * (1.0 - crate::math::exp(-e.max(0.0)))
 }
 
+/// A per-cell **dimensionless suitability** in `[0, 1]`: how well conditions
+/// suit a population, carrying no units and no magnitude.
+///
+/// Distinct from [`CapacityMap`] by decision 0103, which exists because a
+/// campaign spec was written on the belief that a suitability field was a
+/// capacity field — both were `CellMap<f64>`, so neither the compiler, the
+/// reviewer, nor the type-audit objected to a 20–100× silent rescale. The
+/// only legal way to combine the two is [`CapacityMap::modulated_by`].
+///
+/// Named `…Map` rather than `…Field` deliberately: `crate::field::Field<T>`
+/// already means a function over (space × time), and reusing the word would
+/// reproduce the very blur this type exists to prevent.
+/// type-audit: bare-ok(ratio: element)
+#[derive(Debug, Clone, PartialEq)]
+pub struct SuitabilityMap(crate::CellMap<f64>);
+
+impl SuitabilityMap {
+    /// Validating constructor: every element must be finite and in `[0, 1]`.
+    /// type-audit: bare-ok(ratio: values)
+    pub fn new(values: crate::CellMap<f64>) -> Result<Self, UnitError> {
+        for (_, v) in values.iter() {
+            if !v.is_finite() || *v < 0.0 || *v > 1.0 {
+                return Err(UnitError {
+                    unit: "suitability",
+                    value: *v,
+                    reason: "must be finite and within [0, 1]",
+                });
+            }
+        }
+        Ok(Self(values))
+    }
+
+    /// Suitability at one cell.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn at(&self, id: crate::CellId) -> f64 {
+        *self.0.get(id)
+    }
+
+    /// The number of cells.
+    /// type-audit: bare-ok(count: return)
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Whether the map is empty.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+/// A per-cell **headcount capacity**: how many individuals a cell supports.
+/// Has units — it is a population, not a ratio. See [`SuitabilityMap`] for the
+/// distinction and decision 0103 for why it is enforced in the type system.
+/// type-audit: bare-ok(count: element)
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapacityMap(crate::CellMap<f64>);
+
+impl CapacityMap {
+    /// Validating constructor: every element must be finite and non-negative.
+    /// type-audit: bare-ok(count: values)
+    pub fn new(values: crate::CellMap<f64>) -> Result<Self, UnitError> {
+        for (_, v) in values.iter() {
+            if !v.is_finite() || *v < 0.0 {
+                return Err(UnitError {
+                    unit: "capacity",
+                    value: *v,
+                    reason: "must be finite and non-negative",
+                });
+            }
+        }
+        Ok(Self(values))
+    }
+
+    /// Headcount capacity at one cell.
+    /// type-audit: bare-ok(count: return)
+    pub fn at(&self, id: crate::CellId) -> f64 {
+        *self.0.get(id)
+    }
+
+    /// The number of cells.
+    /// type-audit: bare-ok(count: return)
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Whether the map is empty.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Borrow the untyped field. An **explicit** escape hatch: consumers that
+    /// still take a bare `CellMap<f64>` need one, and making the unwrap visible
+    /// at the call site is the point — an implicit `Deref` would restore exactly
+    /// the interchangeability decision 0103 removes.
+    /// type-audit: bare-ok(count: return)
+    pub fn as_cell_map(&self) -> &crate::CellMap<f64> {
+        &self.0
+    }
+
+    /// Consume into the untyped field. See [`CapacityMap::as_cell_map`].
+    /// type-audit: bare-ok(count: return)
+    pub fn into_cell_map(self) -> crate::CellMap<f64> {
+        self.0
+    }
+
+    /// Scale every cell by a dimensionless factor, staying a capacity. This is
+    /// the shape of `carrying_capacity × SETTLERS_PER_CAPACITY`.
+    /// type-audit: bare-ok(ratio: factor)
+    pub fn scaled(&self, factor: f64) -> CapacityMap {
+        CapacityMap(self.0.map_indexed(|_, v| v * factor))
+    }
+
+    /// **The only legal product**: headcount × suitability → headcount. This is
+    /// what `eff_capacity` is, and having it as the one combining operation is
+    /// how decision 0103 makes `capacity := suitability` unwritable.
+    ///
+    /// # Panics
+    /// If the two maps cover different cell counts — they must come from the
+    /// same geosphere.
+    pub fn modulated_by(&self, suitability: &SuitabilityMap) -> CapacityMap {
+        assert_eq!(
+            self.0.len(),
+            suitability.len(),
+            "a capacity and a suitability must span the same geosphere"
+        );
+        CapacityMap(self.0.map_indexed(|id, v| v * suitability.at(id)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -423,5 +554,70 @@ mod tests {
         assert!(sovereignty_floor(dragon, 0.0) > sovereignty_floor(bugbear, 0.0));
         assert!(sovereignty_floor(bugbear, 0.0) > sovereignty_floor(mouse, 0.0));
         assert!(sovereignty_floor(bugbear, 1.0) > sovereignty_floor(bugbear, 0.0));
+    }
+
+    fn tiny_geo() -> crate::Geosphere {
+        crate::Geosphere::new(0)
+    }
+
+    #[test]
+    fn a_suitability_map_accepts_the_unit_interval_and_rejects_outside_it() {
+        let geo = tiny_geo();
+        let ok = crate::CellMap::from_fn(&geo, |c| f64::from(c.0 % 2));
+        assert!(SuitabilityMap::new(ok).is_ok());
+
+        for bad in [-0.01, 1.01, f64::NAN, f64::INFINITY] {
+            let m = crate::CellMap::from_fn(&geo, |_| bad);
+            assert!(
+                SuitabilityMap::new(m).is_err(),
+                "suitability must reject {bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_capacity_map_accepts_any_non_negative_magnitude_and_rejects_negatives() {
+        let geo = tiny_geo();
+        let ok = crate::CellMap::from_fn(&geo, |c| f64::from(c.0) * 37.5);
+        assert!(CapacityMap::new(ok).is_ok());
+
+        for bad in [-1.0, f64::NAN, f64::NEG_INFINITY] {
+            let m = crate::CellMap::from_fn(&geo, |_| bad);
+            assert!(CapacityMap::new(m).is_err(), "capacity must reject {bad}");
+        }
+    }
+
+    #[test]
+    fn modulating_a_capacity_by_a_suitability_yields_a_capacity() {
+        let geo = tiny_geo();
+        let cap = CapacityMap::new(crate::CellMap::from_fn(&geo, |_| 40.0)).unwrap();
+        let suit = SuitabilityMap::new(crate::CellMap::from_fn(&geo, |_| 0.25)).unwrap();
+        let eff = cap.modulated_by(&suit);
+        for c in geo.cells() {
+            assert_eq!(eff.at(c), 10.0);
+        }
+        // Scaling stays a capacity and composes the other way round identically.
+        assert_eq!(
+            cap.scaled(0.25).at(crate::CellId(0)),
+            eff.at(crate::CellId(0))
+        );
+    }
+
+    #[test]
+    fn a_suitability_never_raises_a_capacity() {
+        // The property that makes the product safe: modulation is a contraction,
+        // because a suitability cannot exceed 1.
+        let geo = tiny_geo();
+        let cap =
+            CapacityMap::new(crate::CellMap::from_fn(&geo, |c| f64::from(c.0) + 1.0)).unwrap();
+        let suit = SuitabilityMap::new(crate::CellMap::from_fn(&geo, |c| f64::from(c.0 % 3) / 2.0))
+            .unwrap();
+        let eff = cap.modulated_by(&suit);
+        for c in geo.cells() {
+            assert!(
+                eff.at(c) <= cap.at(c),
+                "modulation must never raise capacity at {c:?}"
+            );
+        }
     }
 }

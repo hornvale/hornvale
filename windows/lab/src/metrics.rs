@@ -1674,7 +1674,7 @@ pub fn registry() -> Vec<Metric> {
                             continue;
                         }
                         let lat = geo.coord(cell).latitude.abs();
-                        let kv = *k.get(cell);
+                        let kv = k.at(cell);
                         if lat < 30.0 {
                             trop_sum += kv;
                             trop_n += 1;
@@ -3751,7 +3751,7 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
             continue;
         }
         defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
-        caps.push(*capacity.get(cell));
+        caps.push(capacity.at(cell));
     }
     if defs.len() < 2 {
         return MetricValue::Absent;
@@ -7228,9 +7228,18 @@ mod tests {
         // stack as a sixth competitor, redeciding seed 42's settlement
         // placement once more — 56/23 -> 254/97, moving both the syllable
         // total and the denominator.
+        //
+        // The Keeping step B re-pin (2026-08-04): `CarryingInput.habitable`
+        // decomposed to `is_land`, so the arid and very-hot bands the old
+        // conflated flag excluded outright now carry (low) capacity —
+        // 254/97 -> 252/97. Note the DENOMINATOR HOLDS at 97: seed 42 gains
+        // only 70 newly-reachable cells and none of them clears the viability
+        // floor, so no kobold settlement is added or lost; only the naming draw
+        // shifts, by two syllables. That is the expected shape of a change that
+        // opens marginal ground rather than good ground.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(254.0 / 97.0)
+            MetricValue::Number(252.0 / 97.0)
         );
     }
 

@@ -599,9 +599,16 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// redecided seed 42's deep-history settlement outcome, and a second site
 /// there now restacks under the material key — seed 42's count moves 0 -> 1.
 /// Seeds 7 and 1000 are unmoved.
+///
+/// The Keeping step B re-pin (2026-08-04): `CarryingInput.habitable` decomposed
+/// to `is_land`, opening the arid/very-hot bands to low capacity. **Seed 7 moves
+/// 1 -> 6**, and it is the seed that gained the most newly-reachable ground
+/// (3,126 cells, 16.4% of its land, against 0.6% on seed 42) — so more of its
+/// cells now carry stacked occupations for the fourth key to reorder. Six of
+/// 19,046 land cells is still "barely", which is what this test claims.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 1usize), (7, 1), (1000, 0)] {
+    for (seed, expected) in [(42u64, 1usize), (7, 6), (1000, 0)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

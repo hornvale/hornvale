@@ -263,7 +263,7 @@ fn k_biomass_gradient_grounding_holds_after_the_freshwater_repoint() {
                 continue;
             }
             let lat = geo.coord(cell).latitude.abs();
-            let kv = *k.get(cell);
+            let kv = k.at(cell);
             if lat < 30.0 {
                 trop_sum += kv;
                 trop_n += 1;
@@ -334,7 +334,7 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // to 1.7): 108 — inside the [100, 400] band the brief names, chosen
     // jointly with the keystone margin (see this test's doc comment).
     //
-    // The Demesne (T2) then re-pointed `niche_per_species_k`'s resource-
+    // The Demesne (T2) then re-pointed `per_species_suitability`'s resource-
     // supply term at the per-axis dot product (`axis_supply`): the peopled
     // roster's `ANIMAL_PREY` weight (goblin 0.5, kobold 0.45, hobgoblin
     // 0.35, bugbear 0.85 — see `domains/species/src/lib.rs`) now reads
@@ -387,7 +387,7 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // about why it would.** That paragraph predates The Living Community: the
     // deep-history bake, not demography stack-condensation, has been the
     // settlement provider since that epoch, and the bake reads plain
-    // `carrying_capacity`, not `niche_per_species_k`'s per-axis dot product
+    // `carrying_capacity`, not `per_species_suitability`'s per-axis dot product
     // (`windows/worldgen/src/lib.rs` — "the retired `coexist::pack`/
     // `condense_stack` placer is gone from genesis"). The peopled roster's
     // `ANIMAL_PREY` weights are therefore not an input to settlement

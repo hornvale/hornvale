@@ -15,7 +15,7 @@
 //! World-building idiom reused verbatim from `occupancy_readout.rs`
 //! (`hornvale_worldgen::build_world`, `WorldComponents::assemble`,
 //! `terrain_of`/`climate_of`/`sky_of` "reconstruct, never store"). The
-//! per-species K comes from [`hornvale_worldgen::niche_per_species_k`], whose
+//! per-species K comes from [`hornvale_worldgen::per_species_suitability`], whose
 //! returned `u32` is a **build-local dense index, not identity** (see its doc
 //! comment) - it is the position in the `species_biosphere` slice passed in,
 //! so the index -> [`hornvale_kernel::KindId`] mapping here is rebuilt fresh,
@@ -30,7 +30,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, niche_per_species_k,
+    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
     sky_of, terrain_of,
 };
 use std::collections::BTreeSet;
@@ -49,8 +49,8 @@ const VIABILITY_FLOOR: f64 = hornvale_demography::FLOOR;
 fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     // The build-local dense index -> KindId mapping, built from the exact
-    // same `wc.biosphere` ordering passed to `niche_per_species_k` below
-    // (ascending-KindId order, per `niche_per_species_k`'s doc comment) so
+    // same `wc.biosphere` ordering passed to `per_species_suitability` below
+    // (ascending-KindId order, per `per_species_suitability`'s doc comment) so
     // the returned `u32` tags resolve to the correct kind.
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
@@ -81,7 +81,7 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
-    let ks = niche_per_species_k(
+    let ks = per_species_suitability(
         geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
     );
 

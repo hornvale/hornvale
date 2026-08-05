@@ -17,7 +17,7 @@
 //! ## Task 1 result: does support restriction move settlement placement? (P4)
 //!
 //! Measured 2026-07-26 on seed 42, this branch's base (includes The Vigil).
-//! A throwaway gate was added as the first statement of `niche_per_species_k`'s
+//! A throwaway gate was added as the first statement of `per_species_suitability`'s
 //! `CellMap::from_fn` closure in `windows/worldgen/src/lib.rs` (reverted
 //! immediately after measuring, not shipped here):
 //! ```text
@@ -68,7 +68,7 @@ use hornvale_demography::home_range;
 use hornvale_kernel::{ANIMAL_PREY, CellMap, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, niche_per_species_k, sky_of, terrain_of,
+    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// Lindeman trophic transfer efficiency — the Earth-anchored ~10%.
@@ -111,7 +111,7 @@ fn waterline_probe() {
     let bio: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
 
-    let ks = niche_per_species_k(
+    let ks = per_species_suitability(
         geo,
         &terrain,
         &climate,

@@ -1304,7 +1304,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `ice-lead` | A channel of open water through sea ice. | — | — | — | gap (experiential): kobold has no exposure to 'ice-lead' |
 | `island` | land the water surrounds | — | — | — | gap (experiential): kobold has no exposure to 'island' |
 | `kelp-canopy` | The floating canopy of a kelp forest. | — | — | — | gap (experiential): kobold has no exposure to 'kelp-canopy' |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): kobold has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | Raoroa | /raoroa/ | Raoroa | Raoroa → no change → Raoroa |
 | `lake` | still water held in a hollow that has no outlet to the sea | Raxaroxooro | /raxaroxooro/ | — | compound: `little` + `water` |
@@ -1389,7 +1389,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sun-like-star` | a distant star resembling this world's own sun | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `taiga` | a biome class | Xoaxoroo | /xoaxoroo/ | Xoaxoroo | Xoaxoroo → no change → Xoaxoroo |
 | `temperate-forest` | a biome class | Roo | /roo/ | Roo | Roo → no change → Roo |
-| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-grassland` | a biome class | Xooxo | /xooxo/ | Xooxo | Xooxo → no change → Xooxo |
 | `temperate-rainforest` | a biome class | Xaara | /xaara/ | Xaara | Xaara → no change → Xaara |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | — | — | — | gap (experiential): kobold has no exposure to 'thorn-scrub' |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
@@ -1401,7 +1401,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tropical-seasonal-forest` | a biome class | Xoaroa | /xoaroa/ | Xoaroa | Xoaroa → no change → Xoaroa |
 | `tuber` | a staple crop | Xaaroa | /xaaroa/ | Xaaroa | Xaaroa → no change → Xaaroa |
 | `tubeworm-thicket` | Vent fauna crowded around hot water. | — | — | — | gap (experiential): kobold has no exposure to 'tubeworm-thicket' |
-| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): kobold has no exposure to 'twig-blight-kind' |
 | `twilight-water` | Water at the edge of the light. | — | — | — | gap (experiential): kobold has no exposure to 'twilight-water' |
 | `two` | the cardinal number 2 | Roaroo | /roaroo/ | Roaroo | Roaroo → no change → Roaroo |
@@ -1418,7 +1418,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `white-dwarf` | the dense cinder a spent star leaves | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `wind` | moving air | Xaaro | /xaaro/ | Xaaro | Xaaro → no change → Xaaro |
 | `wind-scour` | Ground swept bare by wind. | — | — | — | gap (experiential): kobold has no exposure to 'wind-scour' |
-| `wooded-grassland` | Grassland with scattered trees. | — | — | — | gap (experiential): kobold has no exposure to 'wooded-grassland' |
+| `wooded-grassland` | Grassland with scattered trees. | Xooroa | /xooroa/ | Xooroa | Xooroa → no change → Xooroa |
 | `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): kobold has no exposure to 'woolly-mammoth-kind' |
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): kobold has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |

@@ -1,6 +1,8 @@
 # 0082. Locale, chamber, place — "room" unqualified is retired
 
-**Status:** Accepted (2026-07-27) · **Decider:** Nathan
+**Status:** Superseded by
+[0101](0101-geometry-and-society-are-separate-vocabularies.md) (2026-08-04) ·
+**Decider:** Nathan
 
 In the context of the room mesh now carrying two scales of place, facing the
 fact that one word named both and the ambiguity had already produced a wrong

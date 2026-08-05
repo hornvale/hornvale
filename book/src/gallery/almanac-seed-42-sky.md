@@ -263,7 +263,7 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Snaapzmoov** — temperate-forest
 - **Xoxoro** — temperate-forest
 - **Geoge** — temperate-forest
-- **Rooraxarora** — temperate-forest
+- **Xoraxa** — temperate-grassland
 - **Roorora** — temperate-forest
 - **Naneo** — tropical-seasonal-forest
 - **Geoboge** — tropical-rainforest

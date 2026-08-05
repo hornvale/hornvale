@@ -853,7 +853,7 @@ fn owlbear_condition_niche() -> ConditionNiche {
 // The Vacancy (T7): seven terrestrial fauna, each authored against
 // `windows/worldgen/tests/fixtures/occupancy.csv` (the committed occupancy
 // readout) as it stood before this task's regen. Two structural facts read
-// off `niche_per_species_k` (worldgen) shaped every niche below: (1) the
+// off `per_species_suitability` (worldgen) shaped every niche below: (1) the
 // `ANIMAL_PREY`/`PLANT_FORAGE` supply terms both derive from
 // `forage_supply_field`, itself a fraction of the NPP-based `base_carrying`
 // field, which collapses toward 0 wherever `carrying_capacity`'s aridity term
