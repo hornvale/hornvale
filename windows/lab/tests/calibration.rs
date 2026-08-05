@@ -298,9 +298,18 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // invariant this test exists to guard — a tidally-locked world's head is
     // never `cyclic` — never fired (that branch panics loudly if it does);
     // the locked-ambient count is unmoved at 40, only locked-eternal falls.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is now DRAWN PER SETTLEMENT around a
+    // people's authored `threat_response` instead of read off the species, so
+    // every world's raid history differs and with it which settlements survive
+    // to seat a flagship pantheon: (148, 40) -> (151, 41). The invariant this
+    // test exists to guard is re-checked rather than assumed — the `other`
+    // arm above panics loudly on a cyclic head in a locked world, and the run
+    // reached this assertion, so it never fired on any of the 1000 seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (148, 40),
+        (151, 41),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -530,8 +539,17 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // inland (559 + 207 = 766, matching goblin's present-row count elsewhere
     // in this file — no `Absent` rows introduced). This is a recorded
     // witness, not a guarded directional claim.
-    assert_eq!(coastal, 559, "coastal flagship count drifted");
-    assert_eq!(inland, 207, "inland flagship count drifted");
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, so every world's raid history differs and flagships reseat
+    // again: 559 -> 565 coastal, 207 -> 204 inland (565 + 204 = 769, matching
+    // goblin's re-pinned present-row count elsewhere in this file — still no
+    // `Absent` rows introduced). Still a recorded witness, not a guarded
+    // directional claim; the sibling test that DID carry a direction on this
+    // axis was retired at The Tumult (see this file's header).
+    assert_eq!(coastal, 565, "coastal flagship count drifted");
+    assert_eq!(inland, 204, "inland flagship count drifted");
 }
 
 #[test]
@@ -723,12 +741,22 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // always lunar; goblin's head is always solar; a locked-world kobold
     // head is always solar) never fired — this is a recorded row, not a
     // guarded claim.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, changing which worlds field a kobold head at all — the
+    // moonless-spinning pool moves 33 -> 32 solar and 61 -> 64 lunar. All
+    // three structural invariants above this pool (a mooned kobold head is
+    // always lunar; goblin's head is always solar; a locked-world kobold head
+    // is always solar) are re-checked rather than assumed: each is an
+    // `assert!`/`panic!` earlier in this test, and the run reached these
+    // recorded rows, so none of them fired.
     assert_eq!(
-        moonless_solar, 33,
+        moonless_solar, 32,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 61,
+        moonless_lunar, 64,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -864,8 +892,19 @@ fn blind_attribution_beats_chance_decisively() {
     // guards (blind attribution beats chance decisively) HOLDS, re-checked
     // rather than assumed. The mooned-pair invariant below (perfect
     // attribution among spinning, mooned pairs) never fired either.
-    assert_eq!(correct, 693, "blind-attribution count drifted");
-    assert_eq!(total, 759, "attributable-pair count drifted");
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, shifting which worlds field an attributable goblin/kobold
+    // pair (759 -> 768 total) and which side several land on (693 -> 701
+    // correct); accuracy 0.9130434782608696 -> 0.9127604166666666, still
+    // decisively above the 0.75 floor asserted above — the directional claim
+    // this test guards (blind attribution beats chance decisively) HOLDS,
+    // re-checked rather than assumed. The mooned-pair invariant below
+    // (perfect attribution among spinning, mooned pairs) never fired either;
+    // the run reaches it, and it is an `assert_eq!` that would have.
+    assert_eq!(correct, 701, "blind-attribution count drifted");
+    assert_eq!(total, 768, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1071,16 +1110,27 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // the goblin-false population is still exactly empty (the assertion
     // above this comment did not fire), so the detector still reads true on
     // every goblin world with a pantheon, and the inner `assert!` above
-    // confirms it still reads false on every one of the 762 kobold worlds
-    // that hold one.
+    // confirmed it still read false on every one of the 762 kobold worlds
+    // that held one.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, moving which worlds hold a flagship pantheon at all:
+    // goblin 766/234 -> 769/231 true/absent, kobold 762/238 -> 769/231
+    // false/absent. The claim this row guards is re-checked, not assumed —
+    // the `g_false_seeds` assertion above did not fire, so the goblin-false
+    // population is still exactly empty and the detector still reads true on
+    // every goblin world that holds a pantheon, and the inner `assert!` in
+    // the loop confirms it still reads false on every one of the 769 kobold
+    // worlds that do.
     assert_eq!(
         (g_true, g_absent),
-        (766, 234),
+        (769, 231),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (762, 238),
+        (769, 231),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1446,8 +1496,17 @@ fn name_collision_rate_is_measured_and_pinned() {
     // directional claim (H4 already failed and is recorded as such above),
     // so nothing to re-verify beyond the three-way partition still summing
     // to 1000.
-    assert_eq!(zero, 3, "zero-collision world count drifted");
-    assert_eq!(nonzero, 767, "nonzero-collision world count drifted");
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement rather than
+    // per species, which reshuffles which settlements survive to be named at
+    // all: 3 -> 1 zero-collision, 767 -> 769 nonzero; absent unmoved at 230
+    // for the sixth regen running (1 + 769 + 230 = 1000). This row still
+    // carries no directional claim (H4 already failed and is recorded as
+    // such above), so nothing to re-verify beyond the three-way partition
+    // still summing to 1000 — which it does.
+    assert_eq!(zero, 1, "zero-collision world count drifted");
+    assert_eq!(nonzero, 769, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1526,7 +1585,16 @@ fn name_collision_rate_is_measured_and_pinned() {
         // differently across every world: 0.560_572_844_615_584_4 ->
         // 0.528_593_255_324_676. Same roster-competition cause as the
         // zero/nonzero re-pin above; this row carries no directional claim.
-        (mean - 0.528_593_255_324_676).abs() < 1e-6,
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, so a different set of
+        // settlements survives to be named on every world:
+        // 0.528_593_255_324_676 -> 0.535_421_983_528_571_5. Same
+        // per-settlement-draw cause as the zero/nonzero re-pin above; this
+        // row still carries no directional claim, and the rate stays inside
+        // the range decision 0024 sanctions (see the note above).
+        (mean - 0.535_421_983_528_571_5).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1705,7 +1773,15 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 766 present, mean 8.687_525_197_786_464 -> 8.657_123_104_960_824.
         // Still comfortably below the campaign's own <10-character claim
         // (spec §7), re-checked rather than assumed.
-        ("goblin", 766u32, 8.657_123_104_960_824),
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, so which worlds seat a goblin
+        // flagship — and which sites its names compound over — moves again:
+        // 766 -> 769 present, mean 8.657_123_104_960_824 ->
+        // 8.787_985_079_973_994. Still comfortably below the campaign's own
+        // <10-character claim (spec §7), re-checked rather than assumed.
+        ("goblin", 769u32, 8.787_985_079_973_994),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1766,7 +1842,18 @@ fn name_length_distributions_are_measured_and_pinned() {
         // unlike every prior roster/bake change, where it usually moved
         // further than goblin's). Still comfortably below the campaign's
         // own <10-character claim (spec §7), re-checked rather than assumed.
-        ("kobold", 762u32, 7.189_805_441_863_518),
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species: 762 -> 769 present, mean
+        // 7.189_805_441_863_518 -> 7.236_424_583_355_002. Both species now
+        // read 769 present — an incidental coincidence of two independently
+        // moving counts, not a structural tie; the only tie this file
+        // asserts is per-species, between a species' own syllable and
+        // name-length columns (see the syllable row below). Still
+        // comfortably below the campaign's own <10-character claim
+        // (spec §7), re-checked rather than assumed.
+        ("kobold", 769u32, 7.236_424_583_355_002),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1886,8 +1973,19 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // structural relation this test also asserts requires. The claim
         // still HOLDS at both species — 2.764 and 2.306, both inside 2-3 —
         // re-checked, not assumed.
-        ("goblin", 766u32, 2.763_782_961_879_896),
-        ("kobold", 762u32, 2.305_631_764_829_393),
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, reseating flagships again:
+        // goblin 766 -> 769 present, mean 2.763_782_961_879_896 ->
+        // 2.813_568_037_061_118; kobold 762 -> 769 present, mean
+        // 2.305_631_764_829_393 -> 2.319_622_207_412_223_2. Present counts
+        // agree with the name-length row's re-pin above (769 / 769), as the
+        // per-row structural relation this test also asserts requires. The
+        // claim still HOLDS at both species — 2.814 and 2.320, both inside
+        // 2-3 — re-checked, not assumed.
+        ("goblin", 769u32, 2.813_568_037_061_118),
+        ("kobold", 769u32, 2.319_622_207_412_223_2),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2022,7 +2120,18 @@ fn name_transparency_is_measured_and_pinned() {
         // the mean falls: 0.804_225_380_346_752_7 -> 0.785_500_964_077_923.
         // Still emphatically NOT 1.0 — the claim this row exists to guard —
         // re-checked rather than assumed.
-        (mean - 0.785_500_964_077_923).abs() < 1e-9,
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): warlikeness is drawn per
+        // settlement rather than per species, so a different set of
+        // settlements is named on every world; present/absent are again
+        // unmoved at 770/230, and the mean rises a little:
+        // 0.785_500_964_077_923 -> 0.786_123_665_363_636_2. Still
+        // emphatically NOT 1.0 — the claim this row exists to guard, and
+        // the one a rise must be checked against — re-checked rather than
+        // assumed: a 0.786 mean over a 0.15-to-1.0 span is wear still
+        // happening, not wear stopping.
+        (mean - 0.786_123_665_363_636_2).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2042,7 +2151,14 @@ fn name_transparency_is_measured_and_pinned() {
         // below, unmoved) — the spread narrows a little but stays a real
         // distribution over worlds, not the uniformity defect the row exists
         // to catch.
-        (min - 0.142_857_14).abs() < 1e-8,
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): the floor rises again
+        // 0.142_857_14 -> 0.15 while the ceiling stays pegged at 1.0
+        // (asserted below, unmoved). A 0.15-to-1.0 span around a 0.786 mean
+        // is still a real distribution over worlds, not the uniformity
+        // defect the row exists to catch — re-checked rather than assumed.
+        (min - 0.15).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2136,8 +2252,17 @@ fn null_control_blind_attribution_is_at_chance() {
     // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
     // lefford, 0063): the BAKE label bump adds another path-dependent step:
     // 323 -> 322 indistinguishable, 64 -> 65 decided.
-    assert_eq!(indistinguishable, 322, "indistinguishable count drifted");
-    assert_eq!(decided, 65, "decided count drifted");
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): warlikeness is drawn per settlement, and the draw
+    // is keyed on the settlement's own site, so the two solo builds' already
+    // path-dependent histories separate on FEWER seeds this time: 322 -> 326
+    // indistinguishable, 65 -> 61 decided (the pool holds at 387). The
+    // directional floors above are re-checked, not assumed — 326/387 = 0.842
+    // is still mostly-indistinguishable, and the twin-pick rate below is
+    // 31/61 = 0.508, well inside the ±0.2 chance band.
+    assert_eq!(indistinguishable, 326, "indistinguishable count drifted");
+    assert_eq!(decided, 61, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
@@ -2145,7 +2270,12 @@ fn null_control_blind_attribution_is_at_chance() {
     // The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
     // lefford, 0063): re-measured against the new decided pool of 65 —
     // 32 of 65 still pick the twin, unmoved from the prior regen.
-    assert_eq!(picks_twin, 32, "twin-pick count drifted");
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): re-measured against the smaller decided pool of
+    // 61 — 31 of 61 pick the twin, a 0.508 split, i.e. the null control lands
+    // marginally closer to chance than the prior regen's 0.492.
+    assert_eq!(picks_twin, 31, "twin-pick count drifted");
 }
 
 #[test]
@@ -2226,8 +2356,16 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // further — 0.007_751_937_984_496_131 -> 0.010_335_917_312_661_49 (the
     // pool holds at 387: 8 categories now diverge, up from 6), still an
     // order of magnitude inside the ±0.15 bound.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): the per-settlement warlikeness draw adds another
+    // path-dependent step to the bake — 0.010_335_917_312_661_49 ->
+    // 0.015_503_875_968_992_262 (the pool holds at 387), still an order of
+    // magnitude inside the ±0.15 bound asserted above, which the run reaches
+    // and does not fire. The naming-independent invariant on the line above
+    // (head-domain TVD exactly 0) is likewise unmoved.
     assert!(
-        (cult - 0.010_335_917_312_661_49).abs() < 1e-9,
+        (cult - 0.015_503_875_968_992_262).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -2240,8 +2378,14 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // lefford, 0063): the BAKE label bump moves the residual again:
     // -0.003_956_842_859_287_871 -> -0.003_295_124_196_027_554_4; still
     // ~60x inside the ±0.2 bound.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): same per-settlement-draw cause as the cult-form
+    // movement above — -0.003_295_124_196_027_554_4 ->
+    // -0.005_276_769_343_453_631, still ~38x inside the ±0.2 bound asserted
+    // above, which the run reaches and does not fire.
     assert!(
-        (size - -0.003_295_124_196_027_554_4).abs() < 1e-9,
+        (size - -0.005_276_769_343_453_631).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -2410,7 +2554,24 @@ fn null_control_name_length_smd_is_pinned() {
         // exists to witness (INDISTINGUISHABLE FROM ZERO) reads, if
         // anything, slightly MORE true than before, re-checked rather than
         // assumed.
-        (namelen - -0.017_807_448_465_414_44).abs() < 1e-9,
+        //
+        // The Tolerance's close regen (2026-08-05, canonical census on
+        // lefford at 347945b4, 0063/0079): the per-settlement warlikeness
+        // draw is keyed on the settlement's own site, so both solo builds'
+        // histories move alike in structure and only the residual
+        // name-length gap shifts: -0.017_807_448_465_414_44 ->
+        // +0.009_246_730_125_111_655. The SIGN flips, and the reading is the
+        // same one the F11 note above records for the same event: this is a
+        // standardized mean difference between a people and its
+        // deliberately-identical twin, so the null hypothesis it witnesses is
+        // INDISTINGUISHABLE FROM ZERO, and -0.0178 -> +0.0092 moves it
+        // roughly HALFWAY CLOSER to zero. The sign of a residual this small
+        // is noise about which of two identical populations drew marginally
+        // longer names. Now ~22x inside the ±0.2 sampling-theory bound
+        // `null_control_distributions_are_within_the_sampling_bound`
+        // asserts, which is the assertion that would catch a broken control
+        // and which that test reaches without firing.
+        (namelen - 0.009_246_730_125_111_655).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
