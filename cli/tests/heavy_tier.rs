@@ -39,6 +39,22 @@
 //! reader can check them by hand, and to treat a long-lived token as a
 //! question rather than a fact. A deferral that has outlived two campaigns is
 //! more likely to be spent than to be waiting.
+//!
+//! ## What the serialization-pin guard does NOT do (The Scatter, 2026-08-05)
+//!
+//! The second guard in this file — the one holding
+//! `.config/nextest.toml`'s `threads-required` roster to the set of heavy
+//! batteries that scatter their own seed sweeps — recognises a battery as
+//! internally parallel by the literal `seed_sweep::map_seeds(` call.
+//!
+//! **So a battery that hand-rolls its own `std::thread::scope` is invisible to
+//! it**, and would go unpinned and unnoticed. The guard's non-emptiness assert
+//! does not close this: it catches the HELPER being renamed out from under the
+//! guard, which is a different failure. The residual is accepted rather than
+//! chased — the helper exists precisely so that batteries do not hand-roll,
+//! `TOOL-seed-sweep-reach` is an open row to widen its reach, and an unguarded
+//! hand-rolled sweep is the status quo the guard inherited rather than
+//! anything it introduces. Worth knowing before adding the fourth battery.
 
 use std::fs;
 use std::path::{Path, PathBuf};

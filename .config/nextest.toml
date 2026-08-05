@@ -33,25 +33,45 @@
 # barely separates them, and the failure count does.
 #
 # B's second failure is not real. `hornvale::scene_cost` is a WALL-CLOCK
-# BUDGET test, and B's oversubscription reddened it. Its own module doc gives
-# the rule for reading it — "a real regression is LOCAL: one or two metrics
-# move and the rest hold; a uniform 3x across metrics with unrelated causes is
-# the machine" — so here are all five metrics under B, not just the one that
-# tripped:
+# BUDGET test, and B's oversubscription reddened it.
 #
-#   genesis             12995.4 ms (budget 13000)   99.96% of ceiling — 4.6 ms
-#   SceneContext::build  2340.7 ms (budget  2700)   86.7%
-#   tiles(512)+json     10137.5 ms (budget  8700)  116.5%  <- FAILED
-#   small docs+json         6.9 ms (budget   5.2)  132.7%  <- would also fail
-#   region per tile       378.1 ms (budget   420)   90.0%
+# FIRST, A CODE REGRESSION IS IMPOSSIBLE BY CONSTRUCTION.
+# `git diff --stat 7138ce75 239d24a7` is `.config/nextest.toml | 19 +++`:
+# one file, nineteen lines, all of it test SCHEDULING. A and B share every
+# byte of every crate. Nothing `scene_cost` exercises differs between them.
 #
-# TWO of five are over budget and a third sits 4.6 ms under its ceiling. Only
-# one is reported because the asserts are ORDERED and `tiles` trips first —
-# reading the failure message alone undercounts the excursion. And the worst
-# offender by ratio is `small docs+json`, which `scene_cost.rs`'s own worked
-# contention example cites at 6.8 ms as an UNTOUCHED ceiling: code unchanged
-# since 2026-07-28, so its 133% cannot be a code regression at all. By that
-# file's rubric this is the machine, not the code.
+# SECOND, THE MOVE IS UNIFORM, WHICH IS THE SIGNATURE `scene_cost.rs` ITSELF
+# NAMES. Its module doc: "a real regression is LOCAL: one or two metrics move
+# and the rest hold. A uniform 3x across metrics with unrelated causes is the
+# machine." Against that file's own recorded bases (its `slowest:` row,
+# 2026-07-29, same box, same ~80-way load band), every one of the five
+# inflated by a similar factor under B:
+#
+#                        run B    basis    ratio   vs budget
+#   genesis            12995.4   6318.6    2.06x    99.96%  <- 4.6 ms under
+#   SceneContext::build 2340.7   1308.0    1.79x     86.7%
+#   tiles(512)+json    10137.5   4319.9    2.35x    116.5%  <- FAILED
+#   small docs+json        6.9      2.7    2.56x    132.7%  <- would also fail
+#   region per tile      378.1    206.1    1.83x     90.0%
+#
+# 1.79x-2.56x across all five. Only two crossed a budget because the budgets
+# carry different headroom, not because those two metrics moved differently.
+#
+# THIRD, THE TWO METRICS THE CISTERN NEVER TOUCHED MOVED MOST. `genesis` and
+# `small docs+json` are the campaign's own CONTROL — their doc comments say so
+# ("Unchanged by The Cistern, deliberately"; "Untouched by The Cistern, which
+# is the point"), and the module doc uses their agreement as the evidence that
+# the other three fell because the code changed. Under B they read 2.06x and
+# 2.56x, the largest excursion of the five among them, on code untouched since
+# 2026-07-28. That is not a thing a code change can do; it is the Cistern
+# example's own contention signature reproduced (it lists `small docs+json`
+# at 6.8 ms tagged "untouched Sextant ceiling"; B measured 6.9).
+#
+# Count alone would have argued the other way — two-of-five over budget IS the
+# rubric's "one or two metrics move" sentence. The discriminator is the next
+# sentence, and the ratios above are it. Note also that only ONE failure is
+# reported: the asserts are ORDERED and `tiles` trips before `small docs` is
+# ever evaluated, so the failure message undercounts the excursion.
 #
 # Under A `scene_cost` passes in 10.2 s — quicker than the 13.1 s it took
 # before The Scatter. A tier whose reds already need reading carefully must
