@@ -42,7 +42,9 @@ by arithmetic rather than by decree.
 
 Beyond the seven defects already measured, three passes (substitution+negation →
 dictionary; abstraction-lift+combination → graph; dimension-identification+
-tree-finding → notation) surfaced these. Each is independently checkable.
+tree-finding → notation) surfaced these. Each is independently checkable, and
+§2.3's consequences were worked out further in review — see §3.4, which is where
+that thread ended up.
 
 ### 2.1 Three incompatible definitions of "habitable"
 
@@ -157,12 +159,89 @@ This supersedes stages 6 and 7. Both should be reverted as part of this campaign
 rather than carried, because both are arrangements of a distinction this section
 removes.
 
-### 3.4 Explicitly out of scope
+### 3.4 A within-cell temperature distribution (promoted to first-class)
 
-- **Sub-grid heterogeneity** (§2.3). The right fix is a within-cell temperature
-  *distribution* rather than a mean, so a fraction of each cell stays habitable
-  through a glacial maximum. Large, and it interacts with the locale/room scale.
-  Recorded, deferred.
+Capacity reads the cell **mean**. By Jensen's inequality that is wrong whenever
+the response is nonlinear, which a Gaussian emphatically is:
+
+```
+  R(mean(T))  !=  mean(R(T))
+```
+
+Evaluating at the mean overestimates near the optimum (where R is concave) and
+underestimates in the tails — **and the tails are where refugia live.** This is a
+defect at *any* grid resolution; it is not fixed by subdividing, only shrunk.
+Integrating removes it outright:
+
+```
+  K(s, c, e) = Vmax . S(supply) . E_{T ~ N(mu(c,e), sigma(c))} [ R(s, T) ]
+```
+
+a few-point quadrature per cell per species.
+
+**Do not subdivide the globe instead.** The ladder was measured:
+
+```
+ lvl      cells   km2/cell   across km    300sp MB/era
+   6     40,962      12452         126           98.3
+   7    163,842       3113          63          393.2
+   8    655,362        778          31         1572.9
+  10 10,485,762         49           8        25165.8
+```
+
+Cost is 4x per level and multiplies with §3.1's 25 eras, while real glacial
+refugia are *kilometres* — sheltered valleys, south-facing slopes, coastal
+pockets. Level 8 is still 31 km across; nothing under level 10 resolves a valley,
+and level 10 is 25 GB per era per worker at species scale. Subdivision buys the
+whole cost and none of the refugia. The architecture also already carries a fine
+scale for places (`walk_depth = globe_level + 6`, ~1.7 km); the defect is that the
+coarse layer *claims homogeneity*, not that it is coarse.
+
+#### Where sigma comes from — and where it does NOT
+
+Two tempting sources were checked and both fail:
+
+- **The room-scale `MicroField` cannot supply it.** `windows/locale/src/micro.rs`
+  derives `relief`/`aspect`/`wetness`/`openness` from `room_seed` alone — a pure
+  address hash with no dependence on its parent cell. Its statistics are therefore
+  *identical in every cell of every world*, so aggregating children yields a
+  constant, and a constant sigma produces no differential refugia. The room field
+  is decoration for prose, not a decomposition of the cell field; the two scales
+  are not a multiresolution hierarchy.
+- **The fBm relief has essentially no sub-cell content, by design.**
+  `RELIEF_FREQUENCY = 8.0` with 4 octaves and lacunarity 2 gives octave
+  wavelengths of 7.3 / 3.7 / 1.8 / 0.92 cells at L6. Only the last is near
+  sub-cell, and at gain 0.5 it carries 12.5% of `RELIEF_AMPLITUDE_M = 240 m` —
+  about 30 m, or **0.2 °C** at a 6.5 °C/km lapse rate. That truncation is
+  deliberate: the constant's own comment records rejecting 48.0 *because* its
+  dominant octave was sub-Nyquist "jitter the sea-level percentile averages away".
+
+So sigma must be **derived**, not sampled. The construction, using only committed
+state and adding no seeded draw (hence not epoch-triggering):
+
+```
+  sigma_subcell(c) = k . spread( elevation over c's neighbours ) . relief_scale(c)
+  sigma_T(c)       = lapse_rate . sigma_subcell(c)
+```
+
+- Neighbourhood elevation spread is one `O(cells x 6)` pass over the existing
+  field. It licenses the estimate by **self-similarity**: for fBm-like terrain the
+  variance just below the grid is a fixed ratio of the variance just above it.
+- `relief_scale(induration, boundary_hops)` already exists in
+  `domains/terrain/src/elevation.rs` — hard rock and plate-boundary belts roughen,
+  soft rock lies smooth. This is what makes sigma *terrain-dependent*: the Alps
+  hold refugia through a glacial maximum, the plains do not.
+- `k` is the one authored constant, and it is a fractal-dimension ratio rather
+  than a fitted knob. It declares its kind under decision 0104.
+
+**Deferred within this stage:** `MicroField.aspect` is shaded-to-sunlit slope
+aspect — the single most important real microclimate-refugium mechanism — and it
+exists already, as noise that never touches temperature. Wiring it in as a
+systematic warm fraction rather than a symmetric spread is the natural successor,
+and belongs with the locale scale rather than here.
+
+### 3.5 Explicitly out of scope
+
 - **Asymmetric response curves** (§2.4). A one-field change to
   `ConditionResponse` (a skew term), but it re-authors every niche and should not
   ride a physics change.
@@ -205,14 +284,27 @@ Census scale is checked rather than assumed: `studies/the-census.study.json` is
 census world does run the bake. (`CLAUDE.md`'s "~2000-world census" presumably
 aggregates the other `studies/census-of-*.json`; use the per-study count.)
 
-**So time is probably not the binding constraint — memory is, and only at scale.**
-The runner holds a world per thread. At today's 6 species that is 2.0 MB of
-capacity field per worker and nothing to discuss. At the several-hundred-settling-
-species target this arc exists to reach, one era is **98.3 MB per worker**, and
-40 workers is **~3.9 GB of capacity fields alone**. That wall is already there,
-independent of this campaign; giving capacity an era axis only makes it matter
-sooner, and it is the reason §4's mitigation 2 (stream one era, never hold the
-series) is a requirement rather than an optimisation.
+**Neither time nor memory is binding at level 6 — an earlier draft of this
+paragraph called memory "a wall" and that was wrong.** The runner holds a world
+per thread; the fleet and the arithmetic:
+
+```
+  host      RAM     workers     300 species, one era resident
+  --------  ------  -------     ------------------------------
+  lefford   384 GB       40      3.9 GB    (1% of the box)
+  MBP        64 GB      ~10      1.0 GB
+  ambrose    39 GB       12      1.2 GB
+```
+
+3.9 GB on a 384 GB machine is not a constraint, even at the several-hundred-
+species target this arc exists to reach. Memory only bites if the globe is
+subdivided (§3.4 declines to), and then it bites the *development* boxes well
+before lefford — level 8 at 300 species is 18.9 GB on ambrose, half the machine.
+
+Mitigation 2 below (stream one era, never hold the series) therefore stands on
+tidiness and on headroom against future growth, **not** on necessity. Stating it
+as necessary was an overstatement built on an unchecked multiplication, the same
+error as the "+70 minutes" above and in the same paragraph.
 
 Three mitigations, in the order they should be tried:
 
@@ -222,9 +314,9 @@ Three mitigations, in the order they should be tried:
    rebuilt every call. This alone may be most of the 25×.
 2. **Compute per era-change, not per epoch.** The bake's `era_index_for` is
    monotone, so each era is entered exactly once: at most 25 rebuilds per world,
-   streamed one at a time, never resident together. §4's memory row for
-   all-eras-resident is then irrelevant — which matters enormously at 300 species,
-   where one era alone is 98 MB.
+   streamed one at a time, never resident together. This keeps the resident set at
+   one era rather than 25 — cheap insurance, not a rescue, per the corrected
+   memory arithmetic above.
 3. **Decouple capacity's era resolution from the mask's.** Nothing requires 25
    capacity fields; the deep-time signal is smooth, and 5 with interpolation may
    be indistinguishable. Measure before assuming 25 is needed.
@@ -234,8 +326,8 @@ and the fallback is The Fallow's stock — a cheap scalar per cell carrying the
 land's memory — as an approximation to a time-varying field.
 
 Given the parallelism above, mitigation 1 (hoisting the era-invariant 89%) is
-likely sufficient on its own for *time*. Mitigation 2 is required regardless, for
-memory at species scale.
+likely sufficient on its own, and is the plan's first task: if it does not
+deliver, the rest of the campaign is not worth planning.
 
 ## 5. Preregistration (decision 0016)
 
@@ -249,9 +341,9 @@ its die-off is spread across more than one century rather than concentrated in
 century 1.
 
 **H3 — cold still excludes.** No settling species calls more than **10%** of land
-below its own lethal gate survivable. This is stage 7's H5 restated against a
-per-species limit instead of the global −10 °C snowline, which is the reason H5
-failed: −10 °C is not any particular species' physiological limit.
+below its own lethal gate survivable. This restates **The Tilth stage 7's H5**
+(not this spec's, above) against a per-species limit instead of the global
+−10 °C snowline, which is the reason that hypothesis failed: −10 °C is not any particular species' physiological limit.
 
 **H4 — the cost is paid.** Two readings, because one machine cannot answer both:
 
@@ -265,7 +357,21 @@ failed: −10 °C is not any particular species' physiological limit.
 Stated as ratios because the absolute numbers are machine-dependent and this
 spec's own figures were taken on the wrong machine.
 
-**H5 — the null.** If §3.1 lands and the binding-axis and capacity distributions
+**H5 — refugia are terrain-dependent.** After §3.4, the fraction of a cell that
+stays habitable through the glacial maximum **correlates with that cell's
+neighbourhood elevation spread** (Spearman rho > 0.5 over land, seed 42). A
+uniform sigma would score ~0 and would mean the construction has fallen back to a
+constant, which is the exact failure mode that rules out the room-scale
+`MicroField` as a source.
+
+**H6 — seed 1234 is the acceptance case.** With §3.1 and §3.4 both in, seed 1234
+retains a non-zero surviving population *and* its die-off spans more than one
+century. It is the only probe seed that currently ends empty, it does so for the
+reason this campaign targets, and it needs no new instrument — the existing
+`history_shape_probe.rs` prints both quantities. (This subsumes H2, which is kept
+because it is the weaker, era-axis-only form.)
+
+**H7 — the null.** If §3.1 lands and the binding-axis and capacity distributions
 are materially unchanged from stage 6.1's, then era-variance is not the missing
 signal and the defect is in the authored niches after all — report it, revert, and
 the deferred re-authoring becomes the campaign.
