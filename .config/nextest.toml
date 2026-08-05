@@ -27,13 +27,36 @@
 #   —  pre-Scatter, serial sweeps         6134 s        1.80    (and a
 #      cancelled 14,143 s run that never finished the tier at all)
 #
-# B is 12% faster in TOTAL wall clock and was still rejected, because its
-# second failure is not real: `hornvale::scene_cost` is a WALL-CLOCK BUDGET
-# test, and B's oversubscription blew its tiles budget (10,137 ms against
-# 8,700) and reddened it. Under A it passes in 10.2 s — quicker than the
-# 13.1 s it took before The Scatter. A tier whose reds already need reading
-# carefully must not manufacture more of them, and a duration measured under
-# 40-way contention is not a duration anyone can budget against
+# B is 12% faster in TOTAL wall clock — and that 12% is inside this tier's own
+# run-to-run noise: `docs/timings.md` records two nominally comparable heavy
+# runs at 8187.657 s and 7388.713 s, a 10% spread. So the wall-clock axis
+# barely separates them, and the failure count does.
+#
+# B's second failure is not real. `hornvale::scene_cost` is a WALL-CLOCK
+# BUDGET test, and B's oversubscription reddened it. Its own module doc gives
+# the rule for reading it — "a real regression is LOCAL: one or two metrics
+# move and the rest hold; a uniform 3x across metrics with unrelated causes is
+# the machine" — so here are all five metrics under B, not just the one that
+# tripped:
+#
+#   genesis             12995.4 ms (budget 13000)   99.96% of ceiling — 4.6 ms
+#   SceneContext::build  2340.7 ms (budget  2700)   86.7%
+#   tiles(512)+json     10137.5 ms (budget  8700)  116.5%  <- FAILED
+#   small docs+json         6.9 ms (budget   5.2)  132.7%  <- would also fail
+#   region per tile       378.1 ms (budget   420)   90.0%
+#
+# TWO of five are over budget and a third sits 4.6 ms under its ceiling. Only
+# one is reported because the asserts are ORDERED and `tiles` trips first —
+# reading the failure message alone undercounts the excursion. And the worst
+# offender by ratio is `small docs+json`, which `scene_cost.rs`'s own worked
+# contention example cites at 6.8 ms as an UNTOUCHED ceiling: code unchanged
+# since 2026-07-28, so its 133% cannot be a code regression at all. By that
+# file's rubric this is the machine, not the code.
+#
+# Under A `scene_cost` passes in 10.2 s — quicker than the 13.1 s it took
+# before The Scatter. A tier whose reds already need reading carefully must
+# not manufacture more of them, and a duration measured under 40-way
+# contention is not one anyone can budget against
 # (PROC-heavy-tier-cost-budget wants exactly these numbers).
 #
 # Per battery, A is where the win actually is: 1007→331 s (mire), 2427→990 s

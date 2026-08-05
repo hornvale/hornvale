@@ -212,3 +212,164 @@ fn the_untokenised_ignore_reasons_are_exactly_this_roster() {
          file, not a bare sentence. If it is a cost-based one-off, add it here."
     );
 }
+
+// ============================================================================
+// The serialized-battery filter (The Scatter). `.config/nextest.toml` pins
+// three heavy batteries to `threads-required = "num-cpus"` so each runs ALONE
+// on the canonical box: since The Scatter they parallelise their own 200-seed
+// sweeps across every core, and `gate-full-heavy.sh` sets no `test-threads`
+// limit, so without the pin the box runs up to 40 heavy processes each
+// wanting 40 worker threads.
+//
+// That filter is a HAND-MAINTAINED LIST OF THREE NAMES, and its failure mode
+// is silent and expensive. Rename a battery, or add a fourth that sweeps
+// seeds, and the filter simply matches fewer tests: nothing reddens, the box
+// is oversubscribed again, and the FIRST SYMPTOM is a spurious
+// `hornvale::scene_cost` failure that reads like a performance regression —
+// which is exactly the 341 s of wall clock the pin was bought with.
+//
+// The precedent is two files away: `scripts/gate-full-heavy.sh` already
+// asserts `tag_count == name_count` so a heavy tag that drifts off its `fn`
+// cannot silently vanish from `make gate-full`. This is the same guard for
+// the same class of drift, one directory over.
+// ============================================================================
+
+/// Where the serialized-battery pin lives.
+const NEXTEST_CONFIG: &str = ".config/nextest.toml";
+
+/// The marker that makes an override a serialization pin.
+const THREADS_REQUIRED: &str = "threads-required = \"num-cpus\"";
+
+/// The call that makes a battery internally parallel — the property the pin
+/// exists for. Matching the CALL (not the module) is deliberate: a test that
+/// merely mentions the helper in prose is not the thing that saturates a box.
+const SWEEP_CALL: &str = "seed_sweep::map_seeds(";
+
+/// The test names `.config/nextest.toml`'s serialization override selects,
+/// parsed out of its `test(/<name>$/)` filterset. Std-only string scanning —
+/// this workspace admits no TOML parser (decision 0004).
+fn serialized_filter_names() -> Vec<String> {
+    let text = fs::read_to_string(repo_root().join(NEXTEST_CONFIG))
+        .expect(".config/nextest.toml is readable");
+
+    // SETTINGS ONLY, never comments. Found by mutation-testing this guard:
+    // deleting the real `threads-required` line left the check GREEN, because
+    // the section comment above the override quotes the setting verbatim while
+    // explaining it. A guard that a comment can satisfy is not a guard.
+    let settings: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#') && !l.is_empty())
+        .collect();
+    assert!(
+        settings.contains(&THREADS_REQUIRED),
+        "{NEXTEST_CONFIG} has no live {THREADS_REQUIRED:?} SETTING (a comment \
+         mentioning it does not count). The serialization pin for the \
+         internally-parallel heavy batteries is GONE, which silently \
+         re-oversubscribes the canonical box — see this file's section comment."
+    );
+    let filter_lines: Vec<&str> = settings
+        .iter()
+        .copied()
+        .filter(|l| l.starts_with("filter = ") && l.contains("test(/"))
+        .collect();
+    assert_eq!(
+        filter_lines.len(),
+        1,
+        "expected exactly one `filter = ` line naming tests in {NEXTEST_CONFIG}; \
+         found {}. This guard reads a single override block; teach it about the \
+         others before adding one.",
+        filter_lines.len()
+    );
+
+    let mut names = Vec::new();
+    let mut rest = filter_lines[0];
+    while let Some((_, after)) = rest.split_once("test(/") {
+        let (name, tail) = after
+            .split_once("$/)")
+            .expect("a test(/…/) term in the filterset is end-anchored with `$/)`");
+        names.push(name.to_string());
+        rest = tail;
+    }
+    names.sort();
+    names
+}
+
+/// Every heavy-tagged test whose body calls [`SWEEP_CALL`] — i.e. every heavy
+/// battery that parallelises its own seed sweep and therefore MUST be pinned.
+///
+/// Line-oriented, matching `gate-full-heavy.sh`'s own grep-based discovery, so
+/// the two agree about what a heavy test is. A heavy `#[ignore]` tag sits
+/// directly above its `fn`; a test's region runs from that `fn` to the next
+/// `#[test]` attribute or end of file.
+fn internally_parallel_heavy_tests() -> Vec<String> {
+    let mut sources = Vec::new();
+    collect_rs(&repo_root(), &mut sources);
+    sources.sort();
+
+    let mut found = Vec::new();
+    for path in sources {
+        let text = fs::read_to_string(&path).expect("source file is utf8");
+        let mut next_fn_is_heavy = false;
+        let mut current: Option<String> = None;
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("#[test]") {
+                current = None;
+            }
+            if trimmed.starts_with("#[ignore = \"") {
+                next_fn_is_heavy = trimmed.contains("heavy:");
+                current = None;
+                continue;
+            }
+            if let Some(rest) = trimmed.strip_prefix("fn ")
+                && let Some((name, _)) = rest.split_once('(')
+            {
+                current = next_fn_is_heavy.then(|| name.to_string());
+                next_fn_is_heavy = false;
+                continue;
+            }
+            if line.contains(SWEEP_CALL)
+                && let Some(name) = &current
+                && !found.contains(name)
+            {
+                found.push(name.clone());
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+/// The pin's roster is exactly the set of heavy batteries that actually
+/// scatter their own seed sweeps — checked in BOTH directions, because both
+/// failure modes are silent.
+///
+/// A renamed battery drops out of the filter; a newly-added sweeping battery
+/// never enters it. Either way nextest resumes scheduling forty heavy
+/// processes against a box whose batteries each want forty worker threads,
+/// and the first thing anyone sees is a wall-clock budget test going red for
+/// reasons that have nothing to do with the code it measures.
+#[test]
+fn the_serialization_pin_names_exactly_the_batteries_that_scatter_their_sweeps() {
+    let pinned = serialized_filter_names();
+    let parallel = internally_parallel_heavy_tests();
+
+    assert!(
+        !parallel.is_empty(),
+        "found no heavy test calling {SWEEP_CALL:?}. Either the sweep helper was \
+         renamed (update SWEEP_CALL) or this guard is now asserting nothing — \
+         which is the one outcome it must never quietly reach."
+    );
+    assert_eq!(
+        pinned, parallel,
+        "\n{NEXTEST_CONFIG}'s serialization filter and the set of heavy batteries \
+         that scatter their own seed sweeps have diverged.\n  pinned in config: \
+         {pinned:?}\n  actually parallel: {parallel:?}\nAdd the missing name(s) to \
+         the `filter = ` line, or drop the stale one. Left alone this does NOT \
+         redden on its own: nextest schedules the unpinned battery alongside \
+         everything else, the canonical box is oversubscribed, and the symptom \
+         is a spurious hornvale::scene_cost failure that looks like a real \
+         performance regression."
+    );
+}
