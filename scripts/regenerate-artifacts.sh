@@ -180,7 +180,21 @@ rm -f "$possess_ot_tmp"
 # layers (year 500-1950) to 16 (year 550, still standing at the time of this
 # regen). The counts below are read off the live block each time this
 # comment is touched, not carried forward from memory of the last count.
-history_site=1400
+#
+# The Tolerance (warlikeness became a per-settlement draw instead of a
+# per-species constant): a FIFTH occurrence, and the first that had to move
+# the SITE rather than only re-count it. Cell 1400 collapsed to two layers,
+# one of them zero-tenure — no longer a showcase for stratigraphy at all.
+# Re-found by enumerating occ-site over the live seed-42 ledger: cell 21953
+# is now the richest single-people (all-gnoll) column at 8 layers, and it is
+# the better fit for this page's own thesis besides — it is genuinely
+# CONTESTED, three of its seven completed layers ending in flight from
+# another gnoll band and three more ending because the occupants won
+# somewhere else and carried the settlement onto the ground they took.
+# (Cell 3518 has 9 layers but every one of them ends in ice or famine, which
+# would leave the page titled "The Contested Clearing" describing a quiet
+# one.) All counts below re-read off the live block, per the rule above.
+history_site=21953
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
     printf '# The Contested Clearing of Seed 42\n\n'
@@ -191,17 +205,17 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and sixteen\n' "$history_site"
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and eight\n' "$history_site"
     printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 550 down to the present. Winter took most of them:\n'
-    printf 'the ice crept down the valley, or the seasons shortened past what the\n'
-    printf 'ground could still feed, and the survivors moved on rather than\n'
-    printf 'starve. But six of the fifteen completed layers ended a different\n'
-    printf 'way — put to flight not by cold but by another gnoll band wanting the\n'
-    printf 'same defensible ground for itself, a people with only itself to fight.\n'
-    printf 'The sixteenth was founded in the year 1575 and stands yet, four\n'
-    printf 'hundred twenty-five years on: some forty souls, a hut and a granary,\n'
-    printf 'and no ruin yet to read.\n\n'
+    printf 'last, from the year 850 down to the present. Only one of the seven\n'
+    printf 'completed layers was ended by winter. Three were put to flight by\n'
+    printf 'another gnoll band wanting the same defensible ground, and three\n'
+    printf 'more ended the other way about — the occupants won a fight somewhere\n'
+    printf 'else and carried the settlement onto the land they had taken. It is a\n'
+    printf 'people with only itself to fight, and this column is what that looks\n'
+    printf 'like from the ground. The eighth was founded in the year 1950 and\n'
+    printf 'stands yet, fifty years on: some twelve souls, two huts and a\n'
+    printf 'granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

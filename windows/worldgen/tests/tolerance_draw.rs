@@ -55,7 +55,7 @@ use hornvale_species::{Dispersion, MindVector};
 use std::collections::BTreeMap;
 
 use hornvale_worldgen::disposition::{
-    occupation_draw_key, people_disposition, settlement_disposition,
+    drawn_threat_response, occupation_draw_key, people_disposition, settlement_disposition,
 };
 
 /// The default bake grid (`BakeConfig::default_millennia`): years 0..=2000 in
@@ -226,6 +226,59 @@ fn the_bake_side_key_path_and_the_ledger_side_wrapper_agree() {
                 "bake-side and ledger-side disagree for {people} at site \
                  {site:?} founded {year}: the world would REPORT a disposition \
                  its history was not BAKED with"
+            );
+        }
+        year += BAKE_EPOCH_YEARS;
+    }
+}
+
+/// Task 4's third seam onto the same stream. The raid gate needs one axis, not
+/// three, so it calls `drawn_threat_response` — which consumes ONE draw where
+/// `people_disposition` consumes three. That is only safe because
+/// `threat_response` is the FIRST axis perturbed, so the first draw is the
+/// first draw either way; if the axis order in `people_disposition`'s struct
+/// literal ever moved, or if `drawn_threat_response` grew its own stream
+/// derivation, the world would BAKE a history on one disposition and REPORT
+/// another. Same failure mode as
+/// `the_bake_side_key_path_and_the_ledger_side_wrapper_agree`, one layer in.
+///
+/// Swept over the whole default bake grid and every settling people, including
+/// the spread-0 case (`goblin-twin`-shaped: a kind with an authored mind and no
+/// authored dispersion), where both sides must return the authored location
+/// untouched.
+#[test]
+fn the_gate_side_scalar_is_the_full_draws_threat_response() {
+    let psyche = hornvale_species::psyche_registry();
+    let dispersion = hornvale_species::dispersion_registry();
+    let mut year = BAKE_START_YEAR;
+    while year <= BAKE_END_YEAR {
+        for people in ["human", "goblin", "gnoll", "hobgoblin", "kobold", "bugbear"] {
+            let site = CellId(97 + (year as u32));
+            let key = occupation_draw_key(year);
+            let full = people_disposition(Seed(7), site, key, people, &psyche, &dispersion)
+                .expect("every settling people carries a mind");
+            // The bake side holds two bare f64s the composition root resolved
+            // for it — never a `MindVector`, never a `Dispersion`.
+            let location = psyche
+                .get_by_label(people)
+                .expect("every settling people carries a mind")
+                .threat_response;
+            let spread = dispersion
+                .get_by_label(people)
+                .expect("every settling people carries a dispersion")
+                .mind;
+            assert_eq!(
+                drawn_threat_response(Seed(7), site, key, location, spread),
+                full.threat_response,
+                "the gate would read a different {people} disposition at site \
+                 {site:?} founded {year} than the world reports"
+            );
+            // Spread 0: the authored location exactly, on both sides.
+            assert_eq!(
+                drawn_threat_response(Seed(7), site, key, location, 0.0),
+                location,
+                "a people with no authored dispersion must draw its location \
+                 exactly — the pre-Tolerance behaviour"
             );
         }
         year += BAKE_EPOCH_YEARS;

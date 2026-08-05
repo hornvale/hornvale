@@ -5291,6 +5291,27 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
         .collect();
+    // The Tolerance (spec D2/D5): that authored `threat_response` is the MEAN
+    // of a distribution, and this is its standard deviation. Resolved on the
+    // same channel and handed over as a bare ratio for the same reason — the
+    // bake reads only kernel types, so `Dispersion` itself never crosses.
+    //
+    // Sourced from `dispersion_registry()` rather than from `wc`, because
+    // `WorldComponents` carries no dispersion store: `Dispersion` is authored
+    // beside the psyche but is not one of the integrity-checked components, and
+    // adding it to `WorldComponents` would widen `from_stores`' arity for every
+    // caller to no purpose. The consequence is deliberate and matches
+    // `disposition::settlement_disposition`, which resolves the same registry
+    // on the ledger side: a caller that assembled a SYNTHETIC roster through
+    // `from_stores` (Lab's solo `serpent`/`goblin-twin`, re-keyed off goblin's
+    // components under a fresh `KindId`) finds no row here, draws with spread
+    // 0, and keeps a uniform people — the pre-Tolerance behaviour, which is the
+    // safe direction for a kind nobody authored a spread for.
+    let dispersion = hornvale_species::dispersion_registry();
+    cfg.disposition_spread = peoples
+        .iter()
+        .filter_map(|&k| dispersion.get(&k).map(|d| (k, d.mind)))
+        .collect();
     // The Tithe §4.2's concealment term, resolved on the same channel and with
     // the same fallback: `in_group_radius` rides `SocietyVector`, which only
     // `Settled` kinds carry (decision 0068) — a people without one is absent
@@ -7819,7 +7840,7 @@ mod tests {
         assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 58);
         assert_eq!(count("deity-name"), 58);
-        assert_eq!(count("name-gloss"), 275);
+        assert_eq!(count("name-gloss"), 231);
     }
 
     #[test]

@@ -28,10 +28,22 @@ use hornvale_worldgen::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
-fn seed42() -> World {
+/// The witness world.
+///
+/// **Not seed 42 since The Tolerance (2026-08-04).** This file's claim is
+/// id-invariance; the seed is only the world that happens to *exhibit* a
+/// collision to test it on, and the anti-vacuity guards below exist precisely
+/// so a witness that stops exhibiting one fails loudly instead of passing
+/// empty. That is what happened: making warlikeness a per-settlement draw
+/// halved seed 42's occupation count (919 records -> 459) and took its
+/// material-core collisions with it, from 3 colliding groups to **zero**.
+/// Re-scanned across seeds 42/1/2/3/5/7/11/13/23/1000; seed 7 carries 1255
+/// occupations with 2 colliding material-core groups (4 records) and is the
+/// witness now. The claim, both guards and every assertion are unchanged.
+fn witness_world() -> World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
-        Seed(42),
+        Seed(WITNESS_SEED),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
@@ -39,19 +51,23 @@ fn seed42() -> World {
         &wc,
         BuildDepth::Full,
     )
-    .expect("seed 42 builds")
+    .expect("the witness seed builds")
 }
 
+/// The seed [`witness_world`] builds. A witness, not a claim — see that
+/// function's doc for why it moved off 42.
+const WITNESS_SEED: u64 = 7;
+
 /// Two occupations with identical material cores but different entity ids
-/// must produce identical derived output. Seed 42 measurably contains such
-/// pairs (7 occupations sit in colliding material-core groups, largest group
-/// size 3) — no synthetic id shift is needed to exercise the property.
+/// must produce identical derived output. The witness seed measurably contains
+/// such pairs (4 occupations sit in 2 colliding material-core groups, largest
+/// group size 2) — no synthetic id shift is needed to exercise the property.
 #[test]
 fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
-    let world = seed42();
+    let world = witness_world();
     let now = 5000.0;
     let occs = occupation_records(&world);
-    assert!(!occs.is_empty(), "seed 42 must bake occupations");
+    assert!(!occs.is_empty(), "the witness seed must bake occupations");
 
     let mut groups: BTreeMap<
         u64,
@@ -63,10 +79,10 @@ fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
     let colliding: Vec<_> = groups.values().filter(|g| g.len() > 1).collect();
     assert!(
         !colliding.is_empty(),
-        "seed 42 must contain at least one material-core collision (measured: \
-         7 occupations spread across 3 colliding groups, largest group size 3) \
-         -- zero colliding groups means this test is vacuous and proves \
-         nothing about id-invariance"
+        "the witness seed must contain at least one material-core collision \
+         (measured at seed 7: 4 occupations spread across 2 colliding groups, \
+         largest group size 2) -- zero colliding groups means this test is \
+         vacuous and proves nothing about id-invariance"
     );
 
     for group in &colliding {
@@ -115,14 +131,14 @@ fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
 
 /// Two occupations whose *founding* coordinates and whose parent's founding
 /// coordinates agree must resolve to the same founder handle, despite
-/// different entity ids. Seed 42 measurably contains 29 such colliding
-/// founding-key groups (61 records total, 32 of them beyond the first in
-/// their group).
+/// different entity ids. The witness seed measurably contains such colliding
+/// founding-key groups; the guard below is what keeps that true rather than
+/// assumed.
 #[test]
 fn identical_founding_keys_yield_identical_founder_handles_despite_different_ids() {
-    let world = seed42();
+    let world = witness_world();
     let occs = occupation_records(&world);
-    assert!(!occs.is_empty(), "seed 42 must bake occupations");
+    assert!(!occs.is_empty(), "the witness seed must bake occupations");
 
     let coords_by_id: BTreeMap<EntityId, FoundingCoords<'static>> = occs
         .iter()
@@ -145,10 +161,9 @@ fn identical_founding_keys_yield_identical_founder_handles_despite_different_ids
     let colliding: Vec<_> = groups.values().filter(|g| g.len() > 1).collect();
     assert!(
         !colliding.is_empty(),
-        "seed 42 must contain at least one colliding founding key (measured: \
-         61 records across 29 groups, i.e. 32 records beyond the first in \
-         each group) -- zero colliding groups means this test is vacuous \
-         and proves nothing about id-invariance"
+        "the witness seed must contain at least one colliding founding key -- \
+         zero colliding groups means this test is vacuous and proves nothing \
+         about id-invariance"
     );
 
     for group in &colliding {

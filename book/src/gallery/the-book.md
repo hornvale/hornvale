@@ -261,9 +261,9 @@ The Ngosho's own priesthood taught wrongly, and could be shown wrong by any who 
 *In truth, the Ngosho's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
-## Volume 2: Boaboo
+## Volume 2: Lapja
 
-Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
+Lapja is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
 The Bobboo are bugbears.
 The Loshjo are gnolls.
 The Mepmee are goblins.
@@ -274,17 +274,17 @@ The Dngooqdngo are kobolds.
 ### Tongues
 
 Bobboo Boa Bo Zhabo. (in the bugbear tongue: "The Bobboo are bugbears.")
-Boaboo Boaboo Boo Zhabo. (in the bugbear tongue: "Boaboo is the earth.")
+Lapja Boaboo Boo Zhabo. (in the bugbear tongue: "Lapja is the earth.")
 Loshjo Shjo Jakla La. (in the gnoll tongue: "The Loshjo are gnolls.")
-Boaboo Shjo Lapja La. (in the gnoll tongue: "Boaboo is the earth.")
+Lapja Shjo Lapja La. (in the gnoll tongue: "Lapja is the earth.")
 Mepmee Maa. (in the goblin tongue: "The Mepmee are goblins.")
-Boaboo Moameo. (in the goblin tongue: "Boaboo is the earth.")
+Lapja Moameo. (in the goblin tongue: "Lapja is the earth.")
 Webwee Gwobwee Wo. (in the hobgoblin tongue: "The Webwee are hobgoblins.")
-Boaboo Woowoaweo Wo. (in the hobgoblin tongue: "Boaboo is the earth.")
+Lapja Woowoaweo Wo. (in the hobgoblin tongue: "Lapja is the earth.")
 Foetjee Veabjoo. (in the human tongue: "The Foetjee are humans.")
-Boaboo Vevee. (in the human tongue: "Boaboo is the earth.")
+Lapja Vevee. (in the human tongue: "Lapja is the earth.")
 Dngooqdngo Dngaa. (in the kobold tongue: "The Dngooqdngo are kobolds.")
-Boaboo Dngashgsho. (in the kobold tongue: "Boaboo is the earth.")
+Lapja Dngashgsho. (in the kobold tongue: "Lapja is the earth.")
 
 bugbear: gap — planet (no entry in this lexicon)
 gnoll: gap — planet (no entry in this lexicon)
@@ -303,15 +303,15 @@ The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — rivals.
 The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
-Boaboo is the earth with one moon.
+Lapja is the earth with one moon.
 The moon crosses because Bao walks the sky, slowly.
 The day returns because the sky must be crossed.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Bobboo teach it
 
-Boaboo Boaboo Boo Zhaba. ("Boaboo is the earth — as it is taught.")
+Lapja Boaboo Boo Zhaba. ("Lapja is the earth — as it is taught.")
 
 The Bobboo are bugbears — ourselves.
 The Loshjo are gnolls — rivals.
@@ -319,11 +319,11 @@ The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — rivals.
 The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
-Boaboo is the earth with one moon.
+Lapja is the earth with one moon.
 The moon crosses because Bao walks the sky, slowly.
 The day returns because Baobodbo walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Loshjo tell it
 
@@ -333,15 +333,15 @@ The Mepmee are goblins — neighbors.
 The Webwee are hobgoblins — neighbors.
 The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
-Boaboo is the earth with one moon.
+Lapja is the earth with one moon.
 The moon crosses because it is Jokjo's kin.
 The day returns because Laklajokjo walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Loshjo teach it
 
-Boaboo Shjo Lapja La. ("Boaboo is the earth — as it is taught.")
+Lapja Shjo Lapja La. ("Lapja is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — ourselves.
@@ -349,13 +349,13 @@ The Mepmee are goblins — neighbors.
 The Webwee are hobgoblins — neighbors.
 The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
-Boaboo is the earth with one moon.
+Lapja is the earth with one moon.
 The moon crosses because it answers Jokjo.
 The day returns, as all things return.
 
 — though the folk say The moon crosses because it is Jokjo's kin.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Mepmee tell it
 
@@ -365,14 +365,14 @@ The Mepmee are goblins — ourselves.
 The Webwee are hobgoblins — neighbors.
 The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
-Boaboo is the earth.
+Lapja is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Mepmee teach it
 
-Boaboo Moameo. ("Boaboo is the earth — as it is taught.")
+Lapja Moameo. ("Lapja is the earth — as it is taught.")
 
 The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — neighbors.
@@ -380,12 +380,12 @@ The Mepmee are goblins — ourselves.
 The Webwee are hobgoblins — neighbors.
 The Foetjee are humans — neighbors.
 The Dngooqdngo are kobolds — neighbors.
-Boaboo is the earth.
+Lapja is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Mlalsolshal strides the sky, slowly.
 The day returns because Metme walks the sky, briskly.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Webwee tell it
 
@@ -395,14 +395,14 @@ The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — ourselves.
 The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
-Boaboo is the earth.
+Lapja is the earth.
 The day returns, as all things return.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Webwee teach it
 
-Boaboo Woowoaweo Gwa. ("Boaboo is the earth — as it is taught.")
+Lapja Woowoaweo Gwa. ("Lapja is the earth — as it is taught.")
 
 The Bobboo are bugbears — rivals.
 The Loshjo are gnolls — rivals.
@@ -410,16 +410,16 @@ The Mepmee are goblins — rivals.
 The Webwee are hobgoblins — ourselves.
 The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — rivals.
-Boaboo is the earth.
+Lapja is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because it is Woadngeq's kin.
 The day returns to keep the balance.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Foetjee tell it
 
-Boaboo is the earth.
+Lapja is the earth.
 The day returns to keep the balance.
 The Bobboo are bugbears — neighbors.
 The Loshjo are gnolls — neighbors.
@@ -428,13 +428,13 @@ The Webwee are hobgoblins — neighbors.
 The Foetjee are humans — ourselves.
 The Dngooqdngo are kobolds — neighbors.
 
-*In truth, Boaboo is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Foetjee teach it
 
-Boaboo Vevee. ("Boaboo is the earth — as it is taught.")
+Lapja Vevee. ("Lapja is the earth — as it is taught.")
 
-Boaboo is the earth.
+Lapja is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Pjoefofa walks the sky, slowly.
 The day returns to keep the balance.
@@ -445,11 +445,11 @@ The Webwee are hobgoblins — neighbors.
 The Foetjee are humans — ourselves.
 The Dngooqdngo are kobolds — neighbors.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Dngooqdngo tell it
 
-Boaboo is the earth with one moon.
+Lapja is the earth with one moon.
 The moon crosses because Gngoo strides the sky, slowly.
 The day returns, as all things return.
 The Bobboo are bugbears — rivals.
@@ -459,13 +459,13 @@ The Webwee are hobgoblins — rivals.
 The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — ourselves.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Dngooqdngo teach it
 
-Boaboo Dngashgsho. ("Boaboo is the earth — as it is taught.")
+Lapja Dngashgsho. ("Lapja is the earth — as it is taught.")
 
-Boaboo is the earth with one moon.
+Lapja is the earth with one moon.
 The moon crosses because Gngoo walks the sky, slowly.
 The day returns because Gngoo walks the sky, briskly.
 The Bobboo are bugbears — rivals.
@@ -475,7 +475,7 @@ The Webwee are hobgoblins — rivals.
 The Foetjee are humans — rivals.
 The Dngooqdngo are kobolds — ourselves.
 
-*In truth, Boaboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+*In truth, Lapja is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ### The Reckoning of Years
 

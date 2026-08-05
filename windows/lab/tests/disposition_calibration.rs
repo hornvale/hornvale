@@ -44,6 +44,33 @@
 //! vacates an early site; a people above it raids, and every raid it wins
 //! closes its own record and re-seats the flagship on a later one.
 //!
+//! ## **The Tolerance dissolved this file's partition (2026-08-04)**
+//!
+//! Read the paragraph above as a statement about the roster *before* The
+//! Tolerance. `Bake::takes_the_initiative` no longer compares a people's
+//! authored `threat_response`; it compares a value **drawn per settlement**
+//! around that authored mean, with the people's `Dispersion::mind` as the
+//! standard deviation. So the two-way split this file computes from the psyche
+//! registry — "raiders" above 0.6, "abstainers" below — is now a split by
+//! authored *mean*, not by whether a people's settlements raid. Every one of
+//! the six settling peoples has settlements on both sides of the gate; goblin
+//! (mean 0.5, σ 0.25) clears it on roughly 38 % of its draws and human (0.5,
+//! 0.35) on roughly 42 %.
+//!
+//! The directional claim may well survive — a people whose mean is 0.5 still
+//! raids far less often than one at 0.85, so its flagship should still turn
+//! over less — but the *mechanism sentence* is now approximate where it used to
+//! be exact, and the measured rates below (goblin 16.7 % vs 42.6/45.8/50.0 %,
+//! taken 2026-07-26 on the pre-Tolerance bake) predate the change and are the
+//! numbers the bounds were set from.
+//!
+//! **The thresholds were deliberately NOT retuned here.** Moving a
+//! preregistered bound to rescue a prediction after the physics under it
+//! changed is exactly what this repo forbids; if this battery reddens on the
+//! next heavy-tier run, that is a finding for The Tolerance's readout to
+//! report, not a number to adjust. What is corrected here is only the prose
+//! that claimed a people never raids.
+//!
 //! > **Preregistered:** a NON-RAIDING people holds its first-drawn genesis
 //! > site as its flagship far more often than a RAIDING people does — the
 //! > flagship-re-selection rate is at most [`NONRAIDER_MAX`] for a people

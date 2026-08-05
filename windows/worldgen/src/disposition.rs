@@ -25,7 +25,7 @@
 //! agreement.
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{CellId, ComponentStore, EntityId, KindId, Seed, Value, World};
+use hornvale_kernel::{CellId, ComponentStore, EntityId, KindId, Seed, Stream, Value, World};
 use hornvale_species::{Dispersion, MindVector};
 
 /// Half-width of a symmetric uniform offset with unit standard deviation:
@@ -66,6 +66,70 @@ const NO_SPREAD: Dispersion = Dispersion {
 /// type-audit: bare-ok(count: founded), bare-ok(count: return)
 pub fn occupation_draw_key(founded: f64) -> i64 {
     founded.round() as i64
+}
+
+/// The one place the draw key becomes a stream. **Every** caller goes through
+/// here, so the leg-string format (`"{site}/{founded_year}"`) is written once
+/// and cannot drift between the two entry points; `the_draw_is_byte_pinned_
+/// for_a_known_key` pins the format itself.
+fn draw_stream(seed: Seed, site: CellId, founded_year: i64) -> Stream {
+    // The dynamic leg IS the key: site and founding year, joined. Composed
+    // under the flat `settlement/disposition/v1` root exactly as the deity
+    // stream composes its per-settlement leg.
+    let leg = format!("{}/{}", site.0, founded_year);
+    seed.derive(crate::streams::SETTLEMENT_DISPOSITION)
+        .derive(StreamLabel::dynamic(&leg))
+        .stream()
+}
+
+/// One axis's perturbation: consume one draw and offset `location` by it,
+/// scaled by `spread` and clamped to the axis's closed `[0, 1]` range.
+///
+/// **Consumes exactly one draw**, which is what lets a caller that needs only
+/// the *first* axis ([`drawn_threat_response`]) reach the identical value the
+/// three-axis [`people_disposition`] would put there.
+fn perturb(stream: &mut Stream, location: f64, spread: f64) -> f64 {
+    // `next_f64` is [0, 1), so this is [−1, 1) — asymmetric by one ULP at
+    // the top, which is standard for a uniform built this way and is not
+    // worth a rejection loop.
+    let unit = stream.next_f64() * 2.0 - 1.0;
+    (location + unit * UNIT_SD_HALFWIDTH * spread).clamp(0.0, 1.0)
+}
+
+/// A settlement's drawn `threat_response` alone — the **bake-side** read, and
+/// the input the raid gate (`Bake::takes_the_initiative`) now reads instead of
+/// its people's authored species constant.
+///
+/// Kernel types only, by design. `windows/worldgen/src/history_bake.rs` states
+/// that "the bake reads only kernel types", so the authored location and the
+/// authored spread arrive here as two bare `f64`s that the composition root
+/// resolved off `hornvale_species` — the same channel `BakeConfig.disposition`
+/// and `BakeConfig.in_group_radius` already travel. No `hornvale-species` type
+/// crosses into the bake.
+///
+/// **This is the first of [`people_disposition`]'s three draws, not a fourth
+/// one.** `threat_response` is the first axis perturbed there, both functions
+/// build their stream through [`draw_stream`], and both offset through
+/// [`perturb`], so for one key this returns exactly
+/// `people_disposition(..).unwrap().threat_response` — asserted by
+/// `windows/worldgen/tests/tolerance_draw.rs`'s
+/// `the_gate_side_scalar_is_the_full_draws_threat_response`. Consuming one draw
+/// rather than three is not a shortcut around that agreement: the axes are
+/// independent draws in a frozen order, so the first is the first either way.
+///
+/// A `spread` of zero returns `location` unchanged — exactly the model's
+/// behaviour before this campaign, which is what makes Task 5's mutation proof
+/// (zero dispersion ⇒ zero between-settlement variance) a statement about this
+/// function rather than about the gate that calls it.
+/// type-audit: bare-ok(count: founded_year), bare-ok(ratio: location), bare-ok(ratio: spread), bare-ok(ratio: return)
+pub fn drawn_threat_response(
+    seed: Seed,
+    site: CellId,
+    founded_year: i64,
+    location: f64,
+    spread: f64,
+) -> f64 {
+    perturb(&mut draw_stream(seed, site, founded_year), location, spread)
 }
 
 /// A settlement's effective mind: its people's authored [`MindVector`],
@@ -117,11 +181,38 @@ pub fn occupation_draw_key(founded: f64) -> i64 {
 ///
 /// So a within-epoch transient can share a drawn mind with the record that
 /// displaced it. Two *simultaneously alive* communities never can
-/// (`Bake.node_index` holds one alive community per cell). **Task 4 owns
-/// whether that matters to the raid gate**; it was not resolved here by adding
-/// a third key component, because every available candidate (`BakeId`, a
-/// within-year sequence number, population) is either the sequential-counter
-/// trap or circular through raiding itself.
+/// (`Bake.node_index` holds one alive community per cell). It was not resolved
+/// here by adding a third key component, because every available candidate
+/// (`BakeId`, a within-year sequence number, population) is either the
+/// sequential-counter trap or circular through raiding itself.
+///
+/// **Task 4's ruling: it is accepted, and it does not matter to the raid gate.**
+/// Three reasons, in the order they bind:
+///
+/// 1. **It is a correlation, not a wrong value.** A colliding pair draws the
+///    same *unit offset*, but each record applies it to its own people's
+///    authored location and spread, so two records of different peoples get
+///    different dispositions anyway, and two of the same people get one that is
+///    a perfectly legitimate draw from that people's distribution. Nothing
+///    lands outside the authored support; only the joint distribution of one
+///    rare pair is degenerate.
+/// 2. **The gate's blast radius for a transient is one decision.** A
+///    zero-tenure record is opened and closed inside one epoch. The only use it
+///    ever makes of its disposition is deciding whether the remnant it becomes
+///    may look at held ground on its way down the cascade — one branch of
+///    `Bake::best_home`, taken once, on a band that is about to stop existing.
+///    It never grows, never takes a vassal, and never commits a settlement
+///    fact, so the correlation cannot reach the ledger.
+/// 3. **It cannot reach the campaign's instrument.** H1 and H2 are measured
+///    over settlements alive at `now`, where the key IS unique; a
+///    zero-tenure transient is not in that population, and Task 5's mutation
+///    proof (zero dispersion ⇒ zero between-settlement variance) holds
+///    identically whether or not two dead records shared an offset — at spread
+///    0 every draw returns its people's authored location regardless of key.
+///
+/// The alternative — inventing a third key component to decorrelate a pair that
+/// makes one throwaway decision each — would buy nothing measurable and would
+/// have to be paid for in exactly the currency spec D3 rules out.
 ///
 /// (An earlier draft of this reasoning leaned on a ratified ruling, numbered
 /// just past the end of the log, said to retire one-community-per-cell. No such
@@ -236,25 +327,12 @@ pub fn people_disposition(
         .get_by_label(people)
         .copied()
         .unwrap_or(NO_SPREAD);
-    // The dynamic leg IS the key: site and founding year, joined. Composed
-    // under the flat `settlement/disposition/v1` root exactly as the deity
-    // stream composes its per-settlement leg.
-    let leg = format!("{}/{}", site.0, founded_year);
-    let mut stream = seed
-        .derive(crate::streams::SETTLEMENT_DISPOSITION)
-        .derive(StreamLabel::dynamic(&leg))
-        .stream();
-    let mut perturb = |location: f64| {
-        // `next_f64` is [0, 1), so this is [−1, 1) — asymmetric by one ULP at
-        // the top, which is standard for a uniform built this way and is not
-        // worth a rejection loop.
-        let unit = stream.next_f64() * 2.0 - 1.0;
-        (location + unit * UNIT_SD_HALFWIDTH * spread.mind).clamp(0.0, 1.0)
-    };
+    let mut stream = draw_stream(seed, site, founded_year);
+    let mut next = |location: f64| perturb(&mut stream, location, spread.mind);
     Some(MindVector {
-        threat_response: perturb(location.threat_response),
-        deliberation_latency: perturb(location.deliberation_latency),
-        time_horizon: perturb(location.time_horizon),
+        threat_response: next(location.threat_response),
+        deliberation_latency: next(location.deliberation_latency),
+        time_horizon: next(location.time_horizon),
     })
 }
 

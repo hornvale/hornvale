@@ -1,9 +1,9 @@
 # The Peoples of Seed 42
 
-The land holds 232 settlement(s).
+The land holds 188 settlement(s).
 The chief bugbear settlement, Goodogododaga, holds 118 souls amid tropical-seasonal-forest.
-The chief gnoll settlement, Pzopdzhaxgzavshmo, holds 119 souls amid tropical-rainforest.
-The chief goblin settlement, Nakano, holds 118 souls amid tropical-rainforest.
+The chief gnoll settlement, Psoaxsmaapgzhopgshoopzngaavsma, holds 89 souls amid temperate-forest.
+The chief goblin settlement, Naokano, holds 118 souls amid tropical-rainforest.
 The chief hobgoblin settlement, Geoboegetoanaoka, holds 127 souls amid tropical-rainforest.
 The chief human settlement, Kezngomo, holds 119 souls amid temperate-forest.
 The chief kobold settlement, Roo, holds 90 souls amid temperate-forest.
@@ -17,13 +17,13 @@ The chief kobold settlement, Roo, holds 90 souls amid temperate-forest.
                                                                         
                                                                         
                                                                         
-              o                                        oo               
-              oo                  ooo oo               ooo           o  
-             oooo                     o           o                     
-                                                 ooooo                  
-         oo    oo                                  oo@o                 
-         ooo oo                                                         
-                       oooo                                             
+                                       oo                             o 
+              oo                  oo oooo              o             oo 
+              oo                     oo                                 
+               ooo                                oooo                  
+         oo   oooo                                  o@o                 
+         oo  oo                                                         
+                        ooo                                             
                                                                         
                                                                         
                                                                         

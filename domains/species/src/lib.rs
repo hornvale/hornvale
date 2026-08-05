@@ -186,6 +186,25 @@ impl MindVector {
 /// society has, carried solely by `Settled` kinds. A `Solitary` creature
 /// carries none; consumers needing a society reading for one resolve
 /// [`SocietyVector::MANIKIN`]. `in_group_radius` is a bare ratio in `[0, 1]`.
+///
+/// **This is a grid/group instrument** (Douglas), adopted deliberately at the
+/// owner's direction (The Tolerance, spec D6): `sociality` is *grid* (how
+/// rule-bound a life is) and `in_group_radius` is *group* (how bounded "us"
+/// is). The four biases — hierarchy, egalitarian/sect, individualist,
+/// fatalist — each carry published predictions about cosmology, risk, and
+/// stance toward outsiders, so those are DERIVED from the quadrant rather
+/// than authored per people. Adding a people means placing it on two axes,
+/// not inventing its culture.
+///
+/// **The adoption is documentary; no consumer reads a quadrant yet.** The
+/// Tolerance names the frame and stops there. Wiring the quadrant into
+/// behaviour — the obvious candidate being the raid gate, spec D5's third
+/// term — was deliberately deferred: both axes are per-*people* constants, so
+/// a quadrant term adds nothing to the between-settlement variance that
+/// campaign was measuring, and shipping it would have been an unpreregistered
+/// behavioural change with no measurement attached. The frame is recorded here
+/// so the next campaign that wants it inherits the reading rather than
+/// reinventing one.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SocietyVector {

@@ -7194,9 +7194,18 @@ mod tests {
         // stack as a sixth competitor, redeciding seed 42's settlement
         // placement once more — goblin moves 2.6 -> 67/28
         // (2.392_857_142_857_143).
+        //
+        // The Tolerance re-pin (2026-08-04): the raid gate became a
+        // per-settlement draw rather than a per-species constant, halving
+        // seed 42's occupation count and redeciding settlement survival once
+        // more — goblin moves 67/28 -> 105/41 (2.560_975_609_756_097_6). The
+        // denominator moved (28 -> 41 named goblin settlements), so this is
+        // the placement reshuffle this test's history documents repeatedly,
+        // not a drift in the naming machinery. Still inside the 2-3 target,
+        // which is what the row exists to assert.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(67.0 / 28.0)
+            MetricValue::Number(105.0 / 41.0)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -7228,9 +7237,18 @@ mod tests {
         // stack as a sixth competitor, redeciding seed 42's settlement
         // placement once more — 56/23 -> 254/97, moving both the syllable
         // total and the denominator.
+        //
+        // The Tolerance re-pin (2026-08-04): warlikeness became a
+        // per-settlement draw, redeciding settlement survival once more —
+        // 254/97 -> 111/43, moving both the syllable total and the
+        // denominator. Kobold FELL (2.619 -> 2.581) while goblin ROSE
+        // (2.393 -> 2.561) — opposite directions again, which is the signature
+        // of placement reshuffling rather than a directional drift in the
+        // naming machinery, exactly as every entry above records. Both peoples
+        // still read inside the 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(254.0 / 97.0)
+            MetricValue::Number(111.0 / 43.0)
         );
     }
 
@@ -7321,7 +7339,14 @@ mod tests {
         // stack as a sixth competitor, redeciding seed 42's settlement
         // placement once more — 93/158 -> 97/232. Still strictly between 0
         // and 1.
-        assert_eq!(share, 97.0 / 232.0, "seed 42 transparency drifted");
+        //
+        // The Tolerance re-pin (2026-08-04): warlikeness became a
+        // per-settlement draw, halving seed 42's occupation count — 97/232 ->
+        // 75/188. The denominator is exactly this world's new glossed-settlement
+        // total (232 -> 188 live settlements), so it is the same
+        // settlement-survival shift every re-pin above records. Still strictly
+        // between 0 and 1, so the distribution claim holds unweakened.
+        assert_eq!(share, 75.0 / 188.0, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -7818,6 +7843,15 @@ mod tests {
         // "marsh" drop out). The test still bites — three rooted concepts is
         // still a nonempty precondition — so the set is re-pinned rather
         // than the seed swapped.
+        //
+        // The Tolerance re-pin (2026-08-04): the raid gate became a
+        // per-settlement draw rather than a per-species constant, which
+        // reseats settlements again — "spring" now drops out too, leaving
+        // "river" and "ford". Same reasoning as above: two rooted concepts is
+        // still a nonempty precondition and the mutation below still flips,
+        // so the set is re-pinned rather than the seed swapped. The
+        // PRECONDITION is what moved; the claim (stripping the toponymic
+        // gates makes exposure_sound read false) is untouched.
         let rooted: Vec<&str> = TOPONYMIC
             .iter()
             .copied()
@@ -7825,7 +7859,7 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford", "spring"],
+            vec!["river", "ford"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -9130,9 +9164,22 @@ mod tests {
         // same world — the same same-seed-two-species corroboration the
         // previous witness had. Bugbear kept for continuity with the prior
         // witness species.
+        //
+        // The Tolerance re-witness (2026-08-04): warlikeness became a
+        // per-settlement draw rather than a per-species constant, reseating
+        // settlements once more — seed 16's BUGBEAR no longer clears all six
+        // staple bands. A witness-species invalidation this time, not a
+        // witness-seed one: re-swept seeds 0..80 against every placed people
+        // by the same method (dynamically off `FullView::components().
+        // perception`), and seed 16 still clears — now with (16, goblin) and
+        // (16, kobold), plus (25, hobgoblin) and (63, human) elsewhere in the
+        // range. KOBOLD is the witness now: it is the species that
+        // independently corroborated the previous witness in this very world,
+        // so the seed is unchanged and the corroboration (goblin, same seed,
+        // same six bands) is unchanged in shape.
         let view = FullView::build(Seed(16), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 16");
+            independently_steeped_concepts(&view, "kobold").expect("kobold is placed at seed 16");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

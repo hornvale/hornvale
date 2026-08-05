@@ -3,6 +3,15 @@
 //! the between-settlement variance measured here should be ~0 by
 //! construction — that zero is the baseline H2 must move.
 //!
+//! **Read "today" as "at Task 1" (2026-08-04).** Task 4 replaced the raid
+//! gate's input with a per-settlement draw, so the *gate* no longer reads a
+//! per-people constant. This file is unaffected and deliberately not updated
+//! to follow it: column 1 below measures the **authored** `threat_response`
+//! off the psyche registry, which is exactly the pre-dispersion quantity this
+//! baseline exists to freeze, and its exact-zero variance is the number Task 6
+//! compares against. Do not re-point it at the drawn value — that would
+//! overwrite the baseline with the readout.
+//!
 //! ## Two quantities, kept separate (task ruling, 2026-08-04)
 //!
 //! The raid gate, `Bake::takes_the_initiative`

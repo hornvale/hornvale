@@ -509,6 +509,20 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // consequence of human's biosphere/niche rows redeciding settlement
     // placement, the same class of collateral this file's own history
     // already documents for The Salt.
+    //
+    // The Tolerance re-pin (2026-08-04): the raid gate stopped reading a
+    // per-people `threat_response` constant and started reading a value drawn
+    // per settlement, so which communities raid — and therefore which
+    // occupations open, close and restack — moved on every world with
+    // settlements. Re-measured on the live corpus: 1 tying pair total -- 0 at
+    // seed 42, 0 at seed 7 (the pair that newly tied under The Generalist no
+    // longer does), 1 at seed 1000. Re-read rather than assumed, by the same
+    // argument as above: Task 4's diff touches `Bake::takes_the_initiative` and
+    // its plumbing, not `layer_key`/`legacy_layer_key`/`occupations_by_cell`,
+    // so the key's tie CONDITIONS are untouched and only the corpus they run
+    // over moved. The per-tie assertions inside the loop — the invariant this
+    // test actually defends — all still hold; it is the corroborating count
+    // that moved.
     let mut pairs = 0u64;
     let mut ties = 0u64;
     for seed in [42u64, 7, 1000] {
@@ -551,8 +565,8 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
          until at least one site restacks (pairs={pairs})"
     );
     assert_eq!(
-        ties, 3,
-        "measured 0 (seed 42) + 1 (seed 7) + 2 (seed 1000) = 3 tying pairs on the live \
+        ties, 1,
+        "measured 0 (seed 42) + 0 (seed 7) + 1 (seed 1000) = 1 tying pair on the live \
          corpus; a different count means the key's tie conditions changed"
     );
 }
@@ -599,9 +613,16 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// redecided seed 42's deep-history settlement outcome, and a second site
 /// there now restacks under the material key — seed 42's count moves 0 -> 1.
 /// Seeds 7 and 1000 are unmoved.
+///
+/// The Tolerance re-pin (2026-08-04): warlikeness became a per-settlement draw
+/// instead of a per-species constant, redeciding deep-history settlement
+/// survival at all three seeds. Re-measured: 42 -> 0, 7 -> 2, 1000 -> 1. The
+/// claim is unchanged and is still the one The Salt froze — the material fourth
+/// key barely moves the stratigraphy, three restacking sites across three
+/// worlds — only the witness moved with the corpus underneath it.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 1usize), (7, 1), (1000, 0)] {
+    for (seed, expected) in [(42u64, 0usize), (7, 2), (1000, 1)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

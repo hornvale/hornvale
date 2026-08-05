@@ -343,17 +343,28 @@ with respect to, never a distribution of its own.
 
 **Threat response found a second, sharper consumer in *The Tumult*.** Where
 demography folds it smoothly into a capacity term, the deep-history bake's
-conflict rule reads it as a **gate**: a people whose threat response falls
+conflict rule reads it as a **gate**: a settlement whose threat response falls
 below a fixed threshold does not raid at all, however strong it is on paper.
 Two things follow that are worth recording here rather than only in
 [Settlement](./settlement.md). First, the gate produces an **asymmetric**
-aversion structure with no pairwise machinery whatever — each people gates on
-its *own* authored number, so one people can decline a fight its neighbour is
-happy to pick — and on the shipped roster it means the goblin and the human,
-both at 0.5, never raid while the other four may. Second, and more pointed at the time:
-threat response was for one campaign the **only** per-species input the bake
-received, so every people-to-people asymmetry the deep past produced ran
-through a single scalar.
+aversion structure with no pairwise machinery whatever — each raider gates on
+its *own* number, so one community can decline a fight its neighbour is happy
+to pick. Second, and more pointed at the time: threat response was for one
+campaign the **only** per-species input the bake received, so every
+people-to-people asymmetry the deep past produced ran through a single scalar.
+
+**The gate sorted *kinds* until *The Tolerance*, and now sorts *places*.** For
+two campaigns the comparison read a species constant, so every settlement of a
+people answered it identically and one could say flatly that the goblin and the
+human — both authored at 0.5 — never raided while the other four might. That
+sentence was only ever sayable because a people was a point. Once a people
+became a distribution, the gate's input became a *draw*: each settlement takes
+its own threat response from its people's authored mean and dispersion, keyed
+on where and when it was founded. Every one of the six settling peoples now has
+settlements on both sides of the threshold — the assertive ones mostly above it
+and the neutral ones mostly below, but none wholly either. Warlikeness became a
+property of a place rather than of a kind, which is what makes an aversion
+between two neighbouring towns of the same people expressible at all.
 
 **That is no longer true, and the two scalars that joined it were already
 authored and simply unread.** *The Tithe* gave the bake a standing tribute

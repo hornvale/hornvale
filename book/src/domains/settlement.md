@@ -259,10 +259,13 @@ graph and raids the best one that is both **worth more than its own** (the
 era-effective capacity field, the same one growth reads) and **held by someone
 it can beat** (population scaled by technological horizon, by a margin). Two
 vetoes inhibit it: a target already starving against its own capacity has
-nothing worth taking, and a people whose authored threat response falls below a
+nothing worth taking, and a community whose threat response falls below a
 threshold does not raid at all — which makes the aversion structure asymmetric
-with no pairwise machinery, since each people gates on its own trait. On the
-shipped roster the goblin never raids anyone. A raid is a **conquest**: the
+with no pairwise machinery, since each raider gates on its own trait. That
+second veto read a *species constant* until *The Tolerance*, when it became a
+per-settlement draw: two towns of one people, founded on different ground in
+different centuries, can now answer it differently, so no people is simply
+warlike or simply not. A raid is a **conquest**: the
 raider takes the cell and the loser is driven off, war destroys a fraction of
 the combined population on both sides rather than transferring it, and the
 displaced people re-enters the same rule with its baseline substituted —

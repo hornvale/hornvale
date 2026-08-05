@@ -22,13 +22,13 @@ Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [1020] bugbear of Goodogododaga
-  [1021] hobgoblin of Geoboegetoanaoka
-  [1022] kobold of Roxo
-  [1023] a wild rust-monster
-  [1024] a wild otyugh
-  [1025] a wild xorn
-  [1026] a wild carrion-crawler
+  [560] bugbear of Goodogododaga
+  [561] hobgoblin of Geoboegetoanaoka
+  [562] kobold of Roxo
+  [563] a wild rust-monster
+  [564] a wild otyugh
+  [565] a wild xorn
+  [566] a wild carrion-crawler
 > needs
 The bugbear of Goodogododaga seems content.
 > wait 5

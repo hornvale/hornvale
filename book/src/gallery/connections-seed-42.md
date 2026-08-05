@@ -30,13 +30,13 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Raxarora (17.2°N, 104.2°W)
-=============================================
+The connections of Nenato
+=========================
 
-Raxarora (17.2°N, 104.2°W) is linked by sea-lane to Xoraxa, cell 28374, and Raxarora (16.2°N, 104.6°W) -- a current-borne crossing, not a road.
-A natural route runs to Neteabo, Raxarora (16.2°N, 104.6°W), Geoboge, and Roxoxoxa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+Nenato is linked by sea-lane to Dodadodo, cell 28374, and Bo -- a current-borne crossing, not a road.
+A natural route runs to Gebogebo, Bo, Geoboge, and Toa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
-Raxarora (17.2°N, 104.2°W)'s region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+Nenato's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum
