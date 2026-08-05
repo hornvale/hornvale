@@ -5775,19 +5775,32 @@ mod tests {
         // `vassal_flights` 1 vs 0.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let far = geo.neighbors(CellId(0))[0];
         // The whole world is dead ground except the two cells this fixture
-        // occupies. `best_home` skips a cell whose habitability factor is zero,
-        // so nothing outside these two is ever a candidate.
+        // occupies. Since The Tilth that is said in CAPACITY, not in a mask:
+        // `vacant_for` admits a cell only where this people's capacity is
+        // positive, so a zero-capacity cell is never a candidate. This fixture
+        // used to build the same dead ground out of `EraClimate.habitable`,
+        // which `Bake::factor` no longer reads — the mask went inert and the
+        // road silently led somewhere, so the test was measuring a successful
+        // flight. Habitability is a relation between a people and a cell now,
+        // and a fixture that wants unusable ground has to say so in that
+        // language.
+        let capacity = caps_from_fn(&geo, |c| {
+            if c == CellId(0) || c == far {
+                RICH
+            } else {
+                0.0
+            }
+        });
         let era = {
             use hornvale_kernel::ReferenceElevation;
             EraClimate {
                 day: 0.0,
                 ice: CellMap::from_fn(&geo, |_| false),
-                habitable: CellMap::from_fn(&geo, |c| c == CellId(0) || c == far),
+                habitable: CellMap::from_fn(&geo, |_| true),
                 sea_level: ReferenceElevation::new(0.0).unwrap(),
                 ice_fraction: 0.0,
             }
@@ -8288,18 +8301,23 @@ mod tests {
         // rings turned uninhabitable there is nothing admissible near at all,
         // so the roller keeps walking outward and settles in the third ring —
         // a people whose whole neighbourhood is unusable still migrates as far
-        // as it must. (Capacity is uniform, so nothing but distance orders the
-        // options; an unrestricted scan takes the globally lowest `CellId`,
-        // which sits a ring further out again.)
-        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| POOR);
+        // as it must. (Capacity is uniform across everything admissible, so
+        // nothing but distance orders the options; an unrestricted scan takes
+        // the globally lowest `CellId`, which sits a ring further out again.)
+        //
+        // "Unusable" is said in CAPACITY, not in a mask. `vacant_for` admits a
+        // cell only where this people's capacity is positive; the two inner
+        // rings are worth nothing to the roller, so it walks past them. This
+        // fixture used to block them with `EraClimate.habitable`, which
+        // `Bake::factor` no longer reads — the mask went inert and the roller
+        // stopped in ring 1, which is what `left: Some(1) right: Some(3)` was
+        // reporting.
+        let (geo, graphs, _uniform, river_prox, refugia, era) = cascade_world(|_| POOR);
         let blocked: BTreeSet<CellId> = geo
             .cells()
             .filter(|&c| matches!(geo.hops_between(CellId(0), c, 16), Some(1 | 2)))
             .collect();
-        let era = EraClimate {
-            habitable: CellMap::from_fn(&geo, |c| !blocked.contains(&c)),
-            ..era
-        };
+        let capacity = caps_from_fn(&geo, |c| if blocked.contains(&c) { 0.0 } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let roller = bake.open(
