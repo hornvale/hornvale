@@ -140,6 +140,69 @@ report it and cut §3.1. And if columns *never* return, the churn was not
 climate-driven at all but an artifact of a specific eviction path, which would
 send this back to `nearest_dest` rather than forward.
 
+## 4a. Feasibility measured BEFORE implementation (2026-08-05)
+
+`windows/worldgen/tests/fallow_feasibility.rs` models one cell over 80 epochs with
+no world at all, and sweeps extraction rate against climate variance. Two results,
+and the second is a defect in the probe rather than the design.
+
+### §3.1 works, but needs a timescale separation the spec did not state
+
+```
+  extr\var    0.0    0.2    0.4    0.6    0.8       column depth (H1 wants >= 4)
+      0.00      1      1      1      1      1
+      0.04      1      1      1      1      1
+      0.08      1      1      1      1      1
+      0.16      1     14     17     17     16
+```
+
+A cliff, not a gradient — and it has a closed form. At equilibrium the capital
+account settles at `tilth_eq = regen / (regen + extraction)`, so
+
+```
+  extraction 0.04 -> tilth_eq 0.333, eff_eq  6.67   persists (graceful decline)
+  extraction 0.08 -> tilth_eq 0.200, eff_eq  4.00   CYCLES
+  extraction 0.16 -> tilth_eq 0.111, eff_eq  2.22   CYCLES
+```
+
+The mechanism has **two attractors**: *persistent-degraded*, where a community
+shrinks gracefully onto worn-out ground and stays forever, and *cyclic*, where it
+overshoots and collapses. Columns exist only in the second. Since `GROWTH_RATE` is
+0.2 per epoch, a population absorbs a ~20%-per-epoch fall in capacity simply by
+shrinking — so **collapse requires degradation to outrun population adjustment.**
+
+That is a real design constraint and §3.1 must state it: extraction has to be fast
+relative to `GROWTH_RATE`, or the model produces dignified decline instead of
+collapse-and-refound. It is also reassuring that the cyclic side lands at **14–17
+layers** against the historical **16** — the mechanism reproduces the observed
+texture rather than merely producing *some* texture.
+
+### The variance axis was under-powered — that verdict does not stand
+
+The sweep appears to show variance contributing nothing. It does not, because the
+probe's climate stand-in is too gentle:
+
+```
+  amplitude 0.8 -> multiplier range [0.501, 1.681]   nominal claim was [0.2, 1.8]
+```
+
+Two incommensurate sines rarely align, so the widest setting only ever tested a
+mild climate. **Variance is unresolved, not refuted**, and a successor probe should
+drive it from the real paleoclimate era series rather than a beat function. Recorded
+because the temptation is to read the flat rows as a finding; they are a limit of
+the instrument.
+
+### What this changes
+
+- §3.1 gains the timescale requirement above as an explicit design constraint.
+- H4's first null (*"variance does all the work, cut §3.1"*) is **not** answered —
+  the instrument could not answer it. Its second form (*"columns never return"*) is
+  answered no: they return, at 14–17 layers.
+- The bifurcation is itself a risk worth carrying into §5: texture that depends on
+  which side of a sharp boundary a constant lands is fragile, which is the trap the
+  old hard zero set once already. Either the boundary is widened, or the constants
+  are derived from it deliberately rather than chosen near it.
+
 ## 5. Risks
 
 - **A stock is state, and state is a save-format contract.** `tilth` must either
