@@ -832,6 +832,16 @@ impl History {
 struct Community {
     /// Index into `Bake::records` of this community's occupation record.
     record: usize,
+    /// This community's people, as a **dense index into `Bake::caps`** — the
+    /// people's position in `Bake::peoples`, resolved once in [`Bake::open`].
+    ///
+    /// Denormalised from `records[record].core.people` deliberately. Every
+    /// capacity read needs it, including inside [`Bake::best_home`]'s ring scan,
+    /// and `kernel/CLAUDE.md`'s rule is that a dense index is a `Vec` position,
+    /// not a map key: a `BTreeMap<KindId, _>` lookup per cell per ring would be
+    /// a hot-path regression. The `KindId` remains the durable identity and the
+    /// only thing ever serialized (decision 0015); this is a per-build handle.
+    people_idx: usize,
     /// The cell this community currently occupies.
     site: CellId,
     /// The community's own entity handle.
@@ -981,8 +991,22 @@ struct Bake<'a> {
     graphs: &'a [ConnectionGraph],
     /// Index into `graphs` of the era currently being stepped.
     cur_graph: usize,
-    /// Per-cell base carrying capacity.
-    capacity: &'a CellMap<f64>,
+    /// **Per-people** headcount capacity, one field per entry of `peoples` and
+    /// indexed by the same position (`Community::people_idx`). This replaced a
+    /// single species-blind `CellMap<f64>` (The Tilth): a cell's worth is a
+    /// property of the *pairing* of ground and people, not of the ground alone,
+    /// so gnoll's arid optimum and kobold's high band are no longer read
+    /// through one field that calls both marginal.
+    ///
+    /// **Build-local dense index, never identity** — the same contract
+    /// `per_species_capacity` (which produces these) and `HistoryPlacement.tag`
+    /// document. The composition root builds this slice and `peoples` from ONE
+    /// ordering; nothing here survives a save/load boundary.
+    caps: &'a [hornvale_kernel::ecology::CapacityMap],
+    /// The roster, in the order that indexes `caps`. Held so [`Bake::open`] can
+    /// resolve a `KindId` to its dense index once, at the only place a
+    /// community is created, rather than in the ring-scan hot paths.
+    peoples: &'a [KindId],
     /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
     /// ~0 far from one). Biases all three site-picking paths toward water so
     /// settlements condense near rivers (Task 5b, restoring The Confluence).
@@ -1156,6 +1180,24 @@ impl<'a> Bake<'a> {
         &self.graphs[self.cur_graph]
     }
 
+    /// Resolve a `KindId` to its dense index into `caps` — the one place the
+    /// translation happens. Called at community creation ([`Bake::open`]) and
+    /// once per relocation, never inside a ring scan: the hot paths carry the
+    /// resolved [`Community::people_idx`] instead.
+    ///
+    /// **Panics rather than defaulting**, deliberately. A people with no capacity
+    /// field is a composition-root wiring bug — `caps` and `peoples` must be built
+    /// from ONE ordering — and silently substituting index 0 would hand that
+    /// people another's niche and corrupt every world it touched while failing no
+    /// test. A linear scan over a six-entry roster is cheaper than a map lookup
+    /// and needs no ordering assumption beyond the one it asserts.
+    fn people_idx_of(&self, people: KindId) -> usize {
+        self.peoples
+            .iter()
+            .position(|&k| k == people)
+            .expect("every people the bake places has a capacity field at the same index")
+    }
+
     /// The index of the era in force for `year`: the last era whose `day` is at
     /// or before `year`, or 0 for years before the first.
     fn era_index_for(&self, eras: &[EraClimate], year: f64) -> usize {
@@ -1168,8 +1210,34 @@ impl<'a> Bake<'a> {
         chosen
     }
 
-    /// A cell's habitability factor this era: 1.0 if habitable and unglaciated,
-    /// else 0.0. (Binary here; the swing, not a gradient, drives the dynamics.)
+    /// This era's **geometric-and-thermal admissibility** of a cell: 1.0 if the
+    /// era's masks admit it at all, else 0.0. Species-blind by construction —
+    /// what this gates on is true of the ground for everybody.
+    ///
+    /// **It stayed binary, and stayed on `habitable`, deliberately.** The Tilth's
+    /// handoff proposed reducing this to ice alone, on the reading that a glacier
+    /// is not a niche disagreement while habitability is. That is right about the
+    /// concepts and wrong about *this* codebase, measurably:
+    ///
+    /// - `era.ice` is **identically empty on every production path**. Both
+    ///   `bake_eras` branches fill it `from_fn(|_| false)` and fold the snowline
+    ///   into `habitable` instead (its own doc says so). An ice-only factor is
+    ///   therefore `≡ 1.0`, not a narrower mask.
+    /// - So `habitable` is the *only* era-varying input reaching this function,
+    ///   and it carries two things per-species capacity cannot supply: land above
+    ///   **this era's** sea level (a glacial low-stand exposes shelf that the
+    ///   present-day capacity field reads as ocean), and the snowline swing that
+    ///   is the entire deep-time climate signal the bake replays.
+    /// - Measured on seed 42: ice-only moves records 640 → 812 and *raises*
+    ///   deepest column 16 → 17, but climate displacement stops firing at all —
+    ///   the churn re-sources entirely to conquest (raids 173 → 288, migrations
+    ///   142 → 97). Every era becomes identical, exactly the constant-sky
+    ///   degenerate case `bake_eras` documents.
+    ///
+    /// Narrowing this is The Fallow's job, not The Tilth's: the hard zero here
+    /// should be replaced by a *gradient* that still varies with era, which needs
+    /// an era-varying capacity term to replace it with. Removing the cliff before
+    /// building the ramp deletes deep time rather than explaining it.
     fn factor(era: &EraClimate, cell: CellId) -> f64 {
         if *era.ice.get(cell) || !*era.habitable.get(cell) {
             0.0
@@ -1178,15 +1246,28 @@ impl<'a> Bake<'a> {
         }
     }
 
-    /// A cell's effective capacity this era.
-    fn eff_capacity(&self, era: &EraClimate, cell: CellId) -> f64 {
-        *self.capacity.get(cell) * Self::factor(era, cell)
+    /// What a cell is worth **to one people** this era: that people's headcount
+    /// capacity there, gated by the era masks.
+    ///
+    /// `pidx` is a dense index into `caps` (a [`Community::people_idx`]), never a
+    /// `KindId` — see that field for why the lookup is resolved at `open` time.
+    fn eff_capacity(&self, era: &EraClimate, cell: CellId, pidx: usize) -> f64 {
+        self.caps[pidx].at(cell) * Self::factor(era, cell)
     }
 
-    /// Whether a cell can receive a settler this era: habitable, unglaciated,
-    /// and not already occupied by an alive community.
-    fn vacant_habitable(&self, era: &EraClimate, cell: CellId) -> bool {
-        Self::factor(era, cell) > 0.0 && !self.node_index.contains_key(&cell)
+    /// Whether a cell can receive a settler **of this people** this era: admitted
+    /// by the era masks, worth something to *them*, and not already held.
+    ///
+    /// The middle condition is new with The Tilth and is the point of the rewire.
+    /// The old species-blind predicate answered "is this ground habitable", so a
+    /// people could be routed onto a cell that cannot feed it — and, worse, the
+    /// value it was then judged on came from a field that knew nothing about who
+    /// was standing there. A cell where this people has no capacity is not a
+    /// refuge for them, whatever it is for someone else.
+    fn vacant_for(&self, era: &EraClimate, cell: CellId, pidx: usize) -> bool {
+        Self::factor(era, cell) > 0.0
+            && self.caps[pidx].at(cell) > 0.0
+            && !self.node_index.contains_key(&cell)
     }
 
     /// Walk the era graph outward from `from` in breadth-first **rings** and
@@ -1234,16 +1315,24 @@ impl<'a> Bake<'a> {
         None
     }
 
-    /// The nearest vacant habitable cell to `from` (excluding `from` itself),
-    /// by breadth-first hop distance. Within the nearest layer, refugial cells
-    /// win over non-refugial, then lowest `CellId` — a total, deterministic
-    /// order. `None` if the whole reachable graph is full or hostile.
-    fn nearest_dest(&self, era: &EraClimate, from: CellId) -> Option<CellId> {
+    /// The nearest cell to `from` (excluding `from` itself) that can receive a
+    /// settler **of this people**, by breadth-first hop distance. Within the
+    /// nearest layer, refugial cells win over non-refugial, then river-adjacent,
+    /// then lowest `CellId` — a total, deterministic order. `None` if the whole
+    /// reachable graph is full or worthless to them.
+    ///
+    /// The ordering deliberately still does **not** rank by capacity: a migrant
+    /// flees to the nearest *survivable* refuge, and survivability is now the
+    /// `vacant_for` filter's job (it excludes cells where this people has no
+    /// capacity at all). Making the tie-break prefer richer ground would turn a
+    /// flight into an optimisation, which is [`Bake::best_home`]'s rule, not
+    /// this one's.
+    fn nearest_dest(&self, era: &EraClimate, from: CellId, pidx: usize) -> Option<CellId> {
         self.nearest_ring(from, |ring| {
             let mut candidates: Vec<CellId> = ring
                 .iter()
                 .copied()
-                .filter(|&n| self.vacant_habitable(era, n))
+                .filter(|&n| self.vacant_for(era, n, pidx))
                 .collect();
             if candidates.is_empty() {
                 return None;
@@ -1270,8 +1359,15 @@ impl<'a> Bake<'a> {
     /// first ring that contains an admissible option**, taking the best value
     /// within that ring. Within a ring:
     ///
-    /// - a **vacant** habitable cell scores its effective capacity;
-    /// - a **held** habitable cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
+    /// Every score below is `eff_capacity` **for the rolling people** (The
+    /// Tilth): the comparison is what this people could make of each cell, not
+    /// what the cell is worth in the abstract. The species-blind field this
+    /// replaced could not decide *who* wins a cell at all — it entered every
+    /// candidate's score identically and cancelled out of the `argmax` — so a
+    /// per-people term is the only thing that can express a niche disagreement.
+    ///
+    /// - a **vacant** admissible cell scores that people's effective capacity;
+    /// - a **held** admissible cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
     ///   — proven ground is worth more — and is admissible only when the roller
     ///   clears `RAID_MARGIN` over its holder, only when the roller could still
     ///   seat itself after the war it would have to fight (`can_fight`), and
@@ -1300,6 +1396,7 @@ impl<'a> Bake<'a> {
     fn best_home(
         &self,
         people: KindId,
+        pidx: usize,
         era: &EraClimate,
         from: CellId,
         strength: f64,
@@ -1315,9 +1412,18 @@ impl<'a> Bake<'a> {
             let mut best: Option<HomeOption> = None;
             for &n in ring {
                 if Self::factor(era, n) <= 0.0 {
-                    continue; // the ice has made it worthless to everyone
+                    continue; // the era's masks exclude it for everyone
                 }
-                let value = self.eff_capacity(era, n);
+                // Valued FROM THE ROLLER'S OWN NICHE, which is the whole point
+                // of the rewire: a displaced people compares candidate homes by
+                // what *it* could make of them. Ground a rival thrives on is not
+                // thereby attractive, and ground worth nothing to this people is
+                // not a home at all — so a zero here is skipped rather than
+                // entered at score 0, keeping it out of the tie-break entirely.
+                let value = self.eff_capacity(era, n, pidx);
+                if value <= 0.0 {
+                    continue;
+                }
                 let (score, defender, holder) = match self.node_index.get(&n) {
                     None => (value, 0.0, None),
                     Some(&h) => {
@@ -1433,6 +1539,7 @@ impl<'a> Bake<'a> {
         let can_fight = pop * (1.0 - WAR_LOSS) >= VIABLE_MIN;
         let Some(home) = self.best_home(
             people,
+            self.people_idx_of(people),
             era,
             from,
             roller_strength(pop, offset, year),
@@ -1826,7 +1933,8 @@ impl<'a> Bake<'a> {
     /// remnants preying on remnants all the way down.
     fn has_spoils(&self, era: &EraClimate, idx: usize) -> bool {
         let c = &self.communities[idx];
-        self.eff_capacity(era, c.site) > 0.0 && self.pressure_of(idx, era) < NO_SPOILS_PRESSURE
+        self.eff_capacity(era, c.site, c.people_idx) > 0.0
+            && self.pressure_of(idx, era) < NO_SPOILS_PRESSURE
     }
 
     /// A community's crowding pressure on its cell this era: population
@@ -1834,9 +1942,13 @@ impl<'a> Bake<'a> {
     /// `population` only — `stores` must never enter this term, or a
     /// successful extractor would starve itself on its own tribute (spec
     /// §4.2a).
+    /// Pressure is read against the capacity of the people actually standing
+    /// there (The Tilth): the same cell crowds a people whose niche it suits
+    /// less than one it does not, which is what makes the same ground
+    /// sustainable for one and ruinous for another.
     fn pressure_of(&self, idx: usize, era: &EraClimate) -> f64 {
         let c = &self.communities[idx];
-        let eff = self.eff_capacity(era, c.site);
+        let eff = self.eff_capacity(era, c.site, c.people_idx);
         c.population * NEED / eff
     }
 
@@ -1888,8 +2000,10 @@ impl<'a> Bake<'a> {
         let record_idx = self.records.len();
         self.records.push(record);
         let community_idx = self.communities.len();
+        let people_idx = self.people_idx_of(people);
         self.communities.push(Community {
             record: record_idx,
+            people_idx,
             site,
             id,
             lineage,
@@ -2250,7 +2364,16 @@ impl<'a> Bake<'a> {
             // see; `target_stock` carries the derivation. Both are immutable
             // across a collection pass, so the order-independence this method
             // documents below survives the new term.
-            let sub_eff = self.eff_capacity(era, self.communities[sub].site);
+            // The SUBORDINATE'S capacity on its own cell, not the patron's
+            // reading of that ground (The Tilth). A land tax is bounded by what
+            // the land yields to the people working it; valuing the vassal's
+            // fields through the lord's niche would let a patron whose own niche
+            // suits that ground better demand more than ever grew there.
+            let sub_eff = self.eff_capacity(
+                era,
+                self.communities[sub].site,
+                self.communities[sub].people_idx,
+            );
             let patron_people = self.records[self.communities[rel.patron].record]
                 .core
                 .people;
@@ -2540,9 +2663,18 @@ impl<'a> Bake<'a> {
             return;
         }
         let site = self.communities[idx].site;
-        let eff = self.eff_capacity(era, site);
+        let pidx = self.communities[idx].people_idx;
+        let eff = self.eff_capacity(era, site, pidx);
 
         // Climate eviction: migrate to a vacant refuge, or starve. No conflict.
+        //
+        // **This exact-zero test is the hard cliff the arc is aimed at**, and it
+        // still fires only through [`Bake::factor`]'s binary era mask: a
+        // per-people capacity is a continuous field, so it reaches exactly 0.0
+        // only where a people has no niche at all, never as a gradual failure.
+        // Replacing this test with a *gradient* — ground that grows poor rather
+        // than switching off — is The Fallow's `h(tilth)`, and it needs the stock
+        // term to have something to be a gradient in.
         if eff == 0.0 {
             let (record, pop, lineage, offset, migrant_id) = {
                 let c = &self.communities[idx];
@@ -2554,7 +2686,7 @@ impl<'a> Bake<'a> {
             // starves on the road instead of refounding, exactly as `relocate`
             // rules for a displaced remnant. Without this the refound would
             // `open` at `peak_population == 0` — a peopleless settlement.
-            match self.nearest_dest(era, site) {
+            match self.nearest_dest(era, site, pidx) {
                 Some(dest) if pop * MIGRATE_SURVIVAL >= VIABLE_MIN => {
                     // A climate eviction is the third close-and-reopen in this
                     // file, and it is a MOVE: the people walks to a refuge and
@@ -2721,7 +2853,8 @@ impl<'a> Bake<'a> {
             return;
         }
         let raider_str = self.strength(raider);
-        let raider_val = self.eff_capacity(era, raider_site);
+        let raider_pidx = self.communities[raider].people_idx;
+        let raider_val = self.eff_capacity(era, raider_site, raider_pidx);
         // Spec §4.4, guard (1): a community that is itself paying someone takes
         // no vassal of its own. Hoisted because it does not vary over the
         // candidate walk — but applied per-candidate, inside the else-chain,
@@ -2744,7 +2877,14 @@ impl<'a> Bake<'a> {
             let Some(&t) = self.node_index.get(&n) else {
                 continue;
             };
-            let t_val = self.eff_capacity(era, n);
+            // Valued through the RAIDER'S niche, both sides of the comparison
+            // (The Tilth). `t_val > raider_val` below asks "is that ground better
+            // *for me* than what I hold" — the raider is deciding whether to move
+            // onto it — so both readings must be in the same people's units. The
+            // target's own capacity is a different question and is asked
+            // separately, by `has_spoils`, which is about whether the victim has
+            // a surplus worth taking.
+            let t_val = self.eff_capacity(era, n, raider_pidx);
             let t_str = self.strength(t);
             if raider_str <= t_str * defensibility(self.cur(), raider_site, n) * RAID_MARGIN {
                 continue; // dominance: only a fight it can win
@@ -2831,7 +2971,13 @@ impl<'a> Bake<'a> {
                 // granary cannot be seen (spec §4.2). A second bid overwrites,
                 // which IS the patronage transfer — `tribute` is keyed by the
                 // subordinate, so one patron per community is structural.
-                let cap = self.eff_capacity(era, prize);
+                // Assessed on what the ground yields TO ITS OCCUPANT, matching
+                // `collect_tribute`'s `sub_eff` (The Tilth). The subordinate keeps
+                // its cell in this branch, so the tax base is its own capacity
+                // there; reading it through the new patron's niche would set a
+                // demand the vassal's fields were never able to meet.
+                let target_pidx = self.communities[target].people_idx;
+                let cap = self.eff_capacity(era, prize, target_pidx);
                 let assessment = (cap * ASSESS_RATE).clamp(0.0, cap * ASSESS_MAX);
                 let previous = self.tribute.insert(
                     target,
@@ -3002,6 +3148,11 @@ impl<'a> Bake<'a> {
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
             let site = self.communities[idx].site;
+            // A daughter inherits its mother's niche, so the ranking below is in
+            // the MOTHER'S capacity (The Tilth) — read before the scan, never per
+            // candidate. Hoisting it above the ranking touches no draw: the
+            // `DAUGHTER_PROB` draw above has already been consumed.
+            let dpidx = self.communities[idx].people_idx;
             // A daughter settles the vacant habitable direct neighbour of
             // highest river-weighted capacity (Task 5b) — the dominant source
             // of new settlements, so this is the main lever that pulls the
@@ -3010,10 +3161,10 @@ impl<'a> Bake<'a> {
             // lowest CellId — total & deterministic (`f64::total_cmp`).
             let dest = traversable_neighbors(self.cur(), site)
                 .into_iter()
-                .filter(|&n| self.vacant_habitable(era, n))
+                .filter(|&n| self.vacant_for(era, n, dpidx))
                 .max_by(|a, b| {
-                    let sa = *self.capacity.get(*a) * river_factor(*self.river_prox.get(*a));
-                    let sb = *self.capacity.get(*b) * river_factor(*self.river_prox.get(*b));
+                    let sa = self.caps[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
+                    let sb = self.caps[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
                     // Higher score wins; among equal score, lower CellId wins
                     // (treated as "greater" for `max_by`).
                     sa.total_cmp(&sb).then(b.cmp(a))
@@ -3044,7 +3195,11 @@ impl<'a> Bake<'a> {
 ///
 /// See the module docs for the determinism contract and the
 /// displacement-fires invariant.
-/// type-audit: bare-ok(count: capacity), bare-ok(ratio: river_prox), bare-ok(flag: refugia)
+/// `caps` carries one headcount-capacity field per entry of `peoples`, **in the
+/// same order** — the alignment is the caller's contract and is asserted below.
+/// There is no longer a species-blind capacity field: every site that once read
+/// one now asks the question per-people, including genesis siting.
+/// type-audit: bare-ok(ratio: river_prox), bare-ok(flag: refugia)
 // The bake reads several independent composition-root fields (geo, capacity,
 // river proximity, era series, refugia, roster, span); each is a distinct
 // world input with no coherent grouping into a single struct, so they stay
@@ -3053,7 +3208,7 @@ impl<'a> Bake<'a> {
 pub fn bake(
     seed: Seed,
     geo: &Geosphere,
-    capacity: &CellMap<f64>,
+    caps: &[hornvale_kernel::ecology::CapacityMap],
     river_prox: &CellMap<f64>,
     eras: &[EraClimate],
     refugia: &CellMap<bool>,
@@ -3062,10 +3217,20 @@ pub fn bake(
     graphs: &[ConnectionGraph],
 ) -> History {
     assert_eq!(graphs.len(), eras.len(), "one graph per era");
+    // The index alignment the whole rewire rests on. A length mismatch means the
+    // composition root built `caps` and `peoples` from two different orderings,
+    // which would silently give some people another's niche — checked here, at
+    // the boundary, because nothing downstream can detect it.
+    assert_eq!(
+        caps.len(),
+        peoples.len(),
+        "one capacity field per people, in the same order"
+    );
     let mut bake = Bake {
         graphs,
         cur_graph: 0,
-        capacity,
+        caps,
+        peoples,
         river_prox,
         refugia,
         disposition: &cfg.disposition,
@@ -3081,33 +3246,21 @@ pub fn bake(
         tally: BakeCensus::default(),
     };
 
-    // 1. Seed the ancient world at the earliest era's habitable, highest-
-    //    capacity cells — one alive community per site. The candidate pool
-    //    (`GENESIS_TOP_CELLS`) is kept well above the total genesis community
-    //    count so EVERY people finds its own vacant proto-sites: a small
-    //    shared pool would let the peoples processed first take every cell and
-    //    starve the rest (a world missing a whole people). Each people draws
-    //    from the cells still vacant when its turn comes, retrying past a
-    //    collision rather than wasting the draw, so its `count` sites really
-    //    do open (as long as vacant top cells remain).
+    // 1. Seed the ancient world at each people's OWN best ground — one alive
+    //    community per site. Each people's pool is its top `GENESIS_TOP_CELLS`
+    //    cells by ITS river-weighted capacity, which is kept well above the
+    //    per-people genesis count so every people finds vacant proto-sites even
+    //    after the peoples before it have taken theirs. Each people draws from
+    //    the cells still vacant when its turn comes, retrying past a collision
+    //    rather than wasting the draw, so its `count` sites really do open.
     let earliest = eras
         .iter()
         .min_by(|a, b| a.day.total_cmp(&b.day))
         .expect("at least one era");
-    let mut candidates: Vec<CellId> = geo
+    let admissible: Vec<CellId> = geo
         .cells()
         .filter(|&c| Bake::factor(earliest, c) > 0.0)
         .collect();
-    // Rank candidate proto-sites by river-weighted capacity (Task 5b): a
-    // river-adjacent cell outranks an equally-fertile cell far from water, so
-    // the genesis pool — and thus the peoples seeded from it — cluster near
-    // fresh water. Tie-broken by lowest CellId (total, deterministic).
-    candidates.sort_by(|a, b| {
-        let sa = *capacity.get(*a) * river_factor(*river_prox.get(*a));
-        let sb = *capacity.get(*b) * river_factor(*river_prox.get(*b));
-        sb.total_cmp(&sa).then(a.cmp(b))
-    });
-    let top: Vec<CellId> = candidates.iter().copied().take(GENESIS_TOP_CELLS).collect();
 
     for &people in peoples {
         let mut pstream = seed
@@ -3115,13 +3268,36 @@ pub fn bake(
             .derive(StreamLabel::dynamic(people.0))
             .stream();
         let count = pstream.range_u32(GENESIS_SITES_MIN, GENESIS_SITES_MAX);
-        // Only cells still vacant this people's turn are candidates — prior
-        // peoples' proto-sites are excluded up front, so no draw is wasted.
-        let mut pool: Vec<CellId> = top
+        let pidx = bake.people_idx_of(people);
+        // **PER-PEOPLE, and it has to be — measured, not reasoned.** The first
+        // cut of this rewire kept one species-blind ranking here, on the argument
+        // that "where is the good land" is a fair question to ask of the ground
+        // alone. It is not, once a people can only live in its niche: the top 64
+        // cells by bare productivity are lowland river cells, so **kobold — whose
+        // only discriminating axis is elevation, with a hard 0.0 floor, and whose
+        // ground is the >3000 m band — was seeded entirely onto cells worth zero
+        // to it, evicted in the first epoch, and vanished from the world.**
+        // `species_worlds::default_world_carries_all_four_peoples_with_their_own_flagships`
+        // caught it ("kobold must hold at least one settlement"); nothing about
+        // the shared-pool argument predicted it.
+        //
+        // So the pool is each people's own best ground, and the zero-capacity
+        // filter is load-bearing rather than tidy: a proto-site a people cannot
+        // feed is not a founding, it is a death two epochs later.
+        let mut pool: Vec<CellId> = admissible
             .iter()
             .copied()
-            .filter(|c| !bake.node_index.contains_key(c))
+            .filter(|c| bake.caps[pidx].at(*c) > 0.0 && !bake.node_index.contains_key(c))
             .collect();
+        // Rank by river-weighted capacity IN THIS PEOPLE'S UNITS (Task 5b's river
+        // bias, preserved): a river-adjacent cell outranks an equally-fertile one
+        // far from water. Tie-broken by lowest CellId — total and deterministic.
+        pool.sort_by(|a, b| {
+            let sa = bake.caps[pidx].at(*a) * river_factor(*river_prox.get(*a));
+            let sb = bake.caps[pidx].at(*b) * river_factor(*river_prox.get(*b));
+            sb.total_cmp(&sa).then(a.cmp(b))
+        });
+        pool.truncate(GENESIS_TOP_CELLS);
         let mut opened = 0;
         while opened < count && !pool.is_empty() {
             let pick = pstream.range_u32(0, pool.len() as u32 - 1) as usize;
@@ -3364,7 +3540,6 @@ mod tests {
 
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -3375,11 +3550,13 @@ mod tests {
             ice_fraction: 0.0,
         };
         let people = KindId("goblin");
+        let caps = caps_from_fn(&geo, |_| 100.0);
 
         let mut bake = Bake {
             graphs: &graphs,
             cur_graph: 0,
-            capacity: &capacity,
+            caps: &caps,
+            peoples: all_settlers(),
             river_prox: &river_prox,
             refugia: &refugia,
             disposition: no_disposition(),
@@ -3468,7 +3645,7 @@ mod tests {
     ) -> (
         Geosphere,
         Vec<ConnectionGraph>,
-        CellMap<f64>,
+        Vec<hornvale_kernel::ecology::CapacityMap>,
         CellMap<f64>,
         CellMap<bool>,
         EraClimate,
@@ -3476,7 +3653,7 @@ mod tests {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, capacity_of);
+        let capacity = caps_from_fn(&geo, capacity_of);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -3494,6 +3671,44 @@ mod tests {
     const POOR: f64 = 10.0;
     /// Prime land in [`cascade_world`] — ten times a poor cell's worth.
     const RICH: f64 = 100.0;
+
+    /// The roster a hand-built [`Bake`] is given: every settling people, so any
+    /// `KindId` a test opens resolves to a capacity field. Order is the dense
+    /// index — the same contract the composition root honours.
+    fn all_settlers() -> &'static [KindId] {
+        &[
+            KindId("kobold"),
+            KindId("goblin"),
+            KindId("hobgoblin"),
+            KindId("bugbear"),
+            KindId("gnoll"),
+            KindId("human"),
+        ]
+    }
+
+    /// Per-people capacity fields for a hand-built [`Bake`]: the SAME field,
+    /// painted by `capacity_of`, given to every people in [`all_settlers`].
+    ///
+    /// Species-uniform on purpose. These tests are about the bake's *rules* —
+    /// lineage, cascades, tribute setpoints, the value gradient conflict keys on
+    /// — not about niche differentiation, and a field that varied per people
+    /// would quietly make each of them a test of who prefers what as well. Giving
+    /// every people the identical field reproduces exactly the pre-Tilth
+    /// species-blind `CellMap` these tests were written against, so a failure
+    /// still means the rule moved and not that the fixture did.
+    fn caps_from_fn(
+        geo: &Geosphere,
+        capacity_of: impl Fn(CellId) -> f64,
+    ) -> Vec<hornvale_kernel::ecology::CapacityMap> {
+        let field = CellMap::from_fn(geo, capacity_of);
+        all_settlers()
+            .iter()
+            .map(|_| {
+                hornvale_kernel::ecology::CapacityMap::new(field.clone())
+                    .expect("a non-negative test capacity field is valid")
+            })
+            .collect()
+    }
 
     /// The disposition map a hand-built [`Bake`] uses when the test is not
     /// about disposition: empty, so nobody is vetoed (the same fail-open the
@@ -3542,7 +3757,7 @@ mod tests {
     /// record set and a fixed stream.
     fn hand_bake<'a>(
         graphs: &'a [ConnectionGraph],
-        capacity: &'a CellMap<f64>,
+        caps: &'a [hornvale_kernel::ecology::CapacityMap],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
@@ -3550,7 +3765,8 @@ mod tests {
         Bake {
             graphs,
             cur_graph: 0,
-            capacity,
+            caps,
+            peoples: all_settlers(),
             river_prox,
             refugia,
             disposition,
@@ -3591,7 +3807,7 @@ mod tests {
         //   (b) the pressure the bake computes is unchanged
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let capacity = caps_from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -3671,7 +3887,7 @@ mod tests {
         // Uniform capacity everywhere: raider and both holders read the same
         // land value, so nothing but the approach conductance can decide
         // which holder falls.
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let capacity = caps_from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -3756,7 +3972,7 @@ mod tests {
     fn tribute_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
-        capacity: &'a CellMap<f64>,
+        capacity: &'a [hornvale_kernel::ecology::CapacityMap],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
     ) -> (Bake<'a>, usize, usize) {
@@ -4038,7 +4254,7 @@ mod tests {
 
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let capacity = caps_from_fn(&geo, |_| 100.0);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -4971,7 +5187,7 @@ mod tests {
         // not a clamp bolted on after it — has to be what makes it impossible.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -5228,7 +5444,7 @@ mod tests {
         // `vassal_flights` 1 vs 0.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let far = geo.neighbors(CellId(0))[0];
@@ -6178,7 +6394,7 @@ mod tests {
         // must behave like a median patron instead.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -6228,7 +6444,7 @@ mod tests {
         // community is least able to survive it.
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let capacity = caps_from_fn(&geo, |_| RICH);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -6639,7 +6855,7 @@ mod tests {
     fn adaptive_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
-        capacity: &'a CellMap<f64>,
+        capacity: &'a [hornvale_kernel::ecology::CapacityMap],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         era: &EraClimate,

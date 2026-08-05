@@ -48,6 +48,26 @@ fn peoples() -> Vec<KindId> {
     ]
 }
 
+/// The per-people capacity slice a fixture's single field becomes: the SAME
+/// field, handed to every people in `peoples` (whichever roster the call site
+/// passes to `bake` — the two must be the same length and the same order).
+///
+/// Uniform across peoples on purpose. Every fixture below encodes a value
+/// gradient *across cells* — the refuge step, the escarpment, the value-flat
+/// world — and that gradient is what the rules under test key on. Varying it per
+/// people as well would add a second independent variable to each test and make
+/// a failure ambiguous between "the rule moved" and "the fixture disagrees about
+/// who likes what". The niche-differentiation behaviour has its own coverage.
+fn caps_of(field: &CellMap<f64>, peoples: &[KindId]) -> Vec<hornvale_kernel::ecology::CapacityMap> {
+    peoples
+        .iter()
+        .map(|_| {
+            hornvale_kernel::ecology::CapacityMap::new(field.clone())
+                .expect("a fixture capacity field is finite and non-negative")
+        })
+        .collect()
+}
+
 /// A small test world with a genuine, *oscillating* glacial swing — the
 /// honest driver of climate displacement at volume:
 ///
@@ -139,7 +159,7 @@ fn same_seed_bakes_byte_identical_history() {
     let a = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -150,7 +170,7 @@ fn same_seed_bakes_byte_identical_history() {
     let b = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -170,7 +190,7 @@ fn different_seeds_diverge() {
     let a = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -181,7 +201,7 @@ fn different_seeds_diverge() {
     let b = bake(
         Seed(43),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -207,7 +227,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -283,7 +303,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -410,7 +430,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -509,7 +529,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -537,7 +557,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h2 = bake(
         Seed(42),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -693,7 +713,7 @@ fn value_flat_history_seeded_with(
     bake(
         Seed(seed),
         &geo,
-        &cap,
+        &caps_of(&cap, &people),
         &river,
         &eras,
         &refugia,
@@ -1023,7 +1043,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let no_lane = bake(
         Seed(7),
         &geo,
-        &capacity,
+        &caps_of(&capacity, &people),
         &river,
         &eras,
         &refugia,
@@ -1041,7 +1061,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let lane = bake(
         Seed(7),
         &geo,
-        &capacity,
+        &caps_of(&capacity, &people),
         &river,
         &eras,
         &refugia,

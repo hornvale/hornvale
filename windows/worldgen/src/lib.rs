@@ -5403,11 +5403,13 @@ fn bake_history_from(
     // units, and calling it a suitability is half of the transposition that let
     // The Keeping's spec §3.2 propose swapping it for `per_species_suitability`'s
     // dimensionless [0,1] output — a silent 20-100x rescale nothing objected to.
-    let productivity =
-        hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
-    // `scaled` keeps this a capacity by construction; the unwrap is explicit
-    // because the bake still takes a bare `CellMap<f64>`.
-    let capacity = productivity.scaled(SETTLERS_PER_CAPACITY).into_cell_map();
+    // NOTE: the species-blind `carrying_capacity × SETTLERS_PER_CAPACITY` field
+    // the bake used to take is GONE (The Tilth). It was the last consumer of that
+    // scaling on this path — every valuation the bake makes, genesis siting
+    // included, now reads a per-people headcount field from
+    // `per_species_capacity`. Decision 0103's point, arrived at: a capacity is a
+    // property of a people on a cell, and the blind field could not express that
+    // however it was scaled.
     let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
@@ -5415,6 +5417,37 @@ fn bake_history_from(
     let mut cfg = history_bake::BakeConfig::default_millennia();
     let eras = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+
+    // THE PER-PEOPLE CAPACITY FIELDS, and the one ordering that ties them to
+    // `peoples` (The Tilth). Both vectors are derived from `species_set` in a
+    // single pass each, so their indices agree by construction rather than by
+    // coincidence — `bake` asserts the lengths match, but only this shared
+    // derivation makes the *positions* mean the same thing. `per_species_capacity`
+    // tags its results by `.enumerate()` position over the slice it is handed, so
+    // dropping the tag while preserving order is exactly the alignment the bake
+    // wants; re-sorting or filtering either vector here would break it silently.
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+        stellar_inputs(&sky_of(world)?);
+    let species_biosphere: Vec<&hornvale_species::BiosphereTraits> = peoples
+        .iter()
+        .map(|k| {
+            wc.biosphere.get(k).ok_or_else(|| {
+                BuildError::Pins(format!("settling people '{}' has no biosphere traits", k.0))
+            })
+        })
+        .collect::<Result<_, _>>()?;
+    let caps: Vec<hornvale_kernel::ecology::CapacityMap> = per_species_capacity(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+        &species_biosphere,
+    )
+    .into_iter()
+    .map(|(_tag, map)| map)
+    .collect();
     // The Tumult §4.2a's durable inhibition is authored psychology, so the
     // composition root — the only layer that may read the species registries —
     // resolves it here and hands the bake plain kernel types. A people whose
@@ -5458,7 +5491,7 @@ fn bake_history_from(
     Ok(history_bake::bake(
         seed,
         geo,
-        &capacity,
+        &caps,
         &river_prox,
         &eras,
         &paleo.refugia,
