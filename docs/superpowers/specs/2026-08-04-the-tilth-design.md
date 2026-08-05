@@ -182,8 +182,21 @@ to its global share. Predicted with **no new species**, which is the surprising
 half.
 
 **H3 — marginal ground becomes usable.** Cells clearing the daughter-founding bar
-in newly-opened ground rise above **zero** — step B's measured value on every
-seed.
+in newly-opened ground rise above **zero**. Step B's baseline, measured on all
+five probe seeds after `is_land` landed:
+
+```
+seed        NEW ground opened      survivable   expandable   expansion ratio
+             (K>0, gate-excluded)   (eff>1.0)   (eff>11.43)   before -> after
+42               70  ( 0.63%)            0           0        0.72x -> 0.74x
+7              3126  (16.41%)           78           0        0.91x -> 1.27x
+999999         2040  (12.72%)           20           0        0.95x -> 1.44x
+16244...       2697  (22.77%)           61           0        0.94x -> 1.43x
+1234             97  ( 0.84%)            1           0        0.47x -> 0.49x
+```
+
+The `expandable` column is **zero on every seed** — that is the number this
+campaign has to move, and it is why step B alone changed nothing that matters.
 
 **H4 — the null, stated in advance.** If the monopoly persists after §3, the base
 field was *not* the cause and the collapse belongs to the contest layer — the
