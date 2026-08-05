@@ -151,22 +151,73 @@ pub fn occupation_draw_key(founded: f64) -> i64 {
 /// the clamp resolves that conflict in favour of the bound. The cost is real
 /// and is stated here so it is not rediscovered later as a mystery: a people
 /// authored near a boundary piles clamped mass on it, pulling its *realized*
-/// mean back off the boundary, below its *authored* one.
+/// mean **toward the interior** — away from whichever bound it presses. Near
+/// the upper bound that means *below* the authored value; near the lower bound
+/// it means *above* it. Both occur on the shipped roster.
 ///
-/// Which peoples this touches, on the shipped roster: gnoll (`threat_response`
-/// 0.85, `mind` dispersion 0.22), kobold and bugbear (0.8), and hobgoblin
-/// (0.7) all press the upper bound. Human and goblin sit at the centred 0.5
-/// and are unaffected. The campaign's preregistered **H1 ("the mean
-/// survives")** must be read against this: a small downward shift in those
-/// peoples' realized means is the clamp, not a biased draw.
+/// Which axes this actually touches, computed from the authored σ rather than
+/// eyeballed (half-width √3·σ, matching the uniform draw above; rows with any
+/// clamped mass, ordered by the size of the shift):
+///
+/// ```text
+///   people      σ(mind)  axis                  authored  clamped mass   realized    shift
+///   ----------  -------  --------------------  --------  ------------   --------  --------
+///   human          0.35  time_horizon              0.75  29.4% upper      0.6977   -0.0523
+///   gnoll          0.22  threat_response           0.85  30.3% upper      0.8150   -0.0350
+///   gnoll          0.22  deliberation_latency      0.20  23.8% LOWER      0.2215   +0.0215
+///   gnoll          0.22  time_horizon              0.20  23.8% LOWER      0.2215   +0.0215
+///   human          0.35  deliberation_latency      0.60  17.0% up/0.5% dn 0.5825   -0.0175
+///   bugbear        0.20  threat_response           0.80  21.1% upper      0.7845   -0.0155
+///   *-dragon       0.08  threat_response           0.95  32.0% upper      0.9358   -0.0142
+///   *-dragon       0.08  time_horizon              0.90  13.9% upper      0.8973   -0.0027
+///   bugbear        0.20  time_horizon              0.30   6.7% LOWER      0.3016   +0.0016
+///   kobold         0.12  threat_response           0.80   1.9% upper      0.7999   -0.0001
+///   kobold         0.12  time_horizon              0.80   1.9% upper      0.7999   -0.0001
+///   human          0.35  threat_response           0.50  8.8% up/8.8% dn  0.5000   -0.0000
+/// ```
+///
+/// Four things that table says and prose about "peoples authored near a
+/// boundary" does not:
+///
+/// - **`human` is the most-clamped people on the roster**, not an unaffected
+///   centred one. Its σ = 0.35 is the *widest* authored, which is precisely
+///   what makes it clamp hardest: its half-width is 0.606, so every one of its
+///   three axes reaches a bound. `time_horizon` carries the largest realized
+///   shift on the roster, −0.052 (≈7% of the authored value).
+/// - **`hobgoblin` and `goblin` clamp nothing at all.** hobgoblin's σ = 0.10
+///   gives a half-width of 0.173, so its highest axis (0.7) tops out at 0.873;
+///   goblin sits at 0.5 on all three with a half-width of 0.433. Neither can
+///   reach a bound, and neither belongs on a list of affected peoples.
+/// - **The lower bound clamps too.** gnoll's `deliberation_latency` and
+///   `time_horizon` (0.20) and bugbear's `time_horizon` (0.30) press *downward*
+///   and are pulled *up*. A one-sided "the mean comes out low" reading would
+///   mis-sign these.
+/// - **Being centred is not what protects a people; symmetry is.** human's
+///   `threat_response` sits at 0.5 and clamps 8.8% at *each* bound, so the two
+///   biases cancel exactly and the shift is 0.0000. The bias is a function of
+///   asymmetry with respect to the bounds, not of distance from 0.5.
+///
+/// The three chromatic dragons are listed for completeness because
+/// [`people_disposition`] is defined on any minded kind. They are `Solitary`
+/// and never settle, so [`settlement_disposition`] never resolves one and H1's
+/// per-settlement measurement never sees them.
+///
+/// The campaign's preregistered **H1 ("the mean survives")** must be read
+/// against this table: a realized mean displaced toward the interior on one of
+/// these axes is the clamp, not a biased draw.
 ///
 /// No distribution scheme (reflection, logit-space, σ-rescaling near the
 /// boundary) was chosen to make the mean come out right — that would be
 /// retuning to rescue a frozen prediction, which this campaign forbids.
 ///
-/// One thing the bias does **not** reach: the raid gate is a *threshold* at
-/// `RAID_DISPOSITION_MIN = 0.6`, and clamping at 1.0 moves no mass across 0.6.
-/// So the clamp shows up in H1's reported means and *not* in H3's rates.
+/// **This is an H1 disclosure only; H3 is untouched, and not by luck.** The
+/// raid gate is a *threshold* at `RAID_DISPOSITION_MIN = 0.6`. Clamping to
+/// `[0, 1]` is a monotone map that fixes every value already inside the range —
+/// including 0.6 itself — so `x > 0.6` if and only if `clamp(x) > 0.6`, for
+/// both bounds and for any threshold strictly inside `(0, 1)`. Mass absorbed at
+/// 1.0 was already above the threshold; mass absorbed at 0.0 was already below
+/// it. No draw changes which side of the gate it falls on, so the clamp moves
+/// H1's reported means and **cannot** move H3's rates.
 ///
 /// Returns `None` when `people` has no authored mind at all. A people with a
 /// mind but no authored dispersion draws its location exactly (see

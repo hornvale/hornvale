@@ -232,6 +232,65 @@ fn the_bake_side_key_path_and_the_ledger_side_wrapper_agree() {
     }
 }
 
+/// **The stream golden.** A new permanent stream label is a save-format
+/// contract, and three parts of this one had nothing pinning them:
+///
+/// 1. **The per-dimension consumption order.** `people_disposition`'s doc
+///    calls it "a frozen consumption order, like every other stream in this
+///    workspace" — but reversing which of the three draws feeds which axis
+///    changes every settlement's mind in the world while every *behavioural*
+///    test still passes, because each test asserts a property (independence,
+///    range, zero-dispersion identity) that a permutation preserves.
+/// 2. **The leg-string format**, `format!("{}/{}", site.0, founded_year)`.
+///    Any change to the separator, the order, or the rendering derives a
+///    different seed for every settlement that has ever existed.
+/// 3. **The field order of the `MindVector` struct literal**, which decides
+///    draw-to-axis assignment because Rust evaluates struct-literal fields in
+///    written order.
+///
+/// One `assert_eq!` against a hard-coded vector closes all three. Both witness
+/// peoples are chosen with **three distinct authored axes** (human 0.5/0.6/0.75,
+/// bugbear 0.8/0.4/0.3) so that a permutation cannot go unnoticed, and both keys
+/// were checked to produce **no clamped component** — a value pinned at exactly
+/// 0.0 or 1.0 would be insensitive to the offset that produced it and would
+/// weaken the golden. `site != founded_year` so that transposing the two halves
+/// of the leg is also caught.
+///
+/// If this test fails, the question is never "what are the new numbers" — it is
+/// whether the derivation was *meant* to move. A deliberate change needs an
+/// epoch suffix (`settlement/disposition/v2`), never a re-pin in place.
+#[test]
+fn the_draw_is_byte_pinned_for_a_known_key() {
+    let psyche = hornvale_species::psyche_registry();
+    let dispersion = hornvale_species::dispersion_registry();
+
+    assert_eq!(
+        people_disposition(Seed(42), CellId(1234), 725, "human", &psyche, &dispersion)
+            .expect("human carries a mind"),
+        MindVector {
+            threat_response: 0.243_024_837_524_210_17,
+            deliberation_latency: 0.034_637_047_603_831_57,
+            time_horizon: 0.983_524_581_729_466_8,
+        },
+        "the settlement/disposition/v1 draw moved for human at (site 1234, \
+         year 725). Either the consumption order, the leg format, or the \
+         arithmetic changed — all three are save-format contracts, and a \
+         deliberate change needs an epoch suffix, not a re-pin."
+    );
+
+    assert_eq!(
+        people_disposition(Seed(42), CellId(1234), 725, "bugbear", &psyche, &dispersion)
+            .expect("bugbear carries a mind"),
+        MindVector {
+            threat_response: 0.653_157_050_013_834_4,
+            deliberation_latency: 0.076_935_455_773_618_04,
+            time_horizon: 0.433_442_618_131_123_9,
+        },
+        "the settlement/disposition/v1 draw moved for bugbear at (site 1234, \
+         year 725) — see the human assertion above"
+    );
+}
+
 /// A people authored with zero dispersion is a point, not a distribution: the
 /// draw must return its authored vector *exactly*. This is the value Task 5's
 /// mutation proof needs to mean what it says, and it is also the property
