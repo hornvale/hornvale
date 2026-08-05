@@ -93,9 +93,22 @@ if [ -n "${HV_HEAVY_REF:-}" ]; then
     # Run a specific ref in a dedicated worktree, so the caller's own checkout
     # (and this canonical one) are left untouched. Path is outside the repo to
     # keep `git status` clean here.
+    # Resolve the path: `git worktree list` prints REAL paths, so an
+    # unresolved `$repo_root/../hornvale-heavy-wt` never matches the grep
+    # below. `cd ... && pwd` resolves it whether or not the directory exists
+    # yet (the `||` keeps the unresolved form for the not-yet-created case).
     wt="${HV_HEAVY_WORKTREE:-$repo_root/../hornvale-heavy-wt}"
+    if wt_resolved="$(cd "$wt" 2>/dev/null && pwd)"; then
+        wt="$wt_resolved"
+    fi
     git -C "$repo_root" fetch --all --quiet
-    if [ -d "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
+    # `-e`, not `-d`: a linked worktree's `.git` is a FILE (a gitdir pointer),
+    # never a directory. With `-d` this test is always false, and with the
+    # unresolved path above the grep was always false too — so both guards
+    # failed together and the `else` branch ran `worktree add` over an existing
+    # worktree, which is fatal. Two exit-128 dispatches during The Tolerance
+    # were this, and the fix was to delete the worktree by hand.
+    if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
         git -C "$wt" fetch --all --quiet
         git -C "$wt" checkout --force "$HV_HEAVY_REF"
         git -C "$wt" reset --hard "$HV_HEAVY_REF" --quiet
