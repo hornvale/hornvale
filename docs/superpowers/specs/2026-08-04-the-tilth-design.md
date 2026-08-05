@@ -241,8 +241,9 @@ probe seeds.
                        / tolerance 0.5692  median min-of-conditions (Liebig) for
                                         the BEST-FIT settler on good ground
                                         (p10 0.3485, p90 0.6576)
-  P_FULL = 2000 mm/yr  EXTERNALLY anchored: pooled median land moisture 0.3707
-                       maps to 741 mm/yr against Earth's land-mean ~750
+  precipitation        NO NEW CONSTANT. `climate.precip_at(cell)` already exists:
+                       precip_mm_yr(m) = 2000.0 * m^1.5, Earth-ranged, provenance
+                       "a documented approximation (spec §5 model card)"
 ```
 
 Three things worth stating about this derivation:
@@ -254,15 +255,89 @@ Three things worth stating about this derivation:
 - **The calibration is anchored on the case the model already gets right** - good
   ground, top decile - and the marginal cases then fall wherever the model puts
   them. That is what makes H1-H3 falsifiable rather than fitted.
-- **`P_FULL` is anchored outside the simulation entirely**, to Earth's land-mean
-  precipitation. It also produces the right qualitative regime: median land comes
-  out **moisture-limited** (Lieth precip 0.389 against temp 0.786 at 22 C), as
-  most of Earth's land is.
+- **`P_FULL` is RETRACTED — there was never a constant to author.** Nathan asked
+  whether the scale should be per-world, and checking found `precip_at` already
+  in `domains/climate`: `precip_mm_yr(m) = 2000.0 * m^1.5`, Earth-ranged, with its
+  provenance already cited to the spec's model card. My `P_FULL` would have been a
+  **second, inconsistent conversion of the same quantity** — precisely the
+  duplication this campaign exists to remove — and it was *linear*, where the real
+  function's `1.5` exponent exists to stop mid-range moisture reading as tropical.
+  At median land moisture 0.3707 mine said 741 mm/yr; `precip_mm_yr` says **451**,
+  which matches Earth's *median* land far better than my mean-anchored figure.
+  **Stage 1 consumes `precip_at`.**
+
+  On the per-world question the answer is **no, and it already isn't**: `moisture`
+  is a physical budget (upwind evaporation, orographic rainout, continental
+  drying) clamped to `[0,1]`, never normalised per world. So a dry world genuinely
+  reads dry and `precip_mm_yr` returns low mm/yr — an Athas stays an Athas.
+  Per-world normalisation would be the *bug*: it would rescale every world's
+  driest ground to average and erase exactly the thing that makes such a world
+  distinctive.
 
 The measured tolerance figure also upgrades §2.3 from illustration to data: the
 median min-of-conditions on good ground is **0.5692**, so the product form's
 compression can be quoted against real distributions rather than the
 plausible-looking factors §2.3 currently uses. Recorded as a followup.
+
+## 5b. Provenance audit — three states, and the worst one is not "missing"
+
+Nathan asked whether the provenance of the math is clearly explained in the code.
+Audited: the discipline **exists and is uneven**, in three distinct states.
+
+**Sourced and honest.** `sovereignty_floor`: *"AUTHORED biological prior (not
+census-calibrated)."* `carrying_capacity`'s constants: *"CALIBRATED
+(the-gathering, 2026-07-13): measured against the 200-seed census … frozen as
+measured, not as a placeholder."* `precip_mm_yr`: *"a documented approximation
+(spec §5 model card)."* These are auditable.
+
+**Described but unsourced** — the entire moisture budget:
+
+```rust
+const EVAP: f64 = 0.5;         /// Precipitable water added per upwind step over ocean
+const OROG_K: f64 = 0.07;      /// Orographic rainout coefficient
+const CONVECTIVE: f64 = 0.005; /// Convective rainout per overland step in a rising band
+const DECAY: f64 = 0.006;      /// Fractional decay of precipitable water per overland step
+```
+
+Every one says *what it is*. Not one says **where the number came from** — no
+measurement, no citation, no "authored".
+
+**Falsely sourced.** `carrying_capacity` cites Lieth's Miami model and does not
+implement it (§2.1). **This is worse than being unsourced**, because a citation
+*stops the reader checking*, and it is why the defect survived four campaigns
+while its calibration ran green. The lesson generalises past this campaign: an
+unsourced constant is a gap a reader can see, and a wrongly-sourced formula is a
+gap that actively defends itself.
+
+**What this campaign owes:** stage 1's Lieth adoption states its coefficients
+*with* the citation they actually satisfy, and the retracted `P_FULL` is replaced
+by a call to the function that already carries provenance. Repairing the moisture
+budget's four unsourced constants is out of scope and recorded as a followup — it
+is a different campaign, and probably the one §7 q2's fertility term belongs to.
+
+## 5c. What does not transfer to a non-Earth world
+
+Nathan asked whether other properties drift on an Athas, a Mon Cala, a Pandora.
+
+| world | representable? | what happens |
+|---|---|---|
+| **Athas**-like (hot, arid) | **yes, and improving** | exactly what step B's `is_land` and stage 1's monotone temperature term unlock |
+| **Mon Cala**-like (ocean) | geometrically yes (`--ocean-fraction`) | **uninhabitable**: every settler is terrestrial and `MARINE_FORAGE` has no settling consumer (The Keeping's F10) |
+| **Pandora**-like (low-g, dense air) | **no** | Hornvale defines no planetary radius, hence no surface gravity, so there is no gravity-dependent biology to drift |
+
+The deepest non-transferable assumption is not a single constant: **adopting Lieth
+imports Earth's photosynthetic chemistry as a universal.** Its coefficients are
+fitted to Earth's biosphere — Earth's CO₂, water-carbon life, a G-type spectrum —
+and Hornvale *generates star classes*, so a red-dwarf world receives different
+insolation while keeping Earth's photosynthetic response curve. The same holds for
+`FORAGE_FRACTION`/`PREY_FRACTION` (~10% trophic transfer is an Earth observation)
+and for `snow_fraction` being centred on 0 °C (assumes water).
+
+This is a limit to **state, not to fix**. Adopting Lieth makes the Earth
+assumption explicit and citable where the tent made it invisible, which is an
+improvement even though it does not remove it. A world whose biosphere is not
+water-carbon around a Sun-like star is outside this model's scope, and saying so
+is more honest than a tent that quietly assumed the same thing.
 
 ## 6. Risks
 
