@@ -457,6 +457,71 @@ work on productivity or tolerance will seat it. Recording that as the campaign's
 boundary is more useful than a partial pass or a rescued threshold, and per decision
 0016 the threshold is **not** moved to make H1 read green.
 
+## 5f. The synthetic phase diagram (2026-08-05) — the real diagnosis
+
+Nathan's proposal: sweep a grid of hand-specified situations instead of probing a
+handful of generated worlds. The sampling argument is decisive — a generated world
+offers only the *narrow joint distribution* terrain and climate happen to produce
+together, so no five-seed probe ever visits cold-and-wet or hot-and-arid-with-food
+at all. `tilth_phase_diagram.rs` sweeps **168 situations** (8 temperatures × 7
+moistures × 3 elevations) with **no terrain sculpting and no climate generation**,
+in milliseconds rather than the ~2 s per world a real build costs.
+
+It was built to separate two causes — *tolerance-limited* (nobody fits) versus
+*food-limited* (nobody can eat) — and the answer is **neither**:
+
+```
+  settled                        168 / 168
+  unsettled, TOLERANCE-limited     0
+  unsettled, FOOD-limited          0
+```
+
+Every situation is settleable, and the winner is `hobgoblin` in 112 of 168 and
+`kobold` in the remaining 56 — *all* of which are the 3500 m band. Goblin, bugbear,
+gnoll and human win essentially nothing across the entire climate space.
+
+### The cause: buffered axes cannot discriminate
+
+`ConditionResponse::eval` is `floor + (1 − floor) · devotion · exp(−z²/2)`, and
+`sovereignty_floor(mass, potency)` supplies that floor for temperature, moisture and
+insolation — **but elevation is passed `0.0`** (*"sovereignty buffers physiology but
+not geometry"*). Measured at the extremes:
+
+```
+  at -20 C, moisture 0.02:  hobgoblin temp eval 0.455   kobold temp eval 0.407
+                            -- floored; they CANNOT fall below ~0.31-0.50
+  elevation (floor 0.0):    kobold  3500 m 0.361  /  100 m 0.012
+                            hobgoblin 3500 m 0.047  /  100 m 0.375
+```
+
+So on three of four axes every species retains 31–50% suitability *no matter how
+hostile the ground*, which means those axes are nearly **non-discriminating**: they
+cannot exclude anyone, so they cannot award territory to anyone either. **Elevation
+is the only axis that can decide a cell**, because it is the only one with a hard
+zero — and that is exactly why the map partitions into "kobold above 3000 m,
+hobgoblin everywhere else."
+
+Hobgoblin wins the everywhere-else because it has both the highest sovereignty floor
+among the lowlanders (0.453) *and* the heaviest `PLANT_FORAGE` weight (0.65) against
+the largest supply axis. It is not out-competing anyone on climate; it is winning a
+contest the climate axes were never able to hold.
+
+### What this reframes
+
+- **H1's residual is not gnoll-specific.** Four of six species win nothing across
+  the whole of climate space, and the reason is structural rather than per-species.
+- **Stage 5 risks overshooting into homogeneity, not fragmentation.** §6's risk 4
+  anticipated over-fragmentation; the measured danger is the opposite — one species
+  everywhere, because a large `V_max` plus a high floor makes trivial supply
+  sufficient. All 168 situations clearing the viability bar is that warning.
+- **The lever is the floor, not the roster.** Authoring more species cannot help
+  while three of four axes are buffered into indifference; a new species would land
+  in the same undifferentiated contest. Either the sovereignty floor falls, or more
+  axes get hard stakes of the kind kobold's elevation already is.
+
+That is a different campaign from this one, and stating it is more useful than
+raising `V_max` until the map looks varied.
+
 ## 6. Risks
 
 - **`V_max` and `K_m` are two new authored constants** in a campaign whose thesis
