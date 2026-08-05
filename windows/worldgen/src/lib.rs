@@ -658,15 +658,24 @@ pub fn carrying_inputs_of(
         let freshwater = (moisture * MOISTURE_FLOOR_WEIGHT)
             .max(*river_prox.get(cell))
             .clamp(0.0, 1.0);
-        let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
-        let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
+        // ARIDITY NO LONGER FOLDS IN (The Tilth, stage 1). Moisture was counted
+        // TWICE: once as the Liebig limiter inside `carrying_capacity`, and again
+        // here as a hostility penalty — ~10x through the limiter AND a further 2x
+        // through hostility at moisture 0.1, so ~20x total on merely semi-arid
+        // ground. Lieth's saturating precipitation term now carries the water
+        // signal on its own, so `hostility` keeps only what it was named for:
+        // tectonic unrest.
+        let hostility = terrain.unrest_at(cell).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
             // LAND, not habitability (step B): the habitability mask conflated
             // land with a temperate band and a moisture floor, and the latter two
             // are already graded by `npp`/`hostility` inside `carrying_capacity`.
             is_land: !terrain.is_ocean(cell),
             temperature_c: climate.mean_temperature_at(cell).get(),
-            moisture,
+            // The REAL annual total, not normalised moisture: `precip_at` already
+            // maps the moisture field to Earth-ranged mm/yr with its provenance
+            // cited, and Lieth's precipitation term is defined on that total.
+            precip_mm_yr: climate.precip_at(cell).get(),
             freshwater,
             coastal,
             hostility,

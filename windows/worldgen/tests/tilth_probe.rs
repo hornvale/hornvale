@@ -45,6 +45,14 @@ const MINERAL_SUPPLY_SCALE: f64 = 1.0;
 /// `worldgen::MARINE_SUPPLY_SCALE`, private, so mirrored here.
 const MARINE_SUPPLY_SCALE: f64 = 1.0;
 
+/// Stage 5's dimensional Michaelis-Menten ceiling, DERIVED (spec §5a, re-derived
+/// on stage-1+4 physics): target 68.87 (pre-campaign good ground, a gauge choice
+/// per 0104) / (MM frac 0.8138 x Liebig tolerance 0.6035).
+const V_MAX: f64 = 140.2;
+/// Half-saturation supply, DERIVED: median axis_supply over land on stage-1+4
+/// physics (n = 401,148).
+const K_M: f64 = 0.03004;
+
 /// The spec's probe seeds.
 const SEEDS: [u64; 5] = [42, 7, 999_999, 16_244_526_067_196_353_746, 1234];
 
@@ -68,6 +76,8 @@ fn tilth_derivation_probe() {
     let mut all_supply: Vec<f64> = Vec::new();
     let mut all_good_capacity: Vec<f64> = Vec::new();
     let mut all_min_cond: Vec<f64> = Vec::new();
+    // Per-seed (product-wins, liebig-wins) counts, indexed by SETTLERS position.
+    let mut h1: Vec<(Vec<usize>, Vec<usize>)> = Vec::new();
 
     for seed in SEEDS {
         let world = build_world(
@@ -170,6 +180,56 @@ fn tilth_derivation_probe() {
         supply.sort_by(f64::total_cmp);
         all_supply.extend(supply.iter().copied());
 
+        // H1 per seed: who wins each land cell under each combination rule?
+        let mut wins_p = vec![0usize; SETTLERS.len()];
+        let mut wins_l = vec![0usize; SETTLERS.len()];
+        for &c in &land {
+            use hornvale_kernel::{
+                ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+            };
+            let mut best = (-1.0_f64, usize::MAX, -1.0_f64, usize::MAX);
+            for (i, name) in SETTLERS.iter().enumerate() {
+                let bio = wc.biosphere.iter().find(|(id, _)| id.0 == *name).unwrap().1;
+                let fl = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
+                let cn = &bio.condition_niche;
+                let sub = substrate.get(c);
+                let per_axis = [
+                    (PHOTOSYNTHATE, *base.get(c)),
+                    (PLANT_FORAGE, *forage.get(c)),
+                    (MINERAL, *mineral.get(c)),
+                    (DETRITUS, *detritus.get(c)),
+                    (ANIMAL_PREY, *prey.get(c)),
+                    (MARINE_FORAGE, *marine.get(c)),
+                ];
+                let sup = axis_supply(&bio.niche, &per_axis);
+                let (t, m, i2, e) = (
+                    cn.temperature.eval(sub.temperature_c, fl),
+                    cn.moisture.eval(sub.moisture, fl),
+                    cn.insolation.eval(sub.insolation, fl),
+                    cn.elevation.eval(sub.elevation, 0.0),
+                );
+                // today: saturate dimensionlessly, then MULTIPLY four tolerances
+                let p = (sup / (1.0 + sup)) * t * m * i2 * e;
+                // stage 5: dimensional Michaelis-Menten, then LIEBIG minimum
+                let l = (V_MAX * sup / (K_M + sup)) * t.min(m).min(i2).min(e);
+                if p > best.0 {
+                    best.0 = p;
+                    best.1 = i;
+                }
+                if l > best.2 {
+                    best.2 = l;
+                    best.3 = i;
+                }
+            }
+            if best.0 > 0.0 {
+                wins_p[best.1] += 1;
+            }
+            if best.2 > 0.0 {
+                wins_l[best.3] += 1;
+            }
+        }
+        h1.push((wins_p, wins_l));
+
         // (4) THE LAST UNMEASURED FACTOR: min-of-conditions (Liebig, per spec
         // §3.3) for the BEST-FIT settler on GOOD ground. V_max cannot be solved
         // without it, and authoring it is exactly what §6 forbids.
@@ -210,6 +270,31 @@ fn tilth_derivation_probe() {
             pct(&supply, 0.50),
         );
     }
+
+    // ---- H1, tested as a pure measurement before any production change ----
+    // best-fit territory is argmax_sp of eff(c,sp), and the species-blind capacity
+    // CANCELS from that argmax (spec §5d), so best-fit depends ONLY on how the
+    // per-species term combines. Compute it both ways over the same cells and the
+    // attribution is exact: PRODUCT (today) versus LIEBIG MINIMUM (stage 5).
+    println!("\n=== H1: does the combination rule redistribute best-fit territory? ===");
+    println!(
+        "    {:<10} {:>12} {:>12}",
+        "species", "PRODUCT", "LIEBIG min"
+    );
+    let mut tot_prod = vec![0usize; SETTLERS.len()];
+    let mut tot_lieb = vec![0usize; SETTLERS.len()];
+    for (pw, lw) in &h1 {
+        for i in 0..SETTLERS.len() {
+            tot_prod[i] += pw[i];
+            tot_lieb[i] += lw[i];
+        }
+    }
+    for (i, name) in SETTLERS.iter().enumerate() {
+        println!("    {:<10} {:>12} {:>12}", name, tot_prod[i], tot_lieb[i]);
+    }
+    let won_p = tot_prod.iter().filter(|n| **n > 0).count();
+    let won_l = tot_lieb.iter().filter(|n| **n > 0).count();
+    println!("    species winning ANY territory: product {won_p}/6  ->  Liebig {won_l}/6");
 
     all_moisture.sort_by(f64::total_cmp);
     all_supply.sort_by(f64::total_cmp);

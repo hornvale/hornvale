@@ -410,6 +410,53 @@ rebaseline. That is a deliberate deviation from the ledgered "land 1+4, then lan
 analytically and empirically, so the remaining value of separate commits is
 bookkeeping, not evidence.
 
+## 5e. H1 tested (2026-08-05) — partially confirmed, with a precise residual
+
+Because the species-blind capacity cancels from `argmax` (§5d), best-fit territory
+depends *only* on how the per-species term combines. So H1 is testable as a **pure
+measurement** — both rules computed over the same cells, no production change, exact
+attribution. Pooled over the five probe seeds:
+
+```
+  species         PRODUCT   LIEBIG min
+  kobold            24880        29134
+  goblin                0  ->      458
+  hobgoblin         40160        34652
+  bugbear               0  ->      927
+  gnoll                 0  ->        0      <- STILL excluded
+  human              1818         1687
+  species winning ANY territory:  3/6  ->  5/6
+```
+
+**The combination rule was the cause for two of the three exclusions.** Swapping
+the product for Liebig's minimum moves `goblin` and `bugbear` off zero, and flattens
+the distribution (hobgoblin −14%, kobold +17%). That confirms §2.3's diagnosis and
+justifies stage 5 on measured grounds rather than on tidiness.
+
+**H1's stated threshold — all six on at least three of five seeds — is NOT met.**
+`gnoll` wins nothing, and its cause is different in kind:
+
+```
+  moisture 0.12 (gnoll's optimum) -> precip  83 mm/yr -> Lieth water term 0.054
+  moisture 0.37 (median land)     -> precip 450 mm/yr -> Lieth water term 0.258
+  gnoll moisture tolerance:  0.874 at its optimum, 0.538 at median land
+```
+
+Gnoll is *perfectly tolerant* of the ground it is authored for and that ground has
+**almost no productivity** — and gnoll eats `ANIMAL_PREY 0.65 + PLANT_FORAGE 0.35`,
+both pure functions of `base_carrying`. So the arid specialist starves in the desert
+it was designed for: on wet ground its tolerance excludes it, and on dry ground
+there is nothing to eat. **This is a trophic exclusion, not a field or a
+combination-rule exclusion**, and it is The Keeping's trophic finding arriving for a
+specific species under the corrected model.
+
+So the campaign splits its own hypothesis cleanly: **stage 5 fixes what the
+combination rule broke, and cannot fix what the food web excludes.** Gnoll needs a
+non-photosynthate resource niche — the roster work of §8 step D — and no amount of
+work on productivity or tolerance will seat it. Recording that as the campaign's
+boundary is more useful than a partial pass or a rescued threshold, and per decision
+0016 the threshold is **not** moved to make H1 read green.
+
 ## 6. Risks
 
 - **`V_max` and `K_m` are two new authored constants** in a campaign whose thesis
