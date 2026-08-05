@@ -2417,18 +2417,31 @@ fn bake_eras(
         stellar_inputs(&sky);
     let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
 
-    // A cell is livable this era iff it is land above the era's sea level and
-    // its absolute temperature is at or above the snowline.
+    // A cell is livable this era iff its absolute temperature is at or above the
+    // snowline. **The land test that used to be conjoined here is gone** (The
+    // Tense, step 2): `carrying_inputs_at` now takes `is_land` against the era's
+    // own sea level, so a cell that is sea this era already has zero base
+    // carrying capacity, zero forage and zero prey — and therefore zero
+    // per-species capacity, which `vacant_for` and `eff_capacity` both gate on.
+    // Keeping the test here as well made the mask a second, redundant oracle for
+    // a question capacity already answers, which is how three disagreeing
+    // definitions of "habitable" arose in the first place.
+    //
+    // The redundancy argument depends on eustatic change being **≤ 0**
+    // (`sea_level_change_m` = `-EUSTATIC_M * volume`, volume ≥ 0): an era's sea
+    // level never rises above the present's, so ocean-at-this-era implies
+    // ocean-at-present, and the two supply fields that are still computed
+    // against the present shoreline (mineral, detritus) are zero there. If the
+    // ice model ever admits a high-stand, a drowned present-land cell would keep
+    // non-zero mineral and detritus supply and become settleable sea. That is
+    // asserted, not trusted — `era_substrate.rs::ocean_is_never_settleable_at_any_era`.
     let livable_mask = |sea_level: ReferenceElevation,
                         offset: hornvale_kernel::TempAnomaly|
      -> hornvale_kernel::CellMap<bool> {
         let mean = hornvale_climate::temperature::mean_temperature(
             geo, &elevation, sea_level, insolation, &regime,
         );
-        hornvale_kernel::CellMap::from_fn(geo, |c| {
-            let elev = *elevation.get(c);
-            elev >= sea_level && (*mean.get(c) + offset).get() >= freeze.get()
-        })
+        hornvale_kernel::CellMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
 
     // No forcing to replay (constant sky) → one present-era mask, no swing.

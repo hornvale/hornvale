@@ -214,3 +214,97 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
         }
     }
 }
+
+/// **The ocean-exclusion guard** (The Tense §3.2, step 2).
+///
+/// The era habitability mask no longer tests "is this cell land" — that load
+/// moved to `carrying_inputs_at`, which takes `is_land` against the era's own
+/// sea level. So ocean is now excluded *by capacity being zero there*, and
+/// nothing else. The spec named this the most likely place for a silent
+/// regression, because a leak here puts settlements at sea and no rule test
+/// would notice.
+///
+/// The argument being asserted has two halves:
+///
+/// 1. **Eustatic change is ≤ 0** (`sea_level_change_m` = `-EUSTATIC_M * volume`,
+///    volume ≥ 0 from ice-free). So an era's sea level never exceeds the
+///    present's, and ocean-at-era implies ocean-at-present.
+/// 2. Therefore the two supply fields still computed against the *present*
+///    shoreline — mineral and detritus — are zero on any cell that is sea at any
+///    era, and no shipped kind weights `MARINE_FORAGE`. Every supply term is
+///    zero, so capacity is zero.
+///
+/// If the ice model ever admits a high-stand, half 1 fails and drowned
+/// present-land keeps non-zero mineral/detritus supply. This test is what turns
+/// that from a silent world-corrupting leak into a red build.
+#[test]
+fn ocean_is_never_settleable_at_any_era() {
+    let wc = hornvale_worldgen::components::WorldComponents::assemble().expect("components");
+    for seed in [42, 7, 1234] {
+        let (terrain, climate, obliquity_deg, insolation_scalar, regime) = parts(seed);
+        let geo = terrain.geosphere();
+        let biosphere: Vec<&hornvale_species::BiosphereTraits> =
+            ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll", "human"]
+                .iter()
+                .map(|n| {
+                    wc.biosphere
+                        .get(&hornvale_kernel::KindId(n))
+                        .expect("settler has biosphere traits")
+                })
+                .collect();
+        let hoisted = EraInvariantSupply::build(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+
+        // Present, and a deep low-stand well past anything the ice model
+        // produces — the direction eustatic change is allowed to move.
+        for drop_m in [0.0, 60.0, 130.0, 250.0] {
+            let adjust = EraAdjust {
+                temp_offset: hornvale_kernel::TempAnomaly::from_offset_c(-6.0),
+                sea_level: hornvale_kernel::ReferenceElevation::new(
+                    terrain.sea_level().get() - drop_m,
+                )
+                .expect("a finite low-stand"),
+            };
+            let caps =
+                per_species_capacity_at(geo, &terrain, &climate, &hoisted, &adjust, &biosphere);
+            for (tag, cap) in &caps {
+                for cell in geo.cells() {
+                    // "Sea at this era" is the same predicate `carrying_inputs_at`
+                    // uses, spelled out here so the test does not depend on the
+                    // private helper.
+                    if terrain.elevation_at(cell) < adjust.sea_level {
+                        assert_eq!(
+                            cap.at(cell),
+                            0.0,
+                            "seed {seed}, low-stand {drop_m} m, species {tag}, cell {cell:?}: \
+                             capacity {} on a cell that is SEA this era — ocean exclusion has \
+                             leaked, and settlements will appear at sea",
+                            cap.at(cell)
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Guards half 1 of the argument above directly, at its source: a rising sea
+/// would invalidate the reasoning even if today's seeds never exercise it.
+#[test]
+fn eustatic_change_never_raises_sea_level() {
+    for volume in [0.0, 0.1, 0.5, 0.9, 1.0] {
+        let change = hornvale_paleoclimate::ice::sea_level_change_m(volume);
+        assert!(
+            change <= 0.0,
+            "ice volume {volume} produced a sea-level change of {change} m; \
+             `ocean_is_never_settleable_at_any_era` assumes eustatic change is \
+             never positive, and a high-stand breaks it"
+        );
+    }
+}
