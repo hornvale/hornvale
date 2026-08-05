@@ -1063,22 +1063,28 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     );
 
     let refugia = CellMap::from_fn(&geo, |c| b.contains(&c));
-    let capacity = CellMap::from_fn(&geo, |c| if a.contains(&c) { 120.0 } else { 60.0 });
     let river = CellMap::from_fn(&geo, |_| 0.0);
+    // HOSTILITY IS CAPACITY (The Tense, step 4): island A feeds people in warm
+    // eras, island B in glacial ones, and the other is dead. Same disjoint
+    // oscillation the mask used to express, and the same 120-vs-60 gradient —
+    // what is under test here is whether an unbridged ocean can be CROSSED, and
+    // that is a property of the graph, which this leaves untouched.
+    let capacity_at = |glacial: bool| {
+        CellMap::from_fn(&geo, |c| match (a.contains(&c), b.contains(&c), glacial) {
+            (true, _, false) => 120.0,
+            (_, true, true) => 60.0,
+            _ => 0.0,
+        })
+    };
     let era = |day: f64, glacial: bool| EraClimate {
         day,
         ice: CellMap::from_fn(&geo, |_| false),
-        habitable: CellMap::from_fn(&geo, |c| {
-            if glacial {
-                b.contains(&c)
-            } else {
-                a.contains(&c)
-            }
-        }),
+        habitable: CellMap::from_fn(&geo, |_| true),
         sea_level: e(0.0),
         ice_fraction: if glacial { 0.6 } else { 0.0 },
     };
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
+    let capacity: Vec<CellMap<f64>> = (0..8).map(|i| capacity_at(i % 2 == 1)).collect();
     let cfg = BakeConfig::default_millennia();
     let people = vec![KindId("goblin")];
     let on_b = |h: &History| h.records.iter().any(|r| b.contains(&r.core.site));
@@ -1087,7 +1093,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let no_lane = bake(
         Seed(7),
         &geo,
-        &caps_of(&capacity, &people, eras.len()),
+        &caps_per_era(&capacity, &people),
         &river,
         &eras,
         &refugia,
@@ -1105,7 +1111,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let lane = bake(
         Seed(7),
         &geo,
-        &caps_of(&capacity, &people, eras.len()),
+        &caps_per_era(&capacity, &people),
         &river,
         &eras,
         &refugia,
