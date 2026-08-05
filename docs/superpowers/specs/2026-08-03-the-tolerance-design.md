@@ -1,6 +1,25 @@
 # The Tolerance — design
 
-**Status:** spec, awaiting G3 review.
+**Status:** MERGED 2026-08-05. G3 approved 2026-08-04; executed in seven tasks;
+closed with a chronicle, a retrospective and a Confidence-Gradient re-score.
+**Two decisions in this document did not ship as written**, and the chronicle
+and registry say so rather than this file being edited to match:
+
+- **D5 shipped one of its three terms.** Warlikeness derives from the drawn
+  disposition only; the structural-pressure and grid/group terms are deferred.
+  Folding in `Bake::pressure_of` would leave between-settlement variance
+  standing at spread 0 and so break the campaign's own mutation proof, and the
+  strife field lives downstream of the history it would inform. `PSY-raid-gate-axis`
+  therefore stays `spec'd`: **D8's axis mismatch is NOT dissolved** — the gate
+  still reads the defensive `threat_response`.
+- **D6 shipped as documentation only.** `SocietyVector` is now stated to be a
+  grid/group instrument; nothing derives outsider-stance from the quadrant.
+- **D3 shipped with a different key than §5 implies.** The draw is keyed on the
+  occupation record's `(site, founded_year)`, not on a bare `cell-id`: a
+  community relocates *because it raided*, so a current-cell key would redraw a
+  settlement's psychology as a consequence of the behaviour that psychology
+  caused.
+
 **Date:** 2026-08-03
 **Program:** the peoples program
 (`2026-08-03-the-peoples-program-design.md`). **Runs immediately after C2-0,

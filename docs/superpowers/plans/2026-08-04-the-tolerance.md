@@ -1,5 +1,24 @@
 # The Tolerance Implementation Plan
 
+**Status: COMPLETE — all seven tasks executed, reviewed and merged 2026-08-05.**
+Two of this plan's instructions were overridden during execution, both after
+reading code the plan was written without; the reasoning is in the chronicle and
+the spec's header:
+
+- **Task 3's draw key.** The plan says key on the settlement's committed
+  `cell-id`. Shipped as the occupation record's `(site, founded_year)` — a
+  community relocates *because it raided*, so a current-cell key redraws a
+  settlement's psychology as a consequence of the behaviour that psychology
+  caused. Two traps the plan could not see: `Community.lineage` is a `BakeId`
+  from a sequential counter (the `EntityId` trap again, and circular within a
+  bake), and `Ledger::commit` quantizes floats, so a raw `f64` year would give
+  the bake and the ledger different streams.
+- **Task 4's gate formula.** The plan says
+  `warlike = f(structural pressure, drawn disposition, grid/group quadrant)`.
+  Only the middle term shipped: `pressure_of` varies per settlement, so folding
+  it in would leave variance standing at zero dispersion and break Task 5's
+  mutation proof — the program's shared acceptance criterion.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give a species an interior. Author a **dispersion** beside each vector, draw a per-settlement disposition from it, and make warlikeness a derived, place-specific property instead of a species constant.
