@@ -1185,9 +1185,10 @@ communities of one people differ in any authored dimension at all. A model with
 no persistent per-entity multiplicative heterogeneity cannot produce a heavy
 entity-size tail, and would not do so even with a conduction medium added.
 
-*Half of that diagnosis has since been voided, and the more important half has
-not.* [The Tolerance](./chronicle/the-tolerance.md) made a people a distribution
-rather than a point: each settlement now draws its own threat response from its
+*Re-scored in part by [The Tolerance](./chronicle/the-tolerance.md) (2026-08-05),
+which voids one clause of the paragraph immediately above and leaves the more
+important one standing.* That campaign made a people a distribution rather than
+a point: each settlement now draws its own threat response from its
 people's authored mean and dispersion, keyed on where and when it was founded
 and fixed for the life of the community. So the clause **"no two communities of
 one people differ in any authored dimension at all" is no longer true** — two
@@ -1215,6 +1216,15 @@ a correction to the *argument*, not a new reading of the *bet*. A campaign that
 wants to test the Kesten account now has a cheaper route to it than it did: the
 authoring pattern for per-entity variation exists and is proven, and what
 remains is to point one at a multiplicative term instead of a threshold.
+
+One detail sharpens this rather than softening it, and it is the same point
+clause 3 above makes about asymptotes. The new heterogeneity is drawn from a
+**uniform** on ±√3σ, clamped to the axis — so it is not merely
+non-multiplicative, it is *bounded*, and the probability of a settlement
+exceeding its people's support is exactly zero rather than small. Per-entity
+variation now exists in this world; **rare** per-entity variation still does
+not. The build constraint this chapter already owes a successor campaign is
+unchanged, and one more mechanism now sits inside its scope.
 
 **What replaces the bet is narrower, and it is a different shape of claim.**
 Not a power law: a **sigmoid**. The wager is that annihilation, coexistence and

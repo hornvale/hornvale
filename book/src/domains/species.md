@@ -105,8 +105,14 @@ far its members scatter around that point, one dispersion per vector rather
 than one per dimension. The frame is stated rather than left implicit — the
 authored value is the **mean**, and the dispersion is a standard deviation
 about it — because an unstated frame is the defect The Manikin removed one
-level up. Zero reproduces the older model exactly: a people every one of whose
-members is the same member. The consequence is not decorative. A threshold
+level up. The family is stated for the same reason: the draw is a **uniform on
+±√3σ**, clamped to the axis, the half-width chosen so that a uniform's variance
+`a²/3` makes the realized standard deviation exactly the authored `σ`. A uniform
+gives *spread* but not *rare extremes* — beyond its support the probability is
+zero, not small — so a consumer that needs the exceptional member rather than
+the merely varied one needs a different family, not a larger number. Zero
+reproduces the older model exactly: a people every one of whose members is the
+same member. The consequence is not decorative. A threshold
 applied to a distribution is not the same operation as a threshold applied to
 its mean, so a people authored *below* a behavioural gate no longer simply
 lacks the behaviour; some fraction of it clears the gate, and which fraction is
@@ -369,8 +375,9 @@ still a real per-species divergence these two psychology scalars produce. A
 species is the fixed point those draws (and, now, this one field) are taken
 with respect to.
 
-That first sentence survives *The Tolerance* and the sentence that used to
-follow it does not. `stream_labels()` here is still empty and every cell in the
+That sentence survives *The Tolerance*; the clause that used to close it —
+*"never a distribution of its own"* — does not.
+`stream_labels()` here is still empty and every cell in the
 table above is still authored — the dispersion beside each vector is authored
 exactly like the location it accompanies, and the draw that reads the pair
 lives at the composition root, where a settlement's founding site and year are

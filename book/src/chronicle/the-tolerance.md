@@ -30,6 +30,21 @@ removed one level up, and repeating it one level down would have been careless.
 Zero reproduces the old model exactly, which is what makes the layer falsifiable
 at all.
 
+**The distribution is a uniform on ±√3σ, clamped to the axis.** The √3 is not
+decoration: a uniform of half-width `a` has variance `a²/3`, so a half-width of
+`√3σ` makes the standard deviation exactly `σ` and the authored number mean what
+it says. Naming the family matters more than it looks, because it qualifies the
+claim this chapter opened with. **Selection needs tails, and a uniform has none
+either** — it has hard bounds, and beyond them the probability is exactly zero
+rather than merely small. What a uniform supplies is *spread*: enough range for
+a threshold to sort one people into two groups, which is the whole presenting
+problem. What it does not supply is *rare extremes*, and that is the same
+constraint this project's own confidence map already records against a different
+bet — rare tails need asymptotes, not clamps, and every saturating bound in this
+world is presently a clamp. A campaign that needs the exceptional individual
+rather than merely the varied one will have to change the family, not the
+parameter.
+
 Nine kinds carry a row. The three dragons are narrowest (0.08 around the mind),
 then hobgoblin (0.10), kobold (0.12), bugbear (0.20), gnoll (0.22), goblin
 (0.25), and human widest at 0.35. That ordering is the campaign's one real
@@ -126,8 +141,11 @@ is decisively not met: between-settlement variance in the drawn disposition went
 from **exactly zero** for all six settling peoples to a range of 0.010 to 0.113,
 ordered by authored dispersion. The ordering half is testable on exactly one of
 the four measured columns and passes there, with one discordant pair out of
-fifteen — and that pair *is* the clamp, gnoll's realized spread compressed below
-bugbear's by the asymmetric loss above.
+fifteen — and that pair *is* the clamp, made checkable by its own numbers:
+unclamped, gnoll's spread is **0.0484** against bugbear's **0.0400**, in the
+authored order; clamping then costs gnoll **36 %** of its variance against
+bugbear's **18 %**, which is exactly enough to invert them. The discordance is
+the clamp table's arithmetic, not a defect in the draw.
 
 The other three columns cannot test it at all, and the reason is arithmetic
 rather than experimental. Gate-open, raid-initiated and raid-victim are all
@@ -236,11 +254,19 @@ would have to inform. That needs a different design, not a different call site.
 
 ## A stale sentence, and where staleness comes from
 
-Ten committed prose sites asserted, in one phrasing or another, that a named
-people is an extreme of an authored axis — sentences like "the goblin never
-raids anyone" that were true when written and are now false. Retiring them took
-three sweeps, and each sweep found sites the previous one could not reach,
-because each was aimed at a phrasing rather than at a claim.
+Fourteen committed prose sites asserted, in one phrasing or another, that a
+named people is an extreme of an authored axis — sentences like "the goblin
+never raids anyone" that were true when written and are now false. Retiring them
+took three sweeps of six, four and four, and each found sites the previous one
+could not reach, because the first two were aimed at a phrasing rather than at a
+claim. The third stopped guessing at phrasings and derived the ground truth from
+the authored registries instead, printing the true extremes beside every
+candidate so each could be judged against the source rather than against memory.
+
+A fifteenth turned up later still, on a *different* invariant: a sentence
+asserting that a species is never a distribution of its own. It carried no
+people's name and no number, so nothing keyed to the extremal claim could see
+it. Two premises went stale here, and enumerating them is its own step.
 
 The best part is the part nobody was looking for. The claim that four values
 were reachable on one axis went stale at **five** when a *previous* campaign
@@ -251,10 +277,29 @@ extremal claim anyone has ever written about it.
 
 ## What is owed
 
-The heavy-tier calibration battery that partitions the roster into raiders and
-abstainers was set from pre-Tolerance measurements and was deliberately **not**
-retuned. If it reddens, that is this campaign's finding to own rather than a
-number to adjust. Its prose has been corrected; its bounds have not been touched.
+**The heavy-tier calibration battery went red, as designed.** It partitions the
+roster into raiders and abstainers from authored means and asserts that an
+abstainer re-seats its founding settlement rarely. Measured on the shipped
+draw, the goblin re-seats on **52.1 %** of worlds against a bound of 0.25 — and
+the bound was deliberately not retuned, because retuning it would rescue a
+prediction whose *premise* this campaign destroyed. There is no longer a
+non-raiding partition to bound. The number was never the thing to fix, and the
+failure is the record of what changed rather than a defect to clear. (The
+campaign's own estimate before the run was about 38 %; the measurement came in
+half again as high, which is worth stating because the estimate was a
+calculation and the measurement was not.)
+
+Its failure text has been corrected to say what the partition now asserts. Its
+bounds have not been touched.
+
+One other heavy-tier failure has **open attribution and is not claimed here**: a
+climate readout reporting that weather-gated conductance did not move world
+topology. It was green before this branch existed and this campaign never
+touched the file, but another campaign landed in between and changed the
+placement gate, and the available data does not separate the two. Two further
+failures — a scene-cost ceiling exceeded by 0.8 % and a census-fixture probe —
+were already red on `main` before this branch existed and belong to neither this
+campaign nor its readout.
 
 The individual tier and the slow feedback edges are deferred by design. The
 edges are the interesting half: sustained raiding should shift what earns

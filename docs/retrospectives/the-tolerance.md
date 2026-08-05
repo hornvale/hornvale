@@ -52,23 +52,41 @@ not exist, which is why the hole did not either — and requiring a red against
 exactly that mutation. This belongs beside the standing "require RED" lesson: it
 is a case where a red *was* required and obtained, against the wrong input.
 
-**A stale-prose family took three sweeps, and each sweep was aimed at a
-phrasing.** Ten committed sites asserted that a named people is an extreme of an
-authored axis. Round one found six by one phrase; round two found four more by a
-phrase absent from all six; round three found two more carrying no number at
-all, one of them contradicting a line eleven rows above it inside the block the
-previous round had just edited. All ten descend from a single sentence in a
-*previous* campaign's plan, which is why they propagated verbatim.
+**A stale-prose family took three sweeps, and the first two were aimed at a
+phrasing.** **Fourteen** committed sites asserted that a named people is an
+extreme of an authored axis. Recounted from the commit record rather than from
+the round reports: round 0 found **6** on the claim's own wording; round 1
+(`efe5e0a5`) found **4** more on the arithmetic a stale premise leaves behind, a
+vocabulary absent from all six; round 2 (`18da834b`) found **4** more phrased
+with no number in them at all, one contradicting a line eleven rows above it
+inside the block round 1 had just edited. All fourteen descend from a single
+sentence in a *previous* campaign's plan, which is why they propagated verbatim.
+
+**This retrospective originally said ten, from 6 + 4 + 2, and the review caught
+it.** A miscount inside the lesson about miscounting is as on-the-nose as this
+campaign gets, and it has the same cause as the defect it describes: the figure
+was carried forward from a round report instead of recounted from the source.
+The correction is not "be careful with addition" — it is that **a count is
+scoped to the paragraph that produced it**, and re-deriving one from the record
+costs a minute.
 
 The fix, stated as a rule because this is the third instance in this project's
 memory: **sweep on the invariant a stale premise asserts, not on its wording and
-not on the arithmetic you have already seen.** Round two mechanised exactly
+not on the arithmetic you have already seen.** Round 2 mechanised exactly
 that — a script derived ground truth from the authored registries and printed
 the true minimum and maximum beside every hit, so each was adjudicated against
 the source rather than against memory. 1066 hits on the bare shape narrowed to
 120 with authored-axis vocabulary and then to 4 live and stale; an independent
 re-sweep by the reviewer (3334 blocks → 88 → 44 read by hand) found nothing
 further. The mechanised sweep is the artifact worth reusing, not the word list.
+
+**A fifteenth site surfaced at the close, on a different invariant.**
+`book/src/domains/species.md` ended a paragraph with *"never a distribution of
+its own"* — the campaign's own premise stated abstractly, carrying no people's
+name and no number, so no sweep keyed to the extremal-claim invariant could
+reach it. Two invariants went stale here, not one, and finding the second cost a
+separate reading pass. **Enumerating the invariants a campaign falsifies is
+itself a step**, and this campaign did it once.
 
 **And the prose was already stale before this campaign touched it.** The claim
 that four values were reachable on one axis was correct when written, went stale
@@ -111,6 +129,47 @@ records rather than the 6,041 alive, and the premise became false. Nobody
 changed the disclosure; the world under it moved. The resolution was to correct
 the disclosure rather than to narrow the readout to fit it.
 
+**A heavy-tier fixture re-pin arrived at the close instead of in the drifting
+commit — and it was not this campaign's drift.** `occupancy.csv` failed its own
+drift check, whose assertion message states the standing rule inside itself:
+*"if this is intended, rewrite the fixture in the SAME commit as the change that
+drifted it."* The rule was broken, but the diagnosis handed to me with it was
+wrong, and checking it is the lesson.
+
+The reasoning offered was that this campaign moved seed-42 occupations 919→459
+and the readout covers seeds 1..=30, so the drift is ours. **Occupations and
+occupancy are different things.** The readout renders
+`per_species_suitability(geo, terrain, climate, obliquity, insolation, regime,
+biosphere)` — the carrying-capacity field. It takes no history, no settlements
+and no disposition; `build_world` is called only so terrain and climate can be
+reconstructed. There is no path by which a settlement's drawn temperament
+reaches it. Three checks confirm the real author: the fixture was last written
+by a campaign two before this one; a *later* campaign, absorbed into this branch
+by merge, decomposed the capacity input's habitability mask into a land mask —
+exactly the thing that moves this field, and the new rows are new *biomes*
+appearing, which a psychology draw cannot create; and the branch's own diff
+touches nothing the readout reads.
+
+So the process lesson is two-layered. The re-pin rule was violated by the
+campaign that drifted the field, and it could be violated because this artifact
+is **heavy-tier and therefore invisible to `make gate`** — the standing trap.
+And the second layer is the one worth carrying: **an inherited diagnosis is a
+hypothesis.** It arrived attached to a correct instruction (regenerate the
+fixture) and a correct rule citation, which is exactly the shape that gets a
+wrong attribution written into a retrospective unchecked.
+
+**Refreshing the fixture exposed what it froze, which is the reason to check.**
+The regenerated readout carries a preregistered verdict from the campaign that
+authored it. The verdict survives — one of three target regions still gains a
+top-ranked occupant — but two statements beneath it did not. One went stale (a
+people authored for desert had *zero* desert occupancy; it now holds 3793
+desert cells, because the land-mask change opened the biome). The other **was
+never right**: the same paragraph named that people's largest share as
+temperate-forest when it was tropical-seasonal-forest in the very fixture the
+sentence was written against. A drift check pins output against *change* and has
+no opinion about whether the output was ever *right*, and this is a clean
+instance: the wrong sentence sat green through every regeneration.
+
 ## Two mechanical notes
 
 **Absorbing main mid-campaign forced a baseline decision.** The project forbids
@@ -130,13 +189,56 @@ which proves the incoming change is live and simply does not reach the first
 world. A byte-identical regen is evidence of nothing until you have shown the
 change *can* move something.
 
+**Two dispatch frictions worth recording, because both cost real time and
+neither is in any commit.** The heavy-tier dispatch failed twice with exit 128
+before it could start, because an **orphaned heavy worktree** was parked on the
+canonical box at an old campaign's commit with four uncommitted regenerated
+artifacts from a run killed hours earlier. The shared regeneration worktree is
+not where you left it; verify its HEAD and sweep orphans before dispatching
+rather than after two failures. Separately, the **type-audit report needed a
+regen** after a task that touched a public boundary, and what caught it was the
+pre-commit hook, not the task brief — any task adding a `pub` item should expect
+`docs/audits/type-audit-report.md` to drift and should say so in its own brief.
+
 ## Owed at the close
 
 - **The census refresh.** Deferred by owner ruling so that one run happens on
   the final tree after this branch absorbs main, rather than two.
-- **The heavy-tier calibration battery** partitions the roster from authored
-  means and was deliberately not retuned; if it reddens, that is this campaign's
-  finding.
+- **`occupancy.csv` awaits confirmation on the canonical box.** It was authored
+  here on the Mac, but `heavy-run.sh` names it an authored artifact, diffs it,
+  and is host-guarded to lefford (decision 0079 — goldens are authored on one
+  enforced host). Decision 0090 measured cross-platform byte-identity on a
+  40-world all-metric probe, so this is very likely fine, and *very likely* is
+  not the standard for a committed golden. **The final heavy run on the
+  canonical box is the confirmation**; treat a byte difference there as the
+  golden's, not as a regression.
+- **The heavy-tier calibration battery is RED and that is the campaign's owned
+  finding**, not a pending question: goblin re-seats its flagship on **52.1 %**
+  of worlds against a 0.25 bound (predicted ~38 %; the measurement came in half
+  again as high). The bound was deliberately not retuned, because the test's
+  *premise* — that a non-raiding partition exists — is what this campaign
+  destroyed. One further heavy failure, a climate readout's conductance null,
+  has **genuinely open attribution**: green before this branch existed, never
+  touched by us, but another campaign landed in between and changed the
+  placement gate, and the data does not separate them. Two more (a scene-cost
+  ceiling 0.8 % over, and a census-fixture probe) were **already red on main**
+  and are not ours to carry.
+- **`hostname -s` flaps on this box** between `MacBookPro` and `Greyjoy`, which
+  macOS does unprompted. The owner has ruled that no time is to be spent on it;
+  **do not rename anything.** The consequence must be known rather than fixed:
+  `make ci`'s duration baseline is keyed on `hostname -s`, so it forks and
+  re-forks, and the first run under whichever name is current finds no baseline,
+  records silently, and **cannot alarm**. A quiet `make ci` on this box is
+  *unproven*, not green. This is The Timekeeper's documented second blind spot,
+  live and permanent rather than hypothetical.
+- **`scripts/heavy-run.sh:72` records the wrong ref.** It writes the *caller's*
+  `git rev-parse HEAD` into `runs.tsv` rather than the ref it actually ran — the
+  ledger recorded a main commit for a run whose worktree was verifiably at this
+  branch's Task 5 tip. **Every historical row is wrong the same way**, so the
+  heavy-run ledger cannot currently be used to attribute a result to a tree.
+- **`fixture_staleness.rs`'s failure message is stale**: it still directs the
+  reader to "Regenerate on the AWS box: `make regen-remote`", abandoned by
+  decision 0063 and superseded by `scripts/census-run.sh` (decision 0081).
 - **The raid gate still reads a defensive axis.** Only one of the design's three
   warlikeness terms was built; the structural term is unreachable from where
   history is baked, and the quadrant term is documentary only.
