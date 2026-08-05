@@ -1009,6 +1009,22 @@ pub fn axis_supply(
         .sum()
 }
 
+/// Liebig's law of the minimum over a species' four condition responses: the
+/// **binding** axis limits, exactly as `carrying_capacity` takes
+/// `min(temperature, precipitation)`. Temperature, moisture and insolation are
+/// buffered by the species' `sovereignty_floor`; **elevation is passed `0.0`** —
+/// sovereignty buffers physiology but not geometry.
+///
+/// Shared by [`per_species_suitability`] and [`per_species_capacity`] so the two
+/// cannot drift apart on the one rule they must agree about.
+fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
+    cn.temperature
+        .eval(s.temperature_c, floor_buf)
+        .min(cn.moisture.eval(s.moisture, floor_buf))
+        .min(cn.insolation.eval(s.insolation, floor_buf))
+        .min(cn.elevation.eval(s.elevation, 0.0))
+}
+
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_biosphere` index order tags the fields.
@@ -1107,18 +1123,111 @@ pub fn per_species_suitability(
                 // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
                 // Michaelis-Menten saturation maps a supply magnitude onto
                 // `[0, 1)`, so everything below is a *dimensionless suitability*
-                // and NOT a capacity, however much the function's old `_k` name
-                // suggested otherwise. A per-species capacity — which The
-                // Keeping's §8 identifies as the successor's real need — is this
-                // product WITHOUT the saturation, so the supply's units survive.
+                // and NOT a capacity — which is what this function is for. The
+                // dimensional counterpart, with headcount units, is
+                // [`per_species_capacity`].
                 let saturated = supply / (1.0 + supply);
-                saturated
-                    * cn.temperature.eval(s.temperature_c, floor_buf)
-                    * cn.moisture.eval(s.moisture, floor_buf)
-                    * cn.insolation.eval(s.insolation, floor_buf)
-                    * cn.elevation.eval(s.elevation, 0.0)
+                // LIEBIG, not a product (The Tilth, stage 5). The base field
+                // takes `min(temperature, precipitation)` — the law of the
+                // minimum — and this layer used to MULTIPLY four tolerances,
+                // so one half of the model obeyed Liebig and the other did not.
+                // Measured, the product compressed the result ~4x (median
+                // min-of-conditions on good ground is 0.5692), which is most of
+                // why every newly-opened cell came out unsurvivable. The
+                // binding axis limits; a species mildly suboptimal on four axes
+                // is not penalised four times over.
+                saturated * tolerance_liebig(cn, s, floor_buf)
             });
             (tag as u32, k)
+        })
+        .collect()
+}
+
+/// Stage 5's dimensional Michaelis-Menten ceiling, in **headcount**. DERIVED, not
+/// authored (decision 0104; The Tilth spec §5a): `68.87 / (0.8138 × 0.6035)`, where
+/// 68.87 is the median capacity on today's good ground, 0.8138 the MM fraction at
+/// good-ground supply, and 0.6035 the measured median Liebig tolerance there. The
+/// target is the *pre-campaign* good-ground level, which is legitimate gauge-fixing:
+/// the absolute headcount scale is a Hornvale choice, while stage 1 fixed the
+/// *relative* pattern.
+/// type-audit: bare-ok(count)
+pub const CAPACITY_V_MAX: f64 = 140.2;
+
+/// Half-saturation supply for [`CAPACITY_V_MAX`]. DERIVED: the median
+/// `axis_supply` over land (n = 401,148 cell-species samples over five seeds). A
+/// half-saturation constant belongs where the supply it half-saturates actually
+/// sits.
+/// type-audit: bare-ok(ratio)
+pub const CAPACITY_K_M: f64 = 0.03004;
+
+/// Per-species **capacity**, in headcount — the dimensional counterpart of
+/// [`per_species_suitability`] and what the deep-history bake reasons in.
+///
+/// The difference is decision 0103's whole point. `per_species_suitability`
+/// saturates at a dimensionless `1.0`, which discards the supply's magnitude;
+/// this saturates at [`CAPACITY_V_MAX`] with half-saturation [`CAPACITY_K_M`], so
+/// the result carries units and `capacity := suitability` cannot typecheck.
+/// Tolerance combines by Liebig ([`tolerance_liebig`]), matching the base field.
+///
+/// Returns one [`CapacityMap`] per entry of `species_biosphere`, tagged by that
+/// slice's position — a **build-local dense index, never identity**, exactly as
+/// [`per_species_suitability`] documents.
+///
+/// The return needs only an `index` verdict: the `u32` is the build-local tag, and
+/// the capacity itself is a [`CapacityMap`] rather than a bare primitive — which is
+/// decision 0103 doing exactly the work it was ratified for.
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+pub fn per_species_capacity(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+    regime: &RotationRegime,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
+) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    let base_carrying =
+        hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
+    let substrate = substrate_field(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        regime,
+    );
+    let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
+    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let detritus = detritus_supply_field(geo, terrain);
+    let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
+    let prey = prey_supply_field(geo, &forage);
+
+    species_biosphere
+        .iter()
+        .enumerate()
+        .map(|(tag, bio)| {
+            let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
+            let cn = &bio.condition_niche;
+            let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                let s = substrate.get(cell);
+                use hornvale_kernel::{
+                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                };
+                let per_axis = [
+                    (PHOTOSYNTHATE, base_carrying.at(cell)),
+                    (PLANT_FORAGE, *forage.get(cell)),
+                    (MINERAL, *mineral.get(cell)),
+                    (DETRITUS, *detritus.get(cell)),
+                    (ANIMAL_PREY, *prey.get(cell)),
+                    (MARINE_FORAGE, *marine.get(cell)),
+                ];
+                let supply = axis_supply(&bio.niche, &per_axis);
+                let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
+                headcount * tolerance_liebig(cn, s, floor_buf)
+            });
+            let map = hornvale_kernel::ecology::CapacityMap::new(raw)
+                .expect("a Michaelis-Menten product of non-negative terms is finite and >= 0");
+            (tag as u32, map)
         })
         .collect()
 }

@@ -13,62 +13,62 @@ settlement's real, measured outcome. The world still moves only
 inside a possess session; a freshly built world commits none of this.)*
 
 ```text
-[room 738918402, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: SE, N, SW.
+[room 680558609, day 0]
+Tropical rainforest — a stream gully, sun-warmed, dry — in the lands of Daoga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, S.
 > look
-[room 738918402, day 0]
-Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: SE, N, SW.
+[room 680558609, day 0]
+Tropical rainforest — a stream gully, sun-warmed, dry — in the lands of Daoga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, S.
 > npcs
 7 NPC(s) derived this session:
-  [1020] bugbear of Goodogododaga
-  [1021] hobgoblin of Geoboegetoanaoka
-  [1022] kobold of Roxo
-  [1023] a wild rust-monster
-  [1024] a wild otyugh
-  [1025] a wild xorn
-  [1026] a wild carrion-crawler
+  [741] bugbear of Daoga
+  [742] hobgoblin of Toa
+  [743] human of Mengangama
+  [744] a wild rust-monster
+  [745] a wild otyugh
+  [746] a wild xorn
+  [747] a wild carrion-crawler
 > needs
-The bugbear of Goodogododaga seems content.
+The bugbear of Daoga seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
-[room 738918402, day 5]
-Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
-Ways on: SE, N, SW.
+[room 680558609, day 5]
+Tropical rainforest — a stream gully, sun-warmed, dry — in the lands of Daoga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Ways on: E, NW, S.
 > needs
-The bugbear of Goodogododaga settles down to rest.
+The bugbear of Daoga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (16 stirred).
+Time passes. You sense movement nearby (17 stirred).
 > look
-[room 738918402, day 6]
-Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
-Ways on: SE, N, SW.
+[room 680558609, day 6]
+Tropical rainforest — a stream gully, sun-warmed, dry — in the lands of Daoga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Ways on: E, NW, S.
 > needs
-The bugbear of Goodogododaga settles down to rest.
+The bugbear of Daoga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (16 stirred).
+Time passes. You sense movement nearby (15 stirred).
 > look
-[room 738918402, day 7]
-Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The sky is a low grey rain-deck.
-Ways on: SE, N, SW.
+[room 680558609, day 7]
+Tropical rainforest — a stream gully, sun-warmed, dry — in the lands of Daoga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, S.
 > needs
-The bugbear of Goodogododaga grows restless.
+The bugbear of Daoga grows restless.
 > why hobgoblin
-hobgoblin of Geoboegetoanaoka:
-- canonical name of an entity: hobgoblin of Geoboegetoanaoka (asserted by the-quickening)
+hobgoblin of Toa:
+- canonical name of an entity: hobgoblin of Toa (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (350 stirred).
+Time passes. You sense movement nearby (336 stirred).
 > look
-[room 738918402, day 97]
-Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
-Ways on: SE, N, SW.
+[room 680558609, day 97]
+Tropical rainforest — a stream gully, sun-warmed, dry — in the lands of Daoga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
+Ways on: E, NW, S.
 > needs
-The bugbear of Goodogododaga grows restless.
+The bugbear of Daoga casts about for water.
 > release
 You let go.
 ```

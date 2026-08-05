@@ -1,9 +1,10 @@
 $ hornvale scene surrounds --world world.json --render ascii
 [lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
-  + + +
- +++++++
-++++@++++
- +++++++
+  +
+ +++
+++++@
+ +++++
   +++++
-  ways on: SE, N, SW
-  legend: Goodogododaga, buttressed canopy, tropical seasonal forest
+  ways on: E, NW, S
+  12 cells beyond a face seam: real ground, no honest place on this chart.
+  legend: Daoga, a stream gully, sun-warmed, dry, tropical rainforest
