@@ -37,9 +37,20 @@ use std::collections::{BTreeMap, BTreeSet};
 /// empty. That is what happened: making warlikeness a per-settlement draw
 /// halved seed 42's occupation count (919 records -> 459) and took its
 /// material-core collisions with it, from 3 colliding groups to **zero**.
-/// Re-scanned across seeds 42/1/2/3/5/7/11/13/23/1000; seed 7 carries 1255
-/// occupations with 2 colliding material-core groups (4 records) and is the
-/// witness now. The claim, both guards and every assertion are unchanged.
+/// Re-scanned across seeds 42/1/2/3/5/7/11/13/23/1000; seed 7 carried 2
+/// colliding material-core groups and became the witness.
+///
+/// **Moved again at the main absorb (2026-08-04), and the guard is why we
+/// know.** Composing The Keeping's `is_land` decomposition with this
+/// campaign's raid gate emptied seed 7 in turn — 853 occupations, **zero**
+/// colliding material-core groups — so the guard reddened rather than letting
+/// the test pass on nothing. Re-scanned across the same ten seeds on the
+/// merged tree: 1 and 1000 carry 2 colliding groups (4 records) each; 3, 5 and
+/// 13 carry 1; 42, 2, 7, 11 and 23 carry none. **Seed 1** is the witness now —
+/// 901 occupations, 2 colliding material-core groups of 2, and 24 colliding
+/// founding-key groups for the second test. A WITNESS is being re-pinned here,
+/// never the claim: both anti-vacuity guards and every assertion below are
+/// untouched, and the property they assert is the one The Salt froze.
 fn witness_world() -> World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
@@ -55,13 +66,14 @@ fn witness_world() -> World {
 }
 
 /// The seed [`witness_world`] builds. A witness, not a claim — see that
-/// function's doc for why it moved off 42.
-const WITNESS_SEED: u64 = 7;
+/// function's doc for why it moved off 42, and then off 7.
+const WITNESS_SEED: u64 = 1;
 
 /// Two occupations with identical material cores but different entity ids
 /// must produce identical derived output. The witness seed measurably contains
-/// such pairs (4 occupations sit in 2 colliding material-core groups, largest
-/// group size 2) — no synthetic id shift is needed to exercise the property.
+/// such pairs (at seed 1: 4 occupations sit in 2 colliding material-core
+/// groups, largest group size 2) — no synthetic id shift is needed to exercise
+/// the property.
 #[test]
 fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
     let world = witness_world();
@@ -80,7 +92,7 @@ fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
     assert!(
         !colliding.is_empty(),
         "the witness seed must contain at least one material-core collision \
-         (measured at seed 7: 4 occupations spread across 2 colliding groups, \
+         (measured at seed 1: 4 occupations spread across 2 colliding groups, \
          largest group size 2) -- zero colliding groups means this test is \
          vacuous and proves nothing about id-invariance"
     );

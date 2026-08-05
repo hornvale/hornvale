@@ -7871,6 +7871,18 @@ mod tests {
         // so the set is re-pinned rather than the seed swapped. The
         // PRECONDITION is what moved; the claim (stripping the toponymic
         // gates makes exposure_sound read false) is untouched.
+        //
+        // MERGE re-pin (2026-08-04, main absorbed into the-tolerance):
+        // absorbing The Keeping's `is_land` decomposition reseats seed 7's
+        // settlements a further time and the precondition WIDENS — six of the
+        // seven, everything but `island`. That is the direction step B
+        // predicts: it opens arid and very-hot ground that the old conflated
+        // habitability flag forbade outright, so seed 7's goblins reach a wider
+        // spread of terrain and root more toponyms, not fewer. The test bites
+        // strictly harder than at either parent (2 rooted on this branch, 5 on
+        // the pre-Tolerance tree), and every gate class it was written to
+        // exercise — river, elevation, karst — is covered. Re-pinned, not
+        // re-seeded; the claim is still untouched.
         let rooted: Vec<&str> = TOPONYMIC
             .iter()
             .copied()
@@ -7878,7 +7890,7 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford"],
+            vec!["river", "ford", "hill", "valley", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
