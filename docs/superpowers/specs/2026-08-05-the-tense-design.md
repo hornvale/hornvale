@@ -2,7 +2,7 @@
 
 **Campaign:** the-tense · **Runs on `campaign/the-tilth` itself**, as further
 stages, not on a branch of its own · **Supersedes:** The Tilth stages 6 and 7,
-which are patches on the layer below this one and were reverted in `<revert-sha>`
+which are patches on the layer below this one and were reverted in `511d1fa9`
 
 *Why not its own branch:* it needs `per_species_capacity`, which exists only on
 `campaign/the-tilth`, so a separate branch would fork from an unmerged branch and
