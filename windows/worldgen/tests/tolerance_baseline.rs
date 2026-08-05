@@ -88,6 +88,22 @@
 //! `BuildDepth::Terrain` (decision 0092's sanctioned fixture posture) —
 //! nothing here reads settlements, language, or any stage past the bake.
 //!
+//! # Task 6 lives here too: the preregistered readout
+//!
+//! [`report_the_preregistered_readout`] below is the campaign's H1/H2/H3
+//! readout. It shares this file's seed range, roster, build depth and
+//! victim-side proxy — the whole point of putting it here rather than in a
+//! third file — but it is a **separate test with a separate population
+//! collection**, because it reads three things Task 1's function does not:
+//! the per-settlement **drawn** disposition, the **gate-open** share that
+//! drawn value produces, and the **initiator** side of raiding (Task 5's
+//! technique, reused rather than reinvented).
+//!
+//! Task 1's `report_pre_dispersion_raid_rates` is deliberately untouched by
+//! it. See the warning above: that test freezes the *authored* constant and
+//! its exact-zero variance, which is the pre-dispersion premise, not the
+//! readout.
+//!
 //! Ignored: builds 30 worlds. Reason token `heavy:` puts it in the heavy
 //! tier (`cli/tests/heavy_tier.rs`), not the commit gate.
 #![allow(clippy::disallowed_methods)]
@@ -96,10 +112,11 @@ use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended};
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
+use hornvale_worldgen::disposition::{drawn_threat_response, occupation_draw_key};
 use hornvale_worldgen::{
     BakeCensus, SettlementPins, SkyChoice, WorldComponents, census, history_for,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Seeds `1..=30`, the range every reading below is pooled over — the same
 /// range `generalist_baseline.rs` and `disposition_calibration.rs` (there
@@ -284,6 +301,431 @@ fn report_pre_dispersion_raid_rates() {
         println!(
             "{name}: raided-as-victim rate = {raid_mean:.6}, between-settlement \
              variance = {raid_var:.10} (n = {n})"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Task 6 — the preregistered readout. Everything below REPORTS; the only
+// assertions are guards (non-empty, finite, six peoples), because encoding a
+// preregistered prediction as a build failure creates pressure to retune until
+// the suite goes green.
+// ---------------------------------------------------------------------------
+
+/// The authored per-people inputs, resolved from **the same two sources the
+/// composition root resolves them from** (`lib.rs::bake_history_from`): the
+/// location off `WorldComponents::psyche`, the spread off
+/// `hornvale_species::dispersion_registry()`. Mirrors
+/// `tolerance_mutation.rs`'s function of the same name so the readout and the
+/// mutation proof cannot read different authored values.
+fn authored_inputs(wc: &WorldComponents) -> (BTreeMap<KindId, f64>, BTreeMap<KindId, f64>) {
+    let dispersion = hornvale_species::dispersion_registry();
+    let mut locations = BTreeMap::new();
+    let mut spreads = BTreeMap::new();
+    for (kind, psyche) in wc.psyche.iter() {
+        if !PEOPLES_WITH_HUMAN.contains(&kind.0) {
+            continue;
+        }
+        locations.insert(*kind, psyche.threat_response);
+        spreads.insert(
+            *kind,
+            dispersion
+                .get(kind)
+                .unwrap_or_else(|| panic!("{}: no authored dispersion reached this test", kind.0))
+                .mind,
+        );
+    }
+    (locations, spreads)
+}
+
+/// One settlement-occupation as the readout reads it: the drawn gate input
+/// under both dispersion regimes, and three per-settlement outcomes.
+///
+/// The zeroed columns are **measured, not argued** — they are the same
+/// `drawn_threat_response` call with `spread = 0.0`, evaluated on the same
+/// settlement in the same run, which is what makes this a matched pair rather
+/// than a before/after spanning the `a025e55a` merge (task ruling 2).
+struct ReadoutRow {
+    /// The settlement's people (one of [`PEOPLES_WITH_HUMAN`]).
+    people: &'static str,
+    /// The gate input this settlement's community actually drew, under the
+    /// authored dispersion.
+    drawn: f64,
+    /// `1.0` if the authored-dispersion draw opens the raid gate.
+    gate_open: f64,
+    /// The gate input the same settlement would have drawn at dispersion 0 —
+    /// its people's authored location, the pre-Tolerance regime.
+    drawn_zeroed: f64,
+    /// `1.0` if the zero-dispersion draw opens the raid gate. Constant within
+    /// a people by construction; that constancy is the baseline.
+    gate_open_zeroed: f64,
+    /// `1.0` if this settlement **initiated** at least one raid on a live
+    /// world (Task 5's technique: a raid closes its victim's record with
+    /// `CauseOfEnd::Fled` + `Ended::By(raider)`, and the bake mints one id per
+    /// record, so `raider` names exactly one settlement — the aggressor's).
+    initiated: f64,
+    /// How many raids this settlement initiated (a count, not a flag).
+    raids_initiated: f64,
+    /// `1.0` if this settlement was itself raided — the VICTIM side, Task 1's
+    /// proxy, carried forward so both sides are reported side by side.
+    raided_victim: f64,
+}
+
+/// What the thirty probe worlds actually contained — reported so every rate
+/// below names the population it is over.
+struct Coverage {
+    /// Worlds built.
+    worlds: u64,
+    /// Occupation records across all worlds, all kinds.
+    records_total: u64,
+    /// Occupation records belonging to the six settling peoples.
+    records_roster: u64,
+    /// Records still alive at the end of the bake.
+    alive_total: u64,
+    /// Seeds whose world produced no occupation records at all.
+    seeds_with_no_records: u64,
+    /// Seeds whose world ended with no settlement alive.
+    seeds_with_no_alive: u64,
+}
+
+/// Build every seed in [`SEEDS`] and reduce each occupation record of the six
+/// settling peoples to a [`ReadoutRow`], alongside the [`Coverage`] of the
+/// probe.
+fn readout_population(
+    wc: &WorldComponents,
+    locations: &BTreeMap<KindId, f64>,
+    spreads: &BTreeMap<KindId, f64>,
+) -> (Vec<ReadoutRow>, Coverage) {
+    let mut rows = Vec::new();
+    let mut cov = Coverage {
+        worlds: 0,
+        records_total: 0,
+        records_roster: 0,
+        alive_total: 0,
+        seeds_with_no_records: 0,
+        seeds_with_no_alive: 0,
+    };
+
+    for seed in SEEDS {
+        let history = history_for(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            wc,
+        )
+        .unwrap_or_else(|e| panic!("seed {seed} failed to build: {e:?}"));
+
+        cov.worlds += 1;
+        cov.records_total += history.records.len() as u64;
+        if history.records.is_empty() {
+            cov.seeds_with_no_records += 1;
+        }
+        let alive = history.records.iter().filter(|r| r.core.is_alive()).count() as u64;
+        cov.alive_total += alive;
+        if alive == 0 {
+            cov.seeds_with_no_alive += 1;
+        }
+
+        // The initiator side (Task 5's technique). One pass over the victims
+        // names every aggressor by its own record's handle.
+        let mut raids_by_initiator = BTreeMap::new();
+        for rec in &history.records {
+            if matches!(rec.core.cause, Some(CauseOfEnd::Fled))
+                && let Ended::By(raider) = rec.ended_by
+            {
+                *raids_by_initiator.entry(raider).or_insert(0u64) += 1;
+            }
+        }
+
+        for rec in &history.records {
+            let people = rec.core.people;
+            if !PEOPLES_WITH_HUMAN.contains(&people.0) {
+                continue;
+            }
+            cov.records_roster += 1;
+            let location = locations[&people];
+            let spread = spreads[&people];
+            let key = occupation_draw_key(rec.core.founded);
+            let drawn = drawn_threat_response(Seed(seed), rec.core.site, key, location, spread);
+            let drawn_zeroed = drawn_threat_response(Seed(seed), rec.core.site, key, location, 0.0);
+            let raids = raids_by_initiator
+                .get(&rec.community)
+                .copied()
+                .unwrap_or(0u64);
+            let raided = matches!(rec.core.cause, Some(CauseOfEnd::Fled))
+                && matches!(rec.ended_by, Ended::By(_));
+            rows.push(ReadoutRow {
+                people: people.0,
+                drawn,
+                gate_open: f64::from(u8::from(drawn >= RAID_DISPOSITION_MIN)),
+                drawn_zeroed,
+                gate_open_zeroed: f64::from(u8::from(drawn_zeroed >= RAID_DISPOSITION_MIN)),
+                initiated: f64::from(u8::from(raids > 0)),
+                raids_initiated: raids as f64,
+                raided_victim: f64::from(u8::from(raided)),
+            });
+        }
+    }
+
+    (rows, cov)
+}
+
+/// Discordant pairs between authored dispersion and a measured per-people
+/// statistic, out of the 15 unordered pairs six peoples make: pairs where the
+/// people with the **larger** authored σ carries the **smaller** measured
+/// value. `0` means the ordering tracks the authored dispersion exactly; `15`
+/// means it is exactly inverted. Ties in either coordinate are not counted.
+///
+/// This is the readable form of H2's ordering claim, reported rather than
+/// asserted. Entries are `(people, sigma, statistic)`.
+fn discordant_pairs(stats: &[(&'static str, f64, f64)]) -> usize {
+    let mut n = 0;
+    for (i, a) in stats.iter().enumerate() {
+        for b in &stats[i + 1..] {
+            let sigma_order = a.1.total_cmp(&b.1);
+            let stat_order = a.2.total_cmp(&b.2);
+            if sigma_order != std::cmp::Ordering::Equal
+                && stat_order != std::cmp::Ordering::Equal
+                && sigma_order != stat_order
+            {
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
+/// **The preregistered readout (Task 6).** H1, H2 and H3 are reported and
+/// never asserted — the assertions in this test are guards only (a non-empty
+/// population, finite values, the expected roster), so that no measured
+/// outcome can turn a frozen prediction into a build failure someone is
+/// tempted to retune away.
+///
+/// The comparison point is the **zero-dispersion arm**, re-measured here on
+/// the same settlements in the same run, not Task 1's numbers: `origin/main`
+/// was absorbed at merge `a025e55a` (The Keeping), which changed the placement
+/// gate and moved world identity, so Task 1's figures are the *pre-merge
+/// record* rather than a clean "before". `tolerance_mutation.rs`'s module doc
+/// carries the committed form of this baseline.
+///
+/// Two readings of H1 are printed, because the prediction is ambiguous between
+/// them and the ambiguity is the finding — see the readout's own commentary
+/// block at the end of the output.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn report_the_preregistered_readout() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let (locations, spreads) = authored_inputs(&wc);
+    assert_eq!(
+        locations.len(),
+        6,
+        "all six settling peoples must carry an authored threat_response; got {:?}",
+        locations.keys().collect::<Vec<_>>()
+    );
+
+    let (rows, cov) = readout_population(&wc, &locations, &spreads);
+
+    // Guards ONLY. A harness that measures nothing must not look like one that
+    // works; nothing below this point asserts a hypothesis.
+    assert!(!rows.is_empty(), "no settlements sampled");
+    assert!(
+        rows.iter().all(|r| r.drawn.is_finite()
+            && r.drawn_zeroed.is_finite()
+            && r.gate_open.is_finite()
+            && r.gate_open_zeroed.is_finite()
+            && r.initiated.is_finite()
+            && r.raids_initiated.is_finite()
+            && r.raided_victim.is_finite()),
+        "non-finite value in the readout population"
+    );
+    let sampled: BTreeSet<&'static str> = rows.iter().map(|r| r.people).collect();
+    assert_eq!(
+        sampled.len(),
+        6,
+        "all six peoples measured; got {sampled:?}"
+    );
+
+    // Per-people columns, collected once.
+    let mut drawn: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    let mut drawn_zeroed: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    let mut gate: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    let mut gate_zeroed: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    let mut initiated: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    let mut raids: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    let mut victim: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
+    for r in &rows {
+        drawn.entry(r.people).or_default().push(r.drawn);
+        drawn_zeroed
+            .entry(r.people)
+            .or_default()
+            .push(r.drawn_zeroed);
+        gate.entry(r.people).or_default().push(r.gate_open);
+        gate_zeroed
+            .entry(r.people)
+            .or_default()
+            .push(r.gate_open_zeroed);
+        initiated.entry(r.people).or_default().push(r.initiated);
+        raids.entry(r.people).or_default().push(r.raids_initiated);
+        victim.entry(r.people).or_default().push(r.raided_victim);
+    }
+
+    // Peoples ordered by authored dispersion, widest first — the order H2's
+    // prediction is stated in.
+    let mut by_sigma: Vec<(&'static str, f64)> = PEOPLES_WITH_HUMAN
+        .iter()
+        .map(|n| (*n, spreads[&KindId(n)]))
+        .collect();
+    by_sigma.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(b.0)));
+
+    println!("=== THE TOLERANCE, Task 6: the preregistered readout ===");
+    println!(
+        "population: seeds {SEEDS:?} ({} worlds), {} occupation records total, \
+         {} of the six settling peoples, {} alive at the end of the bake",
+        cov.worlds, cov.records_total, cov.records_roster, cov.alive_total
+    );
+    println!(
+        "empty probes: {} of {} seeds produced NO occupation records; {} of {} ended \
+         with NO settlement alive",
+        cov.seeds_with_no_records, cov.worlds, cov.seeds_with_no_alive, cov.worlds
+    );
+    println!(
+        "gate: RAID_DISPOSITION_MIN = {RAID_DISPOSITION_MIN}; the baseline arm is \
+         dispersion 0 measured on these same settlements (matched pair, one run)"
+    );
+
+    // ---- H1 -------------------------------------------------------------
+    println!();
+    println!(
+        "--- H1 (reported, not asserted): does each people's MEAN behaviour survive \
+         the draw? Two readings. ---"
+    );
+    println!(
+        "H1(a) the mean of the DRAWN DISPOSITION vs the authored location. \
+         The clamp table in windows/worldgen/src/disposition.rs predicts the shifts."
+    );
+    println!(
+        "  {:<10} {:>5} {:>8} {:>6} {:>11} {:>11} {:>10}",
+        "people", "n", "location", "sigma", "zeroed mean", "drawn mean", "shift"
+    );
+    for (name, sigma) in &by_sigma {
+        let d = &drawn[name];
+        let z = &drawn_zeroed[name];
+        println!(
+            "  {:<10} {:>5} {:>8.4} {:>6.4} {:>11.6} {:>11.6} {:>+10.6}",
+            name,
+            d.len(),
+            locations[&KindId(name)],
+            sigma,
+            mean(z),
+            mean(d),
+            mean(d) - mean(z)
+        );
+    }
+    println!(
+        "H1(b) the mean of the GATED OUTCOME (share of settlements whose draw opens \
+         the gate) vs the same share at dispersion 0."
+    );
+    println!(
+        "  {:<10} {:>5} {:>13} {:>13} {:>10}",
+        "people", "n", "zeroed gate", "drawn gate", "shift"
+    );
+    for (name, _) in &by_sigma {
+        let g = &gate[name];
+        let gz = &gate_zeroed[name];
+        println!(
+            "  {:<10} {:>5} {:>13.6} {:>13.6} {:>+10.6}",
+            name,
+            g.len(),
+            mean(gz),
+            mean(g),
+            mean(g) - mean(gz)
+        );
+    }
+
+    // ---- H2 -------------------------------------------------------------
+    println!();
+    println!(
+        "--- H2 (reported, not asserted): is between-settlement variance high for \
+         high-dispersion peoples and near-zero for low-dispersion ones? ---"
+    );
+    println!(
+        "  {:<10} {:>6} {:>11} {:>11} {:>11} {:>11} {:>11}",
+        "people", "sigma", "var drawn", "var zeroed", "var gate", "var initiat", "var victim"
+    );
+    for (name, sigma) in &by_sigma {
+        println!(
+            "  {:<10} {:>6.4} {:>11.8} {:>11.8} {:>11.8} {:>11.8} {:>11.8}",
+            name,
+            sigma,
+            variance(&drawn[name]),
+            variance(&drawn_zeroed[name]),
+            variance(&gate[name]),
+            variance(&initiated[name]),
+            variance(&victim[name]),
+        );
+    }
+    for (label, col) in [
+        ("drawn disposition", &drawn),
+        ("gate-open (thresholded)", &gate),
+        ("initiated a raid (live)", &initiated),
+        ("was raided (live, victim)", &victim),
+    ] {
+        let stats: Vec<(&'static str, f64, f64)> = by_sigma
+            .iter()
+            .map(|(n, s)| (*n, *s, variance(&col[n])))
+            .collect();
+        println!(
+            "  ordering vs authored sigma, {label}: {} of 15 pairs discordant",
+            discordant_pairs(&stats)
+        );
+    }
+
+    // ---- H3 -------------------------------------------------------------
+    println!();
+    println!(
+        "--- H3 (reported, not asserted): does human raid at a rate strictly between \
+         goblin's and hobgoblin's, rather than at 0 or 1? ---"
+    );
+    println!(
+        "  {:<10} {:>5} {:>11} {:>13} {:>13} {:>13}",
+        "people", "n", "gate-open", "initiator rate", "raids/settl", "victim rate"
+    );
+    for (name, _) in &by_sigma {
+        let g = &gate[name];
+        println!(
+            "  {:<10} {:>5} {:>11.6} {:>13.6} {:>13.6} {:>13.6}",
+            name,
+            g.len(),
+            mean(g),
+            mean(&initiated[name]),
+            mean(&raids[name]),
+            mean(&victim[name]),
+        );
+    }
+    let total_raids: f64 = raids.values().flatten().sum();
+    println!(
+        "  roster totals: {total_raids} raids initiated by the six settling peoples \
+         across {} settlements over seeds {SEEDS:?}",
+        rows.len()
+    );
+    for stat in ["gate-open", "initiator rate"] {
+        let col = if stat == "gate-open" {
+            &gate
+        } else {
+            &initiated
+        };
+        let (g, h, hb) = (
+            mean(&col["goblin"]),
+            mean(&col["human"]),
+            mean(&col["hobgoblin"]),
+        );
+        let between = (g < h && h < hb) || (hb < h && h < g);
+        println!(
+            "  H3 on {stat}: goblin {g:.6}, human {h:.6}, hobgoblin {hb:.6} — human \
+             strictly between = {between}; human strictly inside (0, 1) = {}",
+            h > 0.0 && h < 1.0
         );
     }
 }
