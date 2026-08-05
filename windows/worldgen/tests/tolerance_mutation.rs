@@ -72,32 +72,101 @@
 //! not of this measurement — it can only *reduce* the real arm's variance, so
 //! it cannot manufacture the contrast this file reports.
 //!
+//! ## THE NAMED ZERO-DISPERSION BASELINE — committed, not merely printed
+//!
+//! Measured 2026-08-04 over seeds `1..=30`, every occupation record of each
+//! settling people. The AUTHORED arm is the shipped regime; the ZEROED arm is
+//! the baseline Task 6 compares against. Both are re-emitted by
+//! [`zero_dispersion_collapses_between_settlement_variance`]'s `println!`,
+//! which is how this table is re-measured — but the table lives here, in
+//! committed text, because a comparison point a reader on main cannot see
+//! without dispatching a heavy run to lefford is not a baseline.
+//!
+//! ```text
+//!   people        n   location   sigma  | AUTHORED mean       var  gate-open | ZEROED mean       var  gate-open
+//!   ---------  ----  ---------  ------  | ------------- --------- ---------- | ----------- --------- ----------
+//!   bugbear    4163       0.80    0.20  |      0.778766  0.032630   0.771079  |    0.800000  0.000000   1.000000
+//!   gnoll      4057       0.85    0.22  |      0.819846  0.031197   0.833374  |    0.850000  0.000000   1.000000
+//!   goblin     1945       0.50    0.25  |      0.490512  0.060181   0.360411  |    0.500000  0.000000   0.000000
+//!   hobgoblin  4065       0.70    0.10  |      0.700371  0.010235   0.784994  |    0.700000  0.000000   1.000000
+//!   human      2305       0.50    0.35  |      0.507153  0.113103   0.423427  |    0.500000  0.000000   0.000000
+//!   kobold     3461       0.80    0.12  |      0.800680  0.014493   0.982953  |    0.800000  0.000000   1.000000
+//! ```
+//!
+//! In every zeroed arm each settlement drew its people's authored location bit
+//! for bit — which is the whole content of the mutation proof, read across the
+//! roster instead of on the witness alone. The *variance* of those identical
+//! values is exactly `0.0` for human and goblin, whose authored 0.5 is exactly
+//! representable, and is a summation residue of order 1e-27 for the peoples
+//! authored at 0.7/0.8/0.85. That residue is a property of computing a mean in
+//! IEEE arithmetic, not of the model, which is why the assertions below pin the
+//! per-settlement values exactly and the variance to a stated bound.
+//!
+//! Two things the table says that the human row alone does not:
+//!
+//! - **The gate-open share is the axis's visible consequence.** Zeroed, a
+//!   people is entirely inside or entirely outside the gate (0.0 or 1.0);
+//!   authored, every people sits strictly between. That is the difference
+//!   between a roster of six kinds and a roster of thousands of settlements.
+//! - **The authored means are displaced toward the interior on exactly the
+//!   axes the clamp table predicts.** `disposition.rs`'s disclosed table
+//!   predicts a `threat_response` shift for bugbear (−0.0155) and gnoll
+//!   (−0.0350) and none for the rest; measured here, bugbear came in at −0.021
+//!   and gnoll at −0.030, while hobgoblin (+0.0004), kobold (+0.0007) and
+//!   human (+0.007, its two bounds clamping symmetrically) sit at draw noise.
+//!   That is the clamping bias measured on the live population rather than
+//!   derived. **Reported, not asserted** — H1 is not this file's to adjudicate.
+//!
 //! ## What this file proves about the live pipeline, and what it does not
 //!
 //! The variance comparison is a statement about the derivation the gate calls,
-//! evaluated on the keys real worlds actually produced. The remaining link —
-//! that the *shipped bake* gates on a drawn value rather than on its people's
-//! authored constant — is checked separately and live, by
-//! [`the_shipped_bake_gates_on_a_drawn_value_not_the_authored_constant`]'s
-//! reading of raid initiators: `human` and `goblin` are authored at
-//! `threat_response` 0.5, below the 0.6 gate, so **before this campaign
-//! neither could ever take the initiative**. Observing their settlements
-//! initiating raids on live worlds is only possible if the gate reads
-//! something that varies per settlement.
+//! evaluated on the keys real worlds actually produced. Two further links are
+//! needed before that is a statement about the shipped pipeline, and each has
+//! its own test:
 //!
-//! What that observation excludes is exactly the pre-Tolerance behaviour (a
-//! gate reading the per-people authored constant). It does not, on its own,
-//! distinguish a config that never received human's disposition at all —
-//! `Bake::takes_the_initiative` fails *open* on `None`. That case is covered
-//! where it is reachable: by `history_bake.rs`'s in-crate tests of
-//! `BakeConfig::disposition`/`disposition_spread`, and by
-//! `tolerance_draw.rs`'s two-sided agreement pin. `bake_history_from` fills the
-//! two maps from adjacent lines over one `peoples` list, so a roster reaching
-//! one and not the other is not a state this crate can be in.
+//! 1. **The bake gates on a drawn value, not on its people's authored
+//!    constant** —
+//!    [`the_shipped_bake_gates_on_a_drawn_value_not_the_authored_constant`],
+//!    live and in the commit gate. `human` and `goblin` are authored at
+//!    `threat_response` 0.5, below the 0.6 gate, so **before this campaign
+//!    neither could ever take the initiative**. Observing their settlements
+//!    initiating raids on live worlds is only possible if the gate reads
+//!    something that varies per settlement.
+//! 2. **The composition root hands the bake the AUTHORED spread** —
+//!    `hornvale_worldgen`'s in-crate
+//!    `the_composition_root_hands_the_bake_the_authored_dispersion`, at the
+//!    `disposition_maps` seam in `src/lib.rs`. No integration test can reach
+//!    this: `Community.disposition` is private and is never committed, so the
+//!    value the bake gated on is unobservable from outside the crate. Task 5's
+//!    review demonstrated the hole by handing every people a fabricated spread
+//!    of 0.15 — all three tests in *this* file stayed green while the mutation
+//!    proof reported a σ of 0.35 it had read from the registry. Nothing here
+//!    closes that; the in-crate test does.
 //!
-//! Ignored: builds 30 worlds. Reason token `heavy:` puts it in the heavy tier
-//! (`cli/tests/heavy_tier.rs`), not the commit gate.
-#![allow(clippy::disallowed_methods)]
+//! What link 1 excludes on its own is exactly the pre-Tolerance behaviour (a
+//! gate reading the per-people authored constant). It does not distinguish a
+//! config that never received human's disposition at all —
+//! `Bake::takes_the_initiative` fails *open* on `None`. That residue is closed
+//! here rather than deferred: [`authored`]'s `locations.len() == 6` proves all
+//! six settling peoples carry an authored `threat_response` in `wc.psyche`, and
+//! a non-empty human population proves human is in the bake's `peoples` list —
+//! and `disposition_maps` is a `filter_map` over exactly those two, so
+//! `cfg.disposition` containing human is forced, not assumed.
+//!
+//! The two maps are coextensive on the shipped roster, but **not** because they
+//! are built from one candidate list: they read different registries
+//! (`wc.psyche` and `hornvale_species::dispersion_registry()`), so one
+//! `peoples` list can yield two different key sets. What makes them coextensive
+//! is Task 2's `every_kind_with_a_mind_carries_a_dispersion`, and the in-crate
+//! seam test asserts it directly rather than inheriting it.
+//!
+//! (In-crate tests of the bake's own consumption of these maps live in
+//! `windows/worldgen/src/history_bake.rs`'s test module — *not* in
+//! `windows/worldgen/tests/history_bake.rs`, which has none.)
+//!
+//! Ignored: the mutation proof builds 30 worlds. Reason token `heavy:` puts it
+//! in the heavy tier (`cli/tests/heavy_tier.rs`), not the commit gate. The
+//! wiring test above is deliberately NOT ignored — see its own doc.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended};
@@ -143,11 +212,20 @@ const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// stopped reaching the draw, which is the failure this file exists to catch.
 ///
 /// **It is calibrated for `human` specifically and is not a roster-wide
-/// floor.** Dispersion is authored per people, and the same run measured
-/// hobgoblin (σ = 0.10) at variance 0.010_235 — above this floor by 2%, not by
-/// an order of magnitude. A witness other than human needs its own floor,
-/// measured the same way.
-const VARIANCE_FLOOR: f64 = 0.01;
+/// floor** — hence the name. Dispersion is authored per people, and the same
+/// run measured hobgoblin (σ = 0.10) at variance 0.010_235: above this floor by
+/// 2%, not by an order of magnitude. A witness other than human needs its own
+/// floor, measured the same way.
+const HUMAN_VARIANCE_FLOOR: f64 = 0.01;
+
+/// The matching **ceiling** on the authored arm (standing repo lesson: a floor
+/// without a ceiling only catches half the failures). The drawn gate input is
+/// clamped to `[0, 1]`, so its variance cannot exceed 0.25 whatever σ is
+/// authored — an inflated or mis-scaled spread would sail straight past a
+/// floor of 0.01 and look like a healthy signal. `0.20` is above the measured
+/// 0.113 with room for the roster to move and below the 0.25 a two-point
+/// distribution on the bounds would reach.
+const HUMAN_VARIANCE_CEILING: f64 = 0.20;
 
 /// One settlement-occupation, reduced to the draw key its community was gated
 /// on: the world it belongs to, its people, and the `(site, founded-year)`
@@ -354,16 +432,30 @@ fn zero_dispersion_collapses_between_settlement_variance() {
     );
 
     assert!(
-        real.variance > VARIANCE_FLOOR,
-        "authored dispersion produces no variance: {} (floor {VARIANCE_FLOOR}) — the \
+        real.variance > HUMAN_VARIANCE_FLOOR,
+        "authored dispersion produces no variance: {} (floor {HUMAN_VARIANCE_FLOOR}) — the \
          authored spread is not reaching the draw",
         real.variance
     );
     assert!(
-        zeroed.variance < 1e-12,
-        "zeroing dispersion did NOT collapse variance ({}) — the parameter is not being \
-         read, so H2 proves nothing",
-        zeroed.variance
+        real.variance < HUMAN_VARIANCE_CEILING,
+        "authored dispersion produces variance {} (ceiling {HUMAN_VARIANCE_CEILING}) — a \
+         drawn gate input on [0, 1] cannot honestly spread this far around the authored \
+         0.5, so the spread reaching the draw is not the authored one",
+        real.variance
+    );
+    // Exactly zero, not merely small: at spread 0 the offset is
+    // `unit * √3 * 0.0 == 0.0`, `location + 0.0 == location`, and `clamp` fixes
+    // every authored location in [0, 1] — so every settlement holds the same
+    // value bit for bit. Human's authored 0.5 is a power of two, so summing
+    // 2305 copies of it and dividing is exact too, and every deviation from the
+    // mean is an exact 0.0. **That last step is human's alone** — see the
+    // roster loop below, where a people authored at 0.8 leaves a ~1e-27
+    // summation residue that says nothing about the model.
+    assert_eq!(
+        zeroed.variance, 0.0,
+        "zeroing dispersion did NOT collapse variance to exactly zero — the parameter is \
+         not being read, so H2 proves nothing"
     );
 
     // THE NAMED ZERO-DISPERSION BASELINE (task ruling 2). Reported for every
@@ -386,6 +478,26 @@ fn zero_dispersion_collapses_between_settlement_variance() {
             zeroed.mean,
             zeroed.variance,
             zeroed.gate_open
+        );
+        // The exact claim, asserted where it is exactly true: every settlement
+        // of a zero-dispersion people holds its people's authored location, bit
+        // for bit.
+        //
+        // The VARIANCE of those identical values is a different matter, and
+        // asserting it equals 0.0 across the roster is a claim about IEEE
+        // summation rather than about the model: `mean = Σv / n` is exact only
+        // when the location is exactly representable. Human's 0.5 is; bugbear's
+        // 0.8 is not, and 4163 copies of it leave a residue of 2.5e-27 in the
+        // variance. That is why the exact-zero form above is human's alone, and
+        // why this loop pins the values exactly and the variance to a stated
+        // bound — the strong claim where it is true, not the strong-looking one
+        // everywhere.
+        let zeroed_vals = drawn_values(&pop, people, Some(ZERO_DISPERSION), &locations, &spreads);
+        let location = locations[&people];
+        assert!(
+            zeroed_vals.iter().all(|v| *v == location),
+            "{name}: a zero-dispersion settlement drew something other than the authored \
+             {location} — the collapse is not to a point"
         );
         assert!(
             zeroed.variance < 1e-12,
@@ -441,11 +553,23 @@ fn every_zeroed_draw_is_the_authored_location() {
 /// headroom — it is a wiring check, not a rate, and it is not a hypothesis
 /// about how often either people raids.
 ///
-/// A separate, cheaper test than the mutation proof above (six worlds, not
-/// thirty) so that the wiring question can be answered without the full
-/// battery; it is heavy-tier all the same.
+/// **Deliberately NOT `#[ignore]`d, though it builds worlds.** Task 5's review
+/// established that this is the *only* test anywhere that names an unwired
+/// `disposition_spread`: under that mutation the crate suite does redden, but
+/// uselessly — five golden/fixture tests fail with messages about marsh roots
+/// and pre-campaign lexicons, collateral from shifted histories that says
+/// nothing about disposition and is pure noise during a campaign that
+/// legitimately moves those goldens. The in-crate
+/// `two_settlements_of_one_people_can_differ_in_raiding` is blind to it too: it
+/// hand-builds a `Bake` with an explicit spread map and never exercises
+/// `bake_history_from`.
+///
+/// It costs six worlds and ~6–8 s, which is well inside the commit-gate budget,
+/// and `cli/tests/heavy_tier.rs` requires no live-worldgen test to be ignored —
+/// it only constrains the reason string of those that are. A diagnosis that
+/// only arrives when someone dispatches `make gate-full` to lefford is not
+/// guarding the campaign's acceptance criterion.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_shipped_bake_gates_on_a_drawn_value_not_the_authored_constant() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let (locations, _) = authored(&wc);
