@@ -361,6 +361,26 @@ fn median(values: &[f64]) -> f64 {
     }
 }
 
+/// A percentile of an ALREADY-ASCENDING-SORTED (`total_cmp`) slice, using
+/// the NEAREST-RANK convention (never interpolated):
+/// `rank = ceil(p / 100 * n)`, clamped to `[1, n]`, 1-indexed then converted
+/// to a 0-index. Exploratory-only (E1/E2/E3, spec §6b's post-hoc addendum) —
+/// distinct from, and never used by, the frozen [`median`] helper F1-F4 use
+/// (which averages the two middle values on an even-length sample), so this
+/// function's own `p=50.0` can differ slightly from `median()`'s result on
+/// an even-length population. `p=100.0` returns the same element `.last()`
+/// on a sorted slice would.
+fn percentile(sorted_ascending: &[f64], p: f64) -> f64 {
+    assert!(
+        !sorted_ascending.is_empty(),
+        "percentile of an empty population"
+    );
+    let n = sorted_ascending.len();
+    let rank = ((p / 100.0) * n as f64).ceil() as usize;
+    let idx = rank.clamp(1, n) - 1;
+    sorted_ascending[idx]
+}
+
 /// The stride F2/the redundancy control walk the reachable-pair list at: at
 /// most every pair, but no finer than needed to land roughly
 /// [`PATH_SAMPLE_STRIDE_TARGET`] samples across the whole reachable-pair
@@ -892,6 +912,201 @@ fn build_full_readout(seed: u64, wc: &WorldComponents) -> FullSeedReadout {
         settlement_settlements: n,
         settlement_pairs,
     }
+}
+
+// ============================================================================
+// EXPLORATORY (post-hoc, NOT preregistered) — dispatched after F1's
+// preregistered falsification, at the project owner's request. NO floors,
+// NO pass/fail assertions. F1/F2/F3/F-mono (above) and spec §6b are
+// UNCHANGED and UNTOUCHED by anything below; this section is a fully
+// independent, duplicate reconstruction of the same deterministic
+// geographic frame `build_full_readout` builds (same seed -> byte-identical
+// landmarks/pairs, since `nearest_at_separation`/`geo_landmark_stride` are
+// pure functions of the mesh), so E1's population is provably the same one
+// F1's pooled median summarizes — without importing or calling
+// `build_full_readout` itself, so there is zero risk of this work altering
+// F1-F4's own computation.
+// ============================================================================
+
+/// One seed's exploratory readout: per band, the RAW (un-aggregated)
+/// per-pair populations E1/E2/E3 are computed from.
+struct ExploratorySeedReadout {
+    /// Per band: this seed's raw RE-PLANNED per-pair seasonal swings — F1's
+    /// own quantity, independently re-derived and left un-aggregated (E1's
+    /// population).
+    e1_swings_by_band: [Vec<f64>; 5],
+    /// Per band: this seed's raw COMMITTED-ROUTE (fixed dry-optimal path,
+    /// never re-planned) per-pair seasonal swings (E2's population).
+    e2_swings_by_band: [Vec<f64>; 5],
+    /// Per band: this seed's per-pair worst-surcharge-cell fraction, on
+    /// that pair's own committed-route costliest sampled day (E3's
+    /// population).
+    e3_fracs_by_band: [Vec<f64>; 5],
+}
+
+/// Builds one seed's [`ExploratorySeedReadout`]. Reconstructs land cells,
+/// landmarks, and per-band pair destinations EXACTLY as `build_full_readout`
+/// does (deterministic, so byte-identical for a given seed) but computes
+/// E1 (F1 re-derived, raw), E2 (the committed-route/fixed-path swing), and
+/// E3 (the worst-cell surcharge fraction) instead of F1-F4's own
+/// aggregates. Does not call, import from, or share mutable state with
+/// `build_full_readout` — a disclosed duplication, chosen so this
+/// exploratory work cannot alter F1-F4's frozen computation even by
+/// accident.
+fn build_exploratory_readout(seed: u64, wc: &WorldComponents) -> ExploratorySeedReadout {
+    let sample = build_sample(seed, wc);
+
+    let land_cells: Vec<CellId> = sample
+        .geo
+        .cells()
+        .filter(|&c| *sample.dry.get(c) != u64::MAX)
+        .collect();
+    let geo_stride = geo_landmark_stride(land_cells.len());
+    let landmarks: Vec<CellId> = land_cells.iter().step_by(geo_stride).copied().collect();
+    let landmark_count = landmarks.len();
+    let band_count = SEPARATION_BANDS_DEG.len();
+
+    let landmark_dry_sweeps: Vec<CostSweep> = landmarks
+        .iter()
+        .map(|&src| least_cost_from(&sample.geo, &sample.dry, src))
+        .collect();
+
+    let mut pair_dst: Vec<CellId> = Vec::with_capacity(landmark_count * band_count);
+    for i in 0..landmark_count {
+        for &target in SEPARATION_BANDS_DEG {
+            let (dst, _actual) = nearest_at_separation(&sample.geo, &landmarks, i, target);
+            pair_dst.push(dst);
+        }
+    }
+
+    // E2's FIXED path per pair — the dry-optimal path, computed ONCE here
+    // and never re-planned across the day loop below. `None` if
+    // unreachable on the dry field (matches every other frame's
+    // reachability test in this file).
+    let pair_path: Vec<Option<Vec<CellId>>> = (0..landmark_count * band_count)
+        .map(|idx| {
+            let i = idx / band_count;
+            landmark_dry_sweeps[i].path_to(pair_dst[idx])
+        })
+        .collect();
+    let pair_dry_cost: Vec<Option<u64>> = (0..landmark_count * band_count)
+        .map(|idx| {
+            let i = idx / band_count;
+            landmark_dry_sweeps[i].cost_to(pair_dst[idx])
+        })
+        .collect();
+
+    // All SAMPLE_DAYS weathered fields, retained rather than rebuilt per
+    // pair or per E3 lookup — SAMPLE_DAYS (12) x cell_count u64s is a few
+    // MB, trivial, and this is what makes E3's "look up an arbitrary day's
+    // field for the worst-cell surcharge" cheap instead of a rebuild storm.
+    let weathered_fields: Vec<CellMap<u64>> = (0..SAMPLE_DAYS)
+        .map(|day_idx| {
+            let day = day_idx as f64 * sample.year_length / SAMPLE_DAYS as f64;
+            weathered_cost(&sample, day)
+        })
+        .collect();
+
+    let mut e1_min = vec![f64::INFINITY; landmark_count * band_count];
+    let mut e1_max = vec![f64::NEG_INFINITY; landmark_count * band_count];
+    let mut e2_min = vec![f64::INFINITY; landmark_count * band_count];
+    let mut e2_max = vec![f64::NEG_INFINITY; landmark_count * band_count];
+    let mut e2_argmax_day = vec![0usize; landmark_count * band_count];
+
+    for (day_idx, wet) in weathered_fields.iter().enumerate() {
+        // E1: F1's own quantity, independently re-derived — a re-planned
+        // least-cost sweep from each landmark against this day's field,
+        // exactly what `build_full_readout`'s pass 1 does, just left
+        // un-aggregated (per-pair, not reduced to a per-seed median) so E1
+        // can report the population's tail.
+        for (i, &src) in landmarks.iter().enumerate() {
+            let d_wet = least_cost_from(&sample.geo, wet, src);
+            for k in 0..band_count {
+                let idx = i * band_count + k;
+                if let Some(c) = d_wet.cost_to(pair_dst[idx]) {
+                    let c = c as f64;
+                    if c.total_cmp(&e1_min[idx]).is_lt() {
+                        e1_min[idx] = c;
+                    }
+                    if c.total_cmp(&e1_max[idx]).is_gt() {
+                        e1_max[idx] = c;
+                    }
+                }
+            }
+        }
+        // E2: the FIXED dry-optimal path's cost under THIS day's weathered
+        // field — NO re-planning, no sweep, just a sum along the already-
+        // known path, excluding the source cell, exactly as `least_cost`
+        // totals a path (`route.rs`'s `for cell in actions { total +=
+        // cost.get(cell) }`, which also excludes the start). Cheaper than
+        // E1/F1: O(path length) per pair per day, not a full Dijkstra sweep.
+        for (idx, path) in pair_path.iter().enumerate() {
+            if let Some(path) = path {
+                let total: u64 = path[1..]
+                    .iter()
+                    .fold(0u64, |acc, &cell| acc.saturating_add(*wet.get(cell)));
+                let c = total as f64;
+                if c.total_cmp(&e2_min[idx]).is_lt() {
+                    e2_min[idx] = c;
+                }
+                if c.total_cmp(&e2_max[idx]).is_gt() {
+                    e2_max[idx] = c;
+                    e2_argmax_day[idx] = day_idx;
+                }
+            }
+        }
+    }
+
+    let mut readout = ExploratorySeedReadout {
+        e1_swings_by_band: Default::default(),
+        e2_swings_by_band: Default::default(),
+        e3_fracs_by_band: Default::default(),
+    };
+
+    for i in 0..landmark_count {
+        for k in 0..band_count {
+            let idx = i * band_count + k;
+            let Some(dry_cost) = pair_dry_cost[idx] else {
+                continue;
+            };
+            if dry_cost == 0 || !e1_min[idx].is_finite() {
+                continue;
+            }
+            readout.e1_swings_by_band[k].push((e1_max[idx] - e1_min[idx]) / dry_cost as f64);
+            readout.e2_swings_by_band[k].push((e2_max[idx] - e2_min[idx]) / dry_cost as f64);
+
+            // E3: on the committed route's own costliest sampled day (E2's
+            // argmax for THIS pair — the day the fixed path was priciest
+            // under weather, continuing E2's "committed route" framing
+            // rather than F1's re-planned argmax day), the path cell with
+            // the largest weather surcharge, reported as a fraction of that
+            // cell's OWN dry cost. Well-defined for every reachable pair:
+            // §5a's WEATHER_FACTOR_FLOOR guarantees no cell's weathered cost
+            // is u64::MAX, so the subtraction below never underflows a real
+            // (non-defensive) case.
+            let path = pair_path[idx]
+                .as_ref()
+                .expect("a finite dry cost implies a dry path");
+            let costliest_day = &weathered_fields[e2_argmax_day[idx]];
+            let mut worst_frac = f64::NEG_INFINITY;
+            for &cell in &path[1..] {
+                let dry_here = *sample.dry.get(cell);
+                if dry_here == 0 {
+                    continue; // defensive only: BASE_COST=10 floors every land cell above 0
+                }
+                let surcharge = (*costliest_day.get(cell)).saturating_sub(dry_here);
+                let frac = surcharge as f64 / dry_here as f64;
+                if frac.total_cmp(&worst_frac).is_gt() {
+                    worst_frac = frac;
+                }
+            }
+            if worst_frac.is_finite() {
+                readout.e3_fracs_by_band[k].push(worst_frac);
+            }
+        }
+    }
+
+    readout
 }
 
 mod weathering {
@@ -1765,5 +1980,185 @@ mod weathering {
                 &pooled_f2[..HYPOTHESIS_BAND_COUNT]
             );
         }
+    }
+
+    #[test]
+    #[ignore = "heavy: the full 200-seed exploratory readout (~35 minutes in release); post-hoc, dispatched after F1's falsification"]
+    fn the_fares_exploratory_readout() {
+        // EXPLORATORY, POST-HOC, NOT PREREGISTERED. Dispatched after F1's
+        // preregistered falsification (pooled median swing 0.0037 against
+        // the 0.05 floor), at the project owner's request: real weather is
+        // catastrophic (the Donner Party), so a median-only readout cannot
+        // see a catastrophe, and F1 measures the cost of a PERFECTLY
+        // RE-PLANNED route, not a route committed to in advance. Neither
+        // objection changes F1/F2/F3/F-mono's frozen verdicts (spec §6b)
+        // -- this whole test is additional evidence gathered AFTER
+        // unblinding, carries NO floor and NO pass/fail assertion, and must
+        // never be retrofitted as a preregistered hypothesis. It does not
+        // call or touch `build_full_readout`/the four hypotheses' own code
+        // at all (see `build_exploratory_readout`'s doc comment).
+        //
+        // Three statistics, all over the SAME geographic population F1
+        // uses (byte-identical landmarks/pairs for a given seed, since the
+        // construction is a pure function of the mesh):
+        //
+        // E1 -- the tail of F1. Per band (including 80, unlike F1-F4):
+        // pooled p50/p90/p99/max of the RAW per-pair re-planned seasonal
+        // swing (F1's own quantity, un-aggregated). "Pooled" here means
+        // every reachable pair's swing across all 200 seeds, concatenated
+        // THEN percentiled -- NOT median-of-per-seed-medians (F1's own
+        // convention) -- because the whole point is to see the tail a
+        // per-seed-then-cross-seed median would smooth away.
+        //
+        // E2 -- the committed-route cost (the Donner number). Per band:
+        // for each pair, the DRY-OPTIMAL PATH computed ONCE, then that
+        // SAME FIXED path's cost evaluated under each sampled day's
+        // weathered field (summed over the path's cells, excluding the
+        // source) -- no re-planning. Same p50/p90/p99/max tail as E1, plus
+        // E2/F1 (the ratio of committed-route to re-planned swing, at each
+        // percentile) -- the value of foresight.
+        //
+        // E3 -- the worst cell on the route. For each pair's fixed path, on
+        // that pair's own committed-route costliest sampled day, the cell
+        // with the largest weather surcharge, reported as a fraction of
+        // THAT CELL's own dry cost. Pooled p50/p90/p99/max, both overall
+        // (every band's pairs combined, the number the task literally
+        // asked for) and per band (a free bonus from the same data).
+        //
+        // Percentile convention: NEAREST-RANK (see `percentile`'s doc
+        // comment), not interpolated.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let band_count = SEPARATION_BANDS_DEG.len();
+        let mut e1_pooled: [Vec<f64>; 5] = Default::default();
+        let mut e2_pooled: [Vec<f64>; 5] = Default::default();
+        let mut e3_pooled: [Vec<f64>; 5] = Default::default();
+
+        for seed in PREREGISTERED_SEEDS {
+            let r = build_exploratory_readout(seed, &wc);
+            for k in 0..band_count {
+                e1_pooled[k].extend(r.e1_swings_by_band[k].iter().copied());
+                e2_pooled[k].extend(r.e2_swings_by_band[k].iter().copied());
+                e3_pooled[k].extend(r.e3_fracs_by_band[k].iter().copied());
+            }
+            // Per-seed progress: mandatory for any run expected to exceed a
+            // few minutes (spec §7 / the task brief) -- this run is
+            // expected to take about as long as the preregistered readout.
+            eprintln!("PROGRESS seed={seed}/200 done (exploratory)");
+        }
+
+        eprintln!("=== The Fare: EXPLORATORY readout (post-hoc, NOT preregistered; 200 seeds) ===");
+        eprintln!(
+            "No floors, no pass/fail assertions below. F1/F2/F3/F-mono's frozen verdicts \
+             (spec §6b) are unchanged by anything in this test."
+        );
+
+        let mut e1_p50_by_band = [f64::NAN; 5];
+        let mut e2_p50_by_band = [f64::NAN; 5];
+
+        for k in 0..band_count {
+            let mut e1 = e1_pooled[k].clone();
+            e1.sort_by(f64::total_cmp);
+            let mut e2 = e2_pooled[k].clone();
+            e2.sort_by(f64::total_cmp);
+
+            if e1.is_empty() || e2.is_empty() {
+                eprintln!(
+                    "band_deg={:.1}: no reachable pairs (n_e1={}, n_e2={})",
+                    SEPARATION_BANDS_DEG[k],
+                    e1.len(),
+                    e2.len()
+                );
+                continue;
+            }
+
+            let (e1_p50, e1_p90, e1_p99, e1_max) = (
+                percentile(&e1, 50.0),
+                percentile(&e1, 90.0),
+                percentile(&e1, 99.0),
+                percentile(&e1, 100.0),
+            );
+            let (e2_p50, e2_p90, e2_p99, e2_max) = (
+                percentile(&e2, 50.0),
+                percentile(&e2, 90.0),
+                percentile(&e2, 99.0),
+                percentile(&e2, 100.0),
+            );
+            e1_p50_by_band[k] = e1_p50;
+            e2_p50_by_band[k] = e2_p50;
+
+            eprintln!(
+                "band_deg={:.1}: E1(re-planned, n={}) p50={e1_p50:.6} p90={e1_p90:.6} \
+                 p99={e1_p99:.6} max={e1_max:.6}",
+                SEPARATION_BANDS_DEG[k],
+                e1.len()
+            );
+            eprintln!(
+                "band_deg={:.1}: E2(committed-route, n={}) p50={e2_p50:.6} p90={e2_p90:.6} \
+                 p99={e2_p99:.6} max={e2_max:.6}",
+                SEPARATION_BANDS_DEG[k],
+                e2.len()
+            );
+
+            let ratio_at = |a: f64, b: f64| -> String {
+                if b == 0.0 {
+                    "undefined (F1 percentile is zero)".to_string()
+                } else {
+                    format!("{:.6}", a / b)
+                }
+            };
+            eprintln!(
+                "band_deg={:.1}: E2/F1 (value of foresight) at p50={} p90={} max={}",
+                SEPARATION_BANDS_DEG[k],
+                ratio_at(e2_p50, e1_p50),
+                ratio_at(e2_p90, e1_p90),
+                ratio_at(e2_max, e1_max),
+            );
+        }
+
+        for k in 0..band_count {
+            let mut e3 = e3_pooled[k].clone();
+            e3.sort_by(f64::total_cmp);
+            if e3.is_empty() {
+                eprintln!(
+                    "band_deg={:.1}: E3 no reachable pairs",
+                    SEPARATION_BANDS_DEG[k]
+                );
+                continue;
+            }
+            eprintln!(
+                "band_deg={:.1}: E3(worst-cell surcharge fraction, n={}) p50={:.6} p90={:.6} \
+                 p99={:.6} max={:.6}",
+                SEPARATION_BANDS_DEG[k],
+                e3.len(),
+                percentile(&e3, 50.0),
+                percentile(&e3, 90.0),
+                percentile(&e3, 99.0),
+                percentile(&e3, 100.0),
+            );
+        }
+
+        let mut e3_overall: Vec<f64> = e3_pooled.iter().flatten().copied().collect();
+        e3_overall.sort_by(f64::total_cmp);
+        if e3_overall.is_empty() {
+            eprintln!("E3 OVERALL (all bands pooled): no reachable pairs");
+        } else {
+            eprintln!(
+                "E3 OVERALL (all bands pooled, n={}): p50={:.6} p90={:.6} p99={:.6} max={:.6}",
+                e3_overall.len(),
+                percentile(&e3_overall, 50.0),
+                percentile(&e3_overall, 90.0),
+                percentile(&e3_overall, 99.0),
+                percentile(&e3_overall, 100.0),
+            );
+        }
+
+        eprintln!("E1 p50 by band = {:?}", &e1_p50_by_band[..band_count]);
+        eprintln!("E2 p50 by band = {:?}", &e2_p50_by_band[..band_count]);
+
+        // NO assertions on any measured value above -- exploratory, no
+        // floors, no pass/fail. This test's only failure mode is a panic
+        // from malformed data (e.g. `percentile` on an empty slice, guarded
+        // above by the `is_empty()` checks), never a comparison to a
+        // preregistered threshold.
     }
 }
