@@ -140,6 +140,8 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
+mod seed_sweep;
+
 /// The population size the spec froze (§6): seeds `1..=SAMPLE`.
 const SAMPLE: u64 = 200;
 
@@ -370,6 +372,12 @@ fn median(values: &[f64]) -> f64 {
     }
 }
 
+/// Everything one seed contributes to the readout: its [`SeedReadout`], how
+/// many H3 cell samples it checked, and the H3 violations (cell, daily-summed
+/// precipitation, annual climatology) it found. The unit of parallel work in
+/// [`the_mires_preregistered_readout`].
+type SeedContribution = (SeedReadout, usize, Vec<(CellId, f64, f64)>);
+
 /// One seed's H1/H2 readout: the all-land swing, and each band's swing
 /// (`None` if that seed carries no land in that band).
 struct SeedReadout {
@@ -448,17 +456,27 @@ fn the_mires_preregistered_readout() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let min_conductance = default_min_conductance();
 
+    // The seed sweep runs across the machine's CPUs (see
+    // `seed_sweep::map_seeds`), but the readout is byte-identical to the
+    // serial loop this replaced: every world is a pure function of its seed,
+    // each worker holds its own `WorldSample` and shares nothing, and results
+    // come back in SEED order rather than completion order — so `readouts`,
+    // `h3_total_checked` and `h3_total_violations` are assembled below in
+    // exactly the order the serial loop produced them. Set
+    // `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop exactly.
+    let per_seed: Vec<SeedContribution> = seed_sweep::map_seeds(1..=SAMPLE, |seed| {
+        let sample = build_sample(seed, &wc);
+        let readout = readout_for(&sample, min_conductance);
+        let (checked, violations) = h3_violations_for(&sample);
+        (readout, checked, violations)
+    });
+
     let mut readouts = Vec::with_capacity(SAMPLE as usize);
     let mut h3_total_checked = 0usize;
     let mut h3_total_violations = Vec::new();
 
-    for seed in 1..=SAMPLE {
-        let sample = build_sample(seed, &wc);
-
-        let readout = readout_for(&sample, min_conductance);
+    for (seed, (readout, checked, violations)) in (1..=SAMPLE).zip(per_seed) {
         readouts.push(readout);
-
-        let (checked, violations) = h3_violations_for(&sample);
         h3_total_checked += checked;
         for (cell, summed, annual) in violations {
             h3_total_violations.push((seed, cell, summed, annual));
