@@ -19,4 +19,13 @@ hornvale_kernel::stream_labels! {
     /// The deity-naming stream, epoch v2 (a full flat path, not a composed
     /// leg chain — matches `domains/climate`'s own `WEATHER_PHASE` pattern).
     RELIGION_DEITY_V2 = "religion/deity/v2" => "the deity-naming stream, epoch v2";
+    /// The per-settlement disposition draw (The Tolerance). A flat path, like
+    /// `RELIGION_DEITY_V2`: a composition-root concern, because the draw needs
+    /// `hornvale_species::Dispersion` AND the occupation's own site, and no
+    /// domain crate may depend on a sibling.
+    ///
+    /// **Keyed on the occupation record's `(site, founded-year)` pair** — see
+    /// [`crate::disposition`] for why that key, and not the settlement's
+    /// `EntityId`, its `BakeId`, or its bare current `cell-id`.
+    SETTLEMENT_DISPOSITION = "settlement/disposition/v1" => "the per-settlement disposition draw, keyed on the occupation's (site, founded-year)";
 }

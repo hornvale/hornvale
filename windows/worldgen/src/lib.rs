@@ -84,6 +84,7 @@ pub mod chorus;
 pub mod color_naming;
 pub mod components;
 mod descent;
+pub mod disposition;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
