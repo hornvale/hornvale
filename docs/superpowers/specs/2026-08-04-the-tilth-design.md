@@ -224,6 +224,46 @@ Larger than step B, which moved seed 42 by one fact.
   `metrics.rs`, and the `beta`/`approach-ease` calibrations. Each must carry a
   **direction argument**, per the practice step B established.
 
+## 5a. The three constants, derived (2026-08-04)
+
+§6 names fitted constants as this campaign's central risk, since its thesis is
+that the model already carries too much unexplained arithmetic. All three are
+therefore **measured or externally anchored, and shown** —
+`windows/worldgen/tests/tilth_probe.rs` is the instrument, run over the five
+probe seeds.
+
+```
+  K_m    = 0.08036     median axis_supply over land            (n = 183,078)
+  V_max  = 176.0       SOLVED, not read off:
+                         target 68.87   median capacity on good ground today
+                                        (n = 3,056, top decile)
+                       / MM frac 0.6874 at good-ground supply p90 = 0.17668
+                       / tolerance 0.5692  median min-of-conditions (Liebig) for
+                                        the BEST-FIT settler on good ground
+                                        (p10 0.3485, p90 0.6576)
+  P_FULL = 2000 mm/yr  EXTERNALLY anchored: pooled median land moisture 0.3707
+                       maps to 741 mm/yr against Earth's land-mean ~750
+```
+
+Three things worth stating about this derivation:
+
+- **`V_max` had to be solved *through* the Michaelis-Menten fraction**, not read
+  off. An earlier version of the probe printed the target (68.87) as though it
+  were `V_max`; that would have under-scaled every world by ~2.6x. The factors
+  are measured, the arithmetic is stated, and the result is checkable.
+- **The calibration is anchored on the case the model already gets right** - good
+  ground, top decile - and the marginal cases then fall wherever the model puts
+  them. That is what makes H1-H3 falsifiable rather than fitted.
+- **`P_FULL` is anchored outside the simulation entirely**, to Earth's land-mean
+  precipitation. It also produces the right qualitative regime: median land comes
+  out **moisture-limited** (Lieth precip 0.389 against temp 0.786 at 22 C), as
+  most of Earth's land is.
+
+The measured tolerance figure also upgrades §2.3 from illustration to data: the
+median min-of-conditions on good ground is **0.5692**, so the product form's
+compression can be quoted against real distributions rather than the
+plausible-looking factors §2.3 currently uses. Recorded as a followup.
+
 ## 6. Risks
 
 - **`V_max` and `K_m` are two new authored constants** in a campaign whose thesis
