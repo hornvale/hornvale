@@ -2,7 +2,7 @@
 
 **Campaign:** The Fare (Weather Consequence C2)
 **Date:** 2026-08-04
-**Status:** spec, pre-plan
+**Status:** COMPLETE — merged. See [the chronicle](../../../book/src/chronicle/the-fare.md) and [the retrospective](../../retrospectives/the-fare.md).
 **Predecessor:** [The Mire](../../../book/src/chronicle/the-mire.md) (Weather Consequence C1)
 
 ## 1. The question

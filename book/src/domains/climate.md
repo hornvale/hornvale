@@ -218,9 +218,34 @@ variation, the campaign's finding generalizes, lives where conditions
 *alternate*, not where they are *extreme*. See [The
 Mire](../chronicle/the-mire.md) for the full measurement, including the two
 checks that confirmed the null was real rather than the instrument being
-blind, and for what the result does not settle (weather's effect on a
-route's *cost* rather than its bare passability, and the sea-ice case this
-campaign deliberately left ungated).
+blind, and for the sea-ice case that campaign deliberately left ungated.
+
+The cost question that null left open has since been answered, and it
+answers back in three parts. Re-measured on what a route *costs* rather
+than whether it is open — routing over a weathered traversal-cost field
+instead of reading a threshold on the graph — the **median** journey's
+seasonal swing is under half a percent, smaller still than the passability
+null. But the median is the wrong statistic for the phenomenon: the
+ninety-ninth percentile of journeys swings enough to clear the same 5%
+floor the median misses, and the worst journeys in two hundred worlds
+nearly *double* in cost between their best day and their worst. Weather's
+effect on travel is a tail risk, not an average one.
+
+Second, it cannot be avoided by going around. Committing to a route chosen
+in fair weather and walking it in foul costs roughly half a percent more
+than re-planning optimally every day, because an alternative route
+typically costs 11–18% more than the best one — detouring costs about what
+enduring costs. Travellers in these worlds do change their roads with the
+season, about one journey in seven, but they are trading the cost rather
+than escaping it.
+
+Third, and most usefully for anything that trusts the polar result above:
+the exact zero reproduces. A wholly different instrument — path cost rather
+than reachable-component membership, geographic sampling rather than land
+cells — returns the same **0.000000** in the polar band, with the same
+ordering beneath it. The Mire's most surprising finding is a property of
+these worlds, not of the way it was first measured. See [The
+Fare](../chronicle/the-fare.md).
 
 **The tier ladder ahead:** *stochastic* weather — day-to-day variation the
 world's pure `world(place, time)` cannot yet express (standing felt weather has
