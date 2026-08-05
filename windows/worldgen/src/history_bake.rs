@@ -1093,10 +1093,18 @@ struct Bake<'a> {
     /// `per_species_capacity` (which produces these) and `HistoryPlacement.tag`
     /// document. The composition root builds this slice and `peoples` from ONE
     /// ordering; nothing here survives a save/load boundary.
-    caps: &'a [hornvale_kernel::ecology::CapacityMap],
-    /// The roster, in the order that indexes `caps`. Held so [`Bake::open`] can
-    /// resolve a `KindId` to its dense index once, at the only place a
-    /// community is created, rather than in the ring-scan hot paths.
+    /// **Indexed `[era][people]`** (The Tense §3.1). Capacity is no longer a
+    /// single present-day field multiplied by an era mask — it is rebuilt per
+    /// era, so an ice age makes ground *poor* rather than switching it off.
+    ///
+    /// The era index is [`Bake::cur_graph`], which already tracks exactly this:
+    /// the epoch loop sets it from `era_index_for` before stepping, and genesis
+    /// runs at 0, which `bake_eras` guarantees is the oldest era. One index for
+    /// the graph and the capacity means they cannot drift apart.
+    caps_by_era: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
+    /// The roster, in the order that indexes each era's capacity slice. Held so
+    /// [`Bake::open`] can resolve a `KindId` to its dense index once, at the only
+    /// place a community is created, rather than in the ring-scan hot paths.
     peoples: &'a [KindId],
     /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
     /// ~0 far from one). Biases all three site-picking paths toward water so
@@ -1280,6 +1288,13 @@ impl<'a> Bake<'a> {
         &self.graphs[self.cur_graph]
     }
 
+    /// This era's per-people capacity slice — the counterpart of [`Bake::cur`],
+    /// keyed on the same index so the graph and the capacity always describe the
+    /// same era.
+    fn caps_now(&self) -> &[hornvale_kernel::ecology::CapacityMap] {
+        &self.caps_by_era[self.cur_graph]
+    }
+
     /// Resolve a `KindId` to its dense index into `caps` — the one place the
     /// translation happens. Called at community creation ([`Bake::open`]) and
     /// once per relocation, never inside a ring scan: the hot paths carry the
@@ -1352,7 +1367,7 @@ impl<'a> Bake<'a> {
     /// `pidx` is a dense index into `caps` (a [`Community::people_idx`]), never a
     /// `KindId` — see that field for why the lookup is resolved at `open` time.
     fn eff_capacity(&self, era: &EraClimate, cell: CellId, pidx: usize) -> f64 {
-        self.caps[pidx].at(cell) * Self::factor(era, cell)
+        self.caps_now()[pidx].at(cell) * Self::factor(era, cell)
     }
 
     /// Whether a cell can receive a settler **of this people** this era: admitted
@@ -1366,7 +1381,7 @@ impl<'a> Bake<'a> {
     /// refuge for them, whatever it is for someone else.
     fn vacant_for(&self, era: &EraClimate, cell: CellId, pidx: usize) -> bool {
         Self::factor(era, cell) > 0.0
-            && self.caps[pidx].at(cell) > 0.0
+            && self.caps_now()[pidx].at(cell) > 0.0
             && !self.node_index.contains_key(&cell)
     }
 
@@ -3376,8 +3391,8 @@ impl<'a> Bake<'a> {
                 .into_iter()
                 .filter(|&n| self.vacant_for(era, n, dpidx))
                 .max_by(|a, b| {
-                    let sa = self.caps[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
-                    let sb = self.caps[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
+                    let sa = self.caps_now()[dpidx].at(*a) * river_factor(*self.river_prox.get(*a));
+                    let sb = self.caps_now()[dpidx].at(*b) * river_factor(*self.river_prox.get(*b));
                     // Higher score wins; among equal score, lower CellId wins
                     // (treated as "greater" for `max_by`).
                     sa.total_cmp(&sb).then(b.cmp(a))
@@ -3421,7 +3436,7 @@ impl<'a> Bake<'a> {
 pub fn bake(
     seed: Seed,
     geo: &Geosphere,
-    caps: &[hornvale_kernel::ecology::CapacityMap],
+    caps_by_era: &[Vec<hornvale_kernel::ecology::CapacityMap>],
     river_prox: &CellMap<f64>,
     eras: &[EraClimate],
     refugia: &CellMap<bool>,
@@ -3435,14 +3450,21 @@ pub fn bake(
     // which would silently give some people another's niche — checked here, at
     // the boundary, because nothing downstream can detect it.
     assert_eq!(
-        caps.len(),
-        peoples.len(),
-        "one capacity field per people, in the same order"
+        caps_by_era.len(),
+        eras.len(),
+        "one capacity slice per era, in era order"
     );
+    for (i, caps) in caps_by_era.iter().enumerate() {
+        assert_eq!(
+            caps.len(),
+            peoples.len(),
+            "era {i}: one capacity field per people, in the same order"
+        );
+    }
     let mut bake = Bake {
         graphs,
         cur_graph: 0,
-        caps,
+        caps_by_era,
         peoples,
         river_prox,
         refugia,
@@ -3502,14 +3524,14 @@ pub fn bake(
         let mut pool: Vec<CellId> = admissible
             .iter()
             .copied()
-            .filter(|c| bake.caps[pidx].at(*c) > 0.0 && !bake.node_index.contains_key(c))
+            .filter(|c| bake.caps_now()[pidx].at(*c) > 0.0 && !bake.node_index.contains_key(c))
             .collect();
         // Rank by river-weighted capacity IN THIS PEOPLE'S UNITS (Task 5b's river
         // bias, preserved): a river-adjacent cell outranks an equally-fertile one
         // far from water. Tie-broken by lowest CellId — total and deterministic.
         pool.sort_by(|a, b| {
-            let sa = bake.caps[pidx].at(*a) * river_factor(*river_prox.get(*a));
-            let sb = bake.caps[pidx].at(*b) * river_factor(*river_prox.get(*b));
+            let sa = bake.caps_now()[pidx].at(*a) * river_factor(*river_prox.get(*a));
+            let sb = bake.caps_now()[pidx].at(*b) * river_factor(*river_prox.get(*b));
             sb.total_cmp(&sa).then(a.cmp(b))
         });
         pool.truncate(GENESIS_TOP_CELLS);
@@ -3770,7 +3792,7 @@ mod tests {
         let mut bake = Bake {
             graphs: &graphs,
             cur_graph: 0,
-            caps: &caps,
+            caps_by_era: &caps,
             peoples: all_settlers(),
             river_prox: &river_prox,
             refugia: &refugia,
@@ -3870,16 +3892,18 @@ mod tests {
     /// The owned inputs a hand-built [`Bake`] borrows, over `Geosphere::new(1)`
     /// with a full-land graph and every cell habitable in the single era.
     /// `capacity_of` paints the value gradient the conflict tests need.
-    fn cascade_world(
-        capacity_of: impl Fn(CellId) -> f64,
-    ) -> (
+    /// [`cascade_world`]'s owned inputs. Named because the capacity term became
+    /// `[era][people]` with The Tense and the bare tuple stopped being readable.
+    type CascadeWorld = (
         Geosphere,
         Vec<ConnectionGraph>,
-        Vec<hornvale_kernel::ecology::CapacityMap>,
+        Vec<Vec<hornvale_kernel::ecology::CapacityMap>>,
         CellMap<f64>,
         CellMap<bool>,
         EraClimate,
-    ) {
+    );
+
+    fn cascade_world(capacity_of: impl Fn(CellId) -> f64) -> CascadeWorld {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
@@ -3929,15 +3953,19 @@ mod tests {
     fn caps_from_fn(
         geo: &Geosphere,
         capacity_of: impl Fn(CellId) -> f64,
-    ) -> Vec<hornvale_kernel::ecology::CapacityMap> {
+    ) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
         let field = CellMap::from_fn(geo, capacity_of);
-        all_settlers()
+        let per_people: Vec<_> = all_settlers()
             .iter()
             .map(|_| {
                 hornvale_kernel::ecology::CapacityMap::new(field.clone())
                     .expect("a non-negative test capacity field is valid")
             })
-            .collect()
+            .collect();
+        // ONE era: every hand-built fixture here steps a single era, and giving
+        // them an era-invariant field keeps them testing their own rule rather
+        // than also testing The Tense's variation.
+        vec![per_people]
     }
 
     /// The disposition map a hand-built [`Bake`] uses when the test is not
@@ -3999,7 +4027,7 @@ mod tests {
     /// record set and a fixed stream.
     fn hand_bake<'a>(
         graphs: &'a [ConnectionGraph],
-        caps: &'a [hornvale_kernel::ecology::CapacityMap],
+        caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
@@ -4013,7 +4041,7 @@ mod tests {
     /// the pre-campaign per-people behaviour is what those tests still see.
     fn hand_bake_spread<'a>(
         graphs: &'a [ConnectionGraph],
-        caps: &'a [hornvale_kernel::ecology::CapacityMap],
+        caps: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
@@ -4022,7 +4050,7 @@ mod tests {
         Bake {
             graphs,
             cur_graph: 0,
-            caps,
+            caps_by_era: caps,
             peoples: all_settlers(),
             river_prox,
             refugia,
@@ -4231,7 +4259,7 @@ mod tests {
     fn tribute_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
-        capacity: &'a [hornvale_kernel::ecology::CapacityMap],
+        capacity: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
     ) -> (Bake<'a>, usize, usize) {
@@ -7161,7 +7189,7 @@ mod tests {
     fn adaptive_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
-        capacity: &'a [hornvale_kernel::ecology::CapacityMap],
+        capacity: &'a [Vec<hornvale_kernel::ecology::CapacityMap>],
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
         era: &EraClimate,

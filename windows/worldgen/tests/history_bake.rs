@@ -58,7 +58,21 @@ fn peoples() -> Vec<KindId> {
 /// people as well would add a second independent variable to each test and make
 /// a failure ambiguous between "the rule moved" and "the fixture disagrees about
 /// who likes what". The niche-differentiation behaviour has its own coverage.
-fn caps_of(field: &CellMap<f64>, peoples: &[KindId]) -> Vec<hornvale_kernel::ecology::CapacityMap> {
+fn caps_of(
+    field: &CellMap<f64>,
+    peoples: &[KindId],
+    eras: usize,
+) -> Vec<Vec<hornvale_kernel::ecology::CapacityMap>> {
+    // The SAME field in every era. These fixtures were written when capacity was
+    // era-invariant, and keeping them so is what makes each still test the rule
+    // it names rather than also testing The Tense's era variation.
+    (0..eras).map(|_| per_people(field, peoples)).collect()
+}
+
+fn per_people(
+    field: &CellMap<f64>,
+    peoples: &[KindId],
+) -> Vec<hornvale_kernel::ecology::CapacityMap> {
     peoples
         .iter()
         .map(|_| {
@@ -159,7 +173,7 @@ fn same_seed_bakes_byte_identical_history() {
     let a = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -170,7 +184,7 @@ fn same_seed_bakes_byte_identical_history() {
     let b = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -190,7 +204,7 @@ fn different_seeds_diverge() {
     let a = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -201,7 +215,7 @@ fn different_seeds_diverge() {
     let b = bake(
         Seed(43),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -227,7 +241,7 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
     let h = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -303,7 +317,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     let h = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -430,7 +444,7 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     let h = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -529,7 +543,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -557,7 +571,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let h2 = bake(
         Seed(42),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -713,7 +727,7 @@ fn value_flat_history_seeded_with(
     bake(
         Seed(seed),
         &geo,
-        &caps_of(&cap, &people),
+        &caps_of(&cap, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -1043,7 +1057,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let no_lane = bake(
         Seed(7),
         &geo,
-        &caps_of(&capacity, &people),
+        &caps_of(&capacity, &people, eras.len()),
         &river,
         &eras,
         &refugia,
@@ -1061,7 +1075,7 @@ fn ocean_sunders_and_a_lane_leapfrogs() {
     let lane = bake(
         Seed(7),
         &geo,
-        &caps_of(&capacity, &people),
+        &caps_of(&capacity, &people, eras.len()),
         &river,
         &eras,
         &refugia,

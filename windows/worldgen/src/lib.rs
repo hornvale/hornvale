@@ -2397,11 +2397,18 @@ pub fn paleoclimate_from(
 /// The `ice` field is left empty on every era: the snowline is already folded
 /// into `habitable` (an iced cell reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
+// Returns the era series AND the per-era `EraAdjust` beside it (The Tense
+// §3.1). `EraClimate` carries `sea_level` but NOT the albedo temperature
+// offset — it is consumed inside this function to build `habitable` and then
+// discarded — so the adjusts are returned as a parallel vector rather than
+// added as a field to a domain type this window does not own. The two vectors
+// are built in one pass and are the same length by construction.
+#[allow(clippy::type_complexity)]
 fn bake_eras(
     world: &World,
     terrain: &GeneratedTerrain,
     cfg: &history_bake::BakeConfig,
-) -> Result<Vec<EraClimate>, BuildError> {
+) -> Result<(Vec<EraClimate>, Vec<EraAdjust>), BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = terrain.globe().elevation.clone();
@@ -2430,13 +2437,17 @@ fn bake_eras(
             present_sea_level,
             hornvale_kernel::TempAnomaly::from_offset_c(0.0),
         );
-        return Ok(vec![EraClimate {
-            day: cfg.start_year,
-            ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
-            habitable,
-            sea_level: present_sea_level,
-            ice_fraction: 0.0,
-        }]);
+        return Ok((
+            vec![EraClimate {
+                day: cfg.start_year,
+                ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+                habitable,
+                sea_level: present_sea_level,
+                ice_fraction: 0.0,
+            }],
+            // No forcing to replay: the one era IS the present.
+            vec![EraAdjust::present(terrain)],
+        ));
     };
     let forcing = &system.forcing;
 
@@ -2459,6 +2470,7 @@ fn bake_eras(
     let history = integrate_ice(&samples);
 
     let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
+    let mut adjusts: Vec<EraAdjust> = Vec::with_capacity(CLIMATE_ERAS);
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
@@ -2481,8 +2493,14 @@ fn bake_eras(
             sea_level,
             ice_fraction: 0.0,
         });
+        // The same two quantities the mask above was built from, kept rather
+        // than discarded — this is what lets capacity vary with the era.
+        adjusts.push(EraAdjust {
+            temp_offset: state.temp_offset,
+            sea_level,
+        });
     }
-    Ok(eras)
+    Ok((eras, adjusts))
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -5711,7 +5729,7 @@ fn bake_history_from(
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
     let mut cfg = history_bake::BakeConfig::default_millennia();
-    let eras = bake_eras(world, terrain, &cfg)?;
+    let (eras, era_adjusts) = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
 
     // THE PER-PEOPLE CAPACITY FIELDS, and the one ordering that ties them to
@@ -5732,18 +5750,33 @@ fn bake_history_from(
             })
         })
         .collect::<Result<_, _>>()?;
-    let caps: Vec<hornvale_kernel::ecology::CapacityMap> = per_species_capacity(
+    // ONE CAPACITY FIELD PER ERA (The Tense §3.1). The era-invariant supply --
+    // insolation above all, which is ~100% of the pipeline's cost -- is built
+    // once and shared across all of them; only what an era actually moves is
+    // rebuilt. Measured: 6.9x cheaper than calling the unparameterised path per
+    // era, and a full world build goes 894.9 ms -> ~1.28 s.
+    //
+    // Held all-eras-resident rather than streamed: 25 eras x 6 species is 49 MB,
+    // against 384 GB on the census host. Streaming one era at a time is the
+    // successor if the roster grows to hundreds of settling species, where one
+    // era alone is 98 MB (spec §4).
+    let hoisted = EraInvariantSupply::build(
         geo,
         terrain,
         climate,
         obliquity_deg,
         insolation_scalar,
         &regime,
-        &species_biosphere,
-    )
-    .into_iter()
-    .map(|(_tag, map)| map)
-    .collect();
+    );
+    let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
+        .iter()
+        .map(|adjust| {
+            per_species_capacity_at(geo, terrain, climate, &hoisted, adjust, &species_biosphere)
+                .into_iter()
+                .map(|(_tag, map)| map)
+                .collect()
+        })
+        .collect();
     // The raid gate's two authored inputs, resolved in ONE place so a test can
     // reach the same values the bake is about to receive (see
     // [`disposition_maps`]).
@@ -5785,7 +5818,7 @@ fn bake_history_from(
     Ok(history_bake::bake(
         seed,
         geo,
-        &caps,
+        &caps_by_era,
         &river_prox,
         &eras,
         &paleo.refugia,
