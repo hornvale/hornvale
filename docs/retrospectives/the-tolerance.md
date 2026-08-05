@@ -143,20 +143,37 @@ occupancy are different things.** The readout renders
 biosphere)` — the carrying-capacity field. It takes no history, no settlements
 and no disposition; `build_world` is called only so terrain and climate can be
 reconstructed. There is no path by which a settlement's drawn temperament
-reaches it. Three checks confirm the real author: the fixture was last written
-by a campaign two before this one; a *later* campaign, absorbed into this branch
-by merge, decomposed the capacity input's habitability mask into a land mask —
-exactly the thing that moves this field, and the new rows are new *biomes*
-appearing, which a psychology draw cannot create; and the branch's own diff
-touches nothing the readout reads.
+reaches it. The decisive check is the diff rather than the argument: over
+`kernel/src`, `domains/{terrain,climate,astronomy,demography}/src` the branch's
+diff against the merge-base is **empty, zero files**, and
+`domains/species/src/lib.rs` has **zero deletion lines**. Every input to the
+readout is byte-identical between merge-base and HEAD, so the branch *physically
+cannot* have moved the fixture.
 
-So the process lesson is two-layered. The re-pin rule was violated by the
-campaign that drifted the field, and it could be violated because this artifact
-is **heavy-tier and therefore invisible to `make gate`** — the standing trap.
-And the second layer is the one worth carrying: **an inherited diagnosis is a
-hypothesis.** It arrived attached to a correct instruction (regenerate the
-fixture) and a correct rule citation, which is exactly the shape that gets a
-wrong attribution written into a retrospective unchecked.
+**And then I got the replacement attribution wrong too.** I named The Keeping's
+land-mask decomposition as *the* cause. It is *a* cause. Of the thirty new rows,
+**eleven are a people that did not exist in this fixture at all** — a roster
+addition from a different campaign — and **twenty are one biome opening**, the
+two sets overlapping in exactly the one row that needs both. Two campaigns
+drifted this fixture, and it was already stale before the one I blamed touched
+it.
+
+So the lesson has a third instance, and it is in the correction to the
+correction. **An inherited diagnosis is a hypothesis** — and so is the one you
+write to replace it. The first arrived attached to a correct instruction
+(regenerate the fixture) and a correct rule citation, which is the shape that
+gets a wrong cause written down unchecked; the second arrived attached to
+genuine evidence that happened to be *sufficient for the conclusion I was
+defending* (not this branch) and *insufficient for the one I actually wrote*
+(therefore that campaign). Checking that a cause is real is not checking that it
+is the only one. The counting discipline this campaign already learned twice —
+recount from the source, and enumerate rather than generalise — is the same
+discipline, applied to causes instead of sites.
+
+Beneath both: the re-pin rule was violated by the campaigns that drifted the
+field, and it could be violated because this artifact is **heavy-tier and
+therefore invisible to `make gate`** — the standing trap, and the reason two
+campaigns' drift could stack unnoticed.
 
 **Refreshing the fixture exposed what it froze, which is the reason to check.**
 The regenerated readout carries a preregistered verdict from the campaign that
