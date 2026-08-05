@@ -194,7 +194,13 @@ rm -f "$possess_ot_tmp"
 # (Cell 3518 has 9 layers but every one of them ends in ice or famine, which
 # would leave the page titled "The Contested Clearing" describing a quiet
 # one.) All counts below re-read off the live block, per the rule above.
-history_site=21953
+# Repointed from cell 21953 by The Tense: under era-varying capacity that cell
+# holds no column at all, while 3293 carries sixteen layers. Repointing is
+# legitimate HERE and was not when this page last went empty -- the earlier
+# emptiness meant the world had no deep history to show, and moving the camera
+# would have hidden a null result. Seed 42 now has 16-layer columns; the
+# showcase was simply aimed at a cell that is no longer one of them.
+history_site=3293
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
     printf '# The Contested Clearing of Seed 42\n\n'
@@ -205,17 +211,17 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and eight\n' "$history_site"
-    printf 'gnoll steadings have risen on it, one settling atop the ruins of the\n'
-    printf 'last, from the year 850 down to the present. Only one of the seven\n'
-    printf 'completed layers was ended by winter. Three were put to flight by\n'
-    printf 'another gnoll band wanting the same defensible ground, and three\n'
-    printf 'more ended the other way about — the occupants won a fight somewhere\n'
-    printf 'else and carried the settlement onto the land they had taken. It is a\n'
-    printf 'people with only itself to fight, and this column is what that looks\n'
-    printf 'like from the ground. The eighth was founded in the year 1950 and\n'
-    printf 'stands yet, fifty years on: some twelve souls, two huts and a\n'
-    printf 'granary, and no ruin yet to read.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and sixteen\n' "$history_site"
+    printf 'hobgoblin steadings have risen on it, one settling atop the ruins of\n'
+    printf 'the last, from the year 450 down to the present. Not one of them was\n'
+    printf 'ended by the cold. All fifteen completed layers fell to other\n'
+    printf 'hobgoblins — a people with only itself to fight, contesting the one\n'
+    printf 'defensible rise in a neighbourhood it had already filled. Six of those\n'
+    printf 'endings were not evictions at all: the occupants had just taken better\n'
+    printf 'ground from a neighbour and carried the settlement there, so the layer\n'
+    printf 'closes on a departure rather than a defeat. The sixteenth was founded\n'
+    printf 'in the year 1800 and stands yet, two hundred years on: some thirty\n'
+    printf 'souls, two huts and a granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

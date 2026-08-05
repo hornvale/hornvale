@@ -4,21 +4,21 @@
 
 ## The Sky
 
-A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars. The sky is a flat overcast.
+A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars. The sky is fair, with scattered cumulus.
 
 This sky holds: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 
-- [0.68] Goododo Daboa tide
-- [0.39] Dodoa Daboa tide
-- [0.30] Doa
-- [0.27] Doa Goododo Daboa eclipse
-- [0.26] Daadoo Daboa tide
-- [0.22] Doa Dodoa Daboa eclipse
-- [0.20] Doqoo
-- [0.14] heat
-- [0.14] rain
+- [0.70] Doa
+- [0.63] Doa Goododo Daboa eclipse
+- [0.57] Goododo Daboa tide
+- [0.52] Doa Dodoa Daboa eclipse
+- [0.33] Dodoa Daboa tide
+- [0.22] Daadoo Daboa tide
+- [0.17] Doqoo
+- [0.13] rain
+- [0.10] heat
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
@@ -59,189 +59,116 @@ Notable: the Great Delta, salt flats.
 The air organizes into a single day–night overturning (tidally locked); 9 land biomes and 7 marine biomes cover the globe.
 Some 10% of the surface is habitable — land with water and a tolerable season.
 
-- **Goodo** — tropical-rainforest
-- **Goodogodo** — tropical-rainforest
-- **Dodo (58.8°S, 77.9°W)** — temperate-forest
-- **Goodogo (59.8°S, 76.8°W)** — temperate-forest
-- **Psaavdshoxzhmox** — tropical-seasonal-forest
-- **Pzopdzhaxzngavsma** — tropical-seasonal-forest
-- **Nane** — tropical-seasonal-forest
-- **Nenatoa** — temperate-forest
-- **Geoge** — tropical-seasonal-forest
-- **Geoge** — temperate-forest
-- **Naoka** — tropical-seasonal-forest
-- **Ngengato** — temperate-forest
-- **Nga** — alpine
-- **Ngoezmongakagame** — tropical-rainforest
-- **Raxarora (69.1°N, 46.0°E)** — tropical-seasonal-forest
-- **Raxarora (69.4°S, 61.9°W)** — tropical-seasonal-forest
-- **Pee** — tropical-seasonal-forest
-- **Nooka** — tropical-seasonal-forest
-- **Naoka** — tropical-rainforest
-- **Netea** — temperate-rainforest
-- **Xooxa** — temperate-forest
-- **Gzavshmopsav** — tropical-rainforest
-- **Doda (56.8°S, 78.1°W)** — temperate-forest
-- **Betoe** — tropical-seasonal-forest
-- **Roarora** — tropical-rainforest
-- **Gshopzngav** — temperate-forest
-- **Rororaroxoroxora** — temperate-forest
-- **Neneo (26.2°S, 79.1°W)** — temperate-forest
-- **Toa** — temperate-forest
-- **Zngavsmashno (38.9°N, 78.9°E)** — tropical-seasonal-forest
-- **Gaabo (24.1°S, 78.0°W)** — temperate-forest
-- **Raxarora** — tropical-rainforest
-- **Xoaro (74.7°N, 51.2°W)** — tropical-seasonal-forest
-- **Qadoogodoodadoo** — tropical-seasonal-forest
-- **Gododadogodogo** — tropical-seasonal-forest
+- **Godogodo** — tropical-rainforest
+- **Godo (1.0°N, 75.5°E)** — tropical-seasonal-forest
+- **Psoaxsmaap** — tropical-seasonal-forest
 - **Beobee** — tropical-seasonal-forest
-- **Gootoenaoka** — tropical-seasonal-forest
-- **Meozmanga** — alpine
-- **Nenatane** — temperate-forest
-- **Shnodshoxzhmox** — tropical-seasonal-forest
-- **Zhngavzngavsma** — alpine
-- **Zngavsmashno (70.2°N, 46.8°W)** — tropical-seasonal-forest
-- **Qadoogodoodaoga** — tropical-seasonal-forest
-- **Raoxoro** — temperate-rainforest
-- **Roxo (69.5°S, 67.8°W)** — temperate-forest
-- **Toabeodoebe** — temperate-forest
-- **Raxarorarororarara** — alpine
-- **Roarora (76.0°N, 56.8°W)** — temperate-forest
-- **Raxarora (75.7°N, 52.7°W)** — temperate-forest
-- **Zngaavsma (41.6°N, 82.2°E)** — temperate-forest
-- **Zngaavsma** — temperate-rainforest
-- **Roarora (78.0°N, 66.3°W)** — temperate-forest
-- **Neneonena** — temperate-forest
-- **Qadoogoodoogododoa** — temperate-forest
-- **Raraxaxo** — alpine
-- **Dodododo** — temperate-forest
-- **Roarora (78.8°N, 58.9°W)** — alpine
-- **Goodogo (57.6°S, 80.8°W)** — temperate-forest
-- **Roarora (77.8°N, 56.5°W)** — alpine
-- **Psoaxsmaapqzhaovgzhoavpzopdzhax** — temperate-forest
-- **Raaxora** — temperate-forest
-- **Roxo (77.0°N, 58.9°W)** — temperate-forest
-- **Roarora (76.8°N, 54.4°W)** — alpine
-- **Dodoqado (60.7°S, 76.4°W)** — temperate-forest
-- **Qadoo (60.8°S, 74.4°W)** — temperate-forest
-- **Dodo (59.9°S, 72.9°W)** — temperate-forest
-- **Pzopdzhax** — alpine
-- **Boo (60.0°S, 70.9°W)** — alpine
-- **Doda (55.0°S, 76.5°W)** — temperate-forest
-- **Dodo (57.7°S, 78.9°W)** — temperate-forest
-- **Neneo (26.9°S, 75.9°W)** — temperate-forest
-- **Roarora (79.7°N, 56.0°W)** — alpine
-- **Gshopzngavgshovzngav** — temperate-forest
-- **Raoxoro** — temperate-forest
-- **Nena (28.0°S, 76.4°W)** — temperate-forest
-- **Kooneo** — tropical-seasonal-forest
-- **Roxoro (77.1°N, 68.1°W)** — temperate-forest
-- **Roxo (77.1°N, 63.5°W)** — temperate-forest
-- **Psaavshno** — tropical-seasonal-forest
-- **Zngavsmaznav** — alpine
-- **Gshoovzngav (39.9°N, 82.4°E)** — temperate-forest
-- **Dshoxzhmoxshno** — tropical-seasonal-forest
-- **Snaapzmoov (38.1°N, 79.7°E)** — temperate-forest
-- **Geoboge** — temperate-forest
-- **Snaapzmoov (39.0°N, 80.3°E)** — temperate-forest
-- **Boo (60.9°S, 72.3°W)** — alpine
-- **Gshoovzngav (39.1°N, 81.8°E)** — temperate-forest
-- **Dodo (55.8°S, 79.1°W)** — temperate-forest
-- **Roarora (76.1°N, 73.9°W)** — temperate-rainforest
-- **Rara (79.8°N, 61.8°W)** — alpine
-- **Xoaro (74.4°N, 47.5°W)** — tropical-seasonal-forest
-- **Raxarora (75.4°N, 48.7°W)** — temperate-forest
-- **Neneo (26.3°S, 80.4°W)** — temperate-forest
-- **Roxoro (70.4°S, 72.8°W)** — temperate-forest
-- **Raxarora (70.3°S, 75.9°W)** — temperate-forest
-- **Roaxoraroxo** — temperate-forest
-- **Qzhaovgzhovgshopzngavgshovzngav** — temperate-forest
-- **Toa** — tropical-rainforest
-- **Toanoka** — tropical-seasonal-forest
-- **Qzhaovgzhov (37.1°N, 77.8°E)** — temperate-forest
-- **Raxarora (69.5°S, 70.8°W)** — temperate-forest
-- **Raxarorarararorora** — alpine
-- **Dodabododo** — temperate-forest
-- **Dodadodadodo** — temperate-forest
-- **Teanee** — temperate-forest
-- **Toanetea** — temperate-forest
-- **Roaxora** — temperate-rainforest
-- **Pzopdzhax** — temperate-forest
-- **Roarora (70.1°S, 78.8°W)** — temperate-rainforest
-- **Qzhaovgzhovgshopzngav** — temperate-forest
-- **Goodogododo** — temperate-forest
-- **Dodadodododo** — temperate-forest
-- **Doadododa** — temperate-forest
-- **Dodo (55.9°S, 77.3°W)** — temperate-forest
-- **Goodogogodo** — alpine
-- **Roororora** — temperate-forest
-- **Doda (58.1°S, 71.4°W)** — temperate-forest
-- **Gshopzngavsnoapshmav** — temperate-forest
-- **Qzhaovgzhov (44.2°N, 82.7°E)** — temperate-forest
-- **Gaabo (25.2°S, 79.8°W)** — temperate-forest
-- **Nena (24.3°S, 80.5°W)** — temperate-forest
-- **Xoxoraxarora** — temperate-forest
-- **Dogadoda** — taiga
-- **Doda (55.2°S, 73.1°W)** — temperate-forest
-- **Gshopzngavzngavsma** — temperate-forest
-- **Xoxo** — temperate-forest
-- **Toa** — tropical-seasonal-forest
-- **Naneogetoe** — tropical-seasonal-forest
-- **Snaapzmoovpsopdzhaap** — temperate-forest
-- **Qadoo (56.7°S, 79.9°W)** — temperate-forest
-- **Bododaqadoo** — temperate-forest
-- **Zngavsmadzov** — temperate-forest
-- **Zngaavsma (42.5°N, 82.9°E)** — temperate-forest
-- **Dodobo (53.9°S, 79.2°W)** — alpine
-- **Zngaavsma (38.0°N, 78.3°E)** — temperate-forest
-- **Gshoovzngavgshopzngav** — temperate-forest
-- **Gaa** — taiga
-- **Gootoenaneo** — tropical-seasonal-forest
-- **Geto** — tropical-seasonal-forest
-- **Boogodoqado** — alpine
-- **Dzoovgshopzngav** — temperate-forest
-- **Xoxa** — temperate-forest
-- **Roo** — temperate-forest
-- **Rara (79.0°N, 69.7°W)** — alpine
-- **Psopshmav** — taiga
-- **Godo** — alpine
-- **Dodoqado (61.6°S, 78.0°W)** — temperate-forest
-- **Xaro** — alpine
-- **Rara (75.8°N, 42.1°W)** — alpine
-- **Rara (76.2°N, 46.0°W)** — alpine
-- **Rara (76.5°N, 50.1°W)** — alpine
-- **Rororaraxo** — alpine
-- **Rororarorora** — alpine
-- **Roarora (67.6°S, 67.1°W)** — alpine
-- **Doda (57.2°S, 69.0°W)** — temperate-forest
-- **Doado** — temperate-forest
-- **Raxarora (69.4°S, 73.7°W)** — temperate-forest
+- **Toa of the goblins** — tropical-seasonal-forest
+- **Toa of the hobgoblins** — tropical-seasonal-forest
+- **Geoge** — tropical-seasonal-forest
+- **Ngaengozmo** — tropical-seasonal-forest
+- **Kangongato** — tropical-seasonal-forest
+- **Ngezmokango** — tropical-seasonal-forest
+- **Xoxo (16.2°N, 73.3°E)** — temperate-forest
+- **Goodogodogo** — tropical-seasonal-forest
+- **Ngoetamo** — temperate-rainforest
+- **Goodo** — tropical-rainforest
+- **Godo (72.1°N, 45.6°W)** — tropical-seasonal-forest
+- **Beobee** — alpine
+- **Toa (5.7°N, 76.4°E)** — temperate-forest
+- **Teonatoabaabo** — temperate-forest
+- **Nookabootoe** — tropical-seasonal-forest
+- **Goodogo (1.9°N, 75.9°E)** — tropical-seasonal-forest
+- **Goodogo (73.2°N, 58.9°E)** — tropical-seasonal-forest
+- **Geobogeto** — temperate-forest
+- **Gootoenoa** — tropical-rainforest
+- **Roaxora (26.9°S, 75.9°W)** — temperate-forest
+- **Goa** — tropical-rainforest
+- **Toa (78.0°N, 61.4°W)** — temperate-forest
+- **Baabo** — temperate-forest
+- **Rororaxaxo** — alpine
+- **Roarora (55.2°S, 64.3°W)** — alpine
+- **Qadoogoodoogo** — tropical-seasonal-forest
+- **Nena** — temperate-forest
+- **Bege** — temperate-rainforest
+- **Ngakagamemenga** — tropical-rainforest
+- **Roo (28.1°S, 77.7°W)** — temperate-forest
+- **Xaoxoraxora** — alpine
+- **Rororarara** — alpine
 - **Xaoxo** — alpine
-- **Boo (55.5°S, 82.5°W)** — alpine
-- **Boo (60.5°S, 80.4°W)** — alpine
-- **Gaabo (59.6°S, 78.8°W)** — temperate-forest
-- **Dodododadodo** — temperate-forest
-- **Gshopzngavdzov** — temperate-forest
-- **Dzhaap** — temperate-forest
-- **Dshogshovzngav** — taiga
-- **Doda (55.2°S, 71.3°W)** — temperate-forest
-- **Snoapshmav** — temperate-forest
-- **Raoxo** — alpine
-- **Zhngavdsoshnop** — alpine
-- **Dsoshnopzngavsma** — alpine
-- **Qsopdsoshnop** — alpine
-- **Goodogododododa** — temperate-forest
-- **Doda (55.1°S, 74.8°W)** — temperate-forest
-- **Zngaavdzop** — taiga
-- **Goodogodo** — tropical-seasonal-forest
-- **Goodogodagago** — tropical-seasonal-forest
-- **Rara (68.3°S, 77.1°W)** — alpine
-- **Dodobo (59.3°S, 82.6°W)** — alpine
-- **Dodadodo** — temperate-forest
-- **Dodo (56.2°S, 68.4°W)** — temperate-forest
-- **Doda (56.2°S, 71.9°W)** — temperate-forest
-- **Gaabo (56.2°S, 70.2°W)** — temperate-forest
-- **Snaapzmoov (35.5°N, 79.5°E)** — temperate-forest
+- **Roxo (27.0°S, 77.1°W)** — temperate-forest
+- **Roarora (27.1°S, 78.4°W)** — temperate-forest
+- **Psaav** — tropical-seasonal-forest
+- **Roarora (24.3°S, 80.5°W)** — temperate-forest
+- **Pzopdzhaxzmovsngo** — tropical-seasonal-forest
+- **Pzhopshmop** — tropical-seasonal-forest
+- **Psapqsaaxshno** — tropical-seasonal-forest
+- **Xoxo (28.0°S, 76.4°W)** — temperate-forest
+- **Roo (23.2°S, 79.9°W)** — temperate-forest
+- **Roxo (24.4°S, 81.7°W)** — temperate-forest
+- **Roaxora (25.6°S, 74.1°W)** — temperate-forest
+- **Roo (26.7°S, 74.6°W)** — temperate-forest
+- **Dado** — tropical-seasonal-forest
+- **Zngaavsmadshoxzhmox** — tropical-seasonal-forest
+- **Roarora (25.8°S, 75.4°W)** — temperate-forest
+- **Rarara (56.2°S, 66.6°W)** — alpine
+- **Rara (55.3°S, 67.8°W)** — alpine
+- **Xoxo (23.1°S, 78.7°W)** — temperate-forest
+- **Dodo** — alpine
+- **Roxo (29.0°S, 77.0°W)** — temperate-forest
+- **Zmovsngo** — tropical-seasonal-forest
+- **Roarora (55.2°S, 66.1°W)** — alpine
+- **Roo (56.1°S, 64.8°W)** — temperate-forest
+- **Googodoga** — tropical-seasonal-forest
+- **Goodogo (74.0°N, 44.0°W)** — alpine
+- **Xoraxa** — temperate-forest
+- **Xoxa (57.0°S, 63.5°W)** — temperate-forest
+- **Doda** — temperate-forest
+- **Roaxora (57.1°S, 65.3°W)** — temperate-forest
+- **Roarora (54.3°S, 65.5°W)** — alpine
+- **Roarora (26.3°S, 80.4°W)** — temperate-forest
+- **Roarora (26.4°S, 81.6°W)** — temperate-forest
+- **Roo (25.3°S, 81.1°W)** — temperate-forest
+- **Raoxoro (25.4°S, 82.3°W)** — temperate-forest
+- **Roarora (26.5°S, 82.9°W)** — taiga
+- **Xoora (24.7°S, 74.8°W)** — temperate-forest
+- **Roarora (54.2°S, 63.7°W)** — alpine
+- **Roarora (56.8°S, 59.7°W)** — alpine
+- **Rorora** — alpine
+- **Rooroxo** — temperate-forest
+- **Roarora (25.9°S, 76.6°W)** — temperate-forest
+- **Rooxa** — tropical-seasonal-forest
+- **Xaarororora** — temperate-forest
+- **Roarora (28.2°S, 79.0°W)** — temperate-forest
+- **Rara (54.3°S, 67.3°W)** — alpine
+- **Goodogo (72.8°N, 43.2°W)** — alpine
+- **Roarora (30.2°S, 78.9°W)** — taiga
+- **Roarora (27.3°S, 79.7°W)** — temperate-forest
+- **Roo (27.8°S, 75.2°W)** — temperate-forest
+- **Rarara (28.7°S, 74.4°W)** — alpine
+- **Roarora (29.3°S, 79.6°W)** — alpine
+- **Roarora (28.3°S, 80.3°W)** — taiga
+- **Rararororaxaxo** — alpine
+- **Rara (28.9°S, 75.7°W)** — alpine
+- **Xoxarorora** — temperate-forest
+- **Rarara (31.8°S, 76.0°W)** — alpine
+- **Roxo (26.2°S, 79.1°W)** — temperate-forest
+- **Raoxoro (25.2°S, 79.8°W)** — temperate-forest
+- **Xoora (26.6°S, 73.4°W)** — temperate-forest
+- **Xoxa (27.5°S, 72.7°W)** — temperate-forest
+- **Roxo (26.1°S, 77.9°W)** — temperate-forest
+- **Raoxo (30.0°S, 76.3°W)** — alpine
+- **Rororararararara** — alpine
+- **Roaxora (24.5°S, 83.0°W)** — temperate-forest
+- **Raxarora** — tropical-seasonal-forest
+- **Raxarora** — temperate-forest
+- **Roxo (22.4°S, 81.8°W)** — temperate-forest
+- **Rara (53.3°S, 66.7°W)** — alpine
+- **Xoora (27.6°S, 73.9°W)** — temperate-forest
+- **Xaaro** — taiga
+- **Xoaroraxo** — tropical-seasonal-forest
+- **Raoxo (28.6°S, 73.2°W)** — alpine
+- **Roo (28.4°S, 71.9°W)** — temperate-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -275,11 +202,11 @@ Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
 
 ## The Vestige
 
-The underworld's residue marks 2% of the land — the buried palimpsest of ages before.
-0 abandoned delvings and 440 buried undercities lie beneath the land.
-183 layers of that residue are still venerated against 258 forgotten — forgetting outpaces memory.
+The underworld's residue marks 1% of the land — the buried palimpsest of ages before.
+0 abandoned delvings and 352 buried undercities lie beneath the land.
+110 layers of that residue are still venerated against 243 forgotten — forgetting outpaces memory.
 1 pre-human gate-scars still weep dread into the deep.
-The residue's dominant hazard is structural collapse — 440 layers so afflicted.
+The residue's dominant hazard is structural collapse — 352 layers so afflicted.
 
 ## Deep Time
 
@@ -288,53 +215,53 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 ## The People
 
-The land holds 183 settlement(s).
-The chief bugbear settlement, Goodo, holds 110 souls amid tropical-rainforest.
-The chief gnoll settlement, Psaavdshoxzhmox, holds 99 souls amid tropical-seasonal-forest.
-The chief goblin settlement, Nane, holds 89 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Geoge, holds 82 souls amid tropical-seasonal-forest.
-The chief human settlement, Ngengato, holds 121 souls amid temperate-forest.
-The chief kobold settlement, Raxarora, holds 96 souls amid tropical-seasonal-forest.
+The land holds 110 settlement(s).
+The chief bugbear settlement, Godogodo, holds 63 souls amid tropical-rainforest.
+The chief gnoll settlement, Psoaxsmaap, holds 43 souls amid tropical-seasonal-forest.
+The chief goblin settlement, Beobee, holds 40 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Toa, holds 84 souls amid tropical-seasonal-forest.
+The chief human settlement, Ngaengozmo, holds 36 souls amid tropical-seasonal-forest.
+The chief kobold settlement, Xoxo, holds 57 souls amid temperate-forest.
 
-The bugbear lair of **Goodo**, population 110.
+The bugbear lair of **Godogodo**, population 63.
 
-Goodo lives by farming.
+Godogodo lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The gnoll camp of **Psaavdshoxzhmox**, population 99.
+The gnoll camp of **Psoaxsmaap**, population 43.
 
-Psaavdshoxzhmox lives by farming.
+Psoaxsmaap lives by farming.
 Its roles, lowest to highest: gleaner, bonecaster, packlord.
 The gnoll run a basal metabolism of 135 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
-The goblin village of **Nane**, population 89.
+The goblin village of **Beobee**, population 40.
 
-Nane lives by farming.
+Beobee lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Geoge**, population 82.
+The hobgoblin legion of **Toa**, population 84.
 
-Geoge lives by farming.
+Toa lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
-The human town of **Ngengato**, population 121.
+The human town of **Ngaengozmo**, population 36.
 
-Ngengato lives by farming.
+Ngaengozmo lives by farming.
 Its roles, lowest to highest: farmer, priest, steward.
 The human run a basal metabolism of 82 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
-The kobold warren of **Raxarora**, population 96.
+The kobold warren of **Xoxo**, population 57.
 
-Raxarora lives by farming.
+Xoxo lives by farming.
 Its roles, lowest to highest: digger, keeper, elders.
 The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
 ## The Gods
 
-In the lair of **Goodo**, an organized priesthood tends its own pantheon:
+In the lair of **Godogodo**, an organized priesthood tends its own pantheon:
 
 > Dao the Bvaoda is felt more than seen. That's how it's always been. That's how it's always been. Dao is a great one among the gods.
 >
@@ -352,7 +279,7 @@ In the lair of **Goodo**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-In the camp of **Psaavdshoxzhmox**, an organized priesthood tends its own pantheon:
+In the camp of **Psoaxsmaap**, an organized priesthood tends its own pantheon:
 
 > Gzhoo Gzhoo is felt more than seen. That's how it's always been.
 >
@@ -374,7 +301,7 @@ In the camp of **Psaavdshoxzhmox**, an organized priesthood tends its own panthe
 >
 > — derived from the phenomenon *tide*
 
-In the village of **Nane**, an organized priesthood tends its own pantheon:
+In the village of **Beobee**, an organized priesthood tends its own pantheon:
 
 > Teakoatoa the Noteakoa is ever: Teakoatoa the Noteakoa watches unceasing. So it was, so it is.
 >
@@ -396,7 +323,7 @@ In the village of **Nane**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Geoge**, an organized priesthood tends its own pantheon:
+In the legion of **Toa**, an organized priesthood tends its own pantheon:
 
 > Teakoatoa the Ngjatekoto is ever: Teakoatoa the Ngjatekoto watches unceasing. So it was, so it is.
 >
@@ -418,7 +345,7 @@ In the legion of **Geoge**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the town of **Ngengato**, an organized priesthood tends its own pantheon:
+In the town of **Ngaengozmo**, an organized priesthood tends its own pantheon:
 
 > Keengangozmo Keengangozmo is: Keengangozmo Keengangozmo is always watching. That's how it's always been.
 >
@@ -440,7 +367,7 @@ In the town of **Ngengato**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the warren of **Raxarora**, an organized priesthood tends its own pantheon:
+In the warren of **Xoxo**, an organized priesthood tends its own pantheon:
 
 > Roara Roara is: Roara Roara is always watching. That's how it's always been. That's how it's always been. Roara is a great one among the gods.
 >
