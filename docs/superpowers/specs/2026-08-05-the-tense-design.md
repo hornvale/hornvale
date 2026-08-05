@@ -1,8 +1,17 @@
 # The Tense — capacity is written in the eternal present
 
-**Campaign:** the-tense · **Branches off:** `campaign/the-tilth` (it needs that
-branch's `per_species_capacity`, which does not exist on `main`) · **Supersedes:**
-The Tilth stages 6 and 7, which are patches on the layer below this one
+**Campaign:** the-tense · **Runs on `campaign/the-tilth` itself**, as further
+stages, not on a branch of its own · **Supersedes:** The Tilth stages 6 and 7,
+which are patches on the layer below this one and were reverted in `<revert-sha>`
+
+*Why not its own branch:* it needs `per_species_capacity`, which exists only on
+`campaign/the-tilth`, so a separate branch would fork from an unmerged branch and
+inherit a merge-order dependency. That is exactly the hazard that killed the
+abandoned "The Sovereign" framing earlier the same day — a campaign branched off
+`main` on the belief its subject matter was there, caught only by an unresolved
+import at the pre-commit hook. One branch also means **one golden rebaseline**
+for the parked per-species rewire (`64db5432`) and for this work together, which
+§6 wants anyway.
 
 ## 1. The thesis
 

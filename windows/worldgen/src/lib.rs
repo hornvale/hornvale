@@ -1011,56 +1011,53 @@ pub fn axis_supply(
 
 /// Liebig's law of the minimum over a species' four condition responses: the
 /// **binding** axis limits, exactly as `carrying_capacity` takes
-/// `min(temperature, precipitation)`.
+/// `min(temperature, precipitation)`. Temperature, moisture and insolation are
+/// buffered by the species' `sovereignty_floor`; **elevation is passed `0.0`**.
 ///
-/// **Moisture, insolation and elevation are buffered by the species'
-/// `sovereignty_floor`. Temperature is NOT** (stages 6 and 7; spec
-/// `2026-08-05-the-unfloored-axis-design.md`).
+/// ## Two attempts to fix that asymmetry, both reverted, both measured
 ///
-/// The asymmetry is deliberate and the two halves argue in opposite directions,
-/// so neither is a default:
+/// This arrangement is defective and the two obvious repairs are worse. Recorded
+/// here so the next reader does not spend a session rediscovering it; the full
+/// argument is `docs/superpowers/specs/2026-08-05-the-tense-design.md`.
 ///
-/// - **Elevation is buffered** because it is a geometric *proxy*. It has no
-///   lethal value of its own; what altitude actually does to a body is colder air
-///   and thinner oxygen, and temperature is modelled here directly. An unfloored
-///   proxy under a minimum vetoes the real axes — see below.
-/// - **Temperature is not buffered** because it is the one axis with a genuine
-///   physiological limit. Sovereignty models homeostatic buffering, which is
-///   exactly right for "prefers warmth, tolerates less" and exactly wrong for
-///   −50 °C. Floored, it let an unmagical 30 kg goblin (floor 0.335, from mass
-///   alone) read capacity ~37 on a −50 °C cell, and left the capacity field and
-///   the bake's −10 °C era mask contradicting each other over roughly half the
-///   planet.
+/// - **Floor elevation too** (The Tilth stage 6.1). Fixes the real pathology
+///   below, but nothing can then be excluded by anything: goblin read capacity
+///   ~37 on a −50 °C cell, per-cell species diversity went to 3.55 against a
+///   [1.5, 3.0] band ("oatmeal" is ~4), and kobold — a deliberate highland
+///   specialist — took 17.9% of settlements against a 10% cap.
+/// - **Unfloor temperature instead** (stage 7). Makes cold exclude, and
+///   reproduces the pathology on the new axis: temperature then binds on 100% of
+///   land for goblin and human, and gnoll's median capacity falls to 0.00. Both
+///   preregistered hypotheses failed.
 ///
-/// Elevation *was* passed `0.0`, on the reading that sovereignty buffers
-/// physiology but not geometry. That reading is defensible and the consequence
-/// is not: under a **minimum**, the one unfloored term is the only one that can
-/// fall below the floor, so it does not add a constraint — it out-votes every
-/// other axis. Measured on seed 42's 11,066 land cells, elevation was the
-/// binding axis on **100% of land** for goblin, gnoll and human, whose authored
-/// temperature, moisture and insolation curves therefore determined nothing
-/// anywhere. Buffering it moves the binding axis to temperature for those three
-/// (56% / 76% / 88%) while leaving kobold — a deliberate highland specialist —
-/// elevation-bound 28% of the time, which is the shape the roster intends.
+/// **The defect is the flatness, not the floors.** A floored axis can never bind,
+/// so whichever axis is unfloored becomes the sole determinant wherever it dips
+/// below the others' floor — the same bug in either arrangement. Two *kinds* of
+/// constraint are being expressed through one operator: lethal **gates**, which
+/// must reach zero, and **preferences**, which sovereignty should floor. The fix
+/// is to stop mixing them under one `min()` (spec §3.3), not to re-arrange which
+/// axis is bare.
 ///
-/// The trap compounds with [`hornvale_kernel::ConditionResponse`]'s `devotion`,
-/// which is the curve's **peak height**, not its sharpness: a wide "indifferent"
-/// axis authored at low devotion evaluates to a near-constant, and unfloored
-/// that constant sits below every other axis's floor by construction.
+/// The measured pathology this leaves standing, for the record: with elevation
+/// unfloored, a wide low-`devotion` elevation curve evaluates to a near-constant
+/// below every other axis's floor, so **elevation binds on 100% of land for
+/// goblin, gnoll and human** and their authored temperature, moisture and
+/// insolation curves determine nothing anywhere. `devotion` is the curve's peak
+/// height, not its breadth — that naming is what produced the mis-authoring.
 ///
-/// Note this was harmless before stage 5. The pre-Liebig form multiplied the
-/// four responses, and under a *product* every axis always contributes — an
-/// unfloored term suppresses magnitude without erasing the others' variation.
-/// The minimum is what converts it from a scale factor into a veto.
+/// Note it was harmless before stage 5. The pre-Liebig form multiplied the four
+/// responses, and under a *product* every axis always contributes — an unfloored
+/// term suppresses magnitude without erasing the others' variation. The minimum
+/// is what converts it from a scale factor into a veto.
 ///
 /// Shared by [`per_species_suitability`] and [`per_species_capacity`] so the two
 /// cannot drift apart on the one rule they must agree about.
 fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
     cn.temperature
-        .eval(s.temperature_c, 0.0)
+        .eval(s.temperature_c, floor_buf)
         .min(cn.moisture.eval(s.moisture, floor_buf))
         .min(cn.insolation.eval(s.insolation, floor_buf))
-        .min(cn.elevation.eval(s.elevation, floor_buf))
+        .min(cn.elevation.eval(s.elevation, 0.0))
 }
 
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
