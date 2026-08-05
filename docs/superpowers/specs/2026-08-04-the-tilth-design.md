@@ -339,6 +339,77 @@ improvement even though it does not remove it. A world whose biosphere is not
 water-carbon around a Sun-like star is outside this model's scope, and saying so
 is more honest than a tent that quietly assumed the same thing.
 
+## 5d. Stage 1 + 4 measured (2026-08-05) — two findings, one a self-correction
+
+Implemented and measured before stage 5, per the ledgered decision to keep the two
+increments separately attributable. **Not yet committed**: see the note at the end.
+
+### The support exploded, and the count FELL
+
+```
+  cells with K>0 for >=1 settler   was 3038/8130/3944/5231/2140
+                                   now 11010/17636/16033/11209  (~all land)
+  seed 42                          232 settlements -> 157;  14,562 facts -> 10,369
+```
+
+Lieth's "never reaches zero" did exactly what it promised — essentially all land now
+carries non-zero capacity. But **settlements went down**, which is the opposite of
+the campaign's direction, and the reason is that Lieth's water term is *stricter*
+than what it replaced:
+
+```
+  at median land moisture 0.3707  ->  precip_mm_yr = 2000 * m^1.5 = 451 mm/yr
+    old water term (RAW moisture)     0.371
+    new water term (Lieth precip)     0.259     = 70% of the old
+  temperature, temperate band:  15C tent 0.650 / Lieth 0.615
+                                22C tent 1.000 / Lieth 0.786
+                                30C tent 0.600 / Lieth 0.905
+```
+
+Raw moisture in `[0,1]` was silently a **much more generous** water term than
+Lieth's saturating function on a real mm/yr total. So good ground got worse while
+extreme ground became barely viable, and the net is fewer settlements. This is not
+a defect in stage 1 — it is the model being honest for the first time — but it means
+**`V_max` and `K_m` must be RE-DERIVED on the new physics before stage 5**, because
+they were measured against the old capacity distribution. The staged sequencing is
+what caught that; an all-at-once landing would have used stale constants.
+
+### §2.4's mechanism was WRONG, and this measurement proves it
+
+H1 did **not** move: `goblin`, `bugbear` and `gnoll` still win **zero** best-fit
+cells on every seed. Only `human` gained (0/0/154/36 → 34/734/748/168).
+
+§2.4 claimed the base field, being *"shaped like a temperate generalist,"* scored
+every species against an implicit incumbent and so amplified whoever most resembled
+it. **That is algebraically impossible.** Best-fit is
+
+```
+  argmax_sp  eff(c, sp)  =  argmax_sp  [ capacity(c) x K_sp(c) ]  =  argmax_sp  K_sp(c)
+```
+
+because `capacity(c)` is **species-blind and therefore cancels out of the argmax**.
+The base field cannot influence who wins a cell, no matter what shape it has. The
+monopoly is decided entirely inside `K_sp` — that is, by `axis_supply` and the
+condition combination — so **only stage 5 can break it.**
+
+This is a genuine falsification of the spec's stated mechanism, and it sharpens H1
+rather than weakening it: if the monopoly breaks at stage 5, the cause is
+unambiguously the **product-versus-Liebig** change, because that is the only
+remaining term that treats species differently. The staged split bought exactly the
+attribution it was designed to buy — and it also bought this correction, which an
+all-at-once landing would have hidden behind a working result.
+
+### Not committed yet
+
+Stage 1 + 4 moves world identity substantially (232 → 157 settlements on seed 42),
+so committing it demands a full rebaseline and re-pin pass — which stage 5 would
+then immediately redo, since it changes the same numbers again. The measurement is
+recorded here instead, and the two stages will land together with **one**
+rebaseline. That is a deliberate deviation from the ledgered "land 1+4, then land
+5" sequencing: the *attribution* the split existed to protect is secured above,
+analytically and empirically, so the remaining value of separate commits is
+bookkeeping, not evidence.
+
 ## 6. Risks
 
 - **`V_max` and `K_m` are two new authored constants** in a campaign whose thesis
