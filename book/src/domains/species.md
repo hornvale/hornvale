@@ -84,6 +84,34 @@ extends the claim one level: cleaving the vector in two moves no byte of any
 generated world or reference artifact, verified by full regeneration and
 diff, not merely asserted.
 
+**The society vector is a grid/group instrument, and since *The Tolerance* the
+chapter says so.** Douglas's cultural theory arranges societies on two axes —
+*grid*, how rule-bound a life is, and *group*, how bounded "us" is — into four
+biases: hierarchy, egalitarian/sect, individualist, fatalist. Sociality mode is
+this model's grid and in-group radius is its group, and reading them that way
+is a commitment rather than an observation: it says that a people's cosmology,
+its appetite for risk and its stance toward outsiders are things to be
+**derived from where it sits on two axes**, not authored one people at a time.
+Adding a people then becomes a matter of placing it, and the placement carries
+predictions that can be wrong. The adoption is presently documentary — no
+consumer reads a quadrant yet, because both axes are per-people constants and
+wiring one into behaviour without a measurement attached would have been an
+unpreregistered change. What is recorded is the reading, so the campaign that
+wants it inherits an argument instead of inventing one.
+
+**A people is authored as a location and a spread.** Every scalar above names
+where a people sits; since *The Tolerance* a second number beside it names how
+far its members scatter around that point, one dispersion per vector rather
+than one per dimension. The frame is stated rather than left implicit — the
+authored value is the **mean**, and the dispersion is a standard deviation
+about it — because an unstated frame is the defect The Manikin removed one
+level up. Zero reproduces the older model exactly: a people every one of whose
+members is the same member. The consequence is not decorative. A threshold
+applied to a distribution is not the same operation as a threshold applied to
+its mean, so a people authored *below* a behavioural gate no longer simply
+lacks the behaviour; some fraction of it clears the gate, and which fraction is
+a property of the spread its authors gave it.
+
 **The authoring corpus.** Kobold's six numbers are not measured, drawn, or
 fit — they are read. The project's method for authoring a new people is to
 take the Dungeons & Dragons 5th Edition System Reference Document as a
@@ -339,7 +367,18 @@ horizon into the carrying-capacity field each species reads (see
 Gathering* moved population from a per-site draw to a field readout, but
 still a real per-species divergence these two psychology scalars produce. A
 species is the fixed point those draws (and, now, this one field) are taken
-with respect to, never a distribution of its own.
+with respect to.
+
+That first sentence survives *The Tolerance* and the sentence that used to
+follow it does not. `stream_labels()` here is still empty and every cell in the
+table above is still authored — the dispersion beside each vector is authored
+exactly like the location it accompanies, and the draw that reads the pair
+lives at the composition root, where a settlement's founding site and year are
+in scope. But a species is no longer *"never a distribution of its own"*, which
+is what this chapter said until a people acquired a second authored number.
+The distinction worth keeping is between where a distribution is **written
+down** and where it is **sampled**: the first is here, the second is not, and
+`domains/species` remains a domain a seed never touches.
 
 **Threat response found a second, sharper consumer in *The Tumult*.** Where
 demography folds it smoothly into a capacity term, the deep-history bake's
