@@ -262,3 +262,73 @@ tell "siting changed" from "the field changed". One rebaseline serves both.
    oxygen, which are already modelled? Removing it entirely is a larger and more
    honest change than buffering it. Out of scope here; recorded because §2 makes
    it askable for the first time.
+
+---
+
+## 8. Stage 7 — temperature is not buffered (added 2026-08-05, after stage 6.1)
+
+### 8.1 Why this is a separate stage
+
+Stage 6.1 floored elevation and the follow-up measurement found that
+**cold-indifference predates this campaign entirely**: temperature, moisture and
+insolation were already floored, so a floored *temperature* axis — BIO-26 as
+shipped — is what has always stopped cold from excluding anyone. Measured as the
+share of land below the bake's own −10 °C snowline that a species still calls
+survivable (`K > 5`):
+
+```
+species     before stage 6.1    after
+goblin            48.4%         56.1%
+human             47.6%         62.3%
+bugbear           15.7%         39.6%
+```
+
+Goblin already thought half the sub-freezing world was fine. Stage 6.1 amplified
+that; it did not cause it.
+
+So this stage changes **ratified, pre-existing behaviour**, which stage 6 did not,
+and it gets its own preregistration rather than riding stage 6's.
+
+### 8.2 The change
+
+`tolerance_liebig` passes `0.0` for **temperature** and keeps `floor_buf` on
+moisture, insolation and elevation.
+
+The asymmetry is the argument, and it is the opposite of stage 6's. Elevation is
+a *geometric proxy* — it has no lethal value, and a species excluded by altitude
+alone is excluded by a stand-in for temperature and oxygen that are modelled
+elsewhere. Temperature is the one axis with a genuine physiological limit.
+Sovereignty as homeostatic buffering is exactly the right model for "prefers
+warmth, tolerates less" and exactly the wrong one for −50 °C.
+
+Consequence, accepted deliberately: cold becomes able to **exclude**, so the
+capacity field and the bake's era mask stop contradicting each other over roughly
+half the planet. That is the point. It also makes a snowball world lethal on the
+surface rather than merely unpopulated, which is what the deferred subterranean
+ecology rung ([[MAP-10]], [[MAP-69]]) exists to survive — the deep's energy base
+is geothermal and does not care about the snowline.
+
+### 8.3 Preregistration (decision 0016)
+
+**H5 — cold excludes.** After the change, no species calls more than **10%** of
+sub-snowline land survivable. Today the range is 39.6–64.0%.
+
+**H6 — temperature does not become the new veto.** No species has temperature
+binding on more than **90%** of land. This is stage 6's own pathology mirrored:
+an unfloored axis under a minimum out-votes floored ones, and the only reason to
+accept it here is that temperature is the axis that *should* bind when it is
+lethal. If it binds everywhere regardless, the other three are inert again and
+the repair has merely moved the defect.
+
+**H7 — the null, and the likeliest failure.** If unflooring temperature leaves
+any settling species viable (`K > 5`) on less than **5%** of land, the roster is
+authored for a warmer world than the climate model generates — median land on
+both probe seeds is about −10 °C — and the finding is about the authored optima
+or the climate model, **not** about the floor. Report it and revert; do not
+re-author optima to rescue the stage.
+
+### 8.4 Ordering
+
+Stage 7 lands **before** §3.2's `CAPACITY_V_MAX` re-derivation, not after.
+Unflooring temperature lowers tolerance and therefore capacity, so re-deriving
+the gauge first would immediately stale it again. One derivation, at the end.
