@@ -301,6 +301,7 @@
 - [The Generalist](./chronicle/the-generalist.md)
 - [The Mire](./chronicle/the-mire.md)
 - [The Keeping](./chronicle/the-keeping.md)
+- [The Fare](./chronicle/the-fare.md)
 
 # Appendix: The Frontier
 
