@@ -1011,9 +1011,32 @@ pub fn axis_supply(
 
 /// Liebig's law of the minimum over a species' four condition responses: the
 /// **binding** axis limits, exactly as `carrying_capacity` takes
-/// `min(temperature, precipitation)`. Temperature, moisture and insolation are
-/// buffered by the species' `sovereignty_floor`; **elevation is passed `0.0`** —
-/// sovereignty buffers physiology but not geometry.
+/// `min(temperature, precipitation)`.
+///
+/// **EVERY axis is buffered by the species' `sovereignty_floor`, including
+/// elevation. Never pass `0.0` here** (stage 6; spec
+/// `2026-08-05-the-unfloored-axis-design.md`).
+///
+/// Elevation *was* passed `0.0`, on the reading that sovereignty buffers
+/// physiology but not geometry. That reading is defensible and the consequence
+/// is not: under a **minimum**, the one unfloored term is the only one that can
+/// fall below the floor, so it does not add a constraint — it out-votes every
+/// other axis. Measured on seed 42's 11,066 land cells, elevation was the
+/// binding axis on **100% of land** for goblin, gnoll and human, whose authored
+/// temperature, moisture and insolation curves therefore determined nothing
+/// anywhere. Buffering it moves the binding axis to temperature for those three
+/// (56% / 76% / 88%) while leaving kobold — a deliberate highland specialist —
+/// elevation-bound 28% of the time, which is the shape the roster intends.
+///
+/// The trap compounds with [`hornvale_kernel::ConditionResponse`]'s `devotion`,
+/// which is the curve's **peak height**, not its sharpness: a wide "indifferent"
+/// axis authored at low devotion evaluates to a near-constant, and unfloored
+/// that constant sits below every other axis's floor by construction.
+///
+/// Note this was harmless before stage 5. The pre-Liebig form multiplied the
+/// four responses, and under a *product* every axis always contributes — an
+/// unfloored term suppresses magnitude without erasing the others' variation.
+/// The minimum is what converts it from a scale factor into a veto.
 ///
 /// Shared by [`per_species_suitability`] and [`per_species_capacity`] so the two
 /// cannot drift apart on the one rule they must agree about.
@@ -1022,7 +1045,7 @@ fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_
         .eval(s.temperature_c, floor_buf)
         .min(cn.moisture.eval(s.moisture, floor_buf))
         .min(cn.insolation.eval(s.insolation, floor_buf))
-        .min(cn.elevation.eval(s.elevation, 0.0))
+        .min(cn.elevation.eval(s.elevation, floor_buf))
 }
 
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
