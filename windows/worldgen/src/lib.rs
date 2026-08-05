@@ -1093,6 +1093,52 @@ fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_
         .min(cn.elevation.eval(s.elevation, 0.0))
 }
 
+/// **The Tense §3.3's two-tier tolerance — SHADOW MODE, not yet binding.**
+///
+/// `tolerance_liebig` above expresses two different *kinds* of constraint through
+/// one `min()`, and that is why no arrangement of floors could be made to work
+/// (see its doc for the two attempts and their measurements). A floored axis can
+/// never bind, so whichever axis is left bare becomes the sole determinant
+/// wherever it dips below the others' floor.
+///
+/// This separates them:
+///
+/// ```text
+///   tolerance = gate  x  modifier
+///   gate      = product over LETHAL-LIMIT axes, unfloored, able to reach 0
+///   modifier  = min over PREFERENCE axes, each floored by sovereignty
+/// ```
+///
+/// - **Temperature is the gate.** It is the one axis with a genuine
+///   physiological limit; homeostatic buffering is the right model for "prefers
+///   warmth, tolerates less" and the wrong one for −50 °C.
+/// - **Moisture, insolation and elevation are modifiers.** Sovereignty floors
+///   them, so a well-defended species is never excluded *by a preference* — which
+///   is what BIO-26 actually claims.
+///
+/// Moisture is left a modifier here despite desiccation being lethal, because
+/// nothing in the model excludes on moisture today and promoting it would be a
+/// second new exclusion landing in the same change. `tense_shadow.rs` measures
+/// both variants; the choice is recorded there rather than assumed here.
+///
+/// **Nothing calls this yet.** It exists so the cutover switches to code whose
+/// disagreement with the era mask has already been measured, rather than
+/// discovering it afterwards.
+/// type-audit: bare-ok(ratio: floor_buf), bare-ok(ratio: return)
+pub fn tolerance_tiered(
+    cn: &hornvale_species::ConditionNiche,
+    s: &Substrate,
+    floor_buf: f64,
+) -> f64 {
+    let gate = cn.temperature.eval(s.temperature_c, 0.0);
+    let modifier = cn
+        .moisture
+        .eval(s.moisture, floor_buf)
+        .min(cn.insolation.eval(s.insolation, floor_buf))
+        .min(cn.elevation.eval(s.elevation, floor_buf));
+    gate * modifier
+}
+
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_biosphere` index order tags the fields.
