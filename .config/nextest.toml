@@ -10,6 +10,47 @@
 
 [profile.default]
 
+# THE THREE SCATTERED BATTERIES RUN ALONE. Since The Scatter these tests
+# parallelise their own 200-seed sweeps across every core
+# (`windows/lab/tests/seed_sweep/`), so nextest must stop scheduling anything
+# ALONGSIDE them. `gate-full-heavy.sh` sets no `test-threads` limit, so
+# without this the canonical box runs up to 40 heavy processes each wanting 40
+# worker threads — where before The Scatter each held exactly ONE live world.
+# `threads-required = "num-cpus"` reserves the whole runner for the battery.
+#
+# CHOSEN ON MEASUREMENT, AND THE FASTER SHAPE LOST. Two full heavy runs on
+# lefford (40 cores), same ref, differing only in this block:
+#
+#            shape                          wall     cpu_ratio  failures
+#   B  concurrent, 10 workers each        2432 s       18.38    2
+#   A  alone, whole runner each (this)    2773 s       18.86    1
+#   —  pre-Scatter, serial sweeps         6134 s        1.80    (and a
+#      cancelled 14,143 s run that never finished the tier at all)
+#
+# B is 12% faster in TOTAL wall clock and was still rejected, because its
+# second failure is not real: `hornvale::scene_cost` is a WALL-CLOCK BUDGET
+# test, and B's oversubscription blew its tiles budget (10,137 ms against
+# 8,700) and reddened it. Under A it passes in 10.2 s — quicker than the
+# 13.1 s it took before The Scatter. A tier whose reds already need reading
+# carefully must not manufacture more of them, and a duration measured under
+# 40-way contention is not a duration anyone can budget against
+# (PROC-heavy-tier-cost-budget wants exactly these numbers).
+#
+# Per battery, A is where the win actually is: 1007→331 s (mire), 2427→990 s
+# (fare preregistered), 1099→353 s (fare exploratory). Peak RSS of the
+# heaviest, measured alone at 40 workers: 22.3 GB of lefford's 377 GB, at
+# 2914% CPU — against the ~82 GB the uncapped concurrent shape was projected
+# to hold co-resident.
+#
+# In `[profile.default]` DELIBERATELY, not in `[profile.heavy]`: the cap must
+# also bind a hand-typed `cargo nextest run --run-ignored only`, not just the
+# wrapper — a check is worth only the configurations it runs in (The Siding).
+# This changes nothing for `make gate` or `make ci`: neither passes
+# `--run-ignored`, so neither has ever run these three.
+[[profile.default.overrides]]
+filter = 'test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/)'
+threads-required = "num-cpus"
+
 [profile.ci]
 # Report a test that crosses this, but never terminate it.
 slow-timeout = { period = "60s" }
