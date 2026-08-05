@@ -20,3 +20,21 @@ failure-output = "immediate-final"
 # exactly this — 28 tests cancelled after one failure, with no durations for
 # any of them.
 fail-fast = false
+
+[profile.heavy]
+# THE HEAVY TIER's execution profile — `scripts/gate-full-heavy.sh` passes
+# `--profile heavy`. It exists for one setting, and the argument for that
+# setting is already made above under `[profile.ci]`: a fail-fast run cancels
+# the rest, and The Siding lost a whole heavy-tier run to exactly that.
+#
+# The Siding fixed `make ci`. The paths that actually RUN the heavy tier —
+# `make gate-full` and `make heavy-remote` — inherited `[profile.default]`
+# and kept paying. The 2026-08-05 run against 53fdd77b is the receipt: a
+# deliberate assertion failure at 149 s cancelled the run, and the tier's
+# last long battery was SIGTERM'd 14,143 s in without ever completing, then
+# counted in the summary as a FAILURE when it had simply never been run.
+#
+# A SEPARATE PROFILE, not an edit to `[profile.default]`: that profile is
+# shared with `make gate` and must keep behaving exactly as it did. A profile
+# inherits from `default`, so everything else here is unchanged.
+fail-fast = false

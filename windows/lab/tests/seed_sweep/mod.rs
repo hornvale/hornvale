@@ -36,16 +36,50 @@ const THREADS_ENV: &str = "HV_SEED_SWEEP_THREADS";
 /// How many workers [`map_seeds`] spawns for `count` seeds: the machine's
 /// available parallelism, overridable by [`THREADS_ENV`], never more than
 /// there are seeds and never less than one.
+///
+/// **Fails fast on a malformed override**, rather than falling back to the
+/// default. This is the one variable whose purpose is reproducing a
+/// byte-identity proof: a typo that silently restored full parallelism, or a
+/// `0` that silently meant serial, would make the check quietly measure
+/// something other than what the operator asked for — the failure mode a
+/// verification knob can least afford.
 fn thread_budget(count: usize) -> usize {
-    let requested = std::env::var(THREADS_ENV)
-        .ok()
-        .and_then(|v| v.trim().parse::<usize>().ok())
-        .unwrap_or_else(|| {
-            std::thread::available_parallelism()
-                .map(|n| n.get())
-                .unwrap_or(1)
-        });
+    let requested = match std::env::var(THREADS_ENV) {
+        Err(_) => std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1),
+        Ok(raw) => parse_threads(&raw).unwrap_or_else(|| {
+            panic!(
+                "{THREADS_ENV}={raw:?} is not a positive integer. It sets the seed sweep's \
+                 worker count; `1` reproduces the serial loop exactly. Unset it for the \
+                 machine's available parallelism — it is never inferred from a malformed \
+                 value, because this is the knob a byte-identity proof is driven by."
+            )
+        }),
+    };
     requested.clamp(1, count.max(1))
+}
+
+/// The accepted spellings of [`THREADS_ENV`], as a pure function so the
+/// reject-vs-accept boundary is unit-testable without mutating the process
+/// environment (which would race the other tests in the same binary).
+/// `None` means "malformed — refuse", never "use the default".
+fn parse_threads(raw: &str) -> Option<usize> {
+    raw.trim().parse::<usize>().ok().filter(|&n| n > 0)
+}
+
+/// The override's accept/reject boundary. `0` and a typo must both be
+/// REFUSALS, not silent fallbacks — a knob that exists to drive a
+/// byte-identity proof may not quietly measure something else.
+#[test]
+fn the_thread_override_refuses_zero_and_nonsense() {
+    assert_eq!(parse_threads("8"), Some(8));
+    assert_eq!(parse_threads("  4\n"), Some(4));
+    assert_eq!(parse_threads("1"), Some(1));
+    assert_eq!(parse_threads("0"), None);
+    assert_eq!(parse_threads("eight"), None);
+    assert_eq!(parse_threads("-2"), None);
+    assert_eq!(parse_threads(""), None);
 }
 
 /// Run `f` once per seed across the available CPUs, returning the results in

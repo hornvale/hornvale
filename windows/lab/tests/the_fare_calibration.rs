@@ -1710,6 +1710,15 @@ mod weathering {
         // order. Set `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop
         // exactly. Only the PROGRESS lines are now interleaved (they are
         // liveness output, not readout).
+        //
+        // `{seed}` therefore reads as an identifier now, not an ordinal, and
+        // a monotone completion counter would read better. The text stays
+        // VERBATIM anyway, and the reason is not that stderr is a committed
+        // artifact — it is not. It is that the serial-vs-parallel diff which
+        // proved this refactor byte-identical compares this stream line for
+        // line: changing the text would invalidate the proof and force it to
+        // be re-run at full cost. Change it in a commit that re-runs that
+        // diff, or not at all.
         let readouts: Vec<FullSeedReadout> = seed_sweep::map_seeds(PREREGISTERED_SEEDS, |seed| {
             let readout = build_full_readout(seed, &wc);
             // Per-seed progress: The Mire (and this campaign's own pilot
