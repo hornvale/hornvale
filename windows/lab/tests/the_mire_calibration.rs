@@ -150,6 +150,42 @@ const N_DAYS: usize = 12;
 /// `|latitude|` band edges in degrees: equatorial, temperate, polar.
 const BANDS: [(f64, f64); 3] = [(0.0, 30.0), (30.0, 60.0), (60.0, 90.0)];
 
+/// H1's FALSIFIED all-land swing median, pinned as a WITNESS (never a
+/// claim) after the original `>= 0.05` floor failed exactly as The Mire's
+/// chronicle (book/src/chronicle/the-mire.md) records. Not a new floor to
+/// clear -- the measured value itself, frozen so a FUTURE change that
+/// moves it reddens this test, rather than the test staying red forever on
+/// a hypothesis everyone already knows failed.
+///
+/// Freshly re-measured (not copied from the chronicle) on `the-fare`'s
+/// merged HEAD (`c2707a36`, absorbing The Keeping's step B -- settlement
+/// placement, upstream of the connection graph H1 reads) at the full
+/// 200-seed population: **0.0095, an EXACT match to the chronicle's
+/// published figure** despite the intervening placement-changing merge.
+/// See `.superpowers/sdd/2026-08-04-the-fare/mire-remeasure.md` for the
+/// full remeasurement and its comparison against the chronicle.
+const H1_PINNED_MEDIAN: f64 = 0.0095;
+
+/// The relative tolerance around [`H1_PINNED_MEDIAN`] the pin allows before
+/// reddening.
+///
+/// Chosen at 15%, the same tolerance The Fare's own F1 pin uses
+/// (`the_fare_calibration.rs`), for two reasons. First, consistency: both
+/// pins exist for the identical reason (a falsified floor converted to a
+/// witness at the same project-owner direction, in the same session) and
+/// there is no principled basis here for choosing a different number.
+/// Second, evidence: H1 was just re-measured across a settlement-placement-
+/// changing merge and came back an EXACT match (zero drift) -- tighter than
+/// even the sibling Fare settlement-frame statistics moved across that same
+/// merge (1.48%/2.09%, reported in `.superpowers/sdd/2026-08-04-the-fare/
+/// readout-postmerge.md`). 15% is therefore generous relative to the
+/// drift actually observed on this exact quantity, while remaining tight
+/// enough that a real mechanism-level change would very likely clear it --
+/// H1's own original floor sat at 0.05, more than 5x the pinned value, so a
+/// shift large enough to threaten that floor's territory would blow
+/// through a 15% band long before reaching it.
+const H1_PIN_TOLERANCE_FRAC: f64 = 0.15;
+
 /// See the module doc's "`DEFAULT_MIN_CONDUCTANCE`" section for the full
 /// story, including the first (broken) attempt this superseded: this is the
 /// pooled MEDIAN real `Adjacency`-edge conductance measured over the 5-seed
@@ -479,11 +515,38 @@ fn the_mires_preregistered_readout() {
         }
     }
 
+    // --- H1: PINNED AS A FALSIFIED WITNESS, not a floor. ---
+    //
+    // H1's original preregistered claim was `>= 0.05`. It FAILED, and The
+    // Mire's chronicle (book/src/chronicle/the-mire.md) records the
+    // falsification as the campaign's headline: weather-gated conductance
+    // does not move world topology at population scale, a median swing of
+    // 0.95% against a 5% floor. That failure is a finding, not a bug, and
+    // was never in question. What changed, at the project owner's
+    // direction, is what this test DOES with it after being long known
+    // red: the floor is converted from a CLAIM (something that must be
+    // cleared) to a WITNESS (a pin on the measured falsification, so the
+    // test reddens only if the number MOVES, not because the already-
+    // falsified hypothesis stays falsified forever). See
+    // [`H1_PINNED_MEDIAN`]'s doc comment for the pinned value and
+    // [`H1_PIN_TOLERANCE_FRAC`]'s for the tolerance and its reasoning.
+    let h1_tolerance = H1_PINNED_MEDIAN * H1_PIN_TOLERANCE_FRAC;
+    let h1_tolerance_pct = H1_PIN_TOLERANCE_FRAC * 100.0;
     assert!(
-        h1_median >= 0.05,
-        "H1 floor: weather-gated conductance did not move world topology (median swing \
-         {h1_median:.4} < 0.05) -- a real finding, not a test bug: the drama of weather may \
-         be local rather than systemic at min_conductance={min_conductance}"
+        (h1_median - H1_PINNED_MEDIAN).abs() <= h1_tolerance,
+        "H1 PIN (not a floor): all-land swing median was {h1_median:.4}, outside the \
+         pinned witness {H1_PINNED_MEDIAN} +/- {h1_tolerance:.4} ({h1_tolerance_pct:.0}%). \
+         THIS PINS A FALSIFIED HYPOTHESIS AS A WITNESS, NOT A CLAIM: H1's original \
+         preregistered floor (>= 0.05) FAILED, exactly as recorded in The Mire's \
+         chronicle (book/src/chronicle/the-mire.md) -- weather-gated conductance did \
+         not move world topology at population scale, and THAT FAILURE IS THIS \
+         CAMPAIGN'S FINDING. A red assertion here means the MEASURED NUMBER MOVED \
+         away from its pinned value -- something upstream changed (settlement \
+         placement, terrain, climate, or min_conductance={min_conductance}) -- it \
+         does NOT mean the falsified hypothesis was rescued, and it must never be \
+         read that way. Investigate what moved before touching this pin; do not \
+         widen the tolerance to silence a genuine drift, and do not treat a GREEN \
+         result here as H1 having passed."
     );
     assert!(
         h1_median <= 0.60,
@@ -491,22 +554,40 @@ fn the_mires_preregistered_readout() {
          12 sample days looks like a bug, not a season -- the ceiling is deliberate"
     );
 
-    let present_band_medians: Vec<f64> = band_medians.iter().filter_map(|m| *m).collect();
+    // --- H2: PINNED AS A FALSIFIED WITNESS to the MEASURED ordering, not
+    // the original (falsified) claim. ---
+    //
+    // H2's original claim was that swing increases monotonically WITH
+    // |latitude| band (equatorial <= temperate <= polar). FALSIFIED: The
+    // Mire's chronicle records the measured ordering as the REVERSE --
+    // equatorial > temperate > polar -- and that reversal is part of the
+    // same headline finding H1 records. This pins the ACTUAL measured
+    // ordering (a strict ordering check, not a magnitude tolerance -- an
+    // ordering has no natural "how close" to be tolerant about) rather than
+    // re-asserting the increasing claim that failed.
     assert!(
-        present_band_medians.len() >= 2,
-        "H2 needs at least two |latitude| bands with land to say anything about how the swing \
-         varies across them; only {} band(s) carried land in this population",
-        present_band_medians.len()
+        band_medians[0].is_some() && band_medians[1].is_some() && band_medians[2].is_some(),
+        "H2 needs all three |latitude| bands to carry land to pin the measured ordering; \
+         got {band_medians:?}"
     );
-    for w in present_band_medians.windows(2) {
-        assert!(
-            w[0] <= w[1],
-            "H2 (load-bearing) falsified: swing did not increase monotonically with \
-             |latitude| band -- band medians were {present_band_medians:?}. This is the \
-             headline finding if it fails, not a bug to fix by retuning MUD_PENALTY, \
-             SNOW_PENALTY, SNOW_IMPEDING_MM, or either substrate default."
-        );
-    }
+    let (h2_equatorial, h2_temperate, h2_polar) = (
+        band_medians[0].expect("checked above"),
+        band_medians[1].expect("checked above"),
+        band_medians[2].expect("checked above"),
+    );
+    assert!(
+        h2_equatorial > h2_temperate && h2_temperate > h2_polar,
+        "H2 PIN (not the original claim): measured band medians equatorial={h2_equatorial:.4} \
+         temperate={h2_temperate:.4} polar={h2_polar:.4} do not preserve the pinned ordering \
+         equatorial > temperate > polar. THIS PINS A FALSIFIED HYPOTHESIS AS A WITNESS, NOT \
+         A CLAIM: H2's original claim (swing increases monotonically WITH latitude, i.e. \
+         equatorial <= temperate <= polar) is FALSIFIED -- The Mire's chronicle \
+         (book/src/chronicle/the-mire.md) records the measured ordering as the REVERSE, \
+         equatorial > temperate > polar, and that reversal is this campaign's finding, not \
+         a bug to fix by retuning MUD_PENALTY, SNOW_PENALTY, SNOW_IMPEDING_MM, or either \
+         substrate default. A red assertion here means the ORDERING moved from what was \
+         measured, not that the falsified increasing-with-latitude claim was rescued."
+    );
 
     assert!(
         h3_ok,

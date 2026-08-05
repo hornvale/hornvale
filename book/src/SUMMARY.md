@@ -302,6 +302,7 @@
 - [The Mire](./chronicle/the-mire.md)
 - [The Keeping](./chronicle/the-keeping.md)
 - [The Tolerance](./chronicle/the-tolerance.md)
+- [The Fare](./chronicle/the-fare.md)
 
 # Appendix: The Frontier
 
