@@ -417,6 +417,41 @@ const LAT_BANDS: [(f64, f64); 3] = [(0.0, 30.0), (30.0, 60.0), (60.0, 90.0)];
 /// the 200-seed result; a falsified floor is this campaign's finding.**
 const F1_FLOOR_AT_40_DEG: f64 = 0.05;
 
+/// F1's FALSIFIED pooled median seasonal cost swing at the 40-degree band,
+/// pinned as a WITNESS (never a claim) after [`F1_FLOOR_AT_40_DEG`]'s
+/// preregistered assertion failed exactly as spec §6b predicted. This is
+/// NOT a new floor to clear — it is the measured value itself, frozen so a
+/// FUTURE change that moves it reddens this test, rather than the test
+/// staying green forever on a hypothesis everyone already knows failed.
+///
+/// Measured post-merge (commit `c2707a36`, absorbing The Keeping's step B —
+/// `feat(demography)!: decompose CarryingInput.habitable into is_land` —
+/// and 0103 step A1) at the full 200-seed population, and BYTE-IDENTICAL
+/// (all six printed decimals) to the pre-merge measurement recorded in
+/// `.superpowers/sdd/2026-08-04-the-fare/readout.md`. This confirms step
+/// B's settlement-placement change reaches the settlement-frame secondary
+/// (which moved) but not the geographic frame F1 reads (which did not).
+const F1_PINNED_MEDIAN_SWING_AT_40_DEG: f64 = 0.003698;
+
+/// The relative tolerance around [`F1_PINNED_MEDIAN_SWING_AT_40_DEG`] the
+/// pin allows before reddening.
+///
+/// Chosen at 15%, reasoned from a measurement actually taken rather than a
+/// round number picked in the abstract: the SAME post-merge run that
+/// re-confirmed F1's geographic-frame value byte-identical also re-measured
+/// the settlement-frame secondary, which moved 1.48% (`median_swing`) and
+/// 2.09% (`max_swing`) across a merge that changed settlement placement but
+/// touched nothing this pin reads. 15% is roughly 7-10x that observed
+/// sibling-statistic drift — wide enough to absorb ordinary incidental
+/// change elsewhere in the pipeline (a settlement-placement tweak, a minor
+/// unrelated refactor's floating-point reordering) without false-alarming,
+/// while still tight enough that a REAL shift to the weather-cost mechanism
+/// would very likely clear it: F1's own preregistered floor sat at 0.05,
+/// more than 13x the pinned value, so any change large enough to threaten
+/// that floor's territory would blow through a 15% band by a wide margin
+/// long before reaching it.
+const F1_PIN_TOLERANCE_FRAC: f64 = 0.15;
+
 /// F2's frozen floor (spec §6b): pooled re-routing fraction at the
 /// 40-degree separation band. Pilot: 16.27% pooled, well above this floor.
 const F2_FLOOR_AT_40_DEG: f64 = 0.10;
@@ -1901,22 +1936,40 @@ mod weathering {
              total_no_alt={total_settlement_no_alt}"
         );
 
-        // ---------------- F1: EXPECTED TO FAIL ----------------
+        // ---------------- F1: PINNED AS A FALSIFIED WITNESS ----------------
+        // F1's original preregistered claim was `>= F1_FLOOR_AT_40_DEG` (0.05,
+        // spec §6b). It failed as predicted -- the pilot measured 0.30-0.67%
+        // pooled across bands, an order of magnitude below a floor anchored to
+        // §5a's own doubling scale -- and that failure is this campaign's
+        // finding, not a bug. Post-falsification, at the project owner's
+        // direction, this assertion is converted from a CLAIM (a floor that
+        // must be cleared) to a WITNESS (a pin on the measured falsification,
+        // so the test reddens only if the number MOVES, never because the
+        // already-falsified hypothesis stays falsified). See
+        // F1_PINNED_MEDIAN_SWING_AT_40_DEG's doc comment for the pinned value
+        // and F1_PIN_TOLERANCE_FRAC's for the tolerance and its reasoning.
         let f1_measured = pooled_f1[HEADLINE_BAND_IDX];
+        let f1_tolerance = F1_PINNED_MEDIAN_SWING_AT_40_DEG * F1_PIN_TOLERANCE_FRAC;
+        let f1_tolerance_pct = F1_PIN_TOLERANCE_FRAC * 100.0;
         assert!(
-            f1_measured >= F1_FLOOR_AT_40_DEG,
-            "F1 floor: pooled median seasonal cost swing at the 40-degree band was \
-             {f1_measured:.6}, short of the preregistered floor {F1_FLOOR_AT_40_DEG} -- \
-             THIS IS A FINDING, NOT A BUG. Spec §6b recorded this exact expectation \
-             before the 200-seed run: the 5-seed pilot measured 0.30-0.67% pooled \
-             across bands, well under a floor anchored to §5a's own doubling scale, \
-             so failure here was predicted in the spec BEFORE this run rather than \
-             discovered after it. Do not weaken this floor, do not invert this \
-             assertion, do not #[ignore] this test to quiet it, and do not retune \
-             WEATHER_FACTOR_FLOOR, the surcharge formula, MUD_PENALTY, SNOW_PENALTY, \
-             or either substrate default to rescue it -- weather's cost effect on a \
-             single route, even pooled over a full year and 200 worlds, is real but \
-             small relative to journeys' overall cost, and that is the headline."
+            (f1_measured - F1_PINNED_MEDIAN_SWING_AT_40_DEG).abs() <= f1_tolerance,
+            "F1 PIN (not a floor): pooled median seasonal cost swing at the \
+             40-degree band was {f1_measured:.6}, outside the pinned witness \
+             {F1_PINNED_MEDIAN_SWING_AT_40_DEG} +/- {f1_tolerance:.6} \
+             ({f1_tolerance_pct:.0}%). THIS PINS A FALSIFIED HYPOTHESIS AS A \
+             WITNESS, NOT A CLAIM: F1's original preregistered floor (>= \
+             {F1_FLOOR_AT_40_DEG}, spec §6b) failed as predicted before this pin \
+             existed -- weather's cost effect on a re-planned route, even pooled \
+             over a full year and 200 worlds, is real but an order of magnitude \
+             below a floor anchored to §5a's own doubling scale, and THAT FAILURE \
+             IS THIS CAMPAIGN'S FINDING. A red assertion here means the MEASURED \
+             NUMBER MOVED away from its pinned value -- something upstream \
+             changed (terrain, climate, settlement placement, the weather-cost \
+             transform, or the sampling frame itself) -- it does NOT mean the \
+             falsified hypothesis was rescued, and it must never be read that \
+             way. Investigate what moved before touching this pin; do not widen \
+             the tolerance to silence a genuine drift, and do not treat a GREEN \
+             result here as F1 having passed."
         );
 
         // ---------------- F2 ----------------
