@@ -44,6 +44,8 @@ use hornvale_worldgen::{
 };
 use std::collections::BTreeSet;
 
+mod seed_sweep;
+
 /// AUTHORED (spec §5a), **not calibrated**: the floor
 /// `weather_conductance_factor`'s output is clamped to before inversion.
 ///
@@ -1700,15 +1702,32 @@ mod weathering {
         // the established median-of-per-seed-statistics convention
         // instead, for consistency with The Mire's own H1/H2).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-        let mut readouts: Vec<FullSeedReadout> = Vec::with_capacity(200);
-        for seed in PREREGISTERED_SEEDS {
-            readouts.push(build_full_readout(seed, &wc));
+        // The seed sweep runs across the machine's CPUs (see
+        // `seed_sweep::map_seeds`), but `readouts` is byte-identical to the
+        // serial loop this replaced: `build_full_readout` is a pure function
+        // of its seed, each worker holds its own `WorldSample` and shares
+        // nothing, and results come back in SEED order rather than completion
+        // order. Set `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop
+        // exactly. Only the PROGRESS lines are now interleaved (they are
+        // liveness output, not readout).
+        //
+        // `{seed}` therefore reads as an identifier now, not an ordinal, and
+        // a monotone completion counter would read better. The text stays
+        // VERBATIM anyway, and the reason is not that stderr is a committed
+        // artifact — it is not. It is that the serial-vs-parallel diff which
+        // proved this refactor byte-identical compares this stream line for
+        // line: changing the text would invalidate the proof and force it to
+        // be re-run at full cost. Change it in a commit that re-runs that
+        // diff, or not at all.
+        let readouts: Vec<FullSeedReadout> = seed_sweep::map_seeds(PREREGISTERED_SEEDS, |seed| {
+            let readout = build_full_readout(seed, &wc);
             // Per-seed progress: The Mire (and this campaign's own pilot
             // rounds) lost real wall-clock to runs with no visible progress
             // and nothing recoverable. Mandatory per spec §7 / the task
             // brief.
             eprintln!("PROGRESS seed={seed}/200 done");
-        }
+            readout
+        });
 
         let band_count = SEPARATION_BANDS_DEG.len();
 
@@ -2086,17 +2105,32 @@ mod weathering {
         let mut e2_pooled: [Vec<f64>; 5] = Default::default();
         let mut e3_pooled: [Vec<f64>; 5] = Default::default();
 
-        for seed in PREREGISTERED_SEEDS {
-            let r = build_exploratory_readout(seed, &wc);
+        // The seed sweep runs across the machine's CPUs (see
+        // `seed_sweep::map_seeds`), but the pooled populations are
+        // byte-identical to the serial loop this replaced:
+        // `build_exploratory_readout` is a pure function of its seed, each
+        // worker holds its own `WorldSample` and shares nothing, and results
+        // come back in SEED order — so the concatenation below appends each
+        // seed's raw swings in exactly the order the serial loop did. Set
+        // `HV_SEED_SWEEP_THREADS=1` to reproduce that serial loop exactly.
+        // Only the PROGRESS lines are now interleaved (liveness, not
+        // readout).
+        let per_seed: Vec<ExploratorySeedReadout> =
+            seed_sweep::map_seeds(PREREGISTERED_SEEDS, |seed| {
+                let r = build_exploratory_readout(seed, &wc);
+                // Per-seed progress: mandatory for any run expected to exceed
+                // a few minutes (spec §7 / the task brief) -- this run is
+                // expected to take about as long as the preregistered
+                // readout.
+                eprintln!("PROGRESS seed={seed}/200 done (exploratory)");
+                r
+            });
+        for r in &per_seed {
             for k in 0..band_count {
                 e1_pooled[k].extend(r.e1_swings_by_band[k].iter().copied());
                 e2_pooled[k].extend(r.e2_swings_by_band[k].iter().copied());
                 e3_pooled[k].extend(r.e3_fracs_by_band[k].iter().copied());
             }
-            // Per-seed progress: mandatory for any run expected to exceed a
-            // few minutes (spec §7 / the task brief) -- this run is
-            // expected to take about as long as the preregistered readout.
-            eprintln!("PROGRESS seed={seed}/200 done (exploratory)");
         }
 
         eprintln!("=== The Fare: EXPLORATORY readout (post-hoc, NOT preregistered; 200 seeds) ===");

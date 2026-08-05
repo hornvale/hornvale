@@ -85,4 +85,13 @@ filter="$(printf '%s\n' "$names" | awk '{printf "%stest(/%s$/)", sep, $0; sep=" 
 
 echo "== heavy tier: $(printf '%s\n' "$names" | grep -c .) tests"
 # --run-ignored only: run the ignored tests; the filterset restricts to heavy.
-cargo nextest run --workspace --run-ignored only -E "$filter"
+#
+# `--profile heavy` is load-bearing and the reason is written out in
+# .config/nextest.toml: it turns fail-fast OFF. Without it this command
+# inherits [profile.default], and ONE red test cancels every battery still
+# running — the 2026-08-05 run lost its last long battery to SIGTERM 14,143 s
+# in, then reported it as a failure it had never actually run. The Siding
+# diagnosed this and fixed `make ci`; the heavy tier's own path did not get
+# the fix until The Scatter. A tier where a deliberate red is normal (a
+# preregistered falsification pinned as a witness) must never be fail-fast.
+cargo nextest run --profile heavy --workspace --run-ignored only -E "$filter"

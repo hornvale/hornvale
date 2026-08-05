@@ -47,6 +47,26 @@ one percent, so it is a genuine measurement, and quietly dropping a real
 result would be the less honest edit. Read it as an accidental but valid
 sample, not as a second deliberate run.
 
+One `heavy` row is **reconstructed, not written by `timed.sh`**: the
+2026-08-05 row at commit `7138ce75` (wall 2431.901s). The Scatter dispatched
+two heavy runs an hour apart to choose between two scheduling shapes, and
+`heavy-run.sh` writes this ledger inside the *shared* `hornvale-heavy-wt`
+worktree — so the second dispatch's `reset --hard` discarded the first run's
+ledger edit before anyone had committed it. The row is rebuilt verbatim from
+that run's own `timed.sh` line (`wall=2431.901s user=44463.133s
+sys=244.831s cpu_ratio=18.38`), which is the same arithmetic the script would
+have written, and its log survives at
+`/tmp/hornvale-heavy/heavy-20260805T194052Z-3264372.log` on `lefford`. Kept
+for the same reason as the accidental `gate` row above — it is a genuine
+measurement, and it is half of the comparison the row below it exists to
+settle. **Any two heavy dispatches in a row lose the first one's ledger edit
+this way**; commit the row before dispatching again.
+
+Both 2026-08-05 `heavy` rows also carry a hand-filled `branch` cell.
+`heavy-run.sh` records the run worktree's branch, and a `HV_HEAVY_REF`
+dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
+`the-scatter`.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -351,3 +371,6 @@ sample, not as a second deliberate run.
 | 2026-08-05T15:18:51Z | gate | 372.518 | 2449.326 | 96.419 | 6.83 | 0 | 3511485c | the-tolerance | Greyjoy | 10 |
 | 2026-08-05T15:24:07Z | gate | 290.841 | 2398.507 | 53.861 | 8.43 | 0 | 3511485c | the-tolerance | Greyjoy | 10 |
 | 2026-08-05T21:17:18Z | rebaseline | 159.817 | 164.234 | 7.674 | 1.08 | 0 | e8f13103 | campaign/the-tilth | ambrose | 12 |
+| 2026-08-05T20:21:26Z | heavy | 2431.901 | 44463.133 | 244.831 | 18.38 | 0 | 7138ce75 | the-scatter | lefford | 40 |
+| 2026-08-05T21:10:09Z | heavy | 2773.022 | 51741.211 | 565.566 | 18.86 | 0 | 239d24a7 | the-scatter | lefford | 40 |
+| 2026-08-05T22:09:38Z | gate | 289.986 | 2413.614 | 55.767 | 8.52 | 0 | d578dcbe | the-scatter | Greyjoy | 10 |
