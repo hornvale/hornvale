@@ -292,13 +292,13 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// packs against the flat, psychology-only `carrying_inputs_of` /
 /// `species_carrying_input` / `carrying_capacity` path this guard used to
 /// recompute — Task A15a cut genesis over onto the niche-differentiated K
-/// (`niche_per_species_k`, The Niche) the coexistence stack actually
+/// (`per_species_suitability`, The Niche) the coexistence stack actually
 /// competes against (windows/worldgen `build_to`'s `climate+settlements`
 /// stage). Comparing committed population against the OLD flat Σ K would
 /// measure the invariant against a capacity the population was never
 /// realized from. Σ K is now recomputed via
 /// `hornvale_worldgen::demography_report_from` — the pure, deterministic
-/// accessor that mirrors genesis's own `niche_per_species_k` → `coexist::
+/// accessor that mirrors genesis's own `per_species_suitability` → `coexist::
 /// pack` → `stack_condense::condense_stack` pipeline byte-for-byte at the
 /// frozen `BETA`/`FLOOR` constants — summing `per_species_k` over every
 /// peopled species and every cell, exactly as the brief's re-basing
@@ -453,7 +453,12 @@ fn world_level_population_conserves_against_total_capacity() {
     let climate = hornvale_worldgen::climate_from(&world, &terrain)
         .expect("reconstruct climate from committed facts");
     let geo = terrain.geosphere();
-    let suitability = hornvale_demography::carrying_capacity(
+    // NOTE (decision 0103): this is a CAPACITY, not a suitability. The doc
+    // comment above and the assertion messages below predate 0103 and say
+    // "suitability" throughout where they mean capacity — the recorded
+    // reasoning is left as it was written, but the binding is named honestly so
+    // the transposition stops here rather than being copied onward.
+    let productivity = hornvale_demography::carrying_capacity(
         geo,
         &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
     );
@@ -488,7 +493,7 @@ fn world_level_population_conserves_against_total_capacity() {
     // capacity of the ground they actually set them on.
     let occupied_suitability: f64 = occupied_cells
         .iter()
-        .map(|&cell| *suitability.get(cell))
+        .map(|&cell| productivity.at(cell))
         .sum();
     let total_pop: f64 = settlements
         .iter()

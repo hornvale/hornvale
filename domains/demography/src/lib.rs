@@ -85,9 +85,14 @@ pub fn report(
     floor: f64,
     threshold: f64,
 ) -> DemographyReport {
+    // `_k` is accurate here — these ARE capacities, one per species' inputs.
+    // The unwrap is explicit because `condense_tagged` / `coexist::pack` /
+    // `byproducts` still take bare `CellMap<f64>`; typing them through is
+    // follow-on work, and decision 0103's guarantee is at the demography →
+    // worldgen boundary, which `carrying_capacity`'s return type now holds.
     let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
         .iter()
-        .map(|(tag, inputs)| (*tag, carrying_capacity(geo, inputs)))
+        .map(|(tag, inputs)| (*tag, carrying_capacity(geo, inputs).into_cell_map()))
         .collect();
     let settlements = condense_tagged(&per_species_k, geo, threshold);
 
@@ -126,7 +131,7 @@ mod tests {
     fn report_holds_k_fields_and_settlements() {
         let geo = Geosphere::new(3);
         let inputs = CellMap::from_fn(&geo, |c| CarryingInput {
-            habitable: true,
+            is_land: true,
             temperature_c: 20.0,
             moisture: 0.7,
             freshwater: 0.6,
@@ -149,7 +154,7 @@ mod tests {
         );
         assert!(
             !rep.settlements.is_empty(),
-            "a habitable world condenses settlements"
+            "a land world condenses settlements"
         );
     }
 }

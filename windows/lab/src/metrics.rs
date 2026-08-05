@@ -1674,7 +1674,7 @@ pub fn registry() -> Vec<Metric> {
                             continue;
                         }
                         let lat = geo.coord(cell).latitude.abs();
-                        let kv = *k.get(cell);
+                        let kv = k.at(cell);
                         if lat < 30.0 {
                             trop_sum += kv;
                             trop_n += 1;
@@ -3751,7 +3751,7 @@ fn spearman_defensibility_capacity(v: &FullView) -> MetricValue {
             continue;
         }
         defs.push(hornvale_worldgen::weakest_point_defensibility(&graph, cell));
-        caps.push(*capacity.get(cell));
+        caps.push(capacity.at(cell));
     }
     if defs.len() < 2 {
         return MetricValue::Absent;
@@ -7246,6 +7246,25 @@ mod tests {
         // of placement reshuffling rather than a directional drift in the
         // naming machinery, exactly as every entry above records. Both peoples
         // still read inside the 2-3 target.
+        //
+        // The Keeping step B re-pin (2026-08-04, on main):
+        // `CarryingInput.habitable` decomposed to `is_land`, so the arid and
+        // very-hot bands the old conflated flag excluded outright now carry
+        // (low) capacity — main measured 254/97 -> 252/97 on ITS side of the
+        // fork, denominator holding at 97 because seed 42's 70 newly-reachable
+        // cells all fall below the viability floor.
+        //
+        // MERGE (2026-08-04, main absorbed into the-tolerance): RE-MEASURED on
+        // the merged tree, and the composed value is 111/43 — i.e. The
+        // Keeping's +2 syllables do NOT survive composition, and the pin HOLDS
+        // at the branch's number. Verified as a real inertness rather than a
+        // lost merge by a matched-pair control on the merged tree: flipping
+        // `CarryingInput.is_land` back to the pre-Keeping habitability mask
+        // leaves seed 42's DEFAULT (generated-sky) world byte-identical at 8246
+        // facts, while the same flip moves the tier-0 seed-42 world 10682 ->
+        // 10850 facts. Step B is live; it simply lands on ground that carries
+        // no surviving kobold settlement once warlikeness is drawn per
+        // settlement. This metric reads the generated-sky world.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
             MetricValue::Number(111.0 / 43.0)

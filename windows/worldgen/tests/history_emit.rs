@@ -620,9 +620,30 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// claim is unchanged and is still the one The Salt froze — the material fourth
 /// key barely moves the stratigraphy, three restacking sites across three
 /// worlds — only the witness moved with the corpus underneath it.
+///
+/// The Keeping step B re-pin (2026-08-04, on main): `CarryingInput.habitable`
+/// decomposed to `is_land`, opening the arid/very-hot bands to low capacity.
+/// Main measured 42 -> 1, 7 -> 6, 1000 -> 0 on ITS side of the fork; seed 7
+/// gained the most newly-reachable ground (3,126 cells, 16.4% of its land,
+/// against 0.6% on seed 42), so more of its cells carry stacked occupations for
+/// the fourth key to reorder.
+///
+/// MERGE re-pin (2026-08-04, main absorbed into the-tolerance): both changes
+/// redecide settlement survival, so the composed counts are neither branch's
+/// (0/2/1) nor main's (1/6/0) — RE-MEASURED on the merged tree: **42 -> 0,
+/// 7 -> 0, 1000 -> 1**. The CLAIM is unchanged and is still the one The Salt
+/// froze: the material fourth key barely moves the stratigraphy — here a single
+/// restacking site across three worlds of ~19k land cells each, which is
+/// "barely" a fortiori.
+///
+/// NOTE ON THE WITNESS. At 0/0/1 this test is close to degenerate: a dead
+/// fourth key would read 0/0/0 and only seed 1000 separates the two. It is
+/// retained as the BLAST-RADIUS measurement it has always been, not as the
+/// mechanism's pin — `same_day_layers_order_by_material_facts_not_mint_order`
+/// asserts the fourth key's behaviour directly and fails if it stops working.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 0usize), (7, 2), (1000, 1)] {
+    for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 1)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

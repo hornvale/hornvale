@@ -53,7 +53,7 @@
 //! **A CRITICAL blind spot this statistic has, found at review, proved
 //! algebraically, and left in rather than quietly patched over: elevation's
 //! `devotion` contributes EXACTLY ZERO to `cv_ratio`, in isolation.**
-//! `niche_per_species_k` (`windows/worldgen/src/lib.rs`) evaluates elevation
+//! `per_species_suitability` (`windows/worldgen/src/lib.rs`) evaluates elevation
 //! with a HARD floor of `0.0` (sovereignty buffers physiology, never
 //! geometry): `cn.elevation.eval(s.elevation, 0.0)` reduces the general
 //! formula to exactly `devotion_E * bump_E(cell)`, where `bump_E` depends
@@ -68,7 +68,7 @@
 //! nonzero sovereignty floor and are NOT scale-invariant this way, because a
 //! nonzero additive floor breaks the pure-multiplier property - see
 //! `sovereignty_floor` and each axis's `eval` call in
-//! `niche_per_species_k`.) This is a structural fact about the statistic,
+//! `per_species_suitability`.) This is a structural fact about the statistic,
 //! unaffected by the Task 5b re-authoring below; it stays true of the
 //! current niche too.
 //!
@@ -110,7 +110,7 @@
 //! this.
 //!
 //! World-building idiom (decision 0092 test-fixture posture) and the
-//! `niche_per_species_k` build-local-index contract are reused verbatim from
+//! `per_species_suitability` build-local-index contract are reused verbatim from
 //! `windows/worldgen/tests/generalist_baseline.rs` (Task 1) - read that
 //! file's header first.
 #![allow(clippy::disallowed_methods)]
@@ -120,7 +120,7 @@ use hornvale_kernel::{ConditionResponse, KindId, Seed};
 use hornvale_species::{BiosphereTraits, ConditionNiche, biosphere_registry};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, niche_per_species_k, sky_of, terrain_of,
+    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// The viability floor below which a cell's K is ecological noise rather
@@ -153,7 +153,7 @@ const MIN_SETTLEABLE_CELLS: usize = 100_000;
 /// **Measured values this constant was set from** (mesh level 6, the
 /// default `Geosphere` subdivision - 40,962 cells/world, ~110 km
 /// resolution; seeds 1..=30; cell filter: pooled over cells where EITHER
-/// compared kind's `niche_per_species_k` output clears
+/// compared kind's `per_species_suitability` output clears
 /// [`VIABILITY_FLOOR`]). Superseded by the Task 5b re-authoring
 /// (2026-08-04, `domains/species/src/lib.rs`'s `human_condition_niche()`) -
 /// current numbers:
@@ -187,7 +187,7 @@ fn coefficient_of_variation(vals: &[f64]) -> f64 {
 }
 
 /// Build `seed` to full depth and return `(fits_a, fits_b)`: the per-cell K
-/// (`niche_per_species_k`'s raw output) for `bio_a` and `bio_b` respectively,
+/// (`per_species_suitability`'s raw output) for `bio_a` and `bio_b` respectively,
 /// over exactly the cells where at least one of the two clears
 /// [`VIABILITY_FLOOR`] - the same "settleable by at least one roster member"
 /// filter `generalist_baseline.rs` applies over the five-people roster,
@@ -226,10 +226,10 @@ fn measure_fit_pair(
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
-    let ks = niche_per_species_k(
+    let ks = per_species_suitability(
         geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
     );
-    // Build-local dense index -> slot mapping (niche_per_species_k's doc
+    // Build-local dense index -> slot mapping (per_species_suitability's doc
     // comment): `bios` above has bio_a at index 0, bio_b at index 1, so the
     // tag IS the position - looked up rather than assumed, matching the
     // rebuild-per-seed discipline `generalist_baseline.rs` documents.

@@ -86,7 +86,14 @@ spreading ridges, trenches at subduction zones, upwelling zones from
 wind × coastline). A **habitability** mask — land, with liquid water, in a
 tolerable temperature band — is the non-opinionated answer to "where could
 a vale-like place stand," and it is where the Lab's genuinely unknown
-number lives (the next chapter). None of this is committed to the ledger:
+number lives (the next chapter). It is worth being precise about what that
+mask is *not*, since it was briefly asked to be both: it describes ground a
+generic vale-dweller would tolerate, and it no longer gates who may live
+anywhere. Habitability in the fuller sense is a relation between a species
+and a place, so it belongs to each species' own tolerance curves; only
+*dryness* is a property of the ground, and only dryness still gates
+productivity ([The Keeping](../chronicle/the-keeping.md)). None of this is
+committed to the ledger:
 biome and habitability are *fields*, recomputed from the same seed every
 time, so the tier-0 `biome` *fact* that the Vale holds has no registry
 conflict with the globe's biome *field*.

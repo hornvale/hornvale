@@ -3,7 +3,7 @@
 //!
 //! T1 built `mineral_supply_field`/`forage_supply_field`/`DETRITUS_AMBIENT`
 //! as pure builders nothing yet consumed. T2 wires them into
-//! `niche_per_species_k` via [`hornvale_worldgen::axis_supply`], the axis
+//! `per_species_suitability` via [`hornvale_worldgen::axis_supply`], the axis
 //! dot product that replaces the old `base_carrying(cell) × Σuptake` scalar
 //! — a niche direction now SELECTS a spatial combination instead of merely
 //! rescaling one shared field, so two species with different uptake
@@ -38,7 +38,7 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     )
     .unwrap();
 
-    // Reach the terrain handle the way `niche_per_species_k`'s callers do
+    // Reach the terrain handle the way `per_species_suitability`'s callers do
     // (`terrain_of`), then its geosphere — the single construction site for
     // the terrain provider on a built world.
     let terrain = hornvale_worldgen::terrain_of(&world).unwrap();
@@ -159,7 +159,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
-    let ks = hornvale_worldgen::niche_per_species_k(
+    let ks = hornvale_worldgen::per_species_suitability(
         geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
     );
 
@@ -261,7 +261,7 @@ fn different_uptake_vectors_peak_in_different_cells() {
 
 /// Every `stack_settlement`'s `.dominant` tag, mapped back to its `KindId`
 /// label via `wc.biosphere`'s ascending-`KindId` order — the SAME
-/// build-local dense-index contract `niche_per_species_k`'s doc comment
+/// build-local dense-index contract `per_species_suitability`'s doc comment
 /// spells out (never identity, valid only within this one report call).
 /// Counts settlements per dominant kind over the WHOLE roster (fauna
 /// included) — [`hornvale_worldgen::demography_report_from`]'s stack, not the
@@ -437,18 +437,18 @@ fn settlements_and_dominants_diversify_on_seed_42() {
 /// `species_carrying_input` + `hornvale_demography::carrying_capacity` — a
 /// psychology-scaled, PEOPLED-ONLY carrying-capacity path that predates The
 /// Niche's per-species differentiation and has never been re-pointed onto
-/// it (settlement genesis moved onto `niche_per_species_k` at Task A15a,
+/// it (settlement genesis moved onto `per_species_suitability` at Task A15a,
 /// but this grounding metric stayed on the older, simpler path — the two
 /// coexist, per the `species_carrying_input` doc comment). The per-axis
 /// vector supply this campaign built (`mineral_supply_field`/
 /// `forage_supply_field`/`DETRITUS_AMBIENT`) is consumed ONLY by
-/// `niche_per_species_k` (via `axis_supply`), so it cannot touch this
+/// `per_species_suitability` (via `axis_supply`), so it cannot touch this
 /// gradient's inputs at all — confirmed here, live, rather than assumed:
 /// the measured ratio matches `confluence.rs`'s pinned 31.2563 exactly (T3
 /// changed nothing upstream of it), so no `MINERAL_SUPPLY_SCALE`/
 /// `FORAGE_FRACTION`/`CONDENSATION_THRESHOLD` re-fit is needed for THIS
 /// metric. (T3's actual settlement-COUNT investigation — a different K,
-/// `niche_per_species_k`, the one settlement genesis and the menagerie
+/// `per_species_suitability`, the one settlement genesis and the menagerie
 /// strongholds test use — lives in `confluence.rs`'s settlement-count test
 /// and this file's `settlements_and_dominants_diversify_on_seed_42`.)
 #[test]
@@ -479,7 +479,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
                 continue;
             }
             let lat = geo.coord(cell).latitude.abs();
-            let kv = *k.get(cell);
+            let kv = k.at(cell);
             if lat < 30.0 {
                 trop_sum += kv;
                 trop_n += 1;
@@ -503,7 +503,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     );
     // Pinned to the merged-tree live reading: proof of ZERO drift from the
     // vector supply, not merely "still above the floor" — the vector supply's
-    // code path (`niche_per_species_k`/`axis_supply`) is disjoint from this
+    // code path (`per_species_suitability`/`axis_supply`) is disjoint from this
     // one (`carrying_inputs_of`/`species_carrying_input`/`carrying_capacity`),
     // so this ratio is BY CONSTRUCTION the pure scalar-path reading and the
     // vector supply cannot move it. The absolute value tracks the climate
@@ -522,9 +522,17 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // (a temperate/subtropical generalist, per its own condition niche),
     // and by this test's own construction is a new term in `trop_sum`/
     // `pole_sum` — moving the ratio to 31.0099.
+    // The Keeping step B re-pin (2026-08-04): `CarryingInput.habitable`
+    // decomposed to `is_land`, so the arid and very-hot bands the old conflated
+    // flag excluded outright now carry (low) scalar K — 31.0099 -> 31.0649.
+    // The DIRECTION is the check that this is the intended mechanism and not
+    // contamination: hot-and-arid ground is tropical/subtropical, never polar
+    // (the poles stay closed by `temp_response`, zero below 2 C), so opening it
+    // must add more to `trop_sum` than to `pole_sum` and the ratio must RISE.
+    // It rose, by 0.18%. The preregistered floor of 3 still clears tenfold.
     assert!(
-        (ratio - 31.0099).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0099, the post-Generalist \
+        (ratio - 31.0649).abs() < 1e-3,
+        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0649, the post-Keeping-B \
          scalar-path reading) — something outside the-demesne's per-axis \
          supply fields moved this K"
     );
@@ -536,7 +544,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
 // test doc, which established this same fact for The Confluence's
 // freshwater re-point), and neither does anything T1/T2/T3 added here
 // (`mineral_supply_field`/`forage_supply_field`/`axis_supply`/
-// `niche_per_species_k` are pure functions of terrain/climate/biosphere —
+// `per_species_suitability` are pure functions of terrain/climate/biosphere —
 // no `Seed`, no `Stream`, no RNG). The per-axis vector supply changes WHICH
 // cells a species' K peaks in (a derived-FORMULA change), never adds or
 // reorders a seed draw, so the settlement seed-derivation's

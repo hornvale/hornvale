@@ -164,6 +164,43 @@ measured, on a people authored for desert that has no desert at all. The
 gradient claim and the conservation guarantee are untouched; what is now known
 to be beyond the prior is *placing a species where its traits say it belongs*.
 
+*Re-scored down by [The Keeping](./chronicle/the-keeping.md), which contradicts
+the sentence immediately above.* The gradient claim is **not** untouched — not
+because the gradient is wrong, but because the measurement offered for it could
+not have disconfirmed it. The polar term of that ratio is exactly zero often
+enough that the metric floors it at one percent of a baseline unit to avoid a
+division by zero, so a ratio computed against a floored zero is largely a
+statement about the floor. The figure is recorded in the metric's own
+documentation, one line from the claim it undermines. Two further problems ride
+along: roughly one world in twenty is tidally locked, and a locked world's warmth
+is organised around the point beneath its star rather than by latitude, so a
+tropical-versus-polar comparison on those worlds samples hot and cold ground
+alike and reports almost no gradient — they sit inside the pinned average, in
+exactly the failure mode this section claims clearance from. And the productivity
+field is not the published model its own documentation cites: that model rises
+monotonically with temperature and never reaches zero, while the implementation
+is a symmetric tent that reaches zero a little above freezing, which is why no
+world is inhabited cold.
+
+What survives untouched is the **conservation** guarantee — the sum of every
+settlement's population equalling the sum of the field is by-construction
+arithmetic, not a measured bet, and nothing here touches it. What is demoted is
+the *evidential standing* of the gradient claim, which is a subtler and more
+uncomfortable thing than being wrong: the reading itself is plausible, sitting
+inside the band the published model predicts from theory alone. It was the
+evidence that was not evidence. This chapter's own standard — preregistered,
+measured, frozen only after confirmation — was met in form and not in substance,
+and the campaign that found it was looking for something else entirely.
+
+The Vacancy's re-score deserves credit here for seeing the symptom first: it
+recorded that capacity is *"a supply term spanning orders of magnitude multiplied
+by a condition product bounded in the unit interval,"* so an authored niche *"can
+only modulate the primary-production signal, never select against it."* That is
+the same defect, named a campaign early. The Keeping supplies the cause — the base
+field takes the scarcer of its two limits while the layer above it multiplies four
+tolerances together, so one half of the model obeys the law of the minimum and the
+other half does not — and measures the resulting compression at roughly fourfold.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
