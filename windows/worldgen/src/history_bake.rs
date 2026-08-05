@@ -406,12 +406,15 @@ const NEUTRAL_HORIZON: f64 = 0.5;
 /// The Tolerance (2026-08-04) re-derived that, because the numbers behind it
 /// moved: this used to say the axis reaches only THREE values patron-side and
 /// that the short extreme (bugbear, 0.3) is the only `Communal` short-horizon
-/// people. Both halves are now false — `threat_response` is drawn per
-/// settlement, so no people is vetoed out of patronhood and the whole roster is
-/// reachable at **five distinct thresholds** ([`Bake::min_vassal`]), while the
-/// shortest reachable horizon is gnoll's 0.2, which is `Hierarchic`. The
-/// conclusion survives both: five cuts of one band is still coarse, and the two
-/// `Communal` peoples remain bugbear (0.3) and kobold (0.8), so the horizon
+/// people. Both halves are false, and the second one had ALREADY been false
+/// before this campaign — The Vacancy's gnoll is authored at horizon 0.2 with
+/// `threat_response` 0.85, so it has cleared the raid gate and outflanked
+/// bugbear on the short end ever since, and it is `Hierarchic`, not `Communal`.
+/// The Tolerance then falsified the first half too: `threat_response` is drawn
+/// per settlement, so no people is vetoed out of patronhood and the whole
+/// roster is reachable at **five distinct thresholds** ([`Bake::min_vassal`]).
+/// The conclusion survives both: five cuts of one band is still coarse, and the
+/// two `Communal` peoples remain bugbear (0.3) and kobold (0.8), so the horizon
 /// axis still does not vary independently of social form across the roster.
 ///
 /// Three is chosen against the measured range rather than fitted: live worlds
@@ -1946,23 +1949,32 @@ impl<'a> Bake<'a> {
     /// no-spoils vetoes are again the only conditions, so this cannot quietly
     /// become a floor on vassal size in general.
     ///
-    /// **The whole roster is reachable, and that changed in The Tolerance.**
-    /// The bound stated here used to be three: only bugbear (horizon 0.3),
-    /// hobgoblin (0.5) and kobold (0.8) ever became patrons, because goblin was
-    /// vetoed out of raiding by `RAID_DISPOSITION_MIN` as a *people* and human
-    /// had not been authored yet. `threat_response` is now drawn per
-    /// settlement, so no people is vetoed as such: a particular goblin or human
-    /// community can clear the gate and take a vassal.
+    /// **The whole roster is reachable, and this bound has now gone stale
+    /// twice.** It was authored as *three* — bugbear (horizon 0.3), hobgoblin
+    /// (0.5), kobold (0.8) — which was correct on the four-people roster of the
+    /// time, goblin being the one vetoed out of raiding by
+    /// `RAID_DISPOSITION_MIN`. Two things have invalidated it since:
     ///
-    /// All **six peoples** therefore reach patronhood — gnoll 0.2, bugbear 0.3,
-    /// goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8 — admitting vassals
-    /// above `0.029 × eff`, `0.044 × eff`, `0.073 × eff`, `0.073 × eff`,
-    /// `0.110 × eff` and `0.117 × eff` respectively. That is **five distinct
-    /// THRESHOLDS**, not six: this gate is linear in the horizon
-    /// (`effective_horizon × crash_basin_fraction() × eff`), so goblin and
-    /// hobgoblin — authored at the same 0.5 — map to the same cut. Five
-    /// distinct cuts of one band, where it used to be three, and still not the
-    /// continuum the formula could express.
+    /// 1. **The Vacancy added the gnoll**, whose `threat_response` of 0.85
+    ///    clears the gate easily, so its horizon of **0.2 has been reachable
+    ///    patron-side ever since** — and is *shorter* than bugbear's. The bound
+    ///    became four values and the comment was never updated. (The Generalist
+    ///    then added human at `threat_response` 0.5, which the gate vetoed, so
+    ///    that campaign left the count at four.)
+    /// 2. **The Tolerance** made `threat_response` a per-settlement draw, so no
+    ///    people is vetoed *as such*: a particular goblin or human community
+    ///    can clear the gate and take a vassal.
+    ///
+    /// All **six peoples** therefore reach patronhood now — gnoll 0.2, bugbear
+    /// 0.3, goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8 — admitting
+    /// vassals above `0.029 × eff`, `0.044 × eff`, `0.073 × eff`,
+    /// `0.073 × eff`, `0.110 × eff` and `0.117 × eff` respectively. That is
+    /// **five distinct THRESHOLDS**, not six: this gate is linear in the
+    /// horizon (`effective_horizon × crash_basin_fraction() × eff`), so goblin
+    /// and hobgoblin — authored at the same 0.5 — map to the same cut. Five
+    /// distinct cuts of one band, where it was four before this campaign and
+    /// three when the comment was written, and still not the continuum the
+    /// formula could express.
     ///
     /// **Do not read "five" here as [`BakeConfig::time_horizon`]'s count.**
     /// That doc counts how many peoples sit *away from* `NEUTRAL_HORIZON`
@@ -4761,11 +4773,15 @@ mod tests {
         // all — which is precisely what a rule with no patron-side term looks
         // like when the demand happens never to bind.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
-        /// The immediate patron's horizon — bugbear's authored value, the
-        /// shortest sighted patron the shipped roster can produce.
+        /// The immediate patron's horizon — bugbear's authored value. The
+        /// **second**-shortest reachable, not the shortest: gnoll's 0.2 is
+        /// shorter and has been reachable patron-side since The Tolerance made
+        /// the raid gate a per-settlement draw (see the block comment above,
+        /// and [`BakeConfig::time_horizon`]).
         const IMMEDIATE: f64 = 0.3;
-        /// The generational patron's horizon — kobold's authored value, the
-        /// longest sighted one.
+        /// The generational patron's horizon — kobold's authored value, and
+        /// still the longest sighted on the roster (human's 0.75 is the next
+        /// highest).
         const GENERATIONAL: f64 = 0.8;
         /// Epochs driven: long enough for the relation to form, for the
         /// adaptive demand to climb into contact with the vassal's increment,
@@ -4903,11 +4919,18 @@ mod tests {
         // populations, same cells, same stream; the ONLY difference between the
         // arms is the patron people's authored `time_horizon`.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
-        /// The immediate patron's horizon — bugbear's authored value, the
-        /// shortest sighted patron the shipped roster produces.
+        /// The immediate patron's horizon — bugbear's authored value. The
+        /// **second**-shortest reachable, not the shortest: gnoll's 0.2 is
+        /// shorter and has been reachable patron-side since The Tolerance made
+        /// the raid gate a per-settlement draw (see
+        /// [`BakeConfig::time_horizon`]). The arms are unchanged by that —
+        /// this test asserts that a generational patron DECLINES a vassal an
+        /// immediate one takes, which is a claim about the two arms differing,
+        /// not about either being extremal.
         const IMMEDIATE: f64 = 0.3;
-        /// The generational patron's horizon — kobold's authored value, the
-        /// longest sighted one.
+        /// The generational patron's horizon — kobold's authored value, and
+        /// still the longest sighted on the roster (human's 0.75 is the next
+        /// highest).
         const GENERATIONAL: f64 = 0.8;
         /// The patron's population: comfortably over `DAUGHTER_POP ×
         /// RAID_MARGIN`, so dominance is never what decides either arm.
@@ -5050,13 +5073,16 @@ mod tests {
         // to read: only THREE values are reachable patron-side (bugbear 0.3 /
         // hobgoblin 0.5 / kobold 0.8, goblin being raid-vetoed), and bugbear is
         // both the short extreme AND the only `Communal` short-horizon people.
-        // Both halves are now false. `threat_response` is drawn per settlement,
-        // so every people reaches patronhood on some settlements and the
-        // reachable set is the whole roster — gnoll 0.2, bugbear 0.3, goblin
-        // 0.5, hobgoblin 0.5, human 0.75, kobold 0.8, i.e. FIVE distinct
-        // thresholds (goblin and hobgoblin share 0.5). And bugbear is no longer
-        // the short extreme: gnoll's 0.2 is shorter, and gnoll is `Hierarchic`,
-        // not `Communal`.
+        // Both halves are false, and they went false at DIFFERENT times, which
+        // is worth separating. The Vacancy's gnoll (horizon 0.2,
+        // `threat_response` 0.85) has cleared the raid gate since it was
+        // authored, so bugbear stopped being the short extreme one campaign
+        // ago, and gnoll is `Hierarchic`, not `Communal`. The Tolerance then
+        // falsified the count as well: `threat_response` is drawn per
+        // settlement, so every people reaches patronhood on some settlements
+        // and the reachable set is the whole roster — gnoll 0.2, bugbear 0.3,
+        // goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8, i.e. FIVE distinct
+        // thresholds (goblin and hobgoblin share 0.5), up from four.
         //
         // The conclusion survives both corrections, for a reason worth stating
         // rather than asserting. Five cuts of one band is still coarse against

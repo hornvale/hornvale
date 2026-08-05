@@ -377,9 +377,12 @@ at 0.7 least. The patron's **`MindVector.time_horizon`** is read as a
 community grows logistically, maximum sustainable yield sits at half of
 capacity, so a generational patron holds its vassal near that peak while an
 immediate one strips it. On the shipped roster the patrons order gnoll (0.2),
-bugbear (0.3), hobgoblin (0.5), kobold (0.8) — the goblin's and the human's
-horizons are 0.5 and 0.75 respectively, but both threat responses (0.5) bar
-them from raiding at all, so neither ever becomes a patron —
+bugbear (0.3), goblin (0.5), hobgoblin (0.5), human (0.75), kobold (0.8). Until
+*The Tolerance* that list stopped at four: the goblin's and the human's threat
+responses were both authored at 0.5, below the raid threshold, so as *kinds*
+neither could ever take the initiative and neither could ever become a patron.
+Now that threat response is drawn per settlement, a particular goblin or human
+town can clear the gate, and the full six-value ordering above is reachable —
 and extraction rate and relation lifetime are both monotone in that order. It
 is also the mechanism by which a subjugated people can be extinguished at all,
 since extermination is optimal exactly when the discount rate exceeds intrinsic
