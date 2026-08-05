@@ -218,6 +218,38 @@ fn report(seed_value: u64) {
         }
     }
 
+    // The climate the niches are being evaluated against. Temperature is the
+    // dominant binding axis once every axis is floored, so its real range over
+    // land is the context every number above sits in — and it is what tells a
+    // genuinely frozen world apart from a temperate one that merely has nobody
+    // left on it.
+    println!();
+    let mut temps: Vec<f64> = land
+        .iter()
+        .map(|&c| substrate.get(c).temperature_c)
+        .collect();
+    temps.sort_by(f64::total_cmp);
+    let qs = [0.0, 0.05, 0.25, 0.50, 0.75, 0.95, 1.0];
+    print!("{:<10}", "land degC:");
+    for q in qs {
+        print!(" {:>7.1}", pct(&temps, q));
+    }
+    println!();
+    print!("{:<10}", "quantile:");
+    for q in qs {
+        print!(" {:>7.2}", q);
+    }
+    println!();
+    // The bake's era mask admits a cell only at or above this line (worldgen's
+    // private FREEZE_C, mirrored), before any glacial cooling offset is added.
+    const FREEZE_C: f64 = -10.0;
+    let frozen = temps.iter().filter(|t| **t < FREEZE_C).count();
+    println!(
+        "below the -10C snowline TODAY: {frozen} of {} land cells ({:.1}%)",
+        temps.len(),
+        frozen as f64 / temps.len() as f64 * 100.0
+    );
+
     // What the elevation curve alone yields across the real land range — the
     // curve, not the parameters (the constant-vs-curve rule).
     println!();
