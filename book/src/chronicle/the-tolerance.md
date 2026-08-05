@@ -188,9 +188,18 @@ Seed 1's settlement count went *up*. It is seed variation, which is what a draw
 is supposed to produce.
 
 The layer's behavioural neutrality at zero spread was proved rather than argued:
-seed 42 rebuilt with every dispersion forced to zero produces a ledger
+seed 42 rebuilt with every dispersion forced to zero produced a ledger
 byte-identical to the pre-campaign fixture, at 14,561 facts. Everything that
 moved is the draw, and nothing is the plumbing.
+
+That measurement was taken by hand, once, *before* the branch absorbed main
+twice, and it is not reproducible on the shipped tree — the two absorbs moved
+the physics under it. It is stated here as what it is, a dated observation
+rather than a standing property, because nothing in the suite asserts it: no
+committed test checks that the raid gate's disposition draw consumes zero
+draws from the bake's own dynamics stream. If a future edit made it read that
+stream instead, every unit test would still pass and only the seed-42 goldens
+would catch it, several steps downstream of the cause.
 
 ## A proof of the wrong thing
 
@@ -284,10 +293,19 @@ draw, the goblin re-seats on **52.1 %** of worlds against a bound of 0.25 — an
 the bound was deliberately not retuned, because retuning it would rescue a
 prediction whose *premise* this campaign destroyed. There is no longer a
 non-raiding partition to bound. The number was never the thing to fix, and the
-failure is the record of what changed rather than a defect to clear. (The
-campaign's own estimate before the run was about 38 %; the measurement came in
-half again as high, which is worth stating because the estimate was a
-calculation and the measurement was not.)
+failure is the record of what changed rather than a defect to clear.
+
+The campaign did carry a **38 %** figure into that run, and it is worth being
+exact about what it was, because an earlier draft of this page scored the two
+against each other as though one predicted the other. They measure different
+events. 38 % is the goblin's *gate-open share* — the fraction of its drawn
+`threat_response` values that clear the 0.6 threshold at all. 52.1 % is the
+*flagship re-selection rate*, the fraction of worlds in which its flagship ends
+up on a different cell from its first-drawn site. The two are not the same
+quantity and never had to agree: a flagship also re-seats for famine and for
+climate eviction, which is why the pre-campaign goblin re-seated on 16.7 % of
+worlds while its gate-open share was flatly **zero**. Nothing was predicted to
+be 38 % and came in higher.
 
 Its failure text has been corrected to say what the partition now asserts. Its
 bounds have not been touched.

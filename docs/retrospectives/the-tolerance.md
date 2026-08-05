@@ -231,8 +231,14 @@ pre-commit hook, not the task brief — any task adding a `pub` item should expe
   golden's, not as a regression.
 - **The heavy-tier calibration battery is RED and that is the campaign's owned
   finding**, not a pending question: goblin re-seats its flagship on **52.1 %**
-  of worlds against a 0.25 bound (predicted ~38 %; the measurement came in half
-  again as high). The bound was deliberately not retuned, because the test's
+  of worlds against a 0.25 bound. The campaign's **38 %** figure was its
+  *gate-open share* (the fraction of drawn `threat_response` values clearing
+  0.6), NOT a prediction of the re-selection rate — an earlier draft of this
+  page and of the chronicle scored the two against each other, which was my
+  error and is corrected in both. Re-seating also happens for famine and
+  climate eviction, so the two quantities were never obliged to agree: before
+  this campaign goblin's gate-open share was 0 % while its re-seat rate was
+  16.7 %. The bound was deliberately not retuned, because the test's
   *premise* — that a non-raiding partition exists — is what this campaign
   destroyed. One further heavy failure, a climate readout's conductance null,
   has **genuinely open attribution**: green before this branch existed, never
@@ -248,11 +254,26 @@ pre-commit hook, not the task brief — any task adding a `pub` item should expe
   records silently, and **cannot alarm**. A quiet `make ci` on this box is
   *unproven*, not green. This is The Timekeeper's documented second blind spot,
   live and permanent rather than hypothetical.
-- **`scripts/heavy-run.sh:72` records the wrong ref.** It writes the *caller's*
-  `git rev-parse HEAD` into `runs.tsv` rather than the ref it actually ran — the
-  ledger recorded a main commit for a run whose worktree was verifiably at this
-  branch's Task 5 tip. **Every historical row is wrong the same way**, so the
-  heavy-run ledger cannot currently be used to attribute a result to a tree.
+- **`scripts/heavy-run.sh` recorded the wrong ref — FIXED at the close.** It
+  wrote the *caller's* `git rev-parse HEAD` into `runs.tsv` rather than the ref
+  it actually ran, so the ledger recorded a main commit for a run whose
+  worktree was verifiably at this branch's Task 5 tip. `record_outcome` now
+  reads `${run_root:-$repo_root}`, which is the worktree the run used. What
+  remains owed is not the code but the data: **every row written before this
+  fix is wrong the same way**, so historical `runs.tsv` rows still cannot be
+  used to attribute a result to a tree.
+- **Nothing asserts that the disposition draw is stream-neutral.** The raid
+  gate draws on `SETTLEMENT_DISPOSITION`, a stream of its own, and must consume
+  nothing from the bake's dynamics stream — otherwise the layer is not the
+  additive thing this campaign claims it is. That was proved once by hand
+  (seed 42 at zero dispersion reproducing the pre-campaign ledger byte for
+  byte, 14,561 facts) **before both main absorbs**, and it is not reproducible
+  on the shipped tree. No committed test checks it. A future edit that made
+  `Bake::open` read the dynamics stream would pass every unit test and surface
+  only as a seed-42 golden diff, several steps from its cause. The cheap fix is
+  a zero-spread ledger-equality golden at one seed; it was deliberately not
+  added in the close's fix wave, where new test surface would land without its
+  own review.
 - **`fixture_staleness.rs`'s failure message is stale**: it still directs the
   reader to "Regenerate on the AWS box: `make regen-remote`", abandoned by
   decision 0063 and superseded by `scripts/census-run.sh` (decision 0081).

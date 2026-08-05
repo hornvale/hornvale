@@ -106,7 +106,6 @@
 //!
 //! Ignored: builds 30 worlds. Reason token `heavy:` puts it in the heavy
 //! tier (`cli/tests/heavy_tier.rs`), not the commit gate.
-#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Ended};

@@ -82,10 +82,12 @@ if [ -n "${HV_CENSUS_REF:-}" ]; then
     # keep `git status` clean here.
     # Resolve the path: `git worktree list` prints REAL paths, so an
     # unresolved `$repo_root/../hornvale-census-wt` never matches the grep
-    # below. `cd ... && pwd` resolves it whether or not the directory exists
-    # yet (the `||` keeps the unresolved form for the not-yet-created case).
+    # below. `pwd -P`, not plain `pwd`: the logical form still carries any
+    # symlink in the path, which `git worktree list` will have resolved away.
+    # The `if` keeps the unresolved form for the not-yet-created case — the
+    # `cd` fails, the assignment never happens, and `$wt` is left alone.
     wt="${HV_CENSUS_WORKTREE:-$repo_root/../hornvale-census-wt}"
-    if wt_resolved="$(cd "$wt" 2>/dev/null && pwd)"; then
+    if wt_resolved="$(cd "$wt" 2>/dev/null && pwd -P)"; then
         wt="$wt_resolved"
     fi
     git -C "$repo_root" fetch --all --quiet

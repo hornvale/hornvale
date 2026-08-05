@@ -37,17 +37,27 @@
 //!
 //! ## The hypothesis this file does assert
 //!
-//! `threat_response` is the *only* per-people input the composition root
-//! hands the bake (`bake_history_from` fills `BakeConfig::disposition` from
-//! the psyche registry and nothing else). A people below
-//! [`RAID_DISPOSITION_MIN`] never takes the initiative, so it almost never
-//! vacates an early site; a people above it raids, and every raid it wins
-//! closes its own record and re-seats the flagship on a later one.
+//! `threat_response` is the per-people input that decides the RAID GATE —
+//! not, despite what this paragraph used to claim, the only per-people input
+//! the composition root hands the bake at all. `bake_history_from` fills four:
+//! `disposition` and `disposition_spread` (via `disposition_maps`, off
+//! `wc.psyche` and the authored dispersion registry), `in_group_radius` (The
+//! Tithe's concealment term, off `SocietyVector`) and `time_horizon` (The
+//! Tithe's extraction strategy, off `MindVector`). That claim was already false when
+//! it was written — The Tithe added two of those four — and this file's own
+//! campaign made it more so. The narrower, true statement is the one this
+//! battery actually rests on: the gate reads `threat_response` and nothing
+//! else. A people below [`RAID_DISPOSITION_MIN`] never takes the initiative,
+//! so it almost never vacates an early site; a people above it raids, and
+//! every raid it wins closes its own record and re-seats the flagship on a
+//! later one.
 //!
 //! ## **The Tolerance dissolved this file's partition (2026-08-04)**
 //!
-//! Read the paragraph above as a statement about the roster *before* The
-//! Tolerance. `Bake::takes_the_initiative` no longer compares a people's
+//! Read the raid-veto sentences above as a statement about the roster
+//! *before* The Tolerance (the input-enumeration sentences before them are
+//! corrected in place, not scoped — they were never about the roster).
+//! `Bake::takes_the_initiative` no longer compares a people's
 //! authored `threat_response`; it compares a value **drawn per settlement**
 //! around that authored mean, with the people's `Dispersion::mind` as the
 //! standard deviation. So the two-way split this file computes from the psyche

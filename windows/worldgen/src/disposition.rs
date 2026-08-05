@@ -23,6 +23,24 @@
 //! disposition its own history was not *baked with*: silent, deterministic,
 //! and catastrophic. `windows/worldgen/tests/tolerance_draw.rs` pins their
 //! agreement.
+//!
+//! **That agreement is scoped to the canonical registries, and the code does
+//! not enforce the scope.** The bake resolves each people's location off the
+//! `WorldComponents` it was handed (`wc.psyche`, through `disposition_maps`),
+//! while [`settlement_disposition`] hardcodes the global
+//! [`hornvale_species::psyche_registry`]. For a canonical `WorldComponents`
+//! — every production build — those are the same map and the invariant above
+//! holds exactly. For a NON-canonical one they can disagree; the Lab's
+//! re-keyed solo rosters are the live example, and there the wrapper returns
+//! `None` for a people the bake gated on a real value. Inert today (the
+//! wrapper has no production callers), so this is stated as the wrapper's
+//! precondition rather than fixed by threading the stores through its
+//! signature: `settlement_disposition(world, entity)` exists to be a read of
+//! committed facts alone, and widening it to carry two component stores would
+//! push composition-root resolution onto every future caller to close a gap
+//! nothing currently reaches. A caller that needs a non-canonical roster
+//! should call [`people_disposition`] with its own stores, which is exactly
+//! what the bake does.
 
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, ComponentStore, EntityId, KindId, Seed, Stream, Value, World};
