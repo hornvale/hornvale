@@ -258,3 +258,36 @@ Larger than step B, which moved seed 42 by one fact.
    though §2.2 shows it was computed against a floored zero: the reading is
    plausible, its derivation was not. That gives the successor a principled anchor
    instead of a census-fitted one.
+
+   **BUT the ratio is world-dependent, and the metric is not (Nathan, 2026-08-04:
+   "is that calculation going to be accurate for all worlds regardless of
+   obliquity, tidal lock, etc?").** Measured over the committed 1000-world census:
+
+   ```
+                 n     median   mean     capacity-by-abs-latitude
+     spinning   952     23.98   21.99
+     LOCKED      48      0.55    0.64    <- no latitudinal gradient AT ALL
+     pinned all-world mean 20.9646   spinning-only 21.9892   locked shift -1.0246
+   ```
+
+   **Lieth itself is universal** — it is a *pointwise* temperature→NPP relation,
+   valid at a cell regardless of *why* that cell is that temperature. What does not
+   transfer is the **latitudinal summary statistic**. On a tidally locked world the
+   thermal structure is organised around the substellar point
+   (`domains/climate/src/substellar.rs`; `circulation.rs`: *"organized around the
+   substellar point instead"*), so `|latitude| < 30` vs `> 60` cuts across the
+   physics and samples hot and cold longitudes alike. Those 48 worlds report ~0.55
+   — and the metric's own doc claims it is *"comfortably clear of the trivial
+   'poles support as much as the tropics' failure mode."* **They are sitting in that
+   failure mode and they are inside the pinned mean.**
+
+   Obliquity, by contrast, is **not** a contamination source here and can be bounded:
+   Hornvale draws 0–35° (median 18.1, n=1000, max 35.0), never past the ~54° where
+   poles out-insolate the equator, so the gradient never inverts.
+
+   So the metric must become **coordinate-aware or scoped**: either `Absent` on
+   locked worlds (honest and cheap) or re-expressed in substellar angle when locked
+   (better science, more work). Per decision 0097 the durable framing is that
+   *"productivity follows the thermal gradient"* is the invariant, while
+   *"|latitude| is the thermal coordinate"* is a world-dependent assumption that a
+   spinning-world metric silently makes.
