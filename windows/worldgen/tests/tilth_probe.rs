@@ -331,13 +331,25 @@ fn tilth_derivation_probe() {
     // Solve so the MEDIAN new capacity on good ground equals the MEDIAN of
     // today's. Everything below is measured; nothing is authored.
     let k_m = pct(&all_supply, 0.50);
-    let target = pct(&all_good_capacity, 0.50);
+    // THE GAUGE IS FROZEN, and this line is why it has to be stated rather than
+    // measured. `target = pct(&all_good_capacity, 0.50)` re-measured the anchor
+    // on every run, so the "derivation" was really "reproduce whatever good
+    // ground reads today" — and any drift in the base field would be silently
+    // absorbed into V_max, gauging the ruler against the thing it measures.
+    // Decision 0104 fixes the target at the PRE-CAMPAIGN level; that is what
+    // makes it a gauge choice rather than a fit.
+    const FROZEN_TARGET: f64 = 68.87;
+    let target = FROZEN_TARGET;
+    let measured_today = pct(&all_good_capacity, 0.50);
+    let drift = (measured_today / target - 1.0) * 100.0;
     let s_good = pct(&all_supply, 0.90); // good ground carries high supply
     let mm_frac = s_good / (k_m + s_good);
     println!(
         "\nDERIVATIONS — measured, then solved. Do NOT author round numbers.\n\
          \x20 K_m   := median axis_supply over land            = {k_m:.5}\n\
-         \x20 target: median capacity on good ground today     = {target:.2} headcount\n\
+         \x20 target: PRE-CAMPAIGN good ground (frozen gauge)  = {target:.2} headcount\n\
+         \x20 measured on good ground TODAY                    = {measured_today:.2} \
+({drift:+.1}% vs the gauge)\n\
          \x20 MM fraction at good-ground supply (p90={s_good:.5})   = {mm_frac:.4}\n\
          \x20 => V_max = target / (MM_frac * min_conditions_on_good_ground)\n\
          \x20 min-of-conditions (Liebig) for the BEST-FIT settler on good ground:\n\
