@@ -344,16 +344,28 @@ const MIN_POOLED_FLIGHTS: u64 = 20;
 const MIN_POOLED_REVOLTS: u64 = 5;
 
 /// Spec §8.0 — the variety floor: how many standing relations a patron people
-/// must hold before its lifetime median is read at all. Measured minimum over
-/// the three patron peoples is **484** (bugbear); pinned at 100.
+/// must hold before its lifetime median is read at all. Measured minimum was
+/// **484** (bugbear), over the three patron peoples the roster had *when that
+/// reading was taken*; pinned at 100.
 const MIN_RELATIONS_PER_PEOPLE: usize = 100;
 
-/// Spec §8.0 — the variety margin. Pooled median standing-relation lifetime is
-/// **325** standard days for the longest-horizon patron people (kobold, 0.8)
-/// against **175** for the shortest (bugbear, 0.3), a ratio of **1.857**.
-/// Pinned at 1.30 — a real margin, clear of the measurement, and low enough
-/// that ordinary seed noise cannot trip it. Below this the strategy family has
-/// collapsed back toward the single attractor §8.0 exists to detect.
+/// Spec §8.0 — the variety margin. Pooled median standing-relation lifetime
+/// measured **325** standard days for the longest-horizon patron people
+/// (kobold, 0.8) against **175** for the shortest sampled at the time (bugbear,
+/// 0.3), a ratio of **1.857**. Pinned at 1.30 — a real margin, clear of the
+/// measurement, and low enough that ordinary seed noise cannot trip it. Below
+/// this the strategy family has collapsed back toward the single attractor
+/// §8.0 exists to detect.
+///
+/// **Bugbear is no longer the shortest-horizon patron people, and the count is
+/// no longer three.** The Vacancy's gnoll is authored at horizon 0.2 — shorter
+/// than bugbear's 0.3 — and has always cleared the raid gate, and since The
+/// Tolerance made `threat_response` a per-settlement draw all six peoples reach
+/// patronhood. **The gate is unaffected and needs no re-measurement**: the
+/// assertion below sorts the live rows by authored horizon and takes
+/// `rows[0]`/`rows[last]`, so it always compares the actual extremes of
+/// whatever the run produced. The numbers above are preserved as the historical
+/// reading that set the 1.30 pin, not as a claim about today's roster.
 const MIN_LIFETIME_RATIO: f64 = 1.30;
 
 /// Build seed 42's history through the standalone measurement entry point —

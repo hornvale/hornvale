@@ -84,6 +84,40 @@ extends the claim one level: cleaving the vector in two moves no byte of any
 generated world or reference artifact, verified by full regeneration and
 diff, not merely asserted.
 
+**The society vector is a grid/group instrument, and since *The Tolerance* the
+chapter says so.** Douglas's cultural theory arranges societies on two axes —
+*grid*, how rule-bound a life is, and *group*, how bounded "us" is — into four
+biases: hierarchy, egalitarian/sect, individualist, fatalist. Sociality mode is
+this model's grid and in-group radius is its group, and reading them that way
+is a commitment rather than an observation: it says that a people's cosmology,
+its appetite for risk and its stance toward outsiders are things to be
+**derived from where it sits on two axes**, not authored one people at a time.
+Adding a people then becomes a matter of placing it, and the placement carries
+predictions that can be wrong. The adoption is presently documentary — no
+consumer reads a quadrant yet, because both axes are per-people constants and
+wiring one into behaviour without a measurement attached would have been an
+unpreregistered change. What is recorded is the reading, so the campaign that
+wants it inherits an argument instead of inventing one.
+
+**A people is authored as a location and a spread.** Every scalar above names
+where a people sits; since *The Tolerance* a second number beside it names how
+far its members scatter around that point, one dispersion per vector rather
+than one per dimension. The frame is stated rather than left implicit — the
+authored value is the **mean**, and the dispersion is a standard deviation
+about it — because an unstated frame is the defect The Manikin removed one
+level up. The family is stated for the same reason: the draw is a **uniform on
+±√3σ**, clamped to the axis, the half-width chosen so that a uniform's variance
+`a²/3` makes the realized standard deviation exactly the authored `σ`. A uniform
+gives *spread* but not *rare extremes* — beyond its support the probability is
+zero, not small — so a consumer that needs the exceptional member rather than
+the merely varied one needs a different family, not a larger number. Zero
+reproduces the older model exactly: a people every one of whose members is the
+same member. The consequence is not decorative. A threshold
+applied to a distribution is not the same operation as a threshold applied to
+its mean, so a people authored *below* a behavioural gate no longer simply
+lacks the behaviour; some fraction of it clears the gate, and which fraction is
+a property of the spread its authors gave it.
+
 **The authoring corpus.** Kobold's six numbers are not measured, drawn, or
 fit — they are read. The project's method for authoring a new people is to
 take the Dungeons & Dragons 5th Edition System Reference Document as a
@@ -339,21 +373,44 @@ horizon into the carrying-capacity field each species reads (see
 Gathering* moved population from a per-site draw to a field readout, but
 still a real per-species divergence these two psychology scalars produce. A
 species is the fixed point those draws (and, now, this one field) are taken
-with respect to, never a distribution of its own.
+with respect to.
+
+That sentence survives *The Tolerance*; the clause that used to close it —
+*"never a distribution of its own"* — does not.
+`stream_labels()` here is still empty and every cell in the
+table above is still authored — the dispersion beside each vector is authored
+exactly like the location it accompanies, and the draw that reads the pair
+lives at the composition root, where a settlement's founding site and year are
+in scope. But a species is no longer *"never a distribution of its own"*, which
+is what this chapter said until a people acquired a second authored number.
+The distinction worth keeping is between where a distribution is **written
+down** and where it is **sampled**: the first is here, the second is not, and
+`domains/species` remains a domain a seed never touches.
 
 **Threat response found a second, sharper consumer in *The Tumult*.** Where
 demography folds it smoothly into a capacity term, the deep-history bake's
-conflict rule reads it as a **gate**: a people whose threat response falls
+conflict rule reads it as a **gate**: a settlement whose threat response falls
 below a fixed threshold does not raid at all, however strong it is on paper.
 Two things follow that are worth recording here rather than only in
 [Settlement](./settlement.md). First, the gate produces an **asymmetric**
-aversion structure with no pairwise machinery whatever — each people gates on
-its *own* authored number, so one people can decline a fight its neighbour is
-happy to pick — and on the shipped roster it means the goblin and the human,
-both at 0.5, never raid while the other four may. Second, and more pointed at the time:
-threat response was for one campaign the **only** per-species input the bake
-received, so every people-to-people asymmetry the deep past produced ran
-through a single scalar.
+aversion structure with no pairwise machinery whatever — each raider gates on
+its *own* number, so one community can decline a fight its neighbour is happy
+to pick. Second, and more pointed at the time: threat response was for one
+campaign the **only** per-species input the bake received, so every
+people-to-people asymmetry the deep past produced ran through a single scalar.
+
+**The gate sorted *kinds* until *The Tolerance*, and now sorts *places*.** For
+two campaigns the comparison read a species constant, so every settlement of a
+people answered it identically and one could say flatly that the goblin and the
+human — both authored at 0.5 — never raided while the other four might. That
+sentence was only ever sayable because a people was a point. Once a people
+became a distribution, the gate's input became a *draw*: each settlement takes
+its own threat response from its people's authored mean and dispersion, keyed
+on where and when it was founded. Every one of the six settling peoples now has
+settlements on both sides of the threshold — the assertive ones mostly above it
+and the neutral ones mostly below, but none wholly either. Warlikeness became a
+property of a place rather than of a kind, which is what makes an aversion
+between two neighbouring towns of the same people expressible at all.
 
 **That is no longer true, and the two scalars that joined it were already
 authored and simply unread.** *The Tithe* gave the bake a standing tribute
@@ -366,9 +423,12 @@ at 0.7 least. The patron's **`MindVector.time_horizon`** is read as a
 community grows logistically, maximum sustainable yield sits at half of
 capacity, so a generational patron holds its vassal near that peak while an
 immediate one strips it. On the shipped roster the patrons order gnoll (0.2),
-bugbear (0.3), hobgoblin (0.5), kobold (0.8) — the goblin's and the human's
-horizons are 0.5 and 0.75 respectively, but both threat responses (0.5) bar
-them from raiding at all, so neither ever becomes a patron —
+bugbear (0.3), goblin (0.5), hobgoblin (0.5), human (0.75), kobold (0.8). Until
+*The Tolerance* that list stopped at four: the goblin's and the human's threat
+responses were both authored at 0.5, below the raid threshold, so as *kinds*
+neither could ever take the initiative and neither could ever become a patron.
+Now that threat response is drawn per settlement, a particular goblin or human
+town can clear the gate, and the full six-value ordering above is reachable —
 and extraction rate and relation lifetime are both monotone in that order. It
 is also the mechanism by which a subjugated people can be extinguished at all,
 since extermination is optimal exactly when the discount rate exceeds intrinsic

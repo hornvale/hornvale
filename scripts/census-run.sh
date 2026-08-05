@@ -80,9 +80,23 @@ if [ -n "${HV_CENSUS_REF:-}" ]; then
     # Run a specific ref in a dedicated worktree, so the caller's own checkout
     # (and this canonical one) are left untouched. Path is outside the repo to
     # keep `git status` clean here.
+    # Resolve the path: `git worktree list` prints REAL paths, so an
+    # unresolved `$repo_root/../hornvale-census-wt` never matches the grep
+    # below. `pwd -P`, not plain `pwd`: the logical form still carries any
+    # symlink in the path, which `git worktree list` will have resolved away.
+    # The `if` keeps the unresolved form for the not-yet-created case — the
+    # `cd` fails, the assignment never happens, and `$wt` is left alone.
     wt="${HV_CENSUS_WORKTREE:-$repo_root/../hornvale-census-wt}"
+    if wt_resolved="$(cd "$wt" 2>/dev/null && pwd -P)"; then
+        wt="$wt_resolved"
+    fi
     git -C "$repo_root" fetch --all --quiet
-    if [ -d "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
+    # `-e`, not `-d`: a linked worktree's `.git` is a FILE (a gitdir pointer),
+    # never a directory. With `-d` this test is always false, and with the
+    # unresolved path above the grep was always false too — so both guards
+    # failed together and the `else` branch ran `worktree add` over an existing
+    # worktree, which is fatal. That is what blocked The Tolerance's census.
+    if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
         git -C "$wt" fetch --all --quiet
         git -C "$wt" checkout --force "$HV_CENSUS_REF"
         git -C "$wt" reset --hard "$HV_CENSUS_REF" --quiet

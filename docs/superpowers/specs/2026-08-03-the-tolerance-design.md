@@ -1,6 +1,25 @@
 # The Tolerance — design
 
-**Status:** spec, awaiting G3 review.
+**Status:** MERGED 2026-08-05. G3 approved 2026-08-04; executed in seven tasks;
+closed with a chronicle, a retrospective and a Confidence-Gradient re-score.
+**Two decisions in this document did not ship as written**, and the chronicle
+and registry say so rather than this file being edited to match:
+
+- **D5 shipped one of its three terms.** Warlikeness derives from the drawn
+  disposition only; the structural-pressure and grid/group terms are deferred.
+  Folding in `Bake::pressure_of` would leave between-settlement variance
+  standing at spread 0 and so break the campaign's own mutation proof, and the
+  strife field lives downstream of the history it would inform. `PSY-raid-gate-axis`
+  therefore stays `spec'd`: **D8's axis mismatch is NOT dissolved** — the gate
+  still reads the defensive `threat_response`.
+- **D6 shipped as documentation only.** `SocietyVector` is now stated to be a
+  grid/group instrument; nothing derives outsider-stance from the quadrant.
+- **D3 shipped with a different key than §5 implies.** The draw is keyed on the
+  occupation record's `(site, founded_year)`, not on a bare `cell-id`: a
+  community relocates *because it raided*, so a current-cell key would redraw a
+  settlement's psychology as a consequence of the behaviour that psychology
+  caused.
+
 **Date:** 2026-08-03
 **Program:** the peoples program
 (`2026-08-03-the-peoples-program-design.md`). **Runs immediately after C2-0,
@@ -227,13 +246,34 @@ low-dispersion ones.
 **H3 — raiding becomes a fraction, not a flag.** Humans raid at a rate strictly
 between goblin's and hobgoblin's, rather than at 0 or 1.
 
-**H4 — war tracks variance, not level.** Across settlements, raiding
-frequency correlates more strongly with the *interannual variance* of the local
-resource supply than with its *mean*. This is Ember & Ember's cross-cultural
-finding restated as a prediction about a simulated world, and it is the
-campaign's most interesting possible result **in either direction** — a null
-would say Hornvale's ecology does not reproduce the anthropological signal, and
-that is worth knowing.
+**H4 — WITHDRAWN at G3 (2026-08-04), before any code was written.** It read:
+"across settlements, raiding frequency correlates more strongly with the
+*interannual variance* of the local resource supply than with its *mean*" —
+Ember & Ember's cross-cultural finding as a prediction about a simulated world.
+
+**It cannot run, and preregistering it anyway would have been the exact trap
+this program exists to catch.** Two independent reasons, both checked against
+the code rather than assumed:
+
+1. **There is no variance to measure.** `hornvale_demography::carrying_capacity`
+   and `windows/worldgen`'s `forage_supply_field` both return
+   `CellMap<f64>` and take **no time parameter**. The supply the packer reads is
+   one static value per cell.
+2. **The nearest available quantity measures a different construct.** The Mire
+   landed a per-cell daily substrate trajectory, but `spin_up` runs a *periodic*
+   year to convergence, so it is identical every year by construction — seasonal
+   *amplitude*, not interannual *unpredictability*. Ember & Ember draw exactly
+   that distinction: predictable seasons are adapted to; it is the surprise that
+   drives conflict.
+
+The ingredients do exist — `hornvale_climate::weather_phase` is a function of
+**absolute** day, so successive years genuinely differ — but nothing aggregates
+that into a per-cell unpredictability field, and carrying capacity does not read
+it. Building it is real scope this campaign does not budget.
+
+Filed against `SOC-war-variance` with the blocker named. This is the fifth
+instance of the program's own probe-validity ladder biting, and the first caught
+at spec review rather than after the code was written.
 
 **The falsification.** If no measured outcome moves once dispersion is authored,
 the layer is decorative and should not ship — rung 2 of the program's own

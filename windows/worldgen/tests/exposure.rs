@@ -496,8 +496,23 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
 /// as `Qadoo`), and human's flagship is the new sole gapper. `marsh` keeps
 /// the same 5/6-Root, 1/6-Gap shape, just with a different exception;
 /// renamed to name it.
+///
+/// The Tolerance re-pin (2026-08-04): the raid gate became a per-settlement
+/// draw rather than a per-species constant, redeciding seed 42's settlement
+/// placement once more — and human's flagship now sits beside a marsh cell
+/// after all, rooting it as `Meashngeo`. `marsh` is back to a Root for EVERY
+/// placed people (6/6), which is where this test started and why its name
+/// returns to that form.
+///
+/// **The re-pin is case (2), verified rather than assumed.** Every one of the
+/// five previously-rooting peoples kept a BYTE-IDENTICAL root (`Qadoo`,
+/// `Gshoovzngaov`, `Taneo`, `Qaneo`, `Rorora`); the only change is a Gap
+/// becoming a Root. So the phonology did not move — an entry appeared where
+/// exposure appeared, which is exactly what an upstream placement change is
+/// supposed to look like. Had one of those five romanizations changed, that
+/// would have been a phonology bug and not a re-pin.
 #[test]
-fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_human_which_gaps_it() {
+fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -515,7 +530,7 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_human_which_gaps_it
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["human"],
+        Vec::<&str>::new(),
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
@@ -525,9 +540,10 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_human_which_gaps_it
             ("gnoll", "Gshoovzngaov".to_string()),
             ("goblin", "Taneo".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
+            ("human", "Meashngeo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 five of the six placed peoples root 'marsh'"
+        "at seed 42 all six placed peoples root 'marsh'"
     );
 }
 

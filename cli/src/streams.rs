@@ -366,6 +366,17 @@ mod tests {
                 "room/furnishing v1",
                 "room/layout/grown v1",
                 "room/layout/rectilinear v1",
+                // The Tolerance: the per-settlement disposition draw, a
+                // people's authored mind perturbed by its authored
+                // dispersion. Additive at v1 — a NEW label, so it perturbs
+                // no existing stream, but it is versioned from birth
+                // because it will one day want an epoch: the draw shape
+                // (uniform on ±√3σ, per-dimension independent, clamped to
+                // [0, 1]) and the (site, founded-year) key are both
+                // save-format contracts, and changing either changes every
+                // settlement's mind. See
+                // `windows/worldgen/src/disposition.rs`.
+                "settlement/disposition v1",
             ]
         );
     }

@@ -1185,6 +1185,47 @@ communities of one people differ in any authored dimension at all. A model with
 no persistent per-entity multiplicative heterogeneity cannot produce a heavy
 entity-size tail, and would not do so even with a conduction medium added.
 
+*Re-scored in part by [The Tolerance](./chronicle/the-tolerance.md) (2026-08-05),
+which voids one clause of the paragraph immediately above and leaves the more
+important one standing.* That campaign made a people a distribution rather than
+a point: each settlement now draws its own threat response from its
+people's authored mean and dispersion, keyed on where and when it was founded
+and fixed for the life of the community. So the clause **"no two communities of
+one people differ in any authored dimension at all" is no longer true** — two
+towns of one people, on different ground in different centuries, hold genuinely
+different temperaments, and the between-settlement variance in that dimension
+went from exactly zero to 0.010–0.113 depending on the people. The heterogeneity
+is persistent and per-entity, which is two of the three properties a Kesten
+process wants.
+
+The third it does not have, and that is the part this chapter must not round
+away. The drawn quantity enters the model as a **gate on a decision** — a
+community above the threshold may take the initiative, one below it may not —
+not as a **multiplier on strength**. Strength is still
+`(population + stores × 0.5) × tech_weight`, and every term in it is still
+shared, capped, or mean-reverting; nothing about the disposition draw multiplies
+anything. A heterogeneous *propensity to act* changes which communities move and
+therefore how the history branches, but it does not give a community a
+persistent random factor on its own growth, which is the specific thing the
+literature says a heavy entity-size tail requires. So the correct rescore is
+narrow: **the diagnosis loses its "no heterogeneity exists" clause and keeps its
+"no multiplicative heterogeneity exists" clause**, and the entity-size
+prediction is unchanged. Nothing here was measured against M2 — The Tolerance
+preregistered variance and rate hypotheses, not a size distribution — so this is
+a correction to the *argument*, not a new reading of the *bet*. A campaign that
+wants to test the Kesten account now has a cheaper route to it than it did: the
+authoring pattern for per-entity variation exists and is proven, and what
+remains is to point one at a multiplicative term instead of a threshold.
+
+One detail sharpens this rather than softening it, and it is the same point
+clause 3 above makes about asymptotes. The new heterogeneity is drawn from a
+**uniform** on ±√3σ, clamped to the axis — so it is not merely
+non-multiplicative, it is *bounded*, and the probability of a settlement
+exceeding its people's support is exactly zero rather than small. Per-entity
+variation now exists in this world; **rare** per-entity variation still does
+not. The build constraint this chapter already owes a successor campaign is
+unchanged, and one more mechanism now sits inside its scope.
+
 **What replaces the bet is narrower, and it is a different shape of claim.**
 Not a power law: a **sigmoid**. The wager is that annihilation, coexistence and
 domination lie on one saturating response, that the middle is where nearly every

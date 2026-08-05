@@ -240,34 +240,50 @@ const SETTLED_PREMIUM: f64 = 0.25;
 /// the people on it. Well below `COLLAPSE_PRESSURE`: a community can be
 /// worthless to a raider long before it starves out altogether.
 const NO_SPOILS_PRESSURE: f64 = 1.0;
-/// `threat_response` (flee 0 ↔ stand 1) at or above which a people takes the
-/// initiative at all — spec §4.2a's durable inhibition. Authored species data,
-/// never drawn.
+/// Drawn `threat_response` (flee 0 ↔ stand 1) at or above which a **community**
+/// takes the initiative at all — spec §4.2a's durable inhibition.
 ///
-/// **Disclosure on the value.** This gate's stated purpose is to make raiding
-/// heterogeneous *across peoples*; a threshold that admits the whole roster, or
-/// vetoes the whole roster, is inert by construction and buys nothing. 0.6 is
-/// chosen to sit between the manikin's neutral midpoint — where goblin's
-/// authored temperament happens to sit (0.5) — and the assertive peoples
-/// (hobgoblin 0.7, kobold and bugbear 0.8, gnoll 0.85), so
-/// exactly one of the five settling peoples declined to raid on the
-/// pre-human roster. That is a choice
-/// about what the gate *means*, made against the authored roster — not one
-/// fitted to a measured outcome; the cascade metric was not consulted in
-/// picking it. A save-format constant: changing it re-fights every world's
-/// history.
+/// **Since The Tolerance this gate sorts settlements, not peoples.** What it
+/// compares is [`Community::disposition`]: a value drawn per settlement from
+/// its people's authored `threat_response` (the mean) and `Dispersion::mind`
+/// (the standard deviation), keyed on that settlement's own `(site, founded
+/// year)`. Every earlier reading of this constant as a per-species flag — "this
+/// people raids, that one does not" — is retired. No people is on one side of
+/// it any more; each is a *distribution* straddling it, and every one of the
+/// six settling peoples has settlements on both sides:
 ///
-/// **The Generalist consequence (disclosed, not chosen).** Human's
-/// `threat_response` is also authored at 0.5 (The Manikin's neutral
-/// midpoint — see `psyche_registry()`'s human row and its own doc comment on
-/// why 0.5 is an argued anchor there, not a default), so it falls below this
-/// gate too: **two of the six settling peoples now decline to raid, not
-/// one** — goblin and human. This is a *consequence* of human's authored
-/// temperament landing where The Manikin's model says a kind may
-/// legitimately coincide with the reference vector; it is not a decision
-/// about whether humans raid, and neither `threat_response` nor this
-/// constant moved to produce or avoid it (project owner's ruling, Fix round
-/// 1, Finding 2).
+/// ```text
+///   people      authored  σ(mind)  half-width  drawn range     ≈ share ABOVE 0.6
+///   ----------  --------  -------  ----------  --------------  -----------------
+///   gnoll           0.85     0.22       0.381  [0.47, 1.00]                  83 %
+///   kobold          0.80     0.12       0.208  [0.59, 1.00]                  98 %
+///   bugbear         0.80     0.20       0.346  [0.45, 1.00]                  79 %
+///   hobgoblin       0.70     0.10       0.173  [0.53, 0.87]                  79 %
+///   human           0.50     0.35       0.606  [0.00, 1.00]                  42 %
+///   goblin          0.50     0.25       0.433  [0.07, 0.93]                  38 %
+/// ```
+///
+/// (Half-width is √3·σ, the uniform draw's support; see
+/// [`crate::disposition::people_disposition`]. Shares are of the *clamped*
+/// support, and the clamp cannot move them: clamping to `[0, 1]` fixes every
+/// value already inside it, so no draw crosses a threshold strictly inside
+/// `(0, 1)` because of it.)
+///
+/// **Disclosure on the value, kept because it is still the reason 0.6 is 0.6.**
+/// The gate's purpose was to make raiding heterogeneous; a threshold admitting
+/// or vetoing the whole roster is inert by construction. 0.6 was chosen to sit
+/// between the manikin's neutral midpoint — where goblin's authored temperament
+/// sits (0.5) — and the assertive peoples (hobgoblin 0.7, kobold and bugbear
+/// 0.8, gnoll 0.85), so exactly one of the five settling peoples declined to
+/// raid on the pre-human roster, and (The Generalist) two of six once human was
+/// authored at the same 0.5. That was a choice about what the gate *means*,
+/// made against the authored roster and never fitted to a measured outcome; the
+/// cascade metric was not consulted in picking it. Neither `threat_response`
+/// nor this constant has moved since, including in The Tolerance — what moved
+/// is that the roster's temperaments became distributions and the comparison
+/// now happens per settlement.
+///
+/// A save-format constant: changing it re-fights every world's history.
 const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// Pressure at or above which a community starves out (Famine). `pub` so the
 /// demography calibration (`windows/lab/tests/gathering_calibration.rs`) can
@@ -382,18 +398,36 @@ const NEUTRAL_HORIZON: f64 = 0.5;
 /// authoring it as a personality.
 ///
 /// **Why this matters beyond flavour.** The per-people axis
-/// ([`Bake::horizon_of`]) reaches only three values patron-side, and the short
-/// extreme (bugbear, 0.3) is also the only `Communal` short-horizon people, so
-/// a strategy read off `time_horizon` alone is partly confounded with
-/// `sociality` in any world-level reading. The holdings count is a property of
-/// the relation table, so it varies independently of that confound.
+/// ([`Bake::horizon_of`]) is coarse and is partly confounded with `sociality`,
+/// so a strategy read off `time_horizon` alone cannot be cleanly attributed in
+/// any world-level reading. The holdings count is a property of the relation
+/// table, so it varies independently of that confound.
+///
+/// The Tolerance (2026-08-04) re-derived that, because the numbers behind it
+/// moved: this used to say the axis reaches only THREE values patron-side and
+/// that the short extreme (bugbear, 0.3) is the only `Communal` short-horizon
+/// people. Both halves are false, and the second one had ALREADY been false
+/// before this campaign — The Vacancy's gnoll is authored at horizon 0.2 with
+/// `threat_response` 0.85, so it has cleared the raid gate and outflanked
+/// bugbear on the short end ever since, and it is `Hierarchic`, not `Communal`.
+/// The Tolerance then falsified the first half too: `threat_response` is drawn
+/// per settlement, so no people is vetoed out of patronhood and the whole
+/// roster is reachable at **five distinct thresholds** ([`Bake::min_vassal`]).
+/// The conclusion survives both: five cuts of one band is still coarse, and the
+/// two `Communal` peoples remain bugbear (0.3) and kobold (0.8), so the horizon
+/// axis still does not vary independently of social form across the roster.
 ///
 /// Three is chosen against the measured range rather than fitted: live worlds
 /// reach `max_subordinates` 6, so a patron at the observed maximum applies
 /// `1/(1 + 5/3) = 0.375` of its authored horizon — a kobold at the top of the
-/// distribution behaves about as an authored bugbear does, which is the
-/// intended reading (the biggest holder is as short-sighted as the shortest-
-/// sighted people) and not further. A save-format constant: changing it
+/// distribution behaves about as an authored bugbear does (0.8 × 0.375 = 0.3,
+/// bugbear's authored value exactly), which is the intended reading and not
+/// further. Since The Tolerance made gnoll's 0.2 reachable patron-side, that is
+/// the SECOND-shortest authored horizon rather than the shortest, so the
+/// portfolio effect no longer quite reaches the short end of the axis — which
+/// is the conservative direction, and is the same reading it always was: the
+/// biggest holder becomes about as short-sighted as a genuinely short-sighted
+/// people, never more so than any of them. A save-format constant: changing it
 /// re-fights every world's history.
 const PORTFOLIO_HALVING: f64 = 3.0;
 /// The share of itself a vassal hands over in ONE epoch above which it stops
@@ -552,7 +586,7 @@ pub struct BakeOccupation {
 /// rules read (the raid rule's durable inhibition, and the subordinate's
 /// concealment). Years are bare `f64` (absolute, no wall-clock). Not `Copy`:
 /// the authored maps are owned, and the config is always passed by reference.
-/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon)
+/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: disposition_spread), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon)
 #[derive(Clone, Debug, PartialEq)]
 pub struct BakeConfig {
     /// The year the ancient world is seeded at (inclusive).
@@ -561,13 +595,33 @@ pub struct BakeConfig {
     pub end_year: f64,
     /// The step between epochs, in years.
     pub epoch_years: f64,
-    /// Each people's `threat_response` (flee 0 ↔ stand 1) — authored species
-    /// data, never drawn, looked up by the composition root and handed in here
-    /// because the bake reads only kernel types. A people below
-    /// `RAID_DISPOSITION_MIN` never takes the initiative (spec §4.2a's durable
-    /// inhibition); a people ABSENT from the map is not vetoed, so a bake given
-    /// no disposition data behaves exactly as it did before the gate existed.
+    /// Each people's authored `threat_response` (flee 0 ↔ stand 1) — species
+    /// data, looked up by the composition root and handed in here because the
+    /// bake reads only kernel types.
+    ///
+    /// **Since The Tolerance this is the MEAN of a distribution, not the value
+    /// the gate reads.** Each community draws its own `threat_response` out of
+    /// `(this location, the matching `disposition_spread` entry)` at
+    /// [`Bake::open`], keyed on its own `(site, founded year)`
+    /// ([`crate::disposition::drawn_threat_response`]); the drawn value is what
+    /// [`Bake::takes_the_initiative`] compares against `RAID_DISPOSITION_MIN`.
+    /// A people ABSENT from this map is not vetoed at all — it draws nothing
+    /// and passes the gate unconditionally, so a bake given no disposition data
+    /// behaves exactly as it did before the gate existed.
     pub disposition: BTreeMap<KindId, f64>,
+    /// Each people's `Dispersion::mind` — the standard deviation of the
+    /// distribution whose mean is the matching `disposition` entry (spec D2),
+    /// resolved by the composition root off `hornvale_species::
+    /// dispersion_registry()` and handed in as a bare ratio for the same
+    /// kernel-types-only reason.
+    ///
+    /// **A people absent here draws with spread 0**, i.e. exactly its authored
+    /// location — the model's behaviour before The Tolerance. That is the
+    /// fail-closed direction on purpose: a roster this registry does not cover
+    /// (Lab's synthetic solo kinds re-key goblin's components under a fresh
+    /// `KindId`) keeps a uniform people rather than acquiring a silent,
+    /// unauthored spread.
+    pub disposition_spread: BTreeMap<KindId, f64>,
     /// Each people's `SocietyVector.in_group_radius` (insular 0 ↔ expansive 1)
     /// — authored species data, never drawn, looked up by the composition root
     /// and handed in here because the bake reads only kernel types. It sets
@@ -586,16 +640,40 @@ pub struct BakeConfig {
     /// axis, NOT zero, which would mean "strip to the floor" and is the
     /// harshest patron in the family rather than an unaffected one.
     ///
-    /// **Only four values are reachable patron-side on the shipped roster.**
-    /// The six settling peoples are authored bugbear 0.3 / goblin 0.5 /
-    /// hobgoblin 0.5 / kobold 0.8 / gnoll 0.2 / human 0.75, and goblin's and
-    /// human's `threat_response` (both 0.5) sit under `RAID_DISPOSITION_MIN`,
-    /// so a goblin or human community never takes the initiative and
-    /// therefore never becomes a patron (this was already true of goblin
-    /// alone before The Vacancy added gnoll — gnoll's `threat_response`,
-    /// 0.85, clears the gate). The variety this rule can produce is bounded
-    /// by that: four horizons (bugbear 0.3, hobgoblin 0.5, kobold 0.8, gnoll
-    /// 0.2), three of them distinct from the neutral middle.
+    /// **All six peoples are reachable patron-side, and that changed in The
+    /// Tolerance.** The six settling peoples are authored gnoll 0.2 / bugbear
+    /// 0.3 / goblin 0.5 / hobgoblin 0.5 / human 0.75 / kobold 0.8. Until this
+    /// campaign, goblin's and human's `threat_response` (both authored 0.5)
+    /// sat under `RAID_DISPOSITION_MIN` *as constants*, so no goblin or human
+    /// community ever took the initiative, never became a patron, and their
+    /// horizons were unreachable — leaving four peoples, three of them away
+    /// from the neutral middle.
+    ///
+    /// That arithmetic is gone. `threat_response` is now drawn per settlement
+    /// (`disposition`/`disposition_spread` above), so a *particular* goblin or
+    /// human community can land above 0.6 and clear the gate. goblin's authored
+    /// σ(mind) is 0.25 (half-width √3·σ = 0.433, so its draw spans ≈[0.07, 0.93]
+    /// and about 38% of it clears 0.6) and human's is 0.35 (half-width 0.606,
+    /// spanning the whole clamped axis, about 42% of it above the gate): both
+    /// peoples reach patronhood on some settlements and not others.
+    ///
+    /// **Counted three ways, because two of them are easy to conflate**
+    /// (`NEUTRAL_HORIZON` is 0.5):
+    ///
+    /// - **six PEOPLES** can now hold a vassal, up from four;
+    /// - they take **five DISTINCT VALUES** — `{0.2, 0.3, 0.5, 0.75, 0.8}` —
+    ///   because goblin and hobgoblin are both authored at 0.5;
+    /// - **four of those peoples sit AWAY FROM the neutral middle** (gnoll,
+    ///   bugbear, human, kobold), on the four values `{0.2, 0.3, 0.75, 0.8}`;
+    ///   goblin and hobgoblin sit exactly *at* it and add no variety at all.
+    ///
+    /// So the variety this rule can produce is bounded by four horizons that
+    /// differ from the middle, not six — and, since the gate is now a draw, by
+    /// which *settlements* rather than which *peoples* happened to draw boldly.
+    /// ([`Bake::min_vassal`] counts the same roster in a fourth way — five
+    /// distinct *thresholds* — because it maps these values through a scale
+    /// factor; both counts are stated there in full so neither has to be
+    /// re-derived from this one.)
     pub time_horizon: BTreeMap<KindId, f64>,
 }
 
@@ -609,6 +687,7 @@ impl BakeConfig {
             end_year: 2000.0,
             epoch_years: 25.0,
             disposition: BTreeMap::new(),
+            disposition_spread: BTreeMap::new(),
             in_group_radius: BTreeMap::new(),
             time_horizon: BTreeMap::new(),
         }
@@ -856,6 +935,18 @@ struct Community {
     tech: TechHorizon,
     /// Per-people tech-advance offset (years), drawn at genesis.
     tech_offset: f64,
+    /// **This community's own drawn `threat_response`** — the raid gate's
+    /// input (The Tolerance). Drawn once at [`Bake::open`] from its people's
+    /// authored location and spread, keyed on this record's own `(site,
+    /// founded year)`, and never recomputed: a record's site and founding year
+    /// are immutable once opened, so caching the draw here is the same value
+    /// [`crate::disposition::settlement_disposition`] will report off the
+    /// committed ledger.
+    ///
+    /// `None` means the people carries no authored disposition at all and is
+    /// not vetoed — the fail-open the gate has always had, preserved through
+    /// the draw rather than around it.
+    disposition: Option<f64>,
     /// Accumulated wealth — tribute, stores, the granary. Feeds raiding
     /// strength but is NEVER eaten: it does not enter the pressure term, so a
     /// successful extractor does not starve itself on its own tribute (spec
@@ -1013,10 +1104,19 @@ struct Bake<'a> {
     river_prox: &'a CellMap<f64>,
     /// Cells habitable through the glacial maximum (migration preference).
     refugia: &'a CellMap<bool>,
+    /// The world's seed, kept so [`Bake::open`] can derive each community's
+    /// own disposition draw. It is NOT another dynamics stream: the draw hangs
+    /// off `settlement/disposition/v1`, keyed on the community's own `(site,
+    /// founded year)`, and never touches `Bake::stream`.
+    seed: Seed,
     /// Each people's authored `threat_response`, borrowed off the
-    /// [`BakeConfig`] — the durable inhibition [`Bake::takes_the_initiative`]
-    /// reads.
+    /// [`BakeConfig`] — the MEAN [`Bake::open`] draws each community's own
+    /// disposition around, not the value the gate reads.
     disposition: &'a BTreeMap<KindId, f64>,
+    /// Each people's `Dispersion::mind`, borrowed off the [`BakeConfig`] — the
+    /// standard deviation of the draw above. Absent ⇒ spread 0 ⇒ the authored
+    /// location exactly (the pre-Tolerance behaviour).
+    disposition_spread: &'a BTreeMap<KindId, f64>,
     /// Each people's authored `in_group_radius`, borrowed off the
     /// [`BakeConfig`] — the concealment [`Bake::concealment_of`] reads.
     in_group_radius: &'a BTreeMap<KindId, f64>,
@@ -1395,19 +1495,22 @@ impl<'a> Bake<'a> {
     /// held ground never enters its option set.
     fn best_home(
         &self,
-        people: KindId,
         pidx: usize,
         era: &EraClimate,
         from: CellId,
         strength: f64,
         can_fight: bool,
+        disposition: Option<f64>,
     ) -> Option<HomeOption> {
-        // Whether held ground is in this people's option set AT ALL — a
+        // Whether held ground is in this band's option set AT ALL — a
         // strictly narrower thing than the caller's `can_fight` ("would
         // survive winning"), so it gets its own name rather than shadowing the
-        // parameter. The durable inhibition is a property of the people, not
-        // of any one candidate: a timid people simply never sees held ground.
-        let may_take_held_land = can_fight && self.takes_the_initiative(people);
+        // parameter. The durable inhibition is a property of the band's own
+        // drawn mind, not of any one candidate: a timid remnant simply never
+        // sees held ground. (Before The Tolerance this took the `KindId` and
+        // read a species constant, which is exactly what made warlikeness a
+        // property of a kind.)
+        let may_take_held_land = can_fight && self.takes_the_initiative(disposition);
         self.nearest_ring(from, |ring| {
             let mut best: Option<HomeOption> = None;
             for &n in ring {
@@ -1510,6 +1613,7 @@ impl<'a> Bake<'a> {
         year: f64,
         depth: u32,
         carried: CarriedPortfolio,
+        disposition: Option<f64>,
     ) -> Relocation {
         if depth >= CASCADE_DEPTH_CAP {
             return Relocation::Lost; // truncated — the last remnant is lost (bounded-size guard)
@@ -1538,12 +1642,12 @@ impl<'a> Bake<'a> {
         // `a_people_that_cannot_survive_winning_does_not_fight` binds it.
         let can_fight = pop * (1.0 - WAR_LOSS) >= VIABLE_MIN;
         let Some(home) = self.best_home(
-            people,
             self.people_idx_of(people),
             era,
             from,
             roller_strength(pop, offset, year),
             can_fight,
+            disposition,
         ) else {
             return Relocation::Lost; // nothing vacant, nothing beatable — lost
         };
@@ -1576,7 +1680,11 @@ impl<'a> Bake<'a> {
         // COMBINED population, and it is that dissipation (compounding down the
         // chain) that terminates an avalanche.
         self.communities[victim].population *= 1.0 - WAR_LOSS;
-        let (v_people, v_pop, v_lineage, v_offset, v_id) = {
+        // Read BEFORE the victim closes, `disposition` included: the remnant
+        // carries the mind of the settlement it is about to lose down the
+        // cascade, because a band on the road has no seat of its own to draw
+        // one from.
+        let (v_people, v_pop, v_lineage, v_offset, v_id, v_disposition) = {
             let c = &self.communities[victim];
             (
                 self.records[c.record].core.people,
@@ -1584,6 +1692,7 @@ impl<'a> Bake<'a> {
                 c.lineage,
                 c.tech_offset,
                 c.id,
+                c.disposition,
             )
         };
         // The homeless people takes the victim's site (open BEFORE close so
@@ -1629,6 +1738,7 @@ impl<'a> Bake<'a> {
             year,
             depth + 1,
             victim_carried,
+            v_disposition,
         ) {
             Relocation::Settled { cascade } => cascade,
             Relocation::Lost => {
@@ -1663,6 +1773,7 @@ impl<'a> Bake<'a> {
         era: &EraClimate,
         year: f64,
         depth: u32,
+        disposition: Option<f64>,
     ) -> Relocation {
         self.relocate(
             people,
@@ -1675,26 +1786,81 @@ impl<'a> Bake<'a> {
             year,
             depth,
             CarriedPortfolio::none(),
+            disposition,
         )
     }
 
-    /// Whether a people takes the initiative at all — spec §4.2a's
-    /// **disposition** inhibition, the durable one. A people whose authored
-    /// `threat_response` (flee 0 ↔ stand 1) falls below `RAID_DISPOSITION_MIN`
-    /// never raids, however strong it is on paper; a people with no authored
-    /// disposition is not vetoed, so a bake handed no data behaves exactly as
-    /// it did before the gate existed.
+    /// A community's own drawn disposition, resolved at [`Bake::open`] — spec
+    /// D5's middle term, and the whole of The Tolerance's behavioural change.
     ///
-    /// This is the gate that makes raiding heterogeneous ACROSS peoples, and it
-    /// buys an asymmetric aversion structure for free: A declines B while B
-    /// raids A, because each people gates on its own trait and never on the
+    /// `None` when the people carries no authored `threat_response` at all: the
+    /// fail-open is on the *people*, decided before any draw, so a bake handed
+    /// no disposition data draws nothing and behaves exactly as it did before
+    /// the gate existed. A people that IS authored always draws — with spread 0
+    /// if `disposition_spread` has no row for it, which returns its authored
+    /// location unchanged.
+    fn drawn_disposition(&self, people: KindId, site: CellId, founded: f64) -> Option<f64> {
+        let location = *self.disposition.get(&people)?;
+        let spread = self.disposition_spread.get(&people).copied().unwrap_or(0.0);
+        Some(crate::disposition::drawn_threat_response(
+            self.seed,
+            site,
+            crate::disposition::occupation_draw_key(founded),
+            location,
+            spread,
+        ))
+    }
+
+    /// Whether a **community** takes the initiative at all — spec §4.2a's
+    /// **disposition** inhibition, the durable one. A community whose drawn
+    /// `threat_response` (flee 0 ↔ stand 1) falls below `RAID_DISPOSITION_MIN`
+    /// never raids, however strong it is on paper; `None` (a people with no
+    /// authored disposition) is not vetoed, so a bake handed no data behaves
+    /// exactly as it did before the gate existed.
+    ///
+    /// **It reads a community, not a people, and that is the campaign's point.**
+    /// Until The Tolerance the argument was a `KindId` and the comparison was
+    /// against `BakeConfig.disposition[people]` — a species constant, so every
+    /// settlement of a people answered identically and warlikeness was a
+    /// property of a *kind*. It now compares [`Community::disposition`], drawn
+    /// per settlement from that people's authored mean and spread and keyed on
+    /// the settlement's own `(site, founded year)`. Two settlements of one
+    /// people can answer differently; a people is a distribution over stances,
+    /// not a stance.
+    ///
+    /// Taking the value rather than an index is deliberate: the roll-downhill
+    /// path fires on a community that has already *closed* (a remnant on the
+    /// road has no live index), so its disposition travels down
+    /// [`Bake::relocate`] as the value it was opened with. A band carries the
+    /// mind of the settlement it lost, which is the only reading of "this
+    /// people, here" available once the seat is gone.
+    ///
+    /// **What this gate is still NOT.** Spec D5 writes warlikeness as
+    /// `f(structural pressure, drawn disposition, grid/group quadrant)`; only
+    /// the middle term is built. The pressure term is deliberately excluded —
+    /// [`Bake::pressure_of`] already varies per settlement, so folding it in
+    /// would leave between-settlement variance standing when dispersion is
+    /// zeroed and would break the campaign's own mutation proof, besides
+    /// confounding preregistered H2 (which attributes that variance to the
+    /// authored dispersion). Spec D5's "already-designed structural term" —
+    /// the strife field — is in any case **not reachable from the bake**: it
+    /// exists only as `report.byproducts.strife` off `demography_report_from`,
+    /// on the Lab readout path, downstream of the history it would have to
+    /// inform. The grid/group quadrant is deferred on weaker grounds: its
+    /// inputs (`sociality`, `in_group_radius`) are per-*people* constants, so
+    /// it would add no between-settlement variance and threatens nothing — it
+    /// is simply an unpreregistered behavioural change with no measurement
+    /// attached, and D6 is adopted as documentation on `SocietyVector` instead.
+    ///
+    /// It buys an asymmetric aversion structure for free: A declines B while B
+    /// raids A, because each community gates on its own draw and never on the
     /// pair. Like [`Bake::has_spoils`] it is a conjunct in both candidate
-    /// loops — a timid people driven off its land pioneers rather than rolling
-    /// over a holder it could have beaten.
-    fn takes_the_initiative(&self, people: KindId) -> bool {
-        match self.disposition.get(&people) {
+    /// loops — a timid community driven off its land pioneers rather than
+    /// rolling over a holder it could have beaten.
+    fn takes_the_initiative(&self, disposition: Option<f64>) -> bool {
+        match disposition {
             None => true,
-            Some(&d) => d >= RAID_DISPOSITION_MIN,
+            Some(d) => d >= RAID_DISPOSITION_MIN,
         }
     }
 
@@ -1890,13 +2056,40 @@ impl<'a> Bake<'a> {
     /// no-spoils vetoes are again the only conditions, so this cannot quietly
     /// become a floor on vassal size in general.
     ///
-    /// **At most three thresholds are reachable.** Only bugbear (0.3),
-    /// hobgoblin (0.5) and kobold (0.8) ever become patrons on the shipped
-    /// roster (goblin is raid-vetoed by `RAID_DISPOSITION_MIN`), so this gate
-    /// admits vassals above `0.044 × eff`, `0.073 × eff` and `0.117 × eff`
-    /// respectively — three cuts of the same band, never the continuum the
-    /// formula could express. That bounds the effect, and is said here so it is
-    /// not rediscovered as a surprise.
+    /// **The whole roster is reachable, and this bound has now gone stale
+    /// twice.** It was authored as *three* — bugbear (horizon 0.3), hobgoblin
+    /// (0.5), kobold (0.8) — which was correct on the four-people roster of the
+    /// time, goblin being the one vetoed out of raiding by
+    /// `RAID_DISPOSITION_MIN`. Two things have invalidated it since:
+    ///
+    /// 1. **The Vacancy added the gnoll**, whose `threat_response` of 0.85
+    ///    clears the gate easily, so its horizon of **0.2 has been reachable
+    ///    patron-side ever since** — and is *shorter* than bugbear's. The bound
+    ///    became four values and the comment was never updated. (The Generalist
+    ///    then added human at `threat_response` 0.5, which the gate vetoed, so
+    ///    that campaign left the count at four.)
+    /// 2. **The Tolerance** made `threat_response` a per-settlement draw, so no
+    ///    people is vetoed *as such*: a particular goblin or human community
+    ///    can clear the gate and take a vassal.
+    ///
+    /// All **six peoples** therefore reach patronhood now — gnoll 0.2, bugbear
+    /// 0.3, goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8 — admitting
+    /// vassals above `0.029 × eff`, `0.044 × eff`, `0.073 × eff`,
+    /// `0.073 × eff`, `0.110 × eff` and `0.117 × eff` respectively. That is
+    /// **five distinct THRESHOLDS**, not six: this gate is linear in the
+    /// horizon (`effective_horizon × crash_basin_fraction() × eff`), so goblin
+    /// and hobgoblin — authored at the same 0.5 — map to the same cut. Five
+    /// distinct cuts of one band, where it was four before this campaign and
+    /// three when the comment was written, and still not the continuum the
+    /// formula could express.
+    ///
+    /// **Do not read "five" here as [`BakeConfig::time_horizon`]'s count.**
+    /// That doc counts how many peoples sit *away from* `NEUTRAL_HORIZON`
+    /// (four: gnoll, bugbear, human, kobold), which is a different question
+    /// from how many distinct thresholds the roster produces (five, the count
+    /// above). Both are stated in full in both places so neither has to be
+    /// re-derived from the other. Said here so it is not rediscovered as a
+    /// surprise.
     ///
     /// **The horizon read here is the EFFECTIVE one** ([`Bake::
     /// effective_horizon`]), and the composition with spec §4.3c is a real
@@ -2011,6 +2204,7 @@ impl<'a> Bake<'a> {
             alive: true,
             tech,
             tech_offset,
+            disposition: self.drawn_disposition(people, site, year),
             stores: 0.0,
         });
         // Keep the growth buffer exactly parallel to `communities`: a community
@@ -2573,7 +2767,7 @@ impl<'a> Bake<'a> {
         if !self.communities[idx].alive {
             return false;
         }
-        let (record, pop, lineage, offset, id, site) = {
+        let (record, pop, lineage, offset, id, site, disposition) = {
             let c = &self.communities[idx];
             (
                 c.record,
@@ -2582,6 +2776,9 @@ impl<'a> Bake<'a> {
                 c.tech_offset,
                 c.id,
                 c.site,
+                // Read before the close below: the fleeing vassal takes the
+                // mind of the seat it is walking off, having no other.
+                c.disposition,
             )
         };
         let arriving = pop * MIGRATE_SURVIVAL;
@@ -2599,7 +2796,17 @@ impl<'a> Bake<'a> {
         let carried = self.lift_portfolio(idx);
         self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
         match self.relocate(
-            people, arriving, lineage, id, offset, site, era, year, 0, carried,
+            people,
+            arriving,
+            lineage,
+            id,
+            offset,
+            site,
+            era,
+            year,
+            0,
+            carried,
+            disposition,
         ) {
             // `resettled` is tallied inside `relocate`, at the branch that
             // reaches vacant ground; only the migration itself is added here.
@@ -2839,12 +3046,14 @@ impl<'a> Bake<'a> {
     /// break in byte-identity for a fixed physics.
     fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
         let raider_site = self.communities[raider].site;
-        // Read once: it does not vary over the candidate walk, and both the
-        // durable inhibition and the size gate (spec §4.3b) are keyed on it.
+        // Read once: it does not vary over the candidate walk, and the size
+        // gate (spec §4.3b) is keyed on it.
         let raider_people = self.records[self.communities[raider].record].core.people;
-        // The durable inhibition: a timid people never takes the initiative,
-        // so it never enters the candidate loop at all.
-        if !self.takes_the_initiative(raider_people) {
+        // The durable inhibition: a timid COMMUNITY never takes the initiative,
+        // so it never enters the candidate loop at all. Its own drawn
+        // disposition, not its people's authored constant (The Tolerance) —
+        // this seat's neighbour of the same kind may well answer otherwise.
+        if !self.takes_the_initiative(self.communities[raider].disposition) {
             return;
         }
         // Too small to seat itself after the war it is contemplating: decline,
@@ -3037,13 +3246,16 @@ impl<'a> Bake<'a> {
                 c.tech_offset,
             )
         };
-        let (loser_people, loser_id, loser_lineage, loser_offset) = {
+        let (loser_people, loser_id, loser_lineage, loser_offset, loser_disposition) = {
             let c = &self.communities[target];
             (
                 self.records[c.record].core.people,
                 c.id,
                 c.lineage,
                 c.tech_offset,
+                // The beaten lord rolls downhill carrying the mind of the seat
+                // he just lost — read before the close below.
+                c.disposition,
             )
         };
 
@@ -3104,6 +3316,7 @@ impl<'a> Bake<'a> {
             year,
             0,
             loser_carried,
+            loser_disposition,
         ) {
             // `resettled` is tallied inside `relocate`, at the vacant-land
             // branch itself, so every hop that reaches vacant ground counts —
@@ -3233,7 +3446,9 @@ pub fn bake(
         peoples,
         river_prox,
         refugia,
+        seed,
         disposition: &cfg.disposition,
+        disposition_spread: &cfg.disposition_spread,
         in_group_radius: &cfg.in_group_radius,
         time_horizon: &cfg.time_horizon,
         records: Vec::new(),
@@ -3559,7 +3774,9 @@ mod tests {
             peoples: all_settlers(),
             river_prox: &river_prox,
             refugia: &refugia,
+            seed: Seed(1),
             disposition: no_disposition(),
+            disposition_spread: no_spread(),
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
             records: Vec::new(),
@@ -3585,6 +3802,7 @@ mod tests {
         );
         let r1_id = bake.communities[r1_idx].id;
         let lineage = bake.communities[r1_idx].lineage;
+        let r1_disposition = bake.communities[r1_idx].disposition;
         assert_eq!(r1_id, lineage, "genesis community is its own lineage root");
 
         // First migration: R1 closes and relocates to vacant land, founded
@@ -3601,6 +3819,7 @@ mod tests {
             &era,
             100.0,
             0,
+            r1_disposition,
         );
         let r2_idx = match outcome1 {
             Relocation::Settled { cascade: 0 } => bake.communities.len() - 1,
@@ -3608,6 +3827,7 @@ mod tests {
         };
         let r2_id = bake.communities[r2_idx].id;
         let r2_site = bake.communities[r2_idx].site;
+        let r2_disposition = bake.communities[r2_idx].disposition;
         assert_eq!(
             bake.records[bake.communities[r2_idx].record].founded_from,
             Founding::From(r1_id)
@@ -3618,8 +3838,18 @@ mod tests {
         // the case that catches the bug: the buggy code named `lineage`
         // (R1), the fix names R2.
         bake.close(r2_idx, 200.0, CauseOfEnd::Migrated, Ended::Nature);
-        let outcome2 = bake
-            .relocate_holding_nothing(people, 8.0, lineage, r2_id, 0.0, r2_site, &era, 200.0, 0);
+        let outcome2 = bake.relocate_holding_nothing(
+            people,
+            8.0,
+            lineage,
+            r2_id,
+            0.0,
+            r2_site,
+            &era,
+            200.0,
+            0,
+            r2_disposition,
+        );
         let r3_idx = match outcome2 {
             Relocation::Settled { cascade: 0 } => bake.communities.len() - 1,
             other => panic!("expected a direct settle onto vacant land: {other:?}"),
@@ -3718,6 +3948,18 @@ mod tests {
         &NONE
     }
 
+    /// The `disposition_spread` map a hand-built [`Bake`] uses when the test is
+    /// not about The Tolerance's draw: empty, so every people draws with spread
+    /// 0 and every community's disposition is its people's authored location
+    /// exactly. That is the pre-Tolerance behaviour, which is what the existing
+    /// per-people conflict fixtures in this module were written against and
+    /// still assert; the draw itself is exercised by the tests that override
+    /// this map.
+    fn no_spread() -> &'static BTreeMap<KindId, f64> {
+        static NONE: BTreeMap<KindId, f64> = BTreeMap::new();
+        &NONE
+    }
+
     /// The `in_group_radius` map a hand-built [`Bake`] uses when the test is
     /// not about concealment: empty, so nobody hides anything (the same
     /// fail-open the composition root sees when a people carries no
@@ -3762,6 +4004,21 @@ mod tests {
         refugia: &'a CellMap<bool>,
         disposition: &'a BTreeMap<KindId, f64>,
     ) -> Bake<'a> {
+        hand_bake_spread(graphs, caps, river_prox, refugia, disposition, no_spread())
+    }
+
+    /// [`hand_bake`] with an explicit `disposition_spread` — the fixture for a
+    /// test that IS about The Tolerance's per-settlement draw. Every other
+    /// fixture goes through [`hand_bake`], which pins the spread at empty so
+    /// the pre-campaign per-people behaviour is what those tests still see.
+    fn hand_bake_spread<'a>(
+        graphs: &'a [ConnectionGraph],
+        caps: &'a [hornvale_kernel::ecology::CapacityMap],
+        river_prox: &'a CellMap<f64>,
+        refugia: &'a CellMap<bool>,
+        disposition: &'a BTreeMap<KindId, f64>,
+        disposition_spread: &'a BTreeMap<KindId, f64>,
+    ) -> Bake<'a> {
         Bake {
             graphs,
             cur_graph: 0,
@@ -3769,7 +4026,9 @@ mod tests {
             peoples: all_settlers(),
             river_prox,
             refugia,
+            seed: Seed(1),
             disposition,
+            disposition_spread,
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
             records: Vec::new(),
@@ -4698,11 +4957,24 @@ mod tests {
         // ever came to hold is held on identical terms in both. Nothing but
         // the patron's discount rate can explain a difference.
         //
-        // The two values are the authored ones the shipped roster actually
-        // reaches patron-side (bugbear 0.3, kobold 0.8; goblin's 0.5 is
-        // raid-vetoed and hobgoblin sits at the neutral middle), applied to
-        // this fixture's patron people so that the people itself — and
-        // therefore its concealment, disposition and tech — is held fixed.
+        // The two values are authored ones the shipped roster actually reaches
+        // patron-side (bugbear 0.3, kobold 0.8), applied to this fixture's
+        // patron people so that the people itself — and therefore its
+        // concealment, disposition and tech — is held fixed.
+        //
+        // The Tolerance (2026-08-04) corrects why these two: the original
+        // reason given was that they were the ONLY two reachable, goblin's 0.5
+        // being raid-vetoed and hobgoblin sitting at the neutral middle. That
+        // premise is gone — `threat_response` is drawn per settlement now, so
+        // every people reaches patronhood on some settlements
+        // ([`BakeConfig::time_horizon`]) and the reachable set is the whole
+        // roster: gnoll 0.2, bugbear 0.3, goblin 0.5, hobgoblin 0.5, human
+        // 0.75, kobold 0.8. 0.3 and 0.8 are KEPT unchanged, and are still a
+        // good pair: they are far apart, both away from `NEUTRAL_HORIZON`, and
+        // both authored rather than invented. They are no longer the extremes
+        // — gnoll's 0.2 is now the shortest reachable horizon — but this test
+        // asserts a DIRECTION (a generational patron leaves a larger vassal),
+        // not a maximal spread, so a wider pair would not make it bind harder.
         //
         // Non-vacuity is asserted, not assumed: BOTH arms must actually have
         // extracted something from this vassal, or "the generational patron
@@ -4710,11 +4982,15 @@ mod tests {
         // all — which is precisely what a rule with no patron-side term looks
         // like when the demand happens never to bind.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
-        /// The immediate patron's horizon — bugbear's authored value, the
-        /// shortest sighted patron the shipped roster can produce.
+        /// The immediate patron's horizon — bugbear's authored value. The
+        /// **second**-shortest reachable, not the shortest: gnoll's 0.2 is
+        /// shorter and has been reachable patron-side since The Tolerance made
+        /// the raid gate a per-settlement draw (see the block comment above,
+        /// and [`BakeConfig::time_horizon`]).
         const IMMEDIATE: f64 = 0.3;
-        /// The generational patron's horizon — kobold's authored value, the
-        /// longest sighted one.
+        /// The generational patron's horizon — kobold's authored value, and
+        /// still the longest sighted on the roster (human's 0.75 is the next
+        /// highest).
         const GENERATIONAL: f64 = 0.8;
         /// Epochs driven: long enough for the relation to form, for the
         /// adaptive demand to climb into contact with the vassal's increment,
@@ -4852,11 +5128,18 @@ mod tests {
         // populations, same cells, same stream; the ONLY difference between the
         // arms is the patron people's authored `time_horizon`.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
-        /// The immediate patron's horizon — bugbear's authored value, the
-        /// shortest sighted patron the shipped roster produces.
+        /// The immediate patron's horizon — bugbear's authored value. The
+        /// **second**-shortest reachable, not the shortest: gnoll's 0.2 is
+        /// shorter and has been reachable patron-side since The Tolerance made
+        /// the raid gate a per-settlement draw (see
+        /// [`BakeConfig::time_horizon`]). The arms are unchanged by that —
+        /// this test asserts that a generational patron DECLINES a vassal an
+        /// immediate one takes, which is a claim about the two arms differing,
+        /// not about either being extremal.
         const IMMEDIATE: f64 = 0.3;
-        /// The generational patron's horizon — kobold's authored value, the
-        /// longest sighted one.
+        /// The generational patron's horizon — kobold's authored value, and
+        /// still the longest sighted on the roster (human's 0.75 is the next
+        /// highest).
         const GENERATIONAL: f64 = 0.8;
         /// The patron's population: comfortably over `DAUGHTER_POP ×
         /// RAID_MARGIN`, so dominance is never what decides either arm.
@@ -4988,13 +5271,36 @@ mod tests {
     #[test]
     fn a_busy_patron_extracts_harder_from_the_same_vassal_than_a_quiet_one() {
         // Spec §4.3c, the portfolio effect — and the reason it is worth having
-        // on top of §4.3a: the per-people axis reaches only THREE values
-        // patron-side (bugbear 0.3 / hobgoblin 0.5 / kobold 0.8, goblin being
-        // raid-vetoed), and bugbear is both the short extreme AND the only
-        // `Communal` short-horizon people, so any world-level reading off
-        // `time_horizon` alone is partly confounded with `sociality`. The
-        // subordinate count is a property of the RELATION TABLE, not of a
-        // people, so it varies independently of that confound.
+        // on top of §4.3a: the per-people axis is COARSE and partly confounded
+        // with `sociality`, so a second, independent source of variation earns
+        // its place. The subordinate count is a property of the RELATION
+        // TABLE, not of a people, so it varies independently of any per-people
+        // confound whatever.
+        //
+        // The Tolerance (2026-08-04) re-derives that coarseness rather than
+        // deleting the claim, because the arithmetic behind it moved. It used
+        // to read: only THREE values are reachable patron-side (bugbear 0.3 /
+        // hobgoblin 0.5 / kobold 0.8, goblin being raid-vetoed), and bugbear is
+        // both the short extreme AND the only `Communal` short-horizon people.
+        // Both halves are false, and they went false at DIFFERENT times, which
+        // is worth separating. The Vacancy's gnoll (horizon 0.2,
+        // `threat_response` 0.85) has cleared the raid gate since it was
+        // authored, so bugbear stopped being the short extreme one campaign
+        // ago, and gnoll is `Hierarchic`, not `Communal`. The Tolerance then
+        // falsified the count as well: `threat_response` is drawn per
+        // settlement, so every people reaches patronhood on some settlements
+        // and the reachable set is the whole roster — gnoll 0.2, bugbear 0.3,
+        // goblin 0.5, hobgoblin 0.5, human 0.75, kobold 0.8, i.e. FIVE distinct
+        // thresholds (goblin and hobgoblin share 0.5), up from four.
+        //
+        // The conclusion survives both corrections, for a reason worth stating
+        // rather than asserting. Five cuts of one band is still coarse against
+        // the continuum the formula could express, so the portfolio effect
+        // still earns its place. The `sociality` confound is genuinely WEAKER
+        // than the old comment claimed — the short end of the axis is no longer
+        // uniquely `Communal` — but it is not gone: the two `Communal` peoples
+        // are bugbear (0.3) and kobold (0.8), which is to say the horizon axis
+        // still does not vary independently of social form across the roster.
         //
         // **The two arms hold the patron people and its authored horizon
         // FIXED** and differ in exactly one thing: how many OTHER vassals the
@@ -7592,9 +7898,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7608,6 +7915,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7750,9 +8058,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             let outcome = bake.relocate_holding_nothing(
@@ -7765,6 +8074,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             );
             let seated = *bake
                 .node_index
@@ -7851,9 +8161,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7867,6 +8178,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7905,9 +8217,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7921,6 +8234,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -7972,9 +8286,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -7988,6 +8303,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(outcome, Relocation::Settled { cascade: 0 });
         let seat = bake
@@ -8032,9 +8348,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
 
@@ -8050,6 +8367,7 @@ mod tests {
             &era,
             0.0,
             0,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -8137,9 +8455,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             let outcome = bake.relocate_holding_nothing(
@@ -8152,6 +8471,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             );
             // Read everything the assertions need out of the borrowed `Bake`
             // before it dies with this closure's frame: the outcome, the
@@ -8267,9 +8587,10 @@ mod tests {
             None,
             0.0,
         );
-        let (r_id, r_lineage) = (
+        let (r_id, r_lineage, r_disposition) = (
             bake.communities[roller].id,
             bake.communities[roller].lineage,
+            bake.communities[roller].disposition,
         );
         bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
         let records_before = bake.records.len();
@@ -8285,6 +8606,7 @@ mod tests {
             &era,
             0.0,
             CASCADE_DEPTH_CAP,
+            r_disposition,
         );
         assert_eq!(
             capped,
@@ -8309,6 +8631,7 @@ mod tests {
             &era,
             0.0,
             CASCADE_DEPTH_CAP - 1,
+            r_disposition,
         );
         assert_eq!(
             outcome,
@@ -8408,9 +8731,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             bake.relocate_holding_nothing(
@@ -8423,6 +8747,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             )
         };
 
@@ -8443,12 +8768,19 @@ mod tests {
 
     #[test]
     fn a_timid_people_does_not_raid_however_strong_it_is() {
-        // Inhibition 2 of spec §4.2a (durable): a people whose authored
+        // Inhibition 2 of spec §4.2a (durable): a community whose
         // `threat_response` falls below `RAID_DISPOSITION_MIN` never takes the
         // initiative, however strong it is on paper. Both arms are the same
         // world with the same populations — only the raider's disposition
         // differs — and the third arm pins the fail-open contract for a people
         // with no authored psyche at all.
+        //
+        // `hand_bake` fixes the spread at zero, so each community draws its
+        // people's authored location exactly and this stays the per-people
+        // reading it was written as. What The Tolerance changed — that two
+        // settlements of ONE people can answer differently — is the separate
+        // claim of `two_settlements_of_one_people_can_differ_in_raiding`; this
+        // test's job is still the veto itself.
         let probe = Geosphere::new(1);
         let target_cell = probe.neighbors(CellId(0))[0];
         let raid_with_disposition = |disposition: BTreeMap<KindId, f64>| {
@@ -8496,6 +8828,87 @@ mod tests {
         );
     }
 
+    /// **The Tolerance's headline: the sorting phenomenon.** With a dispersion
+    /// above zero, one people's settlements must not all answer the raid gate
+    /// the same way — warlikeness is a property of a *place*, not of a *kind*.
+    ///
+    /// Both arms are the same people, the same authored temperament, the same
+    /// world, the same populations and the same site; only the founding year
+    /// differs between samples, so only the draw key does. The second arm is
+    /// the control that makes the first arm's variation attributable: at
+    /// dispersion 0 every sample draws its people's authored location exactly,
+    /// so a uniform answer there proves the year is not doing the work by some
+    /// other route (tech horizon, say) and the spread is.
+    ///
+    /// Written against the pre-change gate it fails on arm 1 with every sample
+    /// answering 1 — which is precisely the premise this campaign exists to
+    /// overturn.
+    #[test]
+    fn two_settlements_of_one_people_can_differ_in_raiding() {
+        let probe = Geosphere::new(1);
+        let target_cell = probe.neighbors(CellId(0))[0];
+        // Authored exactly AT the gate, so a symmetric spread puts roughly half
+        // the draws on each side of it and the test is not fishing for a rare
+        // tail.
+        let authored: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.6)].into_iter().collect();
+        let spread: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.3)].into_iter().collect();
+        let raided_when_founded_in = |spread: &BTreeMap<KindId, f64>, founded: f64| -> u64 {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+            let mut bake =
+                hand_bake_spread(&graphs, &capacity, &river_prox, &refugia, &authored, spread);
+            let raider = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                founded,
+                200.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            bake.open(
+                KindId("goblin"),
+                target_cell,
+                founded,
+                50.0,
+                Founding::Genesis(target_cell),
+                None,
+                0.0,
+            );
+            bake.maybe_raid(raider, &era, founded);
+            bake.tally.raided
+        };
+
+        // The default bake grid's first twenty epochs (0, 25, … 475).
+        let years: Vec<f64> = (0..20).map(|i| f64::from(i) * 25.0).collect();
+
+        let dispersed: Vec<u64> = years
+            .iter()
+            .map(|&y| raided_when_founded_in(&spread, y))
+            .collect();
+        assert!(
+            dispersed.contains(&1),
+            "no settlement of this people took the initiative anywhere: {dispersed:?}"
+        );
+        assert!(
+            dispersed.contains(&0),
+            "every settlement of this people answered the gate identically \
+             ({dispersed:?}) — warlikeness is still a property of the KIND"
+        );
+
+        // The control: same people, same authored 0.6, same years, no spread.
+        let uniform: Vec<u64> = years
+            .iter()
+            .map(|&y| raided_when_founded_in(no_spread(), y))
+            .collect();
+        assert!(
+            uniform.iter().all(|&r| r == 1),
+            "at dispersion 0 every settlement must answer its people's authored \
+             temperament identically, or the founding year is moving something \
+             other than the draw: {uniform:?}"
+        );
+    }
+
     #[test]
     fn a_timid_people_driven_off_its_land_flees_rather_than_rolling_over_a_holder() {
         // The same durable veto on the roll-downhill's side of the one rule: a
@@ -8524,9 +8937,10 @@ mod tests {
                 None,
                 0.0,
             );
-            let (r_id, r_lineage) = (
+            let (r_id, r_lineage, r_disposition) = (
                 bake.communities[roller].id,
                 bake.communities[roller].lineage,
+                bake.communities[roller].disposition,
             );
             bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
             bake.relocate_holding_nothing(
@@ -8539,6 +8953,7 @@ mod tests {
                 &era,
                 0.0,
                 0,
+                r_disposition,
             )
         };
 

@@ -128,9 +128,16 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // this capacity-by-latitude reading: 20.8640 -> 20.9646. The
     // preregistered floor of 3 still clears decisively (nearly 7x), the
     // claim this row exists to guard, re-checked rather than assumed.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford
+    // at 347945b4, 0063/0079): warlikeness is drawn per settlement rather
+    // than per species, so every world's raid history — and with it which
+    // sites carry surviving settlements — differs: 20.9646 -> 21.9651. The
+    // preregistered floor of 3 still clears decisively (better than 7x),
+    // the claim this row exists to guard, re-checked rather than assumed.
     assert!(
-        (mean - 20.9646).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~20.9646)"
+        (mean - 21.9651).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~21.9651)"
     );
 }
 
@@ -222,9 +229,17 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // the directional claim — below the uniform-sphere baseline of 32.7 —
     // is untouched and still clears the baseline by better than 2x,
     // re-checked rather than assumed.
+    //
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford
+    // at 347945b4, 0063/0079): warlikeness is drawn per settlement rather
+    // than per species, moving settlement placement again and pulling
+    // population slightly equatorward (15.1298 -> 14.8729); the
+    // preregistered directional claim asserted above — below the
+    // uniform-sphere baseline of 32.7 — is untouched and still clears the
+    // baseline by better than 2x, re-checked rather than assumed.
     assert!(
-        (mean - 15.1298).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.1298)"
+        (mean - 14.8729).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~14.8729)"
     );
 }
 

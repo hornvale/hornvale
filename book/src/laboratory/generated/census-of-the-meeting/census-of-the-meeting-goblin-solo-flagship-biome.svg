@@ -11,26 +11,26 @@
 <rect x="60.7" y="231.0" width="53.6" height="5.0" fill="#5b8dd9" rx="2" />
 <text x="87.6" y="227.0" font-size="11" fill="currentColor" text-anchor="middle">5</text>
 <text x="87.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 87.6 252.0)">alpine</text>
-<rect x="123.8" y="231.0" width="53.6" height="5.0" fill="#5b8dd9" rx="2" />
-<text x="150.7" y="227.0" font-size="11" fill="currentColor" text-anchor="middle">5</text>
+<rect x="123.8" y="232.0" width="53.6" height="4.0" fill="#5b8dd9" rx="2" />
+<text x="150.7" y="228.0" font-size="11" fill="currentColor" text-anchor="middle">4</text>
 <text x="150.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 150.7 252.0)">savanna</text>
 <rect x="187.0" y="234.0" width="53.6" height="2.0" fill="#5b8dd9" rx="2" />
 <text x="213.8" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">2</text>
 <text x="213.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 213.8 252.0)">shrubland</text>
-<rect x="250.1" y="210.0" width="53.6" height="26.0" fill="#5b8dd9" rx="2" />
-<text x="276.9" y="206.0" font-size="11" fill="currentColor" text-anchor="middle">26</text>
+<rect x="250.1" y="211.0" width="53.6" height="25.0" fill="#5b8dd9" rx="2" />
+<text x="276.9" y="207.0" font-size="11" fill="currentColor" text-anchor="middle">25</text>
 <text x="276.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 276.9 252.0)">taiga</text>
-<rect x="313.2" y="102.0" width="53.6" height="134.0" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="98.0" font-size="11" fill="currentColor" text-anchor="middle">134</text>
+<rect x="313.2" y="107.0" width="53.6" height="129.0" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="103.0" font-size="11" fill="currentColor" text-anchor="middle">129</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">temperate-forest</text>
-<rect x="376.3" y="223.0" width="53.6" height="13.0" fill="#5b8dd9" rx="2" />
-<text x="403.1" y="219.0" font-size="11" fill="currentColor" text-anchor="middle">13</text>
+<rect x="376.3" y="220.0" width="53.6" height="16.0" fill="#5b8dd9" rx="2" />
+<text x="403.1" y="216.0" font-size="11" fill="currentColor" text-anchor="middle">16</text>
 <text x="403.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 403.1 252.0)">temperate-rainforest</text>
-<rect x="439.4" y="172.0" width="53.6" height="64.0" fill="#5b8dd9" rx="2" />
-<text x="466.2" y="168.0" font-size="11" fill="currentColor" text-anchor="middle">64</text>
+<rect x="439.4" y="171.0" width="53.6" height="65.0" fill="#5b8dd9" rx="2" />
+<text x="466.2" y="167.0" font-size="11" fill="currentColor" text-anchor="middle">65</text>
 <text x="466.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 466.2 252.0)">tropical-rainforest</text>
-<rect x="502.5" y="98.0" width="53.6" height="138.0" fill="#5b8dd9" rx="2" />
-<text x="529.3" y="94.0" font-size="11" fill="currentColor" text-anchor="middle">138</text>
+<rect x="502.5" y="95.0" width="53.6" height="141.0" fill="#5b8dd9" rx="2" />
+<text x="529.3" y="91.0" font-size="11" fill="currentColor" text-anchor="middle">141</text>
 <text x="529.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 529.3 252.0)">tropical-seasonal-forest</text>
 <rect x="565.6" y="123.0" width="53.6" height="113.0" fill="#5b8dd9" rx="2" />
 <text x="592.4" y="119.0" font-size="11" fill="currentColor" text-anchor="middle">113</text>

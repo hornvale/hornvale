@@ -84,6 +84,7 @@ pub mod chorus;
 pub mod color_naming;
 pub mod components;
 mod descent;
+pub mod disposition;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
@@ -5590,6 +5591,70 @@ pub fn build_world_to_with_artifacts(
     build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
 }
 
+/// The raid gate's two authored per-people inputs, as
+/// [`bake_history_from`] resolves them for `BakeConfig::disposition` and
+/// `BakeConfig::disposition_spread`: `(location, spread)` — each people's
+/// authored `threat_response` (the MEAN of its distribution, spec D2) and its
+/// `Dispersion::mind` (that distribution's standard deviation).
+///
+/// **Extracted so it is reachable.** The values the bake actually gates on live
+/// in `Community.disposition`, which is private and is never committed to the
+/// ledger, so no integration test can observe them — The Tolerance's Task 5
+/// review demonstrated the hole by handing every people a fabricated spread and
+/// watching all three of `tests/tolerance_mutation.rs`'s assertions pass while
+/// the *reported* σ came off the registry. This function is the seam that
+/// closes it: it is pure, it is the only place either map is built, and
+/// `the_composition_root_hands_the_bake_the_authored_dispersion` below pins its
+/// output against the authored registries.
+///
+/// Resolved from two different sources, deliberately:
+///
+/// - the location off `wc.psyche` — The Tumult §4.2a's durable inhibition is
+///   authored psychology, and the composition root is the only layer that may
+///   read the species registries, so it resolves them here and hands the bake
+///   plain kernel types;
+/// - the spread off `hornvale_species::dispersion_registry()` rather than off
+///   `wc`, because `WorldComponents` carries no dispersion store: `Dispersion`
+///   is authored beside the psyche but is not one of the integrity-checked
+///   components, and adding it would widen `from_stores`' arity for every
+///   caller to no purpose. This matches `disposition::settlement_disposition`,
+///   which resolves the same registry on the ledger side.
+///
+/// A people missing from either source is simply **absent** from that map, and
+/// the two absences fail in opposite directions by design: absent from
+/// `disposition` is not vetoed at all, absent from `disposition_spread` draws
+/// with spread 0 — its authored location exactly, the pre-Tolerance behaviour.
+/// That is the safe direction for a synthetic roster nobody authored a spread
+/// for (Lab's solo `serpent`/`goblin-twin`, re-keyed off goblin's components
+/// under a fresh `KindId`).
+///
+/// The two maps are coextensive on the shipped roster, but **not because they
+/// are built from one candidate list** — they read different registries, so one
+/// `peoples` list can yield two different key sets. What makes them coextensive
+/// is `hornvale_species`'s `every_kind_with_a_mind_carries_a_dispersion`
+/// (The Tolerance, Task 2), and the test below asserts it here too rather than
+/// inheriting it.
+/// type-audit: bare-ok(ratio: return)
+fn disposition_maps(
+    peoples: &[KindId],
+    wc: &WorldComponents,
+) -> (
+    std::collections::BTreeMap<KindId, f64>,
+    std::collections::BTreeMap<KindId, f64>,
+) {
+    let dispersion = hornvale_species::dispersion_registry();
+    (
+        peoples
+            .iter()
+            .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
+            .collect(),
+        peoples
+            .iter()
+            .filter_map(|&k| dispersion.get(&k).map(|d| (k, d.mind)))
+            .collect(),
+    )
+}
+
 /// Assemble the deep-history bake's inputs (carrying capacity, river
 /// proximity, the paleoclimate eras and their per-era connection graphs, and
 /// the peopled roster) from an already-built `world`/`terrain`/`climate` and
@@ -5679,14 +5744,12 @@ fn bake_history_from(
     .into_iter()
     .map(|(_tag, map)| map)
     .collect();
-    // The Tumult §4.2a's durable inhibition is authored psychology, so the
-    // composition root — the only layer that may read the species registries —
-    // resolves it here and hands the bake plain kernel types. A people whose
-    // psyche is missing is simply absent from the map and is not vetoed.
-    cfg.disposition = peoples
-        .iter()
-        .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
-        .collect();
+    // The raid gate's two authored inputs, resolved in ONE place so a test can
+    // reach the same values the bake is about to receive (see
+    // [`disposition_maps`]).
+    let (disposition, disposition_spread) = disposition_maps(&peoples, wc);
+    cfg.disposition = disposition;
+    cfg.disposition_spread = disposition_spread;
     // The Tithe §4.2's concealment term, resolved on the same channel and with
     // the same fallback: `in_group_radius` rides `SocietyVector`, which only
     // `Settled` kinds carry (decision 0068) — a people without one is absent
@@ -8215,7 +8278,7 @@ mod tests {
         assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 58);
         assert_eq!(count("deity-name"), 58);
-        assert_eq!(count("name-gloss"), 275);
+        assert_eq!(count("name-gloss"), 231);
     }
 
     #[test]
@@ -12400,6 +12463,100 @@ mod tests {
             least.1,
             most.2,
             least.2
+        );
+    }
+
+    /// **The config seam, pinned.** `bake_history_from` claims to hand the bake
+    /// each settling people's authored `threat_response` and authored
+    /// `Dispersion::mind`; nothing downstream can check that claim, because
+    /// `Community.disposition` is private and is never committed, so the value
+    /// the bake gates on is unobservable from any integration test. The
+    /// Tolerance's Task 5 review demonstrated the hole: handing every people a
+    /// fabricated spread of 0.15 left all three of
+    /// `tests/tolerance_mutation.rs`'s assertions green while the mutation
+    /// proof reported a sigma of 0.35 it had read from the registry.
+    ///
+    /// [`disposition_maps`] is the extraction that makes the seam reachable,
+    /// and this is the test at it. It compares the maps the composition root
+    /// builds against the authored registries themselves — so a fabricated,
+    /// rescaled or defaulted spread reddens here even though every world still
+    /// builds.
+    #[test]
+    fn the_composition_root_hands_the_bake_the_authored_dispersion() {
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let psyche = hornvale_species::psyche_registry();
+        let dispersion = hornvale_species::dispersion_registry();
+        let peoples: Vec<KindId> = wc
+            .biosphere
+            .iter()
+            .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+            .map(|(k, _)| *k)
+            .collect();
+        assert_eq!(
+            peoples.len(),
+            6,
+            "the settling roster moved; re-read this test before re-pinning it"
+        );
+
+        let (locations, spreads) = disposition_maps(&peoples, &wc);
+
+        // The two maps are coextensive on the shipped roster — not by
+        // construction (they read different registries) but because every
+        // minded kind carries a dispersion (Task 2).
+        assert_eq!(
+            locations.keys().collect::<Vec<_>>(),
+            spreads.keys().collect::<Vec<_>>(),
+            "a people reached one map and not the other: the gate would read an \
+             authored location with no spread, or a spread with nothing to \
+             perturb"
+        );
+        assert_eq!(
+            locations.len(),
+            peoples.len(),
+            "not every settling people reached the bake's disposition map"
+        );
+
+        for &people in &peoples {
+            assert_eq!(
+                locations[&people],
+                psyche
+                    .get(&people)
+                    .expect("every settling people carries a mind")
+                    .threat_response,
+                "{}: the bake would gate on a location that is not the authored one",
+                people.0
+            );
+            assert_eq!(
+                spreads[&people],
+                dispersion
+                    .get(&people)
+                    .expect("every settling people carries a dispersion")
+                    .mind,
+                "{}: the bake would draw with a spread that is not the authored one — \
+                 every world still builds and every downstream measurement still \
+                 reports the AUTHORED sigma, so this assertion is the only thing \
+                 standing between the campaign and a readout of worlds it did not \
+                 describe",
+                people.0
+            );
+        }
+
+        // The demonstrated failure mode was a single fabricated constant handed
+        // to everyone, which every per-people equality above catches but which
+        // is worth naming: dispersion is authored per people, and a roster that
+        // has become uniform is not this roster.
+        let mut distinct: Vec<f64> = spreads.values().copied().collect();
+        distinct.sort_by(f64::total_cmp);
+        distinct.dedup();
+        assert!(
+            distinct.len() > 1,
+            "every settling people reached the bake with the same spread {distinct:?} — \
+             dispersion is authored per people, so a uniform map is a fabricated one"
+        );
+        assert!(
+            spreads.values().all(|s| *s > 0.0),
+            "a settling people reached the bake with spread 0, which is the \
+             pre-Tolerance behaviour: {spreads:?}"
         );
     }
 }

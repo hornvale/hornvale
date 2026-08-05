@@ -213,9 +213,44 @@ fn regenerate_occupancy_readout() {
 ///
 /// | region | new kinds present | top occupant |
 /// |---|---|---|
-/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **giant-scorpion** (0.0176) — met |
-/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | treant (0.0581) — NOT met |
+/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **giant-scorpion** (0.0177) — met |
+/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | treant (0.0555) — NOT met |
 /// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | treant (0.0273) — NOT met |
+///
+/// **Witnesses refreshed 2026-08-05 (The Tolerance's close), verdict
+/// unchanged.** The three `mean_k` figures above are the re-read values
+/// (savanna moved most, 0.0581 → 0.0555); the *claim* — one of three regions
+/// gained a top-ranked occupant, and the other two are topped by a sessile
+/// autotroph — survives the re-pin intact, which is the only reason the numbers
+/// were allowed to move.
+///
+/// **Two campaigns drifted this fixture, not one, and neither is the campaign
+/// that re-pinned it.** The row count went 300 → 330, and the thirty new rows
+/// decompose cleanly:
+///
+/// - **11 are `human,*`** — the kind was absent from this fixture entirely
+///   (zero rows), because *The Generalist* (`6fef04fc`) authored human's
+///   biosphere row after this fixture was last written. `KindId("human")` has
+///   grep count **0** in `domains/species/src/lib.rs` at `d75cfea4` and **5**
+///   at the merge-base. A roster addition, not a capacity change.
+/// - **20 are `*,desert`** — desert went 6 → 26 rows, because *The Keeping*
+///   (`448a203d`) decomposed `CarryingInput.habitable` into `is_land` and
+///   opened the biome to the capacity field.
+/// - The two sets **overlap in exactly one row**, `human,desert`, which needs
+///   both causes: the kind has to exist *and* the biome has to be reachable.
+///   11 + 20 − 1 = 30.
+///
+/// Of the 300 pre-existing rows, **90 are byte-identical** in the new fixture —
+/// including taiga's `treant` reading, which is why the third row of the table
+/// above is unchanged. So The Keeping moved *most* capacity readings, not all
+/// of them.
+///
+/// The first version of this note named only The Keeping. That was an
+/// under-checked attribution replacing an under-checked attribution — the exact
+/// failure the retrospective for this campaign names as its own lesson, in the
+/// correction to the correction. Recorded here rather than smoothed over,
+/// because a committed test doc is where the next reader takes a cause on
+/// faith.
 ///
 /// So one of three regions gained a top-ranked occupant. The other two gained
 /// real presence and did not gain dominance, and in both the top slot belongs
@@ -227,11 +262,27 @@ fn regenerate_occupancy_readout() {
 /// climate cannot outrank it there. That is BIO-supply-drowns-niche, and it is the named
 /// prerequisite for this test.
 ///
-/// The gnoll is the sharpest case: a people authored explicitly for hot-arid
-/// desert has **zero** desert occupancy and its largest share is
-/// temperate-forest. Its niche was deliberately left untuned — fitting the
-/// world to a preregistered criterion is the one move that would invalidate
-/// the result.
+/// The gnoll is the sharpest case, and the 2026-08-05 re-pin **corrected two
+/// statements of it**, one stale and one that was never right.
+///
+/// - *Stale:* a people authored explicitly for hot-arid desert had **zero**
+///   desert occupancy. It no longer does — `is_land` opened desert to the
+///   capacity field, and the gnoll now holds 3793 desert cells. But that is
+///   presence, not dominance: desert is worth **0.0097** of the gnoll's world
+///   total K, which is its **smallest share of any biome it reaches — 11th of
+///   11** — while `giant-scorpion` still tops the region. (Desert is the
+///   gnoll's 8th biome by `mean_k`, a different column; the two rankings
+///   disagree and only the share one is quoted here.) The diagnosis is
+///   untouched; only the starkest way of phrasing it is gone.
+/// - *Never right:* "its largest share is temperate-forest". The gnoll's
+///   largest share is **tropical-seasonal-forest** (0.3006), and it was
+///   tropical-seasonal-forest (0.3007) in the fixture this sentence was
+///   written against too. The claim was wrong on the day it was committed, and
+///   a drift check cannot catch that — it pins output against *change*, never
+///   against being *wrong*.
+///
+/// Its niche was deliberately left untuned — fitting the world to a
+/// preregistered criterion is the one move that would invalidate the result.
 ///
 /// This test is expected to fail until BIO-supply-drowns-niche lands. Its failure is the record.
 #[test]

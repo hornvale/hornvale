@@ -37,12 +37,49 @@
 //!
 //! ## The hypothesis this file does assert
 //!
-//! `threat_response` is the *only* per-people input the composition root
-//! hands the bake (`bake_history_from` fills `BakeConfig::disposition` from
-//! the psyche registry and nothing else). A people below
-//! [`RAID_DISPOSITION_MIN`] never takes the initiative, so it almost never
-//! vacates an early site; a people above it raids, and every raid it wins
-//! closes its own record and re-seats the flagship on a later one.
+//! `threat_response` is the per-people input that decides the RAID GATE —
+//! not, despite what this paragraph used to claim, the only per-people input
+//! the composition root hands the bake at all. `bake_history_from` fills four:
+//! `disposition` and `disposition_spread` (via `disposition_maps`, off
+//! `wc.psyche` and the authored dispersion registry), `in_group_radius` (The
+//! Tithe's concealment term, off `SocietyVector`) and `time_horizon` (The
+//! Tithe's extraction strategy, off `MindVector`). That claim was already false when
+//! it was written — The Tithe added two of those four — and this file's own
+//! campaign made it more so. The narrower, true statement is the one this
+//! battery actually rests on: the gate reads `threat_response` and nothing
+//! else. A people below [`RAID_DISPOSITION_MIN`] never takes the initiative,
+//! so it almost never vacates an early site; a people above it raids, and
+//! every raid it wins closes its own record and re-seats the flagship on a
+//! later one.
+//!
+//! ## **The Tolerance dissolved this file's partition (2026-08-04)**
+//!
+//! Read the raid-veto sentences above as a statement about the roster
+//! *before* The Tolerance (the input-enumeration sentences before them are
+//! corrected in place, not scoped — they were never about the roster).
+//! `Bake::takes_the_initiative` no longer compares a people's
+//! authored `threat_response`; it compares a value **drawn per settlement**
+//! around that authored mean, with the people's `Dispersion::mind` as the
+//! standard deviation. So the two-way split this file computes from the psyche
+//! registry — "raiders" above 0.6, "abstainers" below — is now a split by
+//! authored *mean*, not by whether a people's settlements raid. Every one of
+//! the six settling peoples has settlements on both sides of the gate; goblin
+//! (mean 0.5, σ 0.25) clears it on roughly 38 % of its draws and human (0.5,
+//! 0.35) on roughly 42 %.
+//!
+//! The directional claim may well survive — a people whose mean is 0.5 still
+//! raids far less often than one at 0.85, so its flagship should still turn
+//! over less — but the *mechanism sentence* is now approximate where it used to
+//! be exact, and the measured rates below (goblin 16.7 % vs 42.6/45.8/50.0 %,
+//! taken 2026-07-26 on the pre-Tolerance bake) predate the change and are the
+//! numbers the bounds were set from.
+//!
+//! **The thresholds were deliberately NOT retuned here.** Moving a
+//! preregistered bound to rescue a prediction after the physics under it
+//! changed is exactly what this repo forbids; if this battery reddens on the
+//! next heavy-tier run, that is a finding for The Tolerance's readout to
+//! report, not a number to adjust. What is corrected here is only the prose
+//! that claimed a people never raids.
 //!
 //! > **Preregistered:** a NON-RAIDING people holds its first-drawn genesis
 //! > site as its flagship far more often than a RAIDING people does — the
@@ -200,9 +237,11 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         let r = rate(k);
         assert!(
             r <= NONRAIDER_MAX,
-            "{k:?} does not raid (threat_response < {RAID_DISPOSITION_MIN}) yet \
-             re-seated its flagship on {r:.3} of worlds, above the \
-             {NONRAIDER_MAX} bound"
+            "{k:?} is authored BELOW the gate on the mean \
+             (threat_response < {RAID_DISPOSITION_MIN}), so most of its \
+             settlements should decline — yet it re-seated its flagship on \
+             {r:.3} of worlds, above the {NONRAIDER_MAX} bound (set from a \
+             pre-Tolerance measurement; see this module's doc)"
         );
         worst_abstainer = worst_abstainer.max(r);
     }
@@ -211,8 +250,10 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         let r = rate(k);
         assert!(
             r >= RAIDER_MIN,
-            "{k:?} raids (threat_response >= {RAID_DISPOSITION_MIN}) yet re-seated \
-             its flagship on only {r:.3} of worlds, below the {RAIDER_MIN} bound"
+            "{k:?} is authored ABOVE the gate on the mean \
+             (threat_response >= {RAID_DISPOSITION_MIN}), so most of its \
+             settlements should take the initiative — yet it re-seated its \
+             flagship on only {r:.3} of worlds, below the {RAIDER_MIN} bound"
         );
         weakest_raider = weakest_raider.min(r);
     }

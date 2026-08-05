@@ -545,10 +545,26 @@ fn homophony_count_is_measured_and_pinned() {
     // daughters by better than 3x (3.58x over goblin, 3.96x over hobgoblin),
     // which is the claim this row guards; these re-pin the witnesses, not the
     // observation.
-    assert!((mg - 3.693).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 3.337).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 13.227).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 4.237).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Tolerance's close regen (2026-08-05, canonical census on lefford at
+    // 347945b4, 0063/0079): goblin 3.693 -> 3.997, hobgoblin 3.337 -> 3.390,
+    // bugbear 13.227 -> 12.974, kobold 4.237 -> 4.248. The mover is the
+    // per-settlement warlikeness draw: a settlement's raid initiative is now
+    // drawn around its people's authored `threat_response` rather than read
+    // off the species, so every world's raid history — and with it each
+    // daughter's surviving periphery and the naming draws over it — differs.
+    // Unlike the last several regens the four do NOT move together: the three
+    // smaller daughters rise while bugbear falls, so the RATIO narrows more
+    // than at any prior re-pin here. The claim this row guards was therefore
+    // re-checked rather than assumed, and it HOLDS: bugbear is still highest
+    // among the goblinoid daughters by better than 3x (3.25x over goblin,
+    // 3.83x over hobgoblin, down from 3.58x/3.96x). That margin is now the
+    // narrowest this row has recorded — a future regen that narrows it again
+    // may falsify the claim outright, which would be a finding to report, not
+    // a bound to widen. These re-pin the witnesses, not the observation.
+    assert!((mg - 3.997).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 3.390).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 12.974).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 4.248).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

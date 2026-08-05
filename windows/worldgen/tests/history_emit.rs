@@ -509,6 +509,20 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // consequence of human's biosphere/niche rows redeciding settlement
     // placement, the same class of collateral this file's own history
     // already documents for The Salt.
+    //
+    // The Tolerance re-pin (2026-08-04): the raid gate stopped reading a
+    // per-people `threat_response` constant and started reading a value drawn
+    // per settlement, so which communities raid — and therefore which
+    // occupations open, close and restack — moved on every world with
+    // settlements. Re-measured on the live corpus: 1 tying pair total -- 0 at
+    // seed 42, 0 at seed 7 (the pair that newly tied under The Generalist no
+    // longer does), 1 at seed 1000. Re-read rather than assumed, by the same
+    // argument as above: Task 4's diff touches `Bake::takes_the_initiative` and
+    // its plumbing, not `layer_key`/`legacy_layer_key`/`occupations_by_cell`,
+    // so the key's tie CONDITIONS are untouched and only the corpus they run
+    // over moved. The per-tie assertions inside the loop — the invariant this
+    // test actually defends — all still hold; it is the corroborating count
+    // that moved.
     let mut pairs = 0u64;
     let mut ties = 0u64;
     for seed in [42u64, 7, 1000] {
@@ -551,8 +565,8 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
          until at least one site restacks (pairs={pairs})"
     );
     assert_eq!(
-        ties, 3,
-        "measured 0 (seed 42) + 1 (seed 7) + 2 (seed 1000) = 3 tying pairs on the live \
+        ties, 1,
+        "measured 0 (seed 42) + 0 (seed 7) + 1 (seed 1000) = 1 tying pair on the live \
          corpus; a different count means the key's tie conditions changed"
     );
 }
@@ -600,15 +614,36 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// there now restacks under the material key — seed 42's count moves 0 -> 1.
 /// Seeds 7 and 1000 are unmoved.
 ///
-/// The Keeping step B re-pin (2026-08-04): `CarryingInput.habitable` decomposed
-/// to `is_land`, opening the arid/very-hot bands to low capacity. **Seed 7 moves
-/// 1 -> 6**, and it is the seed that gained the most newly-reachable ground
-/// (3,126 cells, 16.4% of its land, against 0.6% on seed 42) — so more of its
-/// cells now carry stacked occupations for the fourth key to reorder. Six of
-/// 19,046 land cells is still "barely", which is what this test claims.
+/// The Tolerance re-pin (2026-08-04): warlikeness became a per-settlement draw
+/// instead of a per-species constant, redeciding deep-history settlement
+/// survival at all three seeds. Re-measured: 42 -> 0, 7 -> 2, 1000 -> 1. The
+/// claim is unchanged and is still the one The Salt froze — the material fourth
+/// key barely moves the stratigraphy, three restacking sites across three
+/// worlds — only the witness moved with the corpus underneath it.
+///
+/// The Keeping step B re-pin (2026-08-04, on main): `CarryingInput.habitable`
+/// decomposed to `is_land`, opening the arid/very-hot bands to low capacity.
+/// Main measured 42 -> 1, 7 -> 6, 1000 -> 0 on ITS side of the fork; seed 7
+/// gained the most newly-reachable ground (3,126 cells, 16.4% of its land,
+/// against 0.6% on seed 42), so more of its cells carry stacked occupations for
+/// the fourth key to reorder.
+///
+/// MERGE re-pin (2026-08-04, main absorbed into the-tolerance): both changes
+/// redecide settlement survival, so the composed counts are neither branch's
+/// (0/2/1) nor main's (1/6/0) — RE-MEASURED on the merged tree: **42 -> 0,
+/// 7 -> 0, 1000 -> 1**. The CLAIM is unchanged and is still the one The Salt
+/// froze: the material fourth key barely moves the stratigraphy — here a single
+/// restacking site across three worlds of ~19k land cells each, which is
+/// "barely" a fortiori.
+///
+/// NOTE ON THE WITNESS. At 0/0/1 this test is close to degenerate: a dead
+/// fourth key would read 0/0/0 and only seed 1000 separates the two. It is
+/// retained as the BLAST-RADIUS measurement it has always been, not as the
+/// mechanism's pin — `same_day_layers_order_by_material_facts_not_mint_order`
+/// asserts the fourth key's behaviour directly and fails if it stops working.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 1usize), (7, 6), (1000, 0)] {
+    for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 1)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

@@ -1,36 +1,36 @@
 # The Peoples of Seed 42
 
-The land holds 171 settlement(s).
-The chief bugbear settlement, Googodoga, holds 87 souls amid tropical-seasonal-forest.
-The chief gnoll settlement, Zmovsngovpsav, holds 89 souls amid tropical-seasonal-forest.
-The chief goblin settlement, Naneotoa, holds 71 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Geoboge, holds 97 souls amid temperate-rainforest.
-The chief human settlement, Ngakagame, holds 94 souls amid temperate-forest.
-The chief kobold settlement, Raxarora, holds 91 souls amid tropical-rainforest.
+The land holds 183 settlement(s).
+The chief bugbear settlement, Goodo, holds 110 souls amid tropical-rainforest.
+The chief gnoll settlement, Psaavdshoxzhmox, holds 99 souls amid tropical-seasonal-forest.
+The chief goblin settlement, Nane, holds 89 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Geoge, holds 82 souls amid tropical-seasonal-forest.
+The chief human settlement, Ngengato, holds 121 souls amid temperate-forest.
+The chief kobold settlement, Raxarora, holds 96 souls amid tropical-seasonal-forest.
 
 ```text
                                                                         
-                     oooooooo                                           
-                         o@oo                  o                        
-                                o                                       
+                    oooooooo                                            
+                         ooo                 o o@                       
                                                                         
                                                                         
+                                                    o                   
+                                                   ooo                  
                                                    oo                   
-                                                   oo                   
                                                                         
                                                                         
                                                                         
-                                                  o  o                  
-                                                    oo                  
                                                                         
+                                                                        
+                                                                        
+                    o                                                   
                    oo                                                   
-                   ooo                                                  
+                                                 o                      
+                                                 o                      
                                                                         
-                                                                        
-                                                                        
-                   oooo                      oo                         
-                   ooo                                                  
-                      oo                                                
+                   oooo                                                 
+                   ooo o   o                                            
+                   oooooo                                               
                                                                         
                                                                         
 ```
