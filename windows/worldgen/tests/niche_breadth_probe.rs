@@ -146,9 +146,10 @@ fn report(seed_value: u64) {
 
     println!();
     println!(
-        "{:<10} {:>6} {:>8} {:>8} {:>8}   {:>8} {:>8} {:>8}",
-        "species", "floor", "K>0", "K>5", "K>14.3", "p50", "p90", "max"
+        "{:<10} {:>6} {:>8} {:>8} {:>8}   {:>8} {:>8} {:>8}  {:>8}",
+        "species", "floor", "K>0", "K>5", "K>14.3", "p50", "p90", "max", "cold"
     );
+    println!("  (last column: % of SUB-SNOWLINE land the species calls survivable)");
     for (i, name) in SETTLERS.iter().enumerate() {
         let bio = biosphere[i];
         let floor = sovereignty_floor(bio.mass, bio.potency);
@@ -157,9 +158,24 @@ fn report(seed_value: u64) {
         let n = vals.len() as f64;
         let gt = |t: f64| vals.iter().filter(|v| **v > t).count() as f64 / n * 100.0;
         let (p0, p5, p14) = (gt(0.0), gt(SURVIVE_K), gt(SPREAD_K));
+        // The column that says whether a species is indifferent to LETHAL cold:
+        // how much of the land below the bake's own -10C snowline it would still
+        // call survivable. The era mask calls every one of these cells
+        // uninhabitable; capacity never consults the snowline at all.
+        let cold_survivable = land
+            .iter()
+            .filter(|&&c| substrate.get(c).temperature_c < -10.0)
+            .filter(|&&c| cap.at(c) > SURVIVE_K)
+            .count();
+        let cold_total = land
+            .iter()
+            .filter(|&&c| substrate.get(c).temperature_c < -10.0)
+            .count()
+            .max(1);
+        let cold_pct = cold_survivable as f64 / cold_total as f64 * 100.0;
         vals.sort_by(f64::total_cmp);
         println!(
-            "{:<10} {:>6.3} {:>7.1}% {:>7.1}% {:>7.1}%   {:>8.2} {:>8.2} {:>8.2}",
+            "{:<10} {:>6.3} {:>7.1}% {:>7.1}% {:>7.1}%   {:>8.2} {:>8.2} {:>8.2}  {:>7.1}%",
             name,
             floor,
             p0,
@@ -167,7 +183,8 @@ fn report(seed_value: u64) {
             p14,
             pct(&vals, 0.50),
             pct(&vals, 0.90),
-            pct(&vals, 1.0)
+            pct(&vals, 1.0),
+            cold_pct
         );
     }
 
