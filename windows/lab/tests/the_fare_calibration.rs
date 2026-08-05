@@ -1148,7 +1148,7 @@ mod weathering {
     use super::*;
 
     #[test]
-    #[ignore = "heavy: builds a live world (tens of seconds); deferred from the commit gate"]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn weathering_raises_cost_somewhere_and_never_makes_a_cell_impassable() {
         // THE KEYSTONE for this task. Two failure modes it must catch: a
         // weathered field that is byte-identical to the dry one (the
@@ -1189,7 +1189,7 @@ mod weathering {
     }
 
     #[test]
-    #[ignore = "heavy: the pilot builds 5 live worlds and routes over them (minutes); spec §6"]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn the_fares_pilot() {
         // TWO independent readouts per seed, each on its own labelled PILOT
         // line, per spec §4a's re-basing (project owner's ruling
@@ -1651,7 +1651,7 @@ mod weathering {
     }
 
     #[test]
-    #[ignore = "heavy: the full 200-seed preregistered readout (~33 minutes in release); spec §6b"]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn the_fares_preregistered_readout() {
         // THE FREEZE (spec §6b, commit a6e28e5e — frozen before this run,
         // the sole authority for every floor and boundary below). Four
@@ -2036,7 +2036,7 @@ mod weathering {
     }
 
     #[test]
-    #[ignore = "heavy: the full 200-seed exploratory readout (~35 minutes in release); post-hoc, dispatched after F1's falsification"]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn the_fares_exploratory_readout() {
         // EXPLORATORY, POST-HOC, NOT PREREGISTERED. Dispatched after F1's
         // preregistered falsification (pooled median swing 0.0037 against
