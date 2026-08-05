@@ -66,8 +66,24 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn niche_breadth_over_land_at_seed_42() {
+    report(SEED);
+}
+
+/// The same tables for seed 1234, which bakes a world with **zero surviving
+/// settlements** — 27 occupations opened, 25 starved, none alive at `now`. It did
+/// so before this campaign too, so it is a standing defect rather than a
+/// regression. Its almanac looks unremarkable beside seed 42's (11% habitable
+/// against 10%, 72% ocean against 73%), so whatever kills it is not visible at
+/// that altitude; this prints the field the bake actually reasons over.
+#[test]
+#[ignore = "probe: measurement only, run explicitly"]
+fn niche_breadth_over_land_at_seed_1234() {
+    report(1234);
+}
+
+fn report(seed_value: u64) {
     let wc = WorldComponents::assemble().expect("components assemble");
-    let seed = hornvale_kernel::Seed(SEED);
+    let seed = hornvale_kernel::Seed(seed_value);
     let world = build_world(
         seed,
         &hornvale_astronomy::SkyPins::default(),
@@ -75,7 +91,7 @@ fn niche_breadth_over_land_at_seed_42() {
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
-    .expect("seed 42 builds");
+    .expect("probe seed builds");
     let terrain = terrain_of(&world).expect("terrain");
     let climate = climate_of(&world).expect("climate");
     let geo = terrain.geosphere();
@@ -98,6 +114,7 @@ fn niche_breadth_over_land_at_seed_42() {
 
     let land: Vec<hornvale_kernel::CellId> =
         geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+    println!("== seed {seed_value} ==");
     println!("land cells: {} of {}", land.len(), geo.cell_count());
 
     let biosphere: Vec<&hornvale_species::BiosphereTraits> = SETTLERS

@@ -106,6 +106,62 @@ fn deep_history_shape_at_seed_42() {
     }
 }
 
+/// **Why and when occupations end**, for one seed — the eviction-cause mix and
+/// the timeline of endings.
+///
+/// Two uses. The Fallow's H2 is stated as a cause mix ("ruins attribute to more
+/// than one cause, ≥20% anthropogenic"), and nothing printed it. And a world that
+/// ends with **zero** surviving settlements — seed 1234 does, both before and
+/// after this campaign — is diagnosed here rather than guessed at: a die-off
+/// concentrated in one epoch band is a climate event sweeping the map, while one
+/// spread evenly is ordinary attrition that never recovered.
+#[test]
+#[ignore = "probe: measurement only, run explicitly"]
+fn eviction_causes_and_timeline() {
+    let wc = WorldComponents::assemble().expect("components assemble");
+    for seed in [42, 1234] {
+        let h = history_for(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+        )
+        .expect("probe seed builds");
+
+        let mut causes: BTreeMap<String, u64> = BTreeMap::new();
+        let mut alive = 0u64;
+        // Endings bucketed by century of the bake window.
+        let mut by_century: BTreeMap<i64, u64> = BTreeMap::new();
+        let mut founded_by_century: BTreeMap<i64, u64> = BTreeMap::new();
+        for r in &h.records {
+            *founded_by_century
+                .entry((r.core.founded / 100.0).floor() as i64)
+                .or_default() += 1;
+            match (r.core.ended, r.core.cause) {
+                (Some(end), cause) => {
+                    *causes
+                        .entry(format!(
+                            "{:?}",
+                            cause.expect("an ended occupation names a cause")
+                        ))
+                        .or_default() += 1;
+                    *by_century.entry((end / 100.0).floor() as i64).or_default() += 1;
+                }
+                (None, _) => alive += 1,
+            }
+        }
+        println!(
+            "== seed {seed}: {} records, {alive} alive ==",
+            h.records.len()
+        );
+        println!("  causes: {causes:?}");
+        println!("  founded by century: {founded_by_century:?}");
+        println!("  ended   by century: {by_century:?}");
+    }
+}
+
 /// The same shape across [`SEEDS`], so a count can be read against its spread.
 ///
 /// This exists because a single-seed comparison misled twice in one session. A
