@@ -476,6 +476,28 @@ cast a `BandKind` to an integer at two call sites.
 Follow the composed-label pattern at `windows/worldgen/src/lib.rs:5098`:
 `seed.derive(streams::CHAMBER).derive(StreamLabel::dynamic(&key)).stream()`.
 
+**The key's spelling is a save-format contract, and the plan originally left it
+unspecified (ledger #20).** `StreamLabel::dynamic` hashes the *string*, so
+whatever spelling the first implementer picks is fixed forever. Two rules:
+
+1. **Build the key in exactly one function**, declared next to `CHAMBER`. The
+   pattern you are copying does this deliberately — read `deity_base_seed`'s
+   doc comment: *"the one place the `religion/deity/v2` stream label is
+   spelled, so [both callers] can never diverge."*
+2. **Spell the band component as the band's NAME, never its index.** `cell`,
+   `entrance` and `slot` are genuine integers naming a place and are spelled
+   decimal; `band` is not. An index is a *declaration position*: if `Stratum`
+   ever gains a variant in the middle — and the open `MAP-cave-depth-weld` work
+   is the named candidate — every index below it shifts and every chamber seed
+   derived from one silently moves. This is **rule 1a one level down**, applied
+   to the derivation instead of the address type.
+
+The precedent is exactly on point. `deity_name_seed` — the function this step
+tells you to copy — carries *no entity id* specifically so names stay
+"invariant to entity mint order", and that was the fix for a naming **epoch**
+(`/v2`). Its own history is a derivation that got welded to an ordinal and had
+to be re-cut. Do not re-mint that defect one realm over.
+
 - [ ] **Step 5: Run to verify both pass**
 
 Run: `cargo nextest run -p hornvale-worldgen --test deep_realm_chamber 2>&1 | tee /tmp/hv-deep-t2.txt`
