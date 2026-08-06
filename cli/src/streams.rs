@@ -322,6 +322,15 @@ mod tests {
         assert_eq!(
             rows,
             vec![
+                // The Deep Realm: the underworld chamber derivation. A NEW
+                // label, additive at v1 — it perturbs no existing stream —
+                // but versioned from birth like `settlement/disposition v1`
+                // below, because its key (a ChamberAddr's cell, entrance,
+                // band NAME and slot — see `windows/worldgen/src/
+                // chamber.rs`'s `chamber_key`) is a save-format contract
+                // the moment anything commits a chamber fact, which this
+                // campaign deliberately does not do (spec §3.1/§3.3).
+                "chamber v1",
                 // The Toponym: a cell's characteristic variant, what a
                 // settlement there is named for. Additive — a new label
                 // perturbs no existing stream.

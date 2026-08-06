@@ -80,6 +80,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 }
 
 pub mod alchemy;
+pub mod chamber;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
