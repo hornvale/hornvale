@@ -290,7 +290,11 @@ pub fn render_life_history_line(
     name: &str,
     biosphere: &hornvale_species::BiosphereTraits,
 ) -> String {
-    let history = hornvale_species::life_history(biosphere.mass, biosphere.metabolic_class);
+    let history = hornvale_species::life_history(
+        biosphere.mass,
+        biosphere.metabolic_class,
+        hornvale_species::LifeSchedule::ALLOMETRIC,
+    );
     let mut line = format!(
         "The {} run a basal metabolism of {:.0} W",
         name, history.basal_metabolic_rate_w

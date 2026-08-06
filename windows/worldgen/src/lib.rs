@@ -4631,7 +4631,12 @@ fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_langua
         hornvale_species::SocialForm::Settled => hornvale_language::CascadeRegime::SETTLED,
         hornvale_species::SocialForm::Gregarious => hornvale_language::CascadeRegime::new(1, 2),
         hornvale_species::SocialForm::Solitary => {
-            if hornvale_species::lifespan(bio.mass, bio.metabolic_class).get()
+            if hornvale_species::lifespan(
+                bio.mass,
+                bio.metabolic_class,
+                hornvale_species::LifeSchedule::ALLOMETRIC,
+            )
+            .get()
                 >= LIFESPAN_THRESHOLD_YEARS
             {
                 hornvale_language::CascadeRegime::new(0, 1)
