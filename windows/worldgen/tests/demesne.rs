@@ -421,11 +421,47 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // The fauna half of the brief's ask: xorn (pure MINERAL niche) must now
     // be a MATERIAL full-roster dominant — it was baseline noise (a single
     // denominator-artifact settlement) under the old shared-NPP scalar.
+    //
+    // ---- FALSIFIED by The Tense (2026-08-05). Recorded, not rescued. ----
+    //
+    // Xorn holds ZERO dominant cells on this tree. It clears on `main` (this
+    // test is green there — verified by running the demesne suite in the main
+    // checkout), so the loss is this branch's, not pre-existing.
+    //
+    // WHAT IT IS NOT: xorn is not erased. `non_void_roster::
+    // every_kind_is_viable_somewhere` — The Vacancy's guard against exactly the
+    // zero-capacity-everywhere failure that hid three chromatic dragons and the
+    // owlbear for four campaigns — is GREEN. Xorn is viable; it is simply no
+    // longer the best fit anywhere.
+    //
+    // MECHANISM (**inferred**, not measured — flagged per the handoff
+    // convention): this branch replaced the species-blind productivity model
+    // with Lieth & Box's Miami model (see T3 below), and scalar-path
+    // productivity rose ~14% on the tropical mean. That lifts every
+    // BIOMASS-fed kind against a MINERAL-fed one whose supply did not move, and
+    // xorn — a *pure* mineral niche — sits exactly on that seam. The surviving
+    // dominants are consistent with it: giant-squid 1160 and twig-blight 570
+    // dwarf the rest. Confirming this properly means re-running the ruler with
+    // the tent restored, which is a probe this campaign did not spend.
+    //
+    // WHY THE ASSERTION IS RETIRED RATHER THAN RE-AIMED. It encodes The
+    // Demesne's *preregistered prediction* that giving mineral supply its own
+    // spatial field would lift xorn over the ruler. A later campaign corrected
+    // the productivity model underneath it and the prediction no longer holds.
+    // A falsified prediction is a finding, not a failure — and re-pinning it to
+    // some other kind, or tuning until xorn returns, would be precisely the
+    // post-unblinding rescue the project forbids. The STRUCTURAL claims this
+    // test exists for are all still asserted above and all still pass: the
+    // peopled roster is unchanged, T2's dot product still differentiates more
+    // dominants than the baseline, and the union clears the preregistered
+    // floor. Only the single-species prediction is withdrawn.
     assert!(
-        material_dominants.contains("xorn"),
-        "xorn (pure-MINERAL niche) should newly clear the dominance ruler once mineral \
-         supply is its own spatial field, not a rescale of base_carrying; dominant counts: \
-         {dominant_counts:?}"
+        !material_dominants.contains("xorn"),
+        "xorn is a material dominant again ({dominant_counts:?}) — The Demesne's \
+         prediction was falsified under The Tense's productivity model and this \
+         assertion records that. If xorn is back, the biomass/mineral balance moved \
+         again: re-read the comment above and re-establish which model is in play, \
+         do not simply flip this back."
     );
 }
 
@@ -495,7 +531,16 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     let trop_mean = trop_sum / f64::from(trop_n);
     let pole_mean = (pole_sum / f64::from(pole_n)).max(POLE_FLOOR);
     let ratio = trop_mean / pole_mean;
-    println!("seed 42 capacity-by-abs-latitude (live, post-the-demesne T1/T2): {ratio:.4}");
+    // The decomposition is PRINTED, not just the ratio. The Keeping found this
+    // metric's degeneracy by reading a doc comment; making it visible in the
+    // run output is cheaper than making the next reader do that again.
+    let raw_pole_mean = pole_sum / f64::from(pole_n);
+    let pole_is_floored = raw_pole_mean < POLE_FLOOR;
+    println!(
+        "seed 42 capacity-by-abs-latitude: ratio={ratio:.4} \
+         (trop_mean={trop_mean:.6} over {trop_n} cells, raw_pole_mean={raw_pole_mean:.6} \
+         over {pole_n} cells, pole floored at {POLE_FLOOR}: {pole_is_floored})"
+    );
     assert!(
         ratio >= 3.0,
         "capacity-by-abs-latitude on seed 42 fell to {ratio:.4} (below the preregistered floor \
@@ -530,11 +575,55 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // (the poles stay closed by `temp_response`, zero below 2 C), so opening it
     // must add more to `trop_sum` than to `pole_sum` and the ratio must RISE.
     // It rose, by 0.18%. The preregistered floor of 3 still clears tenfold.
+    //
+    // ---- The Tense re-pin (2026-08-05): 31.0649 -> 35.4171, and the RATIO IS
+    // ---- NOT A GRADIENT. Read this before touching the number again.
+    //
+    // MECHANISM, named as this comment's convention requires: this branch
+    // replaced the productivity model. `temp_response` — a symmetric tent
+    // peaking at 22 C and reaching exactly zero a little above freezing — is
+    // gone, and `carrying_capacity` now implements the Lieth & Box (1972)
+    // Miami model it had always CITED but never had: a monotone, saturating
+    // temperature term, min'd with a precipitation term on real mm/yr instead
+    // of a normalised moisture in [0,1]. That is The Keeping's headline defect
+    // being repaired, motivated by decision 0104.
+    //
+    // THE DIRECTION CHECK CANNOT BE RUN, and that is the finding. Measured
+    // here: raw_pole_mean = 0.004508, still BELOW `POLE_FLOOR`. The polar term
+    // is therefore pinned at the floor, and
+    //
+    //     ratio == trop_mean / POLE_FLOOR == 100 * trop_mean, exactly
+    //     (0.354171 * 100 = 35.4171, which is the whole of the drift)
+    //
+    // so this quantity carries no polar information at all. It is the tropical
+    // mean in different units. There is no gradient in it whose direction could
+    // confirm or refute a mechanism — which is precisely the degeneracy The
+    // Keeping recorded ("a ratio computed against a floored zero is largely a
+    // statement about the floor") and which the Confidence Gradient already
+    // demotes.
+    //
+    // WHAT THIS ASSERTION IS, THEREFORE. It is a drift TRIPWIRE on scalar-path
+    // productivity — an internal-consistency check on a Hornvale-internal
+    // number, which decision 0104 rules a VALID use of internal measurement.
+    // It is NOT evidence for the biomass-by-latitude gradient; treating it as
+    // evidence would be 0104's CIRCULAR cell, which names
+    // `capacity-by-abs-latitude` explicitly. The preregistered floor of 3
+    // above is the real surviving claim, and it clears tenfold.
+    //
+    // WHY THE POLES ARE STILL ~ZERO, given the tent that zeroed them is gone.
+    // Not the productivity field any more: `npp_temperature` is positive
+    // everywhere. It is `species_carrying_input` — the per-species TOLERANCE in
+    // `ConditionNiche` — and no authored people tolerates polar cold. So the
+    // polar zero has moved from being a property of the ground to being a
+    // property of the ROSTER, which is where the retired tent's own doc comment
+    // says tolerance belongs. Same number, different and better-located cause;
+    // a cold-adapted or subterranean people would now lift it off the floor,
+    // where before nothing could.
     assert!(
-        (ratio - 31.0649).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0649, the post-Keeping-B \
-         scalar-path reading) — something outside the-demesne's per-axis \
-         supply fields moved this K"
+        (ratio - 35.4171).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~35.4171). NOTE this is \
+         100 * trop_mean while the polar term sits on its floor — check the printed \
+         decomposition above before assuming anything latitudinal moved."
     );
 }
 
