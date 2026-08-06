@@ -340,7 +340,7 @@ fn autotroph_is_computed_as_an_endotherm_today() {
     // SHIPPED behaviour, not the correct one. When BIO-autotroph-physics lands, this test is
     // expected to fail, and its failure is the point.
     use hornvale_kernel::Mass;
-    use hornvale_species::{basal_metabolic_rate_w, lifespan};
+    use hornvale_species::{LifeSchedule, basal_metabolic_rate_w, lifespan};
 
     let mass = Mass::new(1800.0).expect("positive mass");
     assert_eq!(
@@ -349,8 +349,8 @@ fn autotroph_is_computed_as_an_endotherm_today() {
         "Autotroph BMR is identical to Endotherm today (BIO-autotroph-physics)"
     );
     assert_eq!(
-        lifespan(mass, MetabolicClass::Autotroph),
-        lifespan(mass, MetabolicClass::Endotherm),
+        lifespan(mass, MetabolicClass::Autotroph, LifeSchedule::ALLOMETRIC),
+        lifespan(mass, MetabolicClass::Endotherm, LifeSchedule::ALLOMETRIC),
         "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }

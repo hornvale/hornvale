@@ -1745,6 +1745,60 @@ pub enum MetabolicClass {
     Ametabolic,
 }
 
+/// How a kind's time-law quantities are scheduled against its mass (The Long
+/// Age, spec §3). Mass and [`MetabolicClass`] are the other two inputs to the
+/// same law; this is the third, and it is the only one that is a free
+/// authoring choice rather than a physical measurement.
+///
+/// An enum rather than a bare `f64` so that a *staged* schedule — a
+/// metamorphic kind whose larval phase runs on its own curve before merging
+/// into the adult one — arrives later as a new variant rather than a new
+/// axis, changing no consumer's signature.
+/// type-audit: bare-ok(ratio: Paced.factor)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LifeSchedule {
+    /// Pure allometry: every time-law quantity is a function of mass and
+    /// metabolic class alone. Every kind in the roster today.
+    Allometric,
+    /// Allometry with an authored dimensionless pace factor: lifespan,
+    /// maturity and reproductive tempo all stretch by `factor` at unchanged
+    /// mass, and the basal metabolic rate does not move. Construct through
+    /// [`LifeSchedule::paced`].
+    Paced {
+        /// The dimensionless stretch. `1.0` is [`LifeSchedule::Allometric`];
+        /// above 1.0 is longer-lived and later-maturing, below 1.0 shorter.
+        factor: f64,
+    },
+}
+
+impl LifeSchedule {
+    /// The default every kind carries unless authored otherwise.
+    pub const ALLOMETRIC: LifeSchedule = LifeSchedule::Allometric;
+
+    /// A paced schedule, or `None` if `factor` is not finite and strictly
+    /// positive. A zero or negative factor is not a fast-living creature; it
+    /// is a creature with no lifespan, which the time laws cannot express.
+    /// type-audit: bare-ok(ratio: factor)
+    pub fn paced(factor: f64) -> Option<LifeSchedule> {
+        if factor.is_finite() && factor > 0.0 {
+            Some(LifeSchedule::Paced { factor })
+        } else {
+            None
+        }
+    }
+
+    /// The multiplier this schedule contributes to the time laws — `1.0` for
+    /// [`LifeSchedule::Allometric`], so the default path is an IEEE-754
+    /// no-op and every pre-campaign value is preserved bit-for-bit.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn factor(self) -> f64 {
+        match self {
+            LifeSchedule::Allometric => 1.0,
+            LifeSchedule::Paced { factor } => factor,
+        }
+    }
+}
+
 /// The biosphere component: every entity has one. The packer and the
 /// habitat/niche-K layer read only these traits.
 /// type-audit: bare-ok(identifier-text)
