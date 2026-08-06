@@ -429,6 +429,54 @@ reaches the arithmetic.
 M2 is the stronger evidence: its outcome is not a constant anyone chose, and it
 demonstrates the axis reaching a consumer the program spec had not identified.
 
+### 6.1 Amendment — M2 as specified was not achievable, and why that is itself the finding
+
+**Recorded after Task 4 ran it and it stayed green.** M2's mutation — dropping
+the schedule inside `generation_length_of` — does **not** redden any test, and
+cannot.
+
+`generation_length_of` resolves its biosphere row from
+`WorldComponents::assemble()`, the canonical registry. Decision D6 ships the
+channel with **zero occupants**, so every row that function can ever reach has
+`schedule == Allometric`, which is bit-identical to the `ALLOMETRIC` the
+mutation substitutes. The mutation is structurally unobservable.
+
+**This is D6 and §6 in direct tension, and it generalises**: a consumer that
+looks its row up *by name from the canonical registry* cannot be
+mutation-proven to read an authored channel that nothing authors yet. Only a
+consumer that takes a `&BiosphereTraits` **directly** can, because a test can
+hand it a cloned-and-paced row. That splits this campaign's four consumers
+cleanly:
+
+```
+  consumer                      takes            mutation-provable today?
+  ----------------------------  ---------------  ------------------------
+  cascade_regime_of             &BiosphereTraits  YES  (M1, reddened)
+  render_life_history_line      &BiosphereTraits  YES  (M2, reddened)
+  generation_length_of          species: &str     NO   (registry-locked)
+  species_life_history          species: &str     NO   (registry-locked)
+```
+
+So M2 is **re-sited onto `render_life_history_line`**, which is a fair trade
+and arguably a better one: that function writes the life-history line of every
+committed gallery almanac, so reddening it proves the channel can move a
+*committed artifact*, not merely an in-memory value.
+
+What remains true of the kinship result: the arithmetic still differentiates —
+at goblin's ~21.7-year generation length seed 42's median 50-year founding gap
+reads `Ancestor(n≥1)`, and at eleven times that pace the same gap reads
+`Sibling`. The test asserts both, and drives the short-lived half through the
+real `generation_length_of`. But **that `generation_length_of` forwards
+`bio.schedule` rather than a hardcoded default is a code-reading argument, not
+an assertion**, and it is disclosed as such at the test. This follows The Deep
+Realm's precedent, where the vessel's budget pass-through was likewise argued
+rather than asserted and said so out loud.
+
+**The first campaign to author a `Paced` kind — C2c — closes this gap for
+free**, and should be told to: routing that kind through `generation_length_of`
+turns a code-reading argument into an assertion, and is the cheapest way to
+retire it.
+
 **Both mutations must be run, both halves confirmed RED, then reverted and
 confirmed green** — the template The Deep Realm's H3 established.
 
