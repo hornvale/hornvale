@@ -599,6 +599,11 @@ fn an_override_wins_over_the_derived_default() {
     // returns the override; call it with none and assert it returns the
     // derived default; assert a DIFFERENT address is unaffected by either.
     // Nothing is committed to a ledger.
+    //
+    // The payload is `origin`: default `Found`, override `Made` (ledger #24).
+    // Also assert the two invariants that make the seam more than a lookup:
+    //   - no-override resolution is UNCHANGED from the pre-Task-4 derivation;
+    //   - `Made` is absorbing: nothing takes a chamber back to `Found`.
 }
 ```
 
@@ -612,6 +617,38 @@ Expected: FAIL — nothing consults the ledger.
 the seam is proven without deciding how an address is written down.
 Mirror `hornvale_species::instance_biosphere` — read it first; it is the
 workspace's only instance lens and this is the same pattern one level over.
+
+**The seam needs a payload, and Task 2 shipped none (ledger #24).** `Chamber`
+is `{ addr, stratum }`: `addr` is the key, and `stratum` is a pure function of
+`addr.band`. There is nothing to override. So:
+
+**`Chamber` gains `origin: ChamberOrigin { Found, Made }`.** The derived default
+is `Found` — this campaign digs nothing — and an override sets `Made`. This is
+not invented for the test; it is spec §3.3's own opening sentence: *"A chamber
+is either **found** or **made** … what separates them is a maker and a purpose,
+not a different generator."*
+
+**`stratum` stays un-overridable, and the rule generalises:** the override
+records an **event's effect**; the default records the **substrate**. You
+override what happened *to* a place, never what the place *is* — a dig does not
+move you into different rock. Every instance of this pattern splits the same
+way (`instance_biosphere`: an individual's mass, not its species' identity;
+version control: the diff, not the blob; archaeology: what builders cut, not the
+cavity). If a later task wants to override `stratum`, that is a design error,
+not a missing feature.
+
+**`Made` is absorbing.** A chamber never reverts to `Found` — tool marks do not
+un-cut themselves. This campaign has no writer, so state it as a documented
+property of the resolver and assert it there: applying an override can take
+`Found → Made`, and nothing can take `Made → Found`. It is the same persistence
+asymmetry §4.1 names (an excavated extent *persists* after the maker is gone;
+only the *claim* lapses), which is what makes an abandoned dwarven hall
+available to something else.
+
+**The no-override path must be byte-identical to today's derivation.** Adding a
+parameter must not perturb any existing address's content. Assert it: for a
+sample of addresses, the resolver with no overrides equals what `chamber_at`
+returned before this task. That is a real invariant, not an assumption.
 
 - [ ] **Step 4: Run to verify it passes, and commit**
 
