@@ -24,7 +24,7 @@
 //! letting one rot, forces a deliberate edit here.
 
 use hornvale_species::{
-    ActivityCycle, MetabolicClass, SocialForm, StatusBasis, biosphere_registry,
+    ActivityCycle, LifeSchedule, MetabolicClass, SocialForm, StatusBasis, biosphere_registry,
     perception_registry, psyche_registry, society_registry,
 };
 
@@ -269,6 +269,42 @@ fn social_form_coverage_matches_the_table() {
     }
 }
 
+/// The witnesses of each `LifeSchedule` variant, ascending by `KindId`.
+/// `Paced` carries a factor, so kinds are classified by variant rather than
+/// compared by value — two differently-paced kinds still witness one state.
+fn life_schedule_witnesses(paced: bool) -> Vec<&'static str> {
+    biosphere_registry()
+        .iter()
+        .filter(|(_, b)| matches!(b.schedule, LifeSchedule::Paced { .. }) == paced)
+        .map(|(k, _)| k.0)
+        .collect()
+}
+
+#[test]
+fn life_schedule_coverage_matches_the_table() {
+    // THE LONG AGE: lifespan's authoring channel ships with NO occupant, so
+    // `Paced` sits at `Declared` and nothing witnesses it. That empty cell is
+    // the campaign's stated result rather than an oversight — the channel is
+    // inert until a kind is authored into it, which is what made the epoch
+    // cheap. This row is where the first campaign to author a long-lived kind
+    // (C2c, dwarves) must make a deliberate edit.
+    let every_kind: Vec<&'static str> = biosphere_registry().iter().map(|(k, _)| k.0).collect();
+    let expected: &[(&str, Rung, &[&str])] = &[
+        ("Allometric", Rung::Witnessed, &every_kind),
+        ("Paced", Rung::Declared, &[]),
+    ];
+    for (variant, rung, witnesses) in expected {
+        let actual = life_schedule_witnesses(*variant == "Paced");
+        assert_eq!(&actual, witnesses, "{variant} witnesses");
+        let actual_rung = if actual.is_empty() {
+            Rung::Declared
+        } else {
+            Rung::Witnessed
+        };
+        assert_eq!(&actual_rung, rung, "{variant} rung");
+    }
+}
+
 #[test]
 fn the_dark_trait_combinations_are_named() {
     // Combinations, not single variants — each is a cell the roster does not
@@ -340,7 +376,7 @@ fn autotroph_is_computed_as_an_endotherm_today() {
     // SHIPPED behaviour, not the correct one. When BIO-autotroph-physics lands, this test is
     // expected to fail, and its failure is the point.
     use hornvale_kernel::Mass;
-    use hornvale_species::{basal_metabolic_rate_w, lifespan};
+    use hornvale_species::{LifeSchedule, basal_metabolic_rate_w, lifespan};
 
     let mass = Mass::new(1800.0).expect("positive mass");
     assert_eq!(
@@ -349,8 +385,8 @@ fn autotroph_is_computed_as_an_endotherm_today() {
         "Autotroph BMR is identical to Endotherm today (BIO-autotroph-physics)"
     );
     assert_eq!(
-        lifespan(mass, MetabolicClass::Autotroph),
-        lifespan(mass, MetabolicClass::Endotherm),
+        lifespan(mass, MetabolicClass::Autotroph, LifeSchedule::ALLOMETRIC),
+        lifespan(mass, MetabolicClass::Endotherm, LifeSchedule::ALLOMETRIC),
         "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }
@@ -377,4 +413,23 @@ fn dispersion_is_a_ratio_on_every_axis() {
             );
         }
     }
+}
+
+#[test]
+fn every_authored_kind_is_allometric_today() {
+    // THE LONG AGE: the channel ships with zero occupants, and this is the
+    // auditable evidence. C2c (dwarves) is its first intended consumer; when
+    // that campaign authors one, this assertion is the thing it must
+    // deliberately widen -- which is the point.
+    let reg = hornvale_species::biosphere_registry();
+    let paced: Vec<&str> = reg
+        .iter()
+        .filter(|(_, b)| b.schedule != hornvale_species::LifeSchedule::Allometric)
+        .map(|(k, _)| k.0)
+        .collect();
+    assert!(
+        paced.is_empty(),
+        "no kind is authored with a non-default life schedule yet, but found: {paced:?}"
+    );
+    assert_eq!(reg.len(), 30, "the roster is unchanged by this campaign");
 }

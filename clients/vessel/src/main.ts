@@ -6,6 +6,8 @@
 import { parseSeed, seedFromSearch, type WorkerResponse } from "./protocol.ts";
 import { narrationOf, parseSnapshot } from "./snapshot.ts";
 import { splitResponse } from "./transcript.ts";
+import { planRows } from "./pane_plan.ts";
+import { chartRows } from "./pane_chart.ts";
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -19,7 +21,11 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 function mount(container: HTMLElement): void {
-  const transcript = el("div", "casement-transcript", container);
+  // The diptych. `main.ts`'s header has anticipated this since The Casement:
+  // nothing module-level holds session state, so a page can mount two.
+  const panes = el("div", "casement-panes", container);
+  const transcript = el("div", "casement-transcript", panes);
+  const map = el("pre", "casement-mapview", panes);
   const controls = el("form", "casement-controls", container);
   const seedLabel = el("label", "casement-seedlabel", controls);
   seedLabel.textContent = "seed ";
@@ -69,20 +75,48 @@ function mount(container: HTMLElement): void {
     (live ? input : seedInput).focus();
   }
 
+  /** Redraw the map pane from a parsed snapshot. One band shows at a time:
+   * the session refuses `map out` indoors, so the walk-band chart is not
+   * derivable inside a building and there is nothing honest to show there.
+   * A pane with nothing to draw empties rather than keeping a stale picture
+   * on screen — a frozen last-seen chart presented as live is a cheat pane.
+   *
+   * The whole body is guarded: `planRows`/`chartRows` validate every field
+   * they read and refuse rather than throw, but that guarantee lives in
+   * those modules, not here. A pane throw here runs *before* `append` and
+   * `setIdle` in every `onmessage` branch below, so an uncaught exception
+   * would leave `busy` and `input.disabled` stuck `true` forever — the
+   * Casement locks with no error shown, which is worse than a stale or
+   * blank pane. The try/catch makes that impossible structurally, at the
+   * one call site, rather than by ordering calls correctly at every branch
+   * and hoping a future edit does not reorder them back. */
+  function drawMap(snap: ReturnType<typeof parseSnapshot>): void {
+    let rows: string[] | null = null;
+    try {
+      rows = snap ? (planRows(snap) ?? chartRows(snap)) : null;
+    } catch (err) {
+      console.error("pane render failed; showing no map this turn", err);
+    }
+    map.textContent = rows ? rows.join("\n") : "";
+  }
+
   worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
     const msg = e.data;
     if (msg.type === "started") {
       live = true;
       transcript.replaceChildren();
       const snap = parseSnapshot(msg.snapshot);
+      drawMap(snap);
       append("casement-prose", snap ? narrationOf(snap) : msg.text);
       setIdle("Possessed. The world stands still; only you move.");
     } else if (msg.type === "error") {
       live = false;
+      map.textContent = "";
       append("casement-error", msg.text);
       setIdle("The casement is shut. Try another seed.");
     } else {
       const snap = parseSnapshot(msg.snapshot);
+      drawMap(snap);
       append("casement-prose", snap ? narrationOf(snap) : msg.text);
       if (msg.released) live = false;
       setIdle(live ? "" : "Released. Possess again — any seed is a world.");
@@ -91,6 +125,7 @@ function mount(container: HTMLElement): void {
 
   worker.onerror = () => {
     live = false;
+    map.textContent = "";
     append("casement-error", "The casement is dark: its worker failed to load.");
     setIdle("The casement is shut.");
   };
@@ -108,6 +143,11 @@ function mount(container: HTMLElement): void {
     seedInput.disabled = true;
     possess.disabled = true;
     input.disabled = true;
+    // The map is a live view, not a log — unlike the transcript, which
+    // deliberately keeps its history, a stale picture from the previous
+    // seed sitting beside "The genesis of seed N…" would contradict
+    // `drawMap`'s own rule against keeping a stale picture on screen.
+    map.textContent = "";
     status.textContent = `The genesis of seed ${seed}… (a few seconds; ` +
       `sky, tectonics, climate, settlements, all from the seed)`;
     worker.postMessage({ type: "start", seed: seed.toString() });

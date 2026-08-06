@@ -206,7 +206,7 @@ fn tilth_derivation_probe() {
                     cn.temperature.eval(sub.temperature_c, fl),
                     cn.moisture.eval(sub.moisture, fl),
                     cn.insolation.eval(sub.insolation, fl),
-                    cn.elevation.eval(sub.elevation, 0.0),
+                    cn.elevation.eval(sub.height_asl_m.get(), 0.0),
                 );
                 // today: saturate dimensionlessly, then MULTIPLY four tolerances
                 let p = (sup / (1.0 + sup)) * t * m * i2 * e;
@@ -250,7 +250,7 @@ fn tilth_derivation_probe() {
                         .eval(sub.temperature_c, fl)
                         .min(cn.moisture.eval(sub.moisture, fl))
                         .min(cn.insolation.eval(sub.insolation, fl))
-                        .min(cn.elevation.eval(sub.elevation, 0.0))
+                        .min(cn.elevation.eval(sub.height_asl_m.get(), 0.0))
                 })
                 .fold(0.0_f64, f64::max);
             all_min_cond.push(best);

@@ -100,8 +100,8 @@ fn present_era_substrate_is_bit_identical_to_the_unparameterised_field() {
                 "seed {seed} cell {cell:?}: insolation moved"
             );
             assert_eq!(
-                a.elevation.to_bits(),
-                b.elevation.to_bits(),
+                a.height_asl_m.get().to_bits(),
+                b.height_asl_m.get().to_bits(),
                 "seed {seed} cell {cell:?}: elevation moved"
             );
         }
@@ -136,7 +136,7 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
         if b.temperature_c < a.temperature_c {
             colder += 1;
         }
-        if a.elevation < 0.0 && b.elevation >= 0.0 {
+        if a.height_asl_m.get() < 0.0 && b.height_asl_m.get() >= 0.0 {
             newly_exposed += 1;
         }
         // Insolation is hoisted and era-invariant by construction.

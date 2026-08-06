@@ -6372,6 +6372,7 @@ fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species:
     Some(hornvale_species::life_history(
         bio.mass,
         bio.metabolic_class,
+        bio.schedule,
     ))
 }
 

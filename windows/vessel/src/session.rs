@@ -8,7 +8,7 @@ use crate::liveness::{
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
-    SensedChannel, SessionSnapshot, SocialEntry,
+    SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -537,7 +537,20 @@ impl<'w> Session<'w> {
     /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
     /// channel (The Snapshot spec §3). Never commits, never advances the
     /// turn counter, and costs nothing on turns where no caller asks: the
-    /// CLI never does, so its measured per-turn cost is unchanged.
+    /// CLI never does, so its measured per-turn cost is unchanged. For a
+    /// caller that *does* ask — the Casement, over wasm — the cost is not
+    /// nothing: `snapshot() + json` measured 0.173 → 1.249 ms (7.22×), and
+    /// the bytes grew per band — walk 4235 → 11582 (2.73×), chamber 4064 →
+    /// 4759 (1.17×) (`windows/vessel/examples/turn_cost.rs`).
+    ///
+    /// This method's failure surface is wider than a per-channel read: the
+    /// only error path below is `observable`'s single `VesselError::Build`
+    /// (a purview failure), and a whole snapshot fails on it rather than
+    /// just the spatial channel. At the ABI, `set_snapshot()` calls
+    /// `.and_then(|p| p.session.snapshot().ok())`, so that failure empties
+    /// the snapshot buffer and the client falls back to prose — losing
+    /// every channel that turn (self, sensed, known, social, structured
+    /// narration), not just the map.
     pub fn snapshot(&self) -> Result<SessionSnapshot, VesselError> {
         let vantage = observable(self.world, &self.ctx, &self.agent, self.day)?;
         // The noun catalog comes from the focalizer; the PROSE comes from
@@ -617,6 +630,37 @@ impl<'w> Session<'w> {
             })
             .collect();
 
+        // The band the possession is in decides the channel. `inside` is the
+        // same discriminator `handle`'s `map` arm uses, so pane and verb can
+        // never disagree about which band is current — and that is the whole
+        // reason this matches on `inside` alone rather than on the three
+        // "not out of doors" states the session now carries (`inside`,
+        // `submerged`, `underground`). `map`'s arms guard on `inside` too, so
+        // the other two fall through to the surface chart in the verb and
+        // must fall through here identically or the pane would start showing
+        // something the verb refuses to. Adding a band to the session without
+        // deciding what the pane shows there is the failure this comment
+        // exists to catch: see `SpatialChannel`'s doc.
+        let spatial = match self.inside.as_ref() {
+            Some(inside) => {
+                let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
+                SpatialChannel::Chamber {
+                    plan: crate::plan::plan_of(
+                        &inside.lattice,
+                        inside.at,
+                        inside.structure.chambers.len(),
+                        chamber,
+                        inside.cell,
+                    ),
+                }
+            }
+            // `purview(0)` is the same call `map` makes out of doors, at the
+            // same zoom, so the pane shows what the verb would have shown.
+            None => SpatialChannel::Walk {
+                chart: self.purview(0)?,
+            },
+        };
+
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
             turn: self.turn,
@@ -652,6 +696,7 @@ impl<'w> Session<'w> {
                     .map(|(noun, datum)| NounEntry { noun, datum })
                     .collect(),
             },
+            spatial,
         })
     }
 
@@ -3676,5 +3721,68 @@ mod tests {
                 "{line} must refuse underground with the underground reason: {out}"
             );
         }
+    }
+
+    /// The snapshot's spatial channel and the `map` verb must answer the
+    /// SAME band question, including in a band neither was written against.
+    ///
+    /// Found at The Panes' merge, not during either campaign: The Deep Realm
+    /// added `underground` while The Panes added the spatial channel, in
+    /// parallel worktrees, and the textual merge was clean because they
+    /// touched different lines of the same file. `SpatialChannel` enumerates
+    /// bands; The Deep Realm added one; neither campaign's chronicle mentions
+    /// the other's surface. That is precisely the semantic collision
+    /// `make preflight` says it cannot score.
+    ///
+    /// What it asserts is a FOLD, not a correctness claim. Standing in a cave
+    /// chamber, the pane shows a chart of the country overhead — which is
+    /// odd, and is exactly what the `map` verb already does in the same
+    /// state, because both guard on `inside` alone. So the invariant worth
+    /// pinning is not "the pane is right here" but "the pane and the verb
+    /// cannot drift apart here": whichever answer the sim settles on, one
+    /// change must move both. Without this, adding a fourth band would fold
+    /// silently into `walk` and no test would notice.
+    #[test]
+    fn the_underground_band_folds_into_walk_as_map_does() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        session.delve_at(cell, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        // The pane: `walk`, carrying a chart rather than a plan.
+        let snap = session.snapshot().expect("a descended session snapshots");
+        match &snap.spatial {
+            crate::snapshot::SpatialChannel::Walk { .. } => {}
+            crate::snapshot::SpatialChannel::Chamber { .. } => panic!(
+                "the underground band emitted `chamber` — if that is now intended, \
+                 `SpatialChannel`'s doc and the `map` verb's band arms must change WITH it"
+            ),
+        }
+        let json = crate::snapshot_json(&snap);
+        assert!(
+            json.contains(r#""band":"walk""#),
+            "the wire tag must read `walk` underground: {json:.120}"
+        );
+
+        // The verb, in the same state: the surface chart, not a plan and not
+        // a refusal. `plan_here` prints a legend; `map`'s chart prints a lens
+        // header — so the two are told apart by content, not by length.
+        let out = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(
+            out.contains("[lens:"),
+            "map underground must draw the walk-band chart, as the pane does: {out}"
+        );
+        assert!(
+            !out.contains(INDOOR_CHART_REFUSAL),
+            "map underground must not take the indoor refusal: {out}"
+        );
     }
 }

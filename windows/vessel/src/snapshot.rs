@@ -56,6 +56,9 @@ pub struct SessionSnapshot {
     /// The sim's own rendering. Carried verbatim: prose is the
     /// constitutional primary and the client never re-derives it.
     pub narration: Narration,
+    /// Where the possession stands, as cells. Last in key order because it
+    /// is the newest channel and key order is contract.
+    pub spatial: SpatialChannel,
 }
 
 /// The possessed agent's own identity.
@@ -163,6 +166,55 @@ pub struct Narration {
     pub nouns: Vec<NounEntry>,
 }
 
+/// Where the possession stands, as cells rather than as a picture.
+///
+/// A tagged union over the **band**, because the session already treats
+/// indoors and out as mutually exclusive: `Session::handle`'s `map` arm
+/// answers `map out` indoors with `INDOOR_CHART_REFUSAL`, so the walk-band
+/// chart is not derivable while inside a building. One pane switches; two do
+/// not coexist.
+///
+/// **Two variants, but the session now has more than two ways to be
+/// somewhere** — and that asymmetry is deliberate rather than an oversight,
+/// so read it before adding a variant. `Session` carries three "not out of
+/// doors at ground level" states: `inside` (a built structure), `submerged`
+/// (the water column, The Column), and `underground` (the cave lattice, The
+/// Deep Realm). Only `inside` gets its own variant. The other two fold into
+/// `Walk`, which is what the `map` VERB does in exactly the same states —
+/// `map`'s band arms guard on `inside` alone, so `map` underground or
+/// submerged draws the surface chart too. Pane and verb therefore still
+/// cannot disagree, which is the property this union exists to hold; what
+/// they agree ON, in those two bands, is a chart of the country overhead.
+/// Whether that is the right answer is an open question, not a settled one
+/// (`CLIENT-band-fold` in the idea registry) — but it is the *same* answer
+/// the sim already gives, and changing it is a sim change before it is a
+/// schema change. `the_underground_band_folds_into_walk_as_map_does` in
+/// `session.rs`'s test module pins the fold (it lives there rather than in
+/// `tests/session_snapshot.rs` because reaching an open cave needs the
+/// private `delve_at`, seed 42's flagship having no cave under it), so a
+/// fourth band cannot be added without meeting this question.
+///
+/// The wire tag is `band`, with values `walk` and `chamber`. A client reads
+/// it before anything else, so renaming either is a `vessel/session/v2`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "band", rename_all = "lowercase")]
+pub enum SpatialChannel {
+    /// Not inside a built structure: the walk-band chart,
+    /// `scene/surrounds/v1` embedded verbatim. One schema, one owner — the
+    /// same move `sensed.room` makes with `locale/room/v2`. Covers standing
+    /// out of doors, **and** the two bands that fold into it (submerged,
+    /// underground) — see the enum's own doc for why.
+    Walk {
+        /// The chart, as `windows/scene` renders it structurally.
+        chart: hornvale_scene::SurroundsScene,
+    },
+    /// Inside a building: the chamber-band floor plan.
+    Chamber {
+        /// The plan, as `vessel/plan/v1`.
+        plan: crate::plan::SessionPlan,
+    },
+}
+
 /// One examinable noun and its datum.
 /// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum)
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -201,6 +253,29 @@ mod tests {
             .expect("the minted position describes")
     }
 
+    /// A minimal `vessel/plan/v1` document, for tests that need a
+    /// `SpatialChannel::Chamber` but not a full lattice derivation.
+    fn minimal_plan() -> crate::plan::SessionPlan {
+        crate::plan::SessionPlan {
+            schema: crate::plan::PLAN_SCHEMA.to_string(),
+            chamber: 1,
+            at: 0,
+            of: 1,
+            extent: crate::plan::PlanExtent {
+                x: 0,
+                y: 0,
+                w: 1,
+                h: 1,
+            },
+            palette: vec![crate::plan::PaletteEntry {
+                kind: "floor".to_string(),
+                chambers: vec![0],
+            }],
+            cells: vec![0],
+            you: crate::plan::PlanPoint { x: 0, y: 0 },
+        }
+    }
+
     fn minimal() -> SessionSnapshot {
         SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
@@ -230,6 +305,9 @@ mod tests {
             narration: Narration {
                 prose: String::new(),
                 nouns: Vec::new(),
+            },
+            spatial: SpatialChannel::Chamber {
+                plan: minimal_plan(),
             },
         }
     }
@@ -275,6 +353,9 @@ mod tests {
                     datum: "Night.".to_string(),
                 }],
             },
+            spatial: SpatialChannel::Chamber {
+                plan: minimal_plan(),
+            },
         };
         let json = snapshot_json(&snap);
         assert!(json.contains(r#""schema":"vessel/session/v1""#));
@@ -284,6 +365,7 @@ mod tests {
             "\"known\":",
             "\"social\":",
             "\"narration\":",
+            "\"spatial\":",
         ] {
             assert!(json.contains(key), "channel key {key} missing from {json}");
         }

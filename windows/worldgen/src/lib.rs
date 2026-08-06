@@ -20,8 +20,8 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConceptRegistry, Correspondent, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId,
     LedgerError, ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, Visibility, Void, World, WorldContext, WorldTime,
-    observe,
+    RegistryError, SeaLevelHeight, Seed, Temperature, Value, Visibility, Void, World, WorldContext,
+    WorldTime, observe,
 };
 use hornvale_language::CommonVocabulary;
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
@@ -1094,7 +1094,7 @@ fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_
         .eval(s.temperature_c, floor_buf)
         .min(cn.moisture.eval(s.moisture, floor_buf))
         .min(cn.insolation.eval(s.insolation, floor_buf))
-        .min(cn.elevation.eval(s.elevation, 0.0))
+        .min(cn.elevation.eval(s.height_asl_m.get(), 0.0))
 }
 
 /// **The Tense §3.3's two-tier tolerance — SHADOW MODE, not yet binding.**
@@ -1139,7 +1139,7 @@ pub fn tolerance_tiered(
         .moisture
         .eval(s.moisture, floor_buf)
         .min(cn.insolation.eval(s.insolation, floor_buf))
-        .min(cn.elevation.eval(s.elevation, floor_buf));
+        .min(cn.elevation.eval(s.height_asl_m.get(), floor_buf));
     gate * modifier
 }
 
@@ -1251,9 +1251,13 @@ pub fn per_species_suitability(
                 // so one half of the model obeyed Liebig and the other did not.
                 // Measured, the product compressed the result ~4x (median
                 // min-of-conditions on good ground is 0.5692), which is most of
-                // why every newly-opened cell came out unsurvivable. The
-                // binding axis limits; a species mildly suboptimal on four axes
-                // is not penalised four times over.
+                // why every newly-opened cell came out unsurvivable.
+                //
+                // Merge note (main absorbed 2026-08-06): main's side of this
+                // conflict is the PRODUCT form this stage deliberately replaced,
+                // carrying main's rename of the elevation field. Kept Liebig —
+                // the measured change — and moved the rename inside
+                // `tolerance_liebig`, which is where the field is now read.
                 saturated * tolerance_liebig(cn, s, floor_buf)
             });
             (tag as u32, k)
@@ -1865,7 +1869,7 @@ pub fn climate_from(
 
 /// The four v1 environmental fields at one cell — the substrate the habitat
 /// model (The Niche) scores a species' condition niche against.
-/// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation), bare-ok(diagnostic-value: elevation)
+/// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Substrate {
     /// Mean annual temperature, °C.
@@ -1879,8 +1883,9 @@ pub struct Substrate {
     /// [`hornvale_kernel::ReferenceElevation`], whose isostatic datum sits
     /// 1.7–3.5 km below sea level and moves from world to world. Negative on
     /// ocean cells (they are still scored; the supply term is what empties
-    /// them).
-    pub elevation: f64,
+    /// them). A [`SeaLevelHeight`], not a bare `f64` (The Benchmark) — the
+    /// datum this field's name once merely claimed, the type now enforces.
+    pub height_asl_m: SeaLevelHeight,
 }
 
 /// Annual-mean top-of-atmosphere insolation at a latitude, relative to the
@@ -2043,13 +2048,17 @@ pub fn substrate_field_at(
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
         temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
         moisture: climate.moisture_at(cell),
+        // Hoisted, not recomputed per cell: insolation is era-INVARIANT and
+        // ~100% of this pipeline's cost, so it is built once and passed in.
+        // Main's side computes it inline per rotation regime, which is the
+        // pre-hoist shape this campaign replaced.
         insolation: *insolation.get(cell),
-        // The re-datum: `ReferenceElevation - ReferenceElevation` is the
-        // kernel's own typed subtraction, whose output is the signed metre
-        // difference — height above sea level. Negative on ocean cells. At an
-        // era, this is height above THAT era's sea level, so a glacial low-stand
-        // exposes shelf as land without any mask saying so.
-        elevation: terrain.elevation_at(cell) - adjust.sea_level,
+        // The re-datum, taking MAIN's named conversion (`ReferenceElevation::
+        // above`, decision 0008) over this branch's raw typed subtraction —
+        // same signed metre difference, better named — but against THIS ERA's
+        // sea level rather than today's. That era-varying half must survive the
+        // rename: a glacial low-stand exposes shelf as land with no mask.
+        height_asl_m: terrain.elevation_at(cell).above(adjust.sea_level),
     })
 }
 
@@ -2098,15 +2107,18 @@ const SUBTERRANEAN_MOISTURE: f64 = 0.90;
 /// - **moisture** is the fixed [`SUBTERRANEAN_MOISTURE`], replacing the
 ///   surface cell's own (climate-driven, arid-to-wet) reading entirely: cave
 ///   dampness comes from seepage and condensation, not the weather above.
-/// - **elevation** is `surface.elevation` UNCHANGED — height above sea level
-///   of the cell the chamber sits beneath. A literal metres-below-surface
-///   offset per band would need a real depth coordinate, which is exactly
-///   the change to `Position` spec §6 rules out; the surface cell's own
-///   elevation is the only depth-adjacent reading available without
-///   inventing one, and it is also the physically right one: a chamber
-///   really is beneath that geographic point, at that point's altitude.
+/// - **height_asl_m** is `surface.height_asl_m` UNCHANGED — height above sea
+///   level of the cell the chamber sits beneath. (The Benchmark renamed this
+///   field from `elevation` and typed it `SeaLevelHeight`; this doc already
+///   described it as "height above sea level", so the rename only made the
+///   name agree with the comment.) A literal metres-below-surface offset per
+///   band would need a real depth coordinate, which is exactly the change to
+///   `Position` spec §6 rules out; the surface cell's own height is the only
+///   depth-adjacent reading available without inventing one, and it is also
+///   the physically right one: a chamber really is beneath that geographic
+///   point, at that point's altitude.
 ///
-/// Because temperature and elevation pass through unchanged, they cannot by
+/// Because temperature and height pass through unchanged, they cannot by
 /// themselves distinguish a chamber from the cell above it — only moisture
 /// and insolation do. That is a real, stated limitation of this v1 model
 /// rather than a hidden one; Task 8's H2 readout is where whether it is too
@@ -2117,7 +2129,7 @@ pub fn subterranean_substrate(surface: Substrate) -> Substrate {
         temperature_c: surface.temperature_c,
         moisture: SUBTERRANEAN_MOISTURE,
         insolation: 0.0,
-        elevation: surface.elevation,
+        height_asl_m: surface.height_asl_m,
     }
 }
 
@@ -5041,9 +5053,15 @@ pub fn family_daughters(
 /// 132.0 kg/~80.9 yr, which held this rank until The Vacancy added gnoll;
 /// human's 70.0 kg/~69.0 yr does not challenge it), and the
 /// shortest-lived dragon, white/black-dragon at ~163.4 yr (2200.0 kg,
-/// `Endotherm`). Also clear of the wild `Solitary` beasts
-/// (otyugh/xorn/rust-monster/owlbear), which top out around ~110 yr and so
-/// stay banked at `SETTLED` rather than freezing.
+/// `Endotherm`). Also clear of the six settling peoples, which top out at
+/// gnoll's ~81.5 yr — that margin is what makes this campaign's
+/// byte-neutrality hold. It is **not** true that only dragons clear it:
+/// measured over the roster, giant-octopus (131.1), giant-squid (142.3),
+/// giant-scorpion (148.9), rhinoceros (165.2), giant-constrictor-snake
+/// (169.2) and giant-crocodile (201.2) all do, and all bank the frozen-
+/// isolate regime. None speaks, so the regime is latent; an earlier version
+/// of this doc named only otyugh/xorn/rust-monster/owlbear and read as
+/// though those were the whole wild-solitary set.
 ///
 /// [`CascadeRegime::new`]: hornvale_language::CascadeRegime::new
 const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
@@ -5052,20 +5070,36 @@ const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
 /// pure over a biosphere row (no world/seed needed; `domains/language`
 /// cannot read `SocialForm`, so worldgen — the composition root — computes
 /// this and passes the regime in). `Settled` peoples keep drawing at the
-/// historical rate; `Gregarious` beasts (no current speaker) bank a slightly
-/// slower `{1,2}`; `Solitary` freezes to the isolate rate `{0,1}` once its
-/// allometric lifespan clears [`LIFESPAN_THRESHOLD_YEARS`] (a dragon), else
-/// it stays at the historical rate (a short-lived solitary beast, banked);
-/// `Sessile` never speaks and is inert at `SETTLED`. Total over
-/// `SocialForm`.
+/// historical rate, unless the row's own lifespan clears
+/// [`LIFESPAN_THRESHOLD_YEARS`], in which case turnover falls and the tongue
+/// banks the same slower `{1,2}` rate as a `Gregarious` beast (The Long Age,
+/// mutation M1); `Gregarious` beasts (no current speaker) bank that slower
+/// `{1,2}` unconditionally; `Solitary` freezes to the isolate rate `{0,1}`
+/// once its lifespan clears the same threshold (a dragon), else it stays at
+/// the historical rate (a short-lived solitary beast, banked); `Sessile`
+/// never speaks and is inert at `SETTLED`. Total over `SocialForm`.
 fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
+    // `life_history` is the honest source: it returns `None` for an
+    // `Ametabolic` kind, which has no mass-derived lifespan at all. The bare
+    // `lifespan` call this used to make returned a number for a construct
+    // (xorn: 64.97 yr) that the model says does not exist.
+    let long_lived = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+        .lifespan
+        .is_some_and(|l| l.get() >= LIFESPAN_THRESHOLD_YEARS);
     match bio.social_form {
-        hornvale_species::SocialForm::Settled => hornvale_language::CascadeRegime::SETTLED,
+        // Many speakers, but turnover falls with lifespan: a settled people
+        // that lives past the threshold accrues far fewer transmission events
+        // per century, so its tongue drifts slower without freezing (0066).
+        hornvale_species::SocialForm::Settled => {
+            if long_lived {
+                hornvale_language::CascadeRegime::new(1, 2)
+            } else {
+                hornvale_language::CascadeRegime::SETTLED
+            }
+        }
         hornvale_species::SocialForm::Gregarious => hornvale_language::CascadeRegime::new(1, 2),
         hornvale_species::SocialForm::Solitary => {
-            if hornvale_species::lifespan(bio.mass, bio.metabolic_class).get()
-                >= LIFESPAN_THRESHOLD_YEARS
-            {
+            if long_lived {
                 hornvale_language::CascadeRegime::new(0, 1)
             } else {
                 hornvale_language::CascadeRegime::SETTLED
@@ -8814,6 +8848,60 @@ mod tests {
     }
 
     #[test]
+    fn a_long_lived_settled_people_drifts_slower_than_a_short_lived_one() {
+        // THE LONG AGE (spec 6, mutation M1). Decision 0066 ships as
+        // "drift = f(sociality x lifespan)", and until this campaign the
+        // Settled row of that product was CONSTANT in lifespan -- exactly the
+        // cell an elf was meant to probe. This is the assertion that goes RED
+        // if the Settled arm stops consulting lifespan at all.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let human = wc.biosphere.get_by_label("human").expect("human has a row");
+
+        // Same people, same mass, same social form -- only the schedule moves.
+        assert_eq!(
+            cascade_regime_of(human),
+            hornvale_language::CascadeRegime::SETTLED,
+            "human at 69.0 yr is far below the threshold"
+        );
+
+        let mut long_lived = human.clone();
+        long_lived.schedule =
+            hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
+        assert!(
+            hornvale_species::lifespan(
+                long_lived.mass,
+                long_lived.metabolic_class,
+                long_lived.schedule
+            )
+            .get()
+                >= LIFESPAN_THRESHOLD_YEARS,
+            "the fixture must actually clear the threshold, or this test proves nothing"
+        );
+        assert_eq!(
+            cascade_regime_of(&long_lived),
+            hornvale_language::CascadeRegime::new(1, 2),
+            "a Settled people that lives past the threshold drifts slower"
+        );
+    }
+
+    #[test]
+    fn an_ametabolic_kind_is_never_asked_for_a_lifespan() {
+        // xorn is Ametabolic: life_history reports no lifespan at all, yet the
+        // bare allometry returns 64.97 yr for its mass. The regime must not be
+        // decided by that number. Solitary + no lifespan banks at SETTLED.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let xorn = wc.biosphere.get_by_label("xorn").expect("xorn has a row");
+        assert_eq!(
+            xorn.metabolic_class,
+            hornvale_species::MetabolicClass::Ametabolic
+        );
+        assert_eq!(
+            cascade_regime_of(xorn),
+            hornvale_language::CascadeRegime::SETTLED
+        );
+    }
+
+    #[test]
     fn predator_pressure_is_deterministic_and_nontrivial() {
         // THE QUARRY: the carnivore-density field is byte-identical across calls
         // (no seed, pure over committed facts) and genuinely varies — some cells
@@ -11689,7 +11777,7 @@ mod tests {
             assert!(s.temperature_c.is_finite());
             assert!((0.0..=1.0).contains(&s.moisture));
             assert!(s.insolation.is_finite() && s.insolation >= 0.0);
-            assert!(s.elevation.is_finite());
+            assert!(s.height_asl_m.get().is_finite());
         }
         // Annual-mean insolation is higher at the equator than at a pole.
         let eq = annual_mean_insolation(0.0, obliquity_deg, insolation_scalar);

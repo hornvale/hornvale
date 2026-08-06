@@ -297,6 +297,66 @@ fn a_founders_handle_does_not_depend_on_how_the_community_ended() {
     );
 }
 
+#[test]
+fn a_long_lived_people_founds_by_siblings_where_a_short_lived_one_founds_by_descendants() {
+    // THE LONG AGE (spec 6, mutation M2) -- the CONTINUOUS proof, and the
+    // consumer the peoples-program spec never identified. descent.rs records
+    // that seed 42's founding gaps run to a median of 50 years. At goblin's
+    // ~21.7 yr generation length that gap is two removes; stretch the
+    // schedule and the same gap becomes a sibling relationship. Nothing here
+    // is a constant anyone chose -- it falls out of the arithmetic.
+    const MEDIAN_FOUNDING_GAP_YEARS: f64 = 50.0;
+
+    // The short-lived case is routed through the REAL consumer,
+    // `generation_length_of`, not through a bypassed `life_history` call --
+    // this is "the descent path" the test's name promises.
+    let w = seed42();
+    let short =
+        generation_length_of(&w, "goblin").expect("goblin has a derivable generation length");
+    assert!(
+        matches!(
+            hornvale_history::descent::kinship(MEDIAN_FOUNDING_GAP_YEARS, short),
+            Kinship::Ancestor(n) if n >= 1
+        ),
+        "a short-lived people's founders are separated by generations (gl = {short})"
+    );
+
+    // The long-lived case CANNOT be driven through `generation_length_of`:
+    // that function resolves its row exclusively from
+    // `WorldComponents::assemble()` (the canonical, world-independent
+    // registry -- see its own doc comment), and every one of the registry's
+    // 30 rows is `LifeSchedule::Allometric` today (Task 2's own null). A
+    // paced schedule is therefore reachable only by cloning a row and
+    // calling the shared allometry directly, exactly as `generation_length_of`
+    // does internally with whatever row it is given. This also means: a
+    // mutation that reverts `generation_length_of` to hardcode
+    // `LifeSchedule::ALLOMETRIC` instead of forwarding `bio.schedule` is
+    // UNOBSERVABLE by any test today, for any real species, since
+    // `bio.schedule == LifeSchedule::Allometric == LifeSchedule::ALLOMETRIC`
+    // bit-for-bit until a future campaign (C2c) authors a `Paced` kind. That
+    // is by design -- "the channel ships with zero occupants" -- not a gap
+    // this test can or should paper over.
+    let reg = hornvale_species::biosphere_registry();
+    let goblin = reg
+        .get_by_label("goblin")
+        .expect("goblin has a biosphere row");
+    let mut slow = goblin.clone();
+    slow.schedule = hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
+    let long = hornvale_species::life_history(slow.mass, slow.metabolic_class, slow.schedule)
+        .generation_length
+        .expect("still not Ametabolic")
+        .get();
+    assert!(
+        long > 100.0,
+        "the fixture must clear half the gap, or this proves nothing"
+    );
+    assert_eq!(
+        hornvale_history::descent::kinship(MEDIAN_FOUNDING_GAP_YEARS, long),
+        Kinship::Sibling,
+        "a people that lives centuries founds its daughter communities within one generation"
+    );
+}
+
 /// A people the CANONICAL roster has never heard of must still get distinct
 /// founder handles.
 ///

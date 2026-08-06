@@ -199,7 +199,7 @@ fn niche_k_over(
                     * cn.temperature.eval(s.temperature_c, floor_buf)
                     * cn.moisture.eval(s.moisture, floor_buf)
                     * cn.insolation.eval(s.insolation, floor_buf)
-                    * cn.elevation.eval(s.elevation, 0.0)
+                    * cn.elevation.eval(s.height_asl_m.get(), 0.0)
             });
             (tag as u32, k)
         })

@@ -235,7 +235,7 @@ fn would_moisture_as_a_gate_add_exclusion() {
             let modifier = cn
                 .insolation
                 .eval(s.insolation, floor)
-                .min(cn.elevation.eval(s.elevation, floor));
+                .min(cn.elevation.eval(s.height_asl_m.get(), floor));
             if gate * modifier < bar {
                 t_moist += 1;
             }

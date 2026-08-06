@@ -18,7 +18,9 @@ pub use budget::StrangeSite;
 use budget::StrangenessBudget;
 
 use hornvale_climate::{Biome, BiomeExpr, Formation, GeneratedClimate, Realm, Stratum};
-use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
+use hornvale_kernel::{
+    CellId, NearestCellIndex, RoomAddr, SeaLevelHeight, Seed, World, WorldTime, quantize,
+};
 use hornvale_terrain::GeneratedTerrain;
 pub use hornvale_terrain::WaterKind;
 use hornvale_worldgen::{climate_from, terrain_of};
@@ -106,6 +108,13 @@ pub struct LocaleFields {
     pub moisture: f64,
     /// Elevation, meters.
     pub elevation_m: f64,
+    /// Height above this world's sea level, metres — signed, negative below.
+    /// `elevation_m` is the absolute isostatic reading and stays beside it,
+    /// because every correct consumer already reads that one; this is the
+    /// quantity a *reader* wants, and the one the relief bands are computed
+    /// from (The Benchmark).
+    #[serde(serialize_with = "serialize_height_asl")]
+    pub height_asl_m: SeaLevelHeight,
     /// Salt/fresh water at the room (max-weight cell — categorical, inherited,
     /// never blended). `water.is_fresh()` is the drinkable query. `WaterKind`
     /// lives in the terrain domain crate, which (decision 0002) depends on
@@ -113,6 +122,14 @@ pub struct LocaleFields {
     /// field serializes by its stable name instead (see `serialize_water_kind`).
     #[serde(serialize_with = "serialize_water_kind")]
     pub water: WaterKind,
+}
+
+/// Serialize a [`SeaLevelHeight`] as its quantized metres — the emit-boundary
+/// quantization every float in this schema goes through (decision 0033). The
+/// type cannot travel through JSON, so the *field name* carries the datum
+/// instead; that pairing is the whole discipline.
+fn serialize_height_asl<S: serde::Serializer>(h: &SeaLevelHeight, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_f64(quantize(h.get()))
 }
 
 /// Serialize a `WaterKind` by its stable lowercase-hyphenated name (the
@@ -507,10 +524,19 @@ impl LocaleContext {
             let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
             quantize(sum / denom as f64)
         };
+        let elevation_m = blend(&|c| self.terrain.globe().elevation.get(c).get());
+        // `from_metres`, not a subtraction: the left operand is a three-corner
+        // BLEND, not any single cell's reading, so there is no pair of
+        // `ReferenceElevation`s here to subtract. Derived from the already-
+        // quantized `elevation_m` and a quantized sea level so that the value
+        // emitted and the band computed from it agree exactly with what a
+        // consumer re-derives from the document.
+        let sea_level_m = quantize(self.terrain.globe().sea_level.get());
         let fields = LocaleFields {
             temperature_c: blend(&|c| self.climate.mean_temperature_at(c).get()),
             moisture: blend(&|c| self.climate.moisture_at(c)),
-            elevation_m: blend(&|c| self.terrain.globe().elevation.get(c).get()),
+            elevation_m,
+            height_asl_m: SeaLevelHeight::from_metres(quantize(elevation_m - sea_level_m)),
             water: *self.terrain.globe().water_kind.get(best.0),
         };
 
@@ -1078,6 +1104,26 @@ mod tests {
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
         assert_eq!(loc.schema, ROOM_SCHEMA);
+    }
+
+    #[test]
+    fn a_locale_reports_height_above_sea_level_not_the_raw_reading() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        // The same address `fields_are_within_the_corner_range` uses, for the same
+        // reason: it resolves on seed 42's mesh without needing a settlement.
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let sea = hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get());
+        let expected = hornvale_kernel::quantize(loc.fields.elevation_m - sea);
+        assert_eq!(
+            loc.fields.height_asl_m.get(),
+            expected,
+            "height_asl_m must be elevation_m re-datumed onto sea level, exactly"
+        );
     }
 
     #[test]

@@ -290,7 +290,11 @@ pub fn render_life_history_line(
     name: &str,
     biosphere: &hornvale_species::BiosphereTraits,
 ) -> String {
-    let history = hornvale_species::life_history(biosphere.mass, biosphere.metabolic_class);
+    let history = hornvale_species::life_history(
+        biosphere.mass,
+        biosphere.metabolic_class,
+        biosphere.schedule,
+    );
     let mut line = format!(
         "The {} run a basal metabolism of {:.0} W",
         name, history.basal_metabolic_rate_w
@@ -1480,6 +1484,36 @@ mod tests {
         assert!(
             !line.contains("lifespan"),
             "ametabolic species must suppress the life-history clause: {line}"
+        );
+    }
+
+    #[test]
+    fn render_life_history_line_reflects_a_paced_schedule() {
+        // THE LONG AGE (spec 6, mutation M2), the second of Task 4's three
+        // consumers: unlike `generation_length_of` (which resolves its row
+        // only from the canonical, always-Allometric registry, and so cannot
+        // observe a paced schedule today), `render_life_history_line` takes
+        // the `BiosphereTraits` row directly, so a cloned-and-paced row is
+        // enough to prove it forwards `biosphere.schedule` rather than a
+        // hardcoded default.
+        let biosphere = hornvale_species::biosphere_registry();
+        let goblin = biosphere
+            .get(&hornvale_kernel::KindId("goblin"))
+            .expect("goblin is in the registry");
+        let base_line = render_life_history_line("goblin", goblin);
+
+        let mut slow = goblin.clone();
+        slow.schedule =
+            hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
+        let slow_line = render_life_history_line("goblin", &slow);
+
+        assert_ne!(
+            base_line, slow_line,
+            "a paced schedule must change the rendered life-history line"
+        );
+        assert!(
+            slow_line.contains("slow, long-lived, and sparse"),
+            "an 11x-paced goblin must read as slow, long-lived, and sparse: {slow_line}"
         );
     }
 

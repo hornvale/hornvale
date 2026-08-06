@@ -221,7 +221,7 @@ fn report(seed_value: u64) {
                     cn.temperature.eval(s.temperature_c, temp_floor),
                     cn.moisture.eval(s.moisture, floor),
                     cn.insolation.eval(s.insolation, floor),
-                    cn.elevation.eval(s.elevation, elev_floor),
+                    cn.elevation.eval(s.height_asl_m.get(), elev_floor),
                 ];
                 let mut best = 0;
                 for (j, t) in terms.iter().enumerate() {
@@ -245,7 +245,7 @@ fn report(seed_value: u64) {
                         .eval(s.temperature_c, temp_floor)
                         .min(cn.moisture.eval(s.moisture, floor))
                         .min(cn.insolation.eval(s.insolation, floor))
-                        .min(cn.elevation.eval(s.elevation, elev_floor))
+                        .min(cn.elevation.eval(s.height_asl_m.get(), elev_floor))
                 })
                 .collect();
             tol.sort_by(f64::total_cmp);
@@ -299,7 +299,10 @@ fn report(seed_value: u64) {
     // What the elevation curve alone yields across the real land range — the
     // curve, not the parameters (the constant-vs-curve rule).
     println!();
-    let mut elevs: Vec<f64> = land.iter().map(|&c| substrate.get(c).elevation).collect();
+    let mut elevs: Vec<f64> = land
+        .iter()
+        .map(|&c| substrate.get(c).height_asl_m.get())
+        .collect();
     elevs.sort_by(f64::total_cmp);
     let bands = [0.05, 0.25, 0.50, 0.75, 0.95];
     print!("{:<10}", "elev m:");
