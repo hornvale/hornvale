@@ -159,13 +159,42 @@ pub enum LifeSchedule {
 }
 ```
 
-Carried in `life_schedule_registry() -> ComponentStore<KindId, LifeSchedule>`,
-**sparse**: a kind absent from the store is `Allometric`. This follows
-`dispersion_registry()` — The Tolerance, the immediately preceding campaign in
-this program — which holds **9 rows against `biosphere_registry`'s 30**, with
-its consumer naming the absence default as a const (`NO_SPREAD` in
-`windows/worldgen/src/disposition.rs`). The species crate's own doc states the
-pattern: "each component authors its own rows directly."
+Carried as a **seventh field on `BiosphereTraits`**, `schedule: LifeSchedule`,
+authored explicitly on all thirty rows.
+
+**Amended 2026-08-06, after G3, on evidence from reading the call sites.** The
+approved spec said a sparse `life_schedule_registry()` following
+`dispersion_registry()`. Three measurements overturned it:
+
+- **`dispersion` is not in `WorldComponents` at all** — zero occurrences in
+  `components.rs`. Its store is read directly at its single consumer
+  (`disposition.rs`). The precedent is "a separate store for a
+  one-consumer component", which does not transfer to an input with six
+  consumers.
+- **Every consumer of `life_history`/`lifespan` already holds the biosphere
+  row.** `render_life_history_line(name, biosphere)` takes the row and nothing
+  else; lab's `species_life_history` resolves the row then calls
+  `life_history(bio.mass, bio.metabolic_class)`; so do `generation_length_of`
+  and `cascade_regime_of`. A separate store would mean threading a second
+  parameter into four functions across four crates, none of which has a
+  `WorldComponents` in scope.
+- **`WorldComponents::from_stores` has ten callers.** A separate store in
+  `WorldComponents` adds a twelfth parameter to all ten. Keeping the schedule
+  on the row means the synthetic Lab rosters (`goblin-twin`, `serpent`) inherit
+  it correctly *by construction*, because they clone biosphere rows — and
+  `family_daughters`' own comment explains that reading from the caller's `wc`
+  rather than the canonical registry is load-bearing for exactly those kinds.
+
+Cost of the amended shape: **33 struct-literal sites** gain one field (30
+registry rows plus 3 in worldgen tests), every one enumerated by the compiler.
+That repetition is a *feature* here — thirty explicit
+`schedule: LifeSchedule::Allometric` lines are the auditable evidence that no
+kind was accidentally made long-lived, which a sparse store's silent absence
+could not give.
+
+Cohesion argues the same way: `mass` and `metabolic_class` are the other two
+inputs to this law and live on the row. Splitting one input-set across two
+stores is worse cohesion, not better.
 
 **The store ships empty.** Not one kind is authored `Paced`. That is §6's
 problem to answer, not something to paper over.
@@ -277,14 +306,28 @@ The compiler is the enumeration, not this list. Written as orientation only —
 silence an exhaustiveness or arity error with a wildcard or a stub.**
 
 - `domains/species/src/allometry.rs` — the four time laws take a schedule.
-- `domains/species/src/lib.rs` — `LifeSchedule`, `life_schedule_registry`,
-  re-exports, `impl Component`.
-- `windows/worldgen/src/lib.rs` — `cascade_regime_of`, its callers, the
-  `WorldComponents` assembly.
+- `domains/species/src/lib.rs` — `LifeSchedule`, the seventh `BiosphereTraits`
+  field, 30 registry rows, re-exports.
+- `windows/worldgen/src/lib.rs` — `cascade_regime_of` (signature unchanged —
+  it already takes the row), plus 3 `BiosphereTraits` literals in tests.
 - `windows/worldgen/src/descent.rs` — `generation_length_of`.
 - `windows/almanac/src/lib.rs` — `render_life_history_line`.
 - `windows/lab/src/metrics.rs` — the six life-history extractors.
 - `domains/species/tests/coverage.rs`, `windows/worldgen/tests/*`.
+
+Two assertion sites make the old invariant explicit and must be *widened*
+rather than merely kept passing:
+
+- `cascade_regime_of_matches_the_authored_regime_map`
+  (`windows/worldgen/src/lib.rs`) asserts all six peoples resolve to `SETTLED`.
+  Still true — they are all under 120 — so it must keep passing untouched, and
+  gain the new long-lived `Settled` case beside it.
+- The golden `solitary-tongue-peoples-lexicons-seed-42.txt`'s failure message
+  tells a future reader that a drift means "`cascade_regime_of` is no longer
+  resolving **every** `Settled` people to `CascadeRegime::SETTLED` … this is a
+  BUG — do not rebaseline." After this campaign that sentence is true only for
+  peoples *under the threshold*. The message must say so, or it will one day
+  send C2d's implementer to diagnose a bug that is the model working.
 
 Signature churn is the real cost: `lifespan(mass, class)` and
 `life_history(mass, class)` gain a schedule parameter, and every call site is
@@ -457,13 +500,15 @@ crate's own authoring discipline. *Discarded:* a scalar override; a new
 `MetabolicClass` variant (a clade tag is not a longevity strategy, and it is an
 enum widening with 7+ exhaustive-match sites for no gain).
 
-**D2 — A sparse component store, not a field on `BiosphereTraits`.**
-`life_schedule_registry() -> ComponentStore<KindId, LifeSchedule>`; absence is
-`LifeSchedule::ALLOMETRIC`, named as a const at the read site. Follows
-`dispersion_registry()` (C2t, the preceding campaign in this program): 9 rows
-against biosphere's 30, its consumer naming the absence default `NO_SPREAD`.
-*Discarded:* a 7th struct field — 30 mechanical row edits enlarging the diff a
-byte-neutrality claim must be audited against, for no expressive gain.
+**D2 — A seventh field on `BiosphereTraits`, not a separate store.**
+**AMENDED after G3** (see §3.2 for the evidence). The original decision chose a
+sparse `life_schedule_registry()` on the `dispersion_registry()` precedent;
+reading the call sites showed that precedent does not transfer — `dispersion`
+is not in `WorldComponents` at all and has one consumer, whereas the schedule
+has six, every one of which already holds the biosphere row. *Discarded:* the
+sparse store — it would add a twelfth parameter to `from_stores`' ten callers
+and thread a second argument into four functions across four crates, and Lab's
+synthetic rosters would no longer inherit the schedule by construction.
 
 **D3 — The factor multiplies exactly what `pace_multiplier` multiplies.**
 `lifespan`, `age_at_maturity`, `reproductive_tempo`, `pace_of_life`; **not**
