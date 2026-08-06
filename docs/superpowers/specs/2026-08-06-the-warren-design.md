@@ -382,3 +382,50 @@ verified cause.
 exactly; the third (P3) was falsified — the world does not move, and the
 campaign's real footprint is confined to two live, non-ledger read paths.
 Task 5 re-pins those three goldens, citing this section.
+
+### 10.1 What the 188-line affect diff actually mixes
+
+The re-pin of `affect-trace-seed-42.txt` moves 188 lines, which reads as a
+large drift and is not one. Decomposed by species rather than by line — the
+same discipline The Deep Realm's "a compound rate is not a measurement" arrived
+at — it is **three different things**:
+
+```
+  species           lines differing   of which LABEL changes
+  ----------------  ---------------   ----------------------
+  bugbear                    0                 0
+  kobold                     0                 0
+  gnoll                      0                 0
+  otyugh                     1                 0
+  hobgoblin                  2                 0
+  human                      4                 0
+  goblin                     4                 0
+  rust-monster              40                34     <- the target
+  carrion-crawler           36                35     <- a neighbour effect
+  ----------------
+  only before: xorn      only after: giant-elk       <- the roster swap
+```
+
+1. **Six of the nine shared species are effectively untouched** — zero to four
+   lines, and **not one label change** among them. The peopled roster's
+   emotional life is where it was.
+2. **rust-monster is the campaign's target and moved most** (34 of its 40
+   differing lines are label changes). Its scoring frame changed; its
+   trajectory changed with it. This is the intended effect, arriving where it
+   was aimed.
+3. **xorn left the trace and giant-elk entered it.** Xorn is gated on cave
+   presence now and no longer stands at a cave-free cell. Everything below it
+   re-indexed, which is why a naïve label-frequency comparison across the whole
+   file reads as a large behavioural shift (`54 Content → 19 Content`) when
+   almost all of that is comparing *different creatures at the same index*.
+
+**A caution, stated as a hypothesis rather than a finding.**
+`carrion-crawler`'s 35 label changes are the one item not directly explained by
+its own scoring — it is not `Subterranean` and its frame did not change. The
+evidenced guess is the path The Deep Realm documented: `niche → suitability →
+the coexistence fit → the shared predator/prey pressure fields → every other
+creature's danger-sense and hunger → its affect`. Its neighbours changed — a
+xorn left and a giant elk, which is prey, arrived — so a hunger and danger
+profile changing is exactly what that path predicts. **This has not been walked
+through `hornvale_demography::coexist::pack` by hand and is not asserted as a
+cause.**
