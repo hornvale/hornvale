@@ -1656,9 +1656,15 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
         println!("Locale {} (depth {})", locale.id, locale.depth);
         println!("  at {:.4}, {:.4}", locale.latitude, locale.longitude);
         println!("  biome: {}", locale.biome);
+        let h = locale.fields.height_asl_m;
+        let height = if h.get() < 0.0 {
+            format!("{:.0} m below sea level", h.depth())
+        } else {
+            format!("{:.0} m above sea level", h.get())
+        };
         println!(
-            "  temperature {:.1} °C · moisture {:.2} · elevation {:.0} m",
-            locale.fields.temperature_c, locale.fields.moisture, locale.fields.elevation_m
+            "  temperature {:.1} °C · moisture {:.2} · {height}",
+            locale.fields.temperature_c, locale.fields.moisture
         );
         println!(
             "  regime: {} (strangeness {:.1})",

@@ -3,6 +3,7 @@
 //! noun the prose mentions is in `nouns`, and only those are examinable.
 
 use crate::Vantage;
+use hornvale_kernel::SeaLevelHeight;
 
 /// A rendered vantage: prose plus its noun catalog.
 /// type-audit: bare-ok(prose: prose), bare-ok(artifact: nouns)
@@ -28,6 +29,20 @@ fn capitalize_first(s: &str) -> String {
     match c.next() {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
         None => String::new(),
+    }
+}
+
+/// A height as a reader-facing phrase. Sea level is derived per world and is
+/// nowhere near 0 m on the isostatic datum, so a bare signed number is not
+/// merely unhelpful — it reads as a depth. Saying the datum aloud is the prose
+/// half of the discipline the type carries in code.
+/// type-audit: bare-ok(prose: return)
+fn height_phrase(h: SeaLevelHeight) -> String {
+    let m = h.get();
+    if m < 0.0 {
+        format!("{:.0} m below sea level", h.depth())
+    } else {
+        format!("{m:.0} m above sea level")
     }
 }
 
@@ -73,10 +88,10 @@ impl Focalizer for TemplateFocalizer {
             (
                 biome,
                 format!(
-                    "{:.1} °C the year round, moisture {:.2}, {:.0} m elevation.",
+                    "{:.1} °C the year round, moisture {:.2}, {}.",
                     v.locale.fields.temperature_c,
                     v.locale.fields.moisture,
-                    v.locale.fields.elevation_m
+                    height_phrase(v.locale.fields.height_asl_m)
                 ),
             ),
             (
@@ -154,5 +169,26 @@ mod tests {
             .find(|(n, _)| n == "sky")
             .expect("sky is a noun");
         assert_eq!(sky.1, v.sky, "the sky noun carries the day's sky report");
+    }
+
+    #[test]
+    fn the_biome_datum_reports_height_above_sea_level() {
+        let v = vantage_at(0.0);
+        let f = TemplateFocalizer.render(&v);
+        let (_, datum) = f
+            .nouns
+            .iter()
+            .find(|(n, _)| *n == v.locale.biome)
+            .expect("the biome is a noun");
+        // Seed 42's sea level is -2936.17 m. Before The Benchmark this line read
+        // "-2936 m elevation" for a tropical forest at the shoreline.
+        assert!(
+            !datum.contains("-2936"),
+            "the raw isostatic reading leaked into prose: {datum}"
+        );
+        assert!(
+            datum.contains("above sea level") || datum.contains("below sea level"),
+            "a height must say what it is a height above: {datum}"
+        );
     }
 }
