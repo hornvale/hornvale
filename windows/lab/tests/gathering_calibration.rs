@@ -135,9 +135,27 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // sites carry surviving settlements — differs: 20.9646 -> 21.9651. The
     // preregistered floor of 3 still clears decisively (better than 7x),
     // the claim this row exists to guard, re-checked rather than assumed.
+    // The Tense's close regen (2026-08-06, canonical census on lefford at the
+    // merged SHA, 0063/0079): 21.9651 -> 18.7988, a 14.4% FALL, and the
+    // direction is the point. This campaign replaced the species-blind
+    // productivity model — a symmetric tent reaching exactly zero a little
+    // above freezing — with the Lieth & Box Miami model it had always cited,
+    // which is monotone and never zero. Cold ground now carries capacity, so
+    // the tropical/polar RATIO must narrow, and it did. A rise here would have
+    // been the surprise.
+    //
+    // The preregistered floor of 3 still clears decisively (better than 6x),
+    // the claim this row exists to guard, re-checked rather than assumed.
+    // Note what this row is NOT: `demesne.rs`'s live seed-42 sibling was
+    // re-labelled this campaign after measuring that its polar term sits below
+    // its floor, making it 100 x the tropical mean rather than a gradient.
+    // This census reading is the 1000-world one and is not degenerate that
+    // way, but decision 0106's circularity rule still applies to both — an
+    // internally-measured value is a drift tripwire, never evidence for the
+    // Earth-contingent gradient claim.
     assert!(
-        (mean - 21.9651).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~21.9651)"
+        (mean - 18.7988).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.7988)"
     );
 }
 
@@ -238,8 +256,8 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // uniform-sphere baseline of 32.7 — is untouched and still clears the
     // baseline by better than 2x, re-checked rather than assumed.
     assert!(
-        (mean - 14.8729).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~14.8729)"
+        (mean - 14.9484).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~14.9484)"
     );
 }
 
