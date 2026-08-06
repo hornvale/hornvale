@@ -304,6 +304,7 @@
 - [The Tolerance](./chronicle/the-tolerance.md)
 - [The Fare](./chronicle/the-fare.md)
 - [The Hollow](./chronicle/the-hollow.md)
+- [The Collation](./chronicle/the-collation.md)
 
 # Appendix: The Frontier
 
