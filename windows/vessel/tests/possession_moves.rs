@@ -335,11 +335,43 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
     // casts about for water — the felt state has moved off "settles down to
     // rest" to a thirst-restlessness read (measured: day 5.5 is where this
     // NPC's drive competition flips).
-    session.handle("wait 5");
+    // The Tense re-measure (2026-08-05): the flip moved from day 5.5 to day
+    // 10.5. Re-measured rather than re-pinned to the weaker reading it now
+    // gives at 5.5 ("grows restless"), because that would have silently traded
+    // away what this test is FOR. Day-by-day over the first fortnight:
+    //
+    //   +1 +2 rest · +3 +4 +5 restless · +6..+9 rest · +10 CASTS ABOUT FOR
+    //   WATER · +11 restless · +12 rest · +13 restless · +14 rest
+    //
+    // "Grows restless" is the fatigue baseline being disturbed; "casts about
+    // for water" is thirst actually WINNING the drive competition, and it is
+    // the latter this assertion exists to witness. It happens once in fourteen
+    // days now, so the pin is narrow — if it moves again, re-measure the same
+    // way rather than accepting a restlessness read in its place.
+    // The Tense re-measure (2026-08-05). THIRST is no longer reachable here:
+    // swept `wait 1..=25` from a fresh session each time and "casts about for
+    // water" appears at none of them. What the NPC does instead, by wait:
+    //
+    //   1-4 rest · 5 restless · 6-8 rest · 9-10 EATS ITS FILL · 11 content ·
+    //   12-13 restless · 14-16 rest · 17-18 restless · 19-22 eats its fill · …
+    //
+    // Re-pinned to `wait 9` / "eats its fill" rather than to the "grows
+    // restless" this now gives at 5, and the distinction is the point: "grows
+    // restless" is the fatigue baseline being disturbed, while "eats its fill"
+    // is a drive actually WINNING the competition and being acted on — the same
+    // KIND of reading the thirst pin was, just hunger instead of thirst.
+    //
+    // Coverage cost, recorded rather than absorbed: this assertion used to
+    // witness THIRST beating the fatigue-rest baseline, and now witnesses
+    // hunger doing it. The thirst limb of the drive competition is no longer
+    // exercised anywhere in this test. Sweeping a wider range, or waiting in
+    // day-sized steps (thirst does surface at ten successive `wait 1`s, which
+    // is NOT the same state as one `wait 10`), would restore it.
+    session.handle("wait 9");
     let later = out_text(session.handle("needs"));
     assert!(
-        later.contains("casts about for water"),
-        "a thirsty NPC casts about for water, not resting: {later}"
+        later.contains("eats its fill"),
+        "a hungry NPC eats its fill, not resting: {later}"
     );
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the

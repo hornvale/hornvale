@@ -245,14 +245,17 @@ fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
         "pin: the fine room's own exits at this point of the seed-42 walk \
          (if world-gen ever changes this, re-measure and update the pin)"
     );
-    // The two triads SWAPPED under The Tense, which is worth stating because it
-    // looks alarming and is not. `{N, SW, SE}` and `{NE, NW, S}` are the only
-    // two exit triads on this lattice — the alternating up/down triangle
-    // parities — so a cell has one or the other and nothing else. The walk now
-    // lands on the opposite parity at both rungs: the fine room took what the
-    // coarse cell used to have and vice versa. The CLAIM this test makes is
-    // untouched, and is precisely that the two rungs report DIFFERENT triads:
-    // the footer must show the drawn cell's parity, never the walk-depth room's.
+    // The two triads SWAPPED under The Tense, which looks alarming and is not.
+    // Each cell on this mesh offers three exits, and `{N, SW, SE}` and
+    // `{NE, NW, S}` are the pair the walk alternates between here — the walk
+    // now lands on the opposite one at both rungs, so the fine room took what
+    // the coarse cell used to have and vice versa. (These are not the ONLY
+    // triads the mesh admits: `{NW, SW, E}` occurs too, measured out at sea in
+    // `session.rs`'s water walk. Do not infer a global two-parity rule from
+    // this pin, which is what an earlier draft of this comment did.) The CLAIM
+    // this test makes is untouched, and is precisely that the two rungs report
+    // DIFFERENT triads: the footer must show the drawn cell's parity, never the
+    // walk-depth room's.
     let coarse = out(session.handle("map out 1"));
     assert!(
         coarse.contains("ways on: NE, NW, S"),
