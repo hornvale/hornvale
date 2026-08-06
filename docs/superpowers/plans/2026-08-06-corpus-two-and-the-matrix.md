@@ -17,8 +17,9 @@
 - **`route`-equivalent discipline for figures:** every number this plan writes into a document comes from the renderer, not from a human transcribing a run.
 - **No change to `tropes::resolve` or the bundle vocabulary.** The 20 unsatisfiable requirements `tvtropes-2012` declares are deliberate and documented in its provenance.
 - **The known reading, which must not move:** `polti-1895` is **0 stageable of 36, 1 inapplicable**; `tvtropes-2012` is **0 stageable of 409, 62 inapplicable**. A moved number means a predicate moved and is a stop condition, not a rebaseline.
-- `make quick` (fmt + clippy + test) clean before every commit. Never `--no-verify`.
+- **`make quick` is `fmt-check clippy type-audit type-audit-report` — it runs no tests.** Run it before every commit, and run the tests separately: `cargo test -p hornvale` for this work's targeted tests, `make gate` (~15 min, fmt + clippy + type-audit + nextest + doctests) before the branch is offered for integration. Never `--no-verify`.
 - The pre-commit hook skips `make quick` when no Rust-relevant paths are staged; that is expected for docs-only commits.
+- **One gating agent at a time on this machine** (`CLAUDE.md`, decision 0086/0081): `make gate` saturates ten cores on its own, and two concurrent gates cost about thirty minutes each while both look hung. Another campaign worktree, `the-deep-realm`, is live. Stagger.
 
 ---
 
