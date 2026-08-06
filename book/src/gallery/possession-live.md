@@ -93,6 +93,13 @@ the CLI runs.</p>
   .casement-possess:disabled, .casement-input:disabled { opacity: 0.5; }
   .casement-promptmark { font-family: var(--mono-font, monospace); opacity: 0.75; }
   .casement-status { min-height: 1.5em; }
+  .casement-panes { display: flex; gap: 1rem; align-items: flex-start; }
+  .casement-transcript { flex: 1 1 60%; min-width: 0; }
+  .casement-map {
+    flex: 0 0 auto; margin: 0; font-family: monospace;
+    line-height: 1.05; white-space: pre; overflow-x: auto;
+  }
+  @media (max-width: 640px) { .casement-panes { flex-direction: column; } }
 </style>
 <script type="module" src="./vessel.js"></script>
 

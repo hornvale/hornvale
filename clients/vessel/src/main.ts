@@ -6,6 +6,8 @@
 import { parseSeed, seedFromSearch, type WorkerResponse } from "./protocol.ts";
 import { narrationOf, parseSnapshot } from "./snapshot.ts";
 import { splitResponse } from "./transcript.ts";
+import { planRows } from "./pane_plan.ts";
+import { chartRows } from "./pane_chart.ts";
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -19,7 +21,11 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 function mount(container: HTMLElement): void {
-  const transcript = el("div", "casement-transcript", container);
+  // The diptych. `main.ts`'s header has anticipated this since The Casement:
+  // nothing module-level holds session state, so a page can mount two.
+  const panes = el("div", "casement-panes", container);
+  const transcript = el("div", "casement-transcript", panes);
+  const map = el("pre", "casement-map", panes);
   const controls = el("form", "casement-controls", container);
   const seedLabel = el("label", "casement-seedlabel", controls);
   seedLabel.textContent = "seed ";
@@ -69,20 +75,33 @@ function mount(container: HTMLElement): void {
     (live ? input : seedInput).focus();
   }
 
+  /** Redraw the map pane from a parsed snapshot. One band shows at a time:
+   * the session refuses `map out` indoors, so the walk-band chart is not
+   * derivable inside a building and there is nothing honest to show there.
+   * A pane with nothing to draw empties rather than keeping a stale picture
+   * on screen — a frozen last-seen chart presented as live is a cheat pane. */
+  function drawMap(snap: ReturnType<typeof parseSnapshot>): void {
+    const rows = snap ? (planRows(snap) ?? chartRows(snap)) : null;
+    map.textContent = rows ? rows.join("\n") : "";
+  }
+
   worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
     const msg = e.data;
     if (msg.type === "started") {
       live = true;
       transcript.replaceChildren();
       const snap = parseSnapshot(msg.snapshot);
+      drawMap(snap);
       append("casement-prose", snap ? narrationOf(snap) : msg.text);
       setIdle("Possessed. The world stands still; only you move.");
     } else if (msg.type === "error") {
       live = false;
+      map.textContent = "";
       append("casement-error", msg.text);
       setIdle("The casement is shut. Try another seed.");
     } else {
       const snap = parseSnapshot(msg.snapshot);
+      drawMap(snap);
       append("casement-prose", snap ? narrationOf(snap) : msg.text);
       if (msg.released) live = false;
       setIdle(live ? "" : "Released. Possess again — any seed is a world.");
@@ -91,6 +110,7 @@ function mount(container: HTMLElement): void {
 
   worker.onerror = () => {
     live = false;
+    map.textContent = "";
     append("casement-error", "The casement is dark: its worker failed to load.");
     setIdle("The casement is shut.");
   };
