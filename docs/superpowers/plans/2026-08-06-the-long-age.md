@@ -934,3 +934,10 @@ the registry authors and what `match` arms name. `paced()` returns
 signature; it is the one time-law-adjacent function the schedule must not
 reach (§3.4). If a later task finds itself passing a schedule to it, that is
 the error, not an omission here.
+
+---
+
+**Status: COMPLETE.** All five tasks executed and merged 2026-08-06. Both
+mutations were run; M1 reddened as specified, M2 did not and was re-sited —
+see the spec's §6.1 and the retrospective. The null held: exactly one
+committed artifact moved.

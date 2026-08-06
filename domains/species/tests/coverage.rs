@@ -24,7 +24,7 @@
 //! letting one rot, forces a deliberate edit here.
 
 use hornvale_species::{
-    ActivityCycle, MetabolicClass, SocialForm, StatusBasis, biosphere_registry,
+    ActivityCycle, LifeSchedule, MetabolicClass, SocialForm, StatusBasis, biosphere_registry,
     perception_registry, psyche_registry, society_registry,
 };
 
@@ -266,6 +266,42 @@ fn social_form_coverage_matches_the_table() {
             Rung::Witnessed
         };
         assert_eq!(&actual_rung, rung, "{form:?} rung");
+    }
+}
+
+/// The witnesses of each `LifeSchedule` variant, ascending by `KindId`.
+/// `Paced` carries a factor, so kinds are classified by variant rather than
+/// compared by value — two differently-paced kinds still witness one state.
+fn life_schedule_witnesses(paced: bool) -> Vec<&'static str> {
+    biosphere_registry()
+        .iter()
+        .filter(|(_, b)| matches!(b.schedule, LifeSchedule::Paced { .. }) == paced)
+        .map(|(k, _)| k.0)
+        .collect()
+}
+
+#[test]
+fn life_schedule_coverage_matches_the_table() {
+    // THE LONG AGE: lifespan's authoring channel ships with NO occupant, so
+    // `Paced` sits at `Declared` and nothing witnesses it. That empty cell is
+    // the campaign's stated result rather than an oversight — the channel is
+    // inert until a kind is authored into it, which is what made the epoch
+    // cheap. This row is where the first campaign to author a long-lived kind
+    // (C2c, dwarves) must make a deliberate edit.
+    let every_kind: Vec<&'static str> = biosphere_registry().iter().map(|(k, _)| k.0).collect();
+    let expected: &[(&str, Rung, &[&str])] = &[
+        ("Allometric", Rung::Witnessed, &every_kind),
+        ("Paced", Rung::Declared, &[]),
+    ];
+    for (variant, rung, witnesses) in expected {
+        let actual = life_schedule_witnesses(*variant == "Paced");
+        assert_eq!(&actual, witnesses, "{variant} witnesses");
+        let actual_rung = if actual.is_empty() {
+            Rung::Declared
+        } else {
+            Rung::Witnessed
+        };
+        assert_eq!(&actual_rung, rung, "{variant} rung");
     }
 }
 

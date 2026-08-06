@@ -1,6 +1,6 @@
 # The Long Age — design
 
-**Status:** G3 APPROVED (Nathan, 2026-08-06). Planning.
+**Status:** COMPLETE — merged 2026-08-06. Chronicle: `book/src/chronicle/the-long-age.md`.
 **Date:** 2026-08-06
 **Campaign:** C2b of the peoples program
 (`2026-08-03-the-peoples-program-design.md`). **Runs after C2-0 (The

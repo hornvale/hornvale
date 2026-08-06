@@ -127,6 +127,28 @@ arithmetic are different objects.** The claim carrying the null was "one file
 moves", never "+1 tag". Knowing which is which *before* the result arrives is
 what makes the correction honest rather than convenient.
 
+## The absorption cadence was missed, and got away with it
+
+CLAUDE.md asks a branch to absorb main **at every plan-stage boundary**, not
+only at close. This campaign absorbed once, at the close, and that absorption
+was the branch's first meeting with main. It is recorded here because the skill
+asks for it, and because the reason is worth naming: the campaign ran inside a
+single session, so it never *occurred* to me to ask whether main had moved —
+and The Panes (26 commits) landed while Tasks 1–4 were running.
+
+It cost nothing. There was zero file overlap, The Panes ships its map
+deliberately uninhabited so it touches no life-history, and the merged-result
+gate was green first time. But "it cost nothing" is the outcome, not the
+process: had the two campaigns collided semantically, I would have discovered it
+at the single worst moment — after the null was measured, the chronicle written,
+and the retrospective drafted against a tree that no longer existed.
+
+**The cheap habit:** check `git log HEAD..origin/main` at each task boundary,
+not each session boundary. A single-session campaign feels like it has no
+boundaries to absorb at, and that feeling is exactly wrong — parallel sessions
+are the norm here, and wall-clock hours are what main moves against, not
+task numbers.
+
 ## A generated artifact merged textually is silently wrong
 
 Absorbing main at the close (The Panes, 26 commits) merged **cleanly, with no
