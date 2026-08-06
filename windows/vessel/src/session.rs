@@ -2202,14 +2202,30 @@ impl<'w> Session<'w> {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
-        // The chart legend resolves by the same word rule as the prose catalog.
-        // A mark's name is a plain `<kind> of <place>` construction, so deriving
-        // its words mechanically is safe here in a way it is not for a
-        // comma-qualified room descriptor — which is why the descriptor declares
-        // its noun phrase instead (The Handle, spec §2).
+        // The chart legend resolves by the same word rule as the prose catalog,
+        // deriving a mark's words mechanically — safe for a plain
+        // `<kind> of <place>` construction in a way it is not for a
+        // comma-qualified room descriptor, which declares its noun phrase
+        // instead (The Handle, spec §2).
+        //
+        // A legend entry DUPLICATING a prose entry is skipped, and that is the
+        // load-bearing half. The legend keys its ground mark on the whole raw
+        // descriptor, so deriving from it re-admits exactly the qualifiers the
+        // prose entry deliberately declined: without this, `examine hollow`
+        // failed against the prose catalog and then succeeded against the
+        // legend's copy of the same name, in the same room, with different
+        // wording. The documented precedence — "a noun named by both grains
+        // resolves to the prose datum" — has to cover the grains DISAGREEING
+        // about a word, not merely which datum to print.
         match scene
             .legend
             .iter()
+            .filter(|e| {
+                !prose
+                    .nouns
+                    .iter()
+                    .any(|n| n.display.eq_ignore_ascii_case(&e.noun))
+            })
             .find(|e| crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum).matches(&wanted))
         {
             Some(e) => Turn::Out(e.datum.clone()),
@@ -2778,6 +2794,51 @@ mod tests {
             !reply.starts_with("You see no"),
             "the legend names {:?} and examine refuses its first word {head:?}: {reply}",
             mark.noun
+        );
+    }
+
+    /// The two grains must not disagree about a WORD. The chart legend keys its
+    /// ground mark on the whole raw descriptor, so deriving words from it
+    /// re-admits the qualifiers the prose entry declined by declaring only its
+    /// noun phrase. Before the duplicate-skip, `examine hollow` was refused by
+    /// the prose catalog and then answered by the legend's copy of the same
+    /// name — same room, same thing, two different answers depending on which
+    /// matcher got there.
+    #[test]
+    fn a_qualifier_the_prose_entry_declined_is_not_readmitted_by_the_legend() {
+        let w = seam_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        // Walk until the descriptor carries a qualifier; the flagship's own
+        // ("buttressed canopy") has none, so it cannot exercise this.
+        let mut qualifier = None;
+        for _ in 0..8 {
+            let prose = session.focalized().expect("the lens renders");
+            let qualified = prose
+                .nouns
+                .iter()
+                .find_map(|n| n.display.split_once(", ").map(|(_, tail)| tail.to_string()));
+            if let Some(tail) = qualified {
+                qualifier = tail
+                    .split(|c: char| !c.is_alphanumeric())
+                    .find(|w| w.chars().count() >= 4)
+                    .map(str::to_lowercase);
+                if qualifier.is_some() {
+                    break;
+                }
+            }
+            let _ = session.handle("go n");
+        }
+        let Some(word) = qualifier else {
+            // Not a pass: say so rather than reporting green on nothing.
+            panic!("no comma-qualified descriptor within 8 rooms of the flagship");
+        };
+        let reply = match session.handle(&format!("examine {word}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            reply.starts_with("You see no"),
+            "{word:?} is a qualifier, not a noun, and the legend re-admitted it: {reply}"
         );
     }
 
