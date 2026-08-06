@@ -350,6 +350,53 @@ fn report_cave_substrate() {
 // A fourth result, reachability (ledger #26), follows in its own section
 // below — it shares this section's helpers but answers a different question
 // (can a player get there, not what the graph looks like once they do).
+//
+// -----------------------------------------------------------------------------
+// WHAT IT MEASURED (2026-08-06, seeds 1..=30, 469,122 land cells, 55,947 caves).
+// Recorded here because a readout whose results live only in stdout is one
+// somebody has to re-run to learn anything.
+//
+//   chambers per CAVE   median 5, p25 4, p75 7, max 15, mean 5.6799, cv 0.4044
+//   chambers per CELL   median 0 (88.07% of land is cave-free), mean 0.6774
+//
+//   by band, measured vs theory:
+//     Cover     ( 8 addr, 22395)  mean 4.0096 sd 1.4148 cv 0.3529
+//               Binomial( 8, .5)  mean 4.0000 sd 1.4142 cv 0.3536
+//     Basement  (12 addr, 20206)  mean 5.9955 sd 1.7352 cv 0.2894
+//               Binomial(12, .5)  mean 6.0000 sd 1.7321 cv 0.2887
+//     Roots     (16 addr, 13346)  mean 8.0047 sd 1.9920 cv 0.2489
+//               Binomial(16, .5)  mean 8.0000 sd 2.0000 cv 0.2500
+//
+// Mean, sd AND cv match theory to 3-4 decimals in every band. The chamber
+// count is not merely close to binomial — it IS `Binomial(4(rank+1), 0.5)`,
+// with nothing else in it.
+//
+// **So spec §7's falsification is PARTIALLY TRIGGERED, and this is the
+// campaign's headline rather than a footnote.** Scored clause by clause:
+//
+//   "same depth"     NOT falsified — depth differs by place, three values,
+//                    from terrain's own measured budget.
+//   "same shape"     FALSIFIED — given the band, shape is a fixed
+//                    distribution with no place dependence at all. Two caves
+//                    in the same band have statistically identical graphs
+//                    whatever their rock, climate, elevation or kind;
+//                    `chamber.rs` does not read `Cave::kind` at all.
+//   "same contents"  FALSIFIED on the same terms — `stratum` is a pure
+//                    function of band and `origin` is always `Found`, so
+//                    contents are a function of depth alone.
+//
+// Two of three clauses fail, so "not triggered" is not a defensible summary.
+// This is a good finding and it is precisely what the campaign was built to be
+// able to detect: the fixed-lattice design bought edge symmetry and address
+// stability (§3.2's hard problem, dissolved) at the cost of contributing no
+// character of its own. **Everything the underworld has, terrain gave it.**
+//
+// It also makes the `MAP-cave-depth-weld` split the single highest-leverage
+// next move, on evidence rather than aesthetics: the only place-character the
+// underworld has comes from a 3-valued budget welded to the existence gate.
+// C2a consumed that budget as-is (ledger #16) specifically so this measurement
+// could exist.
+// -----------------------------------------------------------------------------
 // =============================================================================
 
 /// Land-only graph-distance radii (terrain-cell hops — see [`land_distances`])
