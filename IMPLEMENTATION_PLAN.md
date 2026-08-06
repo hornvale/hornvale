@@ -1,242 +1,135 @@
-# HANDOFF — The Tilth / The Tense, next session
+# HANDOFF — The Tilth / The Tense
 
-Written 2026-08-05. **Every claim below is either measured (command given) or
-explicitly marked as inferred.** That convention is inherited and worth keeping;
-it is what caught the previous handoff's own wrong hypothesis about §1.
+Written 2026-08-06. **Every claim below is either measured (command given) or
+explicitly marked as inferred.**
 
 ## Situation
 
-Branch `campaign/the-tilth`, HEAD `4a431f28`, **40 commits ahead of main**
-(`f73059d5`), tree clean, main fully absorbed. **The suite is RED: 49 failures /
-2981**, down from 52 — verified by a full run, and a diff of the two failure
-lists confirms the three that cleared are exactly the three changed here
-(§1's two fixtures, §4a's migration gate) with nothing regressed. Do not
-merge.
+Branch `campaign/the-tilth`, **pushed** to `origin`, 57 commits ahead of main
+(`f73059d5`), tree clean.
 
-## 1. DONE — the two lib tests, fixed on the mechanism (`aa865df1`)
+**The suite is GREEN: 2982 tests, 0 failures, 84 skipped.** `make gate` passes
+(787 s, `cpu_ratio` 5.93). `make rebaseline` moves nothing but its own timing
+ledger, which confirms the whole 49-failure sweep touched test code and fixtures
+exclusively and never a generation path — the artifacts accepted in `655b63ca`
+still stand byte-for-byte.
 
-The previous handoff's hypothesis was **wrong**, and the mechanism is more
-interesting than the guess. It supposed both were consequences of eviction
-moving from `eff == 0.0` to pressure. Neither is; eviction is not on either
-code path.
+## What remains, and it needs Nathan
 
-Measured: `history_bake.rs` reads `EraClimate.habitable` in **zero** places.
-`Bake::factor` gates on ice alone and `era.ice` is identically empty. Both
-fixtures built their unusable ground out of that mask, so the mask went inert
-and each **silently stopped exercising its own rule** — the vassal's road led
-somewhere (a successful flight, not a death), and the roller stopped in ring 1
-instead of walking to ring 3.
-
-Repaired by changing the fixtures' *language*, not their claims: dead ground is
-now said in **capacity**, per-people, which is what `vacant_for` actually reads.
-Every assertion untouched. Both pass.
-
-> The trap that hid them, restated: `--test history_bake` is the *integration*
-> binary. These are **lib** unit tests. Run `cargo nextest run -p
-> hornvale-worldgen --lib`, or `make gate`.
-
-## 2. DONE — campaign close (`cdf4b40b`)
-
-- `docs/decisions/0105-habitability-is-a-relation-not-a-constant.md` (minted
-  against `git log origin/main -- docs/decisions/`; 0104 is this branch's, so
-  0105 was the first free number and no other worktree had passed 0103).
-- `book/src/chronicle/the-tilth.md`, `book/src/chronicle/the-tense.md`, both in
-  `SUMMARY.md`.
-- `docs/retrospectives/the-tilth.md` — covers both campaigns, with the reason
-  stated.
-- Confidence Gradient re-scored **sideways** in `book/src/open-questions.md`.
-- Verified: `mdbook build book`, and all 22 `cli/tests/docs_consistency` checks.
-
-## 3. The triage of the remaining 49
-
-Full log: rerun `HV_TEST_OK=1 cargo nextest run --workspace --no-fail-fast`.
-The 52-failure baseline this table was built from took **720 s**.
-
-### 3a. THE HEADLINE, measured — the dynamic range compressed
-
-From `git show 655b63ca -- book/src/gallery/almanac-seed-42.md`:
+Two items, both blocked on the same thing: **this box cannot reach lefford.**
 
 ```
-  seed 42:  209 settlements -> 122
-            bugbear seat 88 souls -> 67   goblin 82 -> 41   human 77 -> 36
-  seed 1234 (settled finding, §5): 0 survivors -> 36 alive, 70 sites
+$ ssh -o BatchMode=yes lefford 'echo OK'
+nathan@lefford: Permission denied (publickey,password).
 ```
 
-A gate produces all-or-nothing worlds; a continuous squeeze produces middling
-ones. **Dead worlds live and rich worlds thin.** Most of the table below is
-downstream of this one fact.
+1. **`make heavy-remote REF=1a1ca8b3c1e3376e2dd031dd9881c69ac38e7490`** — the
+   branch is pushed, so the SHA is fetchable; the command just needs a session
+   that can authenticate. (Run it as `! make heavy-remote REF=…` to put the
+   output in the conversation.)
+2. **The owed census.** Authorized by Nathan, unspent. `scripts/census-run.sh`
+   hard-refuses anywhere but `lefford` (this box is `ambrose`) and there is no
+   remote census target — `regen-remote` is abandoned, and `heavy-remote` runs
+   the heavy tier, not a census. Decision 0063 is why the guard fails closed:
+   the boxes disagree on ~0.1% of discrete-count metrics, and a wrong-host run
+   commits wrong values that then drift-check green forever.
 
-*(An earlier draft of this section inferred "more, smaller settlements" from the
-failure messages alone and was wrong in the direction of the count — the
-artifact diff is what corrected it. Check the artifact, not the assertions.)*
+Then merge. Nothing else is outstanding.
 
-### 3b. "The world legitimately moved — re-pin" (~34)
+## The campaign, in one paragraph
 
-**One root cause, eight tests: seed 1's planet endonym `Pao` -> `Xoaboa`.**
-`folk_sections_are_byte_unchanged`, `goblin_section_speaks_and_margins_seed_1`,
-`initiate_edition_supersets_the_committed_artifact`,
-`planet_sentence_aggregates_moons_star_and_day_length`, `the_additivity_law`,
-`the_null_volume_is_untouched`, `the_esoteric_law_mutation_verified`,
-`tongue_probes_derive_from_committed_is_a_facts`. Every species line is
-byte-identical on both sides in each; only the planet name moves. The endonym
-comes from the flagship culture's lexicon, which moved with placement.
+Capacity gained a **species** index (The Tilth) and then an **era** index (The
+Tense), collapsing three mutually inconsistent oracles for the word "habitable"
+into one: capacity. Decision 0105 records it — habitability is a relation
+between a people, a cell and an era, not a property of ground. The measured
+cost is that this **compresses the variance between worlds**: seed 1234 went
+from permanently dead (0 survivors) to 36 communities across 70 sites, while
+seed 42 fell from 209 settlements to 122 with chief populations down a third to
+a half. A gate produces all-or-nothing worlds; a continuous squeeze produces
+middling ones. Dead worlds live and rich worlds thin.
 
-**One root cause, five tests: the seed-42 bugbear seat was renamed
-`Goodogododaga` -> `Dadogogodaga`** (confirmed in the almanac diff above; the
-test's own message guessed "probably renamed"). `the_first_mark` ×3,
-`possession_moves` ×2. Re-read the pin from
-`book/src/gallery/possession-seed-42.md`.
+## What the 49 failures turned out to be
 
-**Ordinary seed-content drift.** `census_of_peoples_metrics_extract_for_seed_42`
-(biome text), `seed_42_name_syllables_are_pinned` (2.561 -> 2.333),
-`seed_42_name_transparency` (0.399 -> 0.530),
-`build_world_generates_settlements_and_no_vale` (peak pop 118 -> 68),
-`genesis_observes_an_unoccluded_sky` (231 -> 177),
-`build_world_produces_the_full_cascade` (1 -> 2),
-`the_material_fourth_key_barely_moves_the_stratigraphy`,
-`affect_trace_golden`, `the_purview map_out`, `the_blocking`.
+Roughly three quarters were the world legitimately moving. The quarter that
+wasn't is the part worth keeping:
 
-**`solitary_tongue peoples_lexicons_...` — VERIFIED legitimate, and this one was
-worth the check.** Its own message distinguishes a determinism **bug** (a root
-becoming a *different* root ⇒ `cascade_regime_of` byte-identity broke) from
-benign exposure drift. Regenerated with `REBASELINE=1` and classified all 88
-changed lines: **zero** are word→different-word. Every one is a gap↔word
-transition or a gap-reason change. The phonology did not move. The regeneration
-was reverted pending §4 (see 3d).
+- **Two bake fixtures had gone VACUOUS, not wrong.** Both built their unusable
+  ground from `EraClimate.habitable`, which the bake reads in zero places now.
+  Green while proving nothing.
+- **`the_lintel`'s walker was not moving.** `go n` twelve times, "No way n from
+  here." every time — the mesh is triangular and the parity of the starting
+  cell flipped. A search that had quietly stopped searching.
+- **`the_water_column` looped until `look` MENTIONED water**, then dived from
+  dry land and read the failure as a column. Its lateral-refusal check also
+  hardcoded a direction the cell need not offer, so it could go green on a
+  refusal it was not testing for. It now asks the verb.
+- **The affect golden narrowed silently** — `Lost` and `Frustrated` vanished
+  with the two gnolls the re-placement removed, and they were the only
+  negative-valence affect in the fixture. A byte pin cannot tell "values moved"
+  from "half the state space stopped being exercised". Now ratcheted.
+- **`k_biomass_gradient` is not a gradient.** `raw_pole_mean = 0.004508` sits
+  below the floor, so `ratio ≡ 100 × trop_mean` exactly. Re-labelled as a
+  productivity tripwire, explicitly not evidence for the biomass-by-latitude
+  claim — decision 0104 names `capacity-by-abs-latitude` as its circular cell.
+- **Two preregistered predictions FALSIFIED and recorded, not rescued:** xorn no
+  longer clears the dominance ruler (both the demesne and menagerie guards), and
+  it is not erased — The Vacancy's viability guard is green.
 
-### 3c. "This is telling us something" (~14)
+## Three corrections to what the inherited handoff and I believed
 
-| what | evidence | read |
-|---|---|---|
-| **Kobold traded hill for valley** | `hill` gapped by 5 peoples -> all 6; `valley` gapped by 6 -> 5 | kobold, the authored *highland* specialist, now gaps hill and roots valley. **Directly entangled with Nathan's kobold call.** |
-| **Toponymic exposure shrank** | `spring` gapped by 3 -> all 6; `marsh` by 0 -> 1; seed-7 goblins root `[river, ford]` not `[river, ford, hill, valley, marsh, spring]`; seed-0 gnolls lost `island` | fewer, smaller settlements touch fewer biomes |
-| **Organization moved BOTH ways** | seed 2 hobgoblin lost it (3 tests agree: `the_taught_contrast`, `the_ladder_law`, `the_reckoning`); seed 4 kobold lost it; seed 57 bugbear *gained* it | consistent with a threshold crossed in both directions by a compressed distribution — not a one-way loss |
-| **The sky stopped mattering to the flagship** | `locked_rotation_changes_the_flagship_cascade`: `assert_ne` now *equal* — spinning and tide-locked give the identical cascade | **the most suspicious single failure.** Era-averaging may have diluted insolation's influence. Worth a probe before accepting. |
-| **Lab/worldgen staple lists diverged** | `the_independent_reading_covers_every_staple_worldgen_can_steep`: "does not steep rice ... the duplicate is stale again" | a real duplication-drift bug, independent of pins |
-| **Belief one lost `celestial-body`** | `why_explains_belief_one`, `repl_answers_sky_village_and_belief` | content, or a broken belief chain — unverified, look before re-pinning |
-| **Three vacuity guards fired** | `id_shift_invariance` (witness seed invalidated a **3rd** time in two days: 42→7→1→none); REPL settlement listing (**122 distinct of 122** — no repeats left to qualify); vessel `session` (walker never reached water) | the guards working as designed. See the retrospective's follow-up: this class wants *constructing*, not a 4th hunt. |
+1. **`k_biomass` was NOT pre-existing.** The handoff said it "fails identically
+   at the branch point (verified by stashing)". Main is green on all 7 demesne
+   tests, verified by running them in the main checkout. The stashing check was
+   empty because the campaign's work was already committed.
+2. **Kobold was never over the cap.** "~18% against a 10% cap" is false on this
+   tree: 39 of 525 stack settlements, **7.4%**, and `branches_identity` was
+   never failing.
+3. **Exposure did not shrink.** I filed it that way; total gaps across the four
+   seed-42 toponymic concepts went **17 → 15**, slightly MORE exposure on 42%
+   fewer settlements. What actually happened is that kobold traded `hill` for
+   `valley` exactly.
 
-**Pre-existing, not ours:** `demesne::k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply`
-(verified at the branch point by the prior session).
-**Unverified whether pre-existing:** `demesne::settlements_and_dominants_diversify_on_seed_42`
-(xorn still not clearing the dominance ruler). Same file, same campaign lineage,
-reads like an aspiration that may never have passed — **check it at the branch
-point before treating it as a regression.**
+## The one thing left open on the physics
 
-### 3d. Why nothing was re-pinned
-
-**Every re-pin in 3b is downstream of the three open calls in §4.** Each of them
-moves settlement placement, and placement is what all ~34 pins record. Re-pinning
-now means doing it twice. The one regeneration performed (the frozen lexicon
-golden) was reverted for the same reason after its *diagnostic* value was taken.
-
-## 4. Nathan's three calls — answered 2026-08-05
-
-### 4a. Migration floor — DONE (`4ecac401`)
-
-Re-based onto the five-seed spread, per Nathan. The gate's own comment had
-already named the defect and never acted on it: *"5 was set clear of the
-CROSS-SEED MINIMUM, not of seed 42."* Measured:
-
-```
-  42:4   7:1   999_999:3   16_244_526_067_196_353_746:7   1234:311
-  total 326, firing 5 of 5
-```
-
-Now asserts total ≥ 25 (a STOP condition, an order of magnitude under the
-measurement) **and** ≥ 3 of 5 seeds firing. The second clause is load-bearing:
-one world carries 95% of the total, so a bare total could pass on seed 1234
-alone with the mechanism dead everywhere else.
-
-### 4b. Kobold — Nathan chose "generalist", and the attempt FAILED. Read this.
-
-Direction: raise/drop the 10% cap, re-author the niche so highland affinity is a
-**preference** rather than a specialism. Two settings were measured and both are
-wrong. **Reverted; the tree is at the unmodified niche.**
-
-Elevation is passed `floor = 0.0`, so that axis is a bare Gaussian
-`devotion · exp(-½z²)`, and it sits under `min()` with three *floored* axes.
+**Kobold's niche cannot be sensibly re-authored while elevation is an unfloored
+axis under a flat `min()`.** Measured, both directions:
 
 | setting | kobold dominance, seed 42 | verdict |
 |---|---|---|
-| `opt 3000, w 1100, dev 0.95` (shipped) | ~18% of settlements | the specialist Nathan wants to move away from |
-| `opt 3000, w 2400, dev 0.95` | **492 of 492** | dominates every settlement on the world |
-| `opt 3000, w 2400, dev 0.50` | passes ≤10% | but now gaps **both** `hill` and `valley` — no terrain identity at all |
+| `opt 3000, w 1100, dev 0.95` (shipped) | 39/525 = 7.4% | highland specialist |
+| `opt 3000, w 2400, dev 0.95` | **492/525** | dominates the whole world |
+| `opt 3000, w 2400, dev 0.50` | passes the cap | gaps **both** hill and valley |
 
-**The trap I walked into:** I evaluated kobold's curve in isolation and it looked
-right (lowland fit 0.023 → 0.435, peak unmoved). Dominance is **comparative** —
-widening one people's unfloored axis while the other three stay narrow makes it
-the best fit everywhere. *Evaluate the curve* is not enough here; evaluate the
-**comparison**.
+The trap: kobold's curve looked right evaluated alone (lowland fit 0.023 →
+0.435, peak unmoved). Dominance is **comparative** — widening one people's
+unfloored axis while three stay narrow makes it best everywhere.
 
-**And the deeper finding, which changes the question:** the shipped niche
-*already* gapped `hill` at seed 42 under The Tense (that is failure 3c row 1,
-measured before any niche edit). So kobold did not lose the highlands because of
-how it is authored. It lost them because **era-varying capacity systematically
-punishes high-elevation niches** — elevation correlates with cold, and the era
-minimum binds hardest exactly there. A highland specialist is the species most
-disadvantaged by giving capacity a time axis.
+And the shipped niche *already* gapped `hill` before any edit, so this is
+upstream of the authoring: era-varying capacity punishes high-elevation niches,
+because elevation correlates with cold and the era minimum binds hardest there.
+The fix is spec §3.3's two-tier gate/modifier split. `tolerance_tiered` exists
+and is wired to nothing.
 
-Every setting trades one pathology for another because the axis is unfloored
-under a flat `min()`. That is decision 0105's recorded instability, and spec
-§3.3's two-tier gate/modifier split is the named fix — `tolerance_tiered` exists
-and is wired to nothing. **The kobold question is blocked on §3.3, not on
-kobold.** Re-authoring the constant first would be a third arrangement of floors
-where stages 6 and 7 already failed twice.
+## Witness tests are now a rate problem
 
-### 4c. Census — authorized, NOT SPENT
+Several tests lost their witness this campaign, one of them for the fourth time
+in three days (`id_shift_invariance`: 42 → 7 → 1 → 6). Each was re-found by its
+own file's stated rule, and each now records the recurrence. The pattern is in
+the retrospective as an open follow-up: `id_shift_invariance` in particular
+wants **constructing** rather than a fifth hunt, and the header's rejection of a
+synthetic *id shift* is not an argument against constructing two records with
+genuinely equal material cores.
 
-Nathan authorized it. It cannot be run from here: this box is `ambrose`, the
-canonical census host is `lefford` (`scripts/census-canonical-host.txt`), and the
-guard fails closed by design — decision 0063 measured ~0.1% of discrete-count
-metrics disagreeing between boxes, and a wrong-host run commits wrong values that
-then drift-check green forever.
+Also scarcer: the staple-coverage witness fell from seven qualifying (seed,
+species) pairs in 0..150 to **three**, with none at all in 0..40.
 
-There is **no** remote census target: `make regen-remote` is abandoned, and
-`heavy-remote` dispatches `heavy-run.sh` (the heavy tier), not a census. Running
-it needs the branch pushed and lefford's **shared** regeneration worktree — which
-CLAUDE.md says to ask about and verify rather than assume. Not improvised.
-
-Sequencing note: with 4b unresolved, placement will move again, so the census is
-better spent after §3.3 than now.
-
-## 5. Findings that are settled — do not re-derive
-
-- **`era.ice` is identically empty** on every production path; "make factor
-  ice-only" is a no-op.
-- **`devotion` is the response curve's PEAK, not its breadth.**
-- **Mixing floored and unfloored axes under `min()` is unstable by
-  construction.** Stages 6 and 7 are the same bug on two axes; both landed,
-  measured, reverted (`511d1fa9`).
-- **Moisture must NOT become a gate** — takes human to 100% excluded.
-- **Insolation is ~100% of the capacity pipeline's cost**, era-invariant, so it
-  hoists; a 4× byte-identical memoisation is available and unspent.
-- **Seed 1234 carries 36 alive, 70 sites, 16-deep columns.**
-- **The bake HAS a recolonisation path** (daughter founding).
-- **`CAPACITY_V_MAX = 140.2` is correct and was re-derived.**
-- **`tolerance_tiered` exists and NOTHING CALLS IT.**
-
-## 6. Process traps — now written up as rules
-
-All eight are in `docs/retrospectives/the-tilth.md`. The two that cost the most:
-
-- **Never project a cost from the components you happen to have listed** — show
-  the components sum to the whole first. ("1.1×" measured 3.7×.)
-- **Never compare a single seed when the constant re-rolls the world.**
-  (`GENESIS_TOP_CELLS` gave 433/483/558/**281** for 8/16/32/64.)
-
-And the one this session added: **check the artifact, not the assertions**, when
-inferring which way the world moved (3a).
-
-## 7. Commands
+## Commands
 
 ```bash
 cd /Users/nathan/Projects/hornvale/.claude/worktrees/the-tilth   # ALWAYS explicit
-make doctor
-cargo nextest run -p hornvale-worldgen --lib
-HV_TEST_OK=1 cargo nextest run --workspace --no-fail-fast   # ~720 s
-make gate
+make gate                                        # green, ~13 min
+HV_TEST_OK=1 cargo nextest run --workspace --no-fail-fast
 ```
 
-A stray `cd` resets the shell to the **main checkout** — it happened this
-session (caught immediately, main verified clean). Prefix every command.
+A stray `cd` resets the shell to the **main checkout**; it happened twice this
+session and main was verified clean both times. Prefix every command.
