@@ -241,6 +241,90 @@ pub fn chamber_at(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Option<Chamber>
     Some(Chamber { addr, stratum })
 }
 
+/// The chambers adjacent to `addr` that exist under `cave`'s depth budget —
+/// `addr`'s passages.
+///
+/// **This is what dissolves spec §3.2's "one genuinely hard problem."** That
+/// problem, as stated, is deriving A's neighbours and B's neighbours
+/// independently and needing them to agree — two separate derivations that
+/// could drift. This function does not have that shape at all: **adjacency
+/// is a pure, symmetric function of two addresses alone**, defined once,
+/// here, and existence (via [`chamber_exists`]) is likewise a pure function
+/// of `(seed, cave, addr)`. Two addresses `A` and `B` are adjacent exactly
+/// when they differ in exactly one axis by exactly one step:
+///
+/// - same `band`, `slot` differing by 1, **or**
+/// - same `slot`, `band` differing by 1.
+///
+/// "Differs by 1" is symmetric in its two arguments by inspection — it is
+/// not computed relative to a starting address, so there is nothing that
+/// could make `A`'s view of the relation disagree with `B`'s. Consequently
+/// `passages_from(A)` contains `B` if and only if `passages_from(B)`
+/// contains `A`, for any two addresses, with nothing stored and nothing to
+/// keep in sync. **A future edit that makes adjacency depend on anything
+/// other than the two addresses themselves — which chambers happen to
+/// exist, a generation order, which one was asked first — re-creates the
+/// exact problem this function exists to dissolve.** If you are tempted to
+/// special-case a direction, that temptation is the bug.
+///
+/// **Neither axis wraps.** `slot` does not wrap modularly (slot `0` is
+/// adjacent only to slot `1`, not also to `SLOTS_PER_BAND - 1`), matching
+/// `band`, which cannot wrap either — there is no rung before `Regolith` or
+/// after `Underneath` for it to wrap into. Keeping both axes non-wrapping
+/// means the lattice has one consistent shape rather than one axis behaving
+/// like a line and the other like a ring; end slots and end bands simply
+/// have fewer neighbours, which is the ordinary edge-of-space behaviour a
+/// bounded lattice should have. Non-wrapping is symmetric for the same
+/// reason wrapping would have been: "differs by 1" (or, under a modular
+/// scheme, "differs by 1 mod N") is symmetric either way, so this choice is
+/// about lattice shape, not about which option the two-way test would catch
+/// — an asymmetric IMPLEMENTATION of either scheme (for instance, computing
+/// one direction with wrapping arithmetic and the other without) is what the
+/// test guards against, not the choice itself.
+///
+/// A non-existent `addr` has no passages — there is nothing to traverse
+/// from nowhere — so this returns an empty `Vec` without deriving any
+/// candidate neighbours.
+pub fn passages_from(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Vec<ChamberAddr> {
+    if !chamber_exists(seed, cave, addr) {
+        return Vec::new();
+    }
+
+    let mut candidates = Vec::new();
+
+    // Same band, adjacent slot. Guaranteed not to underflow/overflow: addr
+    // passed the chamber_exists check above, so addr.slot < SLOTS_PER_BAND.
+    if addr.slot > 0 {
+        candidates.push(ChamberAddr {
+            slot: addr.slot - 1,
+            ..addr
+        });
+    }
+    if addr.slot + 1 < SLOTS_PER_BAND {
+        candidates.push(ChamberAddr {
+            slot: addr.slot + 1,
+            ..addr
+        });
+    }
+
+    // Same slot, adjacent band. Guaranteed not to underflow/overflow: addr
+    // passed the chamber_exists check above, so addr.band <= band_rank(cave.
+    // deepest_band) <= 4 (band_rank's maximum return value).
+    if addr.band > 0 {
+        candidates.push(ChamberAddr {
+            band: addr.band - 1,
+            ..addr
+        });
+    }
+    candidates.push(ChamberAddr {
+        band: addr.band + 1,
+        ..addr
+    });
+
+    candidates.retain(|&candidate| chamber_exists(seed, cave, candidate));
+    candidates
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
