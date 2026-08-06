@@ -46,12 +46,14 @@
 //! a separation rule and never takes a cell back.
 
 pub mod allocate;
+pub mod anchor_cells;
 pub mod classify;
 pub mod grow;
 pub mod occupancy;
 pub mod render;
 
 pub use allocate::allocate;
+pub use anchor_cells::{anchor_cells, is_faithful};
 pub use classify::{
     bounds_of, cell_beyond, doorway_between, freedom_of_a_chain, kind_of, openings, reachable_from,
     realized_links, standing_cell,
