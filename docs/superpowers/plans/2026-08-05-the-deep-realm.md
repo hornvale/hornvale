@@ -647,6 +647,27 @@ fn you_can_enter_a_cave_and_come_back_out() {
 
 - [ ] **Step 2: Run to verify it fails**
 
+> **THERE ARE TWO DIFFERENT REFUSALS HERE, AND TASK 3 MEASURED THE SECOND ONE
+> (ledger #23).** The plan's test above only anticipates "no cave at this cell".
+> But a cell *with* a cave can still have **no chamber at its entrance address**
+> — and that is not an edge case: measured over 1000 probe entrances, the
+> entrance chamber exists only **51.5%** of the time, so nearly half of all
+> caves lead nowhere.
+>
+> That is **not a defect**. It is spec §3.4's rung 0 — `Sealed`, *"the void
+> exists and is unreachable"* — which §3.4 says explicitly "earns its place in
+> C2a … because a void nobody can reach must still exist; it is what a later
+> dig *finds*." The lattice is expressing sealed caves.
+>
+> So `delve` needs **three** outcomes, not two:
+> 1. no cave here → refuse, naming the absence;
+> 2. a cave here but no chamber at the entrance → refuse, **naming it sealed** —
+>    the player is told the rock is closed, not that nothing is there;
+> 3. a chamber → descend.
+>
+> Getting 2 wrong is the whole failure mode `dive`'s doc comment warns about:
+> a refusal that does not say what stopped you reads as a parse failure.
+
 - [ ] **Step 3: Implement**
 
 Read `session.rs:939-975` (`dive`/`surface`) first and follow its shape exactly:

@@ -197,6 +197,7 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
 
     let mut reached = 0u32;
     let mut probed = 0u32;
+    let mut entrance_exists = 0u32;
     for raw_seed in 1u64..=100 {
         let seed = Seed(raw_seed);
         for raw_cell in 0u32..10 {
@@ -208,21 +209,55 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
                 slot: 0,
             };
             probed += 1;
+            if chamber_exists(seed, &cave, entrance) {
+                entrance_exists += 1;
+            }
             if !passages_from(seed, &cave, entrance).is_empty() {
                 reached += 1;
             }
         }
     }
 
+    // Decomposed, because the single "reached" rate conflates two different
+    // facts and only one of them is about CONNECTIVITY. `passages_from`
+    // returns empty both when the entrance chamber is isolated AND when the
+    // entrance address holds no chamber at all, and those mean opposite
+    // things about the lattice.
     let fraction = f64::from(reached) / f64::from(probed);
+    let exists_rate = f64::from(entrance_exists) / f64::from(probed);
+    let conditional = if entrance_exists == 0 {
+        0.0
+    } else {
+        f64::from(reached) / f64::from(entrance_exists)
+    };
     println!(
-        "cave-mouth connectivity: {reached}/{probed} entrances reach at least \
-         one chamber ({fraction:.4})"
+        "cave-mouth connectivity: {reached}/{probed} probe entrances reach a \
+         chamber ({fraction:.4})"
+    );
+    println!(
+        "  decomposed: entrance chamber EXISTS in {entrance_exists}/{probed} \
+         ({exists_rate:.4}); of those, {conditional:.4} reach a neighbour"
+    );
+    println!(
+        "  NOTE: an entrance address holding NO chamber is spec §3.4 rung 0 — \
+         `Sealed`, \"the void exists and is unreachable\" — not a defect. \
+         Task 5's `delve` must refuse such a cave BY NAMING IT sealed."
     );
 
     assert!(
         reached > 0,
         "0 of {probed} probe entrances reached any chamber — the lattice is \
          disconnected from every entrance"
+    );
+    // The conditional rate is the one that actually measures connectivity,
+    // and it has a prediction: an existing entrance has at most two lattice
+    // neighbours, so under independence at EXISTENCE_DENSITY = 0.5 it should
+    // reach one with probability 1 - 0.5^2 = 0.75. A collapse here would mean
+    // adjacency is generating candidates that can never exist.
+    assert!(
+        conditional > 0.5,
+        "only {conditional:.4} of EXISTING entrance chambers reach a \
+         neighbour; under the lattice's own density model this should be near \
+         0.75, so adjacency is likely generating unreachable candidates"
     );
 }
