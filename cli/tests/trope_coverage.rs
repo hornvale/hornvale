@@ -60,6 +60,37 @@ fn committed_trope_coverage_matches_the_live_report_for_tvtropes_2012() {
     assert_committed_matches_live("tropes/tvtropes-2012.trope.json", "tvtropes-2012");
 }
 
+/// Spec invariant: "`hornvale tropes report` with no `--corpus` still
+/// defaults to Polti and still reproduces its artifact byte-for-byte, so the
+/// rename is the only change visible to an existing caller." Every other
+/// test in this file passes `--corpus` explicitly, so without this one
+/// nothing exercises `cmd_tropes`'s default (`unwrap_or("tropes/polti.trope.json")`
+/// at `cli/src/main.rs`) or the no-mode-flag arm. That default is also what
+/// `scripts/regenerate-artifacts.sh:394` relies on for Polti's artifact — if
+/// its spelling ever drifted from `tropes/polti.trope.json`, the regenerate
+/// script would silently start writing a header the golden test above
+/// never actually re-derives through the same code path, and every explicit
+/// `--corpus tropes/polti.trope.json` test would stay green throughout.
+#[test]
+fn bare_tropes_report_still_defaults_to_polti_and_matches_its_artifact() {
+    let root = workspace_root();
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["tropes", "report"])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(out.status.success(), "tropes report failed: {out:?}");
+    let live = String::from_utf8(out.stdout).expect("utf-8");
+    hornvale_kernel::golden::assert_golden(
+        &root.join("docs/audits/trope-coverage-polti-1895.md"),
+        &live,
+        "the bare `tropes report` invocation (no --corpus) must still default to Polti \
+         and reproduce its committed artifact byte-for-byte — if this drifts while the \
+         explicit `--corpus tropes/polti.trope.json` test still passes, the default \
+         corpus path baked into `cmd_tropes` has moved",
+    );
+}
+
 /// Shared body for `check_mode_agrees_with_the_committed_artifact_*`: `check`
 /// agrees with the committed artifact and stays silent when it does. Spec D7
 /// names `check` as the ratchet; the byte ratchet above is what actually
@@ -89,6 +120,26 @@ fn check_mode_agrees_with_the_committed_artifact_for_tvtropes_2012() {
     assert_check_agrees("tropes/tvtropes-2012.trope.json");
 }
 
+/// The `check` half of the same default-corpus invariant covered by
+/// `bare_tropes_report_still_defaults_to_polti_and_matches_its_artifact`:
+/// the bare `tropes check` (no `--corpus`) must still resolve to Polti and
+/// agree with its committed artifact.
+#[test]
+fn bare_tropes_check_still_defaults_to_polti_and_agrees() {
+    let root = workspace_root();
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["tropes", "check"])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(out.status.success(), "tropes check failed: {out:?}");
+    assert!(
+        out.stdout.is_empty(),
+        "check should be silent on agreement, printed {} bytes",
+        out.stdout.len()
+    );
+}
+
 /// `check` must actually FAIL when the report diverges. Every other test here
 /// asserts success, so a refactor that made the check arm return `Ok(())`
 /// unconditionally would leave all of them green while the command stopped
@@ -108,12 +159,24 @@ fn check_mode_agrees_with_the_committed_artifact_for_tvtropes_2012() {
 /// test than the one this replaces, and one that would look identical (a red
 /// assertion) whichever reason it failed for. Naming the temp corpus
 /// `polti-1895` makes it resolve to the real, existing
-/// `docs/audits/trope-coverage-polti-1895.md`, which its very different
-/// situations cannot byte-match — so this proves `check` catches a content
-/// mismatch, the failure mode it was written to guard.
+/// `docs/audits/trope-coverage-polti-1895.md`.
 ///
-/// Asserts on exit status rather than stderr text, so rewording the message
-/// does not redden it.
+/// What actually guarantees the mismatch is the header, not the situations:
+/// `render` embeds the invocation path via `regenerate_command(path)`, and
+/// the temp file's OS-assigned path (some `/tmp/hv-trope-divergent-<pid>.json`)
+/// can never equal `tropes/polti.trope.json` — so line 1 alone diverges from
+/// the committed artifact regardless of what the temp corpus's situations
+/// say. The deliberately-different situations below add a second, independent
+/// source of divergence beneath that header, but the header alone already
+/// proves the point.
+///
+/// Asserts on exit status rather than the drift message's exact wording, so
+/// rewording that message does not redden this test — but a bare
+/// `!success()` is satisfied by EITHER failure branch in `check`'s arm
+/// (content mismatch, or the committed artifact missing entirely), and
+/// under path derivation a differently-named temp corpus would hit the
+/// latter. The second assertion below pins out that branch by name, so this
+/// test fails loudly if it ever starts passing for the wrong reason.
 #[test]
 fn check_mode_fails_on_a_divergent_corpus() {
     let root = workspace_root();
@@ -146,6 +209,13 @@ fn check_mode_fails_on_a_divergent_corpus() {
         !out.status.success(),
         "check exited 0 against a corpus that cannot match the committed \
          artifact — the ratchet is not discriminating"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !stderr.contains("No such file"),
+        "check failed because the committed artifact is MISSING, not because its \
+         content diverged — this test exists to prove a content mismatch is caught, \
+         and a missing-file failure proves nothing about that. stderr: {stderr}"
     );
 }
 
