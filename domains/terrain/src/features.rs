@@ -117,6 +117,68 @@ pub fn presence_prob(field: f64, belt: f64) -> f64 {
     (field * (0.4 + 0.6 * belt)).clamp(0.0, 1.0)
 }
 
+/// Spatial frequency of the cave presence gate's noise field. Named here
+/// rather than inlined at the call site so the calibration in [`uniformize`]
+/// and the field it calibrates against cannot drift apart.
+/// type-audit: bare-ok(ratio)
+pub const CAVE_GATE_FREQ: f64 = 5.0;
+/// Octave count of the cave presence gate's noise field. See [`CAVE_GATE_FREQ`].
+/// type-audit: bare-ok(count)
+pub const CAVE_GATE_OCTAVES: u32 = 4;
+
+/// Mean of `sphere_fbm01` at [`CAVE_GATE_FREQ`]/[`CAVE_GATE_OCTAVES`],
+/// **measured, not assumed** — 0.500274 over 655 488 samples (64 seeds x a
+/// level-5 globe). Statistically indistinguishable from 0.5, which is what
+/// the three-slice construction implies; the measured figure is kept so the
+/// provenance of the number is the measurement rather than the derivation.
+/// See [`uniformize`].
+const GATE_NOISE_MEAN: f64 = 0.5003;
+/// Standard deviation of the same field, measured over the same 655 488
+/// samples: 0.076443. The field is very nearly Gaussian there — skewness
+/// -0.010, excess kurtosis -0.059 — which is what licenses the normal-CDF
+/// warp in [`uniformize`]. Note this is much wider than the 0.058 The
+/// Hollow's plan guessed from land-only bucket data.
+const GATE_NOISE_SD: f64 = 0.0764;
+
+/// Map an fbm sample onto a uniform `[0,1]` variate, so that comparing it
+/// against a probability is a genuine Bernoulli trial.
+///
+/// **Why this exists.** `sphere_fbm01` returns values massed near 0.5, not
+/// spread uniformly — the three-slice average compresses variance toward the
+/// middle (see `crust.rs`), leaving a field with SD ~0.076 rather than a
+/// uniform's 0.289. Measured over 64 level-5 globes, every sample fell in
+/// `[0.161, 0.832]` and `P(noise < 0.35) = 0.0022`. Comparing a probability
+/// directly against it — which the model did from The Lode until The Hollow —
+/// makes [`presence_prob`] a probability in name only, firing a nominal 0.325
+/// at 0.011 (spec §2.3).
+///
+/// **Why a monotone warp specifically.** The noise serves two purposes at
+/// once: it sets the presence *rate* and it makes features *cluster*. A
+/// monotone transform preserves the spatial ordering exactly, so clustering
+/// is untouched by construction while the marginal is corrected — the one
+/// repair that fixes the first purpose without touching the second.
+///
+/// **Why it is applied here and not inside `sphere_fbm01`.** Two other
+/// callers depend on the raw distribution: `deposit_at` feeds the sample to
+/// `deposit_grade_tonnage` as a *value*, and `prehuman_scar_at` compares it
+/// against a threshold calibrated against exactly this marginal. Changing the
+/// shared function would break both.
+///
+/// The transform is the normal CDF via the standard tanh approximation
+/// (accurate to ~1e-4), which needs only `hornvale_kernel::math::tanh` and so
+/// stays on the pinned `libm` path. Its argument is strictly increasing in
+/// `noise` (`d/dz [A z (1 + B z^2)] = A (1 + 3 B z^2) > 0`), so the whole map
+/// is monotone for every finite input.
+/// type-audit: bare-ok(ratio: noise), bare-ok(ratio: return)
+pub fn uniformize(noise: f64) -> f64 {
+    /// Coefficient of the tanh approximation to the normal CDF.
+    const A: f64 = 0.7988;
+    /// Cubic correction term of the same approximation.
+    const B: f64 = 0.044_17;
+    let z = (noise - GATE_NOISE_MEAN) / GATE_NOISE_SD;
+    (0.5 * (1.0 + hornvale_kernel::math::tanh(A * z * (1.0 + B * z * z)))).clamp(0.0, 1.0)
+}
+
 /// The genetic process that formed a deposit — the taxonomy's primary axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DepositProcess {
@@ -361,6 +423,72 @@ mod tests {
         );
         let (kind, _) = cave_process(&tied, 500.0, 0.9, Some(0)).expect("hosts a cave");
         assert_eq!(kind, CaveKind::Karst);
+    }
+
+    #[test]
+    fn uniformize_is_monotone_and_bounded() {
+        let mut prev = -1.0;
+        for i in 0..=1000 {
+            let x = i as f64 / 1000.0;
+            let u = uniformize(x);
+            assert!(
+                (0.0..=1.0).contains(&u),
+                "uniformize({x}) = {u} escaped [0,1]"
+            );
+            assert!(u >= prev, "uniformize is not monotone at {x}: {u} < {prev}");
+            prev = u;
+        }
+    }
+
+    /// Worlds pooled by [`uniformize_turns_the_cave_gate_noise_into_a_uniform_variate`].
+    ///
+    /// **One globe is not a sample of the marginal.** At [`CAVE_GATE_FREQ`] a
+    /// single level-5 world holds only ~10^2 independent noise blobs, so its
+    /// own mean and spread wander: measured over 64 seeds, per-world mean
+    /// ranged 0.4835-0.5237 and per-world SD 0.0662-0.0854 against a pooled
+    /// 0.50027 / 0.07644. A per-world decile histogram therefore measures that
+    /// sampling wobble, not the warp — under the correct constants the
+    /// per-world worst decile deviation still has median ~0.025 and reaches
+    /// 0.073, so a single-globe +/-0.035 test fails for roughly a quarter of
+    /// seeds no matter how well [`uniformize`] is calibrated. Pooling twelve
+    /// worlds averages the wobble down (worst decile deviation 0.0068) so the
+    /// histogram tests the transform instead of the draw.
+    const UNIFORMITY_WORLDS: std::ops::RangeInclusive<u64> = 1..=12;
+
+    #[test]
+    fn uniformize_turns_the_cave_gate_noise_into_a_uniform_variate() {
+        use crate::provider::GeneratedTerrain;
+        use crate::{TerrainPins, generate};
+        use hornvale_kernel::{Geosphere, Seed};
+
+        let geo = Geosphere::new(5);
+        let mut deciles = [0usize; 10];
+        let mut n = 0usize;
+        for seed in UNIFORMITY_WORLDS {
+            let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
+            let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+            let noise_seed = terrain.globe().features_noise_seed();
+            for cell in geo.cells() {
+                let raw = crate::crust::sphere_fbm01(
+                    noise_seed,
+                    geo.position(cell),
+                    CAVE_GATE_FREQ,
+                    CAVE_GATE_OCTAVES,
+                );
+                let u = uniformize(raw);
+                deciles[((u * 10.0) as usize).min(9)] += 1;
+                n += 1;
+            }
+        }
+
+        for (i, &count) in deciles.iter().enumerate() {
+            let share = count as f64 / n as f64;
+            assert!(
+                (share - 0.1).abs() < 0.035,
+                "decile {i} holds {share:.4} of samples, not ~0.10 — the warp did \
+                 not uniformize the field (n={n}, deciles={deciles:?})"
+            );
+        }
     }
 
     #[test]
