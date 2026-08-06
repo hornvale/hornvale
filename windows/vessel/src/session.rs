@@ -651,6 +651,11 @@ impl<'w> Session<'w> {
                         inside.structure.chambers.len(),
                         chamber,
                         inside.cell,
+                        // Task 5 (The Sighting) decides which creatures are
+                        // visible and passes them here; until it lands this
+                        // stays empty, which is a legal `SessionPlan` (`[]`,
+                        // not an omitted key) and not a shortcut.
+                        Vec::new(),
                     ),
                 }
             }

@@ -273,6 +273,7 @@ mod tests {
             }],
             cells: vec![0],
             you: crate::plan::PlanPoint { x: 0, y: 0 },
+            marks: Vec::new(),
         }
     }
 
