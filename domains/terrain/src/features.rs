@@ -45,15 +45,74 @@ pub fn lavatube_proneness(buf: &MaterialBuffer, crust_age: f64) -> f64 {
     (mafic * extrusive * youth).clamp(0.0, 1.0)
 }
 
+/// Hops beyond which a plate contact contributes no fault-void stress — the
+/// width of the actively-deforming belt around the contact, in cells. A
+/// provisional value; the campaign's calibration task sets it against the
+/// scale one hop represents.
+const FRACTURE_STRESS_REACH: f64 = 8.0;
+
+/// Fault-void stress from boundary proximity, `[0,1]`: full on a plate
+/// contact, tapering linearly to zero at [`FRACTURE_STRESS_REACH`], and zero
+/// in a cratonic interior with no reachable boundary.
+///
+/// **Why this is not [`belt_weight`].** `belt_weight` carries an
+/// `INTERIOR_FLOOR` deliberately — its own doc says boundaries only *raise*
+/// the weight above it — and that is right for what it models: a feature
+/// *belt* concentrates an ore province that also exists, thinly, in the
+/// interior. A fault void is not a concentration of a background process; it
+/// requires a fault. `boundary_distance` is this model's only proxy for fault
+/// density, and a cell with no reachable same-plate boundary has, by that
+/// proxy, no fault to host a void. Reading a floored weight as stress credits
+/// every cratonic-interior cell with a third of the stress of a plate contact,
+/// which makes distance from a fault inexpressible — a term that cannot fall
+/// below 0.3 cannot say "far from any fault".
+///
+/// A linear taper to zero at a stated reach, rather than [`belt_weight`]'s
+/// hyperbolic decay, because the physical claim being made is exactly that
+/// there is a distance beyond which the boundary's damage does not reach; a
+/// curve that never reaches zero is why `belt_weight` needed a floor at all.
+/// type-audit: bare-ok(count: hops), bare-ok(ratio: return)
+pub fn fracture_stress(hops: Option<u32>) -> f64 {
+    match hops {
+        Some(h) => (1.0 - h as f64 / FRACTURE_STRESS_REACH).clamp(0.0, 1.0),
+        None => 0.0,
+    }
+}
+
 /// Fracture proneness, `[0,1]`: a fault void. Needs stress (proximity to a
-/// plate contact) and rock that breaks rather than flows — hard and
-/// unmetamorphosed. Reuses [`belt_weight`] for the stress term so fracture
-/// caves and ore belts read the same lineament field.
+/// plate contact) and rock competent enough to hold an open void rather than
+/// creep shut.
+///
+/// **Brittleness is induration, not the absence of metamorphism.** Until The
+/// Hollow's Task 5 this read `induration * (1 - metamorphic_grade)`, which was
+/// wrong twice over:
+///
+/// - *Wrong sign on the physics.* `metamorphic_grade` records peak burial
+///   pressure and temperature — a rock's history, not its present rheology. At
+///   the depths a cave occupies, gneiss, schist and quartzite are among the
+///   most brittle rocks in the crust; ductile behaviour is a function of
+///   current depth and temperature, which this term does not read. High grade
+///   is not evidence of a rock that flows.
+/// - *Anti-correlated with its own stress term by construction.*
+///   [`crate::lithology::induration_at`] defines `metamorphic_grade` as
+///   `1 - hops/OROGEN_REACH` within four hops of a boundary on continental
+///   crust. It is therefore a decreasing function of exactly the distance the
+///   stress term reads as increasing. The product was zero at `hops = 0` — on
+///   a plate contact, the most faulted place in the model, no fault cave could
+///   exist — and peaked at `hops = 4`, where the overprint has just run out.
+///   Its maximum over all land was ~0.39, below
+///   `DEEP_PROCESS_PRONENESS` (0.5), so [`BandKind::Roots`] was not rare but
+///   *unreachable*: a ceiling below the threshold that reads it, which is the
+///   spec's own §2.2 failure reproduced in new code.
+///
+/// Competence is what keeps a void open: cemented, indurated rock holds a
+/// fracture; soft, poorly consolidated rock closes it by creep. `induration`
+/// is that axis and needs no second factor.
 /// type-audit: bare-ok(count: boundary_distance), bare-ok(ratio: return)
 pub fn fracture_proneness(buf: &MaterialBuffer, boundary_distance: Option<u32>) -> f64 {
-    let stress = belt_weight(boundary_distance);
-    let brittle = buf.induration * (1.0 - buf.metamorphic_grade);
-    (stress * brittle).clamp(0.0, 1.0)
+    let stress = fracture_stress(boundary_distance);
+    let competent = buf.induration.clamp(0.0, 1.0);
+    (stress * competent).clamp(0.0, 1.0)
 }
 
 /// The void-opening process this cell's rock best supports, with that
@@ -435,11 +494,73 @@ mod tests {
 
     #[test]
     fn a_cell_supporting_no_process_hosts_no_cave() {
-        // Nothing to dissolve, fully felsic (no tube), perfectly plastic (nothing
-        // to fracture).
+        // Nothing to dissolve, fully felsic (no tube), and incompetent rock ON a
+        // plate contact — so the fracture term is zeroed by the rock rather than
+        // by the (also-sufficient) absence of a boundary, which would make the
+        // fracture half of this assertion vacuous.
         let mut inert = buf(0.0, 1.0);
         inert.induration = 0.0;
-        assert_eq!(cave_process(&inert, 0.0, 0.9, None), None);
+        assert_eq!(fracture_stress(Some(0)), 1.0, "stress must be live here");
+        assert_eq!(cave_process(&inert, 0.0, 0.9, Some(0)), None);
+    }
+
+    /// A fault void must be possible where the faults are. `metamorphic_grade`
+    /// is `1 - hops/OROGEN_REACH` near a boundary, so the retired
+    /// `induration * (1 - metamorphic_grade)` brittleness term was exactly zero
+    /// at `hops = 0` — the most faulted place in the model could host no
+    /// fracture cave, and the term's land maximum (~0.39) sat below
+    /// `DEEP_PROCESS_PRONENESS`, making `Roots` unreachable.
+    #[test]
+    fn a_plate_contact_can_host_a_fault_void_and_reach_the_roots() {
+        // Hard rock fully overprinted by the orogen it sits in — the exact cell
+        // the old formula scored at zero.
+        let mut contact = buf(0.0, 0.7);
+        contact.induration = 0.9;
+        contact.metamorphic_grade = 1.0;
+        let p = fracture_proneness(&contact, Some(0));
+        assert!(
+            p > 0.0,
+            "a plate contact scored {p}, so no fault cave can open"
+        );
+        assert!(
+            p >= DEEP_PROCESS_PRONENESS,
+            "fracture peaks at {p}, under the {DEEP_PROCESS_PRONENESS} a Roots-deep cave needs"
+        );
+        let col = crate::strata::column(
+            35.0,
+            0.3,
+            true,
+            400.0,
+            1.0,
+            RockClass::Sandstone,
+            Basement::Continental,
+        );
+        assert_eq!(cave_depth(CaveKind::Fracture, &col, p), BandKind::Roots);
+    }
+
+    /// Fault-void stress must be able to say "far from any fault".
+    /// `belt_weight`'s `INTERIOR_FLOOR` is right for feature belts and wrong
+    /// here: it credits a cratonic interior with a third of a plate contact's
+    /// stress, which made `Fracture` a background process rather than a
+    /// boundary one.
+    #[test]
+    fn fault_stress_has_no_interior_floor_unlike_a_feature_belt() {
+        assert_eq!(fracture_stress(None), 0.0);
+        assert!(
+            belt_weight(None) > 0.0,
+            "the belt floor is deliberate; this is the contrast"
+        );
+        // ... and it reaches zero at a finite distance, which a hyperbolic decay
+        // never does.
+        assert_eq!(fracture_stress(Some(FRACTURE_STRESS_REACH as u32)), 0.0);
+        assert!(fracture_stress(Some(1)) > fracture_stress(Some(4)));
+        assert!(fracture_stress(Some(4)) > fracture_stress(Some(7)));
+
+        // A cell with no reachable boundary hosts no fault void however hard
+        // its rock is.
+        let mut hard = buf(0.0, 0.7);
+        hard.induration = 1.0;
+        assert_eq!(fracture_proneness(&hard, None), 0.0);
     }
 
     #[test]
