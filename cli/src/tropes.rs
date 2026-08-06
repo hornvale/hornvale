@@ -603,6 +603,35 @@ mod tests {
         );
     }
 
+    /// The second corpus, asserted the same way and for the same reason.
+    ///
+    /// `tvtropes-2012` is frozen before measurement exactly as `polti-1895`
+    /// is, and 409 is what its own provenance document declares. Deriving
+    /// this number from the file would make the assertion vacuous — the
+    /// point is that a change to the corpus has to come through here and be
+    /// said out loud.
+    #[test]
+    fn the_second_corpus_has_four_hundred_and_nine_uniquely_identified_situations() {
+        let corpus = load(include_str!("../../tropes/tvtropes-2012.trope.json"))
+            .expect("the second corpus parses");
+        let mut seen = BTreeSet::new();
+        for st in &corpus.situations {
+            assert!(
+                seen.insert(st.id.as_str()),
+                "duplicate situation id `{}` — one situation would vanish into a \
+                 BTreeMap key collision and the report would understate its denominator",
+                st.id
+            );
+        }
+        assert_eq!(
+            corpus.situations.len(),
+            409,
+            "the frozen corpus must hold exactly 409 situations; changing that \
+             changes what every preregistered number was scored against"
+        );
+        assert_eq!(corpus.corpus, "tvtropes-2012");
+    }
+
     /// The corpus's actant roles stay inside Greimas' six. A seventh role, or
     /// a situation declaring none, means the hand-authored decomposition
     /// vocabulary drifted — and nothing else in the workspace checks it.
