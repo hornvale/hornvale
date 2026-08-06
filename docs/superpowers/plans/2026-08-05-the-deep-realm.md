@@ -61,9 +61,44 @@ guarantee, which is the right direction, and it still catches a lattice bug.
    fixed and exists before generation. Never introduce an ordinal that counts
    what the generator made — that is the rule The Salt, 0102 and The Tolerance
    each learned separately.
+
+   **1a. `ChamberAddr.band` indexes the permanent `BandKind` ladder, never a
+   count of realized bands.** *(Added 2026-08-06, ledger #16 — this is rule 1
+   arriving through a door the plan did not guard.)* The measured budget takes
+   only **three** of `BandKind`'s five values today (`Cover`/`Basement`/
+   `Roots`; `Regolith` and `Underneath` never occur — Task 0). It is therefore
+   tempting to index `band` against the three bands that *actually happen*.
+   **Do not.** "The 2nd distinct band that occurs" is a construction step
+   wearing a place's clothes: the open `MAP-cave-depth-weld` fix would change
+   the realized set from three values to four or five, and every address would
+   silently relocate — with every override landing on the wrong chamber or on
+   none. Indexed against the ladder, that same fix changes only *which*
+   addresses are occupied, and no address moves. The depth stack is
+   `LADDER → ADDRESS`, then `BUDGET → OCCUPANCY`; the budget must never
+   acquire an edge to the address.
 2. **Nothing is stored.** Existence and content derive from the address. The
    override seam is a *lookup* in this campaign; there is no writer.
-3. **Task 0 can stop the campaign**, and is meant to be able to.
+3. **Task 0 can stop the campaign**, and is meant to be able to. *(It ran, and
+   it cleared — see Task 0's RESULT block below.)*
+
+## The depth weld is consumed, not fixed — and C2a is its instrument
+
+`MAP-cave-depth-weld` is open and stays open: `cave_depth`'s deepening step
+still reads the same `proneness` scalar the presence gate reads, so "how likely
+is a cave here" and "how deep does it go" are one number. **C2a consumes the
+budget as-is** (ledger #16). The weld lives in `domains/terrain`, and splitting
+it means re-calibrating the cave model again and moving the census metric, the
+almanac and the map palette — the artifact blast radius The Hollow just paid,
+for a model that just passed five preregistered criteria.
+
+The sequencing argument runs the other way from the obvious one. **C2a is the
+weld's first real consumer**, and The Hollow's own dominant lesson is that a
+field nothing reads cannot be observed to be wrong. Splitting before a consumer
+exists calibrates against a guess. So Task 8's H2 readout is the evidence: if
+the chamber graph comes back flat *because* a 3-valued budget is too coarse,
+that is a measured case for the split; if it comes back varied, the weld was
+never C2a's problem. **Task 8 must report the budget's contribution to H2
+explicitly**, not merely report H2.
 
 ---
 
@@ -656,6 +691,14 @@ Over seeds 1..=30, **reported and never asserted**:
   non-zero. If every cell with a cave gets a similar graph, the generator is
   producing a uniform column with extra steps — spec §2's discarded framing
   returning as an implementation accident.
+
+**Also report H2 broken down by the cell's `deepest_band`** (ledger #16). C2a
+is the first consumer of the depth budget, so this readout is the evidence for
+or against the open `MAP-cave-depth-weld` split. If graphs are uniform *within*
+a band but differ *between* bands, the budget is carrying the variation and a
+3-valued budget is the ceiling — a measured case for the split. If graphs vary
+freely within a band, the weld is not C2a's constraint and the row can say so.
+**Report which, whichever way it comes out.**
 
 Keep Task 0's guards.
 
