@@ -450,6 +450,38 @@ recomputes, or for a save-format-class document whose meaning changes are epoch
 events; the end-to-end fixture for a document the client merely parses.** Where
 neither holds, a second committed copy is only a thing to drift.
 
+**Re-scored by [The Panes](./chronicle/the-panes.md) (2026-08-06): the bet
+The Snapshot deliberately declined to take has now been taken.** That campaign
+proved the emit seam by moving an *existing* pane onto the document, and said
+plainly why — a second pane that nothing could contradict would have proved
+nothing. The Panes added the second pane. It is the harder direction, because
+the redaction boundary is only as real as the first consumer that could have
+violated it and did not: a map pane is precisely the pane most tempted to
+reach outside its channel for world truth, and the shape of the schema is what
+stops it. The channel carries **semantic content, never a picture** — cells,
+not glyphs — so the sim never learns how anything is drawn, and the client
+renders from one document rather than from two sources that could disagree.
+Both panes are now pure functions of one snapshot, which is the structural
+form of the claim rather than a discipline anyone must keep.
+
+Two things sharpen the score rather than merely confirming it. First, the cost
+was **measured, not asserted**: a session-level benchmark this campaign built
+prices the emit at 1.249 ms against a 0.173 ms baseline, and the payload
+growth is band-dependent in a way a single figure hides — 2.73× out of doors,
+1.17× indoors. The bet's premise is that the emit is cheap enough to pay every
+turn; that is now a number rather than an expectation, and it paid down a
+re-measurement another campaign had left owed. Second, the bet's *weakest*
+seam showed itself at the merge, not during the work. A tagged union over
+bands is an enumeration of another part of the sim's state space, and a
+parallel campaign added a band to that space while this one ran. The merge was
+textually clean; nothing in either campaign's documents mentions the other's
+surface; the two agreed only because both happened to guard on the same
+condition. **The generalisable lesson is that an emit whose shape mirrors
+sim state inherits that state's growth, and no gate asks whether the mirror is
+still total.** The seam held, and it held for a reason no test had stated —
+which is the kind of pass worth recording as a narrower confidence, not a
+wider one.
+
 Every test of this bet so far has pushed on the *producer* side — new source
 classes, new layers, new document shapes. [The Vigil](./chronicle/the-vigil.md)
 pushed on the **observer** side instead, and the interface took it without

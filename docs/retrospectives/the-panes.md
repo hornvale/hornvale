@@ -205,11 +205,31 @@ see above.
 
 ## Confidence Gradient
 
-`book/src/open-questions.md` was checked against this campaign's territory.
-**No bet moved — N/A.** The campaign added a presentation channel and a client
-pane; it drew no world-state, changed no physics, and moved no metric any bet
-is scored on. The one thing it *measured* — per-turn session cost — is not a
-bet the chapter holds.
+**A bet moved, and this section first said it had not.** The original entry
+read *"No bet moved — N/A"*, on the reasoning that the campaign drew no
+world-state, changed no physics, and moved no metric any bet is scored on.
+That reasoning is wrong in a way worth keeping on the record, because it is a
+tempting error: it scored the gradient on **whether physics moved** rather
+than on **whether the chapter holds a bet in this territory**. It does. The
+Snapshot's entry is about the client emit seam, and it explicitly names what
+it declined to do — prove the seam by adding a second pane, which would have
+proved nothing at the time. This campaign added the second pane. That is the
+bet advancing along its own stated axis, and it was visible from the chapter's
+own text without any judgment call.
+
+Caught at the merge, during the freshness sweep, only because the sweep
+grepped the chapter for the campaign's *domains* rather than trusting this
+section's conclusion. The re-score now sits in `book/src/open-questions.md`
+after The Snapshot's entry: the bet is confirmed, with two refinements — the
+emit cost is now measured rather than assumed (1.249 ms, and band-dependent
+byte growth of 2.73× / 1.17×), and the seam's weakest point turned out to be
+one no test had stated, namely that an emit mirroring sim state inherits that
+state's growth. It is recorded as a *narrower* confidence, not a wider one.
+
+**The generalisable form: a campaign that changes no physics can still move a
+bet, because not every bet is scored on physics.** The check is a grep of the
+chapter for the campaign's territory, and the answer "N/A" needs the same
+evidence any other answer does.
 
 ## Follow-ups
 
@@ -265,6 +285,49 @@ which is git-ignored and dies with the worktree.
   so there is no committed golden snapshot in the gallery and no drift check on
   the schema's bytes. Adding the spatial channel makes this gap materially
   larger — the schema now carries the fine layer.
+- **The Casement lockup class is not closed, only narrowed.** Finding 3's
+  repair wrapped `drawMap` in a try/catch precisely because an uncaught throw
+  in an `onmessage` branch skips `setIdle` and freezes the input box. But
+  `narrationOf` runs in the *same unguarded region*, between the guarded
+  `drawMap(snap)` and `setIdle(...)` on both the possess and the turn branch
+  — and `parseSnapshot` validates only the schema tag (`snap?.schema ===
+  SESSION_SCHEMA`), never the shape beneath it. So a payload carrying the
+  right tag and a missing `narration` returns a truthy `snap`, `narrationOf`
+  throws on `snap.narration.prose`, and the input freezes identically. The
+  guard was placed at the symptom rather than at the region. **Pre-existing,
+  not introduced here** — the same three lines sit in `main.ts` at this
+  campaign's merge base — but the campaign that names a failure mode is the
+  one that should have swept for its siblings, and this is the sweep-on-the-
+  invariant lesson landing again: the invariant is "every `onmessage` branch
+  reaches `setIdle`", not "`drawMap` cannot throw."
+
+### The band fold — a semantic collision the preflight cannot score
+
+Found at the close, merging main in, and worth recording as a *class*. The
+Deep Realm added an `underground` band to `Session` while The Panes added a
+`spatial` channel that is a tagged union **over bands**. Two parallel
+worktrees, one file, no textual conflict — `git` had nothing to complain
+about, because the two campaigns edited different lines. Neither campaign's
+spec, plan, or chronicle mentions the other's surface; a grep of both new
+chronicles for `snapshot`, `pane`, or `spatial` returns nothing.
+
+The outcome is benign and that is the interesting part. `underground` folds
+into `walk`, so the pane draws the surface chart from inside a cave — which
+is exactly what the `map` verb does in the same state, because `map`'s band
+arms guard on the indoor state alone. The Panes' own comment claimed pane and
+verb "can never disagree about which band is current," and after the merge
+that claim is still *literally true*. It survived by luck rather than by
+design: had The Deep Realm made `map` band-aware for `underground` (as it did
+for `look`, `go`, and `back`), the pane and the verb would have silently
+diverged with every test green.
+
+So the repair is not to the behaviour but to what is *checked*. A test now
+asserts the two halves agree in the third band, mutation-verified in both
+directions, and the open question — what a surface chart means read from
+below ground — is registered rather than answered. **The generalisable form:
+when a campaign ships an enumeration over some other campaign's state space,
+the absorption check is not "did it merge" but "is the enumeration still
+total."** Nothing mechanical asks that.
 
 ### Deferred minors from Task 3's review
 

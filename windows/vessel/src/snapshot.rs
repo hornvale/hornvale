@@ -168,19 +168,42 @@ pub struct Narration {
 
 /// Where the possession stands, as cells rather than as a picture.
 ///
-/// A tagged union over the **band**, because the session already treats the
-/// two as mutually exclusive: `Session::handle`'s `map` arm answers `map out`
-/// indoors with `INDOOR_CHART_REFUSAL`, so the walk-band chart is not
-/// derivable while inside a building. One pane switches; two do not coexist.
+/// A tagged union over the **band**, because the session already treats
+/// indoors and out as mutually exclusive: `Session::handle`'s `map` arm
+/// answers `map out` indoors with `INDOOR_CHART_REFUSAL`, so the walk-band
+/// chart is not derivable while inside a building. One pane switches; two do
+/// not coexist.
+///
+/// **Two variants, but the session now has more than two ways to be
+/// somewhere** — and that asymmetry is deliberate rather than an oversight,
+/// so read it before adding a variant. `Session` carries three "not out of
+/// doors at ground level" states: `inside` (a built structure), `submerged`
+/// (the water column, The Column), and `underground` (the cave lattice, The
+/// Deep Realm). Only `inside` gets its own variant. The other two fold into
+/// `Walk`, which is what the `map` VERB does in exactly the same states —
+/// `map`'s band arms guard on `inside` alone, so `map` underground or
+/// submerged draws the surface chart too. Pane and verb therefore still
+/// cannot disagree, which is the property this union exists to hold; what
+/// they agree ON, in those two bands, is a chart of the country overhead.
+/// Whether that is the right answer is an open question, not a settled one
+/// (`CLIENT-band-fold` in the idea registry) — but it is the *same* answer
+/// the sim already gives, and changing it is a sim change before it is a
+/// schema change. `the_underground_band_folds_into_walk_as_map_does` in
+/// `session.rs`'s test module pins the fold (it lives there rather than in
+/// `tests/session_snapshot.rs` because reaching an open cave needs the
+/// private `delve_at`, seed 42's flagship having no cave under it), so a
+/// fourth band cannot be added without meeting this question.
 ///
 /// The wire tag is `band`, with values `walk` and `chamber`. A client reads
 /// it before anything else, so renaming either is a `vessel/session/v2`.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "band", rename_all = "lowercase")]
 pub enum SpatialChannel {
-    /// Out of doors (or submerged): the walk-band chart, `scene/surrounds/v1`
-    /// embedded verbatim. One schema, one owner — the same move `sensed.room`
-    /// makes with `locale/room/v2`.
+    /// Not inside a built structure: the walk-band chart,
+    /// `scene/surrounds/v1` embedded verbatim. One schema, one owner — the
+    /// same move `sensed.room` makes with `locale/room/v2`. Covers standing
+    /// out of doors, **and** the two bands that fold into it (submerged,
+    /// underground) — see the enum's own doc for why.
     Walk {
         /// The chart, as `windows/scene` renders it structurally.
         chart: hornvale_scene::SurroundsScene,

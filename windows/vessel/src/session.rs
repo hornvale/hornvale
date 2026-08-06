@@ -632,7 +632,15 @@ impl<'w> Session<'w> {
 
         // The band the possession is in decides the channel. `inside` is the
         // same discriminator `handle`'s `map` arm uses, so pane and verb can
-        // never disagree about which band is current.
+        // never disagree about which band is current — and that is the whole
+        // reason this matches on `inside` alone rather than on the three
+        // "not out of doors" states the session now carries (`inside`,
+        // `submerged`, `underground`). `map`'s arms guard on `inside` too, so
+        // the other two fall through to the surface chart in the verb and
+        // must fall through here identically or the pane would start showing
+        // something the verb refuses to. Adding a band to the session without
+        // deciding what the pane shows there is the failure this comment
+        // exists to catch: see `SpatialChannel`'s doc.
         let spatial = match self.inside.as_ref() {
             Some(inside) => {
                 let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
@@ -3713,5 +3721,68 @@ mod tests {
                 "{line} must refuse underground with the underground reason: {out}"
             );
         }
+    }
+
+    /// The snapshot's spatial channel and the `map` verb must answer the
+    /// SAME band question, including in a band neither was written against.
+    ///
+    /// Found at The Panes' merge, not during either campaign: The Deep Realm
+    /// added `underground` while The Panes added the spatial channel, in
+    /// parallel worktrees, and the textual merge was clean because they
+    /// touched different lines of the same file. `SpatialChannel` enumerates
+    /// bands; The Deep Realm added one; neither campaign's chronicle mentions
+    /// the other's surface. That is precisely the semantic collision
+    /// `make preflight` says it cannot score.
+    ///
+    /// What it asserts is a FOLD, not a correctness claim. Standing in a cave
+    /// chamber, the pane shows a chart of the country overhead — which is
+    /// odd, and is exactly what the `map` verb already does in the same
+    /// state, because both guard on `inside` alone. So the invariant worth
+    /// pinning is not "the pane is right here" but "the pane and the verb
+    /// cannot drift apart here": whichever answer the sim settles on, one
+    /// change must move both. Without this, adding a fourth band would fold
+    /// silently into `walk` and no test would notice.
+    #[test]
+    fn the_underground_band_folds_into_walk_as_map_does() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        session.delve_at(cell, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+
+        // The pane: `walk`, carrying a chart rather than a plan.
+        let snap = session.snapshot().expect("a descended session snapshots");
+        match &snap.spatial {
+            crate::snapshot::SpatialChannel::Walk { .. } => {}
+            crate::snapshot::SpatialChannel::Chamber { .. } => panic!(
+                "the underground band emitted `chamber` — if that is now intended, \
+                 `SpatialChannel`'s doc and the `map` verb's band arms must change WITH it"
+            ),
+        }
+        let json = crate::snapshot_json(&snap);
+        assert!(
+            json.contains(r#""band":"walk""#),
+            "the wire tag must read `walk` underground: {json:.120}"
+        );
+
+        // The verb, in the same state: the surface chart, not a plan and not
+        // a refusal. `plan_here` prints a legend; `map`'s chart prints a lens
+        // header — so the two are told apart by content, not by length.
+        let out = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(
+            out.contains("[lens:"),
+            "map underground must draw the walk-band chart, as the pane does: {out}"
+        );
+        assert!(
+            !out.contains(INDOOR_CHART_REFUSAL),
+            "map underground must not take the indoor refusal: {out}"
+        );
     }
 }

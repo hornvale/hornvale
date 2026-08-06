@@ -243,6 +243,25 @@ cheat-pane failure mode the snapshot's own documentation warns about at
 length. A pane that cannot be honest goes away instead, and the map pane
 empties on entering a building rather than lying about the country outside.
 
+**Two variants, four bands — noticed at the merge, not during the work.** The
+tagged union splits `walk` from `chamber`, but a possession has more than two
+ways to be somewhere: it can also be submerged in the water column, or
+underground in the cave lattice that *The Deep Realm* built alongside this
+work, the two arriving independently. Both of those fold into
+`walk`, so standing in a cave chamber the pane draws a chart of the country
+overhead.
+
+That reads like a defect and is not one, or at least not this campaign's. The
+`map` verb guards on the indoor state alone and answers the same way in the
+same places, so the pane reproduces the sim faithfully — pane and verb agree
+on an answer neither of them chose. The property worth holding is that
+agreement, not the particular answer, and a test now pins it: whichever way
+the question is eventually settled, one change has to move both. What the
+question *is* — what a surface chart means read from below ground — is a sim
+question before it is a schema one, and it is registered rather than
+answered here. Two campaigns edited one file, the merge was textually clean,
+and neither one's design documents mention the other's surface.
+
 The `map` verb survives untouched. It is the CLI's only map, and it is the
 subject of a live parity test that walks what the render *claims* to depict
 and demands `examine` accept each item — the check that caught The Lintel's
