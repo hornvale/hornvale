@@ -25,7 +25,7 @@ function mount(container: HTMLElement): void {
   // nothing module-level holds session state, so a page can mount two.
   const panes = el("div", "casement-panes", container);
   const transcript = el("div", "casement-transcript", panes);
-  const map = el("pre", "casement-map", panes);
+  const map = el("pre", "casement-mapview", panes);
   const controls = el("form", "casement-controls", container);
   const seedLabel = el("label", "casement-seedlabel", controls);
   seedLabel.textContent = "seed ";

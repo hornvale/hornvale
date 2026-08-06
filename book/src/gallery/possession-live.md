@@ -95,7 +95,7 @@ the CLI runs.</p>
   .casement-status { min-height: 1.5em; }
   .casement-panes { display: flex; gap: 1rem; align-items: flex-start; }
   .casement-transcript { flex: 1 1 60%; min-width: 0; }
-  .casement-map {
+  .casement-mapview {
     flex: 0 0 auto; margin: 0; font-family: monospace;
     line-height: 1.05; white-space: pre; overflow-x: auto;
   }
