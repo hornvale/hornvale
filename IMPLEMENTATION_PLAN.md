@@ -6,9 +6,12 @@ it is what caught the previous handoff's own wrong hypothesis about §1.
 
 ## Situation
 
-Branch `campaign/the-tilth`, HEAD `cdf4b40b`, **36 commits ahead of main**
-(`f73059d5`), tree clean, main fully absorbed. **The suite is RED: 50 failures /
-2981** (was 52; §1 fixed two). Do not merge.
+Branch `campaign/the-tilth`, HEAD `4a431f28`, **40 commits ahead of main**
+(`f73059d5`), tree clean, main fully absorbed. **The suite is RED: 49 failures /
+2981**, down from 52 — verified by a full run, and a diff of the two failure
+lists confirms the three that cleared are exactly the three changed here
+(§1's two fixtures, §4a's migration gate) with nothing regressed. Do not
+merge.
 
 ## 1. DONE — the two lib tests, fixed on the mechanism (`aa865df1`)
 
@@ -44,7 +47,7 @@ Every assertion untouched. Both pass.
 - Confidence Gradient re-scored **sideways** in `book/src/open-questions.md`.
 - Verified: `mdbook build book`, and all 22 `cli/tests/docs_consistency` checks.
 
-## 3. The triage of the remaining 50
+## 3. The triage of the remaining 49
 
 Full log: rerun `HV_TEST_OK=1 cargo nextest run --workspace --no-fail-fast`.
 The 52-failure baseline this table was built from took **720 s**.
