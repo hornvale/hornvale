@@ -55,6 +55,19 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bios`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
 
     let world = build_world(
         Seed(seed),
@@ -82,7 +95,7 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     };
 
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
     );
 
     let mut viable = BTreeSet::new();

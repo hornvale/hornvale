@@ -86,6 +86,19 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bios`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
 
     // Accumulated across every seed in the sweep, keyed by (kind, biome).
     // `occupied_k`: the K values of cells at/above the viability floor (the
@@ -125,7 +138,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
         };
 
         let ks = per_species_suitability(
-            geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+            geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
         );
         let biome_map = climate.biome_map();
 

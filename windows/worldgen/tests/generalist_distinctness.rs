@@ -117,7 +117,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{ConditionResponse, KindId, Seed};
-use hornvale_species::{BiosphereTraits, ConditionNiche, biosphere_registry};
+use hornvale_species::{BiosphereTraits, ConditionNiche, HabitatRealm, biosphere_registry};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
@@ -226,8 +226,11 @@ fn measure_fit_pair(
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
+    // Both are peopled, surface-scored kinds — absent from the sparse
+    // habitat-realm store, so both default to `Surface`.
+    let realm = [HabitatRealm::SURFACE, HabitatRealm::SURFACE];
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
     );
     // Build-local dense index -> slot mapping (per_species_suitability's doc
     // comment): `bios` above has bio_a at index 0, bio_b at index 1, so the

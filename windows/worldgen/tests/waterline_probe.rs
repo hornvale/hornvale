@@ -110,6 +110,19 @@ fn waterline_probe() {
     let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
     let bio: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bio`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
 
     let ks = per_species_suitability(
         geo,
@@ -119,6 +132,7 @@ fn waterline_probe() {
         insolation_scalar,
         &regime,
         &bio,
+        &realm,
     );
     let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };
