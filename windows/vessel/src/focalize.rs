@@ -161,7 +161,7 @@ impl Focalizer for TemplateFocalizer {
             "{place} — {descriptor} — in the lands of {village}. The {sky_noun} above: {}",
             v.sky
         );
-        let nouns = vec![
+        let mut nouns = vec![
             Noun::new(
                 &biome,
                 &biome,
@@ -187,6 +187,13 @@ impl Focalizer for TemplateFocalizer {
             ),
             Noun::new(&sky_noun, &sky_noun, &v.sky),
         ];
+        // One entry per body the sky named — "the vast moon", "the sun" — so
+        // a player can name what the sentence just said rather than only the
+        // whole report. Two moons both yielding the word "moon" is expected;
+        // `Noun::matches` and catalog order resolve it to the first.
+        for (noun, datum) in &v.sky_bodies {
+            nouns.push(Noun::new(noun, noun, datum));
+        }
         Focalized { prose, nouns }
     }
 }
@@ -351,5 +358,22 @@ mod tests {
             height_phrase(SeaLevelHeight::from_metres(1200.0)),
             "1200 m above sea level"
         );
+    }
+
+    #[test]
+    fn each_body_the_sky_names_is_examinable_and_moon_is_not_ambiguous_at_runtime() {
+        let v = vantage_at(0.0);
+        let f = TemplateFocalizer.render(&v);
+        let moons: Vec<&Noun> = f.nouns.iter().filter(|n| n.matches("moon")).collect();
+        assert!(!moons.is_empty(), "the night sky names at least one moon");
+        // Deterministic priority: the first entry wins, and it is a MOON's
+        // datum, not the whole sky report.
+        let first = moons[0];
+        assert!(
+            first.datum.contains("moon"),
+            "moon resolves to a moon: {:?}",
+            first.datum
+        );
+        assert_ne!(first.datum, v.sky, "and not to the whole sky report");
     }
 }

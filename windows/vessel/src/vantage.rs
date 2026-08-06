@@ -7,7 +7,7 @@ use hornvale_locale::{Locale, LocaleContext};
 use hornvale_settlement::VillageInfo;
 
 /// Everything observable from the agent's position at `at`.
-/// type-audit: bare-ok(prose: sky), bare-ok(flag: submerged)
+/// type-audit: bare-ok(prose: sky), bare-ok(flag: submerged), bare-ok(identifier-text: sky_bodies)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vantage {
     /// The room, as the locale window describes it (ground truth).
@@ -18,6 +18,11 @@ pub struct Vantage {
     pub village: VillageInfo,
     /// The sky over this day, from the world's sky provider.
     pub sky: String,
+    /// One `(display noun, datum)` per body `sky` names, in the order the
+    /// sentence names them. Carried alongside `sky` rather than parsed back
+    /// out of it, because only the sky report itself knows which words are a
+    /// body's own phrase.
+    pub sky_bodies: Vec<(String, String)>,
     /// Whether the vantage is DOWN in the water column rather than on its
     /// surface. Land vantages are never submerged.
     pub submerged: bool,
@@ -52,15 +57,15 @@ pub fn observable_at(
     let cell = ctx
         .terrain()
         .nearest_cell(locale.latitude, locale.longitude);
-    let sky =
+    let report =
         hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), Some(cell))
-            .map_err(|e| VesselError::Build(e.to_string()))?
-            .description;
+            .map_err(|e| VesselError::Build(e.to_string()))?;
     Ok(Vantage {
         submerged: matches!(stratum, Some(st) if st != hornvale_climate::Stratum::Surface),
         locale,
         day: at,
         village: agent.village.clone(),
-        sky,
+        sky: report.description,
+        sky_bodies: report.body_phrases,
     })
 }
