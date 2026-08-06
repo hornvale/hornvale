@@ -11,10 +11,12 @@
 //! address must name a PLACE, never a construction step. See each test's own
 //! doc comment for which half of that rule it guards.
 
+use std::collections::BTreeMap;
+
 use hornvale_kernel::{CellId, Seed};
 use hornvale_terrain::{BandKind, Cave, CaveKind};
 use hornvale_worldgen::chamber::{
-    ChamberAddr, SLOTS_PER_BAND, chamber_at, chamber_exists, passages_from,
+    ChamberAddr, ChamberOrigin, SLOTS_PER_BAND, chamber_at, chamber_exists, passages_from,
 };
 
 /// The rule The Salt, 0102 and The Tolerance each learned separately:
@@ -44,6 +46,7 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
     // in BOTH caves' budget; Roots's rank 3 gives `deep` a fourth band
     // `shallow` cannot reach at all. Every address checked here therefore
     // sits in the region shared by both caves' budgets.
+    let no_overrides = BTreeMap::new();
     for band in 0..=2u8 {
         for slot in 0..SLOTS_PER_BAND {
             let addr = ChamberAddr {
@@ -59,8 +62,8 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
                  sharing the same seed and cell"
             );
             assert_eq!(
-                chamber_at(seed, &shallow, addr),
-                chamber_at(seed, &deep, addr),
+                chamber_at(seed, &shallow, addr, &no_overrides),
+                chamber_at(seed, &deep, addr, &no_overrides),
                 "content at {addr:?} differs between a shallow and a deep cave — \
                  an address must name a PLACE, never a construction step"
             );
@@ -259,5 +262,115 @@ fn a_cave_mouth_reaches_at_least_one_chamber() {
         "only {conditional:.4} of EXISTING entrance chambers reach a \
          neighbour; under the lattice's own density model this should be near \
          0.75, so adjacency is likely generating unreachable candidates"
+    );
+}
+
+/// The seam, per spec 3.3: a chamber's content is its own latest override
+/// fact, else its address-derived default. This campaign ships no WRITER, and
+/// **commits nothing** — the resolver is tested directly, so the address's
+/// on-ledger form stays genuinely undecided until a campaign needs to dig.
+/// (Owner's ruling, 2026-08-05: committing a fact here would fix that form as
+/// a permanent key, which spec 8 flag 2 exists to defer.)
+///
+/// The payload is `origin`: default `Found`, override `Made` (ledger #24).
+/// Also assert the two invariants that make the seam more than a lookup:
+///   - no-override resolution is UNCHANGED from the pre-Task-4 derivation;
+///   - `Made` is absorbing: nothing takes a chamber back to `Found`.
+#[test]
+fn an_override_wins_over_the_derived_default() {
+    let seed = Seed(2026);
+    let cave = Cave {
+        kind: CaveKind::Fracture,
+        deepest_band: BandKind::Roots,
+    };
+    let cell = CellId(4);
+
+    // Find two addresses that both exist under this (seed, cave, cell) —
+    // one to override, one to leave alone as the "unaffected" witness.
+    let mut existing = Vec::new();
+    for band in 0..=3u8 {
+        for slot in 0..SLOTS_PER_BAND {
+            let addr = ChamberAddr {
+                cell,
+                entrance: 0,
+                band,
+                slot,
+            };
+            if chamber_exists(seed, &cave, addr) {
+                existing.push(addr);
+            }
+        }
+    }
+    assert!(
+        existing.len() >= 2,
+        "need at least two existing chambers under this fixture to test an \
+         override against an unaffected address; found {}",
+        existing.len()
+    );
+    let overridden_addr = existing[0];
+    let other_addr = existing[1];
+
+    let no_overrides: BTreeMap<ChamberAddr, ChamberOrigin> = BTreeMap::new();
+
+    // Invariant: no-override resolution is UNCHANGED from the pre-Task-4
+    // derivation. `chamber_at` with an empty override map must still resolve
+    // `stratum` from `addr.band` alone (the only thing the old, one-fewer-
+    // parameter `chamber_at` ever did), and the resolved `origin` must be the
+    // address-derived default, `Found` — this campaign digs nothing.
+    for &addr in &existing {
+        let chamber = chamber_at(seed, &cave, addr, &no_overrides).unwrap_or_else(|| {
+            panic!("{addr:?} was measured to exist but chamber_at(None) returned None")
+        });
+        assert_eq!(chamber.addr, addr);
+        assert_eq!(
+            chamber.stratum,
+            hornvale_climate::Realm::UNDERDARK.strata()[addr.band as usize],
+            "stratum at {addr:?} must still be the pre-Task-4 pure function of \
+             addr.band alone"
+        );
+        assert_eq!(
+            chamber.origin,
+            ChamberOrigin::Found,
+            "with no override recorded, {addr:?} must resolve to the \
+             address-derived default, Found"
+        );
+    }
+
+    // The override wins.
+    let mut overrides = BTreeMap::new();
+    overrides.insert(overridden_addr, ChamberOrigin::Made);
+    let overridden = chamber_at(seed, &cave, overridden_addr, &overrides)
+        .expect("the overridden address was measured to exist");
+    assert_eq!(
+        overridden.origin,
+        ChamberOrigin::Made,
+        "an override fact must win over the address-derived default"
+    );
+
+    // A DIFFERENT address is unaffected by an override recorded for another
+    // address entirely.
+    let other = chamber_at(seed, &cave, other_addr, &overrides)
+        .expect("the other address was measured to exist");
+    assert_eq!(
+        other.origin,
+        ChamberOrigin::Found,
+        "an override recorded for {overridden_addr:?} must not leak onto \
+         {other_addr:?}"
+    );
+
+    // `Made` is absorbing: nothing takes a chamber back to `Found`. Exercised
+    // directly on the resolver so the property holds independent of the fact
+    // that today's derived default is always `Found` (see `resolve_origin`'s
+    // own docs for why this is tested as a standalone function).
+    assert_eq!(
+        hornvale_worldgen::chamber::resolve_origin(ChamberOrigin::Made, Some(ChamberOrigin::Found)),
+        ChamberOrigin::Made,
+        "an override of Found must not pull a Made chamber back to Found — \
+         Made is absorbing"
+    );
+    assert_eq!(
+        hornvale_worldgen::chamber::resolve_origin(ChamberOrigin::Made, None),
+        ChamberOrigin::Made,
+        "the absence of an override must not pull a Made chamber back to Found"
     );
 }

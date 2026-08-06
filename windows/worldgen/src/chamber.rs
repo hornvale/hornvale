@@ -15,6 +15,8 @@
 //! formation process might shape subterranean conditions, and inventing that
 //! coupling now would be scope this task does not own.
 
+use std::collections::BTreeMap;
+
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, Seed, Stream};
 use hornvale_terrain::{BandKind, Cave};
@@ -92,25 +94,61 @@ pub struct ChamberAddr {
     pub slot: u8,
 }
 
+/// A chamber's maker, or the lack of one — spec §3.3's opening sentence: "A
+/// chamber is either **found** or **made** … what separates them is a maker
+/// and a purpose, not a different generator." One taxonomy covers cave-mouth
+/// shelters, Petra, sewers, catacombs, escape tunnels, dwarven halls, drow
+/// cities, a dug shelter, and a hole cut by magic — this campaign ships only
+/// the field and the seam that reads it, never a writer.
+///
+/// **`stratum` stays un-overridable and this type never touches it.** The
+/// override records an *event's effect* (something happened to this place);
+/// `stratum` records the *substrate* (what the place *is*). A dig does not
+/// move you into different rock — see [`Chamber::stratum`]'s own docs.
+///
+/// **`Made` is absorbing** — see [`resolve_origin`], which states and tests
+/// the rule directly: applying an override can take `Found → Made`; nothing
+/// takes `Made → Found`. Tool marks do not un-cut themselves.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChamberOrigin {
+    /// The address-derived default. This campaign digs nothing, so every
+    /// chamber `chamber_at` produces without a matching override resolves to
+    /// this.
+    Found,
+    /// Recorded by an override: a maker cut this chamber for a purpose. This
+    /// campaign ships no writer, so nothing in the shipped generation path
+    /// produces `Made` — it exists for a future dig fact to set, and for
+    /// [`resolve_origin`]'s absorbing rule to be stated over.
+    Made,
+}
+
 /// A chamber's resolved content — deliberately minimal for this task. Spec
 /// §3's substrate table lists a chamber's content as "depth — `BandKind` on
-/// each node — what the rock here is like", and that is exactly what this
-/// carries: the named stratum its address's `band` indexes. Later tasks
-/// extend this (Task 5's descent narration, Task 6's derived subterranean
+/// each node — what the rock here is like", and that is exactly what
+/// `stratum` carries: the named stratum its address's `band` indexes. Task 4
+/// (ledger #24) adds `origin`, the seam's own payload; later tasks extend
+/// this further (Task 5's descent narration, Task 6's derived subterranean
 /// conditions); a holding's dug-out dressing (spec §4) is explicitly out of
 /// this campaign's scope, so this task does not invent fields for it.
 ///
-/// Content is a pure function of `addr` alone — never of the `Cave` that
-/// gated its existence. `an_addresss_meaning_does_not_depend_on_which_
-/// other_chambers_exist` in `deep_realm_chamber.rs` is the regression guard:
-/// a `Chamber` for one address must come out identical no matter which cave
-/// (shallow or deep) was asked, for every address both caves admit.
+/// Content is a pure function of `(addr, overrides)` alone — never of the
+/// `Cave` that gated its existence. `an_addresss_meaning_does_not_depend_on_
+/// which_other_chambers_exist` in `deep_realm_chamber.rs` is the regression
+/// guard: with the same override source, a `Chamber` for one address must
+/// come out identical no matter which cave (shallow or deep) was asked, for
+/// every address both caves admit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Chamber {
     /// The address this content was derived for.
     pub addr: ChamberAddr,
     /// The rock stratum at `addr.band` — `Realm::UNDERDARK.strata()[addr.band]`.
+    /// **Never overridable** — see [`ChamberOrigin`]'s own docs for why: this
+    /// is the substrate, not an event's effect, and no seam in this campaign
+    /// (or any later one, per that doc) should add a way to override it.
     pub stratum: hornvale_climate::Stratum,
+    /// Whether this chamber was found or made — the override seam's payload
+    /// (spec §3.3, Task 4, ledger #24). See [`ChamberOrigin`]'s own docs.
+    pub origin: ChamberOrigin,
 }
 
 /// The one explicit mapping between a NAMED [`BandKind`] (what
@@ -229,16 +267,69 @@ pub fn chamber_exists(seed: Seed, cave: &Cave, addr: ChamberAddr) -> bool {
     chamber_stream(seed, addr).next_f64() < EXISTENCE_DENSITY
 }
 
+/// The override source for a chamber's `origin` — spec §3.3's seam: "a
+/// chamber's content = its own latest override fact, else its
+/// address-derived default." Mirrors `hornvale_species::instance_biosphere`'s
+/// pattern one level over (an instance's effective trait is its own latest
+/// override fact, else its kind's authored default) — but as an ordinary
+/// parameter, **not** `&Ledger`/`&World` (constraint 1, owner's ruling
+/// 2026-08-05): this campaign defers how a chamber address is written down
+/// to a ledger, and consulting a real ledger here would fix that form
+/// permanently. A plain `BTreeMap` keeps the seam obvious — an address maps
+/// to at most one recorded origin, which is exactly the shape a future dig
+/// fact would need to look up, without inventing a trait this campaign has
+/// no second implementor for. `BTreeMap`, never `HashMap` (workspace rule):
+/// iteration order is never observed here, but the type is banned outright.
+pub type ChamberOverrides = BTreeMap<ChamberAddr, ChamberOrigin>;
+
+/// Applies an override onto a derived default, enforcing [`ChamberOrigin`]'s
+/// absorbing rule (spec §3.3): once a chamber is `Made`, no override —
+/// including an explicit `Some(ChamberOrigin::Found)`, and including the
+/// absence of any override at all — can resolve it back to `Found`. Kept as
+/// a standalone, `pub` function (rather than inlined into [`chamber_at`]) so
+/// the absorbing property can be asserted directly against every
+/// `(default, override)` combination, independent of the fact that
+/// `chamber_at`'s own derived default is always `Found` today — see
+/// `an_override_wins_over_the_derived_default` in `deep_realm_chamber.rs`.
+pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> ChamberOrigin {
+    if default == ChamberOrigin::Made {
+        return ChamberOrigin::Made;
+    }
+    over.unwrap_or(ChamberOrigin::Found)
+}
+
 /// A chamber's resolved content at `addr`, under `cave`'s measured depth
 /// budget — `None` when [`chamber_exists`] is `false`, else the
-/// address-derived [`Chamber`]. See [`Chamber`]'s own docs for why its
-/// content never depends on `cave` beyond the existence gate.
-pub fn chamber_at(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Option<Chamber> {
+/// address-derived [`Chamber`], with `origin` resolved through `overrides`
+/// (spec §3.3). See [`Chamber`]'s own docs for why content never depends on
+/// `cave` beyond the existence gate, and [`ChamberOverrides`]'s docs for why
+/// the override source is an ordinary parameter rather than `&Ledger`.
+///
+/// **Existence is unaffected by `overrides`.** An override changes what an
+/// already-existing chamber's `origin` resolves to; it cannot conjure a
+/// chamber into existence at an address `chamber_exists` rejects — that
+/// would be digging, which this campaign does not ship (no writer exists to
+/// produce such an override in the first place).
+///
+/// With an empty `overrides` map this is byte-identical to the pre-Task-4
+/// derivation: `stratum` is the same pure function of `addr.band` it always
+/// was, and `origin` resolves to the address-derived default, `Found`.
+pub fn chamber_at(
+    seed: Seed,
+    cave: &Cave,
+    addr: ChamberAddr,
+    overrides: &ChamberOverrides,
+) -> Option<Chamber> {
     if !chamber_exists(seed, cave, addr) {
         return None;
     }
     let stratum = hornvale_climate::Realm::UNDERDARK.strata()[addr.band as usize];
-    Some(Chamber { addr, stratum })
+    let origin = resolve_origin(ChamberOrigin::Found, overrides.get(&addr).copied());
+    Some(Chamber {
+        addr,
+        stratum,
+        origin,
+    })
 }
 
 /// The chambers adjacent to `addr` that exist under `cave`'s depth budget —
@@ -394,6 +485,44 @@ mod tests {
             assert_eq!(band_of_rank(band_rank(band)), Some(band));
         }
         assert_eq!(band_of_rank(5), None, "the ladder ends at rank 4");
+    }
+
+    /// `resolve_origin`'s full truth table (spec §3.3). The two rows that
+    /// matter most are the last two: once `default` is `Made`, NEITHER an
+    /// explicit `Some(Found)` override NOR the absence of any override at
+    /// all can pull it back to `Found` — that is the absorbing rule stated
+    /// as a property, not just exercised incidentally by
+    /// `an_override_wins_over_the_derived_default` in `deep_realm_chamber.rs`.
+    #[test]
+    fn made_is_absorbing_over_every_default_and_override_combination() {
+        assert_eq!(
+            resolve_origin(ChamberOrigin::Found, None),
+            ChamberOrigin::Found
+        );
+        assert_eq!(
+            resolve_origin(ChamberOrigin::Found, Some(ChamberOrigin::Found)),
+            ChamberOrigin::Found
+        );
+        assert_eq!(
+            resolve_origin(ChamberOrigin::Found, Some(ChamberOrigin::Made)),
+            ChamberOrigin::Made,
+            "an override must win over a Found default"
+        );
+        assert_eq!(
+            resolve_origin(ChamberOrigin::Made, None),
+            ChamberOrigin::Made,
+            "a Made default must survive the absence of an override"
+        );
+        assert_eq!(
+            resolve_origin(ChamberOrigin::Made, Some(ChamberOrigin::Found)),
+            ChamberOrigin::Made,
+            "Made is absorbing: an explicit Found override must not pull a \
+             Made default back to Found"
+        );
+        assert_eq!(
+            resolve_origin(ChamberOrigin::Made, Some(ChamberOrigin::Made)),
+            ChamberOrigin::Made
+        );
     }
 
     /// Every band spells differently. A collision would silently merge two
