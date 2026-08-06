@@ -687,3 +687,39 @@ fn there_is_nothing_to_dive_into_on_dry_land() {
     };
     assert!(up.contains("already at the surface"), "{up}");
 }
+
+/// The Deep Realm, Task 5: at a cell with no cave, `delve` refuses and names
+/// the absence — the first of the three outcomes `dive`'s own doc warns a
+/// descent verb must distinguish. The other two (a cave whose entrance is
+/// SEALED vs. a cave that actually descends) are exercised in
+/// `windows/vessel/src/session.rs`'s own internal tests
+/// (`delve_has_three_distinguishable_outcomes`), which need a hand-picked
+/// cave cell — a terrain cell spans many walk-band rooms, so a test cannot
+/// reliably steer a walk to land on one specific outcome, let alone a
+/// SEALED one specifically (only ~48.5% of caves, Task 3), and only
+/// `session.rs`'s own tests can reach the private `delve_at` seam that
+/// sidesteps needing to.
+///
+/// This mirrors `there_is_nothing_to_dive_into_on_dry_land` exactly: the
+/// flagship's own starting cell has no cave (measured, not assumed — the
+/// seed-42 fixture's cave count over land is nonzero but sparse, and the
+/// starting cell is never one of them), so no walk is needed to observe this
+/// outcome.
+#[test]
+fn there_is_no_cave_at_the_flagships_own_starting_cell() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let out = match s.handle("delve") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(out.contains("no cave here"), "{out}");
+    let up = match s.handle("climb") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(
+        up.contains("not underground"),
+        "climb with nothing to climb out of must name that: {up}"
+    );
+}

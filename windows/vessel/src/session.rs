@@ -96,6 +96,14 @@ const INDOOR_DIAGONAL_REFUSAL: &str =
 /// that text died with the constant, so only the water's own reason remains.)
 const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first, then swim.";
 
+/// What lateral movement says while underground (The Deep Realm). The cave
+/// lattice this campaign ships has no walkable interior — only the entrance
+/// chamber is reachable — so a compass step from it is refused for the same
+/// reason a step from a water stratum is: there is nowhere down here for a
+/// bearing to mean. Diegetic, not a parse error, matching
+/// [`SUBMERGED_LATERAL_REFUSAL`]'s own reasoning one realm over.
+const UNDERGROUND_LATERAL_REFUSAL: &str = "Not down here. Climb out first, then walk.";
+
 /// The player-authored disposition-shift predicate (The First Mark): the
 /// first fact the possessing player, not a world system, ever commits.
 /// type-audit: bare-ok(identifier-text)
@@ -157,6 +165,9 @@ verbs:
                    the bare direction works on its own too
   dive             descend a layer of the water column; 'surface' comes back
   surface          rise a layer, and at the top return to the open air
+  delve            descend into the cave at this cell, if the rock admits
+                   one; 'climb' comes back
+  climb            return to the surface from underground
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
@@ -263,6 +274,17 @@ pub struct Session<'w> {
     /// The depth band, mirroring `inside`: a second way of being somewhere
     /// other than out of doors at ground level.
     submerged: Option<hornvale_climate::Stratum>,
+    /// The chamber the possession has descended into within the cave lattice
+    /// beneath this cell, if any (The Deep Realm, Task 5). `None` is the
+    /// surface. Mirrors `submerged`: the whole resolved value is carried
+    /// rather than just an address, so `climb` and a later `look` never need
+    /// to re-derive it (`chamber_at` is pure and would return the same
+    /// content either way, but there is nothing to gain by re-deriving what
+    /// is already in hand). This campaign's lattice has only the entrance
+    /// address reachable from the vessel seam — no deeper descent verb
+    /// exists yet — so this is always the entrance chamber (`band = 0,
+    /// slot = 0`) when `Some`.
+    underground: Option<hornvale_worldgen::chamber::Chamber>,
     /// The session-lived geometry memo (the-waymark fix round, Finding 2):
     /// `RoomMeshMemo` is fixed for this session's whole lifetime (`neighbors`
     /// is world-independent; `corner_weights` is fixed once `ctx`'s
@@ -487,6 +509,7 @@ impl<'w> Session<'w> {
             last_text: String::new(),
             inside: None,
             submerged: None,
+            underground: None,
             mesh_memo: hornvale_kernel::RoomMeshMemo::new(),
             home_nav_cache: HomeNavCache::new(),
         };
@@ -864,6 +887,14 @@ impl<'w> Session<'w> {
             // leaves the walk band, so nothing else changes.
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" if self.submerged.is_some() => self.out(self.describe_here()),
+            // Underground (The Deep Realm, Task 5): the chamber lattice's
+            // content is read straight from `self.underground`, never
+            // through `describe_here`'s locale pipeline — that pipeline's
+            // stratum handling (`expr_at_stratum`) is water-specific (a
+            // vantage stratum that disagrees with the cell's own substitutes
+            // `Formation::OpenWater`), so feeding it a rock `Stratum` would
+            // render nonsense rather than a chamber.
+            "look" if self.underground.is_some() => Turn::Out(self.describe_underground_here()),
             "look" => self.out(self.describe_here()),
             // `map` is band-aware for exactly the reason `look` is, and it is the
             // SAME verb rather than a new one: §6's contract is that any pane
@@ -888,6 +919,12 @@ impl<'w> Session<'w> {
             // to step across, so a bearing under water still has nowhere to go
             // (The Column). Two bands, two answers, one verb.
             "go" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
+            // The chamber lattice, likewise: this campaign ships only the
+            // entrance address, no walkable interior, so a bearing from it
+            // has nowhere to mean either (The Deep Realm, Task 5).
+            "go" if self.underground.is_some() => {
+                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+            }
             "go" => self.go(rest),
             // Band-aware, for the same reason `look` is: the outdoor path resolves
             // against the LOCALE's two grains, which know nothing of what stands
@@ -908,6 +945,9 @@ impl<'w> Session<'w> {
             // GEOMETRY, and a walk-band trail is not geometry.
             "back" if self.inside.is_some() => Turn::Out(INDOOR_BACK_REFUSAL.to_string()),
             "back" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
+            "back" if self.underground.is_some() => {
+                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+            }
             "back" => self.back(),
             "wait" => self.wait(rest),
             "whoami" => Turn::Out(self.whoami()),
@@ -921,6 +961,8 @@ impl<'w> Session<'w> {
             "consult" => Turn::Out(self.consult()),
             "dive" => self.dive(),
             "surface" => self.surface(),
+            "delve" => self.delve(),
+            "climb" => self.climb(),
             "enter" => self.enter(rest),
             "out" => self.leave(),
             // Coarse-ward is still refused: possessing a settlement, a culture
@@ -948,6 +990,9 @@ impl<'w> Session<'w> {
             other if self.submerged.is_some() && parse_compass(other).is_some() => {
                 Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
             }
+            other if self.underground.is_some() && parse_compass(other).is_some() => {
+                Turn::Out(UNDERGROUND_LATERAL_REFUSAL.to_string())
+            }
             other if parse_compass(other).is_some() => self.go(other),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
@@ -971,6 +1016,25 @@ impl<'w> Session<'w> {
             return Vec::new();
         };
         self.ctx.water_column_at(hornvale_kernel::CellId(cw.cell))
+    }
+
+    /// The cave at the cell the possession stands on, if the terrain places
+    /// one there — mirrors `column_here`: both resolve the same fuzzy
+    /// corner-weighted cell under the possession and ask "is there a medium
+    /// here to descend into," one for water, one for rock. `None` on a cell
+    /// with no cave, or before terrain built at all.
+    ///
+    /// Returns the resolved [`hornvale_kernel::CellId`] alongside the cave
+    /// rather than the bare `Cave` `column_here` analogy would suggest:
+    /// addressing a chamber (`ChamberAddr`) needs the cell, where a water
+    /// stratum needs no address at all, so the caller needs both.
+    fn chamber_column_here(&self) -> Option<(hornvale_kernel::CellId, hornvale_terrain::Cave)> {
+        let terrain = self.terrain.as_ref()?;
+        let v = crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, None)
+            .ok()?;
+        let cw = v.locale.corners.iter().max_by_key(|c| c.weight)?;
+        let cell = hornvale_kernel::CellId(cw.cell);
+        terrain.cave_at(cell).map(|cave| (cell, cave))
     }
 
     /// Descend one layer of the water column.
@@ -1024,6 +1088,103 @@ impl<'w> Session<'w> {
             Ok(d) if breaking => Turn::Out(format!("You break the surface.\n{d}")),
             other => self.out(other),
         }
+    }
+
+    /// Descend into the cave at this cell's entrance chamber (The Deep
+    /// Realm, Task 5).
+    ///
+    /// Mirrors `dive`, but the chamber lattice has a THIRD outcome `dive`
+    /// never needed. Task 3 measured that even where a cave exists, its own
+    /// entrance address (`band = 0, slot = 0`) resolves to an actual chamber
+    /// only 51.5% of the time — spec §3.4 rung 0, `Sealed`: "the void exists
+    /// and is unreachable," a real chamber a later dig could find, not a
+    /// defect. `dive`'s own doc warns what happens when a refusal doesn't
+    /// name what stopped you: it reads as a parse failure rather than a fact
+    /// about the world. So each of the three outcomes below is named:
+    ///   1. no cave at this cell at all — say so;
+    ///   2. a cave, but its entrance resolves to nothing — say it is
+    ///      SEALED, not that there is simply nothing here;
+    ///   3. a chamber — descend, and say what the rock here is.
+    fn delve(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return Turn::Out("There is no rock to delve into in here.".to_string());
+        }
+        if self.underground.is_some() {
+            return Turn::Out(
+                "You are already below; 'climb' brings you back up first.".to_string(),
+            );
+        }
+        let Some((cell, cave)) = self.chamber_column_here() else {
+            return Turn::Out("There is no cave here to delve into.".to_string());
+        };
+        self.delve_at(cell, cave)
+    }
+
+    /// The outcome of delving at a KNOWN cell and cave — split out of
+    /// [`Self::delve`] so the sealed-vs-open decision can be exercised
+    /// directly against a hand-picked cell (this campaign's own unit
+    /// coverage) without steering the possession there first. Steering is
+    /// impractical to do from a test: `chamber_column_here` resolves the
+    /// possession's terrain cell through the same fuzzy corner-weighted walk-
+    /// band lookup `column_here` uses, and a terrain cell spans many, many
+    /// walk-band rooms, so hitting one particular cell (let alone one with a
+    /// SEALED cave specifically, ~48.5% of caves per Task 3's measurement)
+    /// by walking is not something a test should depend on landing.
+    fn delve_at(&mut self, cell: hornvale_kernel::CellId, cave: hornvale_terrain::Cave) -> Turn {
+        let addr = hornvale_worldgen::chamber::ChamberAddr {
+            cell,
+            entrance: 0,
+            band: 0,
+            slot: 0,
+        };
+        let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
+        match hornvale_worldgen::chamber::chamber_at(self.world.seed, &cave, addr, &overrides) {
+            None => Turn::Out(
+                "The cave mouth is here, but the rock beyond is sealed; there is no way down."
+                    .to_string(),
+            ),
+            Some(chamber) => {
+                self.underground = Some(chamber);
+                Turn::Out(format!(
+                    "You worm down into the dark. The rock here is {}.",
+                    stratum_word(chamber.stratum)
+                ))
+            }
+        }
+    }
+
+    /// Return to the surface from the chamber lattice — `delve`'s inverse,
+    /// mirroring `surface`. This campaign's lattice reaches only the
+    /// entrance address, so unlike `surface` there is no intermediate layer
+    /// to rise through: any descent climbs out in one step.
+    fn climb(&mut self) -> Turn {
+        if self.underground.take().is_none() {
+            return Turn::Out(
+                "You are not underground; there is nothing to climb out of.".to_string(),
+            );
+        }
+        match self.describe_here() {
+            Ok(d) => Turn::Out(format!("You climb back into the light.\n{d}")),
+            other => self.out(other),
+        }
+    }
+
+    /// The chamber rendering while underground (The Deep Realm, Task 5) —
+    /// deliberately minimal, in `describe_chamber_here`'s spirit one realm
+    /// over: this campaign ships no interior lattice for a cave the way a
+    /// structure has one, only the entrance address, so there is no floor
+    /// plan or anchor catalogue to draw from. Read straight off
+    /// `self.underground` rather than re-deriving through `chamber_at` —
+    /// re-deriving would be pure and would agree, but there is nothing to
+    /// gain by paying for it a second time.
+    fn describe_underground_here(&self) -> String {
+        let chamber = self
+            .underground
+            .expect("guarded by self.underground.is_some() at the call site");
+        format!(
+            "[underground]\nThe rock here is {}. Ways on: out.",
+            stratum_word(chamber.stratum)
+        )
     }
 
     /// Absorb the current room's projection into knowledge.
@@ -2434,6 +2595,11 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
         Stratum::Bathypelagic => "the lightless water",
         Stratum::Abyssal => "the abyss",
         Stratum::Hadal => "a trench",
+        Stratum::Regolith => "the regolith",
+        Stratum::Cover => "the cover rock",
+        Stratum::Basement => "the basement rock",
+        Stratum::Roots => "the roots of the world",
+        Stratum::Underneath => "the underneath",
     }
 }
 
@@ -3386,5 +3552,166 @@ mod tests {
             "a static detail for the mark is a second description of the possessed \
              agent, which is the drift §6 exists to prevent"
         );
+    }
+
+    /// The first cave-bearing cell this seed's terrain places whose entrance
+    /// address (`band = 0, slot = 0`) resolves to `want_open`. Scans the
+    /// terrain directly (`GeneratedTerrain::cave_at`) rather than steering a
+    /// walk there: a terrain cell spans many walk-band rooms (measured while
+    /// developing this campaign — dozens to low hundreds of `go` steps per
+    /// terrain-cell crossing), and even once ON the right cell, only 51.5% of
+    /// caves have a chamber at their entrance at all (Task 3), so a walk
+    /// cannot be relied on to land on either specific outcome. Direct
+    /// scanning is what `windows/worldgen/tests/deep_realm_substrate.rs`
+    /// (Task 0) and `deep_realm_chamber.rs` (Tasks 2-3) already do for the
+    /// same reason.
+    fn find_cave_cell(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+        seed: Seed,
+        want_open: bool,
+    ) -> (hornvale_kernel::CellId, hornvale_terrain::Cave) {
+        let overrides = hornvale_worldgen::chamber::ChamberOverrides::new();
+        for cell in terrain.geosphere().cells() {
+            if terrain.is_ocean(cell) {
+                continue;
+            }
+            let Some(cave) = terrain.cave_at(cell) else {
+                continue;
+            };
+            let addr = hornvale_worldgen::chamber::ChamberAddr {
+                cell,
+                entrance: 0,
+                band: 0,
+                slot: 0,
+            };
+            let is_open =
+                hornvale_worldgen::chamber::chamber_at(seed, &cave, addr, &overrides).is_some();
+            if is_open == want_open {
+                return (cell, cave);
+            }
+        }
+        panic!(
+            "no {} cave found in seed 42's terrain — the fixture no longer has one \
+             of the three outcomes this campaign's descent verb needs to distinguish",
+            if want_open { "open" } else { "sealed" }
+        );
+    }
+
+    /// The Deep Realm, Task 5's own hazard: `delve` needs THREE
+    /// distinguishable outcomes, not the two the original plan sketch
+    /// anticipated. Task 3 measured that even a cell WITH a cave resolves no
+    /// chamber at its own entrance address 51.5% of the time (spec §3.4 rung
+    /// 0, `Sealed` — "the void exists and is unreachable," a real fact a
+    /// later dig could find, not a defect) — so "no cave" and "cave but
+    /// sealed" are different facts about the world and must read as such,
+    /// exactly the failure mode `dive`'s own doc warns a refusal that
+    /// doesn't name what stopped you falls into.
+    #[test]
+    fn delve_has_three_distinguishable_outcomes() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+
+        // Outcome 1: no cave at all. The flagship's own starting cell — no
+        // walk needed, mirroring `there_is_nothing_to_dive_into_on_dry_land`.
+        let no_cave = match session.handle("delve") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(no_cave.contains("no cave here"), "{no_cave}");
+        assert!(
+            session.underground.is_none(),
+            "a refused delve must not change the underground state"
+        );
+
+        // Outcome 2: a cave, but the entrance resolves to nothing — SEALED,
+        // named as such rather than read as "no cave here" again.
+        let (sealed_cell, sealed_cave) = find_cave_cell(&terrain, world.seed, false);
+        let sealed = match session.delve_at(sealed_cell, sealed_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(sealed.contains("sealed"), "{sealed}");
+        assert!(
+            session.underground.is_none(),
+            "a sealed entrance must not change the underground state"
+        );
+
+        // Outcome 3: a chamber — descend, and `climb` returns.
+        let (open_cell, open_cave) = find_cave_cell(&terrain, world.seed, true);
+        let open = match session.delve_at(open_cell, open_cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            session.underground.is_some(),
+            "a resolved entrance chamber must set the underground state: {open}"
+        );
+        let up = match session.handle("climb") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("climb must not release"),
+        };
+        assert!(
+            session.underground.is_none(),
+            "climb must clear the underground state"
+        );
+        assert!(up.contains("You climb back into the light"), "{up}");
+
+        // The whole point: each outcome must be told apart from the others.
+        assert_ne!(no_cave, sealed, "no-cave and sealed read identically");
+        assert_ne!(
+            sealed, open,
+            "sealed and a successful descent read identically"
+        );
+        assert_ne!(
+            no_cave, open,
+            "no-cave and a successful descent read identically"
+        );
+    }
+
+    /// `delve` refuses while indoors, mirroring `dive`'s own "no water in
+    /// here" guard one realm over — descending into rock through a
+    /// building's own floor is not what either verb means.
+    #[test]
+    fn delve_refuses_while_inside_a_structure() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session
+            .descend(path_structure(&session.agent.position, 2), 0)
+            .expect("a chamber to stand in");
+        let out = match session.handle("delve") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(out.contains("no rock to delve into in here"), "{out}");
+    }
+
+    /// Lateral movement is refused while underground, and says so
+    /// diegetically — mirroring `SUBMERGED_LATERAL_REFUSAL`'s own guard one
+    /// realm over. Exercised directly against a hand-picked open cave
+    /// (`delve_at`) rather than a walk, for the same reason
+    /// `delve_has_three_distinguishable_outcomes` is.
+    #[test]
+    fn lateral_movement_is_refused_underground() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        session.delve_at(cell, cave);
+        assert!(
+            session.underground.is_some(),
+            "the fixture must have descended"
+        );
+        for line in ["go n", "back", "n"] {
+            let out = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("{line} must not release"),
+            };
+            assert!(!out.contains("No verb"), "{line}: {out}");
+            assert!(
+                out.contains("Climb out first"),
+                "{line} must refuse underground with the underground reason: {out}"
+            );
+        }
     }
 }

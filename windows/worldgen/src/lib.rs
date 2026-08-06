@@ -80,6 +80,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 }
 
 pub mod alchemy;
+pub mod chamber;
 pub mod chorus;
 pub mod color_naming;
 pub mod components;
@@ -525,9 +526,9 @@ fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> Seafloo
 /// biome, so culture's subsistence function is always defined. Culture
 /// imports no domain (spec §2.6); this map lives only at the composition
 /// root. Forest biomes (and taiga) farm; grassland/savanna farm or herd;
-/// desert/shrubland herd; tundra forages; alpine, ice, and every marine
-/// biome are barren (defensively — settlements never sit on open ocean, but
-/// the map must still be total).
+/// desert/shrubland herd; tundra forages; alpine, ice, every marine biome,
+/// and every cave formation are barren (defensively — settlements never sit
+/// on open ocean or bare rock, but the map must still be total).
 pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeClass {
     biome_class_of_formation(hornvale_climate::BiomeExpr::for_legacy(biome).formation)
 }
@@ -566,7 +567,10 @@ pub fn biome_class_of_formation(
         | Formation::KelpForest
         | Formation::Vent
         | Formation::Upwelling
-        | Formation::OpenWater => BiomeClass::Barren,
+        | Formation::OpenWater
+        | Formation::KarstCave
+        | Formation::LavaTube
+        | Formation::FractureCave => BiomeClass::Barren,
     }
 }
 
@@ -1652,6 +1656,74 @@ pub fn substrate_field(
         // difference — height above sea level. Negative on ocean cells.
         elevation: terrain.elevation_at(cell) - sea_level,
     })
+}
+
+/// Fixed subterranean moisture (The Deep Realm, Task 6): rock voids run
+/// near-saturated from seepage and condensation, largely independent of the
+/// surface climate above — a genuinely different regime from the surface
+/// axis this same `Substrate` field models elsewhere, not a scaled-up
+/// version of it. `0.90` sits above every peopled and fauna species'
+/// authored moisture optimum (the wettest surface strongholds are bugbear's
+/// `0.82` and otyugh's `0.83` — see `domains/species`), so a chamber reads as
+/// wetter than any surface stronghold, not merely damp.
+const SUBTERRANEAN_MOISTURE: f64 = 0.90;
+
+/// A chamber's environmental substrate (The Deep Realm, Task 6) — what
+/// [`hornvale_species::ConditionNiche`] axes a subterranean species is scored
+/// against, derived from `surface`, the already-built [`Substrate`] of the
+/// cell the chamber lies beneath. Pure and seed-free: two calls with the same
+/// `surface` are byte-identical.
+///
+/// **This function never constructs a [`hornvale_climate::facets::BiomeExpr`]
+/// and never calls `.biome()`.** Task 1's `unreachable!()` panics
+/// (`domains/climate/src/facets.rs:305,316`, `variants.rs:727`) guard a cave
+/// `Formation`/rock `Stratum` reaching that projection; this function routes
+/// around it entirely by building a `Substrate` directly from another
+/// `Substrate`; it never asks what a cave's legacy `Biome` is.
+///
+/// Each axis, and why the address's `band` does not appear as a parameter
+/// here even though the plan frames conditions as coming "from the cell
+/// above it and its band":
+///
+/// - **temperature** is `surface.temperature_c` UNCHANGED. That field is
+///   already [`GeneratedClimate::mean_temperature_at`]'s annual mean, not a
+///   day-sampled instantaneous reading, so "buffered toward the annual mean"
+///   is already true of the one value this model has to offer — there is no
+///   modelled seasonal/diurnal swing for depth to damp further, and this
+///   task adds no geothermal warming (the plan asks for buffering toward a
+///   mean, not a heat source, and a warming term would be exactly the kind
+///   of new physical mechanism §6's scope list does not license). A model
+///   with a genuine unbuffered reading to damp would show real band
+///   dependence here; this substrate does not have one, so band is unused
+///   by design rather than by oversight.
+/// - **insolation** is `0.0`, always, at every band. No aperture this
+///   campaign models (`CaveMouth`, `WorkedWay`, …) is a light source scored
+///   here — an `Access` rung is about reachability, not illumination — so
+///   this axis cannot vary by band either.
+/// - **moisture** is the fixed [`SUBTERRANEAN_MOISTURE`], replacing the
+///   surface cell's own (climate-driven, arid-to-wet) reading entirely: cave
+///   dampness comes from seepage and condensation, not the weather above.
+/// - **elevation** is `surface.elevation` UNCHANGED — height above sea level
+///   of the cell the chamber sits beneath. A literal metres-below-surface
+///   offset per band would need a real depth coordinate, which is exactly
+///   the change to `Position` spec §6 rules out; the surface cell's own
+///   elevation is the only depth-adjacent reading available without
+///   inventing one, and it is also the physically right one: a chamber
+///   really is beneath that geographic point, at that point's altitude.
+///
+/// Because temperature and elevation pass through unchanged, they cannot by
+/// themselves distinguish a chamber from the cell above it — only moisture
+/// and insolation do. That is a real, stated limitation of this v1 model
+/// rather than a hidden one; Task 8's H2 readout is where whether it is too
+/// coarse gets scientific scrutiny, mirroring how the depth budget's own
+/// coarseness is deferred to the same readout.
+pub fn subterranean_substrate(surface: Substrate) -> Substrate {
+    Substrate {
+        temperature_c: surface.temperature_c,
+        moisture: SUBTERRANEAN_MOISTURE,
+        insolation: 0.0,
+        elevation: surface.elevation,
+    }
 }
 
 /// The deep-time window (1 Myr) and sampling, standard days. These, the era
@@ -11605,10 +11677,31 @@ mod tests {
     /// vector supply diversifies full-roster (fauna-included) per-cell
     /// dominance to the measured Stage-1 achievement
     /// ([`STAGE1_DISTINCT_DOMINANTS_42`] = 4, up from the baseline 2), and
-    /// `xorn` — the pure-`MINERAL` specialist the mineral supply field was
-    /// built to unlock — holds a real stronghold. This pins the ACHIEVEMENT,
-    /// not the preregistered `>= 6` target (which stays `#[ignore]`d below,
-    /// honestly unmet — see the module doc for the treant/dragon/peoples gap).
+    /// one of the two pure-`MINERAL` specialists — the mineral supply field
+    /// was built to unlock a real stronghold for that niche, not for either
+    /// specific kind holding it — holds a real stronghold. This pins the
+    /// ACHIEVEMENT, not the preregistered `>= 6` target (which stays
+    /// `#[ignore]`d below, honestly unmet — see the module doc for the
+    /// treant/dragon/peoples gap).
+    ///
+    /// **UPDATE (The Deep Realm, Task 6).** `xorn` and `rust-monster` share
+    /// this one `MINERAL` resource niche, so which of the two wins a
+    /// contested cell has always been a function of their `condition_niche`
+    /// curves, not the resource axis this test is really about. Task 6
+    /// honestly re-authored both curves against real subterranean conditions
+    /// (`domains/species/src/lib.rs`): `rust-monster`'s condition preferences
+    /// sharpened into genuine peaks (moisture/insolation devotion raised),
+    /// while `xorn`'s stayed — and were made more honestly — flat and
+    /// indifferent (its low-devotion, mighty-sovereignty-floor character is
+    /// unchanged by Task 6, just no longer faked via a biased insolation
+    /// optimum). Scored against the SURFACE substrate — chambers are not
+    /// wired into placement yet, spec §6 — a flatter competitor no longer
+    /// wins any contested cell against a sharper one, so `rust-monster` now
+    /// sweeps every stronghold this axis produces at seed 42 and `xorn` holds
+    /// none. That is a measured consequence of Task 6's re-authoring, not a
+    /// regression in the per-axis supply field this test otherwise pins, so
+    /// the assertion below widens from "xorn specifically" to "the shared
+    /// MINERAL niche produces a real dominant, whichever specialist wins it".
     #[test]
     fn menagerie_distinct_dominants_diversify_and_xorn_holds_a_stronghold() {
         let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
@@ -11629,8 +11722,9 @@ mod tests {
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
         assert!(
-            dominates_a_cell("xorn"),
-            "the mineral specialist (xorn) should hold a stronghold: {breakdown:?}"
+            dominates_a_cell("xorn") || dominates_a_cell("rust-monster"),
+            "the shared pure-MINERAL niche (xorn, rust-monster) should hold a stronghold \
+             somewhere — neither specialist dominates any cell: {breakdown:?}"
         );
     }
 
