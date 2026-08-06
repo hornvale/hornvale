@@ -20,6 +20,14 @@ uses `hornvale_kernel::math::tanh`, already routed through the pinned `libm`.
 **Spec:** `docs/superpowers/specs/2026-08-05-the-hollow-design.md` (G3-approved
 2026-08-05, commit `2808f59d`).
 
+**Status: COMPLETE** — code-complete, awaiting merge. Tasks 0–7 executed. Three
+of this plan's own instructions were amended during execution and the
+amendments are recorded in
+[the retrospective](../../retrospectives/the-hollow.md): Task 1's delete
+instruction had a live caller, Task 5's "constants only" restriction was not
+executable (two formulas were structurally wrong), and Task 2's uniformity test
+measured one globe and would have driven an over-fit to seed 42.
+
 ## Global Constraints
 
 - **No new crates.** Dependency allowlist is `serde`, `serde_json`, `libm`

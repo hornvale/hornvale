@@ -303,6 +303,7 @@
 - [The Keeping](./chronicle/the-keeping.md)
 - [The Tolerance](./chronicle/the-tolerance.md)
 - [The Fare](./chronicle/the-fare.md)
+- [The Hollow](./chronicle/the-hollow.md)
 
 # Appendix: The Frontier
 

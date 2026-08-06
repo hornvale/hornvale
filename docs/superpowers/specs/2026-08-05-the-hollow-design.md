@@ -1,7 +1,12 @@
 # The Hollow — a cave is three questions, and they were all asking one field
 
 **Campaign:** The Hollow (terrain — the cave model)
-**Status:** spec, awaiting G3
+**Status:** COMPLETE — code-complete, awaiting merge. All five §4 criteria pass;
+the existence/depth weld (§2.4's third concentration) survives and is the
+campaign's stated partial null. See [the
+chronicle](../../../book/src/chronicle/the-hollow.md), [the
+retrospective](../../retrospectives/the-hollow.md), and [decision
+0104](../../decisions/0104-a-threshold-must-know-its-variates-distribution.md).
 **Predecessor:** The Lode (2026-07-22) shipped the model; C2a The Deep Realm's
 Task 0 found it hollow and stopped.
 **Successor:** C2a The Deep Realm resumes on this.

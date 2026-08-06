@@ -150,8 +150,9 @@ own fertility suitability, for farmland the walk can trust; a
 hydrogeology reading — aquifer, aquitard, and karst from porosity and
 carbonate, with spring promoted separately wherever an aquifer cell borders
 lower, non-aquifer ground (a descending contact, computed once the geosphere
-is in hand, not a pointwise threshold); a cave/karst void-proneness reading
-where carbonate and water meet; a walk-facing appearance vector (albedo, hue, grain, hardness
+is in hand, not a pointwise threshold); a karst void-proneness reading
+where carbonate and water meet — the dissolution term of the later cave
+model, not the whole of it; a walk-facing appearance vector (albedo, hue, grain, hardness
 underfoot); and a mineral-prospectivity field standing in for ore bodies a
 later campaign will place. None of it commits a new fact or draws a new
 stream — the seed-to-world mapping this campaign touches is byte-for-byte
