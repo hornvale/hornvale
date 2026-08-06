@@ -1,0 +1,267 @@
+# The Warren — design
+
+**Status:** G3 pending (autopilot; ledger at
+`.superpowers/sdd/decision-ledger.md`).
+**Date:** 2026-08-06
+**Campaign:** C2w of the peoples program
+(`2026-08-03-the-peoples-program-design.md`), **inserted 2026-08-06 between
+C2b and C2c** at the owner's direction, on the same grounds C2t was inserted:
+every dwarf authored before it would be authored in a frame it changes. Runs
+after C2b (The Long Age, merged); **blocks C2c (The Delvers).**
+
+The Deep Realm gave the world an inside, gave two of its creatures honest
+subterranean niches, and shipped a function that says what a chamber's
+environment is. Nothing calls that function.
+
+So the world currently scores a cave-dwelling, light-shunning, damp-loving
+creature against the sunlight and the rainfall of the hillside above it. This
+campaign makes the placement layer ask which realm a creature lives in before
+deciding whether it thrives there.
+
+## 1. What was measured before anything was designed
+
+**`subterranean_substrate` has exactly one consumer in the workspace, and it is
+a test.** `windows/worldgen/src/lib.rs` defines it `pub`; the only non-doc
+reference outside its own definition is
+`windows/worldgen/tests/deep_realm_rehome.rs`.
+
+**The live path scores everything against the surface.**
+`demography_report_with_beta_from` collects `wc.biosphere.iter()` — *the whole
+component set, fauna included*, in its own comment's words — and hands it to
+`per_species_suitability`, which builds one `substrate_field` (surface) and
+scores every kind against it.
+
+**So C2a's rehoming is half-connected.** Xorn's and rust monster's niches were
+re-authored for true darkness and `SUBTERRANEAN_MOISTURE = 0.90`, and the live
+suitability layer evaluates those niches against a sunlit, climate-driven
+surface cell. The trait is expressible and unread — **rung 2 of the program's
+own probe-validity ladder**, arriving in the campaign immediately before the
+one that depends on it.
+
+This is not a criticism of C2a, which measured the rehoming correctly in the
+frame it built and shipped a byte-identical world. It is the consumer half that
+campaign explicitly did not build, surfacing where the ladder predicts it will.
+
+### 1.1 Caves are rare, and that is the whole shape of the problem
+
+The Deep Realm measured 469,122 land cells holding 55,947 caves — **caves are a
+~12 % minority of land cells, and roughly half of those are sealed.** A
+subterranean kind scored against subterranean conditions *everywhere* would
+draw capacity from cells with no void in them at all.
+
+`terrain.cave_at(cell) -> Option<Cave>` already exists and is already read in
+`windows/worldgen/src/lib.rs`'s terrain report. The availability gate is
+therefore a read, not a new mechanism.
+
+## 2. What this is not
+
+- **Not the dwarves.** C2c authors the roster. This campaign authors no kind;
+  its consumers are xorn and rust monster, which C2a already authored and which
+  are waiting.
+- **Not chamber-level occupancy.** Capacity stays keyed by **cell**. A cell
+  gains a subterranean *reading*; it does not gain a population keyed
+  `(cell, chamber)`. The program spec's original `(cell, stratum)` promise was
+  superseded by decision 0105's chamber graph and is not revived here.
+- **Not a subterranean supply field.** Supply stays surface-fed
+  (allochthonous) by design. Chemosynthesis is The Keeping's step D
+  (`BIO-chemotrophy`) and must not be smuggled in.
+- **Not a realm derived from the niche.** See §3.2 — that would re-bless the
+  proxy C2a removed.
+- **Not byte-neutral.** See §5. This campaign changes what the world computes,
+  and it says so up front rather than hoping.
+
+## 3. The design
+
+### 3.1 A kind declares its realm; the world decides where that realm exists
+
+The keystone, and the cell no simpler option occupies:
+
+> **Authored realm × per-cell availability.** A kind declares that it lives
+> underground. The world decides *where* underground is.
+
+Both halves are load-bearing. Without the authored half, realm has to be
+inferred from niche values, which is the proxy this program is trying to
+delete. Without the availability half, a subterranean kind draws full
+subterranean capacity on every land cell, including the ~88 % with no cave in
+them — a strictly worse model than the surface-scoring it replaces.
+
+### 3.2 Why realm is authored rather than derived
+
+You *can* predict a kind's realm today from its niche: insolation optimum ≈ 0
+and moisture ≈ 0.90 identifies xorn and rust monster exactly. That
+predictability is **circular** — it holds only because C2a authored those
+values to *mean* subterranean. Deriving realm from them would re-establish the
+proxy as the encoding, which is the defect F5 named and C2a spent a campaign
+removing.
+
+Authoring realm makes the claim falsifiable in the other direction: a kind can
+now be declared subterranean and turn out to fit badly there, which is a
+finding rather than a contradiction in terms.
+
+### 3.3 `HabitatRealm`, in a sparse component store
+
+```rust
+/// Which realm a kind's carrying capacity is scored in.
+pub enum HabitatRealm {
+    /// Scored against the surface substrate. Every kind not listed.
+    Surface,
+    /// Scored against the subterranean substrate, gated by cave availability.
+    Subterranean,
+}
+```
+
+Carried in `habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm>`,
+**sparse**: a kind absent from the store is `Surface`. It ships with **two
+rows** — `xorn` and `rust-monster`.
+
+**Sparse is right here for exactly the reason a field was right in The Long
+Age.** That campaign's D2 was overturned on the rule that a storage precedent
+transfers on *consumer count*, not component shape: the life schedule had six
+consumers that each already held the biosphere row, so it rode the row. This
+has **one** consumer — `per_species_suitability` — which does not hold a row
+per kind at all but a `&[&BiosphereTraits]` slice, and is reached through
+`demography_report_with_beta_from`, which does hold the `wc`. One consumer,
+two occupants, twenty-eight silent defaults: a sparse store, following
+`dispersion_registry`.
+
+The same rule, applied honestly, gives the opposite answer to the one it gave
+last campaign. That is the rule working, not a contradiction.
+
+### 3.4 What `per_species_suitability` does
+
+It already builds one `substrate_field` and hoists it out of the per-species
+loop. It now builds **two** — the surface field, and that field mapped through
+`subterranean_substrate` — still hoisted, still computed once.
+
+For each kind it selects the field its `HabitatRealm` names, and for a
+`Subterranean` kind multiplies the per-cell result by a **cave-availability
+factor**: `1.0` where `terrain.cave_at(cell).is_some()`, `0.0` where it does
+not. A void that does not exist offers no habitat.
+
+The gate is deliberately **binary rather than graded by aperture**. The Deep
+Realm's aperture scale reserves its lowest rung for a sealed cave — a real void
+with no way in — and a sealed cave is still habitat for something that is
+already inside it. Grading by reachability would conflate *can a creature live
+there* with *can a walker get there*, which are different questions and the
+second is `MAP-underworld-reachability`'s, not this campaign's.
+
+### 3.5 The `Surface` path must be bit-identical
+
+Every kind not in the store must be scored exactly as it is today, with the
+same operation order, so that any world movement this campaign produces is
+attributable to the two kinds it re-homes and to nothing else. The second
+substrate field is built but never read for a `Surface` kind.
+
+This is what makes §5's measurement interpretable: without it, a drift could be
+the new field's arithmetic rather than the realm change.
+
+## 4. Blast radius
+
+Orientation only — **the compiler is the enumeration.** Never silence a
+missing-field, arity, or exhaustiveness error with a wildcard or a stub.
+
+- `domains/species/src/lib.rs` — `HabitatRealm`, `habitat_realm_registry`,
+  re-exports, `impl Component`.
+- `windows/worldgen/src/lib.rs` — `per_species_suitability` (signature gains
+  the realm lookup and terrain access), `demography_report_with_beta_from`.
+- `windows/worldgen/src/components.rs` — `WorldComponents` gains
+  `habitat_realm`; `from_stores` gains a parameter. **Ten callers** (measured:
+  2 in `cli/tests`, 1 in `windows/worldgen/tests`, 2 in `components.rs`, 4 in
+  `lib.rs`, 2 in `windows/lab/src/roster.rs`).
+- `windows/worldgen/tests/deep_realm_rehome.rs` — C2a's probe; it should now
+  assert the *live* path agrees with what it measured by hand.
+
+`per_species_suitability` is `pub` and has **ten call sites in eight files** —
+the live one in `lib.rs` plus seven test files:
+`generalist_baseline`, `generalist_distinctness`, `waterline_probe`,
+`occupancy_readout`, `keeping_probe`, `non_void_roster`, `demesne`. Each gains
+an argument.
+
+*(This paragraph first said "five test callers", counted off a grep piped
+through `head -5`. Corrected before the plan was written. A grep is only as
+complete as the grep — and a truncated one is worse than none, because it
+looks like an answer.)*
+
+## 5. Preregistration
+
+Frozen 2026-08-06, before any implementation code. Decision 0016.
+
+**This campaign is not byte-neutral, and its size is a measurement, not a
+prediction.** The Deep Realm's retrospective records that re-authoring these
+same two niches produced a 1e-4 golden drift on *unrelated* creatures, through
+`niche → suitability → the demography coexistence fit → the shared predator /
+prey pressure fields → every other creature's affect`. Changing the *frame*
+those niches are evaluated in travels the same path.
+
+**P1 — the direction.** Rust monster's mean subterranean suitability over
+cave-bearing land cells is **greater** than its current surface suitability.
+C2a measured the ratio at ~2.5 by hand; the live path should agree in
+direction. Xorn's should be **flat within noise** — its potency buys a
+sovereignty floor and its devotions are near-zero on every axis, so no curve
+moves it. *That asymmetry is C2a's finding, and reproducing it through a
+different code path is the check that this campaign wired the right thing.*
+
+**P2 — the range collapses.** Both kinds' *total* habitat falls, because the
+cave gate zeroes ~88 % of land cells. A subterranean creature gains fitness
+where it lives and loses everywhere it never should have been scored. **If
+total habitat rises, the gate is not working.**
+
+**P3 — world identity moves, and the campaign reports by how much.** The
+committed seed-42 world, the gallery almanacs, and both census fixtures are all
+expected to move. The deliverable is the *measured* magnitude and its
+attribution, not a number predicted here.
+
+**Falsification.** If P1 fails — if scoring these creatures in the frame they
+were authored for does **not** improve their fit — then either
+`subterranean_substrate` is wrong or C2a's niches are, and the campaign's
+premise is broken. Report it; do not tune either to rescue the prediction.
+
+**A carve-out, stated rather than assumed: this needs a census regen and
+golden re-pins, and both require the owner's explicit authorization.** They are
+not taken as implied by G3 approval.
+
+## 6. The mutation this campaign owes
+
+The program's shared acceptance criterion: a green test proves the code ran;
+only a mutation proves the axis is visible.
+
+**M1.** Force `habitat_realm_registry()` to return an empty store — i.e. treat
+every kind as `Surface`, the pre-campaign behaviour. Rust monster's live
+suitability over cave cells must return to its surface value and the test must
+go **RED**.
+
+**M2.** Force the cave-availability gate to `1.0` everywhere. Total
+subterranean habitat must jump to all land cells and the range test must go
+**RED**.
+
+Both must be run, reddened, reverted, and their output pasted into the commit
+message. Note that unlike The Long Age's M2, **both are reachable**, because
+this campaign ships with two live occupants rather than none — the registry-
+locked-consumer problem that campaign hit does not arise here.
+
+## 7. Definition of done
+
+- §3 implemented; `Surface` path bit-identical (§3.5) asserted, not assumed.
+- §5's P1/P2 measured and reported; P3's magnitude measured and attributed.
+- §6's two mutations run, reddened, reverted, output recorded.
+- `make gate` green; artifact drift reviewed deliberately rather than
+  rebaselined reflexively.
+- Census regen and golden re-pins **only after explicit authorization**.
+- Chronicle, retrospective, freshness sweep, Confidence Gradient check.
+- The program spec gains its C2w paragraph and C2c's is amended to say the
+  realm is now real.
+
+## 8. Flagged for review
+
+1. **Census regen + golden re-pins are required and are a carve-out.** This is
+   the first campaign in this program that moves worlds. Explicit
+   authorization needed; not implied by approving this spec.
+2. **The cave gate is binary, not graded by aperture** (§3.4). A sealed cave
+   counts as habitat. Defensible — a sealed void still houses what is already
+   in it — but it is a modelling choice a reader may want the other way.
+3. **`per_species_suitability` gains terrain access it did not need before.**
+   It already takes `&GeneratedTerrain`, so this is a read rather than a new
+   parameter — but it widens what the function is *about*.
+4. **Sparse store here, field last campaign.** The same consumer-count rule
+   gives opposite answers in consecutive campaigns (§3.3). Stated explicitly
+   so it reads as the rule working rather than as inconsistency.
