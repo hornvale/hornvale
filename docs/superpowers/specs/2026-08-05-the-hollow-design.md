@@ -363,3 +363,74 @@ freshness sweep, Confidence Gradient re-score if moved):
 4. **§4's H3 numbers are the least-grounded in the spec.** The `[0.02, 0.25]`
    band is argued from real-world karst extent, not from anything measured
    here. It is a genuine prediction, and the most likely row to be falsified.
+
+---
+
+## 10. Baseline, measured
+
+Instrument A's baseline, produced before any behavioural commit by
+`windows/worldgen/tests/hollow_readout.rs` — the same code path that will
+produce the readout, so the campaign's claims are diffs against this block
+rather than against memory.
+
+Measured at commit `77124f7609b836d9d6e979aa18cc8d38b1e72256` (the plan
+commit; the model code is unchanged from `main`), on the Mac, with:
+
+```bash
+cargo test -p hornvale-worldgen --test hollow_readout -- --nocapture
+```
+
+Runtime: **14.59 s** (30 worlds to `BuildDepth::Terrain`, debug profile). Under
+the 60-second heavy-tier threshold, so the battery stays in the commit gate and
+carries no `#[ignore]`.
+
+```
+== The Hollow readout — 30 worlds, 469122 land cells
+prevalence: 1198 caves = 0.2554% of land; 3 of 30 worlds have NO cave
+per-world cave fraction: p50=0.00224 p90=0.00469 max=0.01020
+kind Karst: 1198 (100.0000% of caves)
+kind LavaTube: 0 (0.0000% of caves)
+kind Fracture: 0 (0.0000% of caves)
+band Regolith: 0 (0.0000% of caves)
+band Cover: 1198 (100.0000% of caves)
+band Basement: 0 (0.0000% of caves)
+band Roots: 0 (0.0000% of caves)
+band Underneath: 0 (0.0000% of caves)
+clustering: 1159 clustered / 39 solitary = 96.7446%
+gate calibration — nominal presence_prob vs realized hit rate:
+  [0.00,0.05)  cells=  407611  caves=      0  realized=0.00000  nominal~0.025
+  [0.20,0.25)  cells=    5333  caves=      0  realized=0.00000  nominal~0.225
+  [0.25,0.30)  cells=   16557  caves=      8  realized=0.00048  nominal~0.275
+  [0.30,0.35)  cells=   23984  caves=    266  realized=0.01109  nominal~0.325
+  [0.35,0.40)  cells=   14895  caves=    819  realized=0.05498  nominal~0.375
+  [0.40,0.45)  cells=     742  caves=    105  realized=0.14151  nominal~0.425
+```
+
+### 10.1 Reading it against §2
+
+Every §2 defect reproduces, on the same 30 seeds and the same 469,122 land
+cells §1 cites:
+
+| §4 row | Baseline claimed in §2/§4 | Baseline measured here |
+|---|---|---|
+| H1 | Karst 100%, others 0% | Karst 100.0000%, `LavaTube` 0, `Fracture` 0 |
+| H2 | 1 depth value, 100% | 1 value (`depth_reach_bands = 2`, printed as `Cover`), 100% |
+| H3 | 3/30 worlds cave-less; 0.26% of land | 3/30 cave-less; 0.2554% of land |
+| H4 | ~0.014 realized vs ~0.325 nominal | 0.01109 realized vs ~0.325 nominal (**29x low**) |
+| H5 | 96.7% clustered | 96.7446% clustered |
+
+Two notes on where the numbers differ from §2, neither a correction of it:
+
+- **§2.3's table was a 10-world probe** (154,249 land cells); this is the
+  30-seed instrument. The bucket *shape* is identical — monotone, and low by
+  more than an order of magnitude throughout — but the individual rates are
+  not the same numbers. The largest gap is the top bucket, `0.14151` here
+  against `0.21961` there, on 742 cells; H4 is evaluated against **this**
+  block, not against §2.3.
+- **The buckets are exhaustive over land, which §2.3 did not say.** The six
+  bucket counts sum to 469,122 — every land cell — and the six cave counts sum
+  to 1,198, every cave. So no land cell has a `presence_prob` in the
+  uncovered `[0.05, 0.20)` gap, and none reaches `0.45`. That empty middle is
+  §2.4's bimodal `carbonate` showing through the gate: `presence_prob` inherits
+  the limestone flag's gap rather than smoothing it.
+
