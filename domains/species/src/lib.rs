@@ -1833,6 +1833,11 @@ pub struct BiosphereTraits {
     /// to the old "has a psyche entry" proxy for peoplehood. (An enum, not a
     /// bare primitive — no type-audit verdict needed.)
     pub social_form: SocialForm,
+    /// How this kind's time-law quantities are scheduled against its mass.
+    /// [`LifeSchedule::Allometric`] for every kind authored so far — longevity
+    /// is an authoring choice this roster has not yet made. (An enum, not a
+    /// bare primitive — no type-audit verdict needed.)
+    pub schedule: LifeSchedule,
 }
 
 // The biosphere / psyche / perception / family authoring lives in the four
@@ -1871,6 +1876,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: goblin_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1882,6 +1888,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: kobold_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1893,6 +1900,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: hobgoblin_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1904,6 +1912,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: bugbear_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1915,6 +1924,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: treant_condition_niche(),
                 potency: 9.0 / 30.0, // treant — CR 9 (5E MM); potency = CR/30
                 social_form: SocialForm::Sessile,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1926,6 +1936,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: twig_blight_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Sessile,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1937,6 +1948,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_elk_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1948,6 +1960,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: woolly_mammoth_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1959,6 +1972,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_goat_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1970,6 +1984,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: otyugh_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -1981,6 +1996,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
                 // Ametabolic, burrows through stone: lives IN the substrate,
                 // not on it. rust-monster shares the pure-MINERAL niche but
                 // stays Terrestrial — it walks the surface eating metal.
@@ -1995,6 +2011,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: rust_monster_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2006,6 +2023,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: white_dragon_condition_niche(),
                 potency: 13.0 / 30.0, // adult white dragon — CR 13 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2017,6 +2035,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: red_dragon_condition_niche(),
                 potency: 17.0 / 30.0, // adult red dragon — CR 17 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2028,6 +2047,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: black_dragon_condition_niche(),
                 potency: 14.0 / 30.0, // adult black dragon — CR 14 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2039,6 +2059,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: owlbear_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Vacancy (T7): seven terrestrial fauna. See the block comment
@@ -2053,6 +2074,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_scorpion_condition_niche(),
                 potency: 0.0, // giant scorpion — CR 3 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2064,6 +2086,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_hyena_condition_niche(),
                 potency: 0.0, // giant hyena — CR 1 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2075,6 +2098,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: dire_wolf_condition_niche(),
                 potency: 0.0, // dire wolf — CR 1 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2086,6 +2110,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: rhinoceros_condition_niche(),
                 potency: 0.0, // rhinoceros — CR 2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2097,6 +2122,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_constrictor_snake_condition_niche(),
                 potency: 0.0, // giant constrictor snake — CR 2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2108,6 +2134,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: carrion_crawler_condition_niche(),
                 potency: 0.0, // carrion crawler — CR 2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2119,6 +2146,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: shrieker_condition_niche(),
                 potency: 0.0, // shrieker — CR 0 (5E MM); CR/30 = 0 regardless of set
                 social_form: SocialForm::Sessile,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Vacancy (T8): four marine kinds plus the amphibious proof case.
@@ -2134,6 +2162,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: reef_shark_condition_niche(),
                 potency: 0.0, // reef shark — CR 1/2 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2145,6 +2174,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_octopus_condition_niche(),
                 potency: 0.0, // giant octopus — CR 1 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2156,6 +2186,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: killer_whale_condition_niche(),
                 potency: 0.0, // killer whale — CR 3 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Gregarious,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2167,6 +2198,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_squid_condition_niche(),
                 potency: 0.0, // giant squid — CR 7 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         (
@@ -2181,6 +2213,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_crocodile_condition_niche(),
                 potency: 0.0, // giant crocodile — CR 5 (5E MM); mundane, potency stays 0
                 social_form: SocialForm::Solitary,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Vacancy (T9): the fifth people. `family_of` follows kobold's
@@ -2210,6 +2243,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: gnoll_condition_niche(),
                 potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other five peoples
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
         // The Generalist (C2-0): the sixth people, and the roster's first
@@ -2226,6 +2260,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: human_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                schedule: LifeSchedule::Allometric,
             },
         ),
     ]

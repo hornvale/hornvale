@@ -378,3 +378,22 @@ fn dispersion_is_a_ratio_on_every_axis() {
         }
     }
 }
+
+#[test]
+fn every_authored_kind_is_allometric_today() {
+    // THE LONG AGE: the channel ships with zero occupants, and this is the
+    // auditable evidence. C2c (dwarves) is its first intended consumer; when
+    // that campaign authors one, this assertion is the thing it must
+    // deliberately widen -- which is the point.
+    let reg = hornvale_species::biosphere_registry();
+    let paced: Vec<&str> = reg
+        .iter()
+        .filter(|(_, b)| b.schedule != hornvale_species::LifeSchedule::Allometric)
+        .map(|(k, _)| k.0)
+        .collect();
+    assert!(
+        paced.is_empty(),
+        "no kind is authored with a non-default life schedule yet, but found: {paced:?}"
+    );
+    assert_eq!(reg.len(), 30, "the roster is unchanged by this campaign");
+}
