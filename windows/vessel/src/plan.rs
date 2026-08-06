@@ -30,11 +30,19 @@
 //! forever without corrupting a world." A snapshot is derived fresh each turn
 //! and discarded, so it has exactly that property and this is legal.
 //!
-//! Writing one to disk is not. A replay file or a morgue file carrying these
-//! cells would point into the fine layer and break 0069 **by the saving**.
-//! `CLIENT-coverage-matrix` already holds the answer a replay campaign wants:
-//! save-as-seed-plus-marks — a seed and the verb sequence, replayed to
-//! regenerate snapshots, never a recording of them.
+//! Writing one to disk is not — if what gets written is state the sim will
+//! later **read back and resume from**. A replay file or a morgue file that
+//! a later run replays forward would point into the fine layer and break
+//! 0069 **by the saving**. `CLIENT-coverage-matrix` already holds the answer
+//! a replay campaign wants: save-as-seed-plus-marks — a seed and the verb
+//! sequence, replayed to regenerate snapshots, never a recording of them.
+//!
+//! That is a different thing from a **golden witness**: a fixture compared
+//! byte-for-byte to catch drift, never fed back into a session to resume
+//! play from. 0069 governs the first kind, not the second — a witness is
+//! read by a diff, not by the sim. This campaign's own
+//! `windows/vessel/tests/fixtures/snapshot-seed-42-{walk,chamber}.json`
+//! commit plan cells to disk and are exactly that second kind.
 
 use crate::lattice::{Cell, CellKind, Lattice};
 use serde::Serialize;

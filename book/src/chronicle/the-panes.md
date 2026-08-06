@@ -256,11 +256,15 @@ the discipline the transcript and snapshot readers already held.
 
 The chamber reader indexes twice per cell — once into the grid, once into the
 palette — and switches on the kind. It validates before it draws: the grid
-length must equal `w × h` and every index must be a legal palette subscript,
-and it returns **no pane** rather than a short or clamped one when either
-fails. An unknown kind renders as a documented fallback glyph rather than
-throwing, matching the client's standing posture that a reader which cannot
-understand the structure degrades to prose, which always works.
+length must equal `w × h`, every index must be a legal palette subscript, and
+every palette entry itself must be a non-null object, and it returns **no
+pane** rather than a short or clamped one when any of the three fails — the
+last of the three closed a defect where a malformed (`null`) entry threw
+instead of refusing, found in the final whole-branch review. An unknown
+*kind string* on an otherwise well-shaped entry renders as a documented
+fallback glyph rather than throwing, matching the client's standing posture
+that a reader which cannot understand the structure degrades to prose,
+which always works.
 
 The walk reader is not a port. The Rust surrounds renderer is 543 lines, and
 nearly all of it is lens tables, colour-disclosure prose, legend text and marks

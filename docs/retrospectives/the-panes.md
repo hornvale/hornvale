@@ -284,9 +284,18 @@ All four were accepted as minors at the time and none blocks a merge.
 ### Deferred minor from Task 7's review
 
 - `parseCell` accepts non-integer coordinates where `pane_plan.ts` uses
-  `Number.isInteger`, so a fractional coordinate silently **drops** a cell
-  rather than refusing the chart. Inconsistent posture between two readers with
-  the same job.
+  `Number.isInteger`, so a fractional coordinate is not refused the way
+  `pane_plan.ts` would refuse one. **Corrected during the final whole-branch
+  review**: the earlier note here said this "silently drops a cell," which
+  the review found is not what happens in the case that matters. The
+  placement formula is `row = -w; col = 2v + (up ? 0 : 1) + w`, and it does
+  not preserve fractional inputs as fractional outputs: `v: 1.5, w: 0, up:
+  false` gives `col = 2(1.5) + 1 + 0 = 4`, an integer, so the cell is placed
+  at a coordinate arithmetically **derived from** a fractional input — a
+  cell shown in the wrong place, not a cell refused. Only the narrower case
+  where the arithmetic itself lands on a non-integer `row` or `col` fails to
+  match the render loop's integer-stepped keys and is dropped. Whoever picks
+  this up should fix the misplacement, not just the drop.
 
 ## One deliberate deviation from the approved spec
 

@@ -514,7 +514,19 @@ impl<'w> Session<'w> {
     /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
     /// channel (The Snapshot spec §3). Never commits, never advances the
     /// turn counter, and costs nothing on turns where no caller asks: the
-    /// CLI never does, so its measured per-turn cost is unchanged.
+    /// CLI never does, so its measured per-turn cost is unchanged. For a
+    /// caller that *does* ask — the Casement, over wasm — the cost is not
+    /// nothing: `snapshot() + json` measured 0.173 → 1.249 ms (7.22×) and
+    /// 2.8× the bytes (`windows/vessel/examples/turn_cost.rs`).
+    ///
+    /// This method's failure surface is wider than a per-channel read: the
+    /// only error path below is `observable`'s single `VesselError::Build`
+    /// (a purview failure), and a whole snapshot fails on it rather than
+    /// just the spatial channel. At the ABI, `set_snapshot()` calls
+    /// `.and_then(|p| p.session.snapshot().ok())`, so that failure empties
+    /// the snapshot buffer and the client falls back to prose — losing
+    /// every channel that turn (self, sensed, known, social, structured
+    /// narration), not just the map.
     pub fn snapshot(&self) -> Result<SessionSnapshot, VesselError> {
         let vantage = observable(self.world, &self.ctx, &self.agent, self.day)?;
         // The noun catalog comes from the focalizer; the PROSE comes from
