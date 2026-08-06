@@ -1,7 +1,7 @@
 # The Warren — design
 
-**Status:** G3 pending (autopilot; ledger at
-`.superpowers/sdd/decision-ledger.md`).
+**Status:** G3 APPROVED (Nathan, 2026-08-06), **including the census-regen and
+golden re-pin carve-out of §8.1**. Planning.
 **Date:** 2026-08-06
 **Campaign:** C2w of the peoples program
 (`2026-08-03-the-peoples-program-design.md`), **inserted 2026-08-06 between
@@ -217,8 +217,16 @@ were authored for does **not** improve their fit — then either
 premise is broken. Report it; do not tune either to rescue the prediction.
 
 **A carve-out, stated rather than assumed: this needs a census regen and
-golden re-pins, and both require the owner's explicit authorization.** They are
-not taken as implied by G3 approval.
+golden re-pins, and both require the owner's explicit authorization.**
+**Granted by Nathan at G3, 2026-08-06.**
+
+**Where the census runs is not negotiable and is not this box.**
+`scripts/census-canonical-host.txt` names **`lefford`**; this Mac
+(`hostname -s` = `MacBookPro`) is refused outright by
+`require_canonical_census_host`. CLAUDE.md's "the sanctioned refresh is local"
+means *not AWS* — it does not mean *here*. The refresh is therefore: push the
+branch, then `ssh lefford` with `HV_CENSUS_REF=<full-sha>` (a SHA, never a
+branch name), and commit and push the result from there.
 
 ## 6. The mutation this campaign owes
 
@@ -265,3 +273,42 @@ locked-consumer problem that campaign hit does not arise here.
 4. **Sparse store here, field last campaign.** The same consumer-count rule
    gives opposite answers in consecutive campaigns (§3.3). Stated explicitly
    so it reads as the rule working rather than as inconsistency.
+
+## 9. Decisions
+
+Promoted from the autopilot ledger on G3 approval (Nathan, 2026-08-06).
+
+**D1 — C2c splits in two; C2w is inserted between C2b and C2c.** Nothing in the
+placement path reads subterranean conditions, so authoring Mountain and Duergar
+dwarves today would mean authoring them with a low-insolation surface curve —
+the exact fake C2a's F5 removed. Follows C2t's insertion precedent. Brought to
+Nathan because the answers diverged materially and the only precedent was the
+program spec's own C2c paragraph, itself written before C2a shipped.
+
+**D2 — Realm is authored, not derived.** Realm *is* predictable from the niche
+today, but circularly: it predicts only because C2a authored those values to
+mean subterranean. Deriving from them re-establishes the proxy as the encoding.
+Authoring also makes the claim falsifiable the other way. *Discarded:* derive
+from niche values; per-cell best-of-two (realm becomes emergent, so C2c could
+not author Hill-vs-Mountain as a design statement); a list in worldgen
+(authoring in the wrong layer).
+
+**D3 — The keystone: authored realm × per-cell cave availability.** The
+lattice's one unoccupied cell. Without the gate a subterranean kind draws
+capacity on every land cell, including the ~88 % with no void — strictly worse
+than what it replaces. *This decision was overturned once during its own
+ideonomy pass: the first form had no gate, and the distribution axis is what
+surfaced it.*
+
+**D4 — The gate is binary, not graded by aperture.** A sealed void still houses
+what is already inside it; grading by reachability conflates *can a creature
+live there* with *can a walker get there*. The second belongs to
+`MAP-underworld-reachability`.
+
+**D5 — A sparse `ComponentStore`, not a field on `BiosphereTraits`.** The
+consumer-count rule from The Long Age, applied honestly, gives the opposite
+answer here: one consumer, two occupants, twenty-eight silent defaults.
+
+**D6 — Not byte-neutral; the magnitude is measured, not predicted.** Census
+regen and golden re-pins are required; authorized by Nathan at G3. The census
+runs on **lefford** — this Mac is refused by the canonical-host guard.
