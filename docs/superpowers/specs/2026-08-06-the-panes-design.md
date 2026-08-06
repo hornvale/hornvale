@@ -99,7 +99,9 @@ The chamber band has no serializable form today: `Lattice`
   "at": 0, "of": 2,             // "1 of 2", zero-based
   "extent": { "x":0, "y":0, "w":19, "h":10 },
   "kinds":    "wwwwww…",        // row-major, one code per cell: w|f|t
-  "chambers": "---0000…",       // row-major, owning chamber index; '-' = wall
+  "chambers": "---0000…",       // row-major, sole owning chamber index.
+                                // '-' on a wall (owns none) AND on a
+                                // threshold (serves two — see `doorways`)
   "doorways": [ [0, 1, 11, 5] ],// (a, b, x, y) — from Lattice::doorways
   "you":      { "x":6, "y":5 } }
 ```
@@ -114,7 +116,12 @@ Three properties this shape is chosen for:
   the extent so that "absent" cannot mean two things. `kinds` preserves that:
   its length is exactly `w*h`, checked.
 - **No second truth.** A threshold's chamber *pair* is not duplicated into
-  `chambers`; it comes from `doorways`, which the lattice already owns. This
+  `chambers` — which is exactly why a threshold cell reads `-` there rather
+  than picking one of its two sides arbitrarily. `CellKind::serves` is a
+  predicate precisely because "whose is this doorway" has two right answers,
+  and the retired `owner` map could hold only one; `chambers` must not
+  reintroduce that. The pair comes from `doorways`, which the lattice already
+  owns. This
   is the discipline `clients/vessel/src/snapshot.ts` states for `ways` —
   the snapshot deliberately carries no `ways` field because the room owns
   exits, and "two representations of one truth would drift."
