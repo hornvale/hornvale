@@ -402,20 +402,25 @@ git commit -m "feat(worldgen): passages, symmetric by construction"
 - Modify: `windows/worldgen/tests/deep_realm_chamber.rs`
 
 **Interfaces:**
-- Produces: `chamber_at` gains a `world: &World` parameter and consults the
-  ledger before deriving.
+- Produces: `chamber_at` gains an override-source parameter and consults it
+  before deriving. **Not** `&World` — taking the world would force an on-ledger
+  address form, which this campaign defers (owner's ruling, 2026-08-05).
 
 - [ ] **Step 1: Write the failing test**
 
 ```rust
 /// The seam, per spec 3.3: a chamber's content is its own latest override
-/// fact, else its address-derived default. This campaign ships no WRITER —
-/// the test commits a fact by hand to prove the lookup is wired.
+/// fact, else its address-derived default. This campaign ships no WRITER, and
+/// **commits nothing** — the resolver is tested directly, so the address's
+/// on-ledger form stays genuinely undecided until a campaign needs to dig.
+/// (Owner's ruling, 2026-08-05: committing a fact here would fix that form as
+/// a permanent key, which spec 8 flag 2 exists to defer.)
 #[test]
-fn a_committed_override_wins_over_the_derived_default() {
-    // derive a chamber; commit an override fact for its address by hand;
-    // assert the lookup now returns the override, and that a DIFFERENT
-    // address is unaffected.
+fn an_override_wins_over_the_derived_default() {
+    // Call the resolver with a hand-built override input and assert it
+    // returns the override; call it with none and assert it returns the
+    // derived default; assert a DIFFERENT address is unaffected by either.
+    // Nothing is committed to a ledger.
 }
 ```
 
@@ -425,6 +430,8 @@ Expected: FAIL — nothing consults the ledger.
 
 - [ ] **Step 3: Implement**
 
+**Commit nothing.** The resolver takes the override source as a parameter, so
+the seam is proven without deciding how an address is written down.
 Mirror `hornvale_species::instance_biosphere` — read it first; it is the
 workspace's only instance lens and this is the same pattern one level over.
 
