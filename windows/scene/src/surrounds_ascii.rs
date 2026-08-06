@@ -238,6 +238,7 @@ mod tests {
             temperature_c: None,
             moisture: None,
             elevation_m: None,
+            height_asl_m: None,
             color: None,
             marks: vec![],
         }
@@ -264,6 +265,7 @@ mod tests {
                 .map(|s| s.to_string())
                 .collect(),
             relief_legend: crate::RELIEF_LEGEND.iter().map(|s| s.to_string()).collect(),
+            sea_level_m: 0.0,
             cells,
             legend: vec![],
         }

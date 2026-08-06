@@ -1,8 +1,8 @@
-# Scene Schema: surrounds v1
+# Scene Schema: surrounds v2
 
 `scene/tiles/v1` and `scene/tiles-region/v1` both answer a *cartographic*
 question: given a patch of the globe, what is there? They are exocentric —
-they describe ground, and nobody is standing on it. `scene/surrounds/v1`
+they describe ground, and nobody is standing on it. `scene/surrounds/v2`
 answers the *situated* question instead: **an observer is standing in a
 particular room; what lies around them, and how much of it do they know?**
 
@@ -169,7 +169,7 @@ catalog in its stable append-only order), `water_legend`, and
 them. `relief_legend` is `abyss, shelf, lowland, upland, highland, alpine`,
 and its band boundaries are contract:
 
-| `relief_legend` index | Name | Elevation (m) |
+| `relief_legend` index | Name | Height above sea level (m) |
 |---|---|---|
 | 0 | `abyss` | < −3000 |
 | 1 | `shelf` | −3000 .. 0 |
@@ -178,8 +178,13 @@ and its band boundaries are contract:
 | 4 | `highland` | 1000 .. 2500 |
 | 5 | `alpine` | ≥ 2500 |
 
-Each band is half-open, `[lower, upper)`, against `elevation_m`; changing a
-boundary mints `scene/surrounds/v2`.
+Each band is half-open, `[lower, upper)`, against `height_asl_m` — **not**
+against `elevation_m`, which is an absolute reading on the planet-independent
+isostatic datum whose zero is nowhere near any particular world's sea level.
+Banding the absolute reading is what v1 did, and on a world whose sea level
+sits near −2936 m it classified almost all land as `shelf`. Changing a
+boundary, or the quantity they are measured against, mints
+`scene/surrounds/v3`.
 
 `cells` is ordered by ascending packed `room` id — a total order over `u64`
 that needs no float comparison and cannot vary between runs.
@@ -203,12 +208,12 @@ renderer's caption asserts metres per cell.
 
 ## The document
 
-Every `scene/surrounds/v1` document is one JSON object with these fields,
+Every `scene/surrounds/v2` document is one JSON object with these fields,
 in this order (field order **is** the JSON key order and is contract):
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schema` | string | Always the literal `"scene/surrounds/v1"`. |
+| `schema` | string | Always the literal `"scene/surrounds/v2"`. |
 | `seed` | integer | The world's seed (u64; JavaScript's plain `JSON.parse` loses precision above 2^53 — use BigInt-aware parsing when the exact seed matters). |
 | `day` | number | The day observed (`WorldTime`), quantized at the emit boundary. |
 | `observer` | object | Where the observer stands — see the table below. |
@@ -218,6 +223,7 @@ in this order (field order **is** the JSON key order and is contract):
 | `biome_legend` | array of string | The biome catalog, stable append-only order; a cell's `biome` indexes into it. |
 | `water_legend` | array of string | The water catalog, stable order; a cell's `water` indexes into it. |
 | `relief_legend` | array of string | `["abyss", "shelf", "lowland", "upland", "highland", "alpine"]`; a cell's `relief` indexes into it. |
+| `sea_level_m` | number | This world's derived sea level, metres on the isostatic datum, quantized. The bands in `relief_legend` are measured from it, so a consumer can re-derive any cell's band from `height_asl_m` alone. |
 | `cells` | array of object | The neighbourhood, ascending by packed `room` id — see the cell table below. |
 | `legend` | array of object | The chart's noun catalog, ascending by `noun` — see the `LegendEntry` table below. |
 
@@ -249,6 +255,7 @@ Each element of `cells` is an object, in this field order:
 | `temperature_c` | number or null | Annual-mean temperature, °C, quantized; `null` when the cell is not `"here"`. |
 | `moisture` | number or null | Dimensionless moisture index, quantized; `null` when the cell is not `"here"`. |
 | `elevation_m` | number or null | Elevation, metres, quantized; `null` when the cell is not `"here"`. |
+| `height_asl_m` | number or null | Height above sea level, metres, quantized; signed, negative below; `null` when the cell is not `"here"`. `relief` is banded from this. |
 | `marks` | array of object | Salience-ranked things standing here, ordered by `(salience, noun)` — see the `Mark` table below. |
 
 Each element of a cell's `marks` (`Mark`) is an object, in this field order:
@@ -285,7 +292,7 @@ hornvale scene surrounds [--world <path>] [--room <ID> | --depth <D>] [--radius 
                           [--render json|ascii]
 ```
 
-This prints one `scene/surrounds/v1` document to standard output. `--world`
+This prints one `scene/surrounds/v2` document to standard output. `--world`
 defaults to `world.json`. `--room` and `--depth` are mutually exclusive: a
 packed room id already carries its own depth baked into its path length, so
 combining them is a hard error rather than a silent pick of one over the
@@ -316,5 +323,20 @@ container appears anywhere in the producer. The committed example,
 is regenerated and drift-checked in CI, and byte pins in the producer's own
 test suite defend the field order — which, as in every scene schema, **is**
 the JSON key order and is contract. A changed meaning mints
-`scene/surrounds/v2` alongside this one; it is never renamed and never
+`scene/surrounds/v3` alongside this one; it is never renamed and never
 reordered in place.
+
+## v1 → v2: what changed and why
+
+`scene/surrounds/v1` banded `relief` against the raw `elevation_m` reading —
+an absolute isostatic elevation, not a height above sea level. On a world
+whose sea level sits far from zero on that datum (seed 42's is
+−2936.17 m), that put almost all land in `shelf`: 8162 of the world's
+11,066 land cells, leaving exactly one cell `alpine`. v2 bands against the
+new `height_asl_m` field instead, and adds `sea_level_m` to the document so
+a consumer can re-derive any cell's band without a second query. Every
+observable `relief` value moved, which is why this is a new schema version
+rather than a silent correction (decision 0055's additive-or-versioned
+rule) — no producer in this repository emits the v1 document any longer,
+and `scene/surrounds/v1` was never part of `clients/world-wasm`'s catalog,
+so no client outside this repository read the wrong values either.

@@ -7,14 +7,14 @@ same 31-cell, radius-4 neighbourhood the possession's own `map` verb draws
 from. A CLI producer has no session, so every cell here is `here` or
 `sensed` -- never `remembered`. A `remembered` cell is written only by a
 consumer that owns a possession and therefore knows where its agent has
-walked (see [the schema](../reference/scene-surrounds-v1.md)); this page
+walked (see [the schema](../reference/scene-surrounds-v2.md)); this page
 cannot draw one honestly, so it says so instead of implying a fog no CLI
 query can see.
 
 ## Reading the chart
 
 The chart is lattice-aligned, never north-up -- see [the schema's note on
-why](../reference/scene-surrounds-v1.md#placement-integer-lattice-not-compass-bearing).
+why](../reference/scene-surrounds-v2.md#placement-integer-lattice-not-compass-bearing).
 Scale is arc, not metres: the simulation defines no planetary radius, and a
 depth-12 room's edge subtends roughly 0.015° -- a radius-4 neighbourhood
 spans about one five-thousandth of the globe. `@` is always the observer's
@@ -77,7 +77,7 @@ different face's edge for 12 of its 31 cells. Those cells carry their room
 id, state and semantics same as any other -- they are only unplaceable on a
 flat chart, because the surface genuinely bends between two base faces and
 no flat coordinate can say by how much without inventing one (see [the
-schema's seam section](../reference/scene-surrounds-v1.md#seam-cells-real-ground-with-no-honest-place)).
+schema's seam section](../reference/scene-surrounds-v2.md#seam-cells-real-ground-with-no-honest-place)).
 The renderer states the count in its caption rather than dropping the cells
 or fabricating a position for them.
 
