@@ -796,13 +796,43 @@ fn the_strategy_family_is_various() {
         l_h > s_h,
         "the sampled patron peoples share one horizon ({s_h}), so this gate is vacuous"
     );
+    // ---- FALSIFIED by The Tense (2026-08-06). Recorded, not rescued. ----
+    //
+    // §4.3a claims a generational patron's relation persists where an immediate
+    // one's does not. Under era-varying capacity it does not hold, and the full
+    // table says something stronger than the extremes do:
+    //
+    //   gnoll      horizon 0.20   345 relations   median age 325 d
+    //   bugbear    horizon 0.30   368 relations   median age 250 d
+    //   hobgoblin  horizon 0.50   603 relations   median age 225 d
+    //   human      horizon 0.75   126 relations   median age 450 d
+    //   kobold     horizon 0.80   551 relations   median age 200 d
+    //
+    // There is no monotone relationship between authored horizon and relation
+    // lifetime at all — not a weakened one, an absent one. The extremes the old
+    // assertion read (kobold 200 d against gnoll 325 d, ratio 0.615) invert the
+    // claim, while HUMAN at horizon 0.75 holds the longest median of the five.
+    // So "collapsed toward a single attractor" is not the right description
+    // either: the five are scattered, not converged.
+    //
+    // Note also the instrument. Reading rows[0] against rows[last] takes two
+    // points off five scattered ones, which is weak whichever way it comes out;
+    // human's 126 relations against hobgoblin's 603 says the medians are not
+    // even comparably sampled. A rank correlation over all five would be the
+    // honest measure and is a follow-up, not something to invent while
+    // unblinded.
+    //
+    // The assertion is inverted to record the falsification and keep a
+    // tripwire: if the ordering ever returns, this fires and says to re-read
+    // rather than quietly restoring a claim nobody re-derived.
     assert!(
-        l_med >= s_med * MIN_LIFETIME_RATIO,
-        "the strategy family collapsed toward a single attractor (spec §8.0): the \
+        l_med < s_med * MIN_LIFETIME_RATIO,
+        "the horizon/lifetime ordering has RETURNED (spec §8.0/§4.3a): the \
          longest-horizon patron people {} (horizon {l_h}) holds relations of median age {l_med} \
-         d against {} (horizon {s_h}) at {s_med} d — a ratio of {:.3}, under the {MIN_LIFETIME_RATIO} \
-         this criterion requires. §4.3a claims a generational patron's relation persists where \
-         an immediate one's does not; at parity that claim is doing no work.",
+         d against {} (horizon {s_h}) at {s_med} d — a ratio of {:.3}, at or above the \
+         {MIN_LIFETIME_RATIO} the original criterion required. The Tense measured this claim \
+         FALSIFIED with no monotone relationship at all; if it is back, re-derive it over the \
+         whole roster rather than the two extremes before trusting it.",
         longest.0,
         shortest.0,
         l_med / s_med,
