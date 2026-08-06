@@ -130,6 +130,44 @@ fn band_rank(band: BandKind) -> u8 {
     }
 }
 
+/// The inverse of [`band_rank`]: the band a [`ChamberAddr::band`] index names.
+/// `None` for a rank past the ladder's end, so no caller can index out of it.
+///
+/// Kept beside `band_rank` on purpose — the two are one bijection, and a sixth
+/// `BandKind` variant fails *both* to compile rather than leaving the pair
+/// half-updated.
+fn band_of_rank(rank: u8) -> Option<BandKind> {
+    match rank {
+        0 => Some(BandKind::Regolith),
+        1 => Some(BandKind::Cover),
+        2 => Some(BandKind::Basement),
+        3 => Some(BandKind::Roots),
+        4 => Some(BandKind::Underneath),
+        _ => None,
+    }
+}
+
+/// A band's spelling inside the chamber key — **a save-format contract**, and
+/// the reason this is an explicit match rather than `format!("{band:?}")`.
+///
+/// A derived `Debug` impl renders the variant's identifier, which *looks* like
+/// exactly this table and is not the same promise. `Debug` is a diagnostic
+/// facility: nothing stops a later reader from writing a hand-rolled `Debug`
+/// for [`BandKind`] to make some log prettier, and doing so would silently
+/// re-key every chamber in every world with no test able to see it. Stating
+/// the strings here makes the contract reviewable, makes a rename an obvious
+/// epoch decision, and forces a sixth variant to choose its own spelling
+/// instead of inheriting one.
+fn band_name(band: BandKind) -> &'static str {
+    match band {
+        BandKind::Regolith => "regolith",
+        BandKind::Cover => "cover",
+        BandKind::Basement => "basement",
+        BandKind::Roots => "roots",
+        BandKind::Underneath => "underneath",
+    }
+}
+
 /// The one place the `chamber/v1` stream key is spelled — mirrors
 /// `deity_base_seed`'s discipline (`windows/worldgen/src/lib.rs`): "the one
 /// place the stream label is spelled, so [every caller] can never diverge."
@@ -145,15 +183,16 @@ fn band_rank(band: BandKind) -> u8 {
 /// the *name itself* changes, which is the same discipline a `stream_labels!`
 /// rename already carries (an epoch suffix, never silent). This is rule 1a
 /// one level down, applied to the derivation instead of the address type.
+///
+/// The name comes from [`band_name`]'s explicit table, **not** from a `Debug`
+/// impl — see that function for why the distinction is load-bearing rather
+/// than stylistic. A `band` past the ladder's end spells as `"out-of-ladder"`;
+/// it is unreachable through either public entry point (both gate on
+/// [`band_rank`] first), and naming it beats both a panic and a silent
+/// collision with band 0.
 fn chamber_key(addr: ChamberAddr) -> String {
-    let band_name = format!(
-        "{:?}",
-        hornvale_climate::Realm::UNDERDARK.strata()[addr.band as usize]
-    );
-    format!(
-        "{}/{}/{band_name}/{}",
-        addr.cell.0, addr.entrance, addr.slot
-    )
+    let band = band_of_rank(addr.band).map_or("out-of-ladder", band_name);
+    format!("{}/{}/{band}/{}", addr.cell.0, addr.entrance, addr.slot)
 }
 
 /// The stream a chamber's own derivations draw from — [`chamber_key`]
@@ -200,4 +239,89 @@ pub fn chamber_at(seed: Seed, cave: &Cave, addr: ChamberAddr) -> Option<Chamber>
     }
     let stratum = hornvale_climate::Realm::UNDERDARK.strata()[addr.band as usize];
     Some(Chamber { addr, stratum })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The chamber key is a **save-format contract**: `StreamLabel::dynamic`
+    /// hashes this string, so its spelling determines every chamber's derived
+    /// stream forever. Nothing else in the workspace pins it, and a contract
+    /// no failing test defends is a claim rather than a guarantee (The Vigil).
+    ///
+    /// If this test fails, you have re-keyed every chamber in every world.
+    /// That is an **epoch** (`chamber/v2`), not a fix to this assertion.
+    #[test]
+    fn the_chamber_key_spelling_is_pinned() {
+        assert_eq!(
+            chamber_key(ChamberAddr {
+                cell: CellId(9),
+                entrance: 0,
+                band: 2,
+                slot: 3,
+            }),
+            "9/0/basement/3"
+        );
+        assert_eq!(
+            chamber_key(ChamberAddr {
+                cell: CellId(0),
+                entrance: 1,
+                band: 0,
+                slot: 0,
+            }),
+            "0/1/regolith/0"
+        );
+    }
+
+    /// The band is spelled by NAME, never by index — rule 1a one level down.
+    /// A numeral here would mean that inserting a `BandKind` variant mid-ladder
+    /// silently moved every chamber below it to a different stream.
+    #[test]
+    fn the_key_names_its_band_rather_than_numbering_it() {
+        let key = chamber_key(ChamberAddr {
+            cell: CellId(7),
+            entrance: 0,
+            band: 3,
+            slot: 1,
+        });
+        assert!(
+            key.contains("roots"),
+            "band must be spelled by name; got {key:?}"
+        );
+        assert!(
+            !key.contains("/3/"),
+            "band appears as a bare index in {key:?} — an index is a \
+             declaration position, not a place"
+        );
+    }
+
+    /// `band_rank` and `band_of_rank` are one bijection. Kept honest here so
+    /// the pair cannot drift half-updated when a sixth `BandKind` lands.
+    #[test]
+    fn band_rank_and_band_of_rank_round_trip() {
+        for band in [
+            BandKind::Regolith,
+            BandKind::Cover,
+            BandKind::Basement,
+            BandKind::Roots,
+            BandKind::Underneath,
+        ] {
+            assert_eq!(band_of_rank(band_rank(band)), Some(band));
+        }
+        assert_eq!(band_of_rank(5), None, "the ladder ends at rank 4");
+    }
+
+    /// Every band spells differently. A collision would silently merge two
+    /// depths' chambers into one derived stream.
+    #[test]
+    fn every_band_has_a_distinct_spelling() {
+        let names: Vec<&str> = (0..=4).filter_map(band_of_rank).map(band_name).collect();
+        assert_eq!(names.len(), 5, "every rank 0..=4 must name a band");
+        for (i, a) in names.iter().enumerate() {
+            for b in &names[i + 1..] {
+                assert_ne!(a, b, "two bands share the spelling {a:?}");
+            }
+        }
+    }
 }
