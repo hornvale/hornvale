@@ -86,6 +86,7 @@ fn goblin_derived(
         ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("a goblin-derived single-kind component set is well-formed")
 }
@@ -192,6 +193,7 @@ pub fn awakened_owlbear_components() -> WorldComponents {
         ComponentStore::new(), // deity
         ComponentStore::new(), // culture
         ComponentStore::new(), // material
+        ComponentStore::new(), // habitat_realm: both kinds here are surface-dwelling
     )
     .expect("the awakened-owlbear roster is well-formed")
 }
