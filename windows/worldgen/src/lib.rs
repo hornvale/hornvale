@@ -1704,15 +1704,18 @@ const SUBTERRANEAN_MOISTURE: f64 = 0.90;
 /// - **moisture** is the fixed [`SUBTERRANEAN_MOISTURE`], replacing the
 ///   surface cell's own (climate-driven, arid-to-wet) reading entirely: cave
 ///   dampness comes from seepage and condensation, not the weather above.
-/// - **elevation** is `surface.elevation` UNCHANGED — height above sea level
-///   of the cell the chamber sits beneath. A literal metres-below-surface
-///   offset per band would need a real depth coordinate, which is exactly
-///   the change to `Position` spec §6 rules out; the surface cell's own
-///   elevation is the only depth-adjacent reading available without
-///   inventing one, and it is also the physically right one: a chamber
-///   really is beneath that geographic point, at that point's altitude.
+/// - **height_asl_m** is `surface.height_asl_m` UNCHANGED — height above sea
+///   level of the cell the chamber sits beneath. (The Benchmark renamed this
+///   field from `elevation` and typed it `SeaLevelHeight`; this doc already
+///   described it as "height above sea level", so the rename only made the
+///   name agree with the comment.) A literal metres-below-surface offset per
+///   band would need a real depth coordinate, which is exactly the change to
+///   `Position` spec §6 rules out; the surface cell's own height is the only
+///   depth-adjacent reading available without inventing one, and it is also
+///   the physically right one: a chamber really is beneath that geographic
+///   point, at that point's altitude.
 ///
-/// Because temperature and elevation pass through unchanged, they cannot by
+/// Because temperature and height pass through unchanged, they cannot by
 /// themselves distinguish a chamber from the cell above it — only moisture
 /// and insolation do. That is a real, stated limitation of this v1 model
 /// rather than a hidden one; Task 8's H2 readout is where whether it is too
@@ -1723,7 +1726,7 @@ pub fn subterranean_substrate(surface: Substrate) -> Substrate {
         temperature_c: surface.temperature_c,
         moisture: SUBTERRANEAN_MOISTURE,
         insolation: 0.0,
-        elevation: surface.elevation,
+        height_asl_m: surface.height_asl_m,
     }
 }
 
