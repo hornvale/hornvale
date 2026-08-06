@@ -39,7 +39,15 @@ fn capitalize_first(s: &str) -> String {
 /// type-audit: bare-ok(prose: return)
 fn height_phrase(h: SeaLevelHeight) -> String {
     let m = h.get();
-    if m < 0.0 {
+    // Branch on what will be PRINTED, not on the raw sign. The room the bug
+    // report came from sits 0.2 m under, and testing `m < 0.0` while formatting
+    // `{:.0}` rendered it "0 m below sea level" — true, and unreadable. A place
+    // within half a metre of the datum is simply at sea level, which is also the
+    // honest thing to say about a shoreline whose height is a three-corner blend
+    // and whose sign is not meaningful at that precision.
+    if m.abs() < 0.5 {
+        "at sea level".to_string()
+    } else if m < 0.0 {
         format!("{:.0} m below sea level", h.depth())
     } else {
         format!("{m:.0} m above sea level")
@@ -187,8 +195,33 @@ mod tests {
             "the raw isostatic reading leaked into prose: {datum}"
         );
         assert!(
-            datum.contains("above sea level") || datum.contains("below sea level"),
+            datum.contains("sea level"),
             "a height must say what it is a height above: {datum}"
+        );
+    }
+
+    #[test]
+    fn a_height_that_rounds_to_zero_is_not_reported_as_zero_metres_below() {
+        // The room the bug report came from is 0.2 m under, and the first fix
+        // branched on the raw sign while printing `{:.0}` — rendering it as
+        // "0 m below sea level". Both signs must collapse to the same honest
+        // phrase inside the rounding boundary.
+        assert_eq!(
+            height_phrase(SeaLevelHeight::from_metres(-0.2)),
+            "at sea level"
+        );
+        assert_eq!(
+            height_phrase(SeaLevelHeight::from_metres(0.4)),
+            "at sea level"
+        );
+        // …and outside it, the sign and the datum are both stated.
+        assert_eq!(
+            height_phrase(SeaLevelHeight::from_metres(-1200.0)),
+            "1200 m below sea level"
+        );
+        assert_eq!(
+            height_phrase(SeaLevelHeight::from_metres(1200.0)),
+            "1200 m above sea level"
         );
     }
 }
