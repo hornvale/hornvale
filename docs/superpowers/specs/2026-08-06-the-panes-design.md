@@ -91,47 +91,79 @@ The chamber band has no serializable form today: `Lattice`
 (`lattice/mod.rs:257`) derives `Clone, Debug, PartialEq, Eq` and **not**
 `Serialize`. This is the campaign's real new schema surface.
 
-`vessel/plan/v1` is a dense, row-major projection of the lattice:
+`vessel/plan/v1` is a **palette plus a dense index grid**, which is the shape
+`scene/surrounds/v1` already uses and not an invention:
 
 ```
 { "schema": "vessel/plan/v1",
   "chamber": 193703028372802,   // the chamber id the prose names
   "at": 0, "of": 2,             // "1 of 2", zero-based
   "extent": { "x":0, "y":0, "w":19, "h":10 },
-  "kinds":    "wwwwww…",        // row-major, one code per cell: w|f|t
-  "chambers": "---0000…",       // row-major, sole owning chamber index.
-                                // '-' on a wall (owns none) AND on a
-                                // threshold (serves two — see `doorways`)
-  "doorways": [ [0, 1, 11, 5] ],// (a, b, x, y) — from Lattice::doorways
-  "you":      { "x":6, "y":5 } }
+  "palette": [                  // append-only order, like *_legend
+    { "kind": "wall" },
+    { "kind": "floor",     "chambers": [0] },
+    { "kind": "floor",     "chambers": [1] },
+    { "kind": "threshold", "chambers": [0, 1] }
+  ],
+  "cells": [0,0,0,1,1,…],       // row-major palette indices; length == w*h
+  "marks": [],                  // sparse, per-cell instances (empty here)
+  "you":   { "x":6, "y":5 } }
 ```
 
-Three properties this shape is chosen for:
+**Why a palette rather than parallel dense strings.** A per-cell string
+carries exactly one attribute, so every later attribute is another array that
+must stay length-synced with the grid — N chances to desync, and the totality
+invariant to re-check N times. Worse, the interesting attributes are not
+one character wide: a colour triple, an occupant's `EntityId`, a temperature.
+A palette absorbs all of them as **fields on a palette entry**, costing
+nothing per cell, and the grid never changes shape. This is the trajectory
+that matters: `CLIENT-walls-bound-warmth` and `CLIENT-breach-and-rubble` are
+shipped registry rows, `CellKind`'s own doc anticipates a `Rubble` variant,
+and `CellKind::Wall` is documented as "a place in its own right — an alcove,
+a screen or a fireplace is an anchor AT one of these." Cells will accrete.
 
-- **Codes, not glyphs.** `w`/`f`/`t` are `CellKind` discriminants. The client
-  picks `#`/`.`/`+`, which is what leaves `CLIENT-atmosphere`,
-  `CLIENT-alive-map` and MAP-60's render-style layer reachable as pure client
-  changes.
+**Colour specifically, since it is the obvious next ask.** Not emitted this
+campaign — the client picks glyphs, per §5. But the palette is where it
+lands, and the precedent for how is already set: `SurroundsCell.color` is
+`Option<[u8; 3]>` with `#[serde(skip_serializing_if = "Option::is_none")]`,
+written only by `surrounds_scene_colored_in`, so "an uncoloured document is
+byte-for-byte what it was before the colour layer existed." A `color` field
+on a palette entry inherits that property exactly: additive, opt-in, and free
+when absent. Nothing about this campaign's bytes has to move to gain it.
+
+Four properties the shape is chosen for:
+
+- **Semantics, not glyphs.** `"wall"`/`"floor"`/`"threshold"` are `CellKind`
+  discriminants. The client picks `#`/`.`/`+`, which is what leaves
+  `CLIENT-atmosphere`, `CLIENT-alive-map` and MAP-60's render-style layer
+  reachable as pure client changes (decision 0022).
 - **Total, like its source.** `Lattice::cells` is documented as total over
-  the extent so that "absent" cannot mean two things. `kinds` preserves that:
+  the extent so that "absent" cannot mean two things. `cells` preserves that:
   its length is exactly `w*h`, checked.
-- **No second truth.** A threshold's chamber *pair* is not duplicated into
-  `chambers` — which is exactly why a threshold cell reads `-` there rather
-  than picking one of its two sides arbitrarily. `CellKind::serves` is a
-  predicate precisely because "whose is this doorway" has two right answers,
-  and the retired `owner` map could hold only one; `chambers` must not
-  reintroduce that. The pair comes from `doorways`, which the lattice already
-  owns. This
-  is the discipline `clients/vessel/src/snapshot.ts` states for `ways` —
-  the snapshot deliberately carries no `ways` field because the room owns
-  exits, and "two representations of one truth would drift."
+- **The doorway keeps both its answers.** A threshold's palette entry carries
+  `chambers: [a, b]`. `CellKind::serves` is a predicate precisely because
+  "whose is this doorway" has two right answers and the retired `owner` map
+  could hold only one; the palette does not reintroduce that, and it needs no
+  separate `doorways` list duplicating what the cells already say — which is
+  the discipline `clients/vessel/src/snapshot.ts` states for `ways`, where
+  the snapshot carries no `ways` field because "two representations of one
+  truth would drift."
+- **Instances go in `marks`, not the palette.** A palette entry is a *type*;
+  an occupant is an individual. `marks` takes the same `{noun, kind, datum,
+  salience}` shape as `scene/surrounds/v1`'s `Mark` plus its cell — and that
+  shape is deliberately the focalizer's `Focalized.nouns` shape, "because
+  that identity is what makes map and prose two grains of one lens." This is
+  the slot The Sighting fills; it ships empty.
 
 **The payload is small and provably bounded, not estimated.**
 `structure::MAX_CHAMBERS` is 4 and `lattice::CHAMBER_SIDE` is 8, and
 `extent_for` is `cols * CHAMBER_SIDE + (cols + 1)` per axis with
 `(cols, rows)` at most `(2, 2)`. So the largest extent any structure can
-produce is **19×19 = 361 cells**: two dense strings of 361 bytes plus a
-handful of scalars, under 1 KB. Seed 42's opening chamber is 19×10.
+produce is **19×19 = 361 cells**, and the palette is bounded by
+`MAX_CHAMBERS × |CellKind|` — at most a dozen entries today. Seed 42's
+opening chamber is 19×10 with a four-entry palette. Well under 1 KB, and it
+stays there as attributes are added, because attributes land on the dozen
+palette entries rather than on the 361 cells.
 
 ## 4. One pane, switching with the band
 
@@ -227,18 +259,28 @@ colliding with parallel sessions.
 
 ## 9. Testing
 
-- **Rust:** `vessel/plan/v1` round-trips; `kinds.len() == w*h` (the totality
-  property, inherited from `Lattice::cells`); every `doorways` entry names a
-  `t` cell and vice versa; the projection agrees with `lattice::render` on
-  what each cell is, so the two cannot diverge; a snapshot taken twice
-  without an intervening verb is byte-identical (`snapshot` is a pure read).
+- **Rust:** `vessel/plan/v1` round-trips; `cells.len() == w*h` (the totality
+  property, inherited from `Lattice::cells`); every index in `cells` is a
+  legal `palette` subscript, and every `palette` entry is referenced by at
+  least one cell (an unreferenced entry means the projection invented a type
+  the building does not have); every `threshold` entry carries exactly two
+  chambers and every `floor` entry exactly one; the projection agrees with
+  `lattice::render` on what each cell is, so the two cannot diverge; a
+  snapshot taken twice without an intervening verb is byte-identical
+  (`snapshot` is a pure read).
 - **Determinism:** same seed, same verb sequence → byte-identical snapshot
   sequence.
 - **Client:** `pane_map.ts` unit tests with no DOM — a known plan payload
   renders known glyph rows; an absent `spatial` channel renders no pane and
   does not throw.
-- **Negative control:** a snapshot whose `kinds` length disagrees with its
-  extent must be refused by the client, not drawn short.
+- **Negative controls:** a snapshot whose `cells` length disagrees with its
+  extent must be refused by the client, not drawn short; and a cell index
+  past the end of `palette` must be refused, not clamped to the last entry.
+- **Forward-compatibility control:** a payload carrying an *unknown* extra
+  field on a palette entry must still render. This is the property the whole
+  §3.2 shape exists for, and it is worth an explicit test rather than an
+  assumption — it is what lets colour, warmth or rubble ship later without
+  touching the client that predates them.
 
 ## 10. Definition of done
 
