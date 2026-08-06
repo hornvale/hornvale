@@ -122,6 +122,10 @@ descendant of the finding that produced this document.
   Underdark    lifespan       |
       \           /           |
        \         /            |
+        C2w  THE WARREN       |    (inserted 2026-08-06; the realm
+     the placement layer      |     becomes real before anyone is
+     learns to ask which      |     authored into it)
+          realm               |
     +-------+-------+         |
     |               |         |
    C2c             C2d <------+
@@ -178,8 +182,26 @@ was confirmed by a live call on 2026-08-06 and reproduces exactly** — see
 `2026-08-06-the-long-age-design.md` §1, which also records four findings the
 source read did not have.
 
+**C2w — The Warren.** *Inserted 2026-08-06 between C2b and C2c, on C2t's
+argument: every dwarf authored before it would be authored in a frame it
+changes.* C2a re-authored xorn and rust monster for true subterranean
+conditions and shipped `subterranean_substrate`, but nothing in the placement
+path called it — its only consumer in the workspace was a test, so those two
+kinds were scored against the sunlit surface above them. **Rung 2, expressible
+and unread.** C2w gives a kind an authored `HabitatRealm` and gates a
+subterranean kind on whether the cell holds a cave at all. Measured: rust
+monster's fit underground is 2.557× its surface fit and xorn's is 0.979 (flat,
+as C2a predicted from its sovereignty floor), and non-zero land falls from
+100 % to 12 % — the cave fraction. World identity moved in **zero** of 25 seeds,
+because settlement genesis packs only peopled species. Full spec:
+`2026-08-06-the-warren-design.md`.
+
 **C2c — The Delvers.** Dwarves ×5: Hill (surface), Mountain and Duergar
-(subterranean, different strata), Gully, Desert. Their shared `dwarf` family
+(subterranean, different strata), Gully, Desert. **Mountain and Duergar can now
+be authored honestly** — a declared realm rather than a low-insolation surface
+curve standing in for *underground*, which is the fake C2a's F5 removed and
+which C2c would otherwise have recreated. Their realm rows belong in the
+coverage table, not only the biosphere registry. Their shared `dwarf` family
 label crosses two members, which makes a `family_proto` entry in
 `hornvale_language` **mandatory** — today only goblinoid, draconic and plant
 are multi-member families. First people to live in the Deep Realm.

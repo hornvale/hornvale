@@ -197,6 +197,28 @@ measured, on a people authored for desert that has no desert at all. The
 gradient claim and the conservation guarantee are untouched; what is now known
 to be beyond the prior is *placing a species where its traits say it belongs*.
 
+*Partially re-scored up by [The Warren](./chronicle/the-warren.md), which
+supplies the first counterexample to the "can only modulate, never select"
+half.* The reasoning above is sound about the **condition product** —
+four tolerances multiplied together, each bounded in the unit interval, cannot
+overcome a supply term spanning orders of magnitude. But it silently assumes
+that a species' traits reach capacity *only* through that product. A realm does
+not. A kind that declares itself subterranean is scored against the chamber
+rather than the hillside **and multiplied by whether the cell holds a cave at
+all** — a hard zero, not a bounded tolerance, on eighty-eight percent of land.
+Measured over twenty-five worlds: 390,813 land cells with non-zero fit fall to
+46,993, and no supply magnitude anywhere recovers the excluded ones.
+
+So the sentence needs a qualifier rather than a reversal. *An authored
+tolerance* can only modulate. *An authored realm* selects, absolutely, and is
+the first mechanism in the model that places a species where its traits say it
+belongs by excluding everywhere else. The scope of the win is narrow and worth
+stating: it is one binary axis, carried by two fauna kinds, and it does nothing
+for the desert-authored people that started this paragraph — a surface kind
+still has no gate to be excluded by. Whether that generalises past caves is
+open, and is the first thing a campaign placing a *people* underground will
+find out.
+
 *Re-scored down by [The Keeping](./chronicle/the-keeping.md), which contradicts
 the sentence immediately above.* The gradient claim is **not** untouched — not
 because the gradient is wrong, but because the measurement offered for it could
