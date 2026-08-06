@@ -261,38 +261,37 @@ impl GeneratedTerrain {
     }
 
     /// The cave at a cell, if the fluid-flow point process places one.
+    ///
+    /// Kind is selected BEFORE existence is tested (`features::cave_process`),
+    /// existence is gated on that kind's own proneness against a uniformized
+    /// noise sample, and depth reads the cell's stratigraphic column — the
+    /// three repairs of The Hollow (spec §3).
     pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
         if self.is_ocean(id) {
             return None;
         }
+        let (kind, proneness) = crate::features::cave_process(
+            &self.material_at(id),
+            self.drainage_at(id),
+            self.crust_age_at(id),
+            self.boundary_distance_at(id),
+        )?;
         let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let prob = crate::features::presence_prob(proneness, belt);
         let pos = self.geosphere.position(id);
-        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 5.0, 4);
-        let prob = crate::features::presence_prob(self.cave_proneness_at(id), belt);
+        let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
+            self.globe.features_noise_seed(),
+            pos,
+            crate::features::CAVE_GATE_FREQ,
+            crate::features::CAVE_GATE_OCTAVES,
+        ));
         if noise >= prob {
             return None;
         }
-        let buf = self.material_at(id);
-        // TRANSITIONAL (The Hollow, Task 1 → Task 4): the retired
-        // `features::cave_kind` inlined verbatim so this task changes no live
-        // behaviour. It is asked only after a carbonate-gated existence test
-        // has already passed, so the two non-`Karst` arms are unreachable —
-        // that is the bug `features::cave_process` exists to fix, and Task 4
-        // replaces this whole body with it.
-        let kind = if buf.carbonate > 0.5 {
-            crate::features::CaveKind::Karst
-        } else if buf.silica < 0.3 {
-            crate::features::CaveKind::LavaTube
-        } else {
-            crate::features::CaveKind::Fracture
-        };
-        // Depth reads the cell's stratigraphic column, not a dimensionless
-        // ratio (The Hollow, Task 3). The proneness passed is still the Karst
-        // term, because the TRANSITIONAL kind block above is still gated on it;
-        // Task 4 replaces both with the selected process's own proneness.
-        let deepest_band =
-            crate::features::cave_depth(kind, &self.column_at(id), self.cave_proneness_at(id));
-        Some(crate::features::Cave { kind, deepest_band })
+        Some(crate::features::Cave {
+            kind,
+            deepest_band: crate::features::cave_depth(kind, &self.column_at(id), proneness),
+        })
     }
 
     /// The dominant ore deposit at a cell, if the point process places one.
@@ -600,6 +599,44 @@ mod tests {
                     "ocean cells never carry a pre-human scar"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn cave_at_agrees_with_the_kind_first_gate() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        for cell in geo.cells() {
+            let expected = if terrain.is_ocean(cell) {
+                None
+            } else {
+                crate::features::cave_process(
+                    &terrain.material_at(cell),
+                    terrain.drainage_at(cell),
+                    terrain.crust_age_at(cell),
+                    terrain.boundary_distance_at(cell),
+                )
+                .and_then(|(kind, proneness)| {
+                    let belt = crate::features::belt_weight(terrain.boundary_distance_at(cell));
+                    let prob = crate::features::presence_prob(proneness, belt);
+                    let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
+                        terrain.globe().features_noise_seed(),
+                        geo.position(cell),
+                        crate::features::CAVE_GATE_FREQ,
+                        crate::features::CAVE_GATE_OCTAVES,
+                    ));
+                    (noise < prob).then(|| crate::features::Cave {
+                        kind,
+                        deepest_band: crate::features::cave_depth(
+                            kind,
+                            &terrain.column_at(cell),
+                            proneness,
+                        ),
+                    })
+                })
+            };
+            assert_eq!(terrain.cave_at(cell), expected, "cell {cell:?} disagrees");
         }
     }
 
