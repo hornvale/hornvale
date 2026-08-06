@@ -369,13 +369,25 @@ whole reason the null is cheap, so it is checked rather than assumed.
 anything else moves, P1 is false.
 
 Made concrete against the report's actual format, which is aggregate counts by
-class and by crate rather than a per-item listing: today it reads
-`bare-ok(ratio) | 538` and `species | 45 | 0 | 0 | 45`. The one new bare
-primitive at a pub boundary is `LifeSchedule::Paced::factor`, so the expected
-diff is those two rows incrementing by one, and the totals with them.
-`LifeSchedule` itself is an enum and takes no verdict — the convention
-`SocialForm`'s doc already states. **A larger diff than that is a signal, not a
-formality**: it would mean a signature change dropped a tag.
+class and by crate rather than a per-item listing: before this campaign it read
+`bare-ok(ratio) | 538` and `species | 45 | 0 | 0 | 45`. `LifeSchedule` itself
+is an enum and takes no verdict — the convention `SocialForm`'s doc already
+states. **A diff wider than that one file is a signal, not a formality**: it
+would mean a signature change dropped a tag.
+
+> **Correction, made after Task 1 and stated rather than silently applied.**
+> This paragraph originally predicted those two rows incrementing by **one**,
+> on the reasoning that `LifeSchedule::Paced::factor` is the only new bare
+> primitive. That was wrong, and wrong *within this document* — §3.2's own
+> code carries three tags, not one: the field, `paced`'s `factor` parameter,
+> and `factor()`'s return. Measured after Task 1: `bare-ok(ratio)` 538 → **541**
+> and `species` 45 → **48**.
+>
+> **P3's claim is unchanged and held**: exactly one committed artifact moved,
+> and it was `docs/audits/type-audit-report.md`. Only the illustrative count
+> was wrong. It is corrected here in the open because revising a preregistered
+> number after seeing the result is precisely the move this project forbids
+> doing quietly — the claim that carries the null is "one file", never "+1".
 
 **What the null proves, and what it does not.** It proves the channel is inert
 in the absence of an occupant — which is what makes the epoch cheap for C2c and
