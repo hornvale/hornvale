@@ -7203,9 +7203,17 @@ mod tests {
         // the placement reshuffle this test's history documents repeatedly,
         // not a drift in the naming machinery. Still inside the 2-3 target,
         // which is what the row exists to assert.
+        // The Tense re-pin (2026-08-05): 2.560_975_609_756_097_6 (105/41) ->
+        // 2.333_333_333_333_333_5. Seed 42 re-placed from 209 settlements to
+        // 122, so this is the same placement reshuffle every entry above
+        // records. Pinned as a DECIMAL, not a fraction, because the
+        // total/count decomposition is not reachable from the test's
+        // `BuiltView` (the metric returns an opaque `Number`) and inventing a
+        // plausible-looking fraction would be a fabricated provenance. Still
+        // inside the 2-3 target, which is what the row exists to assert.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(105.0 / 41.0)
+            MetricValue::Number(2.333_333_333_333_333_5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -7265,9 +7273,15 @@ mod tests {
         // 10850 facts. Step B is live; it simply lands on ground that carries
         // no surviving kobold settlement once warlikeness is drawn per
         // settlement. This metric reads the generated-sky world.
+        // The Tense re-pin (2026-08-05): 2.581_395_348_837_209_4 (111/43) ->
+        // 2.8, the same seed-42 re-placement as the goblin row above, and
+        // decimal for the same reason (the decomposition is not reachable
+        // here). Note this row's history: the comment above records kobold
+        // settlements going ABSENT once, so a live non-Absent value here is
+        // itself the reassuring half of the reading.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(111.0 / 43.0)
+            MetricValue::Number(2.8)
         );
     }
 
@@ -7365,7 +7379,19 @@ mod tests {
         // total (232 -> 188 live settlements), so it is the same
         // settlement-survival shift every re-pin above records. Still strictly
         // between 0 and 1, so the distribution claim holds unweakened.
-        assert_eq!(share, 75.0 / 188.0, "seed 42 transparency drifted");
+        // The Tense re-pin (2026-08-05): 0.398_936_170_212_765_95 (75/188) ->
+        // 0.529_850_746_268_656_7. Seed 42 re-placed (209 settlements -> 122),
+        // the same settlement-survival shift every re-pin above records.
+        // Decimal rather than a fraction for the same reason as
+        // `name-syllables-goblin`: `share` arrives as an opaque `Number`, so
+        // the numerator/denominator are not re-derivable here and a fraction
+        // would be invented rather than measured. The row's actual claim --
+        // strictly between 0 and 1, so still a distribution -- is asserted
+        // separately above and holds.
+        assert_eq!(
+            share, 0.529_850_746_268_656_7,
+            "seed 42 transparency drifted"
+        );
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -8274,11 +8300,18 @@ mod tests {
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
+        // The Tense re-pin (2026-08-05): the flagship reseated onto
+        // temperate-forest. `flagship-subsistence` above is unchanged at
+        // "farming", so the cascade still reads a farmable seat -- only the
+        // biome under it moved.
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("tropical-rainforest".to_string())
+            MetricValue::Text("temperate-forest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
+        // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
+        // Consistent with the biome move directly above -- it reseated onto
+        // temperate-forest, inland -- rather than an independent fact.
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))

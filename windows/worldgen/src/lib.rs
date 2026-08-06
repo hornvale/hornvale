@@ -8376,7 +8376,13 @@ mod tests {
         assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 58);
         assert_eq!(count("deity-name"), 58);
-        assert_eq!(count("name-gloss"), 231);
+        // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
+        // 209 settlements to 122, and `name-gloss` is emitted per generated
+        // name, so the count tracks settlement population directly. The three
+        // counts above are UNCHANGED at 58 -- the pantheon did not shrink,
+        // which is what this test is named for and the reason the gloss count
+        // is a separate line.
+        assert_eq!(count("name-gloss"), 177);
     }
 
     #[test]
@@ -9382,8 +9388,13 @@ mod tests {
         // 2 -> 118 (measured on the epoch); still a MEASURED value, re-pinned
         // (with review) whenever a deliberate bake/carrying-capacity change
         // moves world identity.
+        // The Tense re-pin (2026-08-05): 118 -> 68. Capacity gained an era
+        // axis, so a cell's worth is now the binding era's rather than the
+        // present day's, and the flagship's millennia of growth compound
+        // against a lower ceiling. Exactly the "deliberate bake/carrying-
+        // capacity change moves world identity" case this comment anticipates.
         assert_eq!(
-            village.population, 118,
+            village.population, 68,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -9502,9 +9513,12 @@ mod tests {
         // one salient phenomenon. Re-pinned 2 -> 1 on the same "incidental
         // count, the cascade running is what matters" basis this test's own
         // comment already states.
+        // The Tense re-pin (2026-08-05): 1 -> 2. The flagship is reseated
+        // again and its vantage observes two salient phenomena. Same
+        // "incidental count, the cascade running is what matters" basis.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            2
         );
     }
 
