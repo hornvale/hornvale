@@ -162,7 +162,12 @@ fn out_of_doors_the_spatial_channel_is_the_walk_band_chart() {
     let snap = session.snapshot().expect("a live session snapshots");
     match &snap.spatial {
         SpatialChannel::Walk { chart } => {
-            assert_eq!(chart.schema, "scene/surrounds/v1");
+            // v2 since The Benchmark: the relief bands measure height above sea
+            // level rather than the raw isostatic reading, and the document now
+            // carries `sea_level_m` so a consumer can re-derive them. The
+            // embedded chart announces its own version, which is why the
+            // enclosing `vessel/session/v1` does not move with it.
+            assert_eq!(chart.schema, "scene/surrounds/v2");
             assert!(
                 !chart.cells.is_empty(),
                 "a chart with no cells shows nothing"

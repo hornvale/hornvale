@@ -56,7 +56,7 @@ fn niche_fit(cn: &ConditionNiche, s: &Substrate, floor: f64) -> f64 {
     cn.temperature.eval(s.temperature_c, floor)
         * cn.moisture.eval(s.moisture, floor)
         * cn.insolation.eval(s.insolation, floor)
-        * cn.elevation.eval(s.elevation, 0.0)
+        * cn.elevation.eval(s.height_asl_m.get(), 0.0)
 }
 
 /// One seed's mean surface vs. subterranean niche fit for one species,

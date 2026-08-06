@@ -1,18 +1,18 @@
-//! The situated pole of the scene protocol: `scene/surrounds/v1`, an
+//! The situated pole of the scene protocol: `scene/surrounds/v2`, an
 //! egocentric neighbourhood of rooms around an observer, placed by exact
 //! integer lattice coordinates. Semantic-only and FOG-FREE — this builder
 //! never invents epistemic state; a session-owning consumer (the vessel)
 //! overlays what it alone knows.
 
 use crate::{Feature, SceneError, features_of};
-use hornvale_kernel::{RoomAddr, World, WorldTime};
+use hornvale_kernel::{RoomAddr, SeaLevelHeight, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext, biome_prose_name};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// The schema identifier this module emits.
 /// type-audit: bare-ok(identifier-text)
-pub const SURROUNDS_SCHEMA: &str = "scene/surrounds/v1";
+pub const SURROUNDS_SCHEMA: &str = "scene/surrounds/v2";
 
 /// The largest legal neighbourhood radius, in BFS rings. A ring-`k`
 /// neighbourhood holds `1 + 3k(k+1)/2` cells, so 8 is 109 cells — past
@@ -21,14 +21,20 @@ pub const SURROUNDS_SCHEMA: &str = "scene/surrounds/v1";
 pub const MAX_SURROUNDS_RADIUS: u32 = 8;
 
 /// The relief catalog, in stable ascending order. Band boundaries are
-/// contract: changing one mints `scene/surrounds/v2`.
+/// contract: changing one, or the quantity they are measured against, mints
+/// `scene/surrounds/v3`.
 /// type-audit: bare-ok(identifier-text)
 pub const RELIEF_LEGEND: [&str; 6] = ["abyss", "shelf", "lowland", "upland", "highland", "alpine"];
 
-/// Elevation (m) to an index into [`RELIEF_LEGEND`].
+/// Height above sea level to an index into [`RELIEF_LEGEND`].
+///
+/// The parameter is a [`SeaLevelHeight`] and not a `ReferenceElevation` for the
+/// reason The Benchmark exists: these thresholds are sea-level-relative, and
+/// before v2 this function was handed the raw isostatic reading, so on a world
+/// whose sea level sits near -2936 m almost all land classified as `shelf`.
 /// type-audit: bare-ok(index: return)
-fn relief_band(elevation_m: f64) -> u32 {
-    match elevation_m {
+fn relief_band(height: SeaLevelHeight) -> u32 {
+    match height.get() {
         e if e < -3000.0 => 0,
         e if e < 0.0 => 1,
         e if e < 300.0 => 2,
@@ -87,7 +93,7 @@ pub struct LegendEntry {
 /// and absent on a seam cell. Fine-grain fields are `null` at coarse grain —
 /// a cell carries the detail its epistemic state warrants, which is what
 /// makes the chart and the prose one lens rather than two.
-/// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(artifact: color)
+/// type-audit: bare-ok(index: room), bare-ok(index: u), bare-ok(index: v), bare-ok(index: w), bare-ok(flag: up), bare-ok(flag: seam), bare-ok(identifier-text: state), bare-ok(index: biome), bare-ok(index: water), bare-ok(index: relief), bare-ok(prose: regime), bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), waiver(elevation-convention: elevation_m), bare-ok(diagnostic-value: height_asl_m), bare-ok(artifact: color)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsCell {
     /// Packed room id.
@@ -123,6 +129,10 @@ pub struct SurroundsCell {
     /// Elevation, metres — fine grain, `null` when coarse.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     pub elevation_m: Option<f64>,
+    /// Height above sea level, metres — fine grain, `null` when coarse.
+    /// Signed: negative below. `relief` is banded from this.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
+    pub height_asl_m: Option<f64>,
     /// Display colour under the requested observer, absent unless this scene
     /// was built through [`surrounds_scene_colored_in`]. The key is skipped
     /// entirely when absent, so an uncoloured document is byte-for-byte what
@@ -133,12 +143,12 @@ pub struct SurroundsCell {
     pub marks: Vec<Mark>,
 }
 
-/// One `scene/surrounds/v1` document. Field order is the JSON key order and
+/// One `scene/surrounds/v2` document. Field order is the JSON key order and
 /// is contract — never reorder.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend), bare-ok(diagnostic-value: sea_level_m)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsScene {
-    /// Always `scene/surrounds/v1`.
+    /// Always `scene/surrounds/v2`.
     pub schema: String,
     /// The world's seed.
     pub seed: u64,
@@ -160,13 +170,20 @@ pub struct SurroundsScene {
     pub water_legend: Vec<String>,
     /// The relief catalog, stable ascending order.
     pub relief_legend: Vec<String>,
+    /// This world's derived sea level, metres on the isostatic datum. The
+    /// bands in `relief_legend` are measured from it, so a consumer can
+    /// re-derive any cell's band from `height_asl_m` alone. Its absence from
+    /// v1 left the one scene kind whose bands were wrong also the one kind a
+    /// client could not correct.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub sea_level_m: f64,
     /// The cells, ascending by `room`.
     pub cells: Vec<SurroundsCell>,
     /// The chart's noun catalog, ascending by `noun`.
     pub legend: Vec<LegendEntry>,
 }
 
-/// Build the `scene/surrounds/v1` document for `room` at `radius` rings,
+/// Build the `scene/surrounds/v2` document for `room` at `radius` rings,
 /// reusing a `LocaleContext` the caller already built. Fog-free: every cell
 /// but the observer's is `"sensed"`.
 ///
@@ -248,11 +265,12 @@ pub fn surrounds_scene_in(
                 .position(|e| *e == locale.biome_kind)
                 .expect("every biome is in the catalog") as u32,
             water: u32::from(locale.fields.water.index()),
-            relief: relief_band(locale.fields.elevation_m),
+            relief: relief_band(locale.fields.height_asl_m),
             regime: is_here.then(|| locale.regime.descriptor.clone()),
             temperature_c: is_here.then_some(locale.fields.temperature_c),
             moisture: is_here.then_some(locale.fields.moisture),
             elevation_m: is_here.then_some(locale.fields.elevation_m),
+            height_asl_m: is_here.then_some(locale.fields.height_asl_m.get()),
             // The default path never colours. `surrounds_scene_colored_in`
             // is the only writer, which is what keeps every committed
             // artifact byte-identical.
@@ -289,12 +307,17 @@ pub fn surrounds_scene_in(
             .map(|s| s.to_string())
             .collect(),
         relief_legend: RELIEF_LEGEND.iter().map(|s| s.to_string()).collect(),
+        // Quantized at assignment, not just at serialization, so the emitted
+        // datum agrees exactly with what a consumer re-derives from the
+        // document (the same reasoning as `LocaleFields.height_asl_m`'s own
+        // pre-quantization in `windows/locale`).
+        sea_level_m: hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get()),
         cells,
         legend,
     })
 }
 
-/// Build the `scene/surrounds/v1` document for `room` at `radius` rings.
+/// Build the `scene/surrounds/v2` document for `room` at `radius` rings.
 /// Fog-free: every cell but the observer's is `"sensed"`.
 ///
 /// Builds a fresh `LocaleContext` per call — a caller that already holds
@@ -322,7 +345,7 @@ pub fn surrounds_scene(
     surrounds_scene_in(world, &ctx, room, radius, at)
 }
 
-/// Build a `scene/surrounds/v1` document with a colour layer, as seen by
+/// Build a `scene/surrounds/v2` document with a colour layer, as seen by
 /// `observer` under the world star's daylight.
 ///
 /// A separate entry point rather than a parameter on
@@ -334,11 +357,11 @@ pub fn surrounds_scene(
 /// must declare (RENDER-9), not one this builder may invent.
 ///
 /// The light is the star's daylight spectrum, not its light at the
-/// observer's own sun elevation: `scene/surrounds/v1` carries no sun angle,
+/// observer's own sun elevation: `scene/surrounds/v2` carries no sun angle,
 /// and inventing one here would make the chart's colours disagree with a
 /// prose renderer that knows the real hour. A caller with an elevation in
 /// hand should say so — `hornvale_astronomy::illuminant::at_elevation` is
-/// the seam, and the day it belongs on is a `scene/surrounds/v2` question.
+/// the seam, and the day it belongs on is a `scene/surrounds/v3` question.
 /// type-audit: bare-ok(count: radius)
 pub fn surrounds_scene_colored_in(
     world: &World,
@@ -815,5 +838,183 @@ mod tests {
             "the builder returned one colour even across {coarse_colors} grid \
              cells — it is not reading lithology at all"
         );
+    }
+
+    #[test]
+    fn the_emitted_relief_band_matches_the_emitted_height() {
+        // THE test for this defect. A unit test on `relief_band` alone would pass
+        // both before and after the fix, because what was wrong is which argument
+        // the CALL SITE passes. This pins the band to the height in the same
+        // document, so passing the raw reading again breaks it.
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let scene = surrounds_scene_in(&w, &ctx, &observer(&w), 2, WorldTime { day: 0.0 }).unwrap();
+        let mut checked = 0;
+        for c in &scene.cells {
+            if let Some(h) = c.height_asl_m {
+                assert_eq!(
+                    c.relief,
+                    relief_band(SeaLevelHeight::from_metres(h)),
+                    "room {} bands as {} but sits {h} m above sea level",
+                    c.room,
+                    scene.relief_legend[c.relief as usize],
+                );
+                checked += 1;
+            }
+        }
+        assert!(
+            checked > 0,
+            "at least the observer's own cell carries a height"
+        );
+    }
+
+    /// THE call-site guard. Reintroducing the original defect — banding
+    /// `elevation_m` instead of `height_asl_m` — must fail this test.
+    ///
+    /// It exists because the obvious version was vacuous. `height_asl_m` is emitted
+    /// only on the observer's own cell, so a self-consistency sweep checks exactly
+    /// ONE cell; and the flagship room is at -0.2 m height over a -2936.4 m
+    /// reading, which `relief_band` maps to `shelf` BOTH ways. A mutation test put
+    /// the bug back and all 20 tests stayed green. The probe room must therefore be
+    /// one where the two data actually disagree, and the `assert_ne!` below is what
+    /// keeps that true if this world ever changes underneath the test.
+    #[test]
+    fn the_emitted_band_is_the_height_band_at_a_discriminating_room() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let globe = ctx.terrain().globe();
+        let sea = globe.sea_level;
+
+        // A land cell whose RAW reading is still negative: raw bands `shelf`, the
+        // corrected height bands `lowland` or above, so the two disagree. The
+        // majority of seed 42's land qualifies (8162 of 11,066 cells). Lowest
+        // CellId wins, for determinism.
+        let probe = globe
+            .elevation
+            .iter()
+            .filter(|(_, e)| e.total_cmp(sea) != std::cmp::Ordering::Less && e.get() < 0.0)
+            .map(|(c, _)| c)
+            .next()
+            .expect("seed 42 has land below the zero of the isostatic datum");
+        let coord = ctx.climate().geosphere().coord(probe);
+        let addr = RoomAddr::containing(
+            hornvale_kernel::math::unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
+            ctx.globe_level() + 6,
+        );
+
+        let scene = surrounds_scene_in(&w, &ctx, &addr, 0, WorldTime { day: 0.0 }).unwrap();
+        let here = scene
+            .cells
+            .iter()
+            .find(|c| c.state == "here")
+            .expect("the observer's own cell is in the chart");
+        let height = here.height_asl_m.expect("the `here` cell carries a height");
+        let raw = here.elevation_m.expect("the `here` cell carries a reading");
+
+        let height_band = relief_band(SeaLevelHeight::from_metres(height));
+        let raw_band = relief_band(SeaLevelHeight::from_metres(raw));
+
+        // ANTI-VACUITY. Without this the test can silently stop discriminating —
+        // which is exactly how the first version of this guard passed while the
+        // defect was live.
+        assert_ne!(
+            height_band, raw_band,
+            "probe room is not discriminating: height {height} m and reading {raw} m \
+             both band as {}; this test would pass with the defect reintroduced",
+            RELIEF_LEGEND[height_band as usize]
+        );
+
+        assert_eq!(
+            here.relief, height_band,
+            "the emitted band is the RAW reading's band ({}) rather than the \
+             height's ({}) — the datum defect is back",
+            RELIEF_LEGEND[raw_band as usize], RELIEF_LEGEND[height_band as usize]
+        );
+    }
+
+    #[test]
+    fn the_document_carries_the_datum_its_bands_are_measured_from() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let scene = surrounds_scene_in(&w, &ctx, &observer(&w), 1, WorldTime { day: 0.0 }).unwrap();
+        assert_eq!(scene.schema, "scene/surrounds/v2");
+        assert_eq!(
+            scene.sea_level_m,
+            hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get()),
+            "a client cannot re-derive a band without the datum"
+        );
+    }
+
+    #[test]
+    fn no_land_cell_bands_as_marine_relief() {
+        // Guards `relief_band`'s THRESHOLD SEMANTICS, and nothing else. It computes
+        // its own height and never calls the builder, so it CANNOT detect the
+        // original defect — which was the argument the call site passed.
+        // `the_emitted_band_is_the_height_band_at_a_discriminating_room` is the
+        // call-site guard; a mutation test confirmed this one stays green with the
+        // bug fully reintroduced. Kept because the thresholds are worth pinning,
+        // labelled so nobody mistakes it for the detector.
+        //
+        // Stated over CELLS, where the invariant holds by definition: a land cell
+        // IS one with `elevation >= sea_level`, so its height is >= 0 and its band
+        // must be `lowland` or above. Deliberately NOT over rooms — a room's height
+        // is a three-corner blend while its water kind is a point sample of the
+        // dominant corner, so a shoreline room can be dry-land-dominant and still
+        // blend centimetres below sea level (spec §12.4).
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let globe = ctx.terrain().globe();
+        let sea = globe.sea_level;
+        let mut land = 0usize;
+        for (cell, e) in globe.elevation.iter() {
+            if e.total_cmp(sea) == std::cmp::Ordering::Less {
+                continue;
+            }
+            land += 1;
+            let band = relief_band(e.above(sea));
+            assert!(
+                band >= 2,
+                "land cell {cell:?} at {:.1} m ({:.1} m above sea level) banded as {}",
+                e.get(),
+                e.above(sea).get(),
+                RELIEF_LEGEND[band as usize]
+            );
+        }
+        assert!(
+            land > 1000,
+            "seed 42 has substantial land; got {land} cells"
+        );
+    }
+
+    #[test]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    fn no_land_cell_bands_as_marine_relief_across_seeds() {
+        for seed in [1u64, 7, 42, 99, 2026] {
+            let w = build_world(
+                Seed(seed),
+                &hornvale_astronomy::SkyPins::default(),
+                SkyChoice::Generated,
+                &hornvale_terrain::TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("the seed builds");
+            let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+            let globe = ctx.terrain().globe();
+            let sea = globe.sea_level;
+            for (cell, e) in globe.elevation.iter() {
+                if e.total_cmp(sea) == std::cmp::Ordering::Less {
+                    continue;
+                }
+                let band = relief_band(e.above(sea));
+                assert!(
+                    band >= 2,
+                    "seed {seed}: land cell {cell:?} banded as {}",
+                    RELIEF_LEGEND[band as usize]
+                );
+            }
+            // The datum's distance from zero is what made this defect invisible;
+            // print it so a future reader can see the spread across seeds.
+            println!("seed {seed}: sea level {:.1} m", sea.get());
+        }
     }
 }

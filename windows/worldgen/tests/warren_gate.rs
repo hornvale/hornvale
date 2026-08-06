@@ -244,7 +244,7 @@ fn a_surface_kind_is_bit_identical_to_the_pre_campaign_arithmetic() {
             * cn.temperature.eval(s.temperature_c, floor_buf)
             * cn.moisture.eval(s.moisture, floor_buf)
             * cn.insolation.eval(s.insolation, floor_buf)
-            * cn.elevation.eval(s.elevation, 0.0);
+            * cn.elevation.eval(s.height_asl_m.get(), 0.0);
 
         let k_live_v = *k_live.get(cell);
         if k_ref.to_bits() != k_live_v.to_bits() {

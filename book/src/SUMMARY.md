@@ -85,7 +85,7 @@
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
-- [Scene Schema: surrounds v1](./reference/scene-surrounds-v1.md)
+- [Scene Schema: surrounds v2](./reference/scene-surrounds-v2.md)
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
@@ -308,6 +308,7 @@
 - [The Deep Realm](./chronicle/the-deep-realm.md)
 - [The Collation](./chronicle/the-collation.md)
 - [The Long Age](./chronicle/the-long-age.md)
+- [The Benchmark](./chronicle/the-benchmark.md)
 
 # Appendix: The Frontier
 

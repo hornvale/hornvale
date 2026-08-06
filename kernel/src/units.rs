@@ -82,11 +82,96 @@ impl ReferenceElevation {
             self
         }
     }
+
+    /// This reading's height above `datum` — the named conversion from an
+    /// absolute isostatic reading to a per-world [`SeaLevelHeight`], and the
+    /// only one besides [`SeaLevelHeight::from_metres`].
+    ///
+    /// Pass the world's derived sea level as `datum`. It is a named method
+    /// rather than [`Sub`](std::ops::Sub) because subtracting two elevations
+    /// means different things depending on what the right-hand one *is* (see
+    /// that impl); naming the conversion is how the caller says which meaning
+    /// it intends, per decision 0008.
+    ///
+    /// ```
+    /// use hornvale_kernel::ReferenceElevation;
+    /// // Seed 42's sea level sits near -2936 m on the isostatic datum, so a
+    /// // shoreline forest reads as a large negative number until you re-datum it.
+    /// let ground = ReferenceElevation::new(-2836.0).unwrap();
+    /// let sea = ReferenceElevation::new(-2936.0).unwrap();
+    /// assert_eq!(ground.above(sea).get(), 100.0);
+    /// ```
+    pub fn above(self, datum: Self) -> SeaLevelHeight {
+        SeaLevelHeight(self.0 - datum.0)
+    }
 }
 
-/// The signed metre difference between two elevations. A local intermediate
-/// (lapse rate, depth shading) — a height-above-a-datum earns its own type
-/// only if it crosses a pub boundary (spec "The Datum" / decision 0044 (`shared-units-live-in-the-kernel`)).
+/// Metres above this world's sea level. Signed: negative below.
+///
+/// Distinguished at the type level from [`ReferenceElevation`], which is an
+/// absolute reading on the planet-independent isostatic datum. A
+/// `SeaLevelHeight` is *per-world* — its zero is a derived value of that other
+/// type — so two of these from different worlds are comparable to each other in
+/// a way their `ReferenceElevation`s are not, and vice versa. Decision 0044's
+/// doctrine requires an interval type to carry its datum; this type's name is
+/// that datum.
+///
+/// Produced by subtracting two [`ReferenceElevation`]s (see
+/// [`Sub`](std::ops::Sub) for that type), or via
+/// [`from_metres`](Self::from_metres) for a caller with no pair to subtract.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct SeaLevelHeight(f64);
+
+impl SeaLevelHeight {
+    /// Builds a height directly from metres rather than from a difference of
+    /// two readings. It exists for one reason: a caller deserializing a
+    /// document has a number, not the pair of elevations it came from.
+    ///
+    /// **This is the hole through which the datum-confusion class returns.** A
+    /// caller holding two [`ReferenceElevation`]s should subtract them instead —
+    /// that path cannot be wrong about which datum it is on. Finiteness is a
+    /// `debug_assert!` only, matching [`TempAnomaly::from_offset_c`].
+    /// type-audit: bare-ok(constructor-edge: value)
+    pub fn from_metres(value: f64) -> Self {
+        debug_assert!(value.is_finite(), "sea-level height must be finite");
+        Self(value)
+    }
+
+    /// The raw signed metres above sea level.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn get(self) -> f64 {
+        self.0
+    }
+
+    /// Metres *below* sea level — the positive-downward reading, and the
+    /// negation of [`get`](Self::get). This accessor exists so that a consumer
+    /// wanting depth never writes the negation by hand: a stray sign is the
+    /// same confusion class this type exists to remove.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn depth(self) -> f64 {
+        -self.0
+    }
+
+    /// Deterministic total order via `f64::total_cmp` (no NaN ambiguity).
+    pub fn total_cmp(self, other: Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+/// The signed metre difference between two elevations, as a bare `f64`.
+///
+/// **Deliberately not a [`SeaLevelHeight`].** Subtracting two elevations is
+/// polymorphic in *meaning*: `cell - sea_level` is a height above sea level,
+/// but `cell - upwind_neighbour` is an orographic rise between two places
+/// (`domains/climate`'s `moisture.rs` and `provider.rs` both do exactly that),
+/// and a terrain-detail delta is neither. Only the first has anything to do
+/// with a datum, so typing this operator's output as a datum-named quantity
+/// would make the type system assert something false about the other two.
+///
+/// The named conversion [`ReferenceElevation::above`] is the sea-level path,
+/// which is what decision 0008 prescribes — "validating constructors and
+/// *named conversions*". The Benchmark tried retyping this operator first and
+/// the compiler found the counterexamples.
 impl Sub for ReferenceElevation {
     type Output = f64;
     fn sub(self, rhs: Self) -> f64 {
@@ -433,5 +518,65 @@ mod tests {
         assert!(Precipitation::new(-1.0).is_err());
         assert!(Precipitation::new(f64::NAN).is_err());
         assert!(Precipitation::new(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn a_sea_level_height_reports_its_metres() {
+        let h = SeaLevelHeight::from_metres(1200.5);
+        assert!((h.get() - 1200.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn depth_is_the_positive_downward_reading() {
+        let below = SeaLevelHeight::from_metres(-3000.0);
+        assert!(
+            (below.depth() - 3000.0).abs() < 1e-12,
+            "depth reads positive downward"
+        );
+        assert!(
+            (below.depth() + below.get()).abs() < 1e-12,
+            "depth is exactly -height"
+        );
+        let above = SeaLevelHeight::from_metres(800.0);
+        assert!(above.depth() < 0.0, "above sea level, depth is negative");
+    }
+
+    #[test]
+    fn heights_order_deterministically() {
+        let a = SeaLevelHeight::from_metres(-10.0);
+        let b = SeaLevelHeight::from_metres(10.0);
+        assert_eq!(a.total_cmp(b), std::cmp::Ordering::Less);
+        assert_eq!(b.total_cmp(a), std::cmp::Ordering::Greater);
+        assert_eq!(a.total_cmp(a), std::cmp::Ordering::Equal);
+    }
+
+    #[test]
+    fn the_named_conversion_yields_a_height_not_a_number() {
+        let ground = ReferenceElevation::new(-2936.0).unwrap();
+        let sea = ReferenceElevation::new(-2936.17).unwrap();
+        // The binding's type is the assertion: this must be a SeaLevelHeight.
+        let h: SeaLevelHeight = ground.above(sea);
+        assert!((h.get() - 0.17).abs() < 1e-9);
+    }
+
+    #[test]
+    fn subtraction_stays_a_bare_number_because_it_is_polymorphic() {
+        // `cell - upwind_neighbour` is an orographic rise, not a height above
+        // any datum, and `domains/climate` computes exactly that. Typing this
+        // operator's output as a SeaLevelHeight would make it assert a datum
+        // that isn't there.
+        let here = ReferenceElevation::new(1200.0).unwrap();
+        let upwind = ReferenceElevation::new(900.0).unwrap();
+        let rise: f64 = here - upwind;
+        assert_eq!(rise, 300.0);
+    }
+
+    #[test]
+    fn a_sea_floor_reading_yields_a_positive_depth() {
+        let sea = ReferenceElevation::new(-2936.17).unwrap();
+        let floor = ReferenceElevation::new(-4000.0).unwrap();
+        let h = floor.above(sea);
+        assert!(h.get() < 0.0, "the sea floor is below sea level");
+        assert!(h.depth() > 1000.0, "and its depth reads positive");
     }
 }

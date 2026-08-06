@@ -60,6 +60,7 @@ pub use schedule::{CapabilitySchema, ScheduleError, System, TickSystem, tick};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
 pub use units::{
-    Mass, Precipitation, ReferenceElevation, TempAnomaly, Temperature, UnitError, Years,
+    Mass, Precipitation, ReferenceElevation, SeaLevelHeight, TempAnomaly, Temperature, UnitError,
+    Years,
 };
 pub use world::{INSTANCE_OF, KERNEL_CORE_PREDICATES, NAME, NAME_GLOSS, World};

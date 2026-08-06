@@ -1656,9 +1656,22 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
         println!("Locale {} (depth {})", locale.id, locale.depth);
         println!("  at {:.4}, {:.4}", locale.latitude, locale.longitude);
         println!("  biome: {}", locale.biome);
+        let h = locale.fields.height_asl_m;
+        // Branch on what will be PRINTED, not on the raw sign — otherwise a
+        // shoreline 0.2 m under renders as "0 m below sea level". Deliberately
+        // duplicated from `windows/vessel`'s `height_phrase` rather than shared:
+        // `cli` must not reach into a window's private helpers, and four lines do
+        // not justify a new pub API. Keep the two wordings identical.
+        let height = if h.get().abs() < 0.5 {
+            "at sea level".to_string()
+        } else if h.get() < 0.0 {
+            format!("{:.0} m below sea level", h.depth())
+        } else {
+            format!("{:.0} m above sea level", h.get())
+        };
         println!(
-            "  temperature {:.1} °C · moisture {:.2} · elevation {:.0} m",
-            locale.fields.temperature_c, locale.fields.moisture, locale.fields.elevation_m
+            "  temperature {:.1} °C · moisture {:.2} · {height}",
+            locale.fields.temperature_c, locale.fields.moisture
         );
         println!(
             "  regime: {} (strangeness {:.1})",

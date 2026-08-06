@@ -132,7 +132,7 @@ const PEOPLES_WITH_HUMAN: [&str; 6] =
 /// against - each field is a direct per-cell read of
 /// [`hornvale_worldgen::Substrate`] (via [`substrate_field`]), the exact
 /// struct `per_species_suitability` builds internally and reads as `s.temperature_c`/
-/// `s.moisture`/`s.insolation`/`s.elevation` (`windows/worldgen/src/lib.rs`,
+/// `s.moisture`/`s.insolation`/`s.height_asl_m` (`windows/worldgen/src/lib.rs`,
 /// `per_species_suitability`'s body). Task 5b (The Generalist re-authoring):
 /// elevation was already read this way by Task 1; temperature/moisture/
 /// insolation are new here, from the same source rather than a hand-rederived
@@ -146,9 +146,9 @@ struct AxisSamples {
     /// Annual-mean top-of-atmosphere insolation, relative to the planet's
     /// global scalar - `Substrate::insolation` verbatim.
     insolation: Vec<f64>,
-    /// Height above this world's sea level, metres - `Substrate::elevation`
-    /// verbatim (the same `elevation_at(cell) - sea_level()` The Tumult's
-    /// re-datum performs).
+    /// Height above this world's sea level, metres - `Substrate::height_asl_m`
+    /// verbatim (the same `elevation_at(cell).above(sea_level())` The
+    /// Tumult's re-datum, retyped by The Benchmark, performs).
     elevation: Vec<f64>,
 }
 
@@ -288,7 +288,7 @@ fn measure_one(
         axes.temperature.push(s.temperature_c);
         axes.moisture.push(s.moisture);
         axes.insolation.push(s.insolation);
-        axes.elevation.push(s.elevation);
+        axes.elevation.push(s.height_asl_m.get());
         for (tag, k) in &ks {
             let name = kinds[*tag as usize].0;
             per_people.entry(name).or_default().push(*k.get(cell));

@@ -46,8 +46,11 @@ exception does not generalise — prose ships verbatim because prose is the
 constitutional primary, and a map is not prose. So the wire tag is `band`,
 with values `walk` and `chamber`, and each arm carries cells.
 
-**Out of doors, the channel embeds `scene/surrounds/v1` verbatim.** Nothing
-new was designed for the walk band at all. `windows/scene` already defines a
+**Out of doors, the channel embeds the surrounds chart verbatim.** Nothing
+new was designed for the walk band at all. (The chart was `scene/surrounds/v1`
+when this shipped; [The Benchmark](./the-benchmark.md) has since minted `v2`,
+which the channel picked up without a line of change here — the embedded
+document announces its own version, which is what that field is for.) `windows/scene` already defines a
 schema-tagged, quantized, structural surrounds scene, and the session already
 returns one as a pure read. One schema, one owner — the same move the room
 channel already makes with `locale/room/v2`. This was the cheapest half of the
@@ -71,7 +74,7 @@ Worse, the attributes actually coming are not one character wide: a colour
 triple, an occupant's identifier, a temperature.
 
 The repository had already solved this and the draft had walked past the
-solution. `scene/surrounds/v1` carries append-only legend tables with a `u32`
+solution. The surrounds chart carries append-only legend tables with a `u32`
 index per cell, an optional colour triple skipped when absent so that *"an
 uncoloured document is byte-for-byte what it was before the colour layer
 existed,"* and a per-cell marks list for instances. `vessel/plan/v1` mirrors
@@ -333,7 +336,7 @@ cells rather than a picture.
 
 The remembered map turns out to be **band-asymmetric**, and nothing had
 recorded that. The walk band already accumulates — the knowledge ledger holds a
-room entry per visited locale, and `scene/surrounds/v1` has carried a
+room entry per visited locale, and the surrounds chart has carried a
 `"remembered"` cell state annotated *"written only by a session-owning
 consumer"* since it was designed, with no writer ever. So a remembered
 overworld minimap is nearly free from data that exists today. The chamber band

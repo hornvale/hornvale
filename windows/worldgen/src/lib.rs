@@ -20,8 +20,8 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConceptRegistry, Correspondent, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId,
     LedgerError, ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, Visibility, Void, World, WorldContext, WorldTime,
-    observe,
+    RegistryError, SeaLevelHeight, Seed, Temperature, Value, Visibility, Void, World, WorldContext,
+    WorldTime, observe,
 };
 use hornvale_language::CommonVocabulary;
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
@@ -1156,7 +1156,11 @@ pub fn per_species_suitability(
                     * cn.temperature.eval(s.temperature_c, floor_buf)
                     * cn.moisture.eval(s.moisture, floor_buf)
                     * cn.insolation.eval(s.insolation, floor_buf)
-                    * cn.elevation.eval(s.elevation, 0.0)
+                    // The Benchmark: banded against HEIGHT ABOVE SEA LEVEL,
+                    // not the raw isostatic reading. The Warren: gated by
+                    // whether the cell holds a cave at all (1.0 for every
+                    // Surface kind, an IEEE-754 no-op).
+                    * cn.elevation.eval(s.height_asl_m.get(), 0.0)
                     * availability
             });
             (tag as u32, k)
@@ -1612,7 +1616,7 @@ pub fn climate_from(
 
 /// The four v1 environmental fields at one cell — the substrate the habitat
 /// model (The Niche) scores a species' condition niche against.
-/// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation), bare-ok(diagnostic-value: elevation)
+/// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Substrate {
     /// Mean annual temperature, °C.
@@ -1626,8 +1630,9 @@ pub struct Substrate {
     /// [`hornvale_kernel::ReferenceElevation`], whose isostatic datum sits
     /// 1.7–3.5 km below sea level and moves from world to world. Negative on
     /// ocean cells (they are still scored; the supply term is what empties
-    /// them).
-    pub elevation: f64,
+    /// them). A [`SeaLevelHeight`], not a bare `f64` (The Benchmark) — the
+    /// datum this field's name once merely claimed, the type now enforces.
+    pub height_asl_m: SeaLevelHeight,
 }
 
 /// Annual-mean top-of-atmosphere insolation at a latitude, relative to the
@@ -1711,10 +1716,10 @@ pub fn substrate_field(
                 insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
             }
         },
-        // The re-datum: `ReferenceElevation - ReferenceElevation` is the
-        // kernel's own typed subtraction, whose output is the signed metre
-        // difference — height above sea level. Negative on ocean cells.
-        elevation: terrain.elevation_at(cell) - sea_level,
+        // The re-datum: `ReferenceElevation::above` is the named conversion
+        // (decision 0008) whose output is a `SeaLevelHeight` — the signed
+        // metre difference, height above sea level. Negative on ocean cells.
+        height_asl_m: terrain.elevation_at(cell).above(sea_level),
     })
 }
 
@@ -1763,15 +1768,18 @@ const SUBTERRANEAN_MOISTURE: f64 = 0.90;
 /// - **moisture** is the fixed [`SUBTERRANEAN_MOISTURE`], replacing the
 ///   surface cell's own (climate-driven, arid-to-wet) reading entirely: cave
 ///   dampness comes from seepage and condensation, not the weather above.
-/// - **elevation** is `surface.elevation` UNCHANGED — height above sea level
-///   of the cell the chamber sits beneath. A literal metres-below-surface
-///   offset per band would need a real depth coordinate, which is exactly
-///   the change to `Position` spec §6 rules out; the surface cell's own
-///   elevation is the only depth-adjacent reading available without
-///   inventing one, and it is also the physically right one: a chamber
-///   really is beneath that geographic point, at that point's altitude.
+/// - **height_asl_m** is `surface.height_asl_m` UNCHANGED — height above sea
+///   level of the cell the chamber sits beneath. (The Benchmark renamed this
+///   field from `elevation` and typed it `SeaLevelHeight`; this doc already
+///   described it as "height above sea level", so the rename only made the
+///   name agree with the comment.) A literal metres-below-surface offset per
+///   band would need a real depth coordinate, which is exactly the change to
+///   `Position` spec §6 rules out; the surface cell's own height is the only
+///   depth-adjacent reading available without inventing one, and it is also
+///   the physically right one: a chamber really is beneath that geographic
+///   point, at that point's altitude.
 ///
-/// Because temperature and elevation pass through unchanged, they cannot by
+/// Because temperature and height pass through unchanged, they cannot by
 /// themselves distinguish a chamber from the cell above it — only moisture
 /// and insolation do. That is a real, stated limitation of this v1 model
 /// rather than a hidden one; Task 8's H2 readout is where whether it is too
@@ -1782,7 +1790,7 @@ pub fn subterranean_substrate(surface: Substrate) -> Substrate {
         temperature_c: surface.temperature_c,
         moisture: SUBTERRANEAN_MOISTURE,
         insolation: 0.0,
-        elevation: surface.elevation,
+        height_asl_m: surface.height_asl_m,
     }
 }
 
@@ -11332,7 +11340,7 @@ mod tests {
             assert!(s.temperature_c.is_finite());
             assert!((0.0..=1.0).contains(&s.moisture));
             assert!(s.insolation.is_finite() && s.insolation >= 0.0);
-            assert!(s.elevation.is_finite());
+            assert!(s.height_asl_m.get().is_finite());
         }
         // Annual-mean insolation is higher at the equator than at a pole.
         let eq = annual_mean_insolation(0.0, obliquity_deg, insolation_scalar);
