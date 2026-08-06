@@ -222,11 +222,24 @@ fn check_mode_fails_on_a_divergent_corpus() {
 /// A mode following a flag is still found. Reading only `args[1]` made
 /// `tropes --corpus <path> check` print a report and exit 0 — a silent false
 /// pass for anything gating on `check`. Nothing else guards that fix.
+///
+/// Deliberately `tvtropes-2012`, not Polti. Pointed at Polti this test ran a
+/// byte-identical invocation to
+/// `check_mode_agrees_with_the_committed_artifact_for_polti` and asserted the
+/// same two things, so the two could only ever fail together and the
+/// flag-parsing regression had no independent guard. The second corpus is
+/// reached by `--corpus` in exactly one other place — a `check` agreement
+/// test that asserts nothing about argument order.
 #[test]
 fn check_mode_is_found_after_a_flag() {
     let root = workspace_root();
     let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
-        .args(["tropes", "--corpus", "tropes/polti.trope.json", "check"])
+        .args([
+            "tropes",
+            "--corpus",
+            "tropes/tvtropes-2012.trope.json",
+            "check",
+        ])
         .current_dir(&root)
         .output()
         .expect("runs the binary");
@@ -278,4 +291,124 @@ fn committed_trope_matrix_matches_the_live_render() {
          so a figure that moved here without either column moving means the two \
          derivations have come apart, which is exactly what this artifact exists to catch",
     );
+}
+
+/// A report's headline, parsed out of `Stageable {s} of {t} ({i}
+/// inapplicable).` as `(stageable, total, inapplicable)`.
+///
+/// `None` rather than a default on any failure, so a caller can distinguish
+/// "the column says different numbers" from "the column no longer says this
+/// at all" and fail on both.
+fn parse_report_headline(text: &str) -> Option<(usize, usize, usize)> {
+    let line = text.lines().find(|l| l.starts_with("Stageable "))?;
+    let rest = line.strip_prefix("Stageable ")?;
+    let (stageable, rest) = rest.split_once(" of ")?;
+    let (total, rest) = rest.split_once(" (")?;
+    let inapplicable = rest.strip_suffix(" inapplicable).")?;
+    Some((
+        stageable.parse().ok()?,
+        total.parse().ok()?,
+        inapplicable.parse().ok()?,
+    ))
+}
+
+/// One corpus's row in the matrix's Columns table, as the same triple.
+///
+/// The row is `| `<id>` | {s} of {t} | {i} | [report](…) |`.
+fn parse_matrix_row(matrix: &str, id: &str) -> Option<(usize, usize, usize)> {
+    let prefix = format!("| `{id}` |");
+    let line = matrix.lines().find(|l| l.starts_with(&prefix))?;
+    let cells: Vec<&str> = line.split('|').map(str::trim).collect();
+    let (stageable, total) = cells.get(2)?.split_once(" of ")?;
+    Some((
+        stageable.parse().ok()?,
+        total.parse().ok()?,
+        cells.get(3)?.parse().ok()?,
+    ))
+}
+
+/// The spec's named matrix validation: "the matrix's per-column figures equal
+/// the per-corpus reports' own."
+///
+/// The byte check above pins the matrix to *itself*. It cannot see the failure
+/// this one exists for, because the two documents are rendered by two callers
+/// — `render` and `render_matrix` — and if their figures ever came apart,
+/// `make rebaseline` would re-accept every golden in one pass and leave two
+/// committed documents stating different numbers with nothing red. So this
+/// compares the two derivations against each other and not against a stored
+/// expectation.
+///
+/// Both sides are **parsed**, never transcribed. Writing `0 of 36` here would
+/// make this a third place a figure is hand-copied — the very thing the
+/// campaign built a generated matrix to avoid — and it would pass unchanged
+/// while both real documents moved together. Nothing below asserts what the
+/// numbers are; the assertion is only that the two documents agree.
+///
+/// The columns are read from their committed bytes and the matrix from a live
+/// run. Those committed bytes are themselves pinned to live `render` output by
+/// the golden tests at the top of this file, so this is still a comparison of
+/// two derivations — but the asymmetry means a divergence introduced into
+/// `render_matrix` reddens here *before* anyone rebaselines, not only after.
+///
+/// Columns are discovered by scanning `docs/audits/` rather than listed, so a
+/// third catalogue is covered the day its artifact is committed. If that scan
+/// or either parse comes up empty the test panics rather than passing
+/// vacuously: a reformatted headline must not silently turn this into an
+/// assertion about nothing.
+#[test]
+fn every_matrix_row_carries_its_own_column_s_headline_figures() {
+    let root = workspace_root();
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["tropes", "matrix"])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(out.status.success(), "tropes matrix failed: {out:?}");
+    let matrix = String::from_utf8(out.stdout).expect("utf-8");
+
+    let audits = root.join("docs/audits");
+    let mut columns: Vec<(String, std::path::PathBuf)> = std::fs::read_dir(&audits)
+        .expect("docs/audits is readable")
+        .map(|e| e.expect("readable directory entry").path())
+        .filter_map(|path| {
+            let name = path.file_name()?.to_str()?;
+            let id = name
+                .strip_prefix("trope-coverage-")?
+                .strip_suffix(".md")?
+                .to_string();
+            Some((id, path))
+        })
+        .collect();
+    columns.sort();
+    assert!(
+        !columns.is_empty(),
+        "no committed column matched docs/audits/trope-coverage-*.md, so this test \
+         compared nothing — the artifacts moved or were renamed"
+    );
+
+    for (id, path) in &columns {
+        let text = std::fs::read_to_string(path).expect("the committed column is readable");
+        let column = parse_report_headline(&text).unwrap_or_else(|| {
+            panic!(
+                "no `Stageable {{s}} of {{t}} ({{i}} inapplicable).` line in {}. The column's \
+                 headline was reformatted; update this parse rather than letting the \
+                 cross-check quietly stop running",
+                path.display()
+            )
+        });
+        let row = parse_matrix_row(&matrix, id).unwrap_or_else(|| {
+            panic!(
+                "the matrix has no parseable Columns row for `{id}`, but \
+                 docs/audits/trope-coverage-{id}.md exists. Either the corpus is committed \
+                 without being declared in CORPORA, or the row's shape changed.\n{matrix}"
+            )
+        });
+        assert_eq!(
+            column, row,
+            "`{id}`: its report says (stageable, total, inapplicable) = {column:?} and the \
+             matrix row says {row:?}. `render` and `render_matrix` have come apart — do NOT \
+             rebaseline, because rebaselining accepts both documents and preserves the \
+             disagreement"
+        );
+    }
 }

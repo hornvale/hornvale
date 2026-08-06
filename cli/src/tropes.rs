@@ -131,13 +131,22 @@ pub fn resolve(corpus: &Corpus, registry: &ConceptRegistry) -> BTreeMap<String, 
 /// The report is a byte-ratcheted artifact. An unwrapped paragraph makes every
 /// future word change a whole-line diff in the review that has to approve it,
 /// so prose is wrapped and tables are not.
+///
+/// A word starting with `-` is never moved to the start of a line, even when
+/// that overruns 76 columns. Markdown reads a leading `-` as a list marker, so
+/// a break landing one there turns prose into a spurious bullet — and in
+/// `render_matrix` the wrapped text is *already* a bullet, where the result is
+/// a nested one. Neither frozen corpus's provenance contains such a word, so
+/// this costs nothing today and closes the hazard for the third catalogue.
+/// The guard sits under `col > 0`, so a paragraph deliberately opening with a
+/// bullet marker still gets one.
 /// type-audit: bare-ok(prose: text), bare-ok(prose: return)
 fn wrap(text: &str) -> String {
     let mut out = String::new();
     let mut col = 0;
     for word in text.split_whitespace() {
         let w = word.chars().count();
-        if col > 0 && col + 1 + w > 76 {
+        if col > 0 && col + 1 + w > 76 && !word.starts_with('-') {
             out.push('\n');
             col = 0;
         } else if col > 0 {
@@ -148,6 +157,25 @@ fn wrap(text: &str) -> String {
         col += w;
     }
     out
+}
+
+/// One corpus's headline counts, `(stageable, inapplicable)`.
+///
+/// Two documents state these same three figures — [`render`] as `Stageable s
+/// of t (i inapplicable).` and [`render_matrix`] as that corpus's row — and
+/// each used to filter `out.values()` for itself. Changing one filter and
+/// running `make rebaseline` re-accepts both goldens together, so the two
+/// documents would come apart quietly with nothing red. One function makes
+/// that divergence unrepresentable; the integration test that parses both
+/// rendered figures is the second half of the same guard.
+/// type-audit: bare-ok(identifier-text: out), bare-ok(prose: return)
+fn tally(out: &BTreeMap<String, Outcome>) -> (usize, usize) {
+    let stageable = out.values().filter(|o| **o == Outcome::Stageable).count();
+    let inapplicable = out
+        .values()
+        .filter(|o| matches!(o, Outcome::Inapplicable(_)))
+        .count();
+    (stageable, inapplicable)
 }
 
 /// Where a corpus's committed report lives.
@@ -199,11 +227,7 @@ pub fn render(
         "\nThis measures reach against *that* catalogue. It is not a verdict on the\nworld, and it scores **representability only** — whether an agent could plan\nor recognise a situation is not measured here.\n\nA low score is the expected reading at this stage: the report is a baseline\ntaken before the machinery it measures exists. What carries information is\nmovement between runs, not the absolute number.\n\n",
     );
 
-    let stageable = out.values().filter(|o| **o == Outcome::Stageable).count();
-    let inapplicable = out
-        .values()
-        .filter(|o| matches!(o, Outcome::Inapplicable(_)))
-        .count();
+    let (stageable, inapplicable) = tally(out);
     s.push_str("## Demand\n\n");
     s.push_str(&format!(
         "Stageable {stageable} of {} ({inapplicable} inapplicable).\n\n| Situation | Actants | Outcome |\n|---|---|---|\n",
@@ -593,11 +617,9 @@ pub fn render_matrix(
     let mut all_zero = !columns.is_empty();
     let mut rows = String::new();
     for (corpus, out) in columns {
-        let stageable = out.values().filter(|o| **o == Outcome::Stageable).count();
-        let inapplicable = out
-            .values()
-            .filter(|o| matches!(o, Outcome::Inapplicable(_)))
-            .count();
+        // The same `tally` the column's own report headline is rendered from,
+        // so the row and the headline cannot state different numbers.
+        let (stageable, inapplicable) = tally(out);
         all_zero &= stageable == 0;
         let path = artifact_path(corpus);
         let file = path.rsplit('/').next().unwrap_or(&path);
@@ -935,6 +957,41 @@ mod tests {
         }
     }
 
+    /// A line break must never put a word starting with `-` at column 0.
+    ///
+    /// `render_matrix` wraps each column's provenance into a `- ` bullet, and
+    /// Markdown reads a `-` at column 0 as a list marker — so a break landing
+    /// one there renders a spurious nested bullet in the middle of a
+    /// sentence, and in ordinary wrapped prose it opens a list that was never
+    /// written. Neither frozen corpus's provenance holds a dashed clause, so
+    /// nothing in the committed artifacts exercises this; a third
+    /// catalogue's could, and it would arrive as a rendering defect in a
+    /// document nobody hand-edits.
+    #[test]
+    fn wrapping_never_starts_a_line_with_a_dash() {
+        // 71 + 1 + 5 = 77 > 76, so `-dash` is exactly the word the wrapper
+        // would otherwise move to the start of the next line.
+        let filler = "a".repeat(71);
+        let wrapped = wrap(&format!(
+            "{filler} -dash and then a tail long enough to wrap again"
+        ));
+        assert!(
+            !wrapped.lines().any(|l| l.starts_with('-')),
+            "a wrapped line begins with a Markdown list marker:\n{wrapped}"
+        );
+        assert!(
+            wrapped.contains(&format!("{filler} -dash")),
+            "the dashed word did not stay on the line it started:\n{wrapped}"
+        );
+        // The guard sits under `col > 0`, so a paragraph that deliberately
+        // opens with a bullet marker — which is how the matrix renders each
+        // column's provenance — still gets one.
+        assert!(
+            wrap("- `c` — provenance").starts_with("- "),
+            "the guard swallowed a deliberate leading bullet"
+        );
+    }
+
     /// The report leads with provenance and carries all four sections, so a
     /// reader cannot mistake the number for a verdict on the world.
     #[test]
@@ -1239,6 +1296,18 @@ mod tests {
     /// cover the corpora they name, and CI's drift check compares files that
     /// exist. This asserts the declared list and the committed artifacts stay
     /// the same set.
+    ///
+    /// It also asserts id uniqueness for **every** declared corpus, because
+    /// this loop is the only place that already parses all of them. The two
+    /// hand-written per-corpus tests below assert uniqueness beside a frozen
+    /// count, and they stay — the count is the deliberate-freeze ratchet. But
+    /// a third catalogue arrives by adding one line to `CORPORA`, and the
+    /// duplicate-id hazard is not the kind that should wait for someone to
+    /// remember to hand-write a third test: `resolve` keys a `BTreeMap` by
+    /// `id`, so a copy-pasted id silently drops a situation, and every share
+    /// in the matrix divides a numerator counted over `corpus.situations` by
+    /// a denominator of `out.len()` — which is how a duplicate renders a
+    /// share above 100%. This is the generic backstop; those are the freeze.
     #[test]
     fn every_corpus_in_corpora_has_a_committed_column() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1249,6 +1318,17 @@ mod tests {
                 .unwrap_or_else(|e| panic!("`{path}` is declared in CORPORA but unreadable: {e}"));
             let corpus =
                 load(&json).unwrap_or_else(|e| panic!("`{path}` does not parse as a corpus: {e}"));
+            let mut seen = BTreeSet::new();
+            for st in &corpus.situations {
+                assert!(
+                    seen.insert(st.id.as_str()),
+                    "`{path}` declares situation id `{}` twice — `resolve` keys a BTreeMap by \
+                     id, so one situation would vanish, the report would understate its \
+                     denominator, and a matrix share counted over the corpus but divided by \
+                     that denominator would render above 100%",
+                    st.id
+                );
+            }
             let artifact = artifact_path(&corpus);
             assert!(
                 root.join(&artifact).is_file(),
