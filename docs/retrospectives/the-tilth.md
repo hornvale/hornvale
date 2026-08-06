@@ -100,6 +100,17 @@ highest-leverage artifact this arc produced, and it caught its own author —
 `era.ice`'s emptiness and the "make factor ice-only" proposal were both recorded
 as settled precisely so the next session would not re-derive them.
 
+**9. Evaluating a curve is not evaluating a competition.** Re-authoring kobold's
+elevation response from a specialism to a preference, the new curve was checked
+in isolation and looked exactly right — the lowland value rose 0.023 → 0.435
+while the peak stayed put. Measured, it put kobold in dominance of **492 of 492**
+settlements. Dominance is decided by *best fit among peoples*, and widening one
+people's unfloored axis while the other three keep narrow ones makes it the best
+fit everywhere.
+**Rule:** for any constant that competes, the object to evaluate is the
+comparison across all participants, not the one curve being edited. "Evaluate the
+curve, not the constant" is necessary and was not sufficient.
+
 ## Open follow-ups
 
 - **`id_shift_invariance` needs constructing, not re-hunting.** Three witness
@@ -115,4 +126,15 @@ as settled precisely so the next session would not re-derive them.
 - **Ocean exclusion now rides supply rather than the era mask** and is the most
   likely site of a silent regression; `era_substrate.rs` guards it.
 - **`tolerance_tiered` is landed and called by nothing.** It should either be
-  wired or removed; dead successors rot.
+  wired or removed; dead successors rot. It is also now **blocking**: the kobold
+  re-authoring cannot be done sensibly while elevation is an unfloored axis under
+  a flat `min()`, because every setting trades one pathology for another
+  (specialist / total takeover / no terrain identity — all three measured). That
+  is the third arrangement of floors after stages 6 and 7 both failed, and the
+  two-tier split is the named fix.
+- **Era-varying capacity systematically disadvantages high-elevation niches.**
+  Elevation correlates with cold and the era minimum binds hardest there, so the
+  species most punished by giving capacity a time axis is a highland specialist.
+  Kobold lost its `hill` exposure at seed 42 under the *shipped* niche, before
+  any re-authoring. Worth checking whether this generalises to the other
+  elevation-staked kinds before treating any of it as a kobold problem.

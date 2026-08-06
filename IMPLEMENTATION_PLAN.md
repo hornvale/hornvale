@@ -127,20 +127,75 @@ moves settlement placement, and placement is what all ~34 pins record. Re-pinnin
 now means doing it twice. The one regeneration performed (the frozen lexicon
 golden) was reverted for the same reason after its *diagnostic* value was taken.
 
-## 4. Nathan's three calls — nothing else can land first
+## 4. Nathan's three calls — answered 2026-08-05
 
-1. **Kobold.** ~18% of settlements against a 10% cap (`branches_identity`), and
-   now measurably *off the highlands* it is authored for (3c, row 1). Lore says
-   highland specialist; Nathan says "kobolds are like rats, pretty much
-   anywhere". Both the cap and the niche authoring are on the table.
-2. **`migration_fires_at_volume`.** Seed 42 gives 4 events against a floor of 5.
-   Migration now scales with how much a world's climate actually moves; seed 42's
-   deep past is mild, seed 1234's harsh (311 events). The floor was written when
-   a binary mask displaced everyone on every era flip — i.e. it encodes the
-   model this campaign removed.
-3. **The owed census.** Still a carve-out needing explicit authorization, on
-   lefford. `make rebaseline` skips censuses by design; census fixtures currently
-   sit at main's tip.
+### 4a. Migration floor — DONE (`4ecac401`)
+
+Re-based onto the five-seed spread, per Nathan. The gate's own comment had
+already named the defect and never acted on it: *"5 was set clear of the
+CROSS-SEED MINIMUM, not of seed 42."* Measured:
+
+```
+  42:4   7:1   999_999:3   16_244_526_067_196_353_746:7   1234:311
+  total 326, firing 5 of 5
+```
+
+Now asserts total ≥ 25 (a STOP condition, an order of magnitude under the
+measurement) **and** ≥ 3 of 5 seeds firing. The second clause is load-bearing:
+one world carries 95% of the total, so a bare total could pass on seed 1234
+alone with the mechanism dead everywhere else.
+
+### 4b. Kobold — Nathan chose "generalist", and the attempt FAILED. Read this.
+
+Direction: raise/drop the 10% cap, re-author the niche so highland affinity is a
+**preference** rather than a specialism. Two settings were measured and both are
+wrong. **Reverted; the tree is at the unmodified niche.**
+
+Elevation is passed `floor = 0.0`, so that axis is a bare Gaussian
+`devotion · exp(-½z²)`, and it sits under `min()` with three *floored* axes.
+
+| setting | kobold dominance, seed 42 | verdict |
+|---|---|---|
+| `opt 3000, w 1100, dev 0.95` (shipped) | ~18% of settlements | the specialist Nathan wants to move away from |
+| `opt 3000, w 2400, dev 0.95` | **492 of 492** | dominates every settlement on the world |
+| `opt 3000, w 2400, dev 0.50` | passes ≤10% | but now gaps **both** `hill` and `valley` — no terrain identity at all |
+
+**The trap I walked into:** I evaluated kobold's curve in isolation and it looked
+right (lowland fit 0.023 → 0.435, peak unmoved). Dominance is **comparative** —
+widening one people's unfloored axis while the other three stay narrow makes it
+the best fit everywhere. *Evaluate the curve* is not enough here; evaluate the
+**comparison**.
+
+**And the deeper finding, which changes the question:** the shipped niche
+*already* gapped `hill` at seed 42 under The Tense (that is failure 3c row 1,
+measured before any niche edit). So kobold did not lose the highlands because of
+how it is authored. It lost them because **era-varying capacity systematically
+punishes high-elevation niches** — elevation correlates with cold, and the era
+minimum binds hardest exactly there. A highland specialist is the species most
+disadvantaged by giving capacity a time axis.
+
+Every setting trades one pathology for another because the axis is unfloored
+under a flat `min()`. That is decision 0105's recorded instability, and spec
+§3.3's two-tier gate/modifier split is the named fix — `tolerance_tiered` exists
+and is wired to nothing. **The kobold question is blocked on §3.3, not on
+kobold.** Re-authoring the constant first would be a third arrangement of floors
+where stages 6 and 7 already failed twice.
+
+### 4c. Census — authorized, NOT SPENT
+
+Nathan authorized it. It cannot be run from here: this box is `ambrose`, the
+canonical census host is `lefford` (`scripts/census-canonical-host.txt`), and the
+guard fails closed by design — decision 0063 measured ~0.1% of discrete-count
+metrics disagreeing between boxes, and a wrong-host run commits wrong values that
+then drift-check green forever.
+
+There is **no** remote census target: `make regen-remote` is abandoned, and
+`heavy-remote` dispatches `heavy-run.sh` (the heavy tier), not a census. Running
+it needs the branch pushed and lefford's **shared** regeneration worktree — which
+CLAUDE.md says to ask about and verify rather than assume. Not improvised.
+
+Sequencing note: with 4b unresolved, placement will move again, so the census is
+better spent after §3.3 than now.
 
 ## 5. Findings that are settled — do not re-derive
 
