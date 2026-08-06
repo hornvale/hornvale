@@ -102,7 +102,7 @@ Ways on: N, SW, SE.
 Tropical seasonal forest — buttressed canopy, in a hollow — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
-Time passes. You sense movement nearby (358 stirred).
+Time passes. You sense movement nearby (332 stirred).
 > examine sky
 Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows

@@ -27,12 +27,12 @@ Ways on: SE, N, SW.
   [562] kobold of Roxo
   [563] a wild rust-monster
   [564] a wild otyugh
-  [565] a wild xorn
-  [566] a wild carrion-crawler
+  [565] a wild carrion-crawler
+  [566] a wild giant-elk
 > needs
 The bugbear of Goodogododaga seems content.
 > wait 5
-Time passes; the world keeps its shape.
+Time passes. You sense movement nearby (2 stirred).
 > look
 [room 738918402, day 5]
 Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -40,7 +40,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Goodogododaga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (16 stirred).
+Time passes. You sense movement nearby (20 stirred).
 > look
 [room 738918402, day 6]
 Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -48,7 +48,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Goodogododaga settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (16 stirred).
+Time passes. You sense movement nearby (15 stirred).
 > look
 [room 738918402, day 7]
 Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The sky is a low grey rain-deck.
@@ -62,7 +62,7 @@ hobgoblin of Geoboegetoanaoka:
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (350 stirred).
+Time passes. You sense movement nearby (318 stirred).
 > look
 [room 738918402, day 97]
 Tropical seasonal forest — buttressed canopy — in the lands of Goodogododaga. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
