@@ -91,7 +91,7 @@ fn map_indoors_draws_a_floor_plan() {
     );
     assert!(
         drawn(&plan, '+') > 0,
-        "the seed-42 structure has two chambers, so its plan must show a doorway: {plan}"
+        "the seed-42 structure has several chambers, so its plan must show a doorway: {plan}"
     );
     // Rectangular, and that is a claim about the render rather than a tidiness
     // preference: a row short of its neighbours means a cell went undrawn, and an
@@ -110,10 +110,15 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     // Task 4b's reification, checked where a PLAYER meets it. Two claims, and
     // neither could be made before a wall was a cell:
     //
-    // - the picture is 1:1 with the lattice, so a 19x10 extent draws 19x10 rather
-    //   than Task 4's doubled 39x21. Pinned as numbers here on purpose: the
+    // - the picture is 1:1 with the lattice, so a 19x19 extent draws 19x19 rather
+    //   than Task 4's doubled 39x39. Pinned as numbers here on purpose: the
     //   `(2w+1)` machinery coming back would still satisfy every proportional
     //   assertion in this file, and would only fail against a stated size.
+    //   Re-measured under The Tense (2026-08-05): the seed-42 structure the
+    //   walk enters now has FOUR chambers rather than two and the first is
+    //   19x19 rather than 19x10. Only the size moved — the 1:1 claim is exactly
+    //   as testable at 19x19, since the doubling this guards against would
+    //   render 39x39.
     // - the plan is ENCLOSED. A drawn border of unbroken `#` is what makes the
     //   picture read as a BUILDING rather than as a floating partition diagram,
     //   and it is what roughly a fifth to two fifths of the extent is spent on.
@@ -124,9 +129,9 @@ fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
     let lines = picture_rows(&plan);
     assert_eq!(
         (lines.len(), lines[0].chars().count()),
-        (10, 19),
-        "the seed-42 structure has two chambers, whose extent is 19x10, and the \
-         render is 1:1: {plan}"
+        (19, 19),
+        "the seed-42 structure's first chamber has extent 19x19, and the \
+         render is 1:1 (a doubling regression would draw 39x39): {plan}"
     );
     let last = lines.len() - 1;
     for (y, row) in lines.iter().enumerate() {
