@@ -342,14 +342,28 @@ All four were accepted as minors at the time and none blocks a merge.
    snapshot rather than one channel — is pinned by no test, only by a comment.
 4. `snapshot()`'s doc still reads *"costs nothing … its measured per-turn cost
    is unchanged."* That is true only for callers that never ask for the payload,
-   and the payload grew. **Reworded at the close** — and the rewording's own
-   first attempt carried a false number: it cited "2.8× the bytes" against
-   `turn_cost.rs`, a figure from a scratch note whose totals never matched the
-   committed fixtures. `turn_cost.rs` reports the growth **per band**, and the
-   two bands differ by more than a factor of two: walk 4235 → 11582 bytes
-   (2.73×), chamber 4064 → 4759 bytes (1.17×). A single pooled multiplier for a
-   quantity that is band-dependent is not a rounding error; it is the wrong
-   shape. The doc now states both bands with their byte counts.
+   and the payload grew. **Reworded at the close — and the rewording carried a
+   false number, which is the part worth keeping.** It cited "2.8× the bytes"
+   and attributed it to `turn_cost.rs`, which reports no such figure:
+   `turn_cost.rs` measures the growth **per band**, and the two bands differ by
+   more than a factor of two — walk 4235 → 11582 B (2.73×), chamber 4064 → 4759
+   B (1.17×).
+
+   The instructive part is where 2.8× came from, because it was **not
+   invented**. Task 3 measured the golden fixture `session-seed-42.json`
+   growing 16,345 → 45,733 B when the spatial channel landed — a ratio of
+   2.797, and both endpoints are exactly right; the file on disk is 45,733 B
+   today. So a correct measurement of one quantity (a multi-turn golden
+   fixture's size on disk) was transplanted onto a claim about a different
+   quantity (one turn's payload), and re-attributed to the bench that measures
+   the second. Every individual number in the chain was real. **A number does
+   not carry its denominator around with it, and a citation is not a check** —
+   the figure looked measured, cited a real file, and was wrong by 2.4× for the
+   chamber band. Sanity arithmetic would have caught it: the two committed
+   per-band fixtures sum to 16,341 B, nowhere near 45,733.
+
+   The doc now states both bands with their byte counts, and the citation is
+   accurate for the first time.
 
 ### Deferred minor from Task 7's review
 
