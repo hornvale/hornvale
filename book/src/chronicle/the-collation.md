@@ -45,10 +45,9 @@ renamed to match the new shape rather than keeping the unsuffixed name, since
 within a month an asymmetry reads as an accident and the next corpus inherits
 the confusion.
 
-Both columns resolve against **one registry of 335 tokens, built once per
-run**. That is what makes the collation a collation: a difference between the
-columns is a difference between the catalogues, and never a difference between
-two worlds.
+Both columns resolve against **one registry, built once per run**. That is what
+makes the collation a collation: a difference between the columns is a
+difference between the catalogues, and never a difference between two worlds.
 
 ## Both columns read zero
 
