@@ -766,6 +766,30 @@ buffered toward the annual mean with depth, insolation zero, moisture high.
 Supply stays surface-fed — cave ecology here is **allochthonous** (spec §6);
 chemosynthesis is The Keeping's step D and must not be smuggled in.
 
+> **THIS TASK MOVES WORLD IDENTITY, AND THE PLAN NEVER SAID SO (ledger #27).**
+> `xorn` appears 4 times and `rust-monster` 3 times in the committed
+> `cli/tests/fixtures/world-seed-42.json`. Species placement is scored against
+> the condition niche, so re-authoring these two niches **relocates them**, and
+> `cli/tests/lens_purity.rs` — the world-identity guard — will go red. That is
+> the intended consequence of H1, not a bug: an xorn scored against
+> subterranean conditions is *supposed* to stop being where it was.
+>
+> `cli/CLAUDE.md` warns that a species change can re-baseline settlement
+> placement and every generated name world-wide, so **check the blast radius
+> rather than assuming it stops at two entities.**
+>
+> Handle it deliberately, and **in this commit, not at the Close**:
+> 1. run the gate and read what actually moved — do not predict it;
+> 2. re-baseline `world-seed-42.json` in the *same* commit that causes the
+>    drift (a golden re-pinned later is a golden nobody reviewed);
+> 3. `make rebaseline` and **review** the artifact diff — almanacs, censuses
+>    and the type-audit report all read species placement;
+> 4. state in the commit message what moved and why.
+>
+> Note the contrast worth carrying into the chronicle: The Hollow changed the
+> cave model substantially and world identity did **not** move, because it was
+> a pure query over already-committed fields. This task is not that.
+
 - [ ] **Step 3: Re-author the two niches**
 
 Remove the low-insolation fake. State in each doc comment what the old curve was
