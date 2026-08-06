@@ -4609,9 +4609,15 @@ pub fn family_daughters(
 /// 132.0 kg/~80.9 yr, which held this rank until The Vacancy added gnoll;
 /// human's 70.0 kg/~69.0 yr does not challenge it), and the
 /// shortest-lived dragon, white/black-dragon at ~163.4 yr (2200.0 kg,
-/// `Endotherm`). Also clear of the wild `Solitary` beasts
-/// (otyugh/xorn/rust-monster/owlbear), which top out around ~110 yr and so
-/// stay banked at `SETTLED` rather than freezing.
+/// `Endotherm`). Also clear of the six settling peoples, which top out at
+/// gnoll's ~81.5 yr — that margin is what makes this campaign's
+/// byte-neutrality hold. It is **not** true that only dragons clear it:
+/// measured over the roster, giant-octopus (131.1), giant-squid (142.3),
+/// giant-scorpion (148.9), rhinoceros (165.2), giant-constrictor-snake
+/// (169.2) and giant-crocodile (201.2) all do, and all bank the frozen-
+/// isolate regime. None speaks, so the regime is latent; an earlier version
+/// of this doc named only otyugh/xorn/rust-monster/owlbear and read as
+/// though those were the whole wild-solitary set.
 ///
 /// [`CascadeRegime::new`]: hornvale_language::CascadeRegime::new
 const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
@@ -4620,25 +4626,36 @@ const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
 /// pure over a biosphere row (no world/seed needed; `domains/language`
 /// cannot read `SocialForm`, so worldgen — the composition root — computes
 /// this and passes the regime in). `Settled` peoples keep drawing at the
-/// historical rate; `Gregarious` beasts (no current speaker) bank a slightly
-/// slower `{1,2}`; `Solitary` freezes to the isolate rate `{0,1}` once its
-/// allometric lifespan clears [`LIFESPAN_THRESHOLD_YEARS`] (a dragon), else
-/// it stays at the historical rate (a short-lived solitary beast, banked);
-/// `Sessile` never speaks and is inert at `SETTLED`. Total over
-/// `SocialForm`.
+/// historical rate, unless the row's own lifespan clears
+/// [`LIFESPAN_THRESHOLD_YEARS`], in which case turnover falls and the tongue
+/// banks the same slower `{1,2}` rate as a `Gregarious` beast (The Long Age,
+/// mutation M1); `Gregarious` beasts (no current speaker) bank that slower
+/// `{1,2}` unconditionally; `Solitary` freezes to the isolate rate `{0,1}`
+/// once its lifespan clears the same threshold (a dragon), else it stays at
+/// the historical rate (a short-lived solitary beast, banked); `Sessile`
+/// never speaks and is inert at `SETTLED`. Total over `SocialForm`.
 fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
+    // `life_history` is the honest source: it returns `None` for an
+    // `Ametabolic` kind, which has no mass-derived lifespan at all. The bare
+    // `lifespan` call this used to make returned a number for a construct
+    // (xorn: 64.97 yr) that the model says does not exist.
+    let long_lived = hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+        .lifespan
+        .is_some_and(|l| l.get() >= LIFESPAN_THRESHOLD_YEARS);
     match bio.social_form {
-        hornvale_species::SocialForm::Settled => hornvale_language::CascadeRegime::SETTLED,
+        // Many speakers, but turnover falls with lifespan: a settled people
+        // that lives past the threshold accrues far fewer transmission events
+        // per century, so its tongue drifts slower without freezing (0066).
+        hornvale_species::SocialForm::Settled => {
+            if long_lived {
+                hornvale_language::CascadeRegime::new(1, 2)
+            } else {
+                hornvale_language::CascadeRegime::SETTLED
+            }
+        }
         hornvale_species::SocialForm::Gregarious => hornvale_language::CascadeRegime::new(1, 2),
         hornvale_species::SocialForm::Solitary => {
-            if hornvale_species::lifespan(
-                bio.mass,
-                bio.metabolic_class,
-                hornvale_species::LifeSchedule::ALLOMETRIC,
-            )
-            .get()
-                >= LIFESPAN_THRESHOLD_YEARS
-            {
+            if long_lived {
                 hornvale_language::CascadeRegime::new(0, 1)
             } else {
                 hornvale_language::CascadeRegime::SETTLED
@@ -8329,6 +8346,60 @@ mod tests {
             cascade_regime_of(treant),
             hornvale_language::CascadeRegime::SETTLED,
             "treant is Sessile (never speaks) -> inert at SETTLED"
+        );
+    }
+
+    #[test]
+    fn a_long_lived_settled_people_drifts_slower_than_a_short_lived_one() {
+        // THE LONG AGE (spec 6, mutation M1). Decision 0066 ships as
+        // "drift = f(sociality x lifespan)", and until this campaign the
+        // Settled row of that product was CONSTANT in lifespan -- exactly the
+        // cell an elf was meant to probe. This is the assertion that goes RED
+        // if the Settled arm stops consulting lifespan at all.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let human = wc.biosphere.get_by_label("human").expect("human has a row");
+
+        // Same people, same mass, same social form -- only the schedule moves.
+        assert_eq!(
+            cascade_regime_of(human),
+            hornvale_language::CascadeRegime::SETTLED,
+            "human at 69.0 yr is far below the threshold"
+        );
+
+        let mut long_lived = human.clone();
+        long_lived.schedule =
+            hornvale_species::LifeSchedule::paced(11.0).expect("11.0 is a valid factor");
+        assert!(
+            hornvale_species::lifespan(
+                long_lived.mass,
+                long_lived.metabolic_class,
+                long_lived.schedule
+            )
+            .get()
+                >= LIFESPAN_THRESHOLD_YEARS,
+            "the fixture must actually clear the threshold, or this test proves nothing"
+        );
+        assert_eq!(
+            cascade_regime_of(&long_lived),
+            hornvale_language::CascadeRegime::new(1, 2),
+            "a Settled people that lives past the threshold drifts slower"
+        );
+    }
+
+    #[test]
+    fn an_ametabolic_kind_is_never_asked_for_a_lifespan() {
+        // xorn is Ametabolic: life_history reports no lifespan at all, yet the
+        // bare allometry returns 64.97 yr for its mass. The regime must not be
+        // decided by that number. Solitary + no lifespan banks at SETTLED.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        let xorn = wc.biosphere.get_by_label("xorn").expect("xorn has a row");
+        assert_eq!(
+            xorn.metabolic_class,
+            hornvale_species::MetabolicClass::Ametabolic
+        );
+        assert_eq!(
+            cascade_regime_of(xorn),
+            hornvale_language::CascadeRegime::SETTLED
         );
     }
 
