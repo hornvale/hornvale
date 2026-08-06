@@ -7916,7 +7916,21 @@ mod tests {
             .collect();
         assert_eq!(
             rooted,
-            vec!["river", "ford", "hill", "valley", "marsh", "spring"],
+            // The Tense re-pin (2026-08-05): back to two — "river" and "ford".
+            // The MERGE note above recorded this precondition WIDENING to six
+            // because The Keeping's `is_land` decomposition opened arid and
+            // very-hot ground; era-varying capacity now narrows it again, since
+            // seed 7's goblins hold fewer and smaller settlements and so reach
+            // less terrain. Two rooted concepts is still a nonempty
+            // precondition and the mutation below still flips, so this follows
+            // The Tolerance's precedent exactly: re-pin the set, do not swap
+            // the seed. The claim — stripping the toponymic gates makes
+            // `exposure_sound` read false — is untouched.
+            //
+            // Note the coverage cost, since the MERGE note above claimed it as
+            // a gain: at six concepts this exercised the river, elevation and
+            // karst gate classes; at two it exercises the river gate only.
+            vec!["river", "ford"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -7977,14 +7991,29 @@ mod tests {
     /// about kobolds, and the gates being witnessed are terrain gates.
     #[test]
     fn the_independent_reading_steeps_island_and_hill_where_the_lexicon_roots_them() {
-        let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
+        // The Tense re-witness (2026-08-05): seed 0's gnolls no longer root
+        // `island` — era-varying capacity reseats settlements and the
+        // flood-fill half of the witness is lost, exactly the way seed 1's
+        // kobolds lost it at F11. The precondition caught it rather than
+        // letting the test pass on nothing, which is what it is for.
+        //
+        // Re-swept 0..60 over every placed people by the same method, and took
+        // the EARLIEST pair rooting BOTH `island` and `hill` — the rule this
+        // witness has always been chosen by, so the choice stays reproducible
+        // and free of selection. That is **(1, gnoll)**: the seed moved by one
+        // and the species did not move at all. Eight pairs qualify in the
+        // window (1/gnoll, 2/bugbear, 7/bugbear, 11/gnoll, 23/gnoll,
+        // 24/bugbear, 28/bugbear, 34/hobgoblin), so both terrain gates remain
+        // emphatically live and this is a population that moved, not a rule
+        // that died.
+        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "gnoll").expect("gnoll is in the default roster");
-        let lexicon = lex(&view, "gnoll").expect("seed 0 gnolls hold a lexicon");
+        let lexicon = lex(&view, "gnoll").expect("seed 1 gnolls hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 0 gnolls must root {concept} for this test to bite"
+                "seed 1 gnolls must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -9241,9 +9270,30 @@ mod tests {
         // independently corroborated the previous witness in this very world,
         // so the seed is unchanged and the corroboration (goblin, same seed,
         // same six bands) is unchanged in shape.
-        let view = FullView::build(Seed(16), &SkyPins::default()).unwrap();
+        // The Tense re-witness (2026-08-05): era-varying capacity reseats
+        // settlements once more and seed 16's kobold no longer spans all six
+        // staple bands. Re-swept by the same method the prior searches used
+        // (0..150, every placed people read dynamically off
+        // `FullView::components().perception`).
+        //
+        // THE PROPERTY GOT SCARCER, and that is the part worth recording. The
+        // Contour's sweep of this range found SEVEN qualifying pairs; this one
+        // finds THREE — (59, hobgoblin), (129, hobgoblin), (133, kobold) — and
+        // the whole of 0..40 now contains none at all. Fewer, smaller
+        // settlements span fewer crop bands, which is exactly what a
+        // capacity-squeezing change should do to a "spans all six" property.
+        // The near-misses concentrate on `millet` and `tuber`: those two are
+        // the bands that drop out first.
+        //
+        // Witness is (133, kobold): the same SPECIES as the outgoing witness,
+        // and seed 133 has carried a witness before (The Contour's sweep found
+        // (133, hobgoblin)), so it is continuous on both axes. Unlike every
+        // previous witness there is NO same-seed second species corroborating
+        // it this time — 59 and 129 are different worlds. Recorded rather than
+        // papered over: this witness is load-bearing alone.
+        let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "kobold").expect("kobold is placed at seed 16");
+            independently_steeped_concepts(&view, "kobold").expect("kobold is placed at seed 133");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),
