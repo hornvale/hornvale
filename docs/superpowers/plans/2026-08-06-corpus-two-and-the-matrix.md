@@ -82,7 +82,9 @@ Add to `mod tests` in `cli/src/tropes.rs`, directly after `the_live_corpus_has_t
 
 - [ ] **Step 3: Run it**
 
-Run: `cargo test -p hornvale --lib tropes::tests::the_second_corpus 2>&1 | tail -20`
+Run: `cargo test -p hornvale --bin hornvale tropes::tests::the_second_corpus 2>&1 | tail -20`
+
+`hornvale` is a binary-only crate: it has no `src/lib.rs` and `--lib` matches no target. Do not create one to satisfy a test invocation.
 
 Expected: PASS if Step 1 copied the right file. A parse failure means the schema diverged and is a stop condition — report it rather than editing either the corpus or `load`.
 
@@ -390,7 +392,7 @@ from its own columns is worse than no summary."
 
 **Spec coverage.** Corpus copied in with its count asserted → Task 1. `check` keyed off the corpus field → Task 2 Steps 1 and 3. Polti's artifact renamed with the full blast radius enumerated → Task 2 Steps 4-6. Matrix generated, not authored → Task 3. Per-corpus byte identity → Task 2 Step 5. Matrix-cannot-drift test → Task 3 Step 1. Default `report` still reproducing Polti → Task 2 Step 7's first check. Out-of-scope items (re-freezing either corpus, changing `resolve` or the vocabulary, acting on the fork, a third corpus) appear nowhere as work.
 
-**Type consistency.** `artifact_path(&Corpus) -> String` is defined in Task 2 Step 1 and used in Task 2 Step 3. `regenerate_command(&Corpus) -> String` is defined and used in Task 2 Steps 1-2. `CORPORA` is defined in Task 3 Step 4 and used by the `matrix` arm. `render_matrix` is specified in Task 3 Step 3 and called in Step 4.
+**Type consistency.** `artifact_path(&Corpus) -> String` is defined in Task 2 Step 1 and used in Task 2 Step 3. `regenerate_command(path: &str) -> String` is defined and used in Task 2 Steps 1-2 — it takes the path the caller actually used, because corpus ids do not map to file stems (see the next note). `CORPORA` is defined in Task 3 Step 4 and used by the `matrix` arm. `render_matrix` is specified in Task 3 Step 3 and called in Step 4.
 
 **Two places the plan expects to be told it is wrong.** Task 2 Step 1 originally assumed corpus ids map to file stems. Verified before publishing: they do not — `polti.trope.json` carries `polti-1895` — so the step now states the mismatch as fact and routes `regenerate_command` through the caller's path instead. Task 3 Step 5 hands the implementer figures derived by a *different* route than the renderer will use, and instructs a stop on disagreement rather than a rebaseline — the two derivations agreeing is the evidence, and only one of them can be checked by the tests.
 
