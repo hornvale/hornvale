@@ -35,7 +35,10 @@ export function planRows(snap: Snapshot): string[] | null {
   const spatial = snap.spatial;
   if (!spatial || spatial.band !== "chamber") return null;
   const plan: PlanPayload = spatial.plan;
-  if (!plan?.extent || !Array.isArray(plan.cells) || !Array.isArray(plan.palette)) {
+  if (
+    !plan?.extent || !Array.isArray(plan.cells) || !Array.isArray(plan.palette) ||
+    !plan.you || !Number.isInteger(plan.you.x) || !Number.isInteger(plan.you.y)
+  ) {
     return null;
   }
   const { w, h } = plan.extent;

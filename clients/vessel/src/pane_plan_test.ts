@@ -115,3 +115,39 @@ Deno.test("an unknown cell kind renders as the fallback, not a throw", () => {
   }))!;
   assertEquals(planRows(snap), ["?."]);
 });
+
+Deno.test("a plan with no `you` at all is refused, not thrown", () => {
+  // `you` is required by the Rust schema, so a payload lacking it is
+  // malformed in exactly the same sense as a cells-length mismatch — refuse
+  // it the same way rather than rendering an unmarked map.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "chamber",
+      plan: {
+        schema: "vessel/plan/v1",
+        extent: { x: 0, y: 0, w: 2, h: 1 },
+        palette: [{ kind: "wall", chambers: [] }, { kind: "floor", chambers: [0] }],
+        cells: [0, 1],
+      },
+    },
+  }))!;
+  assertEquals(planRows(snap), null);
+});
+
+Deno.test("a `you` with a non-integer coordinate is refused", () => {
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "chamber",
+      plan: {
+        schema: "vessel/plan/v1",
+        extent: { x: 0, y: 0, w: 2, h: 1 },
+        palette: [{ kind: "wall", chambers: [] }, { kind: "floor", chambers: [0] }],
+        cells: [0, 1],
+        you: { x: 1.5, y: 0 },
+      },
+    },
+  }))!;
+  assertEquals(planRows(snap), null);
+});
