@@ -142,9 +142,16 @@ pub fn is_faithful(
 /// it.** Testing every free cell and then drawing among the admissible ones —
 /// the first thing this function did — costs one [`is_faithful`] call per
 /// (anchor × free cell): **0.3–2.7 ms per call in release**, measured at the
-/// four chamber counts, against The Panes' whole-`snapshot()`-plus-JSON budget
-/// of 1.249 ms. Testing candidates only until one passes costs one call per
-/// anchor in the common case and is the same function of the same inputs.
+/// four chamber counts, where its median alone exceeded The Panes'
+/// whole-`snapshot()`-plus-JSON figure of 1.249 ms. Testing candidates only
+/// until one passes costs one call per anchor in the common case and is the
+/// same function of the same inputs.
+///
+/// What it costs now, over the 4 × 64 rectilinear sweep, stated at three
+/// points because a median alone would set a ceiling wrong: **42 µs median
+/// (3.4% of 1.249 ms), 410 µs p99 (33%), 437 µs max (35%)**. The tail is where
+/// this lands, not the median — the worst cases are the small chambers with
+/// five anchors, where the sweep rejects most of what it tries.
 ///
 /// # The degrees of freedom it spends
 ///
@@ -156,34 +163,51 @@ pub fn is_faithful(
 /// graph left free, and taking it is not invention. Where one cell is left,
 /// there is nothing to choose and no draw is taken.
 ///
-/// # The filter has never yet been observed to BIND
+/// # Where the filter BINDS, and where it is slack
 ///
-/// Measured, not assumed (2026-08-06, Task 2): removing the faithfulness test
-/// from this sweep entirely — take the drawn cell, unfiltered — leaves
-/// `every_placement_is_faithful` GREEN across all four chamber counts × 64
-/// seeds. A chamber's floor is an open region, the interiors the generator
-/// composes hold at most five anchors, and no five distinct floor cells cut
-/// such a region. So today the property holds because of the FLOOR's topology,
-/// not because of this filter, and the property test would pass on an embedder
-/// that did not check at all.
+/// Measured, not assumed (2026-08-06, Task 2), by removing the filter from
+/// this sweep entirely — take the drawn cell, unfiltered — and re-running both
+/// corpora of 4 chamber counts × 64 seeds:
 ///
-/// The filter stays, and the reason is stated rather than assumed: it is what
-/// makes the guarantee hold BY CONSTRUCTION when any of those three facts
-/// moves — a richer interior (The Blocking already added five anchor kinds), a
-/// grown lattice's non-convex blob, or the kind-aware placement below. What a
-/// reader must NOT do is read that green test as evidence this scan is doing
-/// the work; it is not, yet.
+/// | corpus | unfaithful, filtered | unfaithful, unfiltered |
+/// |---|---|---|
+/// | rectilinear (`allocate`) | 0 | 0 |
+/// | grown (`grow`) | 5 | 10 |
 ///
-/// # When no cell is admissible: a STATED relaxation
+/// **On the grown corpus the filter halves the failures, so it binds today.**
+/// A grown chamber is a non-convex blob: the sweep finds one-cell-wide
+/// corridors (`n=4 seed=22` is three cells in a row; `seed=34` is its vertical
+/// twin) where a single anchor IS a cut vertex, and it finds large blobs with
+/// a pinch in them (`n=3 seed=0`, 79 floor cells) that fail just as readily.
+/// `the_grown_corpus_is_where_the_filter_binds` is the test, and it asserts a
+/// measured CEILING rather than universality, because five of those blobs
+/// cannot be embedded faithfully at all.
+///
+/// **On the rectilinear corpus it is slack**, and that is a fact about
+/// rectangles: a chamber `allocate` produces is convex, so no five distinct
+/// floor cells cut it and the property holds however the anchors land. Since
+/// `structure_at` returns `None` unless `brief.built`, production reaches only
+/// this corpus today — the grown one is the hostile geometry held in reserve,
+/// not a live path.
+///
+/// # When no cell is admissible: a STATED relaxation, and it FIRES
 ///
 /// If no cell in the sweep keeps the placement faithful, the anchor takes the
 /// cell its draw landed on, and the returned placement therefore FAILS
-/// [`is_faithful`]. The relaxation is stated rather than silent — the checker
-/// is how it is reported, and `every_placement_is_faithful` is what asserts it
-/// does not happen for any structure the generator produces. If a chamber has
-/// fewer floor cells than the interior has anchors, the surplus anchors are
-/// left UNPLACED (absent from the map) rather than stacked, since stacking
-/// would put two creatures in one cell for a reason no rule would report.
+/// [`is_faithful`]. The relaxation is stated rather than silent, and the
+/// checker is how it is reported: a caller that needs the guarantee must ASK,
+/// because the return type cannot refuse.
+///
+/// It is not hypothetical. It fires on **5 of 256** grown fixtures and on none
+/// of the rectilinear ones. What it guarantees when it fires is what the grown
+/// test asserts rather than what this sentence promises: anchors stay distinct,
+/// stay inside the chamber, and never outnumber the cells holding them.
+///
+/// If a chamber has fewer floor cells than the interior has anchors — **3 of
+/// 256 grown fixtures**, two of them two-cell chambers — the surplus anchors
+/// are left UNPLACED (absent from the map) rather than stacked, since stacking
+/// would put two creatures in one cell for a reason no rule would report. A
+/// caller must therefore treat a missing `AnchorId` as possible, not as a bug.
 /// type-audit: bare-ok(index: chamber), bare-ok(count: return)
 fn place(
     interior: &Interior,
@@ -336,6 +360,20 @@ mod tests {
         Brief::from_parts(None, None, None, None, 0, true, true)
     }
 
+    /// The brief that selects the GROWN embedding, passed to `embed_with` and
+    /// to NOTHING else.
+    ///
+    /// A structure exists only where `brief.built` (`structure_at` returns
+    /// `None` otherwise), so this brief cannot derive a structure or an
+    /// interior — and `chamber_interior_of` would debug-assert against it,
+    /// since the terrain here reports built. It selects a METHOD, which is
+    /// exactly how `lattice/mod.rs`, `render.rs` and `classify.rs` already use
+    /// it: the grown lattice is the hostile geometry, reachable as a fixture
+    /// and not reachable in production.
+    fn wild() -> Brief {
+        Brief::from_parts(None, None, None, None, 0, false, true)
+    }
+
     /// The `n`th walk-band locale, `n` written out as base-4 path digits.
     fn locale_number(n: u64) -> RoomAddr {
         RoomAddr {
@@ -365,6 +403,17 @@ mod tests {
     /// hand. The chamber index varies with the seed so a sweep covers every
     /// role rather than one.
     fn fixture(chamber_count: usize, seed: Seed) -> (Interior, Lattice, usize) {
+        fixture_embedded_with(chamber_count, seed, &brief())
+    }
+
+    /// [`fixture`], with the embedding METHOD chosen by `method` — the built
+    /// brief for the rectilinear allocation production always takes, the wild
+    /// one for the grown blob it never does.
+    fn fixture_embedded_with(
+        chamber_count: usize,
+        seed: Seed,
+        method: &Brief,
+    ) -> (Interior, Lattice, usize) {
         let (locale, structure) = structure_of(chamber_count, seed);
         let terrain = WalkKeyedTerrain {
             built_walk_ids: [locale.pack().expect("a walk-band locale packs").0]
@@ -374,7 +423,7 @@ mod tests {
         // Keyed to the LOCALE's own seed, exactly as `Session::lattice_of` does.
         let lattice = embed_with(
             &structure,
-            &brief(),
+            method,
             extent_for(&structure),
             locale.seed(seed),
         );
@@ -397,11 +446,14 @@ mod tests {
     /// example — an embedding can be faithful for a two-anchor room and
     /// scatter a six-anchor one, and only the sweep sees that.
     ///
-    /// **Read `place`'s "the filter has never yet been observed to bind"
-    /// before trusting this green.** Measured: this test also passes with the
-    /// scan's faithfulness test removed. It is a real property of the result
-    /// and it is checked here, but on today's corpus it is a claim about the
-    /// FLOOR's topology, not about the scan.
+    /// **This corpus alone does not test the scan**, and the companion test
+    /// does. Measured: this test also passes with the scan's faithfulness
+    /// filter removed, because an `allocate` chamber is a rectangle and no
+    /// five distinct floor cells cut a rectangle. It is a real property of the
+    /// result and it is checked here — it is the corpus production actually
+    /// reaches — but the claim that the SCAN earns it lives in
+    /// [`the_grown_corpus_is_where_the_filter_binds`], where removing the
+    /// filter doubles the failures.
     #[test]
     fn every_placement_is_faithful() {
         for n in 1..=crate::structure::MAX_CHAMBERS {
@@ -415,6 +467,97 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// How many of the 256 grown fixtures the scan cannot place faithfully.
+    ///
+    /// A measured ceiling, not a target: the number of chambers whose geometry
+    /// defeats a placement scan, which is what the stated relaxation exists
+    /// for. Lowering it is an improvement and should be re-pinned here;
+    /// RAISING it means the scan got worse, and that is what this number is
+    /// here to make impossible to do quietly. Removing the scan's filter
+    /// entirely doubles it, which is the measurement that shows the filter is
+    /// load-bearing.
+    /// type-audit: bare-ok(count)
+    const GROWN_RELAXATIONS: usize = 5;
+
+    /// The same sweep as [`every_placement_is_faithful`], against the GROWN
+    /// embedding — and this is the one where the scan's filter does work.
+    ///
+    /// **Why a second corpus exists at all.** A rectilinear chamber is a
+    /// rectangle, so no five distinct floor cells can cut it and the property
+    /// holds however the anchors land. A grown chamber is a non-convex blob:
+    /// the sweep finds one-cell-wide corridors (`n=4 seed=22` is three cells
+    /// in a row, `seed=34` its vertical twin), where a single anchor IS a cut
+    /// vertex. That is the geometry the filter was written for, and without a
+    /// corpus containing it the campaign's keystone property was a claim about
+    /// rectangles.
+    ///
+    /// **Unreachable in production, and that is why it is a fixture.**
+    /// `structure_at` returns `None` unless `brief.built` (`structure.rs`),
+    /// and `brief_of` truncates to the walk band before asking `is_built`, so
+    /// `Session::lattice_of` always dispatches to `allocate`. This is the
+    /// hostile case held in reserve against the day a wild place gets
+    /// chambers — not a live defect.
+    ///
+    /// **What it asserts is a CEILING, not universality**, because the honest
+    /// answer is that some blobs cannot be embedded faithfully at all: five of
+    /// 256 fall back to the stated relaxation. Asserting zero here would be
+    /// asserting something false.
+    #[test]
+    fn the_grown_corpus_is_where_the_filter_binds() {
+        let mut unfaithful: Vec<(usize, u64, usize, usize, usize)> = Vec::new();
+        let mut surplus: Vec<(usize, u64, usize, usize, usize)> = Vec::new();
+        for n in 1..=crate::structure::MAX_CHAMBERS {
+            for seed in 0u64..64 {
+                let (interior, lattice, chamber) = fixture_embedded_with(n, Seed(seed), &wild());
+                let placed = anchor_cells(&interior, &lattice, chamber, Seed(seed));
+                let floor = floor_of(&lattice, chamber).len();
+                let anchors = interior.ids().len();
+                if !is_faithful(&interior, &lattice, &placed) {
+                    unfaithful.push((n, seed, chamber, floor, anchors));
+                }
+                if placed.len() < anchors {
+                    surplus.push((n, seed, chamber, floor, anchors));
+                }
+                // Whatever the relaxation does, it does these three things:
+                // it never stacks two anchors, never leaves the chamber, and
+                // never places more anchors than there are cells to hold.
+                let distinct: BTreeSet<Cell> = placed.values().copied().collect();
+                assert_eq!(
+                    distinct.len(),
+                    placed.len(),
+                    "n={n} seed={seed}: the relaxation stacked two anchors"
+                );
+                assert!(
+                    placed.len() <= floor,
+                    "n={n} seed={seed}: {} anchors placed in {floor} cells",
+                    placed.len()
+                );
+                for (id, cell) in &placed {
+                    assert!(
+                        kind_of(&lattice, *cell).is_some_and(|k| k.serves(chamber)),
+                        "n={n} seed={seed}: {id:?} left chamber {chamber}"
+                    );
+                }
+            }
+        }
+        eprintln!(
+            "GROWN: cases=256 unfaithful={} surplus-unplaced={}\n  unfaithful (n, seed, chamber, floor, anchors): {unfaithful:?}\n  surplus: {surplus:?}",
+            unfaithful.len(),
+            surplus.len()
+        );
+        assert!(
+            !surplus.is_empty(),
+            "no grown chamber holds fewer cells than its interior holds anchors, so \
+             the surplus-unplaced branch is untested here"
+        );
+        assert!(
+            unfaithful.len() <= GROWN_RELAXATIONS,
+            "{} of 256 grown placements are unfaithful, over the measured ceiling of \
+             {GROWN_RELAXATIONS}: {unfaithful:?}",
+            unfaithful.len()
+        );
     }
 
     #[test]
