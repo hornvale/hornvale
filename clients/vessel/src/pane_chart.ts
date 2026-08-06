@@ -52,8 +52,13 @@ export function chartRows(snap: Snapshot): string[] | null {
     | undefined;
   if (chart === null || typeof chart !== "object") return null;
   if (!Array.isArray(chart.cells) || chart.cells.length === 0) return null;
+  // `.map`, never `.filter`: `cell.water` is a positional index into this
+  // legend, so dropping a non-string entry would shift every index after it
+  // and silently relabel every later cell — a river reading as land with no
+  // refusal. A non-string entry maps to `""`, which no `WATER_KINDS` member
+  // equals, so it falls through to a land glyph instead.
   const waterLegend = Array.isArray(chart.water_legend)
-    ? chart.water_legend.filter((w): w is string => typeof w === "string")
+    ? chart.water_legend.map((w) => typeof w === "string" ? w : "")
     : [];
 
   // Placement, reasoning carried over from surrounds_ascii.rs:110-135

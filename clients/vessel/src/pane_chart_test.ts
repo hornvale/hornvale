@@ -22,17 +22,34 @@ Deno.test("the observer is marked, and exactly once", () => {
 
 Deno.test("the ball is symmetric about the observer, not sheared", () => {
   // The `+ w` term in the column formula is what makes this true. Drop it
-  // and the ball leans right — a plausible-looking, wrong map. This is the
-  // negative control on the one piece of real geometry in this module.
+  // and the ball leans right — a plausible-looking, wrong map.
+  //
+  // A prior version of this test compared each row's total *span* (last
+  // non-space minus first non-space) and asked whether the widest row sat
+  // at the vertical centre. Both checks are blind to a pure horizontal
+  // shear: dropping `+ cell.w` shifts every row's *start* column but not
+  // its *width*, so the span sequence and the widest-row position are
+  // identical whether the term is present or absent. Confirmed by mutation
+  // (see the fix-round report) — the old assertions stayed green with the
+  // term removed while the render visibly leaned right.
+  //
+  // What a shear actually moves is each row's *leading*-space count, and a
+  // true (unsheared) hexagon's leading-space counts mirror around the
+  // centre row: row i and row (n-1-i) indent equally. A shear breaks that
+  // mirror because indentation grows (or shrinks) monotonically down the
+  // rows instead of tapering symmetrically toward the ends.
   const rows = chartRows(parseSnapshot(WALK)!)!;
-  const widths = rows.map((r) => r.trimEnd().length - (r.length - r.trimStart().length));
-  const first = widths.indexOf(Math.max(...widths));
-  const last = widths.lastIndexOf(Math.max(...widths));
-  assertEquals(
-    first + last,
-    rows.length - 1,
-    "the widest row is not centred: the ball is sheared",
-  );
+  const lead = rows.map((r) => r.length - r.trimStart().length);
+  const n = lead.length;
+  for (let i = 0; i < n; i++) {
+    assertEquals(
+      lead[i],
+      lead[n - 1 - i],
+      `row ${i}'s indent (${lead[i]}) does not mirror row ${n - 1 - i}'s (${
+        lead[n - 1 - i]
+      }): the ball is sheared`,
+    );
+  }
 });
 
 Deno.test("a chamber-band snapshot draws no chart", () => {
@@ -153,6 +170,36 @@ Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
   }))!;
   const rows = chartRows(snap)!;
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
+});
+
+Deno.test("a non-string water_legend entry does not shift subsequent indices", () => {
+  // `cell.water` is a positional index into `water_legend`. Dropping a
+  // non-string entry (the previous `.filter`-based implementation) shifts
+  // every later index — "river" moves from index 3 to index 2 and
+  // `cell.water: 3` resolves past the end of the legend, silently reading
+  // as land. This pins the position-preserving fix (`.map` to `""` rather
+  // than `.filter`) against that regression.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "walk",
+      chart: {
+        // Index 0 is malformed (not a string). If it were dropped instead
+        // of preserved as "", "river" would shift from index 3 to index 2.
+        water_legend: [null, "ocean", "salt-basin", "river"],
+        cells: [
+          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { v: 1, w: 0, up: false, seam: false, state: "sensed", water: 3 },
+        ],
+      },
+    },
+  }))!;
+  const rows = chartRows(snap)!;
+  assertEquals(
+    rows.join("").split("").filter((c) => c === "~").length,
+    1,
+    "water at the correct (unshifted) index should still render as water",
+  );
 });
 
 Deno.test("a real dry-land cell does not render as water", () => {
