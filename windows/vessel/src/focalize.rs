@@ -174,7 +174,7 @@ impl Focalizer for TemplateFocalizer {
             ),
             Noun::new(
                 &descriptor,
-                &descriptor,
+                &v.locale.regime.descriptor_noun,
                 &format!(
                     "The ground here: {} (strangeness {:.0}).",
                     v.locale.regime.descriptor, v.locale.regime.strangeness

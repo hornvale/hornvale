@@ -554,11 +554,13 @@ impl LocaleContext {
                 kingdom: placed.kingdom,
                 endemic: placed.endemic,
             };
-            let descriptor = crate::grammar::render(negations, micro, expr, self.seed, addr);
+            let (descriptor, descriptor_noun) =
+                crate::grammar::render(negations, micro, expr, self.seed, addr);
             regime = Regime {
                 negations,
                 micro,
                 descriptor,
+                descriptor_noun,
                 strangeness: negations.strangeness(),
             };
         }
