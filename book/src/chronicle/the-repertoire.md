@@ -39,8 +39,8 @@ deliberately lacks. Polti is 1895 French dramaturgy, an instrument of known
 bias, not an inventory of the possible — and a probe that cannot say *different,
 not deficient* scores a design choice as a hole.
 
-The output is one committed, byte-ratcheted artifact,
-[`docs/audits/trope-coverage.md`](https://github.com/hornvale/hornvale/blob/main/docs/audits/trope-coverage.md),
+The output is one committed, byte-ratcheted artifact per corpus,
+[`docs/audits/trope-coverage-polti-1895.md`](https://github.com/hornvale/hornvale/blob/main/docs/audits/trope-coverage-polti-1895.md),
 in four sections: provenance, demand (every situation and its verdict),
 leverage (missing bundles ranked by fan-in), supply (registered tokens no
 situation requires). It regenerates from `hornvale tropes report` and is
