@@ -1,11 +1,44 @@
 //! The Deep Realm, Task 0: is there an underworld worth building?
 //!
-//! `cave_at` has shipped since The Lode and has never had a consumer, so its
-//! distribution has never been checked against anything. This battery is the
-//! campaign's gate: if caves are vanishingly rare, or almost none reach past
-//! band 1 (the shallowest `depth_reach_bands` value — "cover only", per
-//! `Cave::depth_reach_bands`'s own doc comment), the underworld is a
-//! scattering of shallow pockets and the campaign reports that and stops.
+//! `cave_at` had never had a consumer when this battery was first written, so
+//! its distribution had never been checked against anything. This battery is
+//! the campaign's gate: if caves are vanishingly rare, or almost none reach
+//! past [`BandKind::Regolith`], the underworld is a scattering of shallow
+//! pockets and the campaign reports that and stops.
+//!
+//! ## The substrate moved under this instrument, and what that changed
+//!
+//! The first run of this battery (2026-08-05) measured a broken model and
+//! stopped the campaign: 0.26% of land, one `CaveKind`, one depth band, 3 of
+//! 30 worlds caveless. The Hollow then repaired that model, and in doing so
+//! **changed the type this battery reads**: `Cave::depth_reach_bands` (a
+//! `u32` count, nominally `1..=4`) became [`Cave::deepest_band`] (a
+//! [`BandKind`], five named variants `Regolith..Underneath`). That is a type
+//! change, not a rename — a band derived from a column cannot reproduce a
+//! count derived from a ratio.
+//!
+//! **The spec's criterion is therefore restated, never re-thresholded.** Spec
+//! §7's wording — "vanishingly rare or almost none reach past `Regolith`" —
+//! is kept verbatim, and only the instrument is re-expressed. No new numeric
+//! threshold is authored here, because The Hollow published the numbers this
+//! battery measures before it could be re-run: a threshold written now would
+//! be a prediction of a known result rather than a gate. The prior unblinding
+//! is disclosed in the campaign's chronicle.
+//!
+//! **What is reported is band VARIETY, not reach-the-deepest.** The frozen
+//! wording asked "how many cells have reach 4", and the naive translation is
+//! "what fraction reach `Roots`". That translation is unfaithful in the
+//! direction that matters: a world where *every* cave is `Roots` scores 100%
+//! on it and is exactly the falsification §7 names — a uniform column with
+//! extra steps. What C2a's chamber graph consumes is a depth budget that
+//! **differs by place**, so the distinct-band count is a first-class number
+//! here and the deepest-band fraction is reported beside it as a ceiling
+//! check.
+//!
+//! [`BandKind::Underneath`] is reported explicitly and separately: it is a
+//! fifth band that the plan's Task 1 `UNDERDARK` ladder
+//! (`Regolith/Cover/Basement/Roots`) does not include. A nonzero count is a
+//! finding for Task 1, not a gate result.
 //!
 //! **Land** is `!terrain.is_ocean(cell)` — the identical predicate
 //! `windows/worldgen/tests/{confluence,demesne,watershed_measure}.rs` use
@@ -28,7 +61,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{CaveKind, TerrainPins};
+use hornvale_terrain::{BandKind, CaveKind, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -36,20 +69,47 @@ use std::collections::BTreeSet;
 
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
+/// The five [`BandKind`] variants in declaration order, top to bottom. The
+/// band histogram is indexed by position in this array, so a new variant
+/// added to the enum reddens [`band_index`]'s exhaustive match rather than
+/// silently landing in a neighbour's bucket.
+const BAND_NAMES: [&str; 5] = ["Regolith", "Cover", "Basement", "Roots", "Underneath"];
+
+/// Position of `band` in [`BAND_NAMES`]. Exhaustive by construction.
+fn band_index(band: BandKind) -> usize {
+    match band {
+        BandKind::Regolith => 0,
+        BandKind::Cover => 1,
+        BandKind::Basement => 2,
+        BandKind::Roots => 3,
+        BandKind::Underneath => 4,
+    }
+}
+
 /// One seed's measured cave substrate: land/cave cell counts, the
-/// `depth_reach_bands` histogram (indexed `[band - 1]`, bands run `1..=4`
-/// per `cave_at`'s doc comment), the `CaveKind` breakdown, and the
-/// clustering split (cave cells with >=1 neighbouring cave, vs. none).
+/// [`Cave::deepest_band`] histogram (indexed by [`band_index`]), the
+/// `CaveKind` breakdown, and the clustering split (cave cells with >=1
+/// neighbouring cave, vs. none).
 struct SeedReport {
     seed: u64,
     land_cells: usize,
     cave_cells: usize,
-    depth_histogram: [usize; 4],
+    band_histogram: [usize; 5],
     kind_karst: usize,
     kind_lava_tube: usize,
     kind_fracture: usize,
     clustered: usize,
     solitary: usize,
+}
+
+impl SeedReport {
+    /// How many distinct bands this seed's caves actually reach. This is the
+    /// gate's load-bearing number: a chamber graph reads a depth budget, and a
+    /// budget that takes one value everywhere is a uniform column with extra
+    /// steps (spec §7's falsification).
+    fn distinct_bands(&self) -> usize {
+        self.band_histogram.iter().filter(|&&n| n > 0).count()
+    }
 }
 
 /// Build `seed` to `BuildDepth::Terrain` and measure its cave substrate over
@@ -73,7 +133,7 @@ fn measure_one(seed: Seed) -> SeedReport {
 
     let mut land_cells = 0usize;
     let mut cave_cells = 0usize;
-    let mut depth_histogram = [0usize; 4];
+    let mut band_histogram = [0usize; 5];
     let mut kind_karst = 0usize;
     let mut kind_lava_tube = 0usize;
     let mut kind_fracture = 0usize;
@@ -86,8 +146,7 @@ fn measure_one(seed: Seed) -> SeedReport {
         land_cells += 1;
         if let Some(cave) = terrain.cave_at(cell) {
             cave_cells += 1;
-            let idx = (cave.depth_reach_bands.clamp(1, 4) - 1) as usize;
-            depth_histogram[idx] += 1;
+            band_histogram[band_index(cave.deepest_band)] += 1;
             match cave.kind {
                 CaveKind::Karst => kind_karst += 1,
                 CaveKind::LavaTube => kind_lava_tube += 1,
@@ -114,7 +173,7 @@ fn measure_one(seed: Seed) -> SeedReport {
         seed: seed.0,
         land_cells,
         cave_cells,
-        depth_histogram,
+        band_histogram,
         kind_karst,
         kind_lava_tube,
         kind_fracture,
@@ -133,7 +192,7 @@ fn report_cave_substrate() {
 
     let mut total_land = 0usize;
     let mut total_caves = 0usize;
-    let mut total_hist = [0usize; 4];
+    let mut total_hist = [0usize; 5];
     let mut total_karst = 0usize;
     let mut total_lava_tube = 0usize;
     let mut total_fracture = 0usize;
@@ -142,11 +201,12 @@ fn report_cave_substrate() {
 
     for r in &per_seed {
         println!(
-            "seed {}: land={} caves={} depth_hist(1,2,3,4)={:?} karst={} lava_tube={} fracture={} clustered={} solitary={}",
+            "seed {}: land={} caves={} bands(Reg,Cov,Bas,Roo,Und)={:?} distinct_bands={} karst={} lava_tube={} fracture={} clustered={} solitary={}",
             r.seed,
             r.land_cells,
             r.cave_cells,
-            r.depth_histogram,
+            r.band_histogram,
+            r.distinct_bands(),
             r.kind_karst,
             r.kind_lava_tube,
             r.kind_fracture,
@@ -155,7 +215,7 @@ fn report_cave_substrate() {
         );
         total_land += r.land_cells;
         total_caves += r.cave_cells;
-        for (total, count) in total_hist.iter_mut().zip(r.depth_histogram.iter()) {
+        for (total, count) in total_hist.iter_mut().zip(r.band_histogram.iter()) {
             *total += count;
         }
         total_karst += r.kind_karst;
@@ -172,17 +232,51 @@ fn report_cave_substrate() {
         "1. cave fraction of land = {:.6} ({total_caves}/{total_land})",
         total_caves as f64 / total_land as f64
     );
-    for band in 1..=4u32 {
-        let count = total_hist[(band - 1) as usize];
+    for (idx, name) in BAND_NAMES.iter().enumerate() {
+        let count = total_hist[idx];
         println!(
-            "2. depth_reach_bands={band}: {count} caves ({:.6} of caves)",
+            "2. deepest_band={name}: {count} caves ({:.6} of caves)",
             count as f64 / total_caves as f64
         );
     }
+
+    // 3. The gate's load-bearing number. The frozen wording asked "how many
+    //    cells have reach 4"; the ceiling reading is reported for continuity,
+    //    but the number C2a's chamber graph actually consumes is whether the
+    //    depth budget DIFFERS BY PLACE. A substrate where every cave sits at
+    //    one band scores 100% on a reach-the-deepest criterion and is spec
+    //    §7's falsification, not its pass.
+    let past_regolith: usize = total_hist[1..].iter().sum();
+    let distinct_overall = total_hist.iter().filter(|&&n| n > 0).count();
+    let min_distinct = per_seed
+        .iter()
+        .map(SeedReport::distinct_bands)
+        .min()
+        .unwrap_or(0);
+    let max_distinct = per_seed
+        .iter()
+        .map(SeedReport::distinct_bands)
+        .max()
+        .unwrap_or(0);
+    let single_band_seeds = per_seed.iter().filter(|r| r.distinct_bands() <= 1).count();
     println!(
-        "3. fraction of caves reaching band 4 = {:.6} ({}/{total_caves})",
+        "3a. caves past Regolith = {:.6} ({past_regolith}/{total_caves})  <- spec §7's stop-condition reading",
+        past_regolith as f64 / total_caves as f64
+    );
+    println!(
+        "3b. band VARIETY: {distinct_overall}/5 bands occur overall; per-seed distinct bands min={min_distinct} max={max_distinct}; seeds with <=1 band = {single_band_seeds}/{}",
+        per_seed.len()
+    );
+    println!(
+        "3c. ceiling check — deepest band reached: Roots = {:.6} ({}), Underneath = {:.6} ({})",
         total_hist[3] as f64 / total_caves as f64,
-        total_hist[3]
+        total_hist[3],
+        total_hist[4] as f64 / total_caves as f64,
+        total_hist[4]
+    );
+    println!(
+        "3d. NOTE: `Underneath` is not in the plan's Task 1 UNDERDARK ladder \
+         (Regolith/Cover/Basement/Roots). Count above nonzero => a Task 1 finding."
     );
     println!(
         "4. clustering: clustered={total_clustered} ({:.6}), solitary={total_solitary} ({:.6})",
@@ -206,5 +300,19 @@ fn report_cave_substrate() {
     assert!(
         per_seed.iter().all(|r| r.cave_cells <= r.land_cells),
         "more caves than land cells — the land mask and cave_at disagree"
+    );
+
+    // Exhaustiveness. The Hollow's operational finding: checking that a
+    // bucketed table sums to its population is a five-second arithmetic step
+    // that turns a table into a statement about the WHOLE population — and it
+    // is what revealed that campaign's own gate input was gapped rather than
+    // merely non-uniform. This asserts the HARNESS counted every cave, not
+    // that the world has any particular property, so it is a guard and not a
+    // criterion.
+    let hist_total: usize = total_hist.iter().sum();
+    assert_eq!(
+        hist_total, total_caves,
+        "band histogram sums to {hist_total} but {total_caves} caves were counted — \
+         a cave landed in no band"
     );
 }

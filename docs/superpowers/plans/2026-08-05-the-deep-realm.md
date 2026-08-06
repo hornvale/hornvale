@@ -9,7 +9,14 @@ cave-dark on the surface.
 **Architecture:** A chamber is an **address in a fixed lattice**, sparsely
 occupied; existence and content are pure functions of the address. Entrances,
 and how deep a system runs, are existing terrain facts (`cave_at`,
-`depth_reach_bands`). Nothing is stored.
+`deepest_band`). Nothing is stored.
+
+> **Updated 2026-08-06 after The Hollow.** The substrate this plan spends
+> changed type: `Cave::depth_reach_bands` (a `u32` count, `1..=4`) is now
+> `Cave::deepest_band` (a `BandKind`: `Regolith`/`Cover`/`Basement`/`Roots`/
+> `Underneath`). Task 0 has been re-run and **the campaign is unblocked** —
+> see its results below. Every task's text is corrected for the new type; the
+> spec's frozen §7 is not, and carries an amendment at §7.1 instead.
 
 **Tech Stack:** Rust 2024, `cargo nextest`, `serde`/`serde_json`/`libm` only.
 
@@ -73,7 +80,7 @@ enough to be worth a realm.
 - Consumes: `hornvale_worldgen::{build_world_to_with_artifacts, BuildDepth, WorldComponents, SkyChoice, SettlementPins}`, `hornvale_terrain::TerrainPins`, `hornvale_astronomy::SkyPins`.
 - Produces: printed distributions, pasted into the campaign's chronicle.
 
-- [ ] **Step 1: Write the measurement**
+- [x] **Step 1: Write the measurement**
 
 Follow `windows/worldgen/tests/generalist_baseline.rs` for the world-building
 preamble (decision 0092's sanctioned fixture posture) — read it first.
@@ -94,18 +101,23 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_cave_substrate() {
     // per seed: land cells, cells with a cave, and the histogram of
-    // depth_reach_bands over those caves.
+    // deepest_band over those caves.
 }
 ```
 
 Report, over seeds 1..=30:
 1. fraction of **land** cells with `cave_at(cell).is_some()`;
-2. the histogram of `depth_reach_bands` (1, 2, 3, 4) over those cells;
-3. the fraction of caves reaching band 4;
+2. the histogram of `deepest_band` over those cells, across **all five**
+   `BandKind` variants;
+3. band **variety** — how many distinct bands occur, overall and per seed —
+   and, beside it as a ceiling check, the fraction reaching `Roots` and
+   `Underneath`. Variety is the load-bearing number, not reach-the-deepest:
+   see spec §7.1 for why the naive "fraction reaching `Roots`" translation is
+   unfaithful;
 4. whether deep caves cluster — report the count of cave cells whose
    neighbours also have caves, against the count that stand alone.
 
-- [ ] **Step 2: Add the guard assertions**
+- [x] **Step 2: Add the guard assertions**
 
 Required — a harness that measures nothing looks identical to one that works:
 
@@ -118,20 +130,56 @@ Required — a harness that measures nothing looks identical to one that works:
     );
 ```
 
-- [ ] **Step 3: Run once, capture everything**
+- [x] **Step 3: Run once, capture everything**
 
 Run: `cargo nextest run -p hornvale-worldgen --test deep_realm_substrate --run-ignored all --no-capture 2>&1 | tee /tmp/hv-deep-t0.txt`
 
 Grep the file afterwards. **Do not re-run to see a second line.**
 
-- [ ] **Step 4: STOP and report to the controller**
+- [x] **Step 4: STOP and report to the controller**
 
 Do not proceed to Task 1. Report the four numbers. The interpretation is fixed
 in the spec: abundant caves with varied reach ⇒ proceed; vanishingly rare or
 almost none past `Regolith` ⇒ **the campaign stops here and that is the
 finding.**
 
-- [ ] **Step 5: Commit**
+**RESULT — run 2, 2026-08-06, post-Hollow. GATE CLEARED.** Seeds 1..=30,
+469,122 land cells, 55,947 caves (14.5 s):
+
+```
+  1. cave fraction of land       0.119259   (was 0.002554 -- run 1 stopped here)
+  2. deepest_band  Regolith      0.000000        0 caves
+                   Cover         0.400290   22,395
+                   Basement      0.361163   20,206
+                   Roots         0.238547   13,346
+                   Underneath    0.000000        0 caves
+  3a. past Regolith              1.000000   55,947/55,947
+  3b. band variety               3 of 5 bands occur; per-seed min=3 max=3;
+                                 seeds with <=1 band: 0/30
+  3c. ceiling: Roots 0.238547    Underneath 0.000000
+  4. clustering                  0.985218 clustered / 0.014782 solitary
+  CaveKind  karst 0.408351  lava_tube 0.175827  fracture 0.415822
+```
+
+**Interpretation against the frozen criterion:** caves are abundant (11.9% of
+land, no caveless world) and **100% reach past `Regolith`**. Neither clause of
+the stop-condition is met. §3 proceeds.
+
+**Three findings the gate did not ask for, all of which bind later tasks:**
+
+1. **The budget takes only three of five values.** `Regolith` and `Underneath`
+   never occur. No real cave is a one-band pocket, and none reaches the fifth
+   band. Task 1's ladder and Task 7's mutation both depend on this — see
+   spec §7.1.
+2. **Variety is present but *identical across worlds*:** every one of the 30
+   seeds shows exactly 3 distinct bands (min = max = 3). Depth differs by
+   *place within* a world — which is what the chamber graph consumes — but not
+   *between* worlds. H2 should not expect cross-world spread in the budget.
+3. **`Fracture` is the plurality kind (41.6%), not `Karst` (40.8%).** Task 6's
+   niche authoring and Task 1's formation roster must not assume karst is the
+   default cave.
+
+- [x] **Step 5: Commit**
 
 ```bash
 cargo fmt
@@ -272,7 +320,7 @@ This is the whole reason the task is risky:
 /// which chambers happen to exist can move another chamber's address.
 #[test]
 fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
-    // Two caves at the same cell differing ONLY in depth_reach_bands.
+    // Two caves at the same cell differing ONLY in deepest_band.
     // A chamber that exists in BOTH must have identical content in both —
     // its address cannot have been renumbered by the deeper cave having
     // more chambers.
@@ -280,7 +328,7 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 
 #[test]
 fn the_lattice_is_fixed_and_existence_is_sparse() {
-    // Over a cave with reach 4: the address space is SLOTS_PER_BAND * 4,
+    // Over a cave reaching `Roots`: the address space is SLOTS_PER_BAND * 4,
     // constant; the number that EXIST is strictly less, and varies by seed.
 }
 ```
@@ -314,7 +362,10 @@ of that cell, which depth band, and which slot within that band. `band` indexes
 `SLOTS_PER_BAND`, **not** a count of what was generated.
 
 `chamber_exists` derives a stream from `(seed, CHAMBER, addr)` and thresholds
-it, gated so that `addr.band` exceeds nothing beyond `cave.depth_reach_bands`.
+it, gated so that `addr.band` reaches no deeper than `cave.deepest_band`.
+**`band` is an index into the realm's strata ladder and `deepest_band` is a
+named band — compare them through one explicit mapping, in one place.** Do not
+cast a `BandKind` to an integer at two call sites.
 `chamber_at` returns `None` when it does not exist, else derives the content.
 
 Follow the composed-label pattern at `windows/worldgen/src/lib.rs:5098`:
@@ -552,17 +603,17 @@ only the mutation proves the axis is visible.
 - [ ] **Step 1: Write the mutation test**
 
 ```rust
-/// Spec H3. Setting a cave's depth_reach_bands to 1 MUST collapse its chamber
+/// Spec H3. A cave whose `deepest_band` is shallow MUST collapse its chamber
 /// graph to a shallow pocket. If it does not, the budget is not being read and
 /// the terrain coupling is decorative.
 #[test]
 fn a_shallow_cave_has_a_shallow_graph() {
-    let deep = chamber_count(&cave_with_reach(4));
-    let shallow = chamber_count(&cave_with_reach(1));
-    assert!(deep > shallow, "reach 4 gave {deep}, reach 1 gave {shallow}");
+    let deep = chamber_count(&cave_reaching(BandKind::Roots));
+    let shallow = chamber_count(&cave_reaching(BandKind::Regolith));
+    assert!(deep > shallow, "Roots gave {deep}, Regolith gave {shallow}");
     assert!(
-        deepest_band(&cave_with_reach(1)) == 0,
-        "a reach-1 cave reached past Regolith — the budget is not being read"
+        deepest_reached(&cave_reaching(BandKind::Regolith)) == BandKind::Regolith,
+        "a Regolith cave reached deeper — the budget is not being read"
     );
 }
 ```
@@ -574,6 +625,13 @@ numbers is a false pass. This campaign's sibling learned that the hard way: a
 mutation applied at the derivation proves the function reads its argument, not
 that the pipeline passes the authored value — so **also mutate the pipeline**
 (hand the generator a fabricated budget) and confirm something reddens.
+
+**The pipeline half is NOT optional here, and Task 0 is why.** Over 30 seeds,
+`BandKind::Regolith` occurs **0 times in 55,947 caves** — the live generator
+cannot produce the shallow cave this mutation fabricates. So the derivation
+half of this test perturbs a value no real world holds, and on its own it
+would prove nothing about the shipped path. Mutate the pipeline, or H3 is
+decorative. (Spec §7.1.)
 
 - [ ] **Step 3: Commit**
 

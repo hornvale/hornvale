@@ -16,6 +16,11 @@ This campaign gives the world an inside.
 The seam was cut deliberately, over three prior campaigns, and most of it is
 sitting unused.
 
+> **Corrected 2026-08-06, on resumption after The Hollow.** This section is a
+> *snapshot of the codebase*, not a commitment, and two of its claims went
+> stale. Both are fixed in place. §7's preregistration is a promise and is
+> **not** touched -- see §7.1. (Campaign ledger #14/#15.)
+
 **Already built:**
 
 ```
@@ -23,22 +28,40 @@ sitting unused.
   Stratum                         "the pelagic zones and (later) the
                                    underworld's geological layers are the
                                    same construct at different realms"
-  BandKind                        Regolith / Cover / Basement / Roots
-                                  (terrain's rock column, since The Lode)
+  BandKind                        Regolith / Cover / Basement / Roots /
+                                  Underneath  (terrain's rock column, since
+                                  The Lode; FIVE variants, not four)
   Deposit.depth: BandKind         ores already sorted into that column
   cave_at(cell) -> Option<Cave>   located caves, typed by the lithologic
                                   process that opened the void
-  Cave.depth_reach_bands: 1..=4   how far a void penetrates the column
+  Cave.deepest_band: BandKind     the deepest band the void penetrates
+                                  (was `depth_reach_bands: u32`, 1..=4,
+                                  until The Hollow -- a TYPE change)
   dive / surface                  a live vessel verb, with the possession
                                   carrying the stratum it reached
   CauseOfEnd, Function::Extractive, IS_RUIN + a date
 ```
 
-**Not built:** anything that reads the cave half. A grep of `windows/` and
-`cli/` for `Cave` and `CaveKind` returns **no consumers**. Caves are shipped,
-located, typed and depth-reaching, and nothing has ever looked at one. That is
-rung 2 of this program's own probe-validity ladder — expressible but unread —
-sitting in the tree today.
+**Not built:** anything that reads the cave half *as a place*. The original
+text here claimed a grep of `windows/` and `cli/` for `Cave`/`CaveKind`
+"returns **no consumers** … nothing has ever looked at one." **That was false
+when written.** Three consumers were live:
+
+```
+  windows/lab/src/metrics.rs:1252    the census cave-fraction metric
+  windows/worldgen/src/lib.rs:2834   the almanac's deep lines
+  domains/terrain/src/render.rs      the map palette, colouring by CaveKind
+```
+
+Two call `cave_at(cell).is_some()` without ever naming the type, and the third
+is in `domains/`, outside the grep's stated scope — a grep-derived claim is
+only as complete as the grep. The Hollow re-derived this independently and paid
+for it in artifact churn, so **C2a must assume its changes carry an artifact
+blast radius** rather than inheriting this section's "free to change" framing.
+
+What remains true, and is the actual warrant for C2a: nothing reads a cave as
+somewhere you can *be*. That is rung 2 of this program's own probe-validity
+ladder — expressible but unwalked — sitting in the tree today.
 
 So C2a is mostly *connection*. The exception is §3, which is genuinely new.
 
@@ -68,7 +91,7 @@ function of its address.**
 
 ```
   entrance    terrain's cave_at(cell)          where a descent is possible
-  budget      cave.depth_reach_bands 1..=4     how deep this system runs
+  budget      cave.deepest_band: BandKind      how deep this system runs
   chamber     addressed node, content = f(addr)
   passage     edge between chambers            tunnels are the primitive
   depth       BandKind on each node            what the rock here is like
@@ -78,10 +101,17 @@ Nothing is stored. This is the pattern `RoomAddr { face, path }.seed(Seed(42))`
 already uses for surface rooms — but in a **sibling address space**, so
 `RoomAddr` itself is untouched.
 
-`Cave.depth_reach_bands` becomes the generator's **budget**: a karst system
-with reach 4 grows a graph down to `Roots`; reach 1 is a shallow pocket. How
-deep the underworld goes at a place is therefore an existing derived terrain
-fact that C2a *spends* rather than authors.
+`Cave.deepest_band` becomes the generator's **budget**: a system whose deepest
+band is `Roots` grows a graph down to `Roots`; one that stops at `Cover` is a
+shallow pocket. How deep the underworld goes at a place is therefore an
+existing derived terrain fact that C2a *spends* rather than authors.
+
+*(Corrected 2026-08-06: the budget was `depth_reach_bands: u32`, a 1..=4 count,
+when this was written. The Hollow made it a named `BandKind`. The design is
+unchanged — a budget is still spent, not authored — but note the measured
+support: over 30 seeds the budget takes only **three** of the five values,
+`Cover`/`Basement`/`Roots`. `Regolith` and `Underneath` never occur, so no
+real cave is ever a one-band pocket. See §7.1.)*
 
 **`BandKind` demotes from navigation to description.** In water a stratum is
 something you move *between*; in rock you move between *chambers*, and the band
@@ -380,6 +410,50 @@ not a code review.
 differs by place — same depth, same shape, same contents everywhere — it is a
 dungeon bolted to a worldmap, and the campaign should say so rather than ship
 the appearance of integration.
+
+### 7.1 Amendment — the substrate moved under this preregistration
+
+*Added 2026-08-06, on resumption after The Hollow. **§7 above is left verbatim.**
+It is a promise, and its whole function is that it does not change; correcting
+it would destroy the only thing it is for. This subsection records what the
+promise now reads against.*
+
+**What changed.** The Hollow replaced `Cave::depth_reach_bands` (a `u32` count,
+nominally `1..=4`) with `Cave::deepest_band` (a `BandKind`: five named variants,
+`Regolith`/`Cover`/`Basement`/`Roots`/`Underneath`). That is a type change, not
+a rename — a band derived from a stratigraphic column cannot reproduce a count
+derived from a ratio — so §7's wording cannot be mechanically re-pointed.
+
+**Task 0's criterion is restated, never re-thresholded.** The stop-condition
+wording — "vanishingly rare or almost none reach past `Regolith`" — is kept
+exactly, and only the *instrument* is re-expressed. **No new numeric threshold
+is authored**, because The Hollow published the numbers this battery measures
+before it could be re-run: a threshold written now would be a prediction of a
+known result rather than a gate. That prior unblinding is disclosed here and
+belongs in the campaign's chronicle.
+
+**One translation is rejected as unfaithful.** §7 asks "how many cells have
+reach 4", and the naive reading is "what fraction reach `Roots`". A world where
+*every* cave is `Roots` scores 100% on that and is **exactly the falsification
+§7 names** — a uniform column with extra steps. Reach-the-deepest is a *ceiling*
+check; what a chamber graph consumes is a depth budget that **differs by
+place**. Task 0 therefore reports band *variety* as a first-class number and
+the deepest-band fraction beside it as a ceiling check.
+
+**H3's mutation carries a new hazard.** H3 says "setting a cave's
+`depth_reach_bands` to 1 must collapse its graph". The band-era translation is
+`deepest_band = BandKind::Regolith` — **a value the live generator never
+produces** (measured: 0 of 55,947 caves over 30 seeds). So a mutation test that
+fabricates a `Regolith` cave proves the *function* reads its argument and says
+nothing about whether the *pipeline* passes the authored value. Task 7 must
+mutate the pipeline as well, which its own Step 2 already requires; this
+amendment records *why* that half is not optional here.
+
+**`Underneath` is unmapped.** It is a fifth `BandKind` the plan's Task 1
+`UNDERDARK` ladder (`Regolith`/`Cover`/`Basement`/`Roots`) does not include, and
+it never occurs in the measured substrate. Task 1 must decide deliberately
+whether the rock realm's ladder is four bands or five rather than inheriting
+four by accident.
 
 ## 8. Flagged for review
 
