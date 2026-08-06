@@ -15,6 +15,30 @@ export interface Exit {
   to: number;
 }
 
+/** One distinct cell type in a `vessel/plan/v1` payload. */
+export interface PaletteEntry {
+  kind: string;
+  chambers: number[];
+}
+
+/** A `vessel/plan/v1` document — the chamber band's cells. */
+export interface PlanPayload {
+  schema: string;
+  chamber: number;
+  at: number;
+  of: number;
+  extent: { x: number; y: number; w: number; h: number };
+  palette: PaletteEntry[];
+  cells: number[];
+  you: { x: number; y: number };
+}
+
+/** The spatial channel, tagged by band. A client switches on `band` before
+ * reading anything else. */
+export type Spatial =
+  | { band: "walk"; chart: unknown }
+  | { band: "chamber"; plan: PlanPayload };
+
 /** One turn, as the sim emitted it. Only the fields the client reads. */
 export interface Snapshot {
   schema: string;
@@ -37,6 +61,10 @@ export interface Snapshot {
   known: { entries: { key: string; value: string }[] };
   social: { entity: number; label: string; grievance: number; hostile: boolean }[];
   narration: { prose: string; nouns: { noun: string; datum: string }[] };
+  // Optional on purpose: a sim older than The Panes emits no spatial
+  // channel, and the transcript must still work against one. The pane
+  // renders nothing rather than the client throwing.
+  spatial?: Spatial;
 }
 
 /** Parse a snapshot payload, or null if it is absent, junk, or a schema
