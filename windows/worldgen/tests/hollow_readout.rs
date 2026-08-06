@@ -143,7 +143,7 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
             &terrain.material_at(cell),
             terrain.drainage_at(cell),
             terrain.crust_age_at(cell),
-            terrain.boundary_distance_at(cell),
+            terrain.nearest_boundary_at(cell),
         );
         // No supporting process is proneness zero: the cell cannot host a cave
         // and its nominal probability is zero, which is a real bucket entry.
@@ -311,4 +311,88 @@ fn report_cave_substrate() {
         "the harness found no land cells — it is measuring nothing"
     );
     assert_eq!(r.worlds, 30, "expected 30 worlds");
+}
+
+/// The spec's §4 preregistered criteria, frozen at commit `2808f59d` before
+/// any behavioural change. A failure here is a finding, not a defect to be
+/// tuned away: see the campaign chronicle before touching a threshold.
+///
+/// Every threshold below is copied verbatim from the §4 table. One thing is
+/// **not** verbatim and is disclosed here: H4 compares the realized hit rate
+/// against each bucket's **mean** nominal probability, where the plan's Task 5
+/// wrote the bucket's midpoint. §4 says only `|realized - nominal| / nominal <
+/// 0.25`; the midpoint is a fair estimator of a bucket's nominal only when the
+/// probabilities inside it are spread evenly, which was true of the plan's six
+/// hand-picked bins over a bimodal field and is false of the exhaustive
+/// `[0,1)` table this harness now carries. `[0.00,0.05)` holds ~64% of all
+/// land, massed near zero, and its mean nominal is 0.0148 against a midpoint of
+/// 0.025 — so the midpoint reading reports a 39% miss where the gate is in fact
+/// firing at 0.01525 against a true nominal of 0.01484, an agreement of 2.8%.
+/// The threshold is untouched; the estimator is corrected, for the same reason
+/// the bucketing itself was corrected in `56881b5f`.
+#[test]
+fn cave_substrate_meets_preregistered_criteria() {
+    let r = measure();
+    report(&r);
+
+    // H1 — every kind occurs at >= 5% of cave cells.
+    let names = ["Karst", "LavaTube", "Fracture"];
+    for (i, name) in names.iter().enumerate() {
+        let share = r.kinds[i] as f64 / r.caves as f64;
+        assert!(
+            share >= 0.05,
+            "H1: {name} is {share:.4} of caves, under the 0.05 floor"
+        );
+    }
+
+    // H2 — at least 3 distinct bands occur, and the mode is under 90%.
+    let distinct = r.bands.iter().filter(|&&c| c > 0).count();
+    assert!(
+        distinct >= 3,
+        "H2: only {distinct} distinct depth bands occur"
+    );
+    let modal = *r.bands.iter().max().expect("five bands") as f64 / r.caves as f64;
+    assert!(modal < 0.90, "H2: the modal band holds {modal:.4} of caves");
+
+    // H3 — prevalence off the floor, with an absurd-high ceiling.
+    assert_eq!(
+        r.caveless_worlds, 0,
+        "H3: {} worlds have no cave",
+        r.caveless_worlds
+    );
+    let mut sorted = r.per_world_fraction.clone();
+    sorted.sort_by(f64::total_cmp);
+    let median = sorted[sorted.len() / 2];
+    assert!(
+        median >= 0.02,
+        "H3: median cave fraction {median:.4} is below 0.02"
+    );
+    assert!(
+        median <= 0.5,
+        "H3: median cave fraction {median:.4} is absurdly high"
+    );
+
+    // H4 — realized hit rate tracks nominal probability.
+    for (i, &(lo, hi)) in PROB_BUCKETS.iter().enumerate() {
+        let (cells, hits, prob_sum) = r.gate[i];
+        if cells < 500 {
+            continue; // too few samples for a rate to mean anything
+        }
+        let realized = hits as f64 / cells as f64;
+        let nominal = prob_sum / cells as f64;
+        assert!(
+            (realized - nominal).abs() / nominal < 0.25,
+            "H4: bucket [{lo:.2},{hi:.2}) realized {realized:.5} against nominal {nominal:.5}"
+        );
+    }
+
+    // H5 — GUARD. Clustering must survive the monotone warp. If this fails,
+    // the warp was not monotone or fbm's spatial structure did not survive it,
+    // and spec §3.2's central claim is false.
+    let placed = r.clustered + r.solitary;
+    let clustered = r.clustered as f64 / placed as f64;
+    assert!(
+        clustered >= 0.90,
+        "H5: clustering fell to {clustered:.4}, under the 0.90 guard"
+    );
 }

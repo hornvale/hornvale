@@ -195,6 +195,22 @@ impl GeneratedTerrain {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
     }
 
+    /// The nearest reachable same-plate contact — how far, and what kind.
+    ///
+    /// [`boundary_at`](Self::boundary_at) answers only for a cell that *is* a
+    /// contact; this answers for any cell, by reading the kind off the boundary
+    /// cell the distance field already attributes as the source. A consumer
+    /// that cares about the stress *regime* rather than mere proximity needs
+    /// the kind — a rift and a collision sit the same distance away and do
+    /// opposite things to a fracture. The distance field seeds every boundary
+    /// cell with `(0, itself)`, so the kind is always present when the distance
+    /// is.
+    /// type-audit: bare-ok(count: return)
+    pub fn nearest_boundary_at(&self, id: CellId) -> Option<(u32, crate::BoundaryKind)> {
+        let (hops, cell) = (*self.globe.boundary_distance.get(id))?;
+        Some((hops, self.boundary_at(cell)?.kind))
+    }
+
     /// Induration/hardness at a cell, `[0,1]` (the Sculpting/Ground seam,
     /// spec §4). Computed before elevation; agrees with `material_at`'s
     /// `induration` axis everywhere.
@@ -274,7 +290,7 @@ impl GeneratedTerrain {
             &self.material_at(id),
             self.drainage_at(id),
             self.crust_age_at(id),
-            self.boundary_distance_at(id),
+            self.nearest_boundary_at(id),
         )?;
         let belt = crate::features::belt_weight(self.boundary_distance_at(id));
         let prob = crate::features::presence_prob(proneness, belt);
@@ -615,7 +631,7 @@ mod tests {
                     &terrain.material_at(cell),
                     terrain.drainage_at(cell),
                     terrain.crust_age_at(cell),
-                    terrain.boundary_distance_at(cell),
+                    terrain.nearest_boundary_at(cell),
                 )
                 .and_then(|(kind, proneness)| {
                     let belt = crate::features::belt_weight(terrain.boundary_distance_at(cell));

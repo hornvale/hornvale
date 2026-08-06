@@ -34,26 +34,92 @@ pub struct Cave {
 /// used, kept so the taxonomy's meaning does not silently shift.
 const MAFIC_SILICA_MAX: f64 = 0.3;
 
+/// Exponent on the lava tube's youth term. Survival is a **decay**, not a
+/// linear taper: a tube is a roofed void in weak vesicular basalt, and it is
+/// destroyed continuously by roof collapse and burial under later flows and
+/// sediment. A flow halfway through the model's crust-age range is not half
+/// preserved — it is essentially gone, which is why terrestrial lava tubes are
+/// a Holocene-to-late-Pleistocene phenomenon while karst caves survive for
+/// millions of years. A linear `1 - crust_age` says the opposite, giving a
+/// mid-age flow half the tube density of a fresh one. Cubic is the mildest
+/// exponent that states the decay rather than a taper.
+const LAVATUBE_SURVIVAL_EXPONENT: i32 = 3;
+
 /// Lava-tube proneness, `[0,1]`: a drained basaltic flow. Needs mafic rock
 /// (low `silica`), extrusive texture (fine `grain` — a pluton never flowed),
-/// and young crust, because old tubes collapse and are buried.
+/// and young crust, because old tubes collapse and are buried (see
+/// [`LAVATUBE_SURVIVAL_EXPONENT`] for why that last term is not linear).
 /// type-audit: bare-ok(ratio: crust_age), bare-ok(ratio: return)
 pub fn lavatube_proneness(buf: &MaterialBuffer, crust_age: f64) -> f64 {
     let mafic = ((MAFIC_SILICA_MAX - buf.silica) / MAFIC_SILICA_MAX).clamp(0.0, 1.0);
     let extrusive = (1.0 - buf.grain).clamp(0.0, 1.0);
-    let youth = (1.0 - crust_age).clamp(0.0, 1.0);
+    let youth = (1.0 - crust_age)
+        .clamp(0.0, 1.0)
+        .powi(LAVATUBE_SURVIVAL_EXPONENT);
     (mafic * extrusive * youth).clamp(0.0, 1.0)
 }
 
-/// Hops beyond which a plate contact contributes no fault-void stress — the
-/// width of the actively-deforming belt around the contact, in cells. A
-/// provisional value; the campaign's calibration task sets it against the
-/// scale one hop represents.
-const FRACTURE_STRESS_REACH: f64 = 8.0;
+/// Reach, in cells, of the actively-deforming belt around a plate contact —
+/// the distance beyond which a contact contributes no fault-void stress.
+///
+/// A cell is ~110 km across at `GLOBE_LEVEL` (6: 40 962 cells on a globe of
+/// Earth's area), so this is ~165 km: the contact cell at full stress and its
+/// immediate neighbour at a third. That is the scale of an active fault
+/// system's damage belt — the San Andreas system is ~100–200 km wide — and it
+/// is deliberately narrower than `lithology::OROGEN_REACH` (4 hops, ~440 km),
+/// which is the *metamorphic* footprint of an orogen and not a statement about
+/// where open fractures are. Eight hops, this constant's provisional value
+/// when [`fracture_stress`] was introduced, is ~900 km: a continental interior
+/// credited with fault stress.
+const FRACTURE_STRESS_REACH: f64 = 1.5;
 
-/// Fault-void stress from boundary proximity, `[0,1]`: full on a plate
-/// contact, tapering linearly to zero at [`FRACTURE_STRESS_REACH`], and zero
-/// in a cratonic interior with no reachable boundary.
+/// Void survival in an extensional regime — rifts and ridges. The reference
+/// case: see [`fracture_dilation`].
+const FRACTURE_DILATION_EXTENSIONAL: f64 = 1.0;
+/// Void survival along a transform. See [`fracture_dilation`].
+const FRACTURE_DILATION_TRANSFORM: f64 = 0.5;
+/// Void survival in a compressional regime — collision, arc, coastal range.
+/// See [`fracture_dilation`].
+const FRACTURE_DILATION_COMPRESSIONAL: f64 = 0.15;
+
+/// The fraction of a fault zone's fracture porosity that stays **open**, by
+/// the stress regime of the contact, `[0,1]`.
+///
+/// Fracturing a rock is not the same as leaving a void in it. A fracture holds
+/// an aperture only where the least principal stress across it is low; where
+/// the maximum principal stress is horizontal and large, the same fracture
+/// closes and fills with gouge and vein. So the regime, not merely the
+/// proximity, decides whether a damage zone can host a cave:
+///
+/// - **Extensional** (`ContinentalRift`, `OceanicRidge`) — the crust is being
+///   pulled apart; fractures dilate and stay open. The reference case.
+/// - **Transform** — strike-slip, where aperture is confined to releasing
+///   bends and dilational jogs: a real but minority fraction of the trace.
+/// - **Compressional** (`ContinentalCollision`, `CoastalRange`, `IslandArc`) —
+///   horizontal shortening squeezes fractures shut. Not zero: thrust-stack
+///   voids exist, and the model's coarsest interpretation of a contact cell
+///   spans settings. But small.
+///
+/// This is the term that keeps `Fracture` from being a background process
+/// wherever the crust has ever been deformed. Without it the model says that
+/// being *near a plate contact* is sufficient for an open void, which is the
+/// same category error as reading `metamorphic_grade` for present rheology.
+/// type-audit: bare-ok(ratio: return)
+pub fn fracture_dilation(kind: BoundaryKind) -> f64 {
+    match kind {
+        BoundaryKind::ContinentalRift | BoundaryKind::OceanicRidge => FRACTURE_DILATION_EXTENSIONAL,
+        BoundaryKind::Transform => FRACTURE_DILATION_TRANSFORM,
+        BoundaryKind::ContinentalCollision
+        | BoundaryKind::CoastalRange
+        | BoundaryKind::IslandArc => FRACTURE_DILATION_COMPRESSIONAL,
+    }
+}
+
+/// Fault-void stress at a cell, `[0,1]`, from the nearest same-plate contact:
+/// how far away it is, tapering linearly to zero at
+/// [`FRACTURE_STRESS_REACH`], times how much void that contact's regime leaves
+/// open ([`fracture_dilation`]). Zero in a cratonic interior with no reachable
+/// boundary.
 ///
 /// **Why this is not [`belt_weight`].** `belt_weight` carries an
 /// `INTERIOR_FLOOR` deliberately — its own doc says boundaries only *raise*
@@ -71,10 +137,13 @@ const FRACTURE_STRESS_REACH: f64 = 8.0;
 /// hyperbolic decay, because the physical claim being made is exactly that
 /// there is a distance beyond which the boundary's damage does not reach; a
 /// curve that never reaches zero is why `belt_weight` needed a floor at all.
-/// type-audit: bare-ok(count: hops), bare-ok(ratio: return)
-pub fn fracture_stress(hops: Option<u32>) -> f64 {
-    match hops {
-        Some(h) => (1.0 - h as f64 / FRACTURE_STRESS_REACH).clamp(0.0, 1.0),
+/// type-audit: bare-ok(count: nearest_boundary), bare-ok(ratio: return)
+pub fn fracture_stress(nearest_boundary: Option<(u32, BoundaryKind)>) -> f64 {
+    match nearest_boundary {
+        Some((hops, kind)) => {
+            let proximity = (1.0 - hops as f64 / FRACTURE_STRESS_REACH).clamp(0.0, 1.0);
+            proximity * fracture_dilation(kind)
+        }
         None => 0.0,
     }
 }
@@ -108,9 +177,12 @@ pub fn fracture_stress(hops: Option<u32>) -> f64 {
 /// Competence is what keeps a void open: cemented, indurated rock holds a
 /// fracture; soft, poorly consolidated rock closes it by creep. `induration`
 /// is that axis and needs no second factor.
-/// type-audit: bare-ok(count: boundary_distance), bare-ok(ratio: return)
-pub fn fracture_proneness(buf: &MaterialBuffer, boundary_distance: Option<u32>) -> f64 {
-    let stress = fracture_stress(boundary_distance);
+/// type-audit: bare-ok(count: nearest_boundary), bare-ok(ratio: return)
+pub fn fracture_proneness(
+    buf: &MaterialBuffer,
+    nearest_boundary: Option<(u32, BoundaryKind)>,
+) -> f64 {
+    let stress = fracture_stress(nearest_boundary);
     let competent = buf.induration.clamp(0.0, 1.0);
     (stress * competent).clamp(0.0, 1.0)
 }
@@ -127,12 +199,12 @@ pub fn fracture_proneness(buf: &MaterialBuffer, boundary_distance: Option<u32>) 
 /// ladder, so the mix follows the fields instead of a hand-chosen order.
 /// Ties break by `total_cmp` with declaration order as the deterministic
 /// tie-break.
-/// type-audit: bare-ok(count: drainage), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: return)
+/// type-audit: bare-ok(count: drainage), bare-ok(ratio: crust_age), bare-ok(count: nearest_boundary), bare-ok(ratio: return)
 pub fn cave_process(
     buf: &MaterialBuffer,
     drainage: f64,
     crust_age: f64,
-    boundary_distance: Option<u32>,
+    nearest_boundary: Option<(u32, BoundaryKind)>,
 ) -> Option<(CaveKind, f64)> {
     let candidates = [
         (
@@ -142,7 +214,7 @@ pub fn cave_process(
         (CaveKind::LavaTube, lavatube_proneness(buf, crust_age)),
         (
             CaveKind::Fracture,
-            fracture_proneness(buf, boundary_distance),
+            fracture_proneness(buf, nearest_boundary),
         ),
     ];
     let best = candidates
@@ -454,6 +526,11 @@ mod tests {
     use crate::RockClass;
     use crate::lithology::{Basement, MarginPolarity, MaterialBuffer, SoilDepth};
 
+    /// A contact of the reference (extensional) regime, `hops` away.
+    fn rift(hops: u32) -> Option<(u32, BoundaryKind)> {
+        Some((hops, BoundaryKind::ContinentalRift))
+    }
+
     fn buf(carbonate: f64, silica: f64) -> MaterialBuffer {
         MaterialBuffer {
             silica,
@@ -474,7 +551,7 @@ mod tests {
         // Carbonate platform, wet, porous -> Karst.
         let mut karst = buf(0.7, 0.5);
         karst.porosity = 0.8;
-        let (kind, p) = cave_process(&karst, 500.0, 0.5, Some(4)).expect("karst rock hosts a cave");
+        let (kind, p) = cave_process(&karst, 500.0, 0.5, rift(4)).expect("karst rock hosts a cave");
         assert_eq!(kind, CaveKind::Karst);
         assert!(p > 0.0, "selected kind must carry a positive proneness");
 
@@ -488,7 +565,7 @@ mod tests {
         let mut frac = buf(0.0, 0.7);
         frac.induration = 0.95;
         let (kind, _) =
-            cave_process(&frac, 0.0, 0.9, Some(0)).expect("brittle fault rock hosts a cave");
+            cave_process(&frac, 0.0, 0.9, rift(0)).expect("brittle fault rock hosts a cave");
         assert_eq!(kind, CaveKind::Fracture);
     }
 
@@ -500,8 +577,8 @@ mod tests {
         // fracture half of this assertion vacuous.
         let mut inert = buf(0.0, 1.0);
         inert.induration = 0.0;
-        assert_eq!(fracture_stress(Some(0)), 1.0, "stress must be live here");
-        assert_eq!(cave_process(&inert, 0.0, 0.9, Some(0)), None);
+        assert_eq!(fracture_stress(rift(0)), 1.0, "stress must be live here");
+        assert_eq!(cave_process(&inert, 0.0, 0.9, rift(0)), None);
     }
 
     /// A fault void must be possible where the faults are. `metamorphic_grade`
@@ -517,7 +594,7 @@ mod tests {
         let mut contact = buf(0.0, 0.7);
         contact.induration = 0.9;
         contact.metamorphic_grade = 1.0;
-        let p = fracture_proneness(&contact, Some(0));
+        let p = fracture_proneness(&contact, rift(0));
         assert!(
             p > 0.0,
             "a plate contact scored {p}, so no fault cave can open"
@@ -552,9 +629,11 @@ mod tests {
         );
         // ... and it reaches zero at a finite distance, which a hyperbolic decay
         // never does.
-        assert_eq!(fracture_stress(Some(FRACTURE_STRESS_REACH as u32)), 0.0);
-        assert!(fracture_stress(Some(1)) > fracture_stress(Some(4)));
-        assert!(fracture_stress(Some(4)) > fracture_stress(Some(7)));
+        assert!(fracture_stress(rift(0)) > fracture_stress(rift(1)));
+        assert_eq!(
+            fracture_stress(rift(FRACTURE_STRESS_REACH.ceil() as u32)),
+            0.0
+        );
 
         // A cell with no reachable boundary hosts no fault void however hard
         // its rock is.
@@ -574,7 +653,7 @@ mod tests {
             crate::lithology::cave_proneness(&b, 0.0) > 0.0,
             "the karst term must be live, or a priority ladder would agree by accident"
         );
-        let (kind, _) = cave_process(&b, 0.0, 0.9, Some(0)).expect("hosts a cave");
+        let (kind, _) = cave_process(&b, 0.0, 0.9, rift(0)).expect("hosts a cave");
         assert_eq!(kind, CaveKind::Fracture);
 
         // An exact tie goes to the earliest-declared kind, which is what the
@@ -585,10 +664,10 @@ mod tests {
         tied.induration = 0.5;
         assert_eq!(
             crate::lithology::cave_proneness(&tied, 500.0),
-            fracture_proneness(&tied, Some(0)),
+            fracture_proneness(&tied, rift(0)),
             "the tie-break case must actually tie, or the assertion below is vacuous"
         );
-        let (kind, _) = cave_process(&tied, 500.0, 0.9, Some(0)).expect("hosts a cave");
+        let (kind, _) = cave_process(&tied, 500.0, 0.9, rift(0)).expect("hosts a cave");
         assert_eq!(kind, CaveKind::Karst);
     }
 
