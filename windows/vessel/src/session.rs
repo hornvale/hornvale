@@ -8,7 +8,7 @@ use crate::liveness::{
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
-    SensedChannel, SessionSnapshot, SocialEntry,
+    SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -594,6 +594,29 @@ impl<'w> Session<'w> {
             })
             .collect();
 
+        // The band the possession is in decides the channel. `inside` is the
+        // same discriminator `handle`'s `map` arm uses, so pane and verb can
+        // never disagree about which band is current.
+        let spatial = match self.inside.as_ref() {
+            Some(inside) => {
+                let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
+                SpatialChannel::Chamber {
+                    plan: crate::plan::plan_of(
+                        &inside.lattice,
+                        inside.at,
+                        inside.structure.chambers.len(),
+                        chamber,
+                        inside.cell,
+                    ),
+                }
+            }
+            // `purview(0)` is the same call `map` makes out of doors, at the
+            // same zoom, so the pane shows what the verb would have shown.
+            None => SpatialChannel::Walk {
+                chart: self.purview(0)?,
+            },
+        };
+
         Ok(SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
             turn: self.turn,
@@ -629,6 +652,7 @@ impl<'w> Session<'w> {
                     .map(|(noun, datum)| NounEntry { noun, datum })
                     .collect(),
             },
+            spatial,
         })
     }
 

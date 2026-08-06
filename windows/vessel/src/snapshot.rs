@@ -56,6 +56,9 @@ pub struct SessionSnapshot {
     /// The sim's own rendering. Carried verbatim: prose is the
     /// constitutional primary and the client never re-derives it.
     pub narration: Narration,
+    /// Where the possession stands, as cells. Last in key order because it
+    /// is the newest channel and key order is contract.
+    pub spatial: SpatialChannel,
 }
 
 /// The possessed agent's own identity.
@@ -163,6 +166,32 @@ pub struct Narration {
     pub nouns: Vec<NounEntry>,
 }
 
+/// Where the possession stands, as cells rather than as a picture.
+///
+/// A tagged union over the **band**, because the session already treats the
+/// two as mutually exclusive: `Session::handle`'s `map` arm answers `map out`
+/// indoors with `INDOOR_CHART_REFUSAL`, so the walk-band chart is not
+/// derivable while inside a building. One pane switches; two do not coexist.
+///
+/// The wire tag is `band`, with values `walk` and `chamber`. A client reads
+/// it before anything else, so renaming either is a `vessel/session/v2`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "band", rename_all = "lowercase")]
+pub enum SpatialChannel {
+    /// Out of doors (or submerged): the walk-band chart, `scene/surrounds/v1`
+    /// embedded verbatim. One schema, one owner — the same move `sensed.room`
+    /// makes with `locale/room/v2`.
+    Walk {
+        /// The chart, as `windows/scene` renders it structurally.
+        chart: hornvale_scene::SurroundsScene,
+    },
+    /// Inside a building: the chamber-band floor plan.
+    Chamber {
+        /// The plan, as `vessel/plan/v1`.
+        plan: crate::plan::SessionPlan,
+    },
+}
+
 /// One examinable noun and its datum.
 /// type-audit: bare-ok(identifier-text: noun), bare-ok(prose: datum)
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -201,6 +230,29 @@ mod tests {
             .expect("the minted position describes")
     }
 
+    /// A minimal `vessel/plan/v1` document, for tests that need a
+    /// `SpatialChannel::Chamber` but not a full lattice derivation.
+    fn minimal_plan() -> crate::plan::SessionPlan {
+        crate::plan::SessionPlan {
+            schema: crate::plan::PLAN_SCHEMA.to_string(),
+            chamber: 1,
+            at: 0,
+            of: 1,
+            extent: crate::plan::PlanExtent {
+                x: 0,
+                y: 0,
+                w: 1,
+                h: 1,
+            },
+            palette: vec![crate::plan::PaletteEntry {
+                kind: "floor".to_string(),
+                chambers: vec![0],
+            }],
+            cells: vec![0],
+            you: crate::plan::PlanPoint { x: 0, y: 0 },
+        }
+    }
+
     fn minimal() -> SessionSnapshot {
         SessionSnapshot {
             schema: SESSION_SCHEMA.to_string(),
@@ -230,6 +282,9 @@ mod tests {
             narration: Narration {
                 prose: String::new(),
                 nouns: Vec::new(),
+            },
+            spatial: SpatialChannel::Chamber {
+                plan: minimal_plan(),
             },
         }
     }
@@ -275,6 +330,9 @@ mod tests {
                     datum: "Night.".to_string(),
                 }],
             },
+            spatial: SpatialChannel::Chamber {
+                plan: minimal_plan(),
+            },
         };
         let json = snapshot_json(&snap);
         assert!(json.contains(r#""schema":"vessel/session/v1""#));
@@ -284,6 +342,7 @@ mod tests {
             "\"known\":",
             "\"social\":",
             "\"narration\":",
+            "\"spatial\":",
         ] {
             assert!(json.contains(key), "channel key {key} missing from {json}");
         }
