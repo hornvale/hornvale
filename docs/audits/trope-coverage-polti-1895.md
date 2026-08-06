@@ -1,4 +1,4 @@
-<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes report`. -->
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes --corpus tropes/polti.trope.json report`. -->
 
 # Trope coverage
 

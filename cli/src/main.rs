@@ -82,7 +82,8 @@ usage:
   hornvale tropes [report|check] [--corpus <PATH>]
                           score the frozen dramatic-situation corpus against the live
                           registry (report: render to stdout; check: diff against the
-                          committed artifact; default corpus: tropes/polti.trope.json)
+                          artifact committed for that corpus's id; default corpus:
+                          tropes/polti.trope.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -885,17 +886,24 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     }
     match mode {
         Some("report") | None => {
-            print!("{}", tropes::render(&corpus, &outcomes, &world.registry));
+            print!(
+                "{}",
+                tropes::render(&corpus, &outcomes, &world.registry, path)
+            );
             Ok(())
         }
         Some("check") => {
-            let live = tropes::render(&corpus, &outcomes, &world.registry);
-            let committed = std::fs::read_to_string("docs/audits/trope-coverage.md")
-                .map_err(|e| format!("docs/audits/trope-coverage.md: {e}"))?;
+            let live = tropes::render(&corpus, &outcomes, &world.registry, path);
+            let artifact = tropes::artifact_path(&corpus);
+            let committed =
+                std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
             if live == committed {
                 Ok(())
             } else {
-                Err("trope coverage drifted; run `make rebaseline` and review the diff".into())
+                Err(format!(
+                    "trope coverage drifted for `{}`; run `make rebaseline` and review the diff",
+                    corpus.corpus
+                ))
             }
         }
         Some(other) => Err(format!("tropes: unknown mode '{other}' (report|check)")),

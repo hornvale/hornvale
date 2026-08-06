@@ -1,6 +1,6 @@
-//! The Repertoire's ratchet. `docs/audits/trope-coverage.md` is a committed
-//! artifact; this fails when the live report diverges from it by a single
-//! byte.
+//! The Repertoire's ratchet. Each corpus has its own committed artifact,
+//! `docs/audits/trope-coverage-<corpus-id>.md`; these fail when a corpus's
+//! live report diverges from its artifact by a single byte.
 //!
 //! Spec D7 asks for a PER-SITUATION ratchet — "no situation that was
 //! stageable becomes unstageable" — because an aggregate percentage lets a
@@ -23,18 +23,25 @@ fn workspace_root() -> std::path::PathBuf {
         .to_path_buf()
 }
 
-#[test]
-fn committed_trope_coverage_matches_the_live_report() {
+/// Shared body for `committed_trope_coverage_matches_the_live_report_*`: run
+/// `tropes report` against one corpus and compare it to that corpus's own
+/// committed artifact.
+///
+/// A shared helper called from one `#[test]` per corpus — rather than a
+/// single test looping over both — keeps each corpus's pass/fail independent
+/// and named in CI output; a loop would report only "the test failed" and
+/// leave which corpus moved to the panic message alone.
+fn assert_committed_matches_live(corpus_path: &str, artifact_stem: &str) {
     let root = workspace_root();
     let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
-        .args(["tropes", "report"])
+        .args(["tropes", "--corpus", corpus_path, "report"])
         .current_dir(&root)
         .output()
         .expect("runs the binary");
     assert!(out.status.success(), "tropes report failed: {out:?}");
     let live = String::from_utf8(out.stdout).expect("utf-8");
     hornvale_kernel::golden::assert_golden(
-        &root.join("docs/audits/trope-coverage.md"),
+        &root.join(format!("docs/audits/trope-coverage-{artifact_stem}.md")),
         &live,
         "the trope-coverage report drifted from the committed artifact. Regenerate \
          deliberately with `make rebaseline` and review the diff — a situation that \
@@ -43,14 +50,24 @@ fn committed_trope_coverage_matches_the_live_report() {
     );
 }
 
-/// `check` mode agrees with the committed artifact and stays silent when it
-/// does. Spec D7 names `check` as the ratchet; the byte ratchet above is what
-/// actually gates, so without this the command itself is never exercised.
 #[test]
-fn check_mode_agrees_with_the_committed_artifact() {
+fn committed_trope_coverage_matches_the_live_report_for_polti() {
+    assert_committed_matches_live("tropes/polti.trope.json", "polti-1895");
+}
+
+#[test]
+fn committed_trope_coverage_matches_the_live_report_for_tvtropes_2012() {
+    assert_committed_matches_live("tropes/tvtropes-2012.trope.json", "tvtropes-2012");
+}
+
+/// Shared body for `check_mode_agrees_with_the_committed_artifact_*`: `check`
+/// agrees with the committed artifact and stays silent when it does. Spec D7
+/// names `check` as the ratchet; the byte ratchet above is what actually
+/// gates, so without this the command itself is never exercised.
+fn assert_check_agrees(corpus_path: &str) {
     let root = workspace_root();
     let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
-        .args(["tropes", "check"])
+        .args(["tropes", "--corpus", corpus_path, "check"])
         .current_dir(&root)
         .output()
         .expect("runs the binary");
@@ -60,6 +77,16 @@ fn check_mode_agrees_with_the_committed_artifact() {
         "check should be silent on agreement, printed {} bytes",
         out.stdout.len()
     );
+}
+
+#[test]
+fn check_mode_agrees_with_the_committed_artifact_for_polti() {
+    assert_check_agrees("tropes/polti.trope.json");
+}
+
+#[test]
+fn check_mode_agrees_with_the_committed_artifact_for_tvtropes_2012() {
+    assert_check_agrees("tropes/tvtropes-2012.trope.json");
 }
 
 /// `check` must actually FAIL when the report diverges. Every other test here
@@ -74,6 +101,17 @@ fn check_mode_agrees_with_the_committed_artifact() {
 /// the committed bytes — so the committed artifact is never written to, and
 /// this test cannot leave the tree dirty even if it fails.
 ///
+/// The temp corpus is deliberately given the id `polti-1895` rather than some
+/// other id like `divergent`: `artifact_path` derives the committed-artifact
+/// path from `corpus.corpus`, so an id with no matching committed file would
+/// make `check` fail on a missing file, not on a content mismatch — a weaker
+/// test than the one this replaces, and one that would look identical (a red
+/// assertion) whichever reason it failed for. Naming the temp corpus
+/// `polti-1895` makes it resolve to the real, existing
+/// `docs/audits/trope-coverage-polti-1895.md`, which its very different
+/// situations cannot byte-match — so this proves `check` catches a content
+/// mismatch, the failure mode it was written to guard.
+///
 /// Asserts on exit status rather than stderr text, so rewording the message
 /// does not redden it.
 #[test]
@@ -86,7 +124,7 @@ fn check_mode_fails_on_a_divergent_corpus() {
         std::env::temp_dir().join(format!("hv-trope-divergent-{}.json", std::process::id()));
     std::fs::write(
         &corpus,
-        r#"{"corpus":"divergent","provenance":"a deliberately different corpus",
+        r#"{"corpus":"polti-1895","provenance":"a deliberately different corpus",
             "frozen":"never","bundles":{},
             "situations":[{"id":"s1","name":"S","actants":{"subject":"someone"},
                            "requires":["predicate:absent"],"excluded_by":[]}]}"#,

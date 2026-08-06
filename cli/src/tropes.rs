@@ -146,17 +146,40 @@ fn wrap(text: &str) -> String {
     out
 }
 
+/// Where a corpus's committed report lives.
+///
+/// Derived from the corpus's own identifier rather than passed alongside it,
+/// so a caller cannot pair the wrong corpus with the wrong artifact — which
+/// is exactly what the previous hardcoded path did for every corpus except
+/// `polti-1895`, silently and always as a failure.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn artifact_path(corpus: &Corpus) -> String {
+    format!("docs/audits/trope-coverage-{}.md", corpus.corpus)
+}
+
+/// The command that regenerates a report, for the header.
+///
+/// Takes the path the caller actually used rather than deriving one from the
+/// corpus id: `polti-1895` lives in `tropes/polti.trope.json`, so a derived
+/// stem would print a regenerate command naming a file that does not exist.
+/// type-audit: bare-ok(identifier-text: path), bare-ok(identifier-text: return)
+pub fn regenerate_command(path: &str) -> String {
+    format!("hornvale tropes --corpus {path} report")
+}
+
 /// Render the coverage report. Four sections, provenance first (spec §4 L2).
-/// type-audit: bare-ok(identifier-text: out), bare-ok(prose: return)
+/// type-audit: bare-ok(identifier-text: out), bare-ok(prose: return), bare-ok(identifier-text: path)
 pub fn render(
     corpus: &Corpus,
     out: &BTreeMap<String, Outcome>,
     registry: &ConceptRegistry,
+    path: &str,
 ) -> String {
     let mut s = String::new();
-    s.push_str(
-        "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes report`. -->\n\n",
-    );
+    s.push_str(&format!(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `{}`. -->\n\n",
+        regenerate_command(path)
+    ));
     s.push_str("# Trope coverage\n\n## Provenance\n\n");
     s.push_str(&format!("- **Corpus:** `{}`\n", corpus.corpus));
     s.push_str(&format!("- **Source:** {}\n", corpus.provenance));
@@ -505,7 +528,7 @@ mod tests {
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
         let out = resolve(&corpus, &registry);
-        let text = render(&corpus, &out, &registry);
+        let text = render(&corpus, &out, &registry, "tropes/test.trope.json");
         assert!(text.contains("a catalogue with known bias"));
         for section in ["## Provenance", "## Demand", "## Leverage", "## Supply"] {
             assert!(text.contains(section), "missing {section}");
@@ -536,7 +559,7 @@ mod tests {
         let corpus = load(json).expect("corpus parses");
         let registry = hornvale_kernel::ConceptRegistry::default();
         let out = resolve(&corpus, &registry);
-        let text = render(&corpus, &out, &registry);
+        let text = render(&corpus, &out, &registry, "tropes/test.trope.json");
 
         // Disclosed in prose, with the arithmetic that gets a reader from the
         // row count to the true total.
