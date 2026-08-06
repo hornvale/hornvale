@@ -165,6 +165,115 @@ opening chamber is 19×10 with a four-entry palette. Well under 1 KB, and it
 stays there as attributes are added, because attributes land on the dozen
 palette entries rather than on the 361 cells.
 
+### 3.3 How it encodes, and how it decodes
+
+**Encode (Rust), one pass, no new machinery.** `Lattice::cells` is a
+`BTreeMap<Cell, CellKind>` documented as total over the extent. Walk it in
+row-major order; intern each `CellKind` through a `BTreeMap<CellKind, u32>`,
+pushing a new palette entry on first sight; emit the index. `CellKind`
+already derives `Ord` (`lattice/mod.rs:139`), so the interner needs no new
+derives — and it is a `BTreeMap`, not a `HashMap`, which the workspace bans
+outright. Cost is one pass over at most 361 cells against a palette of at
+most a dozen entries. `serde` does the rest through a `Serialize` derive on
+the projection struct.
+
+**The derive goes on the projection, never on `Lattice`.** `Cell`'s doc reads
+"`FRAME`-tier: never serialized, never a fact's object (decision 0069)," and
+that stays literally true of the type: `Lattice` and `Cell` gain no
+`Serialize`. `vessel/plan/v1` is a separate type built each turn.
+
+**Why that is not a 0069 violation, stated because it looks like one.**
+Decision 0069's law is that an entity's *persisted* position is its room and
+"no **saved state** may ever point into the fine layer" — and its stated
+consequence is why: "nothing **stored** points into the fine layer, so it may
+regenerate differently forever without corrupting a world." A session
+snapshot is not saved state. It is derived fresh each turn from a lattice
+itself re-derived from the seed, discarded on the next turn, never a fact's
+object, and never read back into the sim. It has exactly the property 0069
+wanted: the fine layer may regenerate differently forever and no world is
+corrupted.
+
+**The constraint that falls out, and it binds a later campaign.**
+`vessel/plan/v1` is **emit-only and must never be persisted**. The moment a
+snapshot carrying cells is written to disk — a replay file, a morgue file —
+that artifact points into the fine layer and 0069 is broken by the *saving*,
+not by the emitting. Two registry rows are already aimed here
+(`CLIENT-replay-and-tenses`, `UNI-run-record`), and `CLIENT-coverage-matrix`
+already has the right answer: **save-as-seed-plus-marks**. A replay is a seed
+plus the verb sequence, replayed to regenerate snapshots — never a recording
+of them.
+
+**Decode (TypeScript), pure and total.** `pane_map.ts` takes a parsed
+snapshot and returns glyph rows. Per cell: one array index into `cells`, one
+into `palette`, one `kind → glyph` switch. That is `O(w*h)` with a tiny
+constant, on at most 361 cells. It validates before it draws —
+`cells.length === w*h` and every index in range — and returns no pane rather
+than a short or clamped one when either fails (§9). An unknown `kind` renders
+as a documented fallback glyph rather than throwing, matching
+`parseSnapshot`'s existing posture that a client which cannot read the
+structure degrades to prose, which always works.
+
+### 3.4 What it costs — measured where measurable, and honest where not
+
+**Bytes, measured.** `scene/surrounds/v1` was emitted from a committed seed-42
+world at each radius:
+
+```
+$ hornvale new --seed 42 --out world.json
+$ hornvale scene surrounds --world world.json --radius N | wc -c
+
+  radius 0:   1,329 bytes
+  radius 1:   1,902
+  radius 2:   3,044
+  radius 4:   7,049      <- what `map` draws today
+  radius 8:  21,937
+```
+
+So the **walk band is the expensive half at ~7 KB per turn**, and the chamber
+band is the cheap one. The chamber figure is computed, not measured, and
+labelled so: seed 42's opening structure is 19×10 = 190 cells, giving ~380 B
+of index array, a four-entry palette at ~160 B, and ~150 B of scalars — about
+**700 B**, rising to ~1.1 KB at the provable 19×19 maximum. The asymmetry is
+the opposite of what the campaign's framing suggests: the *new* schema is
+nearly free, and the *reused* one is what costs.
+
+**Time, not resolvable with the instruments to hand — and this is the honest
+answer, not a hedge.** The CLI harness cannot see it: world load dominates at
+~350–600 ms per invocation, and radius 0 through 8 showed no monotonic time
+trend against that noise, which bounds the per-cell work as *small* without
+measuring it. `surrounds_scene_in`'s own doc reports "~2 ms of this
+function's own per-cell work" in release, at an unstated radius.
+
+That number cannot simply be adopted, and `CLIENT-four-clocks` says why in as
+many words: the 4.75 ms no-op turn floor it would be compared against is
+**stale** — the row records that per-tick behaviour now exists, so "the
+turn-clock re-measurement is **OWED and not yet done** — it wants a
+session-level benchmark nobody has built," and it closes with "Re-measure, do
+not extrapolate." Quoting 2 ms against 4.75 ms would be exactly the
+extrapolation that caveat forbids.
+
+**So the plan builds the benchmark before it builds the pane.** A
+session-level harness that times `Session::snapshot()` with and without the
+spatial channel, on a fixed verb sequence, is task 1. It settles this
+campaign's cost question and it pays down the measurement
+`CLIENT-four-clocks` has been owed since The Action Clock fired its trigger.
+
+**The mitigation, if the benchmark says one is needed.** Memoize scene
+*construction* on `(room, day, zoom)`. Most verbs move neither the possession
+nor the day — `look`, `examine`, `whoami`, `knows`, `needs`, `why`, `npcs`,
+`help` and every unrecognised line — so the walk-band scene would be rebuilt
+on a minority of turns. Memoization is already the house pattern here:
+`Session` carries `mesh_memo` and `neighbors_memo` with documented
+write-through discipline (`session.rs:277-279`).
+
+Note what this does **not** do: the 7 KB is still serialized and shipped every
+turn. That is deliberate. Emitting "spatial unchanged since last turn" would
+break the invariant that every pane is a pure function of **one** snapshot
+(The Snapshot spec §3) — a snapshot that only makes sense beside its
+predecessor is not self-contained, and the redaction discipline rests on that
+self-containment. Construction is an implementation detail and may be cached;
+the emitted bytes are the contract and stay whole.
+
 ## 4. One pane, switching with the band
 
 Not two spatial panes side by side. The sim forbids it: `session.rs:840`
@@ -256,6 +365,18 @@ colliding with parallel sessions.
    would mean the change leaked into prose, which is the bug.
 4. **The empty map disappoints.** Accepted deliberately (§2). The mitigation
    is honesty in the chronicle, not a hedge in the code.
+5. **A later campaign persists a snapshot and breaks 0069 without touching
+   this code.** The fine layer is legal in an ephemeral emit and illegal in a
+   saved artifact (§3.3), and nothing mechanical enforces the difference.
+   Mitigated by stating it in the schema's own doc comment, where a replay
+   campaign will read it, rather than only here — and by
+   `CLIENT-coverage-matrix`'s existing save-as-seed-plus-marks answer.
+6. **The walk band, not the new schema, is the cost.** ~7 KB per turn
+   measured (§3.4), against ~700 B for the chamber plan. If the task-1
+   benchmark finds the per-turn construction material, the memo is the
+   answer; if it finds the *bytes* material, that is a finding worth
+   stopping on, because the fix would have to touch snapshot
+   self-containment, which §3.4 declines to trade away.
 
 ## 9. Testing
 
