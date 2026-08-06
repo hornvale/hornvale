@@ -429,3 +429,25 @@ xorn left and a giant elk, which is prey, arrived — so a hunger and danger
 profile changing is exactly what that path predicts. **This has not been walked
 through `hornvale_demography::coexist::pack` by hand and is not asserted as a
 cause.**
+
+### 10.2 The census, authored on lefford
+
+Run at SHA `a1de4635` on the canonical host (640.8 s, 1000 + 1000 rows, 0
+refusals). **Exactly two of ~180 metrics moved, in opposite directions:**
+
+```
+  per-cell-diversity      mean 3.6998288 -> 3.0603200   (-0.63950889)
+    [2,3): 268 -> 535     [3,4): 307 -> 379     [4,6): 425 -> 86
+  composition-variance    mean 0.38070089 -> 0.40926278 (+0.028561893)
+```
+
+`census-of-the-meeting` did not move at all — its solo/twin rosters are peopled
+and carry no subterranean kind.
+
+**Diversity falls** because two creatures stopped being counted across the 88 %
+of land with no cave. **Composition variance rises** because a species present
+in one cell in eight differentiates places that a ubiquitous one flattens.
+The second is the better argument for the change: correctness was the means,
+and a more textured world is what it bought.
+
+`make census-check` passes; the golden-pins tripwire is clean.

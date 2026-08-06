@@ -140,6 +140,33 @@ hand, so it is written down here as the most likely account and not as a cause.
 A hundred and eighty-eight lines was never the measurement. Before believing a
 number, ask what its denominator mixes.
 
+## Two numbers moved in two thousand worlds
+
+The census is a hundred and eighty-odd metrics over a thousand worlds, twice.
+Exactly two of them moved, and they moved in opposite directions.
+
+```
+  per-cell-diversity      mean 3.6998 -> 3.0603   (-0.6395)
+  composition-variance    mean 0.3807 -> 0.4093   (+0.0286)
+```
+
+The first is the obvious one and it is a **fall**: species per cell dropped by
+about seventeen percent, because two creatures stopped being counted in the
+eighty-eight percent of land that has no cave in it. That number was not
+diversity. It was two animals being scored in the wrong frame, and the model
+has been slightly too crowded for as long as they have been in it.
+
+The second is the one worth keeping. Composition variance — how much the mix of
+species differs from one place to the next — went **up**. A creature that is
+everywhere adds the same thing to every cell and flattens the comparison; a
+creature that is present in one cell in eight makes the two cells different.
+**Confining a species made the world's places less alike.**
+
+That is a better argument for the change than the fitness ratio is. The fitness
+ratio says the model now scores a cave creature against a cave, which is merely
+correct. The variance says the world got more textured as a result, which is
+the thing the correctness was for.
+
 ## What this leaves
 
 The dwarves. Two of the five are meant to live underground, and until this
