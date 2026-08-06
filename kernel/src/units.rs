@@ -84,6 +84,58 @@ impl ReferenceElevation {
     }
 }
 
+/// Metres above this world's sea level. Signed: negative below.
+///
+/// Distinguished at the type level from [`ReferenceElevation`], which is an
+/// absolute reading on the planet-independent isostatic datum. A
+/// `SeaLevelHeight` is *per-world* — its zero is a derived value of that other
+/// type — so two of these from different worlds are comparable to each other in
+/// a way their `ReferenceElevation`s are not, and vice versa. Decision 0044's
+/// doctrine requires an interval type to carry its datum; this type's name is
+/// that datum.
+///
+/// Produced by subtracting two [`ReferenceElevation`]s (see
+/// [`Sub`](std::ops::Sub) for that type), or via
+/// [`from_metres`](Self::from_metres) for a caller with no pair to subtract.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct SeaLevelHeight(f64);
+
+impl SeaLevelHeight {
+    /// Builds a height directly from metres rather than from a difference of
+    /// two readings. It exists for one reason: a caller deserializing a
+    /// document has a number, not the pair of elevations it came from.
+    ///
+    /// **This is the hole through which the datum-confusion class returns.** A
+    /// caller holding two [`ReferenceElevation`]s should subtract them instead —
+    /// that path cannot be wrong about which datum it is on. Finiteness is a
+    /// `debug_assert!` only, matching [`TempAnomaly::from_offset_c`].
+    /// type-audit: bare-ok(constructor-edge: value)
+    pub fn from_metres(value: f64) -> Self {
+        debug_assert!(value.is_finite(), "sea-level height must be finite");
+        Self(value)
+    }
+
+    /// The raw signed metres above sea level.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn get(self) -> f64 {
+        self.0
+    }
+
+    /// Metres *below* sea level — the positive-downward reading, and the
+    /// negation of [`get`](Self::get). This accessor exists so that a consumer
+    /// wanting depth never writes the negation by hand: a stray sign is the
+    /// same confusion class this type exists to remove.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn depth(self) -> f64 {
+        -self.0
+    }
+
+    /// Deterministic total order via `f64::total_cmp` (no NaN ambiguity).
+    pub fn total_cmp(self, other: Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
 /// The signed metre difference between two elevations. A local intermediate
 /// (lapse rate, depth shading) — a height-above-a-datum earns its own type
 /// only if it crosses a pub boundary (spec "The Datum" / decision 0044 (`shared-units-live-in-the-kernel`)).
@@ -433,5 +485,35 @@ mod tests {
         assert!(Precipitation::new(-1.0).is_err());
         assert!(Precipitation::new(f64::NAN).is_err());
         assert!(Precipitation::new(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn a_sea_level_height_reports_its_metres() {
+        let h = SeaLevelHeight::from_metres(1200.5);
+        assert!((h.get() - 1200.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn depth_is_the_positive_downward_reading() {
+        let below = SeaLevelHeight::from_metres(-3000.0);
+        assert!(
+            (below.depth() - 3000.0).abs() < 1e-12,
+            "depth reads positive downward"
+        );
+        assert!(
+            (below.depth() + below.get()).abs() < 1e-12,
+            "depth is exactly -height"
+        );
+        let above = SeaLevelHeight::from_metres(800.0);
+        assert!(above.depth() < 0.0, "above sea level, depth is negative");
+    }
+
+    #[test]
+    fn heights_order_deterministically() {
+        let a = SeaLevelHeight::from_metres(-10.0);
+        let b = SeaLevelHeight::from_metres(10.0);
+        assert_eq!(a.total_cmp(b), std::cmp::Ordering::Less);
+        assert_eq!(b.total_cmp(a), std::cmp::Ordering::Greater);
+        assert_eq!(a.total_cmp(a), std::cmp::Ordering::Equal);
     }
 }
