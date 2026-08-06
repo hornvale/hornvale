@@ -145,13 +145,9 @@ pub fn generation_length_of(world: &World, species: &str) -> Option<f64> {
     // literal cannot be built from it. `get_by_label` exists for exactly
     // this: a label-content comparison instead of a key construction.
     let bio = wc.biosphere.get_by_label(species)?;
-    hornvale_species::life_history(
-        bio.mass,
-        bio.metabolic_class,
-        hornvale_species::LifeSchedule::ALLOMETRIC,
-    )
-    .generation_length
-    .map(|y| y.get()) // salt-allow: y is a StdDays, not an entity
+    hornvale_species::life_history(bio.mass, bio.metabolic_class, bio.schedule)
+        .generation_length
+        .map(|y| y.get()) // salt-allow: y is a StdDays, not an entity
 }
 
 /// The figure `occupation`'s founder descends from — the founder of the
