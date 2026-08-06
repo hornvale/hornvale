@@ -180,6 +180,27 @@ low insolation optimum was decoration on a creature that no environment was
 scoring. The prediction was right about the mechanism and wrong about which
 creature had it.
 
+## No world changed
+
+Worth stating plainly, because it was predicted wrong. Adding a realm, a depth
+ladder, an address space, a stream, two verbs and two re-authored creature
+niches moved **no world's identity at all**: the committed seed-42 world is
+byte-identical, and the only artifacts that moved are the stream manifest
+gaining its one new row and the type-audit report tracking the new public
+surface.
+
+The prediction that it *would* move came from finding the two re-homed
+creatures named in the committed world file. They are named there — as a
+registry entry and as a naming fact — and neither is a placement. Which
+creature thrives where is computed live, every time, and only peopled species
+commit a place to the ledger. A symbol in a saved world says nothing about
+which fact carries it.
+
+No epoch is owed either, and that is on evidence rather than assertion: the new
+stream label does not exist on the main line, so its `v1` is rideable; no
+existing label was renamed or reused; and the kernel's hash and noise constants
+were never touched.
+
 ## What this leaves
 
 A chamber's content is its own latest recorded difference, else its
