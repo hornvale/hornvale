@@ -84,6 +84,80 @@
 //! consecutive turns share `(room, day, zoom)`.
 //! `snapshot bytes` is deterministic on seed 42 (identical across all three
 //! runs); only the timings vary run to run.
+//!
+//! ## Measured — through the wasm ABI (The Sighting, Task 1)
+//!
+//! Date: 2026-08-06. Box: `MacBookPro` (`hostname -s`). This discharges
+//! `CLIENT-four-clocks`: every browser-side figure in this repo was this
+//! native number multiplied by an assumed 3.6-3.8x ratio, never measured
+//! through the ABI. It now is. Bench:
+//! `clients/vessel/wasm/turn_bench.mjs`, driving `book/src/gallery/vessel.wasm`
+//! (a fresh `make wasm-vessel` build) via `node`, `performance.now()`, 5 runs,
+//! same `SEQUENCE`. Verbatim output:
+//!
+//! ```text
+//! Session::start   median 2192.533 ms
+//! hv_handle(verb)  median    3.740 ms
+//! snapshot+decode  median    0.016 ms
+//!   moving        n=10  handle median   15.032 ms   snapshot+decode median    0.020 ms
+//!   day-advancing n=5   handle median    5.558 ms   snapshot+decode median    0.028 ms
+//!   neither       n=35  handle median    2.556 ms   snapshot+decode median    0.014 ms
+//! snapshot bytes   walk 12189, chamber 4752
+//! ```
+//!
+//! **Architectural finding, found before any ratio was computed:** `hv_handle`
+//! (`clients/vessel/wasm/src/lib.rs`) calls `set_snapshot()` internally on
+//! every turn, so it already pays for `session.snapshot()` construction *and*
+//! `snapshot_json()` serialization — the two things this file measures as
+//! separate `handle(verb)` and `snapshot()+json` figures. `snapshot+decode`
+//! above is therefore not the wasm analogue of this file's `snapshot()+json`:
+//! it is only the cost of reading an *already-serialized* buffer out of
+//! linear memory and UTF-8-decoding it in JS (0.014-0.028 ms — negligible).
+//! The apples-to-apples comparison is `hv_handle` (bundled) against this
+//! file's `handle(verb) + snapshot()+json` (also bundled, just measured as
+//! two calls).
+//!
+//! **The real ratio, stated as a number — and it is not 3.6-3.8x:**
+//! `hv_handle + snapshot-read` (wasm, bundled) ÷ `handle(verb) +
+//! snapshot()+json` (native, run 3, the freshest of the three "after the
+//! spatial channel" runs above): `3.756 / 2.086 = 1.80x`. Against run 1
+//! (the slowest native run) the ratio is `3.756 / 2.259 = 1.66x`; against
+//! the three-run average (`2.137`) it is `1.76x`. **Every apples-to-apples
+//! per-turn ratio this bench found is in the 1.66-1.82x band — well under
+//! half the assumed 3.6-3.8x.** That assumption traces most closely to
+//! naively comparing wasm `hv_handle` against native `handle(verb)` alone
+//! (ignoring that wasm bundles snapshot construction in): `3.740 / 0.980
+//! (three-run average) = 3.82x` — a number essentially inside the assumed
+//! band, but the wrong comparison, since it silently credits wasm's
+//! `handle` figure with work the native `handle` figure never had to do.
+//! **Every browser-side figure elsewhere in this repo built on the
+//! 3.6-3.8x assumption should be re-examined**, not trusted at face value.
+//!
+//! Per-class ratios (same bundled-vs-bundled method, native run 3):
+//! `moving` 15.052/11.543 = **1.30x**; `neither` 2.570/1.293 = **1.99x**;
+//! `day-advancing` 5.586/6.818 = **0.82x** — wasm measured *faster* than
+//! native for this class, which reads as implausible on its face and is
+//! reported as such rather than smoothed away; it may reflect the small
+//! sample (native n=5 per run vs wasm n=5 total) rather than a real effect.
+//!
+//! Genesis (`hv_start` vs `Session::start`) is the one figure where the
+//! native side itself is too noisy (681-1317 ms across the three "after
+//! spatial channel" runs, nearly 2x spread) to state a single confident
+//! ratio: `2192.533 / 705.885 (run 3) = 3.11x`; `/ 681.428 (run 2) = 3.22x`;
+//! `/ 1317.037 (run 1) = 1.66x`. Unlike the turn-cost ratio, genesis sits
+//! closer to (if still generally under) the assumed band.
+//!
+//! **A confound, not a bug in this bench:** the wasm ABI's `hv_start`
+//! (`clients/vessel/wasm/src/lib.rs`) hardcodes `PossessOpts { day:
+//! WorldTime { day: 0.0 }, .. }`, while this file uses
+//! `PossessOpts::default()`, which is noon (`day: 0.5`). The two paths are
+//! not observing the same simulated moment, which plausibly explains part
+//! of the walk-band snapshot byte gap above (wasm 12189 vs native's
+//! recorded 11582, chamber much closer: 4752 vs 4759) — diurnal state
+//! differs. Determinism is not violated (each side is internally
+//! reproducible for its own fixed day), but a future re-measurement that
+//! wants byte-identical snapshots between the two paths needs the same
+//! `day` on both sides.
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session};
