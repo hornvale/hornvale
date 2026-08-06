@@ -258,7 +258,7 @@ fn river_exposure_tracks_real_proximity() {
 /// roots_it` below, which records the shape as it stands after The Wearing's
 /// close merge moved the population again — 1/5 Root, 4/5 Gap). `marsh` is now 5/5
 /// Root, 0/5 Gap — the opposite drift, now saturated like `river`/`ford`
-/// (see `marsh_is_a_root_for_every_placed_people_at_seed_42` below).
+/// (see `marsh_is_a_root_for_every_placed_people_at_seed_42_except_goblin` below).
 /// `spring` alone still genuinely discriminated at that point: 1/5 Root
 /// (kobold), 4/5 Gap.
 ///
@@ -278,7 +278,7 @@ fn river_exposure_tracks_real_proximity() {
 /// discriminate at seed 42 after this re-pin (each 1/5 Root, 4/5 Gap, and
 /// each re-pinned alongside this test); `spring` joins `marsh`/`river`/
 /// `ford` as saturated, which is why this test is renamed and rewritten
-/// to match `marsh_is_a_root_for_every_placed_people_at_seed_42`'s shape
+/// to match `marsh_is_a_root_for_every_placed_people_at_seed_42_except_goblin`'s shape
 /// rather than asserting a "differs" claim that is no longer true.
 ///
 /// # The Contour absorb (2026-08-02)
@@ -297,6 +297,33 @@ fn river_exposure_tracks_real_proximity() {
 /// and `valley` already use rather than the saturated shape this file
 /// carried between the two absorbs.
 ///
+/// **The Tense (2026-08-05) — kobold traded `hill` for `valley`, exactly.**
+/// All four toponymic partitions in this file moved together, and the symmetry
+/// is the readable part:
+///
+/// ```text
+///   hill    kobold rooted, 5 gapped   ->  NO rooter, all six gap
+///   valley  no rooter, all six gap    ->  kobold roots it, 5 gap
+///   spring  no rooter, all six gap    ->  goblin/hobgoblin/human root it
+///   marsh   all six root it           ->  goblin gaps it
+/// ```
+///
+/// Kobold is the authored HIGHLAND specialist and it has swapped the highland
+/// concept for the lowland one. That is worth flagging rather than burying in
+/// a re-pin: it is the same signal that made kobold's niche a live question
+/// this campaign, and re-authoring the niche was measured and made things
+/// strictly worse (see `domains/species`'s kobold doc and the campaign
+/// retrospective). The cause is upstream of the authoring — era-varying
+/// capacity punishes high-elevation niches, because elevation correlates with
+/// cold and the era minimum binds hardest there.
+///
+/// Note also what did NOT happen, since "exposure shrank" was the expected
+/// reading and is wrong: total gaps across these four concepts went 17 -> 15.
+/// Slightly MORE exposure, not less, on 42% fewer settlements.
+///
+/// Every test below is renamed to state what it now measures. A name that
+/// claims a partition the body no longer asserts is the failure mode decision
+/// 0104 is about — a wrong label defends itself.
 /// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
 /// a sixth competitor, redeciding seed 42's settlement placement once more —
 /// kobold's flagship no longer has exposure to a spring cell either.
@@ -305,7 +332,7 @@ fn river_exposure_tracks_real_proximity() {
 /// this test's own established policy of renaming to the shape rather than
 /// asserting a "discriminates" claim that is no longer true.
 #[test]
-fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
+fn spring_is_a_gap_at_seed_42_except_for_goblin_hobgoblin_and_human() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -323,13 +350,17 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
+        vec!["bugbear", "gnoll", "kobold"],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 no placed people roots 'spring'"
+        vec![
+            ("goblin", "Nebao".to_string()),
+            ("hobgoblin", "Negao".to_string()),
+            ("human", "Kozme".to_string()),
+        ],
+        "at seed 42 three placed peoples root 'spring' — goblin, hobgoblin, human"
     );
 }
 
@@ -346,7 +377,7 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
 /// raid could clear, which redecided seed 42's settlement survival and
 /// placement outright: bugbear's flagship no longer sits at hill's strict
 /// local elevation maximum — it now sits at valley's local minimum instead
-/// (see `valley_is_a_gap_for_every_placed_people_at_seed_42_except_bugbear_
+/// (see `valley_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it_except_bugbear_
 /// which_roots_it` immediately below, which is bugbear and hill's mirror).
 /// Goblin's flagship is the new occupant of hill's elevation maximum,
 /// rooting it as `Nootea`. The partition is still asserted EXACTLY, in both
@@ -374,7 +405,7 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
 /// human among the gappers), the same shape family this test's own history
 /// already carries; renamed to name the new sole rooter.
 #[test]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it() {
+fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -396,13 +427,14 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("kobold", "Roxoro".to_string())],
-        "at seed 42 exactly one people roots 'hill' — kobold"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 NO people roots 'hill' — kobold, the authored highland \
+         specialist, lost it under The Tense (see the doc comment)"
     );
 }
 
@@ -437,7 +469,7 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it
 /// every placed people) but the roster gains "human" alongside the other
 /// five.
 #[test]
-fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
+fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -455,13 +487,13 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
+        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human"],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 no placed people roots 'valley'"
+        vec![("kobold", "Raxoroo".to_string())],
+        "at seed 42 exactly one people roots 'valley' — kobold"
     );
 }
 
@@ -512,7 +544,7 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
 /// supposed to look like. Had one of those five romanizations changed, that
 /// would have been a phonology bug and not a re-pin.
 #[test]
-fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
+fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_goblin() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -530,7 +562,7 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        Vec::<&str>::new(),
+        vec!["goblin"],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
@@ -538,12 +570,11 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
         vec![
             ("bugbear", "Qadoo".to_string()),
             ("gnoll", "Gshoovzngaov".to_string()),
-            ("goblin", "Taneo".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
             ("human", "Meashngeo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 all six placed peoples root 'marsh'"
+        "at seed 42 five of six placed peoples root 'marsh' — goblin lost it"
     );
 }
 
