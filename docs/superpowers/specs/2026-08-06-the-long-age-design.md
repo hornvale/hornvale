@@ -1,7 +1,6 @@
 # The Long Age — design
 
-**Status:** G3 pending (autopilot; ledger at
-`.superpowers/sdd/decision-ledger.md`).
+**Status:** G3 APPROVED (Nathan, 2026-08-06). Planning.
 **Date:** 2026-08-06
 **Campaign:** C2b of the peoples program
 (`2026-08-03-the-peoples-program-design.md`). **Runs after C2-0 (The
@@ -447,5 +446,54 @@ Recorded for C2c rather than fixed here, from The Deep Realm's handoff:
 
 ## 10. Decisions
 
-Seven ledger entries, at `.superpowers/sdd/decision-ledger.md`, to be promoted
-here on G3 approval.
+Promoted from the autopilot ledger on G3 approval (Nathan, 2026-08-06). The
+scratch ledger dies with the worktree; this is the durable record.
+
+**D1 — Author an input, never override the output.** The channel adds a third
+authored input and leaves `lifespan` derived. `biosphere_registry` authors
+inputs (`mass`, `metabolic_class`, `potency`, `social_form`,
+`condition_niche`) and derives outputs; a `lifespan_override` would invert the
+crate's own authoring discipline. *Discarded:* a scalar override; a new
+`MetabolicClass` variant (a clade tag is not a longevity strategy, and it is an
+enum widening with 7+ exhaustive-match sites for no gain).
+
+**D2 — A sparse component store, not a field on `BiosphereTraits`.**
+`life_schedule_registry() -> ComponentStore<KindId, LifeSchedule>`; absence is
+`LifeSchedule::ALLOMETRIC`, named as a const at the read site. Follows
+`dispersion_registry()` (C2t, the preceding campaign in this program): 9 rows
+against biosphere's 30, its consumer naming the absence default `NO_SPREAD`.
+*Discarded:* a 7th struct field — 30 mechanical row edits enlarging the diff a
+byte-neutrality claim must be audited against, for no expressive gain.
+
+**D3 — The factor multiplies exactly what `pace_multiplier` multiplies.**
+`lifespan`, `age_at_maturity`, `reproductive_tempo`, `pace_of_life`; **not**
+`basal_metabolic_rate_w`. Metabolic rate is genuinely mass-set — a long-lived
+kind is not a cold kind. *Discarded:* lifespan and maturity only, which leaves
+the almanac emitting "moderate-paced, lifespan ~750 yr" because the headline
+bucket reads `pace_of_life`.
+
+**D4 — `MAX_PACE_MULTIPLIER` stays at 1.5 and is redocumented.** See §3.5.
+Its doc's requirement is that saturation not be *silent*; documenting satisfies
+that without rescaling `pace_of_life` for all thirty kinds. *Discarded:*
+raising the ceiling (census regen, null forfeited); leaving the doc untouched
+(a false instruction left in the code).
+
+**D5 — One threshold serves both arms.** `Settled` + lifespan ≥
+`LIFESPAN_THRESHOLD_YEARS` → `CascadeRegime::new(1, 2)`, else `SETTLED`.
+Decision 0066 states the model as one product, and `CascadeRegime{min,max}` is
+a pair of integers, so the codomain is discrete and banding is forced by the
+type rather than chosen. *Discarded:* a second `Settled`-specific threshold; a
+continuous map (it would quantize to the same step).
+
+**D6 — No kind is authored long-lived.** `Paced` ships with zero occupants;
+C2c (dwarves) is its first consumer, C2d (elves) its second. The Deep Realm's
+retrospective sets the rule: name a derived thing's first consumer in the same
+campaign, *or say plainly that it has none*. Authoring one here would move the
+roster, the census fixtures and world identity — destroying the null that is
+this campaign's result. The rung-2 trap is answered by §6's two mutations
+instead.
+
+**D7 — No new lab metric.** One metric reddens 34 tests until both census
+fixtures refresh (31 `the-census` + 3 `census-of-the-meeting`), and with zero
+occupants it would read a constant. Deferred to C2c, which will have something
+worth measuring.
