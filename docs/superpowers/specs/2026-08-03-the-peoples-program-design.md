@@ -137,19 +137,46 @@ and six elves first would mean authoring eleven peoples twice. See §4b.
 **C2-0 — The Generalist.** Humans, one kind, surface only. No new mechanism.
 Full spec: `2026-08-03-the-generalist-design.md`.
 
-**C2a — The Deep Realm.** A subterranean `Realm`: new `Medium` and `Access`
-values, a stratum column, cave `Formation`s, a subterranean supply field, and
-per-stratum occupancy so that a cell's population is keyed `(cell, stratum)`
-rather than `(cell)`. Rehomes xorn and rust monster off their faked surface
-niches — the campaign's payload, and its proof, without a new kind. Follows The
-Stratum's recommended depth-band mechanism rather than extending `RoomAddr`.
+**C2a — The Deep Realm.** *Merged 2026-08-06. This paragraph is corrected
+against what shipped; the original described bands, and decision
+[0105](../../decisions/0105-water-keeps-bands-rock-becomes-a-graph.md)
+replaced them.* A subterranean `Realm`: new `Medium` and `Access` values, cave
+`Formation`s, and an **addressed chamber graph** — not a depth-band column.
+Water keeps its bands; rock does not, because most cells hold no void at all
+and the voids that exist are sparse and connected sideways. A chamber is a pure
+function of its lattice address (cell, entrance, depth band, slot); nothing is
+stored. Rehomes xorn and rust monster off their faked surface niches — the
+campaign's payload, and its proof, without a new kind.
+
+**Two things this paragraph promised that did not ship, and C2c inherits:**
+
+- **Per-stratum occupancy did not ship.** The original text promised a cell's
+  population keyed `(cell, stratum)` rather than `(cell)`. 0105 superseded the
+  band-shaped design that keying assumed, and **nothing places anyone in a
+  chamber**. No `(cell, stratum)` keying exists anywhere in the workspace. C2c
+  is "the first people to live in the Deep Realm" and has no occupancy
+  mechanism to build on — it must bring one.
+- **There is no subterranean supply field, by design.** Supply stays
+  surface-fed (allochthonous). Chemosynthesis is The Keeping's step D and must
+  not be smuggled in here.
+
+Measured, and relevant to C2c's scope: a cave's chamber count is *exactly*
+`Binomial(4(rank+1), ½)`, so given the depth band the graph carries no place
+information at all — everything the underworld has, terrain gave it. Roughly
+half of all caves are sealed, and 7 of 30 flagship settlements cannot reach an
+enterable cave. Neither was tuned; both levers belong to terrain and were just
+calibrated against five preregistered criteria.
 
 **C2b — The Long Age.** Lifespan gains an authoring channel: a *curve* or
 strategy rather than a scalar override, with metamorphosis as the sibling case
 the design must leave room for. `cascade_regime_of`'s `Settled` arm learns to
-read it. Preregister byte-neutrality for the five existing peoples — that null
-is the result, and it is what makes the epoch cheap. Owes the live confirmation
-of F1's arithmetic.
+read it. Preregister byte-neutrality for the **six** existing peoples — that
+null is the result, and it is what makes the epoch cheap. (Corrected from
+"five": human arrived with C2-0 and gnoll with The Vacancy, so the settling
+roster is goblin, kobold, human, hobgoblin, bugbear, gnoll.) **F1's arithmetic
+was confirmed by a live call on 2026-08-06 and reproduces exactly** — see
+`2026-08-06-the-long-age-design.md` §1, which also records four findings the
+source read did not have.
 
 **C2c — The Delvers.** Dwarves ×5: Hill (surface), Mountain and Duergar
 (subterranean, different strata), Gully, Desert. Their shared `dwarf` family
