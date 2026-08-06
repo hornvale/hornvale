@@ -218,12 +218,70 @@ fn the_band_tag_is_what_the_client_switches_on() {
     );
 }
 
+#[test]
+fn a_creature_standing_in_the_chamber_reaches_the_plan() {
+    // The Sighting, test 1. `wait` before `enter` is load-bearing and is the
+    // answer to "why does the committed chamber fixture carry no marks": the
+    // within-room `Occupancy` is populated by `DriveMovements::step_with_occupancy`,
+    // which only runs on a tick, so before the first `wait` NO creature has a
+    // fine-layer position and the embedding has nothing to place. The fixture
+    // script is `enter` alone, at turn 1.
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    session.handle("wait");
+    session.handle("enter");
+    let snap = session.snapshot().expect("a live session snapshots");
+    let SpatialChannel::Chamber { plan } = &snap.spatial else {
+        panic!("`enter` puts the possession inside")
+    };
+
+    assert!(
+        !plan.marks.is_empty(),
+        "a chamber holding a co-located creature must draw it: present = {:?}",
+        snap.sensed.present
+    );
+    for mark in &plan.marks {
+        // The NPC's OWN noun, not a generic one — the join `PlanMark` took the
+        // focalizer's shape for.
+        assert!(
+            snap.sensed
+                .present
+                .iter()
+                .any(|p| p.label == mark.noun && mark.datum.contains(&p.felt)),
+            "mark {:?} names no creature `sensed.present` reports",
+            mark
+        );
+        assert_eq!(mark.kind, "creature", "a creature's mark says what it is");
+        // Inside the extent, and standing on a cell it could stand on: the
+        // plan's own grid is total, so a mark outside it would be undrawable.
+        let e = &plan.extent;
+        assert!(
+            mark.x >= e.x && mark.x < e.x + e.w && mark.y >= e.y && mark.y < e.y + e.h,
+            "mark {mark:?} is outside the extent {e:?}"
+        );
+        assert!(
+            !(mark.x == plan.you.x && mark.y == plan.you.y),
+            "a creature was drawn in the possession's own cell — §7 rule 5"
+        );
+    }
+}
+
 /// The committed fixtures the Casement's pane tests decode.
 ///
 /// Byte goldens, refreshed with `REBASELINE=1` like every other golden in
 /// this repo. A diff here means the wire shape moved, which is the epoch
 /// decision point — never rebaseline to make a red run green without
 /// deciding that first.
+///
+/// **Three fixtures, and the third is The Sighting's.** `…-chamber.json` is
+/// taken at turn 1 on the script `enter` alone, so no tick has ever run, the
+/// within-room `Occupancy` is still its empty default, and its `marks` array is
+/// therefore `[]` — legitimately, not because nothing writes the field. That
+/// makes it the wrong fixture to decode a mark from, so `…-chamber-occupied.json`
+/// is taken one `wait` earlier and carries a real creature. It is ADDITIVE: the
+/// two older fixtures' scripts are untouched, because changing one to gain a mark
+/// would have moved `turn`, `day` and `narration` in a file whose whole job is to
+/// hold those still.
 #[test]
 fn the_client_fixtures_are_current() {
     let world = world();
@@ -233,9 +291,15 @@ fn the_client_fixtures_are_current() {
     session.handle("enter");
     let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
 
+    let (mut occupied_session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    occupied_session.handle("wait");
+    occupied_session.handle("enter");
+    let occupied = hornvale_vessel::snapshot_json(&occupied_session.snapshot().unwrap());
+
     for (name, body) in [
         ("snapshot-seed-42-walk.json", walk),
         ("snapshot-seed-42-chamber.json", chamber),
+        ("snapshot-seed-42-chamber-occupied.json", occupied),
     ] {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures")

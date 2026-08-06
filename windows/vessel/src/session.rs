@@ -31,6 +31,41 @@ const WILD_COUNT: usize = 4;
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
 const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 
+/// How far the possession sees inside a chamber, as a **Chebyshev** radius in
+/// cells — the metric [`crate::lattice::shadowcast`] itself bounds, so the
+/// constant and the algorithm cannot disagree about what "four" means.
+///
+/// **It is a stand-in, and which kind of stand-in matters.** Hornvale has no
+/// indoor lighting model, so no physical quantity fixes this number. What fixes
+/// it is the requirement that it BIND. A chamber [`crate::lattice::allocate`]
+/// draws is a rectangle; a rectangle is convex; so occlusion alone never hides
+/// one floor cell of a chamber from another. And every structure a possession
+/// can enter takes that method — `embed_with` selects on `brief.built`, and
+/// `structure_at` returns `None` without it — so occlusion is not a live
+/// narrowing today at all. A chamber spans [`crate::lattice::CHAMBER_SIDE`] = 8
+/// cells, whose Chebyshev diameter is 7, so **at radius 7 or more the narrowing
+/// is decoration**: it would remove nothing any built world can produce. Half a
+/// chamber is the largest round number that is not decoration.
+///
+/// One named constant rather than a literal at the call site, so that the day a
+/// light model arrives there is exactly one place to replace, and so no second
+/// caller can quietly disagree with the first.
+/// type-audit: bare-ok(count)
+const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
+
+/// What [`crate::plan::PlanMark::kind`] a creature carries — the plan's
+/// counterpart to `scene/surrounds/v2`'s `"settlement"`, and deliberately not
+/// `"agent"`, which that schema already spends on the possessed agent alone.
+const CREATURE_MARK_KIND: &str = "creature";
+
+/// A creature's rank on the plan (lower is more salient). Ten, the same rank
+/// `scene/surrounds/v2` gives the flagship settlement, because a living thing is
+/// the most salient thing a floor plan can draw and nothing else writes a
+/// `PlanMark` yet — the ordering this constant participates in is currently
+/// creature-against-creature, where `plan_of`'s noun tie-break decides.
+/// type-audit: bare-ok(index)
+const CREATURE_SALIENCE: u32 = 10;
+
 /// The ways-on name for the aperture leading DEEPER into a structure — a
 /// direction, not a thing, because a chamber address carries no bearing and the
 /// chambers of one structure are prose-identical, so only depth distinguishes
@@ -341,6 +376,42 @@ struct Inside {
     /// and is passable; a `Floor` cell, never a `Threshold`, so the drawn mark
     /// cannot hide a doorway (`lattice::cell_beyond`).
     cell: crate::lattice::Cell,
+    /// The seed this frame's geometry is drawn from — the locale's own seed
+    /// ([`Session::frame_seed`]), the one `lattice` above was embedded with and
+    /// the one [`crate::lattice::anchor_cells`] places anchors with.
+    ///
+    /// Carried rather than re-derived for the reason `lattice` is: it is a
+    /// property of the STRUCTURE, fixed for as long as the possession stands in
+    /// it, and re-deriving it per snapshot would invite the two to disagree.
+    /// It is also the one lever The Sighting's negative control needs — perturb
+    /// this and the embedding moves while nothing else does, which is exactly
+    /// the experiment spec §2.1 asks for.
+    seed: Seed,
+}
+
+/// What the fine layer says about the chamber the possession is standing in:
+/// where each co-located creature has been drawn, and which cells the
+/// possession can see from where it stands.
+///
+/// `FRAME`-tier in its entirety, like everything else in this band (decision
+/// 0069): derived inside one [`Session::snapshot`] call and dropped when it
+/// returns. Nothing here is committed, and that is the campaign's central
+/// constraint rather than an implementation detail — the embedding may decide
+/// what a client is SHOWN, never what an agent comes to BELIEVE (spec §2.1).
+/// `Session::knowledge` is not read or written on this path.
+struct Sighting {
+    /// Every cell the possession can see, [`SIGHT_RADIUS`] Chebyshev cells out
+    /// and stopping at the fabric.
+    lit: std::collections::BTreeSet<crate::lattice::Cell>,
+    /// Where each co-located creature the embedding could place stands. A
+    /// creature is ABSENT here for four distinct reasons, all legitimate:
+    /// nothing has recorded its within-room anchor yet (no tick has run), the
+    /// recorded anchor no longer names a place this room composes, this chamber
+    /// composes no anchor of that anchor's kind, or the cell it would take is
+    /// already held (§7 rule 5). Absence therefore never means "hidden" — which
+    /// is why [`Session::snapshot`] narrows `sensed.present` only on a creature
+    /// this map DOES place.
+    placed: std::collections::BTreeMap<EntityId, crate::lattice::Cell>,
 }
 
 impl<'w> Session<'w> {
@@ -583,7 +654,12 @@ impl<'w> Session<'w> {
         // entry regardless of scope; it is exactly as cheap as the
         // pre-Task-4 unconditional search, never cheaper, for this call.
         let mut home_nav_cache = HomeNavCache::new();
-        let present = self
+        // The fine layer, derived ONCE per snapshot: `anchor_cells` costs 42 us
+        // at the median and 410 us at p99 against this call's own measured
+        // 1.249 ms, so a second derivation — or one per creature — would be a
+        // budget item rather than noise. `None` out of doors.
+        let sighting = self.sighting();
+        let here: Vec<(EntityId, PresentEntry)> = self
             .colocated_npcs()
             .iter()
             .map(|npc| {
@@ -598,13 +674,62 @@ impl<'w> Session<'w> {
                     &mut mesh_memo,
                     &mut home_nav_cache,
                 );
-                PresentEntry {
-                    entity: npc.entity.0.get(),
-                    label: npc.label.clone(),
-                    felt: felt_phrase(&affect),
-                }
+                (
+                    npc.entity,
+                    PresentEntry {
+                        entity: npc.entity.0.get(),
+                        label: npc.label.clone(),
+                        felt: felt_phrase(&affect),
+                    },
+                )
             })
             .collect();
+
+        // SIGHT NARROWS WHAT IS SENT (spec §2.1, `CLIENT-redaction-panes`): a
+        // creature the embedding placed in a cell the possession cannot see is
+        // withheld sim-side, so the client is never handed something it is
+        // trusted to hide. A creature the embedding could NOT place is passed
+        // through: sight redacts what it can locate, and an embedding that has
+        // nothing to say about a creature must not be read as saying it is
+        // hidden. Nothing here touches `self.knowledge` — that deferral is the
+        // whole of §2.1 and `perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`
+        // is what holds it.
+        let hidden = |who: &EntityId| {
+            sighting
+                .as_ref()
+                .is_some_and(|s| s.placed.get(who).is_some_and(|c| !s.lit.contains(c)))
+        };
+        let present: Vec<PresentEntry> = here
+            .iter()
+            .filter(|(who, _)| !hidden(who))
+            .map(|(_, entry)| entry.clone())
+            .collect();
+
+        // The same shadowcast decides the marks, so the pane and the sensed
+        // channel cannot disagree about who is here.
+        let marks: Vec<crate::plan::PlanMark> = sighting
+            .as_ref()
+            .map(|s| {
+                here.iter()
+                    .filter_map(|(who, entry)| {
+                        let cell = *s.placed.get(who)?;
+                        s.lit.contains(&cell).then(|| crate::plan::PlanMark {
+                            x: cell.0,
+                            y: cell.1,
+                            noun: entry.label.clone(),
+                            kind: CREATURE_MARK_KIND.to_string(),
+                            // The sentence `needs` prints for this creature,
+                            // verbatim: the mark on the plan, the entry in
+                            // `sensed.present` and the line in the prose are one
+                            // examinable thing, which is the whole reason
+                            // `PlanMark` took the focalizer's shape.
+                            datum: format!("The {} {}.", entry.label, entry.felt),
+                            salience: CREATURE_SALIENCE,
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
 
         let social = self
             .npcs
@@ -651,11 +776,7 @@ impl<'w> Session<'w> {
                         inside.structure.chambers.len(),
                         chamber,
                         inside.cell,
-                        // Task 5 (The Sighting) decides which creatures are
-                        // visible and passes them here; until it lands this
-                        // stays empty, which is a legal `SessionPlan` (`[]`,
-                        // not an omitted key) and not a shortcut.
-                        Vec::new(),
+                        marks,
                     ),
                 }
             }
@@ -1358,11 +1479,13 @@ impl<'w> Session<'w> {
                 // it is; say so rather than panicking in a player's hands.
                 return Turn::Out("error: that chamber has no floor to stand in".to_string());
             };
+            let seed = self.frame_seed(&structure);
             self.inside = Some(Inside {
                 structure,
                 at: next,
                 lattice,
                 cell,
+                seed,
             });
             return self.out(self.describe_chamber_here());
         }
@@ -1400,11 +1523,13 @@ impl<'w> Session<'w> {
     fn descend(&mut self, structure: crate::structure::Structure, at: usize) -> Option<()> {
         let lattice = self.lattice_of(&structure);
         let cell = crate::lattice::standing_cell(&lattice, at)?;
+        let seed = self.frame_seed(&structure);
         self.inside = Some(Inside {
             structure,
             at,
             lattice,
             cell,
+            seed,
         });
         Some(())
     }
@@ -1748,14 +1873,27 @@ impl<'w> Session<'w> {
     /// plan is a property of the STRUCTURE, and so does not change as the
     /// possession walks deeper into it.
     fn lattice_of(&self, structure: &crate::structure::Structure) -> crate::lattice::Lattice {
-        let locale = crate::band::truncate_to_walk(&structure.threshold, self.walk_depth());
         let brief = self.brief_here();
         crate::lattice::embed_with(
             structure,
             &brief,
             crate::lattice::extent_for(structure),
-            locale.seed(self.world.seed),
+            self.frame_seed(structure),
         )
+    }
+
+    /// The seed every FRAME-tier derivation of `structure` is drawn from: the
+    /// locale's own seed, read off the THRESHOLD for the reason [`Self::lattice_of`]
+    /// gives (a plan is a property of the structure, not of how deep into it you
+    /// have walked).
+    ///
+    /// A named derivation with two callers rather than an expression inlined
+    /// twice: [`Self::lattice_of`] embeds the cells with it and
+    /// [`crate::lattice::anchor_cells`] places anchors into those same cells with
+    /// it, and a placement keyed differently from the plan it is placed into would
+    /// be a silent second world.
+    fn frame_seed(&self, structure: &crate::structure::Structure) -> Seed {
+        crate::band::truncate_to_walk(&structure.threshold, self.walk_depth()).seed(self.world.seed)
     }
 
     /// The drawn floor plan, in the chamber block's own shape: a bracketed
@@ -1850,6 +1988,107 @@ impl<'w> Session<'w> {
             &brief,
             inside.at,
         ))
+    }
+
+    /// Draw the fine layer: place this chamber's anchors into its cells, resolve
+    /// each co-located creature onto one of them, and cast sight from where the
+    /// possession stands. `None` out of doors, where there is no lattice and
+    /// therefore nothing to narrow.
+    ///
+    /// # The join, and the honest name for it
+    ///
+    /// Hornvale's two fine layers meet here (spec §2). `liveness::Occupancy`
+    /// records `(RoomAddr, AnchorId)` — the anchor a creature stands at in its
+    /// ROOM's interior, [`crate::interior::interior_of`]'s graph. A chamber
+    /// composes a DIFFERENT graph ([`crate::interior::chamber_interior_of`] is
+    /// role-gated, so a threshold chamber and a hearthroom do not compose alike),
+    /// and `Occupancy`'s own doc warns that an `AnchorId` is "only meaningful
+    /// paired with the SPECIFIC `Interior` that produced it".
+    ///
+    /// So the two are joined **by anchor KIND, never by ordinal**: a creature at
+    /// the room's threshold is drawn at this chamber's threshold, and a creature
+    /// whose kind this chamber does not compose is simply not drawn. Reusing the
+    /// raw offset would be the exact confusion that doc warns against — it would
+    /// put a creature "at the hearth" wherever this chamber's second anchor
+    /// happens to be — and it would make the drawn position mean nothing.
+    ///
+    /// What the join cannot do is decide WHICH CHAMBER a creature is in: the
+    /// coarse layer persists a room, and every chamber of a structure truncates
+    /// to one room. Every co-located creature is therefore drawn in the chamber
+    /// the possession is standing in. That is the resolution the persisted layer
+    /// has, stated rather than papered over; a chamber-scoped `Occupancy` is what
+    /// would change it, and nothing today produces one.
+    ///
+    /// # §7 rule 5 has a caller
+    ///
+    /// [`crate::lattice::Occupancy::place`] refuses rather than overwrites, and
+    /// the possession is seated FIRST — it is a creature standing in a cell like
+    /// any other, and `you` is already drawn there. A creature whose cell is
+    /// taken (by the possession, or by a creature earlier in `self.npcs`' own
+    /// derivation order) is left unplaced rather than stacked.
+    fn sighting(&self) -> Option<Sighting> {
+        let inside = self.inside.as_ref()?;
+        // The chamber's interior, through the SAME accessor `chamber_nouns_here`
+        // and `examine_chamber` read it through — the plan asked for reuse rather
+        // than a fourth derivation of `chamber_interior_of`, and this is it.
+        let chamber = self.chamber_interior_here()?;
+        let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+
+        let mut held = crate::lattice::Occupancy::default();
+        // `Inside::cell` is documented passable (`standing_cell`/`cell_beyond`
+        // both guarantee it), so this cannot refuse — asserted rather than
+        // assumed, and bound to a local first so the placement itself still
+        // happens in a release build.
+        let seated = held.place(&inside.lattice, inside.cell, self.agent_entity());
+        debug_assert!(
+            seated.is_ok(),
+            "the possession's own standing cell was refused: {seated:?}"
+        );
+
+        let terrain = self.terrain_here();
+        let room = crate::interior::interior_of(&self.agent.position, &terrain);
+        let mut placed = std::collections::BTreeMap::new();
+        for npc in self.colocated_npcs() {
+            // Room-CHECKED (`anchor_in`, not `at`): a creature whose recorded
+            // anchor belongs to some other room is not standing anywhere here,
+            // and reading it against this room's graph is what that method exists
+            // to prevent.
+            let Some(anchor) = self.occupancy.anchor_in(npc.entity, &self.agent.position) else {
+                continue;
+            };
+            // RANGE-CHECKED before the read. `Interior::anchor` indexes straight
+            // into its `Vec`, so an id recorded against a graph this room no
+            // longer composes would not be merely wrong — it would panic in a
+            // player's hands mid-turn. `anchor_in` rules out the wrong ROOM;
+            // this rules out the wrong SIZE of the right room's graph, which is
+            // what a furnishing epoch (`room/furnishing/v1`) would produce
+            // between the tick that recorded the anchor and this read.
+            if !room.ids().contains(&anchor) {
+                continue;
+            }
+            let kind = room.anchor(anchor).kind;
+            let Some(here) = chamber
+                .ids()
+                .into_iter()
+                .find(|&a| chamber.anchor(a).kind == kind)
+            else {
+                continue;
+            };
+            // A missing cell is legitimate, not a bug: `anchor_cells` leaves
+            // surplus anchors UNPLACED when a chamber holds fewer floor cells
+            // than the interior holds anchors (3 of 256 on the grown corpus).
+            let Some(&cell) = cells.get(&here) else {
+                continue;
+            };
+            if held.place(&inside.lattice, cell, npc.entity).is_ok() {
+                placed.insert(npc.entity, cell);
+            }
+        }
+
+        Some(Sighting {
+            lit: crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS),
+            placed,
+        })
     }
 
     /// `examine <noun>` INDOORS: the chamber's own anchors first, then the floor
@@ -3788,6 +4027,247 @@ mod tests {
         assert!(
             !out.contains(INDOOR_CHART_REFUSAL),
             "map underground must not take the indoor refusal: {out}"
+        );
+    }
+
+    // ---- The Sighting -------------------------------------------------
+    //
+    // Tests 2-4 of the campaign's four live HERE rather than in
+    // `tests/session_snapshot.rs`, where the plan filed them, because each
+    // needs a lever the public surface deliberately does not offer: an NPC
+    // put at a chosen anchor (`Session::occupancy`), a second creature made
+    // co-located (`Session::ledger`), and — the negative control — the frame
+    // seed the embedding is drawn from (`Inside::seed`). Adding a public
+    // setter for any of those would ship a knob production never turns, which
+    // is worse than a unit test.
+
+    /// A session standing in seed 42's opening structure, one tick in — the
+    /// shared fixture for the three tests below. The tick matters: `Occupancy`
+    /// is populated by `DriveMovements::step_with_occupancy`, so before a
+    /// `wait` no creature has a within-room anchor at all.
+    fn possessed_inside(world: &World) -> Session<'_> {
+        let (mut session, _) = Session::start(world, &PossessOpts::default()).unwrap();
+        session.handle("wait");
+        session.handle("enter");
+        assert!(
+            session.inside.is_some(),
+            "seed 42's opening locale is built and enterable"
+        );
+        session
+    }
+
+    /// The marks this session's snapshot draws.
+    fn marks_of(session: &Session<'_>) -> Vec<crate::plan::PlanMark> {
+        match session
+            .snapshot()
+            .expect("a live session snapshots")
+            .spatial
+        {
+            SpatialChannel::Chamber { plan } => plan.marks,
+            SpatialChannel::Walk { .. } => panic!("expected the chamber band"),
+        }
+    }
+
+    #[test]
+    fn two_creatures_cannot_be_drawn_in_one_cell() {
+        // THE SIGHTING, TEST 2. `lattice::Occupancy::place`'s `Refusal` path
+        // shipped with no caller at all — its own module doc says a test over
+        // data that does not exist yet "reads as coverage". This is the caller,
+        // and this is the test that makes the refusal non-vacuous.
+        //
+        // The collision is built out of the two facts that make it reachable:
+        // `liveness::Occupancy` deliberately ALLOWS two creatures at one anchor
+        // ("a hearth crowded with three NPCs is a legitimate occupancy"), and
+        // `lattice::Occupancy` deliberately forbids two creatures in one cell.
+        // One anchor resolves to one cell, so the second creature must be
+        // refused and must not be drawn.
+        let world = seam_world();
+        let mut session = possessed_inside(&world);
+
+        let room = session.agent.position.clone();
+        let first = session
+            .colocated_npcs()
+            .first()
+            .copied()
+            .expect("seed 42 puts a creature here")
+            .entity;
+        let anchor = session
+            .occupancy
+            .anchor_in(first, &room)
+            .expect("the tick recorded where it stands");
+        assert_eq!(
+            marks_of(&session).len(),
+            1,
+            "precondition: exactly one creature is drawn before the second arrives"
+        );
+
+        // A second creature, made co-located the way the world makes one: an
+        // `agent-at` fact, which is what `colocated_npcs` reads.
+        let second = session
+            .npcs
+            .iter()
+            .map(|n| n.entity)
+            .find(|&e| e != first)
+            .expect("a session derives more than one NPC");
+        let fact = crate::liveness::place_agent(second, &room, session.day);
+        session
+            .ledger
+            .commit(fact, &session.registry)
+            .expect("agent-at is registered");
+        session.occupancy.place(second, &room, anchor);
+
+        assert_eq!(
+            session.colocated_npcs().len(),
+            2,
+            "both creatures are now in the possession's room"
+        );
+        assert_eq!(
+            session.occupancy.anchor_in(first, &room),
+            session.occupancy.anchor_in(second, &room),
+            "and both stand at the same anchor, which liveness permits"
+        );
+
+        let marks = marks_of(&session);
+        assert_eq!(
+            marks.len(),
+            1,
+            "one cell may hold one creature: the second must be REFUSED, not stacked — got {marks:?}"
+        );
+        // The refused creature is still REPORTED. Sight redacts what it can
+        // locate; a creature the embedding declined to place is not a creature
+        // sight decided was hidden.
+        let snap = session.snapshot().unwrap();
+        assert_eq!(
+            snap.sensed.present.len(),
+            2,
+            "a creature refused a cell must not vanish from `sensed.present`"
+        );
+    }
+
+    #[test]
+    fn a_creature_beyond_sight_appears_neither_in_sensed_nor_in_marks() {
+        // THE SIGHTING, TEST 3. The narrowing is structural and sim-side
+        // (`CLIENT-redaction-panes`): the client is never handed a creature it
+        // is trusted to hide.
+        //
+        // The creature is moved by putting it at a DIFFERENT anchor of its own
+        // room's interior — the same `Occupancy::place` catch-up itself uses —
+        // and the anchor is CHOSEN BY MEASUREMENT rather than by hand: the test
+        // asks the embedding which of this chamber's cells lies outside the
+        // shadowcast and then finds the room anchor that draws there. Hardcoding
+        // an anchor id would pin a number that moves with the pattern
+        // inventory.
+        let world = seam_world();
+        let mut session = possessed_inside(&world);
+        let room = session.agent.position.clone();
+        let who = session
+            .colocated_npcs()
+            .first()
+            .copied()
+            .expect("a creature is here")
+            .entity;
+
+        let (near, far) = {
+            let inside = session.inside.as_ref().unwrap();
+            let chamber = session.chamber_interior_here().unwrap();
+            let cells =
+                crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
+            let lit = crate::lattice::shadowcast(&inside.lattice, inside.cell, SIGHT_RADIUS);
+            let terrain = session.terrain_here();
+            let interior = crate::interior::interior_of(&room, &terrain);
+            // For each of the ROOM's anchors, which cell it would be drawn at
+            // (joined by kind, exactly as `sighting` joins them), and whether
+            // that cell is lit.
+            let drawn = |a: crate::interior::AnchorId| {
+                let kind = interior.anchor(a).kind;
+                chamber
+                    .ids()
+                    .into_iter()
+                    .find(|&c| chamber.anchor(c).kind == kind)
+                    .and_then(|c| cells.get(&c).copied())
+            };
+            let mut near = None;
+            let mut far = None;
+            for a in interior.ids() {
+                match drawn(a) {
+                    Some(cell) if lit.contains(&cell) => near = near.or(Some(a)),
+                    Some(_) => far = far.or(Some(a)),
+                    None => {}
+                }
+            }
+            (near, far)
+        };
+        let near = near.expect("some anchor of this room draws inside the possession's sight");
+        let far = far.expect(
+            "some anchor of this room draws OUTSIDE it — without one this test asserts nothing",
+        );
+
+        session.occupancy.place(who, &room, near);
+        let snap = session.snapshot().unwrap();
+        assert_eq!(
+            snap.sensed.present.len(),
+            1,
+            "precondition: a creature in sight IS sent"
+        );
+        assert_eq!(marks_of(&session).len(), 1, "precondition: and IS drawn");
+
+        session.occupancy.place(who, &room, far);
+        let snap = session.snapshot().unwrap();
+        assert!(
+            snap.sensed.present.is_empty(),
+            "a creature out of sight must not be sent: {:?}",
+            snap.sensed.present
+        );
+        assert!(
+            marks_of(&session).is_empty(),
+            "and must not be drawn either — one shadowcast decides both"
+        );
+    }
+
+    #[test]
+    fn perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known() {
+        // THE SIGHTING'S CENTRAL INVARIANT, and spec §2.1 as a test.
+        //
+        // Decision 0069 lets the fine layer "regenerate differently forever
+        // without corrupting a world" precisely because nothing stored points
+        // into it. The moment sight-derived knowledge accumulated, an agent's
+        // BELIEF would depend on the embedder's free draws — so the embedding
+        // may decide what a client is SHOWN and may never decide what an agent
+        // comes to BELIEVE.
+        //
+        // The experiment is the whole claim: change the placement seed and
+        // NOTHING ELSE, then read both channels. `spatial` must move (the
+        // embedding is load-bearing there, and a control that cannot see its
+        // own positive is as empty as one that cannot see its own negative) and
+        // `known` must be byte-identical.
+        let world = seam_world();
+        let mut session = possessed_inside(&world);
+        assert!(
+            !marks_of(&session).is_empty(),
+            "precondition: something is drawn from the embedding at all"
+        );
+
+        let before = session.snapshot().unwrap();
+        let seed = session.inside.as_ref().unwrap().seed;
+        // A different DRAW of the same placement, not a different world: only
+        // `Inside::seed` moves, and `anchor_cells` is the only reader of it.
+        session.inside.as_mut().unwrap().seed = Seed(seed.0 ^ 0x5169_4741_u64);
+        let after = session.snapshot().unwrap();
+
+        assert_ne!(
+            before.spatial, after.spatial,
+            "perturbing the embedding must MOVE what is drawn — if it does not, \
+             the placement seed is not reaching the plan and this control is decoration"
+        );
+        assert_eq!(
+            before.known, after.known,
+            "perturbing the embedding must NOT move what is known (spec §2.1): \
+             sight has leaked into belief"
+        );
+        assert_eq!(
+            before.sensed.present, after.sensed.present,
+            "nor may it move who is REPORTED here in this fixture, where every \
+             creature stays in sight under both placements"
         );
     }
 }
