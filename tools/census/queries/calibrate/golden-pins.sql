@@ -377,7 +377,7 @@ checks AS (
   -- The Generalist resync, 0063/0079: 150 -> 148.
   -- The Tolerance resync, 0063/0079: 148 -> 151.
   SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
-         CAST(locked_eternal AS DOUBLE) AS computed, 151.0 AS pinned, locked_eternal = 152 AS ok FROM agg
+         CAST(locked_eternal AS DOUBLE) AS computed, 152.0 AS pinned, locked_eternal = 152 AS ok FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 41 -> 40.
   -- The Contour epoch v2 resync, 0063: 39 -> 40.
