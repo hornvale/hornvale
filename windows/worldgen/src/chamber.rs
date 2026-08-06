@@ -291,6 +291,21 @@ pub type ChamberOverrides = BTreeMap<ChamberAddr, ChamberOrigin>;
 /// `(default, override)` combination, independent of the fact that
 /// `chamber_at`'s own derived default is always `Found` today — see
 /// `an_override_wins_over_the_derived_default` in `deep_realm_chamber.rs`.
+/// **This function's `default == Made` branch has NO LIVE CALLER, deliberately,
+/// and that is recorded here rather than left to be discovered.** [`chamber_at`]
+/// is the only caller and always passes `Found`, because this campaign ships no
+/// writer — so the absorbing rule is exercised by
+/// `made_is_absorbing_over_every_default_and_override_combination` and by
+/// nothing else in the shipped path.
+///
+/// The Hollow's dominant lesson is that a field nothing reads cannot be
+/// observed to be wrong, and its remedy is to name a derived thing's first
+/// consumer in the same campaign *or say plainly that it has none*. This has
+/// none. Its first real consumer is the digging campaign (C2c) — the moment a
+/// dig fact can make a chamber `Made`, a second dig over the same address must
+/// not be able to un-make it, and §4.1's persistence asymmetry (an excavated
+/// extent survives its maker; only the *claim* lapses) is what that campaign
+/// will be reading. Until then this is a stated deferral, not an oversight.
 pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> ChamberOrigin {
     if default == ChamberOrigin::Made {
         return ChamberOrigin::Made;
