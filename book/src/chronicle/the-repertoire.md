@@ -47,7 +47,7 @@ leverage (missing bundles ranked by fan-in), supply (registered tokens no
 situation requires). It regenerates from `hornvale tropes report` and is
 rebuilt by the ordinary artifact script. Everything below is a reading taken
 through that one instrument; a second came later, and the last section says
-what it changed.
+what it added.
 
 ## The four predictions
 

@@ -219,38 +219,68 @@ fn check_mode_fails_on_a_divergent_corpus() {
     );
 }
 
-/// A mode following a flag is still found. Reading only `args[1]` made
-/// `tropes --corpus <path> check` print a report and exit 0 — a silent false
-/// pass for anything gating on `check`. Nothing else guards that fix.
+/// A mode following a flag is still found — and found before the flag's value
+/// is used. Reading only `args[1]` made `tropes --corpus <path> check` print a
+/// report and exit 0, a silent false pass for anything gating on `check`.
 ///
-/// Deliberately `tvtropes-2012`, not Polti. Pointed at Polti this test ran a
-/// byte-identical invocation to
-/// `check_mode_agrees_with_the_committed_artifact_for_polti` and asserted the
-/// same two things, so the two could only ever fail together and the
-/// flag-parsing regression had no independent guard. The second corpus is
-/// reached by `--corpus` in exactly one other place — a `check` agreement
-/// test that asserts nothing about argument order.
+/// The invocation is `tropes --corpus <a path that does not exist> matrix`,
+/// which no other test makes, and which is chosen so this test can fail *by
+/// itself*. Pointing it at `--corpus <real corpus> check` — either corpus —
+/// made it a byte-identical twin of a `check` agreement test: same argv, same
+/// two assertions, so the two could only ever fail together and the
+/// flag-parsing fix still had no independent guard. Two things make this form
+/// distinct instead:
+///
+/// - **The discriminator is report-shaped output, not the absence of output.**
+///   An empty stdout is what `check` prints on agreement and also what a
+///   crashed run prints; a rendered matrix is a shape nothing else in
+///   `cmd_tropes` produces. This asserts the bytes are the matrix's, so a
+///   fall-through to `report` or `check` cannot satisfy it.
+/// - **The corpus is deliberately unreadable.** `cmd_tropes` scans for the
+///   mode *before* it reads `--corpus`, precisely so `matrix` — which scores
+///   every corpus in `tropes::CORPORA` and has no use for the flag — need not
+///   fail because the caller passed a path that does not exist. That ordering
+///   is asserted nowhere else, and it is what lets this test redden alone:
+///   moving the matrix arm below the corpus read leaves every agreement test
+///   and `committed_trope_matrix_matches_the_live_render` (which invokes bare
+///   `tropes matrix`) green, and reddens only this one.
+///
+/// The original regression is still caught: a mode read from a fixed position
+/// resolves to `None` here, falls through to `report`, and dies on the
+/// unreadable corpus with a non-zero status.
 #[test]
-fn check_mode_is_found_after_a_flag() {
+fn the_mode_is_found_after_a_flag_and_before_the_flag_is_used() {
     let root = workspace_root();
     let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
         .args([
             "tropes",
             "--corpus",
-            "tropes/tvtropes-2012.trope.json",
-            "check",
+            "tropes/no-such-corpus.trope.json",
+            "matrix",
         ])
         .current_dir(&root)
         .output()
         .expect("runs the binary");
     assert!(
         out.status.success(),
-        "tropes --corpus … check failed: {out:?}"
+        "`tropes --corpus <nonexistent> matrix` must not read --corpus at all: the mode \
+         is scanned for before the corpus is loaded, so the matrix renders regardless. \
+         A non-zero status means the mode after the flag was missed and the run fell \
+         through to a corpus-reading arm: {out:?}"
     );
+    let stdout = String::from_utf8(out.stdout).expect("utf-8");
     assert!(
-        out.stdout.is_empty(),
-        "the flag form fell through to report and printed {} bytes",
-        out.stdout.len()
+        stdout.starts_with("<!-- GENERATED FILE") && stdout.contains("# The trope matrix"),
+        "the mode after the flag did not select `matrix`; stdout is not matrix-shaped. \
+         First 200 characters: {:?}",
+        stdout.chars().take(200).collect::<String>()
+    );
+    // Anti-vacuity: the marker above is a prefix a truncated render could still
+    // carry. A rendered matrix always holds the Columns table it is for.
+    assert!(
+        !parse_matrix_columns(&stdout).is_empty(),
+        "matrix-shaped stdout with no Columns rows — the render is not what this \
+         test thinks it is.\n{stdout}"
     );
 }
 
