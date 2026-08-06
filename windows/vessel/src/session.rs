@@ -516,8 +516,9 @@ impl<'w> Session<'w> {
     /// turn counter, and costs nothing on turns where no caller asks: the
     /// CLI never does, so its measured per-turn cost is unchanged. For a
     /// caller that *does* ask — the Casement, over wasm — the cost is not
-    /// nothing: `snapshot() + json` measured 0.173 → 1.249 ms (7.22×) and
-    /// 2.8× the bytes (`windows/vessel/examples/turn_cost.rs`).
+    /// nothing: `snapshot() + json` measured 0.173 → 1.249 ms (7.22×), and
+    /// the bytes grew per band — walk 4235 → 11582 (2.73×), chamber 4064 →
+    /// 4759 (1.17×) (`windows/vessel/examples/turn_cost.rs`).
     ///
     /// This method's failure surface is wider than a per-channel read: the
     /// only error path below is `observable`'s single `VesselError::Build`
