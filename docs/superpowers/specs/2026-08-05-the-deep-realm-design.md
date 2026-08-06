@@ -1,6 +1,6 @@
 # The Deep Realm — design
 
-**Status:** spec, awaiting G3 review.
+**Status:** G3 APPROVED (Nathan, 2026-08-05). Planning.
 **Date:** 2026-08-05
 **Campaign:** C2a of the peoples program
 (`2026-08-03-the-peoples-program-design.md`). **Runs after C2-0 (The
