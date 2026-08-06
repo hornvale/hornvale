@@ -195,6 +195,22 @@ impl GeneratedTerrain {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
     }
 
+    /// The nearest reachable same-plate contact — how far, and what kind.
+    ///
+    /// [`boundary_at`](Self::boundary_at) answers only for a cell that *is* a
+    /// contact; this answers for any cell, by reading the kind off the boundary
+    /// cell the distance field already attributes as the source. A consumer
+    /// that cares about the stress *regime* rather than mere proximity needs
+    /// the kind — a rift and a collision sit the same distance away and do
+    /// opposite things to a fracture. The distance field seeds every boundary
+    /// cell with `(0, itself)`, so the kind is always present when the distance
+    /// is.
+    /// type-audit: bare-ok(count: return)
+    pub fn nearest_boundary_at(&self, id: CellId) -> Option<(u32, crate::BoundaryKind)> {
+        let (hops, cell) = (*self.globe.boundary_distance.get(id))?;
+        Some((hops, self.boundary_at(cell)?.kind))
+    }
+
     /// Induration/hardness at a cell, `[0,1]` (the Sculpting/Ground seam,
     /// spec §4). Computed before elevation; agrees with `material_at`'s
     /// `induration` axis everywhere.
@@ -261,25 +277,36 @@ impl GeneratedTerrain {
     }
 
     /// The cave at a cell, if the fluid-flow point process places one.
+    ///
+    /// Kind is selected BEFORE existence is tested (`features::cave_process`),
+    /// existence is gated on that kind's own proneness against a uniformized
+    /// noise sample, and depth reads the cell's stratigraphic column — the
+    /// three repairs of The Hollow (spec §3).
     pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
         if self.is_ocean(id) {
             return None;
         }
+        let (kind, proneness) = crate::features::cave_process(
+            &self.material_at(id),
+            self.drainage_at(id),
+            self.crust_age_at(id),
+            self.nearest_boundary_at(id),
+        )?;
         let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let prob = crate::features::presence_prob(proneness, belt);
         let pos = self.geosphere.position(id);
-        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 5.0, 4);
-        let prob = crate::features::presence_prob(self.cave_proneness_at(id), belt);
+        let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
+            self.globe.features_noise_seed(),
+            pos,
+            crate::features::CAVE_GATE_FREQ,
+            crate::features::CAVE_GATE_OCTAVES,
+        ));
         if noise >= prob {
             return None;
         }
-        let buf = self.material_at(id);
-        let near_fault = self.boundary_at(id).is_some();
-        let kind = crate::features::cave_kind(&buf, near_fault);
-        // Depth-reach grows with proneness (deeper karst in wetter, more soluble rock).
-        let depth_reach_bands = 1 + (self.cave_proneness_at(id) * 3.0) as u32;
         Some(crate::features::Cave {
             kind,
-            depth_reach_bands,
+            deepest_band: crate::features::cave_depth(kind, &self.column_at(id), proneness),
         })
     }
 
@@ -588,6 +615,44 @@ mod tests {
                     "ocean cells never carry a pre-human scar"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn cave_at_agrees_with_the_kind_first_gate() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        for cell in geo.cells() {
+            let expected = if terrain.is_ocean(cell) {
+                None
+            } else {
+                crate::features::cave_process(
+                    &terrain.material_at(cell),
+                    terrain.drainage_at(cell),
+                    terrain.crust_age_at(cell),
+                    terrain.nearest_boundary_at(cell),
+                )
+                .and_then(|(kind, proneness)| {
+                    let belt = crate::features::belt_weight(terrain.boundary_distance_at(cell));
+                    let prob = crate::features::presence_prob(proneness, belt);
+                    let noise = crate::features::uniformize(crate::crust::sphere_fbm01(
+                        terrain.globe().features_noise_seed(),
+                        geo.position(cell),
+                        crate::features::CAVE_GATE_FREQ,
+                        crate::features::CAVE_GATE_OCTAVES,
+                    ));
+                    (noise < prob).then(|| crate::features::Cave {
+                        kind,
+                        deepest_band: crate::features::cave_depth(
+                            kind,
+                            &terrain.column_at(cell),
+                            proneness,
+                        ),
+                    })
+                })
+            };
+            assert_eq!(terrain.cave_at(cell), expected, "cell {cell:?} disagrees");
         }
     }
 
