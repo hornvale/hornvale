@@ -306,6 +306,7 @@
 - [The Hollow](./chronicle/the-hollow.md)
 - [The Deep Realm](./chronicle/the-deep-realm.md)
 - [The Collation](./chronicle/the-collation.md)
+- [The Long Age](./chronicle/the-long-age.md)
 
 # Appendix: The Frontier
 
