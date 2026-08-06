@@ -297,8 +297,17 @@ In `LocaleFields`, after `elevation_m`:
     pub height_asl_m: SeaLevelHeight,
 ```
 
-Update the struct's `type-audit:` doc tag on line 100 to add
-`bare-ok(constructor-edge: height_asl_m)`.
+**Do NOT add a `type-audit:` tag for this field.** ✅ *Corrected in flight —
+the original instruction said to add `bare-ok(constructor-edge: height_asl_m)`,
+and the tool rejects it:* `locale:104: stale tag position height_asl_m`. The
+audit tracks **primitives** at pub edges; `height_asl_m` is a `SeaLevelHeight`,
+a newtype, so it is not an audited position and a tag for it is stale by
+definition (`tools/type-audit/CLAUDE.md`). Leave the struct's tag line as it is.
+
+The distinction matters for Task 4, which adds `sea_level_m: f64` and
+`height_asl_m: Option<f64>` — those **are** bare primitives at a pub boundary
+and **do** need tags. Typing a field is what removes the tag obligation; naming
+it does not.
 
 - [ ] **Step 4: Add the serializer**
 

@@ -868,6 +868,70 @@ mod tests {
         );
     }
 
+    /// THE call-site guard. Reintroducing the original defect — banding
+    /// `elevation_m` instead of `height_asl_m` — must fail this test.
+    ///
+    /// It exists because the obvious version was vacuous. `height_asl_m` is emitted
+    /// only on the observer's own cell, so a self-consistency sweep checks exactly
+    /// ONE cell; and the flagship room is at -0.2 m height over a -2936.4 m
+    /// reading, which `relief_band` maps to `shelf` BOTH ways. A mutation test put
+    /// the bug back and all 20 tests stayed green. The probe room must therefore be
+    /// one where the two data actually disagree, and the `assert_ne!` below is what
+    /// keeps that true if this world ever changes underneath the test.
+    #[test]
+    fn the_emitted_band_is_the_height_band_at_a_discriminating_room() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let globe = ctx.terrain().globe();
+        let sea = globe.sea_level;
+
+        // A land cell whose RAW reading is still negative: raw bands `shelf`, the
+        // corrected height bands `lowland` or above, so the two disagree. The
+        // majority of seed 42's land qualifies (8162 of 11,066 cells). Lowest
+        // CellId wins, for determinism.
+        let probe = globe
+            .elevation
+            .iter()
+            .filter(|(_, e)| e.total_cmp(sea) != std::cmp::Ordering::Less && e.get() < 0.0)
+            .map(|(c, _)| c)
+            .next()
+            .expect("seed 42 has land below the zero of the isostatic datum");
+        let coord = ctx.climate().geosphere().coord(probe);
+        let addr = RoomAddr::containing(
+            hornvale_kernel::math::unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
+            ctx.globe_level() + 6,
+        );
+
+        let scene = surrounds_scene_in(&w, &ctx, &addr, 0, WorldTime { day: 0.0 }).unwrap();
+        let here = scene
+            .cells
+            .iter()
+            .find(|c| c.state == "here")
+            .expect("the observer's own cell is in the chart");
+        let height = here.height_asl_m.expect("the `here` cell carries a height");
+        let raw = here.elevation_m.expect("the `here` cell carries a reading");
+
+        let height_band = relief_band(SeaLevelHeight::from_metres(height));
+        let raw_band = relief_band(SeaLevelHeight::from_metres(raw));
+
+        // ANTI-VACUITY. Without this the test can silently stop discriminating —
+        // which is exactly how the first version of this guard passed while the
+        // defect was live.
+        assert_ne!(
+            height_band, raw_band,
+            "probe room is not discriminating: height {height} m and reading {raw} m \
+             both band as {}; this test would pass with the defect reintroduced",
+            RELIEF_LEGEND[height_band as usize]
+        );
+
+        assert_eq!(
+            here.relief, height_band,
+            "the emitted band is the RAW reading's band ({}) rather than the \
+             height's ({}) — the datum defect is back",
+            RELIEF_LEGEND[raw_band as usize], RELIEF_LEGEND[height_band as usize]
+        );
+    }
+
     #[test]
     fn the_document_carries_the_datum_its_bands_are_measured_from() {
         let w = world();
@@ -883,16 +947,20 @@ mod tests {
 
     #[test]
     fn no_land_cell_bands_as_marine_relief() {
-        // Seed 42's sea level is -2936.17 m, so banding the RAW isostatic reading
-        // put 8162 of this world's 11,066 land cells in `shelf` and left the planet
-        // exactly one `alpine` cell. Stated over CELLS, where the invariant holds by
-        // definition: a land cell IS one with `elevation >= sea_level`, so its
-        // height is >= 0 and its band must be `lowland` or above.
+        // Guards `relief_band`'s THRESHOLD SEMANTICS, and nothing else. It computes
+        // its own height and never calls the builder, so it CANNOT detect the
+        // original defect — which was the argument the call site passed.
+        // `the_emitted_band_is_the_height_band_at_a_discriminating_room` is the
+        // call-site guard; a mutation test confirmed this one stays green with the
+        // bug fully reintroduced. Kept because the thresholds are worth pinning,
+        // labelled so nobody mistakes it for the detector.
         //
-        // Deliberately NOT stated over rooms: a room's height is a three-corner
-        // blend while its water kind is a point sample of the dominant corner, so a
-        // shoreline room can be dry-land-dominant and still blend centimetres below
-        // sea level. That asymmetry is real and out of scope (spec §12.4).
+        // Stated over CELLS, where the invariant holds by definition: a land cell
+        // IS one with `elevation >= sea_level`, so its height is >= 0 and its band
+        // must be `lowland` or above. Deliberately NOT over rooms — a room's height
+        // is a three-corner blend while its water kind is a point sample of the
+        // dominant corner, so a shoreline room can be dry-land-dominant and still
+        // blend centimetres below sea level (spec §12.4).
         let w = world();
         let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
         let globe = ctx.terrain().globe();
