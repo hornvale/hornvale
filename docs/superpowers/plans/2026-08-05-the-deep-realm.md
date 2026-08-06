@@ -853,6 +853,31 @@ Over seeds 1..=30, **reported and never asserted**:
   producing a uniform column with extra steps — spec §2's discarded framing
   returning as an implementation accident.
 
+**Also report REACHABILITY (ledger #26), and treat it as a first-class result.**
+Task 5's implementer could not reach a cave by walking: an 8000-step walk from
+the flagship start covered 64 terrain cells and found **zero** caves, in a world
+holding 628 of them. The mechanism is inherited, not introduced — The Hollow
+measured cave clustering at 98.5%, so caves occupy a few large provinces and
+most of the map has none, and a terrain cell (~110 km) spans dozens-to-hundreds
+of room-scale walk steps.
+
+This bears directly on the owner's own escalation criterion (spec §8 flag 4:
+*"a roguelike without an underground is incomplete"*). **The code satisfies it;
+a player may not.** Those are different claims, so measure the second one:
+
+1. over the probe seeds, the distance from a flagship start to the nearest cell
+   with a **non-sealed** cave (not merely the nearest cave);
+2. what fraction of land cells lie within some stated radius of one;
+3. the sealed fraction on its own (~48.5% expected — ledger #23).
+
+**Report it whichever way it comes out, and do not tune prevalence or
+clustering to rescue it.** Both levers live in `domains/terrain` and were
+calibrated by The Hollow against five preregistered criteria; moving one to
+make this number look better would be exactly the metric-chasing the mechanism
+rule forbids. If the underworld is real but far away, that is a finding about
+the world, and the remedy — if one is wanted — belongs to a campaign that can
+argue it on mechanism.
+
 **Also report H2 broken down by the cell's `deepest_band`** (ledger #16). C2a
 is the first consumer of the depth budget, so this readout is the evidence for
 or against the open `MAP-cave-depth-weld` split. If graphs are uniform *within*
