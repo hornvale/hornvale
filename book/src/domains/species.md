@@ -253,8 +253,8 @@ program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
 authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
-potency, social organization — the row every kind carries and the packer
-and habitat model read)
+potency, social organization, life schedule — the row every kind carries and
+the packer and habitat model read)
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
@@ -516,8 +516,9 @@ for four campaigns.
 
 **The coverage table and the non-void rule.** That discovery is why the roster
 now ships with two instruments beside it. A committed table names every declared
-state of this model — each `MetabolicClass`, `SocialForm`, `ActivityCycle`, and
-`StatusBasis` variant, plus the trait *combinations* that matter — and records
+state of this model — each `MetabolicClass`, `SocialForm`, `ActivityCycle`,
+`StatusBasis`, and `LifeSchedule` variant, plus the trait *combinations* that
+matter — and records
 which kinds witness it, so a state cannot silently lose its witness or gain an
 unintended one. It deliberately does not demand that every variant be witnessed:
 an empty cell is a legitimate creature-design prediction, and a rule forbidding

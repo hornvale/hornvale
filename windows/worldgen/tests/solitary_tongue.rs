@@ -529,8 +529,11 @@ fn peoples_lexicons_are_unchanged_from_the_pre_campaign_golden() {
         "a settled people's full seed-42 lexicon drifted from The Solitary Tongue's captured \
          golden. READ THE DIFF BEFORE ACTING -- there are two very different causes. (1) If a \
          `root`/`compound` line became a DIFFERENT `root`/`compound` line, the phonology moved: \
-         cascade_regime_of is no longer resolving every Settled people to CascadeRegime::SETTLED, \
-         that byte-identity broke, and this is a BUG -- do not rebaseline. (2) If words only \
+         cascade_regime_of is no longer resolving every Settled people whose lifespan is under \
+         LIFESPAN_THRESHOLD_YEARS to CascadeRegime::SETTLED. All six peoples authored today are \
+         under it (gnoll is highest at ~81.5 yr), so for this fixture the rule is unchanged and a \
+         drift is still a BUG -- do not rebaseline. A campaign that authors a long-lived people \
+         will legitimately change this golden, and must say so. (2) If words only \
          appeared/disappeared or a `gap` merely changed its REASON, while every word present in \
          both versions is byte-identical, then the language did not change at all: upstream \
          SETTLEMENT PLACEMENT moved which biomes these peoples live beside, and the lexicon is \

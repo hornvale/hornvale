@@ -13,6 +13,7 @@ pub mod interior;
 mod knowledge;
 pub mod lattice;
 pub mod liveness;
+pub mod plan;
 mod purview;
 mod session;
 pub mod snapshot;
@@ -26,11 +27,12 @@ pub use chamber_prose::describe_chamber;
 pub use focalize::*;
 pub use knowledge::*;
 pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
+pub use plan::{PLAN_SCHEMA, PaletteEntry, PlanExtent, PlanPoint, SessionPlan, plan_of};
 pub use purview::*;
 pub use session::Session;
 pub use snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
-    SensedChannel, SessionSnapshot, SocialEntry, snapshot_json,
+    SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
 };
 pub use streams::stream_labels;
 pub use structure::{MAX_CHAMBERS, Structure, structure_at};
