@@ -312,3 +312,73 @@ answer here: one consumer, two occupants, twenty-eight silent defaults.
 **D6 — Not byte-neutral; the magnitude is measured, not predicted.** Census
 regen and golden re-pins are required; authorized by Nathan at G3. The census
 runs on **lefford** — this Mac is refused by the canonical-host guard.
+
+## 10. Readout
+
+Measured 2026-08-06 (plan Tasks 3–4), before any re-pin. Full detail in
+`.superpowers/sdd/readout.md` (dies with the worktree); this section is the
+durable copy.
+
+**The wiring check (Task 3, seed 42, `deep_realm_rehome.rs`).** Both
+re-homed kinds scored through the live `per_species_suitability` path (real
+realm slice vs. every kind forced to `Surface`), on cave-bearing land cells
+only: rust-monster's live/surface-forced ratio is **2.603** (C2a measured
+~2.5x by hand); xorn's is **0.977** (C2a measured 1.02). The xorn case is the
+wiring check — reproducing near-flatness through a different code path
+proves the right thing got connected.
+
+**P1 — direction, CONFIRMED (25 seeds, `warren_readout.rs`).** Pooled mean
+suitability over every cave-bearing land cell across all 25 seeds:
+rust-monster before=0.005391 after=0.013783 (**ratio 2.557**); xorn
+before=0.002087 after=0.002043 (**ratio 0.979**). Matches §5's prediction and
+the single-seed wiring check closely.
+
+**P2 — range collapse, CONFIRMED.** Land cells with non-zero suitability,
+pooled over 25 seeds: rust-monster and xorn both fall from 390,813 (100.0%)
+to 46,993 (**12.0%**) of all land cells — matching §5's "~88% of land is
+cave-free" almost exactly (measured 88.0%). It did not rise; the gate is
+working. The two kinds' after-counts are identical, which is structural: a
+subterranean kind's non-zero set is exactly "land cells with a cave" (the
+availability factor is the only zero-producing term, and the sovereignty
+floor keeps fit strictly positive everywhere availability is 1.0) —
+independent of which kind it is. Confirmed by reading
+`per_species_suitability`'s arithmetic, not inferred from the coincidence.
+
+**P3 — world identity, FALSIFIED.** §5 predicted "world identity moves, and
+the campaign reports by how much." Measured instead: **zero of 25 seeds
+moved.** `world_after.to_json()` and `world.ledger.len()` matched their
+"before" (empty `habitat_realm` store) counterpart at every seed, confirming
+over a wider sweep what `cli::tests::lens_purity`'s passing seed-42 fixture
+check already showed. Rust-monster and xorn are fauna, not settling peoples —
+they never found settlements, so their suitability change never reaches a
+committed fact.
+
+**What DID move instead: three goldens, not the world.**
+`hornvale-vessel::session_snapshot::the_client_fixtures_are_current`,
+`hornvale-vessel::session_snapshot::v1_bytes_are_pinned`, and
+`hornvale-lab::affect_trace_golden::seed_42_affect_trace_reproduces_the_pinned_bytes`.
+Measured: at seed 42's possessed bugbear's room, the committed vessel-session
+fixture shows `"a wild xorn"` then `"a wild carrion-crawler"` as nearby
+presences; the live rebuild shows `"a wild carrion-crawler"` then `"a wild
+giant-elk"` in the same two slots — no settlement, name, or fact-count
+difference (P3 already confirms this). **Hypothesis, not fully traced to the
+specific ranking call:** `windows/vessel/src/session.rs:387` and
+`windows/lab/src/health.rs:322` both call
+`hornvale_worldgen::demography_report_from` at snapshot-read time — a LIVE
+re-derivation, not a ledger read — which reaches the now-realm-aware
+`per_species_suitability` through `demography_report_with_beta_from`. Since
+P1 shows rust-monster's and xorn's suitability changing substantially, the
+demography coexistence stack's local density ranking can plausibly reorder
+which fauna reads as "present" at a given cell, with no ledger fact
+involved — the exact chain the campaign spec and The Deep Realm's
+retrospective both name (`niche -> suitability -> the demography
+coexistence fit -> the shared predator/prey pressure fields -> every other
+creature's affect`). This readout did not walk
+`hornvale_demography::coexist::pack`'s ranking for this specific cell/seed
+by hand, so the mechanism is reported as a well-evidenced hypothesis, not a
+verified cause.
+
+**Bottom line.** Two of the spec's three predictions (P1, P2) held almost
+exactly; the third (P3) was falsified — the world does not move, and the
+campaign's real footprint is confined to two live, non-ledger read paths.
+Task 5 re-pins those three goldens, citing this section.
