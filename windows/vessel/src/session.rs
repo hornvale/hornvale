@@ -693,7 +693,10 @@ impl<'w> Session<'w> {
                 nouns: focalized
                     .nouns
                     .into_iter()
-                    .map(|(noun, datum)| NounEntry { noun, datum })
+                    .map(|n| NounEntry {
+                        noun: n.display,
+                        datum: n.datum,
+                    })
                     .collect(),
             },
             spatial,
@@ -2165,12 +2168,12 @@ impl<'w> Session<'w> {
     /// union — `examine` must be able to tell "the lens failed" from "no
     /// grain surfaced that noun", and only the latter is a bare absence.
     /// type-audit: bare-ok(identifier-text: return)
-    pub fn lens_nouns(&self) -> Result<Vec<(String, String)>, VesselError> {
-        let mut out: Vec<(String, String)> = self.focalized()?.nouns;
+    pub fn lens_nouns(&self) -> Result<Vec<crate::focalize::Noun>, VesselError> {
+        let mut out: Vec<crate::focalize::Noun> = self.focalized()?.nouns;
         let scene = self.purview(0)?;
         for e in &scene.legend {
-            if !out.iter().any(|(n, _)| n.eq_ignore_ascii_case(&e.noun)) {
-                out.push((e.noun.clone(), e.datum.clone()));
+            if !out.iter().any(|n| n.display.eq_ignore_ascii_case(&e.noun)) {
+                out.push(crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum));
             }
         }
         Ok(out)
@@ -2192,8 +2195,8 @@ impl<'w> Session<'w> {
             Ok(f) => f,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
-        if let Some((_, detail)) = prose.nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
-            return Turn::Out(detail.clone());
+        if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
+            return Turn::Out(n.datum.clone());
         }
         let scene = match self.purview(0) {
             Ok(s) => s,

@@ -38,7 +38,7 @@ fn examine_accepts_exactly_the_union_of_both_grains() {
             .unwrap()
             .nouns
             .iter()
-            .map(|(n, _)| n.to_lowercase())
+            .map(|n| n.display.to_lowercase())
             .collect();
         let chart: Vec<String> = session
             .purview(0)
@@ -98,7 +98,9 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     let prose = session.focalized().unwrap();
     let chart = session.purview(0).unwrap();
     let mut shared = 0;
-    for (noun, prose_datum) in &prose.nouns {
+    for n in &prose.nouns {
+        let noun = &n.display;
+        let prose_datum = &n.datum;
         let Some(chart_entry) = chart
             .legend
             .iter()
@@ -161,8 +163,8 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     let biome_prose_datum = prose
         .nouns
         .iter()
-        .find(|(n, _)| n.eq_ignore_ascii_case(&biome_noun))
-        .map(|(_, datum)| datum.clone())
+        .find(|n| n.display.eq_ignore_ascii_case(&biome_noun))
+        .map(|n| n.datum.clone())
         .unwrap_or_else(|| panic!("the biome noun '{biome_noun}' must be a prose noun"));
     let biome_reply = out(session.handle(&format!("examine {biome_noun}")));
     assert_eq!(
