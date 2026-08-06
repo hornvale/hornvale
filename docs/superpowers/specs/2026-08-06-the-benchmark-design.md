@@ -152,9 +152,29 @@ A new newtype in `kernel/src/units.rs`, beside `ReferenceElevation`:
 pub struct SeaLevelHeight(f64);
 ```
 
-`Sub for ReferenceElevation` changes its `Output` from `f64` to
-`SeaLevelHeight`. This is the *only* derivation path from an absolute reading to
-a height, exactly as `Sub for Temperature` is for `TempAnomaly`.
+The conversion is a **named method**, `ReferenceElevation::above(datum) ->
+SeaLevelHeight`, and `Sub` keeps its `f64` output.
+
+**Amended after G3, on evidence.** This spec originally retyped `Sub`'s output,
+following `Sub for Temperature`. Task 2's implementer ran the compiler and it
+produced 21 errors naming counterexamples the survey had missed — decisively
+`domains/climate/src/moisture.rs:169` and `provider.rs:182`, which compute
+`elevation.get(c) - elevation.get(upwind)`. That is an **orographic rise between
+two places**, not a height above any datum. Subtracting two elevations is
+polymorphic in meaning, so typing the *operator's* output as a datum-named
+quantity would make the type system assert something false about every
+non-sea-level difference.
+
+The temperature analogy does not carry: `a - b` on two `Temperature`s is always
+an anomaly, because there is only one thing a temperature difference can mean.
+Elevation has at least three (height above sea level, terrain rise between
+places, local relief detail), so the meaning must be *named at the call*, which
+is exactly what decision 0008 prescribes — "validating constructors and **named
+conversions**."
+
+The revision is strictly smaller: workspace blast radius drops from 21 compile
+errors to **zero**, and enforcement is unaffected, because it never lived in the
+operator (§5).
 
 Surface: `get() -> f64`, `total_cmp`, `depth()`, and one escape-hatch
 constructor (§4.3). No `Add`/`Mul` until a consumer needs one — the doctrine's
@@ -178,15 +198,20 @@ for it should be sure it is not holding two `ReferenceElevation`s.
 
 ### 4.4 What the type does NOT catch — stated honestly
 
-`.get()` is used liberally throughout the workspace, and a consumer that calls
-`.get()` before subtracting produces `f64 - f64`, which no type can police.
-`substrate.rs:28` is exactly this shape today and would remain uncaught.
+Producing a height is *not* forced. `Sub` still returns `f64`, and `.get()` is
+used liberally, so a consumer can compute `elevation - sea_level` and pass a
+bare number around. `substrate.rs:28` is exactly this shape and stays uncaught.
 
-So the type is not a total guarantee, and this spec does not claim one. It
-guarantees the **classify** and **display** cases, which is where the live
-defects are, by typing the *parameters* of the functions that consume a height
-(§5). A function that demands a `SeaLevelHeight` cannot be handed a raw reading
-regardless of how many `.get()` calls precede it.
+So the type is not a total guarantee, and this spec does not claim one.
+
+**Enforcement lives at the consumer, not the producer** — which is what the G1
+matrix said before the operator idea was ever considered: only the compiler can
+refuse a *band function* the wrong quantity. A function whose parameter is a
+`SeaLevelHeight` cannot be handed a raw reading, however many `.get()` calls
+precede it, and the only ways to produce one are `above()` and the documented
+escape hatch — both of which name what they are doing. That is why losing the
+operator overload costs nothing: it was belt-and-braces over the mechanism that
+actually works, and it was asserting a falsehood to get there.
 
 ---
 
@@ -326,11 +351,16 @@ Verified by command, not inferred:
 
 ## 12. Risks
 
-1. **`Sub`'s return-type change is a workspace-wide compile break.** Eight
-   production sites (§1) plus tests. Each is a two-line fix, but the count is
-   the risk, not the difficulty: a mechanical sweep is where a wrong `.get()`
-   gets inserted to silence an error. Mitigation: every site is reviewed for
-   whether it wanted a height or a reading, not merely made to compile.
+1. ~~**`Sub`'s return-type change is a workspace-wide compile break.**~~
+   **Retired by the §4.1 amendment** — the named conversion touches no existing
+   site, and `cargo check --workspace --all-targets` is clean. The risk was
+   real: the compiler found 21 errors, and the mitigation it named ("a
+   mechanical sweep is where a wrong `.get()` gets inserted to silence an
+   error") is precisely what would have happened, since three of those sites
+   were not sea-level quantities at all and `.get()` would have "fixed" them
+   into a type that lied about them. The survey that missed them was fooled by
+   `_m` suffixes on parameters that were already typed — a grep-derived plan is
+   only as complete as its grep.
 2. **The `.get()` escape means the guarantee is partial** (§4.4). Stated in the
    spec so no reviewer infers a total guarantee from "the compiler catches it."
 3. **The band distribution may look wrong after the fix** because it is finally

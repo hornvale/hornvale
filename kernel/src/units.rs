@@ -82,6 +82,28 @@ impl ReferenceElevation {
             self
         }
     }
+
+    /// This reading's height above `datum` — the named conversion from an
+    /// absolute isostatic reading to a per-world [`SeaLevelHeight`], and the
+    /// only one besides [`SeaLevelHeight::from_metres`].
+    ///
+    /// Pass the world's derived sea level as `datum`. It is a named method
+    /// rather than [`Sub`](std::ops::Sub) because subtracting two elevations
+    /// means different things depending on what the right-hand one *is* (see
+    /// that impl); naming the conversion is how the caller says which meaning
+    /// it intends, per decision 0008.
+    ///
+    /// ```
+    /// use hornvale_kernel::ReferenceElevation;
+    /// // Seed 42's sea level sits near -2936 m on the isostatic datum, so a
+    /// // shoreline forest reads as a large negative number until you re-datum it.
+    /// let ground = ReferenceElevation::new(-2836.0).unwrap();
+    /// let sea = ReferenceElevation::new(-2936.0).unwrap();
+    /// assert_eq!(ground.above(sea).get(), 100.0);
+    /// ```
+    pub fn above(self, datum: Self) -> SeaLevelHeight {
+        SeaLevelHeight(self.0 - datum.0)
+    }
 }
 
 /// Metres above this world's sea level. Signed: negative below.
@@ -136,9 +158,20 @@ impl SeaLevelHeight {
     }
 }
 
-/// The signed metre difference between two elevations. A local intermediate
-/// (lapse rate, depth shading) — a height-above-a-datum earns its own type
-/// only if it crosses a pub boundary (spec "The Datum" / decision 0044 (`shared-units-live-in-the-kernel`)).
+/// The signed metre difference between two elevations, as a bare `f64`.
+///
+/// **Deliberately not a [`SeaLevelHeight`].** Subtracting two elevations is
+/// polymorphic in *meaning*: `cell - sea_level` is a height above sea level,
+/// but `cell - upwind_neighbour` is an orographic rise between two places
+/// (`domains/climate`'s `moisture.rs` and `provider.rs` both do exactly that),
+/// and a terrain-detail delta is neither. Only the first has anything to do
+/// with a datum, so typing this operator's output as a datum-named quantity
+/// would make the type system assert something false about the other two.
+///
+/// The named conversion [`ReferenceElevation::above`] is the sea-level path,
+/// which is what decision 0008 prescribes — "validating constructors and
+/// *named conversions*". The Benchmark tried retyping this operator first and
+/// the compiler found the counterexamples.
 impl Sub for ReferenceElevation {
     type Output = f64;
     fn sub(self, rhs: Self) -> f64 {
@@ -515,5 +548,35 @@ mod tests {
         assert_eq!(a.total_cmp(b), std::cmp::Ordering::Less);
         assert_eq!(b.total_cmp(a), std::cmp::Ordering::Greater);
         assert_eq!(a.total_cmp(a), std::cmp::Ordering::Equal);
+    }
+
+    #[test]
+    fn the_named_conversion_yields_a_height_not_a_number() {
+        let ground = ReferenceElevation::new(-2936.0).unwrap();
+        let sea = ReferenceElevation::new(-2936.17).unwrap();
+        // The binding's type is the assertion: this must be a SeaLevelHeight.
+        let h: SeaLevelHeight = ground.above(sea);
+        assert!((h.get() - 0.17).abs() < 1e-9);
+    }
+
+    #[test]
+    fn subtraction_stays_a_bare_number_because_it_is_polymorphic() {
+        // `cell - upwind_neighbour` is an orographic rise, not a height above
+        // any datum, and `domains/climate` computes exactly that. Typing this
+        // operator's output as a SeaLevelHeight would make it assert a datum
+        // that isn't there.
+        let here = ReferenceElevation::new(1200.0).unwrap();
+        let upwind = ReferenceElevation::new(900.0).unwrap();
+        let rise: f64 = here - upwind;
+        assert_eq!(rise, 300.0);
+    }
+
+    #[test]
+    fn a_sea_floor_reading_yields_a_positive_depth() {
+        let sea = ReferenceElevation::new(-2936.17).unwrap();
+        let floor = ReferenceElevation::new(-4000.0).unwrap();
+        let h = floor.above(sea);
+        assert!(h.get() < 0.0, "the sea floor is below sea level");
+        assert!(h.depth() > 1000.0, "and its depth reads positive");
     }
 }

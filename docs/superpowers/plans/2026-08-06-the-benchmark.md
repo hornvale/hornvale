@@ -6,12 +6,18 @@
 function cannot be handed a raw isostatic reading, and correct the three
 surfaces that are handed one today.
 
-**Architecture:** A new kernel newtype `SeaLevelHeight`, produced by subtracting
-two `ReferenceElevation`s (the `Temperature`/`TempAnomaly` pattern from decision
-0008). Consuming functions type their *parameters* with it, which turns the live
-bug into a compile error. Field names carry the datum so the discipline survives
-serialization, where types cannot go. `scene/surrounds` is minted `v2` because
-every observable relief band value changes.
+**Architecture:** A new kernel newtype `SeaLevelHeight`, produced by the named
+conversion `ReferenceElevation::above(datum)` (decision 0008's "validating
+constructors and *named conversions*"). Consuming functions type their
+*parameters* with it, which turns the live bug into a compile error. Field names
+carry the datum so the discipline survives serialization, where types cannot go.
+`scene/surrounds` is minted `v2` because every observable relief band value
+changes.
+
+**Revised in flight** (Task 2): the original design retyped `Sub`'s output
+instead. The compiler produced 21 errors including orographic-rise sites that
+are not sea-level quantities at all, proving elevation subtraction is
+polymorphic in meaning. See spec §4.1's post-G3 amendment.
 
 **Tech Stack:** Rust edition 2024, no new dependencies (`serde`, `serde_json`,
 `libm` only), `cargo nextest`, `mdbook`.
@@ -26,6 +32,8 @@ Spec: `docs/superpowers/specs/2026-08-06-the-benchmark-design.md`.
 - **Quantize at emit only** — never in the compute path (`hornvale_kernel::quantize`).
 - **Every crate sets `#![warn(missing_docs)]`** — every new pub item, field and variant gets a one-line doc comment.
 - **Every primitive at a `pub` boundary carries a `type-audit:` verdict tag.**
+- **`docs/audits/type-audit-report.md` is regenerated in the same commit as any pub-boundary change.** The pre-commit hook runs `make quick`, whose report-freshness half fails in ~9 s otherwise. This is a required mechanical regen, not a scope violation — include it and never reach for `--no-verify`:
+  `cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md`
 - **`cargo fmt` as the final step before every commit.** Fmt-gate skips are the most common review finding.
 - **Layering:** `kernel/` → `domains/*` → `windows/*` → `cli/`. A domain depends on `hornvale-kernel` and nothing else.
 - **The verbatim heavy-tier ignore reason**, if any test needs one, is exactly:
@@ -38,7 +46,7 @@ Spec: `docs/superpowers/specs/2026-08-06-the-benchmark-design.md`.
 
 | file | responsibility | task |
 |---|---|---|
-| `kernel/src/units.rs` | `SeaLevelHeight`; `Sub for ReferenceElevation` output | 1, 2 |
+| `kernel/src/units.rs` | `SeaLevelHeight`; `ReferenceElevation::above` | 1, 2 |
 | `windows/locale/src/lib.rs` | `LocaleFields.height_asl_m` + its serializer | 3 |
 | `windows/scene/src/surrounds.rs` | `relief_band` parameter type, `v2` schema, `sea_level_m`, `height_asl_m` | 4 |
 | `book/src/reference/scene-surrounds-v1.md` | → `scene-surrounds-v2.md` reference page | 4 |
@@ -182,161 +190,48 @@ Write the message to a file and use `git commit -F` — never a heredoc (`PROC-c
 
 ---
 
-### Task 2: Make subtraction produce the type
+### Task 2: The named conversion  ✅ DONE (revised in flight)
 
-This is the enforcement step. Changing `Sub`'s associated `Output` breaks every
-typed subtraction site in the workspace; the compiler enumerates them, which is
-the point.
+**Status: complete, committed with Task 1's follow-up.** This task originally
+retyped `Sub for ReferenceElevation`. The implementer ran the compiler, got 21
+errors, and correctly stopped rather than silencing them. Three named sites that
+are **not sea-level quantities at all** —
+`domains/climate/src/moisture.rs:169`, `domains/climate/src/provider.rs:182`
+(orographic rise between a cell and its upwind neighbour) — proved that
+subtracting two elevations is polymorphic in meaning, so the operator cannot
+carry a datum-named output type.
 
-**Files:**
-- Modify: `kernel/src/units.rs:86-95` (the `impl Sub for ReferenceElevation`)
-- Modify: `windows/locale/src/budget.rs:91` and `:117`
-- Modify: `cli/src/repl.rs:85-88`
-- Modify: `windows/worldgen/src/lib.rs:1653`
-- Modify: `windows/lab/src/metrics.rs:1052` and `:3809`
-- Test: `kernel/src/units.rs` test module
-
-**Interfaces:**
-- Consumes: `SeaLevelHeight` from Task 1
-- Produces: `<ReferenceElevation as Sub>::Output == SeaLevelHeight`
-
-- [ ] **Step 1: Write the failing test**
+Replaced by a **named conversion**, per decision 0008's "validating constructors
+and *named conversions*":
 
 ```rust
-#[test]
-fn subtracting_two_readings_yields_a_height_not_a_number() {
-    let ground = ReferenceElevation::new(-2936.0).unwrap();
-    let sea = ReferenceElevation::new(-2936.17).unwrap();
-    // The binding's type is the assertion: this must be a SeaLevelHeight.
-    let h: SeaLevelHeight = ground - sea;
-    assert!((h.get() - 0.17).abs() < 1e-9);
-}
-
-#[test]
-fn a_sea_floor_reading_yields_a_positive_depth() {
-    let sea = ReferenceElevation::new(-2936.17).unwrap();
-    let floor = ReferenceElevation::new(-4000.0).unwrap();
-    let h = floor - sea;
-    assert!(h.get() < 0.0, "the sea floor is below sea level");
-    assert!(h.depth() > 1000.0, "and its depth reads positive");
+pub fn above(self, datum: Self) -> SeaLevelHeight {
+    SeaLevelHeight(self.0 - datum.0)
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+`Sub` keeps `type Output = f64`, documented with *why* it is deliberately not a
+`SeaLevelHeight`. Workspace blast radius: **zero** — `cargo check --workspace
+--all-targets` is clean, against 21 errors for the operator approach.
 
-Run: `cargo test -p hornvale-kernel --lib units`
-Expected: FAIL to compile — `expected SeaLevelHeight, found f64`.
+Enforcement is unaffected: it lives in the *parameter type* of consuming
+functions (Task 4's `relief_band`), never in the operator. See spec §4.1's
+post-G3 amendment and §4.4.
 
-- [ ] **Step 3: Change the output type**
-
-Replace the existing impl at `kernel/src/units.rs:86-95` with:
+**For the remaining tasks:** wherever the plan below says to subtract an
+elevation from a sea level to get a height, call `.above(sea_level)` instead.
+The two spellings that follow are equivalent, and the second is the one to use:
 
 ```rust
-/// Height above the right-hand reading — for the usual right-hand operand, a
-/// world's sea level, this is height above sea level. The **only** derivation
-/// path from an absolute reading to a [`SeaLevelHeight`] besides the documented
-/// escape hatch, exactly as [`Sub`] for [`Temperature`] is for [`TempAnomaly`]
-/// (decision 0008). Before The Benchmark this returned a bare `f64`, which is
-/// how a band function came to classify raw isostatic readings against
-/// sea-level thresholds.
-impl Sub for ReferenceElevation {
-    type Output = SeaLevelHeight;
-    fn sub(self, rhs: Self) -> SeaLevelHeight {
-        SeaLevelHeight(self.0 - rhs.0)
-    }
-}
+let h = SeaLevelHeight::from_metres(elevation.get() - sea_level.get()); // no
+let h = elevation.above(sea_level);                                     // yes
 ```
 
-- [ ] **Step 4: Let the compiler enumerate the breakage**
-
-Run: `cargo check --workspace --all-targets 2>&1 | tee /tmp/hv-benchmark-breakage.txt`
-Then: `grep -c "^error" /tmp/hv-benchmark-breakage.txt`
-
-**Expected sites** (from the spec's survey — if the compiler names a site not on
-this list, stop and report it rather than mechanically silencing it):
-
-- `windows/locale/src/budget.rs:91`, `:117` — `quantize(...)` needs an `f64`
-- `cli/src/repl.rs:85` — the `-relative` and `{relative:.0}` formats
-- `windows/worldgen/src/lib.rs:1653` — assigns into a struct field
-- `windows/lab/src/metrics.rs:1052` — `> 2000.0` comparison
-
-Sites that will **not** break, because they subtract bare `f64`s and no type can
-police them (spec §4.4): `windows/locale/src/substrate.rs:28`,
-`domains/terrain/src/render.rs:133,137`, `domains/climate/src/biome.rs:302`,
-`windows/scene/examples/locked_temperature_golden.rs:90`.
-
-- [ ] **Step 5: Repair each site, reviewing intent**
-
-For each error ask *did this site want a height or a reading?* — do not merely
-add `.get()` to silence it.
-
-`windows/locale/src/budget.rs:91` and `:117`:
-```rust
-let relief = quantize((*g.elevation.get(c) - g.sea_level).get());
-```
-
-`cli/src/repl.rs:85-88` — this site is the plan's demonstration of `depth()`:
-```rust
-let relative = terrain.elevation_at(cell) - terrain.sea_level();
-let surface = if terrain.is_ocean(cell) {
-    format!("ocean, {:.0} m deep", relative.depth())
-} else {
-    format!("land, {:.0} m above the sea", relative.get())
-};
-```
-
-`windows/worldgen/src/lib.rs:1653` — keep the typed value; the field's type
-changes with it in Task 6. For now:
-```rust
-elevation: (terrain.elevation_at(cell) - sea_level).get(),
-```
-
-`windows/lab/src/metrics.rs:1052`:
-```rust
-if (e - sea).get() > 2000.0 {
-```
-
-`windows/lab/src/metrics.rs:3809` — was already `f64 - f64`; route it through
-the type so the sign is named rather than hand-written:
-```rust
-let depth = (v.terrain.elevation_at(next) - v.terrain.sea_level()).depth();
-```
-
-- [ ] **Step 6: Verify green and byte-identical**
-
-```bash
-cargo check --workspace --all-targets
-cargo test -p hornvale-kernel --lib units
-cargo nextest run -p hornvale-lab -p hornvale-locale -p hornvale 2>&1 | tee /tmp/hv-t2.txt
-```
-Expected: all PASS. `metrics.rs:3809`'s value is unchanged (`depth()` returns
-exactly what `sea - elevation` returned), so no lab fixture moves.
-
-- [ ] **Step 7: Confirm no world byte moved**
-
-```bash
-cargo run -p hornvale -- new --seed 42 --out /tmp/hv-t2-world.json
-python3 -c "
-import json
-d=json.load(open('/tmp/hv-t2-world.json'))
-f=d['ledger']['facts'] if 'facts' in d.get('ledger',{}) else d['ledger']
-for x in f:
-    if x.get('predicate') in ('sea-level-m','highest-elevation-m'): print(x['predicate'], x['object'])
-"
-```
-Expected exactly: `sea-level-m {'Number': -2936.1668}` and
-`highest-elevation-m {'Number': 2668.7366}`.
-
-- [ ] **Step 8: Gate and commit**
-
-```bash
-cargo fmt
-cargo clippy --workspace --all-targets -- -D warnings
-git add -A && git commit -F <message-file>
-```
-Subject: `refactor(kernel): elevation subtraction returns a typed height`
+`from_metres` remains correct in exactly one place — Task 3's blended value,
+where there is no pair of `ReferenceElevation`s to convert.
 
 ---
+
 
 ### Task 3: `LocaleFields` carries the height
 
