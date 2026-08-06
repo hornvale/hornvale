@@ -101,44 +101,51 @@ fn digest(world: &hornvale_kernel::World) -> String {
 #[test]
 fn seed_42_affect_trace_reproduces_the_pinned_bytes() {
     let world = world();
+    // ONE world build, two guarantees. These were two tests until The Tense
+    // measured what that cost: nextest is process-per-test (see
+    // `windows/lab/CLAUDE.md`), so a separate coverage test cannot share this
+    // build and simply pays for seed 42 twice — 22 s of the gate to re-derive a
+    // digest computed three lines up. Ordering matters and is deliberate: the
+    // byte pin runs FIRST, and the coverage floor runs after it, so a
+    // `REBASELINE=1` accept still has to clear the floor. That is exactly the
+    // case the ratchet exists for.
+    let digest_for_coverage = digest(&world);
     hornvale_kernel::golden::assert_golden(
         std::path::Path::new(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/tests/fixtures/affect-trace-seed-42.txt"
         )),
-        &digest(&world),
+        &digest_for_coverage,
         "the seed-42 affect trace moved — the-waymark's plan-cache/geometry- \
          memo work must be VALUE-preserving (a cache changes WHEN a search \
          runs, never WHAT it returns); a diff here means some change altered \
          what a creature feels, not just how fast, and needs investigation \
          before acceptance",
     );
-}
 
-/// The fixture's COVERAGE, ratcheted — added by The Tense (2026-08-05) because
-/// accepting that campaign's regeneration silently narrowed what the golden
-/// above witnesses, and nothing would have said so.
-///
-/// The golden is a byte pin. A byte pin cannot tell "the values moved" from
-/// "the trace stopped exercising half the affect space", and the two want
-/// opposite responses. Measured across The Tense's regeneration:
-///
-/// ```text
-///   peoples sampled   bugbear 2, hobgoblin 1, human 1, gnoll 2   ->  bugbear 1, hobgoblin 5
-///   affect labels     Content Eager Searching Helpless Lost Frustrated  ->  first four only
-///   (solitaries rust-monster / otyugh / xorn / carrion-crawler: 1 each, unchanged)
-/// ```
-///
-/// **`Lost` and `Frustrated` are no longer reached at all**, and they were the
-/// only negative-valence affect anywhere in the fixture — all nine lines of it
-/// sat on the two gnolls, which the re-placement removed from the sample. That
-/// is a real loss in what this witness can catch, and it is recorded as a debt
-/// rather than accepted: the floor below is the ACHIEVED value, and 6 is the
-/// target to get back to. Deliberately not weakened to track a future fall —
-/// the same posture `menagerie`'s preregistered `>= 6` dominant target takes.
-#[test]
-fn the_affect_trace_still_exercises_a_spread_of_labels_and_peoples() {
-    let digest = digest(&world());
+    // The fixture's COVERAGE, ratcheted — added by The Tense (2026-08-05) because
+    // accepting that campaign's regeneration silently narrowed what the golden
+    // above witnesses, and nothing would have said so.
+    //
+    // The golden is a byte pin. A byte pin cannot tell "the values moved" from
+    // "the trace stopped exercising half the affect space", and the two want
+    // opposite responses. Measured across The Tense's regeneration:
+    //
+    // ```text
+    //   peoples sampled   bugbear 2, hobgoblin 1, human 1, gnoll 2   ->  bugbear 1, hobgoblin 5
+    //   affect labels     Content Eager Searching Helpless Lost Frustrated  ->  first four only
+    //   (solitaries rust-monster / otyugh / xorn / carrion-crawler: 1 each, unchanged)
+    // ```
+    //
+    // **`Lost` and `Frustrated` are no longer reached at all**, and they were the
+    // only negative-valence affect anywhere in the fixture — all nine lines of it
+    // sat on the two gnolls, which the re-placement removed from the sample. That
+    // is a real loss in what this witness can catch, and it is recorded as a debt
+    // rather than accepted: the floor below is the ACHIEVED value, and 6 is the
+    // target to get back to. Deliberately not weakened to track a future fall —
+    // the same posture `menagerie`'s preregistered `>= 6` dominant target takes.
+
+    let digest = digest_for_coverage;
     let labels: std::collections::BTreeSet<&str> = digest
         .lines()
         .filter_map(|l| l.split("label=").nth(1))
