@@ -127,6 +127,33 @@ arithmetic are different objects.** The claim carrying the null was "one file
 moves", never "+1 tag". Knowing which is which *before* the result arrives is
 what makes the correction honest rather than convenient.
 
+## A generated artifact merged textually is silently wrong
+
+Absorbing main at the close (The Panes, 26 commits) merged **cleanly, with no
+conflicts** — and produced a `docs/audits/type-audit-report.md` with the wrong
+numbers.
+
+The report is aggregate counts by class and by crate. The Long Age moved two
+rows (`bare-ok(ratio)`, `species`); The Panes moved four others
+(`bare-ok(count)`, `identifier-text`, `index`, `vessel`). The rows are adjacent
+lines in one table, so git resolved the region in this branch's favour and
+carried **this branch's stale vessel count** — 237 where main said 254 — into a
+file that neither campaign had ever generated. No conflict marker, nothing red,
+a plausible-looking table.
+
+`make rebaseline` corrected it to the true union, and the delta against main
+returned to exactly the two rows this campaign owns. The commit gate's
+type-audit *report-freshness* check would also have caught it, so the defence
+in depth held. But the sequence is worth naming because the clean merge is the
+trap:
+
+**A generated artifact has no meaningful merge. Regenerate it after every
+absorption and let the diff be the answer — never trust a conflict-free merge
+of a file whose contents are computed.** This generalises past the type-audit
+report to every drift-checked artifact, and it argues for regenerating *before*
+reading the post-merge diff, not after, so the numbers you reason about are
+real ones.
+
 ## Confidence Gradient
 
 `book/src/open-questions.md` checked against this campaign's territory. **No bet
