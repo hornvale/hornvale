@@ -305,6 +305,7 @@
 - [The Fare](./chronicle/the-fare.md)
 - [The Hollow](./chronicle/the-hollow.md)
 - [The Deep Realm](./chronicle/the-deep-realm.md)
+- [The Collation](./chronicle/the-collation.md)
 
 # Appendix: The Frontier
 

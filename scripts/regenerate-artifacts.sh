@@ -391,6 +391,9 @@ echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
 echo "regenerate-artifacts: trope coverage report" >&2
-run -p hornvale -- tropes report > docs/audits/trope-coverage.md
+run -p hornvale -- tropes report > docs/audits/trope-coverage-polti-1895.md
+run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
+  > docs/audits/trope-coverage-tvtropes-2012.md
+run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 
 echo "regenerate-artifacts: done." >&2
