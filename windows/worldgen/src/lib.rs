@@ -525,9 +525,9 @@ fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> Seafloo
 /// biome, so culture's subsistence function is always defined. Culture
 /// imports no domain (spec §2.6); this map lives only at the composition
 /// root. Forest biomes (and taiga) farm; grassland/savanna farm or herd;
-/// desert/shrubland herd; tundra forages; alpine, ice, and every marine
-/// biome are barren (defensively — settlements never sit on open ocean, but
-/// the map must still be total).
+/// desert/shrubland herd; tundra forages; alpine, ice, every marine biome,
+/// and every cave formation are barren (defensively — settlements never sit
+/// on open ocean or bare rock, but the map must still be total).
 pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeClass {
     biome_class_of_formation(hornvale_climate::BiomeExpr::for_legacy(biome).formation)
 }
@@ -566,7 +566,10 @@ pub fn biome_class_of_formation(
         | Formation::KelpForest
         | Formation::Vent
         | Formation::Upwelling
-        | Formation::OpenWater => BiomeClass::Barren,
+        | Formation::OpenWater
+        | Formation::KarstCave
+        | Formation::LavaTube
+        | Formation::FractureCave => BiomeClass::Barren,
     }
 }
 

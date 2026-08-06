@@ -92,7 +92,34 @@ fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
         Medium::AirOverRock => land_micro_habitat(micro),
         Medium::Water if matches!(expr.formation, Formation::SeaIce) => ice_micro_habitat(micro),
         Medium::Water => water_micro_habitat(micro, expr.stratum),
+        Medium::Rock => rock_micro_habitat(micro),
     }
+}
+
+/// The rock column's habitat clause: the same micro-field, read as stone
+/// reads it. Relief is the passage's own shape; aspect means nothing where
+/// no light reaches, so it drops out entirely; wetness is how much the rock
+/// weeps.
+fn rock_micro_habitat(micro: MicroField) -> String {
+    let relief = if micro.relief > 0.33 {
+        "beneath a low ceiling"
+    } else if micro.relief < -0.33 {
+        "over a drop"
+    } else {
+        ""
+    };
+    let wet = if micro.wetness > 0.33 {
+        "weeping with seep-water"
+    } else if micro.wetness < -0.33 {
+        "bone dry"
+    } else {
+        ""
+    };
+    [wet, relief]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// The habitat clause on ice: the same micro-field read as ice reads it.

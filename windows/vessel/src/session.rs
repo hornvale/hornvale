@@ -2397,6 +2397,11 @@ fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
         Stratum::Bathypelagic => "the lightless water",
         Stratum::Abyssal => "the abyss",
         Stratum::Hadal => "a trench",
+        Stratum::Regolith => "the regolith",
+        Stratum::Cover => "the cover rock",
+        Stratum::Basement => "the basement rock",
+        Stratum::Roots => "the roots of the world",
+        Stratum::Underneath => "the underneath",
     }
 }
 
