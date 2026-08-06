@@ -213,6 +213,42 @@ fn the_band_tag_is_what_the_client_switches_on() {
     );
 }
 
+/// The committed fixtures the Casement's pane tests decode.
+///
+/// Byte goldens, refreshed with `REBASELINE=1` like every other golden in
+/// this repo. A diff here means the wire shape moved, which is the epoch
+/// decision point — never rebaseline to make a red run green without
+/// deciding that first.
+#[test]
+fn the_client_fixtures_are_current() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+
+    let walk = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    session.handle("enter");
+    let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+
+    for (name, body) in [
+        ("snapshot-seed-42-walk.json", walk),
+        ("snapshot-seed-42-chamber.json", chamber),
+    ] {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures")
+            .join(name);
+        if std::env::var("REBASELINE").is_ok() {
+            std::fs::write(&path, &body).expect("the fixture directory exists");
+            continue;
+        }
+        let committed = std::fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("{name} is missing — run with REBASELINE=1"));
+        assert_eq!(
+            committed, body,
+            "{name} drifted: the vessel/session/v1 wire shape moved. Decide \
+             whether that is an epoch BEFORE rebaselining."
+        );
+    }
+}
+
 #[test]
 fn the_snapshot_stays_a_pure_read() {
     // `Session::snapshot` documents that it never commits and never advances
