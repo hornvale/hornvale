@@ -10641,27 +10641,25 @@ mod tests {
 
     #[test]
     fn locked_rotation_changes_the_flagship_cascade() {
-        // Seed 5 (re-pinned under The Living Community epoch, this merge):
-        // history is the sole settlement placer now, and the deep-history
-        // bake re-placed every world, so the seed that separates the two
-        // rotation regimes' flagship cascades shifted again. Seed 1 (the
-        // prior anchor) now coincides across regimes; a survey of seeds
-        // 1..=25 found seed 5 the nearest that still separates them (and it
-        // also separates the two regimes' pantheon heads — see
-        // `the_pantheon_reorganizes_between_spinning_and_locked`).
+        // A PANEL, not a single witness — this test has now burned three.
+        //
+        // The claim is existential ("a different sky enriches the flagship's
+        // environment differently"), and it was being asserted on whichever
+        // one seed happened to exhibit it. Seed 1 was the original anchor and
+        // stopped separating under The Living Community; seed 5 replaced it by
+        // a survey of 1..=25 and stopped separating under The Tense. Each time
+        // the test reddened, the property was fine and only the example had
+        // moved — which is a lot of alarm for no defect.
+        //
+        // Measured on this tree, seeds 1..=24 separate the two rotation
+        // regimes' flagship cascades at: **3, 9, 11, 14, 18, 20, 22** (7 of
+        // 24). The panel below is the first three. Asserting "at least one of
+        // three known separators still separates" keeps exactly the original
+        // claim while requiring three independent coincidences to go red
+        // spuriously — and if it ever DOES go red, that is the real finding
+        // this test always meant to report: the sky stopped mattering.
         use hornvale_astronomy::RotationPin;
-        let spinning = generated(5);
-        let locked = build_world(
-            Seed(5),
-            &SkyPins {
-                rotation: Some(RotationPin::Locked),
-                ..SkyPins::default()
-            },
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .unwrap();
+        const PANEL: [u64; 3] = [3, 9, 11];
         let cascade_state = |w: &World| {
             hornvale_settlement::village_info(w).map(|v| {
                 (
@@ -10670,10 +10668,31 @@ mod tests {
                 )
             })
         };
-        assert_ne!(
-            cascade_state(&spinning),
-            cascade_state(&locked),
-            "a different sky must enrich the flagship's environment differently"
+        let separating: Vec<u64> = PANEL
+            .iter()
+            .copied()
+            .filter(|&seed| {
+                let spinning = generated(seed);
+                let locked = build_world(
+                    Seed(seed),
+                    &SkyPins {
+                        rotation: Some(RotationPin::Locked),
+                        ..SkyPins::default()
+                    },
+                    SkyChoice::Generated,
+                    &hornvale_terrain::TerrainPins::default(),
+                    &SettlementPins::default(),
+                )
+                .unwrap();
+                cascade_state(&spinning) != cascade_state(&locked)
+            })
+            .collect();
+        assert!(
+            !separating.is_empty(),
+            "a different sky must enrich the flagship's environment differently, \
+             and it no longer does on ANY of the panel {PANEL:?} — all three were \
+             measured separating. This is the sky ceasing to matter to the \
+             cascade, not a witness drifting; do not re-pin it away."
         );
     }
 
