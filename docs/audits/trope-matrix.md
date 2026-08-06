@@ -46,11 +46,21 @@ a defect.
 
 Every bundle either catalogue requires (52), with the share of that
 catalogue's situations requiring it. Shares are counted over the corpora
-themselves — a bundle's numerator is the situations naming it, the
+themselves — a bundle's numerator is the situations requiring it, the
 denominator is the whole catalogue — and are not read back out of the
-rendered columns. **Gap** is the difference between the highest and lowest
-share, in percentage points, and is what the table is sorted by; equal gaps
-sort by bundle name.
+rendered columns.
+
+**12 of those 52 are marked †**: no catalogue here *declares* the bundle its
+situations ask for. A dangling reference is not a capability — it expands to
+itself, matches no registry token, and blocks its situation by construction.
+Such a row exists because a catalogue asked, and carries the mark because
+asking is all it can do; two of them may be near-synonyms without being two
+demands.
+
+**Gap** is the difference between the highest and lowest share, in
+percentage points, and is what the table is sorted by, descending. Rows
+sharing a Gap are ordered by their unrounded spread — recomputable from the
+counts in each cell — and then by bundle name.
 
 Every column above reads 0 stageable, so nothing in this table is a score.
 It says what each catalogue asks the world for, and the catalogues do not
@@ -68,48 +78,48 @@ agree.
 | `bundle:felt-affect` | 44% (16/36) | 30% (124/409) | 14 |
 | `bundle:speech-act` | 14% (5/36) | 27% (110/409) | 13 |
 | `bundle:self-judgement` | 17% (6/36) | 5% (20/409) | 12 |
-| `bundle:impaired-reason` | 3% (1/36) | 10% (40/409) | 7 |
-| `bundle:interpersonal-violence` | 25% (9/36) | 32% (129/409) | 7 |
-| `bundle:traversable-geography` | 11% (4/36) | 4% (17/409) | 7 |
 | `bundle:witnessing` | 17% (6/36) | 10% (39/409) | 7 |
-| `bundle:community-subordination` | 6% (2/36) | 0% (1/409) | 6 |
+| `bundle:impaired-reason` | 3% (1/36) | 10% (40/409) | 7 |
+| `bundle:traversable-geography` | 11% (4/36) | 4% (17/409) | 7 |
+| `bundle:interpersonal-violence` | 25% (9/36) | 32% (129/409) | 7 |
+| `bundle:relinquishment` | 11% (4/36) | 5% (21/409) | 6 |
 | `bundle:conspiracy` | 8% (3/36) | 2% (10/409) | 6 |
 | `bundle:environmental-adversity` | 6% (2/36) | 0% (0/409) | 6 |
-| `bundle:relinquishment` | 11% (4/36) | 5% (21/409) | 6 |
-| `bundle:act-chronology` | 11% (4/36) | 16% (64/409) | 5 |
+| `bundle:community-subordination` | 6% (2/36) | 0% (1/409) | 6 |
 | `bundle:named-pantheon` | 6% (2/36) | 1% (4/409) | 5 |
-| `bundle:community-downfall` | 6% (2/36) | 2% (9/409) | 4 |
+| `bundle:act-chronology` | 11% (4/36) | 16% (64/409) | 5 |
 | `bundle:judgement-and-sanction` | 11% (4/36) | 7% (29/409) | 4 |
+| `bundle:community-downfall` | 6% (2/36) | 2% (9/409) | 4 |
 | `bundle:sworn-obligation` | 6% (2/36) | 2% (10/409) | 4 |
-| `bundle:celestial-portent` | 3% (1/36) | 0% (2/409) | 3 |
 | `bundle:collective-conflict` | 8% (3/36) | 5% (19/409) | 3 |
 | `bundle:community-as-actor` | 8% (3/36) | 5% (19/409) | 3 |
-| `bundle:community-chronology` | 3% (1/36) | 0% (0/409) | 3 |
-| `bundle:office-and-authority` | 14% (5/36) | 11% (45/409) | 3 |
 | `bundle:revelation` | 14% (5/36) | 11% (44/409) | 3 |
+| `bundle:office-and-authority` | 14% (5/36) | 11% (45/409) | 3 |
+| `bundle:community-chronology` | 3% (1/36) | 0% (0/409) | 3 |
 | `bundle:succession` | 6% (2/36) | 3% (12/409) | 3 |
-| `bundle:flight-and-pursuit` | 6% (2/36) | 4% (15/409) | 2 |
+| `bundle:celestial-portent` | 3% (1/36) | 0% (2/409) | 3 |
 | `bundle:personal-property` | 11% (4/36) | 9% (36/409) | 2 |
+| `bundle:flight-and-pursuit` | 6% (2/36) | 4% (15/409) | 2 |
 | `bundle:search-and-finding` | 6% (2/36) | 4% (17/409) | 2 |
-| `bundle:captivity-and-guardianship` | 6% (2/36) | 5% (21/409) | 1 |
+| `bundle:sustenance-and-appetite` † | 0% (0/36) | 1% (4/409) | 1 |
 | `bundle:deception` | 11% (4/36) | 10% (42/409) | 1 |
 | `bundle:pair-bond` | 11% (4/36) | 12% (48/409) | 1 |
 | `bundle:personal-rank` | 14% (5/36) | 13% (55/409) | 1 |
-| `bundle:sustenance-and-appetite` | 0% (0/36) | 1% (4/409) | 1 |
-| `bundle:arcane-power` | 0% (0/36) | 0% (2/409) | 0 |
-| `bundle:artificial-agency` | 0% (0/36) | 0% (1/409) | 0 |
+| `bundle:captivity-and-guardianship` | 6% (2/36) | 5% (21/409) | 1 |
 | `bundle:coercive-threat` | 8% (3/36) | 8% (32/409) | 0 |
+| `bundle:arcane-power` † | 0% (0/36) | 0% (2/409) | 0 |
+| `bundle:food-and-eating` † | 0% (0/36) | 0% (2/409) | 0 |
+| `bundle:nonhuman-creatures` † | 0% (0/36) | 0% (2/409) | 0 |
+| `bundle:nonhuman-kinds` † | 0% (0/36) | 0% (2/409) | 0 |
+| `bundle:preternatural-power` † | 0% (0/36) | 0% (2/409) | 0 |
+| `bundle:artificial-agency` † | 0% (0/36) | 0% (1/409) | 0 |
+| `bundle:food-and-drink` † | 0% (0/36) | 0% (1/409) | 0 |
+| `bundle:game-of-strategy` † | 0% (0/36) | 0% (1/409) | 0 |
+| `bundle:healing-and-recovery` † | 0% (0/36) | 0% (1/409) | 0 |
+| `bundle:machine-artifact` † | 0% (0/36) | 0% (1/409) | 0 |
+| `bundle:temporal-displacement` † | 0% (0/36) | 0% (1/409) | 0 |
 | `bundle:divine-agency` | 3% (1/36) | 3% (11/409) | 0 |
-| `bundle:food-and-drink` | 0% (0/36) | 0% (1/409) | 0 |
-| `bundle:food-and-eating` | 0% (0/36) | 0% (2/409) | 0 |
-| `bundle:game-of-strategy` | 0% (0/36) | 0% (1/409) | 0 |
-| `bundle:healing-and-recovery` | 0% (0/36) | 0% (1/409) | 0 |
 | `bundle:individual-persons` | 100% (36/36) | 100% (409/409) | 0 |
-| `bundle:machine-artifact` | 0% (0/36) | 0% (1/409) | 0 |
-| `bundle:nonhuman-creatures` | 0% (0/36) | 0% (2/409) | 0 |
-| `bundle:nonhuman-kinds` | 0% (0/36) | 0% (2/409) | 0 |
-| `bundle:preternatural-power` | 0% (0/36) | 0% (2/409) | 0 |
-| `bundle:temporal-displacement` | 0% (0/36) | 0% (1/409) | 0 |
 
 ## Agreement and fork
 

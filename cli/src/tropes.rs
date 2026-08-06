@@ -10,6 +10,7 @@
 
 use hornvale_kernel::ConceptRegistry;
 use serde::Deserialize;
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One situation as authored in the corpus.
@@ -391,19 +392,37 @@ pub fn render(
     s
 }
 
-/// How many situations in `corpus` name `bundle:{bundle}` in their
-/// requirements — the numerator of that bundle's share.
+/// Every bundle `corpus` requires, mapped to the number of **situations**
+/// requiring it — the numerator of that bundle's share.
+///
+/// The single definition of demand for the whole matrix. Both the demand
+/// table and the per-catalogue ranking read this one map, because they are
+/// two views of one quantity: computing them separately let the same bundle
+/// print at two different percentages in the same document the moment a
+/// corpus named a bundle twice in one situation, which `load` does not
+/// reject. Neither frozen corpus does that today, so the bug would have
+/// arrived silently with a third catalogue.
+///
+/// Situations, not occurrences: `requires` is a list, so a situation naming
+/// `bundle:x` twice is still one situation demanding `x`, and the denominator
+/// it is divided by counts situations.
 ///
 /// Counts the `bundle:` reference as authored, not its expansion: the unit of
 /// demand here is the bundle a catalogue reached for, and expanding first
 /// would silently merge two bundles that happen to share a token.
-fn bundle_demand(corpus: &Corpus, bundle: &str) -> usize {
-    let needle = format!("bundle:{bundle}");
-    corpus
-        .situations
-        .iter()
-        .filter(|st| st.requires.contains(&needle))
-        .count()
+fn bundle_demand(corpus: &Corpus) -> BTreeMap<String, usize> {
+    let mut demand: BTreeMap<String, usize> = BTreeMap::new();
+    for st in &corpus.situations {
+        let mut seen: BTreeSet<&str> = BTreeSet::new();
+        for r in &st.requires {
+            if let Some(b) = r.strip_prefix("bundle:")
+                && seen.insert(b)
+            {
+                *demand.entry(b.to_string()).or_default() += 1;
+            }
+        }
+    }
+    demand
 }
 
 /// `n` of `total` as a whole percent, rounded half up.
@@ -423,7 +442,7 @@ fn percent(n: usize, total: usize) -> usize {
 /// One catalogue's demand for one bundle, kept as counts beside the rendered
 /// percent so the document shows the reader the division it performed.
 struct Share {
-    /// Situations in that catalogue naming the bundle.
+    /// Situations in that catalogue requiring the bundle.
     required: usize,
     /// Situations in that catalogue, full stop — the denominator.
     total: usize,
@@ -431,15 +450,88 @@ struct Share {
     percent: usize,
 }
 
+impl Share {
+    /// Compare two shares at full precision, without rounding and without a
+    /// float: `a/A` against `b/B` is `a*B` against `b*A`.
+    fn exact_cmp(&self, other: &Self) -> Ordering {
+        (self.required as u128 * other.total.max(1) as u128)
+            .cmp(&(other.required as u128 * self.total.max(1) as u128))
+    }
+}
+
+/// The unrounded distance between a bundle's highest and lowest share, kept
+/// as an exact fraction.
+///
+/// The rendered **Gap** subtracts two already-rounded percents, so a
+/// displayed gap of N covers true spreads anywhere in `(N-1, N+1)` and cannot
+/// order the bundles inside one tier — alphabetical order there would reverse
+/// the extremes relative to "descending delta". This is the tiebreak that
+/// makes the ordering mean what the document says it means, and a reader can
+/// recompute it from the counts printed in each cell.
+struct Spread {
+    /// Numerator of `high - low`.
+    num: u128,
+    /// Common denominator of `high - low`, never zero.
+    den: u128,
+}
+
+impl Spread {
+    /// The spread across one row's cells. Zero for an empty row.
+    fn of(cells: &[Share]) -> Self {
+        let hi = cells.iter().max_by(|x, y| x.exact_cmp(y));
+        let lo = cells.iter().min_by(|x, y| x.exact_cmp(y));
+        match (hi, lo) {
+            (Some(h), Some(l)) => {
+                let (ht, lt) = (h.total.max(1) as u128, l.total.max(1) as u128);
+                Self {
+                    num: h.required as u128 * lt - l.required as u128 * ht,
+                    den: ht * lt,
+                }
+            }
+            _ => Self { num: 0, den: 1 },
+        }
+    }
+
+    /// Cross-multiplied comparison, exact and float-free.
+    fn exact_cmp(&self, other: &Self) -> Ordering {
+        (self.num * other.den).cmp(&(other.num * self.den))
+    }
+}
+
 /// One row of the demand table.
 struct DemandRow {
-    /// Highest share minus lowest, in percentage points — the sort key, and
-    /// the whole point of the table.
+    /// Highest share minus lowest, in percentage points, as rendered — the
+    /// primary sort key, so the printed column stays monotone and a reader
+    /// can check the ordering against what the table shows.
     gap: usize,
+    /// The same distance unrounded, breaking ties inside a `gap` tier.
+    spread: Spread,
     /// The bundle, without its `bundle:` prefix.
     bundle: String,
+    /// Whether any catalogue in this matrix *declares* the bundle. A row that
+    /// no catalogue declares is a dangling reference: it expands to itself,
+    /// matches no registry token, and blocks its situation by construction.
+    declared: bool,
     /// One share per column, in the caller's column order.
     cells: Vec<Share>,
+}
+
+/// The demand table's order: descending rendered gap, then descending
+/// unrounded spread, then bundle name.
+///
+/// The rendered gap leads so the printed **Gap** column stays monotone and a
+/// reader can check the ordering against what the table shows. But a rendered
+/// gap of N covers true spreads across a two-point window, so it tiers rather
+/// than orders — and inside a tier, falling straight through to the name
+/// reversed the extremes relative to "descending delta". The spread breaks
+/// those ties at full precision, from the same counts the cells print, so the
+/// ordering is what the document says it is and is still re-derivable. The
+/// name is last, for rows that are genuinely equal.
+fn demand_order(a: &DemandRow, b: &DemandRow) -> Ordering {
+    b.gap
+        .cmp(&a.gap)
+        .then_with(|| b.spread.exact_cmp(&a.spread))
+        .then_with(|| a.bundle.cmp(&b.bundle))
 }
 
 /// One catalogue's bundles ranked by share, descending, ties broken by name.
@@ -447,17 +539,12 @@ struct DemandRow {
 /// Bundles the catalogue never requires are not ranked: a zero share is not a
 /// weak demand, it is the absence of one, and a tail of zeroes sorted by name
 /// would put the fork between two catalogues in an alphabetical accident.
-fn ranked_bundles(corpus: &Corpus) -> Vec<(String, usize)> {
-    let mut demand: BTreeMap<String, usize> = BTreeMap::new();
-    for st in &corpus.situations {
-        for r in &st.requires {
-            if let Some(b) = r.strip_prefix("bundle:") {
-                *demand.entry(b.to_string()).or_default() += 1;
-            }
-        }
-    }
-    let mut ranked: Vec<(String, usize)> = demand.into_iter().filter(|(_, n)| *n > 0).collect();
-    ranked.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+/// That exclusion is a property of [`bundle_demand`]'s map, which only gains a
+/// key by being required — there is deliberately no filter here, because a
+/// filter that can never fire reads as though it were load-bearing.
+fn ranked_bundles(demand: &BTreeMap<String, usize>) -> Vec<(&str, usize)> {
+    let mut ranked: Vec<(&str, usize)> = demand.iter().map(|(b, n)| (b.as_str(), *n)).collect();
+    ranked.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
     ranked
 }
 
@@ -538,20 +625,23 @@ pub fn render_matrix(
     }
 
     // The table only a matrix can hold: what each catalogue demands, side by
-    // side, ordered by how much they differ.
-    let mut bundles: BTreeSet<String> = BTreeSet::new();
-    for (corpus, _) in columns {
-        for (b, _) in ranked_bundles(corpus) {
-            bundles.insert(b);
-        }
-    }
+    // side, ordered by how much they differ. One demand map per catalogue,
+    // computed once and shared with the ranking below, so the two sections
+    // cannot state different numbers for the same bundle.
+    let demands: Vec<BTreeMap<String, usize>> =
+        columns.iter().map(|(c, _)| bundle_demand(c)).collect();
+    let bundles: BTreeSet<&str> = demands
+        .iter()
+        .flat_map(|d| d.keys().map(String::as_str))
+        .collect();
     let mut table: Vec<DemandRow> = bundles
         .iter()
         .map(|b| {
             let cells: Vec<Share> = columns
                 .iter()
-                .map(|(corpus, out)| {
-                    let required = bundle_demand(corpus, b);
+                .zip(&demands)
+                .map(|((_, out), demand)| {
+                    let required = demand.get(*b).copied().unwrap_or(0);
                     Share {
                         required,
                         total: out.len(),
@@ -563,26 +653,47 @@ pub fn render_matrix(
             let lo = cells.iter().map(|c| c.percent).min().unwrap_or(0);
             DemandRow {
                 gap: hi - lo,
-                bundle: b.clone(),
+                spread: Spread::of(&cells),
+                bundle: (*b).to_string(),
+                declared: columns.iter().any(|(c, _)| c.bundles.contains_key(*b)),
                 cells,
             }
         })
         .collect();
-    // Descending gap, then bundle name: the gap is the point of the table, and
-    // the name keeps equal gaps — of which there are many at the tail — in a
-    // stable order across runs.
-    table.sort_by(|a, b| b.gap.cmp(&a.gap).then(a.bundle.cmp(&b.bundle)));
+    table.sort_by(demand_order);
+    let undeclared = table.iter().filter(|r| !r.declared).count();
 
     s.push_str("\n## Demand\n\n");
     s.push_str(&wrap(&format!(
         "Every bundle either catalogue requires ({}), with the share of that catalogue's \
          situations requiring it. Shares are counted over the corpora themselves — a bundle's \
-         numerator is the situations naming it, the denominator is the whole catalogue — and \
-         are not read back out of the rendered columns. **Gap** is the difference between the \
-         highest and lowest share, in percentage points, and is what the table is sorted by; \
-         equal gaps sort by bundle name.",
-        bundles.len()
+         numerator is the situations requiring it, the denominator is the whole catalogue — \
+         and are not read back out of the rendered columns.",
+        table.len()
     )));
+    s.push_str("\n\n");
+    if undeclared > 0 {
+        // A `bundle:` reference no catalogue defines renders identically to a
+        // real one, so without this the reader counts dangling asks as
+        // demands — and two near-synonyms among them read as two capabilities.
+        let verb = if undeclared == 1 { "is" } else { "are" };
+        s.push_str(&wrap(&format!(
+            "**{undeclared} of those {} {verb} marked †**: no catalogue here *declares* the \
+             bundle its situations ask for. A dangling reference is not a capability — it \
+             expands to itself, matches no registry token, and blocks its situation by \
+             construction. Such a row exists because a catalogue asked, and carries the mark \
+             because asking is all it can do; two of them may be near-synonyms without being \
+             two demands.",
+            table.len()
+        )));
+        s.push_str("\n\n");
+    }
+    s.push_str(&wrap(
+        "**Gap** is the difference between the highest and lowest share, in percentage \
+         points, and is what the table is sorted by, descending. Rows sharing a Gap are \
+         ordered by their unrounded spread — recomputable from the counts in each cell — and \
+         then by bundle name.",
+    ));
     s.push_str("\n\n");
     if all_zero {
         s.push_str(&wrap(
@@ -601,7 +712,8 @@ pub fn render_matrix(
     }
     s.push_str("---|\n");
     for row in &table {
-        s.push_str(&format!("| `bundle:{}` |", row.bundle));
+        let mark = if row.declared { "" } else { " †" };
+        s.push_str(&format!("| `bundle:{}`{mark} |", row.bundle));
         for c in &row.cells {
             s.push_str(&format!(" {}% ({}/{}) |", c.percent, c.required, c.total));
         }
@@ -616,14 +728,15 @@ pub fn render_matrix(
          ties by name — read down together until they part.",
     ));
     s.push_str("\n\n");
-    let rankings: Vec<Vec<(String, usize)>> =
-        columns.iter().map(|(c, _)| ranked_bundles(c)).collect();
+    // The same `demands` maps the table above was built from — so a bundle
+    // cannot appear at one percentage in the table and another here.
+    let rankings: Vec<Vec<(&str, usize)>> = demands.iter().map(ranked_bundles).collect();
     let totals: Vec<usize> = columns.iter().map(|(_, out)| out.len()).collect();
     let mut shared = 0;
     while let Some(head) = rankings.first().and_then(|r| r.get(shared)) {
         if rankings
             .iter()
-            .all(|r| r.get(shared).map(|(b, _)| b) == Some(&head.0))
+            .all(|r| r.get(shared).map(|(b, _)| *b) == Some(head.0))
         {
             shared += 1;
         } else {
@@ -971,6 +1084,179 @@ mod tests {
                 && text.contains("- `large` asks next for `bundle:other` (50%)"),
             "the fork does not name what each catalogue asks for next:\n{text}"
         );
+    }
+
+    /// A `bundle:` reference no catalogue declares still earns a row — it is
+    /// real demand, authored deliberately — but is marked, and the count of
+    /// such rows is derived rather than written down.
+    ///
+    /// Without the mark a dangling reference renders identically to a
+    /// declared bundle, so a reader counts asks as demands, and two dangling
+    /// near-synonyms read as two separate capabilities. That is precisely
+    /// what `tvtropes-2012` contains: 12 of the live matrix's 52 rows name no
+    /// declared bundle, including `food-and-drink` beside `food-and-eating`.
+    #[test]
+    fn a_bundle_no_catalogue_declares_is_rowed_but_marked() {
+        let corpus = load(
+            r#"{"corpus":"c","provenance":"p","frozen":"f",
+                "bundles":{"declared":["predicate:a"]},
+                "situations":[
+                  {"id":"s1","name":"A","actants":{},"requires":["bundle:declared","bundle:dangling"],"excluded_by":[]},
+                  {"id":"s2","name":"B","actants":{},"requires":["bundle:declared"],"excluded_by":[]}]}"#,
+        )
+        .expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        let out = resolve(&corpus, &registry);
+        let text = render_matrix(&[(&corpus, &out)], &registry);
+
+        assert!(
+            text.contains("| `bundle:dangling` † | 50% (1/2) | 0 |"),
+            "the undeclared bundle is not rowed and marked:\n{text}"
+        );
+        assert!(
+            text.contains("| `bundle:declared` | 100% (2/2) | 0 |"),
+            "the declared bundle should carry no mark:\n{text}"
+        );
+        // The count is computed from the rows, not asserted in prose by hand.
+        assert!(
+            text.contains("**1 of those 2 is marked †**"),
+            "the disclosure does not derive the split:\n{text}"
+        );
+    }
+
+    /// One counting rule for one quantity: a situation requiring the same
+    /// bundle twice is one situation requiring it, in the demand table and in
+    /// the ranking alike.
+    ///
+    /// `load` does not reject a repeated requirement, and the two sections
+    /// used to count it differently — the table by situations, the ranking by
+    /// occurrences. Neither frozen corpus repeats one today, so the first
+    /// document to print a bundle at two different percentages would have
+    /// been a third catalogue's, in the artifact built to prevent exactly
+    /// that.
+    #[test]
+    fn a_bundle_required_twice_by_one_situation_counts_once_everywhere() {
+        let corpus = load(
+            r#"{"corpus":"c","provenance":"p","frozen":"f",
+                "bundles":{"twice":["predicate:a"],"once":["predicate:b"]},
+                "situations":[
+                  {"id":"s1","name":"A","actants":{},"requires":["bundle:twice","bundle:twice"],"excluded_by":[]},
+                  {"id":"s2","name":"B","actants":{},"requires":["bundle:once"],"excluded_by":[]}]}"#,
+        )
+        .expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        let out = resolve(&corpus, &registry);
+        let text = render_matrix(&[(&corpus, &out)], &registry);
+
+        // One situation of two, not two of two — and not 100%.
+        assert!(
+            text.contains("| `bundle:twice` | 50% (1/2) | 0 |"),
+            "the demand table double-counted a repeated requirement:\n{text}"
+        );
+        // The ranking must print the SAME percentage. Counting occurrences
+        // would render `twice` at 100% here while the table said 50%, and
+        // would rank it above `once` on a count the table never showed.
+        assert!(
+            text.contains("2. `bundle:twice` — 50% in `c`"),
+            "the ranking disagrees with the table about the repeated bundle:\n{text}"
+        );
+        assert!(
+            text.contains("1. `bundle:once` — 50% in `c`"),
+            "the ranking lost the un-repeated bundle or reordered it:\n{text}"
+        );
+        assert_eq!(bundle_demand(&corpus).get("twice"), Some(&1));
+    }
+
+    /// Rows sharing a rendered gap are ordered by their unrounded spread, not
+    /// alphabetically.
+    ///
+    /// These are the four live bundles that all render `Gap` 7: their true
+    /// spreads are 7.13, 7.00, 6.96 and 6.54 percentage points. A rendered
+    /// gap of N covers true spreads across a two-point window, so it tiers
+    /// rather than orders; falling straight through to the bundle name put
+    /// `witnessing` (the widest) last and `interpersonal-violence` (the
+    /// narrowest) second, which is not "descending delta" in any sense.
+    /// Exercises the real comparator, not a copy of it.
+    #[test]
+    fn equal_rendered_gaps_are_broken_by_the_unrounded_spread() {
+        let mut rows: Vec<DemandRow> = [
+            ("interpersonal-violence", 9, 129),
+            ("impaired-reason", 1, 40),
+            ("traversable-geography", 4, 17),
+            ("witnessing", 6, 39),
+        ]
+        .iter()
+        .map(|(name, polti, tv)| {
+            let cells = vec![
+                Share {
+                    required: *polti,
+                    total: 36,
+                    percent: percent(*polti, 36),
+                },
+                Share {
+                    required: *tv,
+                    total: 409,
+                    percent: percent(*tv, 409),
+                },
+            ];
+            let hi = cells.iter().map(|c| c.percent).max().expect("cells");
+            let lo = cells.iter().map(|c| c.percent).min().expect("cells");
+            DemandRow {
+                gap: hi - lo,
+                spread: Spread::of(&cells),
+                bundle: (*name).to_string(),
+                declared: true,
+                cells,
+            }
+        })
+        .collect();
+
+        // The premise: the rendered column cannot order these at all.
+        assert!(
+            rows.iter().all(|r| r.gap == 7),
+            "these four no longer share a rendered gap, so this test's premise is gone"
+        );
+        rows.sort_by(demand_order);
+        assert_eq!(
+            rows.iter().map(|r| r.bundle.as_str()).collect::<Vec<_>>(),
+            vec![
+                "witnessing",
+                "impaired-reason",
+                "traversable-geography",
+                "interpersonal-violence"
+            ],
+            "the tier is not ordered by descending unrounded spread"
+        );
+    }
+
+    /// Every corpus the matrix declares as a column has a committed report to
+    /// point at.
+    ///
+    /// The matrix links each column to `./trope-coverage-<id>.md`. Adding a
+    /// path to `CORPORA` without adding a line to
+    /// `scripts/regenerate-artifacts.sh` renders a column whose link is dead,
+    /// and nothing else in the workspace would notice: the golden tests only
+    /// cover the corpora they name, and CI's drift check compares files that
+    /// exist. This asserts the declared list and the committed artifacts stay
+    /// the same set.
+    #[test]
+    fn every_corpus_in_corpora_has_a_committed_column() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("workspace root");
+        for path in CORPORA {
+            let json = std::fs::read_to_string(root.join(path))
+                .unwrap_or_else(|e| panic!("`{path}` is declared in CORPORA but unreadable: {e}"));
+            let corpus =
+                load(&json).unwrap_or_else(|e| panic!("`{path}` does not parse as a corpus: {e}"));
+            let artifact = artifact_path(&corpus);
+            assert!(
+                root.join(&artifact).is_file(),
+                "`{path}` is a declared matrix column but `{artifact}` does not exist — the \
+                 matrix would render a dead link. Add a line to \
+                 scripts/regenerate-artifacts.sh and regenerate."
+            );
+        }
     }
 
     /// The live corpus is structurally sound: ids are unique, and there are

@@ -64,7 +64,7 @@ fn committed_trope_coverage_matches_the_live_report_for_tvtropes_2012() {
 /// defaults to Polti and still reproduces its artifact byte-for-byte, so the
 /// rename is the only change visible to an existing caller." Every other
 /// test in this file passes `--corpus` explicitly, so without this one
-/// nothing exercises `cmd_tropes`'s default (`unwrap_or("tropes/polti.trope.json")`
+/// nothing exercises `cmd_tropes`'s default (`unwrap_or(tropes::CORPORA[0])`
 /// at `cli/src/main.rs`) or the no-mode-flag arm. That default is also what
 /// `scripts/regenerate-artifacts.sh:394` relies on for Polti's artifact — if
 /// its spelling ever drifted from `tropes/polti.trope.json`, the regenerate
@@ -241,35 +241,41 @@ fn check_mode_is_found_after_a_flag() {
     );
 }
 
-/// The matrix cannot drift from the columns it summarises.
+/// The matrix is byte-checked exactly as the columns are.
 ///
-/// Both derive from the same `resolve()` output, so this is cheap — and it
-/// closes the one gap a generated summary still has: that its figures are
-/// recomputed rather than read from the reports, and could diverge if either
-/// renderer changed without the other.
+/// The spec asks for the matrix to be drift-checked the way the columns are,
+/// and the columns get three layers: this file's golden assertions, `hornvale
+/// tropes check`, and CI's regenerate-then-`git diff docs/audits/`. Without
+/// this test the matrix had only the third — the slowest, and the one a
+/// developer running `cargo test --workspace` never sees.
+///
+/// This replaces a substring test that asserted the matrix *contained* each
+/// corpus id and each denominator. That test could not fail for the reason
+/// its own docstring claimed: `contains("409")` is satisfied by the
+/// provenance prose and by every `(217/409)` cell, so a matrix rendering
+/// `| polti-1895 | 0 of 35 |` would still have passed it. A byte comparison
+/// is the same check the columns get, and it cannot be satisfied by
+/// coincidence.
+///
+/// Read a red result the same way: it says the matrix moved, not which figure
+/// moved. Regenerate deliberately with `make rebaseline` and read the diff —
+/// a share that changed means a corpus's demand changed, which is a finding.
 #[test]
-fn the_matrix_agrees_with_each_committed_column() {
+fn committed_trope_matrix_matches_the_live_render() {
     let root = workspace_root();
-    let matrix = std::fs::read_to_string(root.join("docs/audits/trope-matrix.md"))
-        .expect("the committed matrix");
-    for (corpus, stageable, inapplicable, total) in
-        [("polti-1895", 0, 1, 36), ("tvtropes-2012", 0, 62, 409)]
-    {
-        let column =
-            std::fs::read_to_string(root.join(format!("docs/audits/trope-coverage-{corpus}.md")))
-                .expect("the committed column");
-        let headline = format!("Stageable {stageable} of {total} ({inapplicable} inapplicable).");
-        assert!(
-            column.contains(&headline),
-            "{corpus}'s column does not carry `{headline}`"
-        );
-        assert!(
-            matrix.contains(corpus),
-            "the matrix does not name `{corpus}`"
-        );
-        assert!(
-            matrix.contains(&total.to_string()),
-            "the matrix does not carry {corpus}'s denominator {total}"
-        );
-    }
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["tropes", "matrix"])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(out.status.success(), "tropes matrix failed: {out:?}");
+    let live = String::from_utf8(out.stdout).expect("utf-8");
+    hornvale_kernel::golden::assert_golden(
+        &root.join("docs/audits/trope-matrix.md"),
+        &live,
+        "the trope matrix drifted from the committed artifact. Regenerate deliberately \
+         with `make rebaseline` and review the diff — the matrix summarises both columns, \
+         so a figure that moved here without either column moving means the two \
+         derivations have come apart, which is exactly what this artifact exists to catch",
+    );
 }

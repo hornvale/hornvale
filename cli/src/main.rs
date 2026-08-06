@@ -883,7 +883,10 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     if mode == Some("matrix") {
         return cmd_tropes_matrix();
     }
-    let path = flag_value(args, "--corpus").unwrap_or("tropes/polti.trope.json");
+    // `CORPORA[0]`, not a second copy of the literal: the default corpus and
+    // the matrix's first column are the same fact, and a duplicated path
+    // could drift from the declared list without anything noticing.
+    let path = flag_value(args, "--corpus").unwrap_or(tropes::CORPORA[0]);
     let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     let corpus = tropes::load(&json)?;
     let world = world_builder::build_world(
