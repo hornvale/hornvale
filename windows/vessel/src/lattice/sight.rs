@@ -26,10 +26,20 @@
 //!
 //! Impassable cells are the deliberate exception: a wall is lit whenever the
 //! band touches it at all, so a room's fabric is drawn rather than showing as
-//! a ragged fringe of gaps. Sight between two WALLS is therefore not claimed
-//! to be symmetric, and the property test asks only about passable cells —
-//! which are the cells anything can stand in, and the only ones a `sensed`
-//! channel will ever narrow to.
+//! a ragged fringe of gaps. **Symmetry is therefore claimed only between two
+//! PASSABLE cells — ANY pair involving an impassable cell is outside it**, not
+//! merely wall-to-wall pairs. Measured over five fixtures (Task 3's review),
+//! floor↔floor asymmetric ordered pairs number exactly zero everywhere, while
+//! the asymmetry that does exist is dominated by MIXED floor↔wall pairs at
+//! three to seven times the wall↔wall count — 3624 mixed against 842
+//! wall↔wall on `fixture(3, Seed(1))`, 5714 against 780 on the grown twin.
+//! A later campaign reading this output as symmetric for anything
+//! wall-involving would be wrong.
+//!
+//! The narrowing is safe for the reason §2.1 cares about: nothing stands in a
+//! wall, so a wall's visibility can never reach belief. Passable cells are the
+//! cells anything can stand in, and the only ones a `sensed` channel will ever
+//! narrow to.
 //!
 //! # No floats, anywhere
 //!
@@ -357,11 +367,16 @@ mod tests {
     /// involved in deciding the pair, so the pair cannot be wrong for the same
     /// reason `shadowcast` is.
     ///
-    /// The whole list rather than one example. `fixture(2, Seed(4))` splits
-    /// its two chambers on a DIAGONAL — the first thing this helper found was
-    /// that a 19x10 plan has no three-cell-thick wall band anywhere — so a
-    /// single hand-picked pair would be testing the one wall the fixture
-    /// happened to grow.
+    /// The whole list rather than one example, and the two `n=2, seed=4`
+    /// fixtures are why. `allocate` draws a straight vertical divider at
+    /// `x=11` with its doorway at `y=5`; `grow`, on the SAME structure and
+    /// seed, draws a one-cell DIAGONAL staircase, and a 19x10 plan has no
+    /// three-cell-thick wall band anywhere. (The staircase belongs to `grow`.
+    /// Task 3's first report misattributed it to `allocate` — the helper's
+    /// original three-thick-band criterion found nothing, and the panic was
+    /// blamed on the first fixture in the loop when it came from the second.
+    /// Both plans were rendered to settle it.) A hand-picked pair would have
+    /// been testing whichever wall one embedder happened to draw.
     fn pairs_across_a_wall(lattice: &Lattice) -> Vec<(Cell, Cell)> {
         let solid = |c: Cell| !kind_of(lattice, c).is_some_and(|k| k.passable());
         let mut out = Vec::new();
