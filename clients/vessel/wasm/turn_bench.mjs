@@ -118,13 +118,25 @@ for (let run = 0; run < RUNS; run++) {
 // snapshot immediately after start (walk band), then `enter`, then snapshot
 // again (chamber band) — not pulled from the SEQUENCE loop above, whose
 // `enter`/`out` pair would otherwise need band-tracking of its own.
+//
+// `hv_snapshot_len()` is the BYTE count (what "snapshot bytes" means, and
+// what it is compared against elsewhere — `windows/vessel/examples/
+// turn_cost.rs`'s figure is `.len()` on a Rust `String`, i.e. bytes).
+// `readSnapshotJson().length` is a JS string's UTF-16 *code-unit* count,
+// which undercounts whenever the JSON contains a non-ASCII character (each
+// codepoint above U+FFFF costs 4 UTF-8 bytes but only 1 JS `.length`; even
+// BMP non-ASCII characters can cost 2-3 UTF-8 bytes for 1 code unit) — an
+// earlier version of this bench reported `.length` under the "bytes"
+// label, which was wrong on both counts here (a handful of non-ASCII
+// characters in the narration). Use `hv_snapshot_len()` directly; no
+// decode is needed to count bytes.
 if (hv_start(42n) !== 0) {
   throw new Error("hv_start(42) returned non-zero on the byte-count run");
 }
 readOut();
-const walkBytes = readSnapshotJson().length;
+const walkBytes = hv_snapshot_len();
 send("enter");
-const chamberBytes = readSnapshotJson().length;
+const chamberBytes = hv_snapshot_len();
 
 console.log(`Session::start   median ${median(starts).toFixed(3).padStart(8)} ms`);
 console.log(`hv_handle(verb)  median ${median(turns).toFixed(3).padStart(8)} ms`);
