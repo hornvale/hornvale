@@ -38,6 +38,15 @@ const EMPTY = " ";
  * of bug the `+ w` placement term is the headline example of. */
 const WATER_KINDS = new Set(["ocean", "salt-basin", "river"]);
 
+/** The largest lattice coordinate magnitude this pane will place. The sim
+ * cannot currently emit a cell past this — the walk chart's radius is small
+ * — so this is hardening against a malformed or hostile payload, not a live
+ * bug. Two cells at `v: 20000` build a 40,002-character row; at `v: 1e9` the
+ * row exceeds V8's max string length and `String.prototype.repeat`-style
+ * growth throws a `RangeError`, landing on the same `main.ts` lockup path an
+ * uncaught `TypeError` would. Refusing beats hanging the worker. */
+const MAX_COORD = 4096;
+
 /** The glyph rows for this snapshot's chart, or `null` when there is no
  * chart to draw.
  *
@@ -114,6 +123,9 @@ function parseCell(raw: unknown): ChartCell | null {
   const w = c.w === null ? null : typeof c.w === "number" ? c.w : undefined;
   const up = c.up === null ? null : typeof c.up === "boolean" ? c.up : undefined;
   if (v === undefined || w === undefined || up === undefined) return null;
+  if ((v !== null && Math.abs(v) > MAX_COORD) || (w !== null && Math.abs(w) > MAX_COORD)) {
+    return null;
+  }
   const water = typeof c.water === "number" ? c.water : -1;
   return { v, w, up, seam: c.seam, state: c.state, water };
 }

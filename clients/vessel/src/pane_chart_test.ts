@@ -172,6 +172,30 @@ Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
 
+Deno.test("a cell past the coordinate ceiling is refused, not drawn", () => {
+  // With no bound, a cell at v: 20000 builds a 40,002-character row, and at
+  // v: 1e9 the row exceeds V8's max string length and throws a RangeError —
+  // landing on the same main.ts lockup path an uncaught TypeError would.
+  // This pins MAX_COORD against that class of payload: only the in-bound
+  // cell should ever be placed.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "walk",
+      chart: {
+        water_legend: ["none"],
+        cells: [
+          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+          { v: 20000, w: 0, up: true, seam: false, state: "sensed", water: 0 },
+        ],
+      },
+    },
+  }))!;
+  const rows = chartRows(snap)!;
+  assert(rows.every((r) => r.length < 100), "a past-ceiling cell widened the chart");
+  assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
+});
+
 Deno.test("a non-string water_legend entry does not shift subsequent indices", () => {
   // `cell.water` is a positional index into `water_legend`. Dropping a
   // non-string entry (the previous `.filter`-based implementation) shifts

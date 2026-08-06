@@ -79,9 +79,24 @@ function mount(container: HTMLElement): void {
    * the session refuses `map out` indoors, so the walk-band chart is not
    * derivable inside a building and there is nothing honest to show there.
    * A pane with nothing to draw empties rather than keeping a stale picture
-   * on screen — a frozen last-seen chart presented as live is a cheat pane. */
+   * on screen — a frozen last-seen chart presented as live is a cheat pane.
+   *
+   * The whole body is guarded: `planRows`/`chartRows` validate every field
+   * they read and refuse rather than throw, but that guarantee lives in
+   * those modules, not here. A pane throw here runs *before* `append` and
+   * `setIdle` in every `onmessage` branch below, so an uncaught exception
+   * would leave `busy` and `input.disabled` stuck `true` forever — the
+   * Casement locks with no error shown, which is worse than a stale or
+   * blank pane. The try/catch makes that impossible structurally, at the
+   * one call site, rather than by ordering calls correctly at every branch
+   * and hoping a future edit does not reorder them back. */
   function drawMap(snap: ReturnType<typeof parseSnapshot>): void {
-    const rows = snap ? (planRows(snap) ?? chartRows(snap)) : null;
+    let rows: string[] | null = null;
+    try {
+      rows = snap ? (planRows(snap) ?? chartRows(snap)) : null;
+    } catch (err) {
+      console.error("pane render failed; showing no map this turn", err);
+    }
     map.textContent = rows ? rows.join("\n") : "";
   }
 
@@ -128,6 +143,11 @@ function mount(container: HTMLElement): void {
     seedInput.disabled = true;
     possess.disabled = true;
     input.disabled = true;
+    // The map is a live view, not a log — unlike the transcript, which
+    // deliberately keeps its history, a stale picture from the previous
+    // seed sitting beside "The genesis of seed N…" would contradict
+    // `drawMap`'s own rule against keeping a stale picture on screen.
+    map.textContent = "";
     status.textContent = `The genesis of seed ${seed}… (a few seconds; ` +
       `sky, tectonics, climate, settlements, all from the seed)`;
     worker.postMessage({ type: "start", seed: seed.toString() });

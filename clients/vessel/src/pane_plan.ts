@@ -10,12 +10,18 @@ import type { PlanPayload, Snapshot } from "./snapshot.ts";
 /** The glyph for each cell kind. The mark `@` is deliberately the same one
  * the walk-band chart uses: the plan and the chart are one verb's two bands,
  * and a player who has learned to find `@` on one must not have to learn a
- * second mark for the other. */
-const GLYPH: Record<string, string> = {
+ * second mark for the other.
+ *
+ * `Object.create(null)` on purpose: a plain object literal inherits from
+ * `Object.prototype`, so `GLYPH[entry.kind]` for `entry.kind === "constructor"`
+ * would resolve up the prototype chain to `Object`'s constructor function
+ * rather than falling through to `UNKNOWN` — splicing a function's source
+ * text into a map row. A null-prototype lookup table has no chain to climb. */
+const GLYPH: Record<string, string> = Object.assign(Object.create(null), {
   wall: "#",
   floor: ".",
   threshold: "+",
-};
+});
 
 /** Drawn for a cell kind this client does not know. A newer sim may name a
  * kind that postdates this bundle; showing an honest unknown beats throwing
@@ -47,12 +53,24 @@ export function planRows(snap: Snapshot): string[] | null {
   if (plan.cells.some((ix) => !Number.isInteger(ix) || ix < 0 || ix >= plan.palette.length)) {
     return null;
   }
+  // A palette entry this refuses to trust: `null`, or anything that is not
+  // an object. `entry.kind` in the draw loop below would throw on `null` —
+  // the same unguarded-dereference class the `plan.you` fix already closed
+  // once in this file — so refuse the whole plan the same way an
+  // out-of-range index already is, rather than let the draw loop discover it.
+  if (plan.palette.some((entry) => entry === null || typeof entry !== "object")) {
+    return null;
+  }
 
   const rows: string[] = [];
   for (let y = 0; y < h; y++) {
     let row = "";
     for (let x = 0; x < w; x++) {
       const entry = plan.palette[plan.cells[y * w + x]];
+      // `GLYPH` has a null prototype (see its declaration), so an unknown
+      // `kind` — including the string `"constructor"` — simply misses and
+      // falls through to `UNKNOWN` rather than resolving up a prototype
+      // chain that a plain object literal would have had.
       row += GLYPH[entry.kind] ?? UNKNOWN;
     }
     rows.push(row);

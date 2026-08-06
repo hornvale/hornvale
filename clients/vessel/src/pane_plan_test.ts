@@ -135,6 +135,49 @@ Deno.test("a plan with no `you` at all is refused, not thrown", () => {
   assertEquals(planRows(snap), null);
 });
 
+Deno.test("a null palette entry is refused, not thrown on", () => {
+  // A malformed entry that would throw `TypeError: Cannot read properties
+  // of null (reading 'kind')` at draw time must be caught by the up-front
+  // validation instead — the same "refuse the whole plan" posture the
+  // length and index checks already have.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "chamber",
+      plan: {
+        schema: "vessel/plan/v1",
+        extent: { x: 0, y: 0, w: 2, h: 1 },
+        palette: [{ kind: "wall", chambers: [] }, null],
+        cells: [0, 1],
+        you: { x: 0, y: 0 },
+      },
+    },
+  }))!;
+  assertEquals(planRows(snap), null);
+});
+
+Deno.test("a palette entry naming 'constructor' as its kind does not leak the prototype chain", () => {
+  // A plain object literal `{wall: ..., floor: ..., threshold: ...}` used as
+  // a lookup table inherits from `Object.prototype`, so `table["constructor"]`
+  // resolves to `Object`'s constructor function rather than missing — a
+  // client-controlled string reaching into the prototype chain and splicing
+  // a function's source text into a rendered map row.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "chamber",
+      plan: {
+        schema: "vessel/plan/v1",
+        extent: { x: 0, y: 0, w: 1, h: 1 },
+        palette: [{ kind: "constructor", chambers: [] }],
+        cells: [0],
+        you: { x: 9, y: 9 },
+      },
+    },
+  }))!;
+  assertEquals(planRows(snap), ["?"]);
+});
+
 Deno.test("a `you` with a non-integer coordinate is refused", () => {
   const snap = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v1",
