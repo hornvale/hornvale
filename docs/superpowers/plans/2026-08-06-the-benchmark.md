@@ -2,6 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **COMPLETE — merged 2026-08-06.** All six tasks landed; `make gate` 3061
+> passed on the merged result. Task 2 was revised in flight (see its section
+> and spec §4.1). Close artifacts: [chronicle](../../../book/src/chronicle/the-benchmark.md),
+> [retrospective](../../retrospectives/the-benchmark.md).
+
 **Goal:** Give height-above-sea-level its own kernel type so a band or display
 function cannot be handed a raw isostatic reading, and correct the three
 surfaces that are handed one today.

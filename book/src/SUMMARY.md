@@ -308,6 +308,7 @@
 - [The Deep Realm](./chronicle/the-deep-realm.md)
 - [The Collation](./chronicle/the-collation.md)
 - [The Long Age](./chronicle/the-long-age.md)
+- [The Benchmark](./chronicle/the-benchmark.md)
 
 # Appendix: The Frontier
 

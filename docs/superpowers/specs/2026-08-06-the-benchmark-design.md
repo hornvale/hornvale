@@ -1,7 +1,7 @@
 # The Benchmark — the elevation datum
 
-**Campaign:** The Benchmark · **Date:** 2026-08-06 · **Status:** spec, awaiting G3
-review · **Branch:** `the-benchmark` off main @ 402670c5
+**Campaign:** The Benchmark · **Date:** 2026-08-06 · **Status:** COMPLETE — merged 2026-08-06;
+see [the chronicle](../../../book/src/chronicle/the-benchmark.md) · **Branch:** `the-benchmark` off main @ 402670c5
 
 A surveyor's benchmark is a permanent mark of *known* elevation — the physical
 admission that a height means nothing until you say what it is a height above.
@@ -131,7 +131,15 @@ its elevation sibling.
 that **interval types carry their datum**; `ReferenceElevation` does (the word
 "Reference" is the datum), and its sibling has been missing since. 0044 also
 names `ReferenceElevation` as the pilot "retiring the elevation bare-`f64`
-waiver" — a retirement this campaign completes rather than proposes.
+waiver".
+
+**That last clause turned out to be wrong, and the campaign disproved it rather
+than fulfilling it.** The audit at close retired **zero of the waiver's five
+sites**: each carries a genuine *absolute* reading kept deliberately beside the
+new height, because the two answer different questions. Checked empirically —
+deleting the tag at `LocaleFields.elevation_m` makes `type-audit check` fail.
+The doctrine now records the correction. "Elevation" was never one convention
+to retire, which is §4.1's polymorphism finding one level up.
 
 ---
 

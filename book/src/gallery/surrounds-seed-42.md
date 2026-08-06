@@ -1,6 +1,6 @@
 # The Purview of Seed 42
 
-The situated chart `scene/surrounds/v1` describes and `hornvale scene
+The situated chart `scene/surrounds/v2` describes and `hornvale scene
 surrounds --render ascii` draws, addressed outside a possession session --
 three genuinely different observers on the world of seed 42, each with the
 same 31-cell, radius-4 neighbourhood the possession's own `map` verb draws
