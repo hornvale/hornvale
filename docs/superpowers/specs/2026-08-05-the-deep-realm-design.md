@@ -169,40 +169,95 @@ between a shelter and a fortress, and it is the first thing C2c needs. The rest
 is anticipation, and the scale exists so those campaigns extend a rung rather
 than widen an enum.
 
-## 4. Depth: whose reach covers it
+## 4. Depth: whose extent covers it
 
 Something must decide what a place at depth D *is*, so that dwarven halls never
 generate beneath a drow city and descent has character rather than uniform
 noise. A fixed depth→zone table would prevent the collision and make every
 world's descent the same descent.
 
-**Instead, reaches grow from both ends of the column and a régime at depth D is
-whoever's reach covers D.**
+**Instead, extents grow from both ends of the column, and the régime at depth D
+is whoever's extent covers D.** The contact zone — where they meet — falls out
+as the frontier instead of being authored, the same way a process address space
+needs no arbiter when the heap grows up and the stack grows down.
+
+### 4.1 "Reach" is two different things, and they behave differently
+
+The two sides are not one primitive pointing two ways:
 
 ```
-  dwarves dig DOWN from the surface   reach set by holding size, age, history
-  the deep lives UP from below        reach set by its own extent
-  where the two meet                  the CONTACT ZONE — the frontier
+  a surface holding    EXCAVATES   a cost paid — a shaft, an effort
+  the deep             INHABITS    a range already occupied; nothing is dug
 ```
 
-Nothing arbitrates the boundary. **Dwarves cannot generate below their own
-reach and the deep cannot generate above its own**, so the collision is
-structurally impossible rather than checked for — the same trick a process
-address space uses when the heap grows up and the stack grows down. The contact
-zone falls out as the interesting place instead of being authored.
+Which forces a vocabulary the rest of this spec uses precisely:
 
-Because reach is a macro fact, depth character carries *this world's* history:
-a large old holding reaches deep, a failed one barely scratches the cover.
+```
+  excavated extent    depths a maker actually opened.  PHYSICAL.
+                      PERSISTS after the maker is gone.
+  inhabited extent    depths a maker currently occupies.  A CLAIM.
+                      LAPSES when the holding ends.
+  the chase           the depth a maker WANTED, set by what it dug for.
+  capability ceiling  the deepest it COULD cut — tech against rock.
+  terminal depth      where it stopped, and why.
+  barren interval     rock worked through but never occupied.
+  abandoned works     excavated extent that outlived its inhabited extent.
+```
 
-**Descent therefore has a forced path:**
+**The persistence asymmetry is the mechanism the Moria idea needs.** When an
+`Extractive` community ends `Fled` in year 1240 it leaves a hole *nobody's
+claim covers*. Something else can be in it. Drow inheriting a dwarven kingdom
+falls out of the asymmetry rather than being authored as a dungeon variation.
+
+**Collision-safety, stated honestly:** not "contiguous ranges cannot overlap"
+but **a depth belongs to at most one *active* claim**. Abandoned works are
+unclaimed and therefore available — a feature, not a leak. The cost is that an
+excavated extent is **not necessarily contiguous**: a mine follows a seam and
+leaves barren rock between workings. That is more faithful and it forfeits neat
+interval arithmetic.
+
+### 4.2 Why anyone digs — deferred to C2c, and why
+
+The interesting driver is not size. Substituting each candidate:
+
+```
+  peak_population   "we dug because we were many"           monotone, dull
+  duration          "we dug because we had time"            monotone, dull
+  tech horizon      "we dug because we could"               a CEILING
+  rock induration   "we dug as far as the rock allowed"     a CEILING
+  DEPOSIT DEPTH     "we dug because that is where it was"   <- the chase
+  CauseOfEnd        "we stopped because something stopped"  <- the bound
+```
+
+`deposit_depth(process)` already sorts ore into exactly these four bands today —
+placer and lateritic to `Regolith`, hydrothermal and pegmatite to `Basement`,
+magmatic to `Roots`. So a holding chasing magmatic ore digs to the roots
+*regardless of its size*, and a placer holding never goes deep however grand it
+becomes. Depth stops proxying prosperity and becomes a fact about what this
+mountain had.
+
+The natural composition is this codebase's own idiom — `carrying_capacity` is
+documented as a *"Liebig minimum"*:
+
+```
+  excavated extent = min(the chase, the capability ceiling)
+                     bounded by the terminal depth, from CauseOfEnd
+```
+
+**None of this is C2a's.** Every term is a property of *a holding that digs*,
+and C2a puts nobody underground. C2a owes the **shape** — two extents, one
+persisting — and none of the formula. What it must not do is bake in a single
+scalar `reach` that C2c then has to unpick.
+
+### 4.3 The forced path
 
 ```
   surface -> entrance -> natural void -> worked ground -> contact -> deep
 ```
 
-You cannot reach a deep claim without crossing whoever lies between. That is
-not enforced; it simply cannot be expressed, because a claim covers a
-contiguous depth range.
+You cannot reach a deep claim without crossing whoever lies between. Not
+enforced — simply inexpressible, because a claim covers a depth range and the
+descent is a walk.
 
 ## 5. What the macro world decides
 
@@ -255,7 +310,10 @@ underworld is the rock the ocean sits in.
 2. The chamber address space (§3.1), the derived-content function, and the edge
    symmetry invariant (§3.2).
 3. The override seam (§3.3) — the lookup, not any writer.
-4. Depth régime by reach (§4).
+4. Depth régime by extent (§4) — **the shape only**: the excavated/inhabited
+   split, the persistence asymmetry, and at-most-one-active-claim. C2a has
+   nobody underground, so the deep side is a placeholder and the surface side
+   does not exist yet.
 5. Descent at the vessel seam, following `dive`/`surface`'s shape.
 6. Three `Formation` variants from `CaveKind`: `KarstCave`, `LavaTube`,
    `FractureCave`.
@@ -267,6 +325,9 @@ underworld is the rock the ocean sits in.
   is fed by the cell above, which is the correct first model. Chemosynthetic
   cave life is The Keeping's step D.
 - Digging, carving, and any override *writer*.
+- **The reach formula** (§4.2) — the chase, the capability ceiling and the
+  terminal bound are all properties of a holding that digs, and C2a has none.
+  C2c owns them.
 - Dwarven halls (C2c); drow, duergar, svirfneblin (C2d).
 - **The gated-and-fast-changing quadrant** — hazards, sieges, breaches,
   collapse, flood. Named in §7.3 as a place, not built.
