@@ -51,6 +51,7 @@ pub mod classify;
 pub mod grow;
 pub mod occupancy;
 pub mod render;
+pub mod sight;
 
 pub use allocate::allocate;
 pub use anchor_cells::{anchor_cells, is_faithful};
@@ -61,6 +62,7 @@ pub use classify::{
 pub use grow::grow;
 pub use occupancy::{Occupancy, Refusal};
 pub use render::{Plan, render};
+pub use sight::shadowcast;
 
 use crate::brief::Brief;
 use crate::structure::Structure;
