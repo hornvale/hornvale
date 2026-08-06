@@ -240,3 +240,36 @@ fn check_mode_is_found_after_a_flag() {
         out.stdout.len()
     );
 }
+
+/// The matrix cannot drift from the columns it summarises.
+///
+/// Both derive from the same `resolve()` output, so this is cheap — and it
+/// closes the one gap a generated summary still has: that its figures are
+/// recomputed rather than read from the reports, and could diverge if either
+/// renderer changed without the other.
+#[test]
+fn the_matrix_agrees_with_each_committed_column() {
+    let root = workspace_root();
+    let matrix = std::fs::read_to_string(root.join("docs/audits/trope-matrix.md"))
+        .expect("the committed matrix");
+    for (corpus, stageable, inapplicable, total) in
+        [("polti-1895", 0, 1, 36), ("tvtropes-2012", 0, 62, 409)]
+    {
+        let column =
+            std::fs::read_to_string(root.join(format!("docs/audits/trope-coverage-{corpus}.md")))
+                .expect("the committed column");
+        let headline = format!("Stageable {stageable} of {total} ({inapplicable} inapplicable).");
+        assert!(
+            column.contains(&headline),
+            "{corpus}'s column does not carry `{headline}`"
+        );
+        assert!(
+            matrix.contains(corpus),
+            "the matrix does not name `{corpus}`"
+        );
+        assert!(
+            matrix.contains(&total.to_string()),
+            "the matrix does not carry {corpus}'s denominator {total}"
+        );
+    }
+}

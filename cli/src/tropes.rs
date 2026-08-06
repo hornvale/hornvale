@@ -1,9 +1,12 @@
 //! The Repertoire: score a frozen corpus of dramatic situations against the
 //! concept registry. Build-state only — no seed, no world save, no census.
 //!
-//! Wired into the CLI as `hornvale tropes report|check`; `cmd_tropes` in
-//! `main.rs` builds a real world and calls `load`/`resolve`/`render` on it,
-//! and Task 4 pins `render`'s output as a ratchet.
+//! Wired into the CLI as `hornvale tropes report|check|matrix`; `cmd_tropes`
+//! in `main.rs` builds a real world and calls `load`/`resolve`/`render` on
+//! it, and Task 4 pins `render`'s output as a ratchet. `matrix` runs the same
+//! resolution over every corpus in `CORPORA` and renders the comparison ADR
+//! 0095 deferred until a second catalogue existed — one column says what this
+//! world supplies, and only the matrix can say what the catalogues ask for.
 
 use hornvale_kernel::ConceptRegistry;
 use serde::Deserialize;
@@ -156,6 +159,13 @@ fn wrap(text: &str) -> String {
 pub fn artifact_path(corpus: &Corpus) -> String {
     format!("docs/audits/trope-coverage-{}.md", corpus.corpus)
 }
+
+/// Every corpus this repository scores against, in render order.
+///
+/// A constant rather than a directory scan: which corpora are columns is a
+/// deliberate act under ADR 0095, and a scan would silently add one.
+/// type-audit: bare-ok(artifact)
+pub const CORPORA: [&str; 2] = ["tropes/polti.trope.json", "tropes/tvtropes-2012.trope.json"];
 
 /// The command that regenerates a report, for the header.
 ///
@@ -381,6 +391,303 @@ pub fn render(
     s
 }
 
+/// How many situations in `corpus` name `bundle:{bundle}` in their
+/// requirements — the numerator of that bundle's share.
+///
+/// Counts the `bundle:` reference as authored, not its expansion: the unit of
+/// demand here is the bundle a catalogue reached for, and expanding first
+/// would silently merge two bundles that happen to share a token.
+fn bundle_demand(corpus: &Corpus, bundle: &str) -> usize {
+    let needle = format!("bundle:{bundle}");
+    corpus
+        .situations
+        .iter()
+        .filter(|st| st.requires.contains(&needle))
+        .count()
+}
+
+/// `n` of `total` as a whole percent, rounded half up.
+///
+/// Integer arithmetic on purpose. This figure is rendered into a
+/// byte-ratcheted artifact, and decision 0033 keeps floats away from
+/// serialization boundaries; there is no reason to spend a float here when
+/// the inputs are two counts.
+fn percent(n: usize, total: usize) -> usize {
+    if total == 0 {
+        0
+    } else {
+        (n * 200 + total) / (total * 2)
+    }
+}
+
+/// One catalogue's demand for one bundle, kept as counts beside the rendered
+/// percent so the document shows the reader the division it performed.
+struct Share {
+    /// Situations in that catalogue naming the bundle.
+    required: usize,
+    /// Situations in that catalogue, full stop — the denominator.
+    total: usize,
+    /// `required / total` as a whole percent, rounded half up.
+    percent: usize,
+}
+
+/// One row of the demand table.
+struct DemandRow {
+    /// Highest share minus lowest, in percentage points — the sort key, and
+    /// the whole point of the table.
+    gap: usize,
+    /// The bundle, without its `bundle:` prefix.
+    bundle: String,
+    /// One share per column, in the caller's column order.
+    cells: Vec<Share>,
+}
+
+/// One catalogue's bundles ranked by share, descending, ties broken by name.
+///
+/// Bundles the catalogue never requires are not ranked: a zero share is not a
+/// weak demand, it is the absence of one, and a tail of zeroes sorted by name
+/// would put the fork between two catalogues in an alphabetical accident.
+fn ranked_bundles(corpus: &Corpus) -> Vec<(String, usize)> {
+    let mut demand: BTreeMap<String, usize> = BTreeMap::new();
+    for st in &corpus.situations {
+        for r in &st.requires {
+            if let Some(b) = r.strip_prefix("bundle:") {
+                *demand.entry(b.to_string()).or_default() += 1;
+            }
+        }
+    }
+    let mut ranked: Vec<(String, usize)> = demand.into_iter().filter(|(_, n)| *n > 0).collect();
+    ranked.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    ranked
+}
+
+/// Render the matrix over corpora that ADR 0095 deferred until a second
+/// catalogue existed.
+///
+/// Not a scoreboard and not a merge of the columns: the columns each answer
+/// "what does this world supply against that catalogue", and both answer
+/// zero. What only a matrix can say is what the catalogues *ask for*, and
+/// they ask for different things. Every figure below is recomputed from the
+/// corpora and the registry — nothing is parsed back out of a rendered
+/// column, so this document cannot inherit a column's mistake, and the
+/// integration test pins the two derivations together.
+/// type-audit: bare-ok(identifier-text: columns), bare-ok(prose: return)
+pub fn render_matrix(
+    columns: &[(&Corpus, &BTreeMap<String, Outcome>)],
+    registry: &ConceptRegistry,
+) -> String {
+    let mut s = String::new();
+    s.push_str(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale tropes matrix`. -->\n\n",
+    );
+    s.push_str("# The trope matrix\n\n");
+
+    // The disclaimer the columns carry, before any figure. A matrix is more
+    // easily mistaken for a scoreboard than a single column is — two numbers
+    // side by side read as a contest unless something says otherwise first.
+    s.push_str(&wrap(
+        "This measures reach against *these* catalogues. It is not a verdict on the world, \
+         and it scores **representability only** — whether an agent could plan or recognise \
+         a situation is not measured here.",
+    ));
+    s.push_str("\n\n");
+    s.push_str(&wrap(
+        "Neither is it a ranking of the catalogues against each other. Each is an instrument \
+         carrying a declared bias (ADR 0095), so a column is a reading taken through that \
+         bias and nothing more. The finding a single column cannot carry is where the \
+         instruments **disagree** — which is what the demand table below is for.",
+    ));
+    s.push_str("\n\n");
+
+    // Per column: what its own report says, and a pointer to it. The counts
+    // come from this run's `resolve`, not from the committed report, which is
+    // what makes the drift test meaningful.
+    s.push_str("## Columns\n\n");
+    let mut all_zero = !columns.is_empty();
+    let mut rows = String::new();
+    for (corpus, out) in columns {
+        let stageable = out.values().filter(|o| **o == Outcome::Stageable).count();
+        let inapplicable = out
+            .values()
+            .filter(|o| matches!(o, Outcome::Inapplicable(_)))
+            .count();
+        all_zero &= stageable == 0;
+        let path = artifact_path(corpus);
+        let file = path.rsplit('/').next().unwrap_or(&path);
+        rows.push_str(&format!(
+            "| `{}` | {stageable} of {} | {inapplicable} | [{file}](./{file}) |\n",
+            corpus.corpus,
+            out.len()
+        ));
+    }
+    s.push_str(&wrap(&format!(
+        "All columns resolve against one registry of {} tokens, built once per run, so a \
+         difference between columns is a difference between catalogues and never between \
+         two worlds.",
+        registry_tokens(registry).len()
+    )));
+    s.push_str("\n\n| Corpus | Stageable | Inapplicable | Report |\n|---|---|---|---|\n");
+    s.push_str(&rows);
+    s.push('\n');
+    for (corpus, _) in columns {
+        s.push_str(&wrap(&format!(
+            "- `{}` — {}",
+            corpus.corpus, corpus.provenance
+        )));
+        s.push('\n');
+    }
+
+    // The table only a matrix can hold: what each catalogue demands, side by
+    // side, ordered by how much they differ.
+    let mut bundles: BTreeSet<String> = BTreeSet::new();
+    for (corpus, _) in columns {
+        for (b, _) in ranked_bundles(corpus) {
+            bundles.insert(b);
+        }
+    }
+    let mut table: Vec<DemandRow> = bundles
+        .iter()
+        .map(|b| {
+            let cells: Vec<Share> = columns
+                .iter()
+                .map(|(corpus, out)| {
+                    let required = bundle_demand(corpus, b);
+                    Share {
+                        required,
+                        total: out.len(),
+                        percent: percent(required, out.len()),
+                    }
+                })
+                .collect();
+            let hi = cells.iter().map(|c| c.percent).max().unwrap_or(0);
+            let lo = cells.iter().map(|c| c.percent).min().unwrap_or(0);
+            DemandRow {
+                gap: hi - lo,
+                bundle: b.clone(),
+                cells,
+            }
+        })
+        .collect();
+    // Descending gap, then bundle name: the gap is the point of the table, and
+    // the name keeps equal gaps — of which there are many at the tail — in a
+    // stable order across runs.
+    table.sort_by(|a, b| b.gap.cmp(&a.gap).then(a.bundle.cmp(&b.bundle)));
+
+    s.push_str("\n## Demand\n\n");
+    s.push_str(&wrap(&format!(
+        "Every bundle either catalogue requires ({}), with the share of that catalogue's \
+         situations requiring it. Shares are counted over the corpora themselves — a bundle's \
+         numerator is the situations naming it, the denominator is the whole catalogue — and \
+         are not read back out of the rendered columns. **Gap** is the difference between the \
+         highest and lowest share, in percentage points, and is what the table is sorted by; \
+         equal gaps sort by bundle name.",
+        bundles.len()
+    )));
+    s.push_str("\n\n");
+    if all_zero {
+        s.push_str(&wrap(
+            "Every column above reads 0 stageable, so nothing in this table is a score. It \
+             says what each catalogue asks the world for, and the catalogues do not agree.",
+        ));
+        s.push_str("\n\n");
+    }
+    s.push_str("| Bundle |");
+    for (corpus, _) in columns {
+        s.push_str(&format!(" `{}` |", corpus.corpus));
+    }
+    s.push_str(" Gap |\n|---|");
+    for _ in columns {
+        s.push_str("---|");
+    }
+    s.push_str("---|\n");
+    for row in &table {
+        s.push_str(&format!("| `bundle:{}` |", row.bundle));
+        for c in &row.cells {
+            s.push_str(&format!(" {}% ({}/{}) |", c.percent, c.required, c.total));
+        }
+        s.push_str(&format!(" {} |\n", row.gap));
+    }
+
+    // Where the two rankings run together and where they part. The table above
+    // is sorted by disagreement, so it buries the agreement; this says it.
+    s.push_str("\n## Agreement and fork\n\n");
+    s.push_str(&wrap(
+        "Each catalogue's own bundles ranked by share within that catalogue — descending, \
+         ties by name — read down together until they part.",
+    ));
+    s.push_str("\n\n");
+    let rankings: Vec<Vec<(String, usize)>> =
+        columns.iter().map(|(c, _)| ranked_bundles(c)).collect();
+    let totals: Vec<usize> = columns.iter().map(|(_, out)| out.len()).collect();
+    let mut shared = 0;
+    while let Some(head) = rankings.first().and_then(|r| r.get(shared)) {
+        if rankings
+            .iter()
+            .all(|r| r.get(shared).map(|(b, _)| b) == Some(&head.0))
+        {
+            shared += 1;
+        } else {
+            break;
+        }
+    }
+    if shared == 0 {
+        s.push_str(&wrap(
+            "The catalogues do not agree on even their first bundle.",
+        ));
+        s.push_str("\n\n");
+    } else {
+        let ranks = if shared == 1 {
+            "their first rank".to_string()
+        } else {
+            format!("their first {shared} ranks")
+        };
+        s.push_str(&wrap(&format!("They agree without exception on {ranks}:")));
+        s.push_str("\n\n");
+        for i in 0..shared {
+            let (bundle, _) = &rankings[0][i];
+            let shares: Vec<String> = rankings
+                .iter()
+                .zip(&totals)
+                .zip(columns)
+                .map(|((r, total), (corpus, _))| {
+                    format!("{}% in `{}`", percent(r[i].1, *total), corpus.corpus)
+                })
+                .collect();
+            s.push_str(&format!(
+                "{}. `bundle:{bundle}` — {}\n",
+                i + 1,
+                shares.join(", ")
+            ));
+        }
+        s.push('\n');
+    }
+    let forked: Vec<String> = rankings
+        .iter()
+        .zip(&totals)
+        .zip(columns)
+        .filter_map(|((r, total), (corpus, _))| {
+            r.get(shared).map(|(b, n)| {
+                format!(
+                    "- `{}` asks next for `bundle:{b}` ({}%)\n",
+                    corpus.corpus,
+                    percent(*n, *total)
+                )
+            })
+        })
+        .collect();
+    if forked.is_empty() {
+        s.push_str(&wrap("Neither catalogue ranks a bundle beyond that."));
+        s.push('\n');
+    } else {
+        s.push_str(&wrap(&format!("They diverge at rank {}:", shared + 1)));
+        s.push_str("\n\n");
+        for line in &forked {
+            s.push_str(line);
+        }
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -585,6 +892,84 @@ mod tests {
         assert!(
             text.contains("| `bundle:ranked-bundle` | 1 |"),
             "the genuinely ranked bundle lost its row:\n{text}"
+        );
+    }
+
+    /// The matrix computes each share against its **own** catalogue's
+    /// denominator and sorts by the gap between them.
+    ///
+    /// The failure this guards is the one a two-corpus document invites: a
+    /// share divided by the wrong total, or by a pooled total across corpora.
+    /// Both mistakes leave a plausible-looking percentage, and neither the
+    /// byte ratchet nor the drift test can see them — those pin the matrix to
+    /// itself and to the columns' headlines, not to the arithmetic. The
+    /// denominators here (2 and 4) are deliberately different, so a pooled
+    /// or swapped total renders a different number.
+    #[test]
+    fn matrix_shares_are_per_catalogue_and_sorted_by_the_gap() {
+        let small = load(
+            r#"{"corpus":"small","provenance":"p","frozen":"f",
+                "bundles":{"common":["predicate:a"],"lopsided":["predicate:b"]},
+                "situations":[
+                  {"id":"s1","name":"A","actants":{},"requires":["bundle:common","bundle:lopsided"],"excluded_by":[]},
+                  {"id":"s2","name":"B","actants":{},"requires":["bundle:common"],"excluded_by":[]}]}"#,
+        )
+        .expect("corpus parses");
+        let large = load(
+            r#"{"corpus":"large","provenance":"p","frozen":"f",
+                "bundles":{"common":["predicate:a"],"other":["predicate:c"]},
+                "situations":[
+                  {"id":"s1","name":"A","actants":{},"requires":["bundle:common","bundle:other"],"excluded_by":[]},
+                  {"id":"s2","name":"B","actants":{},"requires":["bundle:common","bundle:other"],"excluded_by":[]},
+                  {"id":"s3","name":"C","actants":{},"requires":["bundle:common"],"excluded_by":[]},
+                  {"id":"s4","name":"D","actants":{},"requires":["bundle:common"],"excluded_by":[]}]}"#,
+        )
+        .expect("corpus parses");
+        let registry = hornvale_kernel::ConceptRegistry::default();
+        let a = resolve(&small, &registry);
+        let b = resolve(&large, &registry);
+        let text = render_matrix(&[(&small, &a), (&large, &b)], &registry);
+
+        // 2/2 and 4/4 are both 100% — a pooled denominator of 6 would render
+        // 33% and 67% here, and a swapped one 50% and 200%.
+        assert!(
+            text.contains("| `bundle:common` | 100% (2/2) | 100% (4/4) | 0 |"),
+            "the shared bundle's row is wrong:\n{text}"
+        );
+        assert!(
+            text.contains("| `bundle:lopsided` | 50% (1/2) | 0% (0/4) | 50 |"),
+            "the row for a bundle only `small` requires is wrong:\n{text}"
+        );
+        assert!(
+            text.contains("| `bundle:other` | 0% (0/2) | 50% (2/4) | 50 |"),
+            "the row for a bundle only `large` requires is wrong:\n{text}"
+        );
+        // Widest gap first, so the disagreement leads; the two 50s tie and
+        // fall back to bundle name.
+        let lopsided = text.find("`bundle:lopsided` |").expect("lopsided row");
+        let other = text.find("`bundle:other` |").expect("other row");
+        let common = text.find("`bundle:common` |").expect("common row");
+        assert!(
+            lopsided < other && other < common,
+            "the table is not sorted by gap then name:\n{text}"
+        );
+        // Both rank `common` first at 100%, then part.
+        assert!(
+            text.contains("They agree without exception on their first rank:"),
+            "no agreement sentence:\n{text}"
+        );
+        assert!(
+            text.contains("1. `bundle:common` — 100% in `small`, 100% in `large`"),
+            "the agreed rank is not spelled out:\n{text}"
+        );
+        assert!(
+            text.contains("They diverge at rank 2:"),
+            "no fork sentence:\n{text}"
+        );
+        assert!(
+            text.contains("- `small` asks next for `bundle:lopsided` (50%)")
+                && text.contains("- `large` asks next for `bundle:other` (50%)"),
+            "the fork does not name what each catalogue asks for next:\n{text}"
         );
     }
 

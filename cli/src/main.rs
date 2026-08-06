@@ -84,6 +84,9 @@ usage:
                           registry (report: render to stdout; check: diff against the
                           artifact committed for that corpus's id; default corpus:
                           tropes/polti.trope.json)
+  hornvale tropes matrix   render every corpus side by side: what each catalogue demands,
+                          ordered by where they disagree (ignores --corpus — the columns
+                          are the declared list, not the caller's choice)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -852,6 +855,34 @@ fn cmd_concepts(args: &[String]) -> Result<(), String> {
 /// because every predicate registers up front; this exercises the fuller
 /// pipeline as a smoke test.
 fn cmd_tropes(args: &[String]) -> Result<(), String> {
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
+    // and exit 0 — a false pass for anything gating on `check`.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `tropes` has no valueless flags. It is not a property of
+    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
+    // adding an equivalent here would resurrect the bug above. If `tropes`
+    // ever gains a valueless flag, this loop must learn which flags take
+    // values.
+    //
+    // Parsed BEFORE the corpus is read, so `matrix` can return without ever
+    // touching `--corpus`: the matrix is over every corpus in
+    // `tropes::CORPORA`, and a mode that scores all of them must not fail
+    // because the caller happened to pass a `--corpus` that does not exist.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    if mode == Some("matrix") {
+        return cmd_tropes_matrix();
+    }
     let path = flag_value(args, "--corpus").unwrap_or("tropes/polti.trope.json");
     let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     let corpus = tropes::load(&json)?;
@@ -864,26 +895,6 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     let outcomes = tropes::resolve(&corpus, &world.registry);
-    // Mode is positional but may follow flags, so scan past each flag AND its
-    // value. `args.get(1)` alone let `tropes --corpus X check` emit a report
-    // and exit 0 — a false pass for anything gating on `check`.
-    //
-    // This consumes the token after EVERY `--` flag, which is correct only
-    // because `tropes` has no valueless flags. It is not a property of
-    // `flag_value`: `cmd_concepts` takes `--manifest` with no value, and
-    // adding an equivalent here would resurrect the bug above. If `tropes`
-    // ever gains a valueless flag, this loop must learn which flags take
-    // values.
-    let mut mode = None;
-    let mut rest = args.iter().skip(1);
-    while let Some(a) = rest.next() {
-        if a.starts_with("--") {
-            rest.next();
-        } else {
-            mode = Some(a.as_str());
-            break;
-        }
-    }
     match mode {
         Some("report") | None => {
             print!(
@@ -906,8 +917,42 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
                 ))
             }
         }
-        Some(other) => Err(format!("tropes: unknown mode '{other}' (report|check)")),
+        Some(other) => Err(format!(
+            "tropes: unknown mode '{other}' (report|check|matrix)"
+        )),
     }
+}
+
+/// The matrix over every corpus in `tropes::CORPORA`.
+///
+/// Deliberately takes no arguments: ADR 0095 makes the set of columns a
+/// declared list, not a caller's choice, so there is no `--corpus` to honour
+/// here and nothing the caller can pass that changes which corpora are
+/// scored. The world is built once and every corpus resolved against it —
+/// `build_world` is the expensive call, and a per-corpus build would also let
+/// two columns silently disagree because they were measured against different
+/// registries.
+fn cmd_tropes_matrix() -> Result<(), String> {
+    let world = world_builder::build_world(
+        Seed(0),
+        &SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+    )
+    .map_err(|e| e.to_string())?;
+    let mut corpora = Vec::new();
+    for path in tropes::CORPORA {
+        let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        corpora.push(tropes::load(&json)?);
+    }
+    let resolved: Vec<_> = corpora
+        .iter()
+        .map(|c| (c, tropes::resolve(c, &world.registry)))
+        .collect();
+    let columns: Vec<_> = resolved.iter().map(|(c, out)| (*c, out)).collect();
+    print!("{}", tropes::render_matrix(&columns, &world.registry));
+    Ok(())
 }
 
 fn cmd_streams() -> Result<(), String> {
