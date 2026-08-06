@@ -668,6 +668,17 @@ fn report_the_xorn_before_and_after() {
 }
 ```
 
+> **HAZARD from Task 1 (ledger #19).** Three `unreachable!()` panics now guard
+> combinations that were impossible when Task 1 shipped, and **this task is the
+> first plausible caller of all three**:
+> `domains/climate/src/facets.rs:316` panics if `BiomeExpr::biome()` is called
+> with a cave `Formation`; `facets.rs:305` and `variants.rs:727` panic on a rock
+> `Stratum`. They are correct and deliberate — failing loudly beats silently
+> wrong data — but if deriving subterranean conditions leads you to construct a
+> cave `BiomeExpr`, **do not reach for a wildcard arm to make the panic go
+> away.** Decide what a cave's legacy `Biome` projection actually is, or route
+> around `biome()` entirely, and say which in the commit.
+
 - [ ] **Step 2: Derive the conditions**
 
 A chamber's conditions come from the cell above it and its band: temperature
