@@ -3227,14 +3227,23 @@ mod tests {
     /// unchanged at the derivation layer; only which of them currently carries
     /// a doctrine moved. So seed 1's hobgoblin row is dropped (folk-only, no
     /// doctrine to contrast) and seed 3's hobgoblin row is added as `false`
-    /// (organized, depth `None`). Both arms remain exercised (`true`: seed 2
-    /// hobgoblin, seed 3 goblin; `false`: seeds 1/2 goblin, seed 3 hobgoblin).
+    /// (organized, depth `None`).
+    ///
+    /// The Tense (2026-08-05) dropped the two HOBGOBLIN rows. Seed 2's and
+    /// seed 3's hobgoblins are no longer organized at all — they carry no
+    /// doctrine section for this test to read — because era-varying capacity
+    /// shrank settlements below the emergent-caste threshold that mints a
+    /// shaman (the same three peoples `diachronic.rs`'s ladder table records
+    /// falling Predictive -> Counted; see its comment for the mechanism).
+    /// Both arms are still exercised, which is the property this table exists
+    /// for: `true` via seed 3 goblin, `false` via seeds 1 and 2 goblin. The
+    /// rows are REMOVED rather than re-pinned to `false`, because "not
+    /// organized" is a different state from "organized with depth None" and
+    /// conflating them would let the test pass on a culture it cannot read.
     const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
-        (1, "goblin", false),    // None
-        (2, "goblin", false),    // None
-        (2, "hobgoblin", true),  // Particle
-        (3, "goblin", true),     // Particle
-        (3, "hobgoblin", false), // None
+        (1, "goblin", false), // None
+        (2, "goblin", false), // None
+        (3, "goblin", true),  // Particle
     ];
 
     /// C7 T3's taught-contrast law (spec §3.5, the visible payoff): for
@@ -4329,24 +4338,34 @@ mod tests {
             "the sweep should find at least one real Mystery entry (day-length-std)"
         );
 
-        // Pin the LANG-48 × C6 case on real data: seed 4's kobold priesthood
-        // keeps the moon-period-ratio (bare) while its folk explain it
-        // (CycleReturn) — a Contested whose counter-annotation quotes the
-        // folk's own ratio because-clause ("The moons keep their measure …").
-        let vol4 = render_volume(&generated(4));
-        let kobold4 = vol4
+        // Pin the LANG-48 × C6 case on real data: a priesthood keeps a claim
+        // bare while its folk explain it, so the Contested renders a
+        // counter-annotation quoting the folk's own because-clause.
+        //
+        // Re-pointed by The Tense (2026-08-05) from seed 4's kobold, which is
+        // no longer organized. Two things were checked before re-pointing
+        // rather than assumed. The general case is HEALTHY: eleven such
+        // counter-annotations exist across seeds 1..=5, so `contested_seen`
+        // above is not carrying this alone. But the specific FLAVOUR moved —
+        // every survivor is a moon-CROSSING explanation, and the
+        // moon-period-ratio variant this pin used to illustrate ("The moons
+        // keep their measure …") does not occur anywhere in seeds 1..=5 now.
+        // Recorded as a coverage note: the schema is unexercised in this
+        // window, not known-broken.
+        let vol1 = render_volume(&generated(1));
+        let bugbear1 = vol1
             .chorus
             .iter()
-            .find(|s| s.kind == "kobold")
+            .find(|s| s.kind == "bugbear")
             .and_then(|s| s.doctrine.as_ref())
-            .expect("seed 4 kobold is organized");
+            .expect("seed 1 bugbear is organized");
         assert!(
-            kobold4.annotations.contains(
-                &"— though the folk say The moons keep their measure, as all things return."
-                    .to_string()
+            bugbear1.annotations.contains(
+                &"— though the folk say The moons cross because they are Boko's kin.".to_string()
             ),
-            "the moon-period-ratio Contested renders its counter-annotation: {:?}",
-            kobold4.annotations
+            "the Contested renders its counter-annotation quoting the folk's own \
+             because-clause: {:?}",
+            bugbear1.annotations
         );
 
         // The Contested half: a synthetic folk/doctrine pair over one
@@ -5135,12 +5154,14 @@ mod tests {
                 "The Mepmee's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                // The Tense (2026-08-05): the Webwee (seed 2's hobgoblin) lost
+                // their priesthood, so the three TAUGHT lines are gone and only
+                // the witnessing line remains. They still see the sky darken —
+                // the observation is untouched — they simply have nobody left
+                // to number it or forecast the next one. Same three peoples
+                // `diachronic.rs`'s ladder table records dropping Predictive ->
+                // Counted with an UNCHANGED witnessed count.
                 "Among the Webwee, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Webwee numbers the darkenings: 49.".to_string(),
-                "The next darkening, it teaches, comes on day 36337.".to_string(),
-                "The Webwee's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
                 "Among the Foetjee, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Foetjee numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
@@ -5165,9 +5186,6 @@ mod tests {
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the Mepmee's priesthood taught the darkening would come on day \
-                 35328; it came on day 35609 instead."
-                    .to_string(),
-                "In truth, the Webwee's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the Foetjee's priesthood taught the darkening would come on day \
@@ -5229,12 +5247,10 @@ mod tests {
                 "The Zhooqsa's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                // The Tense (2026-08-05): the Zhooqsha (seed 3's hobgoblin) lost
+                // their priesthood too — the third and last of the three
+                // cultures this campaign unorganized. Witnessing line only.
                 "Among the Zhooqsha, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Zhooqsha numbers the darkenings: 32.".to_string(),
-                "The next darkening, it teaches, comes on day 36125.".to_string(),
-                "The Zhooqsha's own priesthood taught wrongly, and could be shown wrong by any \
-                 who kept their own count."
-                    .to_string(),
                 "Among the Shoammoem, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shoammoem numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
@@ -5261,9 +5277,6 @@ mod tests {
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Zhooqsa's priesthood taught the darkening would come on day \
-                 35583; it came on day 35030 instead."
-                    .to_string(),
-                "In truth, the Zhooqsha's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Shoammoem's priesthood taught the darkening would come on day \
