@@ -2202,10 +2202,15 @@ impl<'w> Session<'w> {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
+        // The chart legend resolves by the same word rule as the prose catalog.
+        // A mark's name is a plain `<kind> of <place>` construction, so deriving
+        // its words mechanically is safe here in a way it is not for a
+        // comma-qualified room descriptor — which is why the descriptor declares
+        // its noun phrase instead (The Handle, spec §2).
         match scene
             .legend
             .iter()
-            .find(|e| e.noun.to_lowercase() == wanted)
+            .find(|e| crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum).matches(&wanted))
         {
             Some(e) => Turn::Out(e.datum.clone()),
             None => Turn::Out(format!("You see no {noun} here.")),
@@ -2740,6 +2745,39 @@ mod tests {
             !reply.starts_with("You see no"),
             "a lens failure must never masquerade as 'nothing here': got \
              {reply:?}"
+        );
+    }
+
+    /// The chart legend resolves by word, not by whole string. This arm is a
+    /// SECOND matcher, separate from the prose catalog's, and The Handle's plan
+    /// changed only the first — so a walker could `examine forest` but not
+    /// `examine bugbear`, with the mark's full name sitting in the legend the
+    /// `map` verb had just printed. Two matchers for one question is how they
+    /// drift; this pins the second to the same rule as the first.
+    #[test]
+    fn a_legend_mark_resolves_by_word_and_not_only_by_its_whole_name() {
+        let w = seam_world();
+        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let scene = session.purview(0).expect("the chart builds");
+        let mark = scene
+            .legend
+            .iter()
+            .find(|e| e.noun.split_whitespace().count() > 1)
+            .expect("some legend entry is a multi-word name");
+        let head = mark
+            .noun
+            .split_whitespace()
+            .next()
+            .expect("a multi-word name has a first word")
+            .to_lowercase();
+        let reply = match session.examine(&head) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "the legend names {:?} and examine refuses its first word {head:?}: {reply}",
+            mark.noun
         );
     }
 

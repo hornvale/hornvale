@@ -59,6 +59,17 @@ Fixes `examine forest`, `examine canopy`, `examine bugbear` — every entry whos
 display name is *itself* the nameable phrase. The descriptor, sky and underworld
 come in Tasks 2–4.
 
+**✅ Corrected in flight.** This header was wrong about `bugbear`, and the
+implementer caught it. `examine` has **two** matchers: the prose catalog, and a
+separate chart-legend arm (`session.rs:2205`) doing its own exact-string
+equality against `scene.legend`. Step 5's code changes only the first, so
+`forest` and `canopy` answered while `bugbear` still refused — with the mark's
+full name sitting in the legend `map` had just printed. Two matchers for one
+question is exactly how they drift. The legend arm now resolves by the same
+`Noun::matches` rule, and `a_legend_mark_resolves_by_word_and_not_only_by_its_whole_name`
+pins it; reverting the arm to equality fails that test with *"the legend names
+\"bugbear of Goodogododaga\" and examine refuses its first word \"bugbear\""*.
+
 **Files:**
 - Modify: `windows/vessel/src/focalize.rs` (the `Focalized` struct and `TemplateFocalizer::render`)
 - Modify: `windows/vessel/src/session.rs` (`lens_nouns` ~:2168, `examine` ~:2186, and the snapshot builder ~:693)
