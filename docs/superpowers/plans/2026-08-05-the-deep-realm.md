@@ -226,11 +226,28 @@ git commit -m "test(deep-realm): Task 0 — is there an underworld worth buildin
 
 ### Task 1: The realm — `Medium::Rock`, a graduated `Access`, cave formations
 
-**Files:**
-- Modify: `domains/climate/src/facets.rs`
-- Modify: `windows/locale/src/grammar.rs` (the one exhaustive `Medium` match)
-- Modify: `domains/climate/src/biome.rs`, `crops.rs`, `variants.rs` (exhaustive `Formation` matches)
+**Files** *(corrected 2026-08-06 by reading each file — ledger #17; the
+original list was wrong in both directions)*:
+- Modify: `domains/climate/src/facets.rs` — `Medium`, `Access`, `Stratum`,
+  `Formation`, `Realm::UNDERDARK`, `Realm::strata()` (matches on `self.medium`),
+  and the exhaustive `Stratum` match at **`facets.rs:211`** inside `biome()`
+- Modify: `domains/climate/src/variants.rs` — **two** matches, not one:
+  the exhaustive `match (formation, ground)` at **:354**, and the exhaustive
+  inner `match stratum` at **:655**
+- Modify: `windows/vessel/src/session.rs` — the exhaustive `Stratum` match at
+  **:2394** (six arms, no catch-all). **The original file list omitted this
+  crate entirely.**
+- Modify: `windows/locale/src/grammar.rs` — the exhaustive `Medium` match in
+  `micro_habitat()` (~:86, not :91-94)
 - Modify: `domains/climate/tests/` — add coverage beside the existing facet tests
+- **NOT `biome.rs`** — it only *constructs* `Formation`s; it has no exhaustive
+  match over them.
+- **NOT `crops.rs`** — `arable()` at :58 is a `matches!` fallthrough that
+  already returns `false` for any unlisted formation, which is the correct
+  answer for a cave. Confirm, do not edit.
+
+Let the compiler find any match this list still misses; `-D warnings` plus
+exhaustiveness will name them. Do **not** add a catch-all arm to silence one.
 
 **Interfaces:**
 - Produces: `Medium::Rock`, `Access` as a graduated enum, `Realm::UNDERDARK`,
@@ -246,6 +263,9 @@ In `domains/climate/tests/facets.rs` (create if absent):
 fn the_underworld_is_a_realm_with_a_rock_column() {
     let r = hornvale_climate::Realm::UNDERDARK;
     assert_eq!(r.medium, hornvale_climate::Medium::Rock);
+    // FIVE bands, mirroring hornvale_terrain::BandKind exactly. See ledger
+    // #18A / rule 1a: a four-band ladder cannot absorb the open depth-weld
+    // fix without relocating every ChamberAddr.
     assert_eq!(
         r.strata(),
         &[
@@ -253,8 +273,20 @@ fn the_underworld_is_a_realm_with_a_rock_column() {
             hornvale_climate::Stratum::Cover,
             hornvale_climate::Stratum::Basement,
             hornvale_climate::Stratum::Roots,
+            hornvale_climate::Stratum::Underneath,
         ]
     );
+}
+
+#[test]
+fn the_rock_ladder_matches_terrains_band_roster_one_for_one() {
+    // Decision 0094: a shared roster, never a shared derivation. Climate may
+    // not import terrain, so this is the only thing keeping the duplicate
+    // honest. If terrain adds a sixth BandKind, this reddens rather than
+    // silently giving the underworld a band it has no rock for.
+    //
+    // Assert the COUNT and the ORDER by name. Do not cast either enum to an
+    // integer -- that would weld the ladder to a declaration position.
 }
 
 #[test]
@@ -275,13 +307,51 @@ Expected: FAIL — `Medium::Rock` does not exist.
 - [ ] **Step 3: Add the variants**
 
 `Access` gains the seven rungs of spec §3.4 and derives `PartialOrd, Ord` so the
-ladder is orderable. `Dive` is **kept** — the Waterworld uses it — and takes its
-place on the ladder. Document each rung with the one-line gloss from the spec.
+ladder is orderable. Document each rung with the one-line gloss from the spec.
 
-`Stratum` gains `Regolith, Cover, Basement, Roots`, each documented as a **rock
-depth register**, explicitly not something you move between (spec §3).
+**Declaration order is load-bearing (ledger #18B).** The seven rock rungs come
+**first**, in spec order, then the two existing realm-entry modes:
+
+```rust
+Sealed, Crack, CaveMouth, WorkedWay, Gate, ShaftNet, Merged, Default, Dive
+```
+
+Both `Default` (the Overworld) and `Dive` (the Waterworld) are **kept** — the
+original plan text mentioned only `Dive` and left `Default` unaddressed. Neither
+is an aperture, so both sort *above* the ladder rather than inside it, and the
+type's doc comment must say so: **`Ord` is meaningful over the rock rungs only;
+a comparison involving `Default` or `Dive` is not.**
+
+Do not put them first. `Sealed` means "the void exists and is unreachable", so
+`Default < Sealed` would make the freely-walkable overworld sort as *less*
+accessible than a sealed void — a term anti-correlated with the scale it joins,
+which is exactly the bug class this program names and which The Hollow then
+committed in its own new code.
+
+Reordering is safe and this was **verified, not assumed**: `Access` derives only
+`Clone, Copy, Debug, PartialEq, Eq` (no `Serialize`), has no exhaustive match
+anywhere, and has no consumer outside `facets.rs`.
+
+`Stratum` gains **five** rock bands — `Regolith, Cover, Basement, Roots,
+Underneath` — each documented as a **rock depth register**, explicitly not
+something you move between (spec §3).
+
+**Five, not four (ledger #18A).** The roster mirrors `hornvale_terrain::BandKind`
+exactly, which has five variants. Task 0 measured `Underneath` at **0 of 55,947
+caves**, so it is tempting to omit it as a dead branch. Omitting it would break
+**rule 1a**: `ChamberAddr.band` indexes this ladder, and a four-band ladder
+cannot absorb the open `MAP-cave-depth-weld` fix — which may make `Underneath`
+occur — without relocating every address. `Underneath` is unreached by
+*measurement*, not by *construction*, and that is the distinction that separates
+it from The Hollow's genuinely dead branches. **Assert that it is currently
+empty**, so that if it ever fills, someone notices.
 
 `Medium` gains `Rock` — "solid, with voids; you move through the gaps in it."
+
+`Realm::UNDERDARK` takes `access: Access::CaveMouth` — the realm's *canonical*
+entrance. **Document at the constant** that an individual chamber's aperture is
+a per-place property Task 2's lattice carries, and that this realm-level value
+is not a claim about any particular cave (ledger #18C).
 
 `Formation` gains `KarstCave`, `LavaTube`, `FractureCave`, documented as
 corresponding one-to-one with `hornvale_terrain::CaveKind`. **Climate may not
