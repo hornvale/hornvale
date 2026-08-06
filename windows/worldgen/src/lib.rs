@@ -1258,7 +1258,7 @@ pub fn per_species_suitability(
 }
 
 /// Stage 5's dimensional Michaelis-Menten ceiling, in **headcount**. DERIVED, not
-/// authored (decision 0104; The Tilth spec §5a): `68.87 / (0.8138 × 0.6035)`, where
+/// authored (decision 0105; The Tilth spec §5a): `68.87 / (0.8138 × 0.6035)`, where
 /// 68.87 is the median capacity on today's good ground, 0.8138 the MM fraction at
 /// good-ground supply, and 0.6035 the measured median Liebig tolerance there. The
 /// target is the *pre-campaign* good-ground level, which is legitimate gauge-fixing:

@@ -29,7 +29,10 @@ pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
 };
-pub use features::{Cave, CaveKind, Commodity, Deposit, DepositProcess};
+pub use features::{
+    Cave, CaveKind, Commodity, Deposit, DepositProcess, cave_process, fracture_proneness,
+    lavatube_proneness,
+};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
     Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,

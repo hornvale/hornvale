@@ -36,7 +36,7 @@ cell to boolean. It has no species argument and cannot acquire one without
 becoming a capacity field. Capacity already carries both indices. The collapse
 had exactly one admissible direction, and after it there is one oracle:
 **habitability is a relation between a people, a cell, and an era** (decision
-0105).
+0106).
 
 ## What a mask leaves behind when it dies
 

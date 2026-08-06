@@ -210,7 +210,7 @@ than only modulate — the defect The Vacancy named and The Keeping traced) and 
 **era** index (so a glacial maximum makes ground poor instead of switching it
 off). Three mutually inconsistent oracles for the word "habitable" — an era mask,
 a capacity test, and a separate refugia rule, the first two disagreeing over
-roughly half of all land — collapsed to one (decision 0105).
+roughly half of all land — collapsed to one (decision 0106).
 
 None of that is yet a promotion, and the reason is worth stating precisely. What
 the arc bought is that the model can now *express* the thing it was previously

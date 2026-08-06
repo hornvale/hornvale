@@ -40,7 +40,7 @@ Then merge. Nothing else is outstanding.
 
 Capacity gained a **species** index (The Tilth) and then an **era** index (The
 Tense), collapsing three mutually inconsistent oracles for the word "habitable"
-into one: capacity. Decision 0105 records it — habitability is a relation
+into one: capacity. Decision 0106 records it — habitability is a relation
 between a people, a cell and an era, not a property of ground. The measured
 cost is that this **compresses the variance between worlds**: seed 1234 went
 from permanently dead (0 survivors) to 36 communities across 70 sites, while
@@ -70,7 +70,7 @@ wasn't is the part worth keeping:
 - **`k_biomass_gradient` is not a gradient.** `raw_pole_mean = 0.004508` sits
   below the floor, so `ratio ≡ 100 × trop_mean` exactly. Re-labelled as a
   productivity tripwire, explicitly not evidence for the biomass-by-latitude
-  claim — decision 0104 names `capacity-by-abs-latitude` as its circular cell.
+  claim — decision 0105 names `capacity-by-abs-latitude` as its circular cell.
 - **Two preregistered predictions FALSIFIED and recorded, not rescued:** xorn no
   longer clears the dominance ruler (both the demesne and menagerie guards), and
   it is not erased — The Vacancy's viability guard is green.

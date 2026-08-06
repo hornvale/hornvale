@@ -586,7 +586,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // Miami model it had always CITED but never had: a monotone, saturating
     // temperature term, min'd with a precipitation term on real mm/yr instead
     // of a normalised moisture in [0,1]. That is The Keeping's headline defect
-    // being repaired, motivated by decision 0104.
+    // being repaired, motivated by decision 0105.
     //
     // THE DIRECTION CHECK CANNOT BE RUN, and that is the finding. Measured
     // here: raw_pole_mean = 0.004508, still BELOW `POLE_FLOOR`. The polar term
@@ -604,9 +604,9 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     //
     // WHAT THIS ASSERTION IS, THEREFORE. It is a drift TRIPWIRE on scalar-path
     // productivity — an internal-consistency check on a Hornvale-internal
-    // number, which decision 0104 rules a VALID use of internal measurement.
+    // number, which decision 0105 rules a VALID use of internal measurement.
     // It is NOT evidence for the biomass-by-latitude gradient; treating it as
-    // evidence would be 0104's CIRCULAR cell, which names
+    // evidence would be 0105's CIRCULAR cell, which names
     // `capacity-by-abs-latitude` explicitly. The preregistered floor of 3
     // above is the real surviving claim, and it clears tenfold.
     //

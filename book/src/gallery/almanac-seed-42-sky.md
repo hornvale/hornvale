@@ -241,7 +241,8 @@ Glaciated strata lie in the cover over 4981 cells — the ice left its mark.
 
 The land's lode is dominantly salt, found across 32% of it.
 Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
-0% of the land is cave country.
+6% of the land is cave country.
+191 cells hold both cave and ore — the deep worked twice.
 
 ## The Vestige
 

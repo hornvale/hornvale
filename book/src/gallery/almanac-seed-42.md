@@ -179,7 +179,8 @@ Geothermal gradient spans 21–30 K/km — the deep's warmth.
 
 The land's lode is dominantly salt, found across 34% of it.
 Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
-0% of the land is cave country.
+6% of the land is cave country.
+203 cells hold both cave and ore — the deep worked twice.
 
 ## The Vestige
 

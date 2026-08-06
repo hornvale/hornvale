@@ -44,11 +44,11 @@ altitude; it is a species whose entire climatic niche has been switched off.
 §3.2 needs the rule that an **Earth-contingent constant may not be calibrated
 against Hornvale's own census** — internal measurement can validate an internal
 choice but not an external fact, so that pairing is circular by construction.
-That is **decision 0104**, ratified on this branch and therefore available here.
+That is **decision 0105**, ratified on this branch and therefore available here.
 
 It is worth noting what the abandoned separate-campaign framing would have cost:
-0104 does not exist on `main`, so a campaign branched there would have had to
-restate the rule and would then have minted a colliding `0104` of its own, since
+0105 does not exist on `main`, so a campaign branched there would have had to
+restate the rule and would then have minted a colliding `0105` of its own, since
 both branches see `0103` as the log's tip. Mint decision numbers against
 `git log origin/main -- docs/decisions/`, never the working tree.
 
@@ -159,7 +159,7 @@ printing the arithmetic longhand.
 The rule of §1a binds this: the target is the *pre-campaign good-ground level* —
 a **gauge** choice, whose absolute value is a Hornvale convention rather than an
 Earth fact, and which may therefore legitimately be measured internally. It may
-not be fitted to rescue any prediction (decision 0104, §1a). `CAPACITY_K_M`
+not be fitted to rescue any prediction (decision 0105, §1a). `CAPACITY_K_M`
 is the median `axis_supply` over land and is untouched by this change — supply
 is not a condition term — but the probe re-measures it and the spec expects it
 to come back unchanged. **If it moves, something else moved too, and that is a

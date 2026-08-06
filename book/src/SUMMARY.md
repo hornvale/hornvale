@@ -305,6 +305,7 @@
 - [The Fare](./chronicle/the-fare.md)
 - [The Tilth](./chronicle/the-tilth.md)
 - [The Tense](./chronicle/the-tense.md)
+- [The Hollow](./chronicle/the-hollow.md)
 
 # Appendix: The Frontier
 

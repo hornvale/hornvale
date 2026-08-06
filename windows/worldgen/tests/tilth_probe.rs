@@ -47,7 +47,7 @@ const MARINE_SUPPLY_SCALE: f64 = 1.0;
 
 /// Stage 5's dimensional Michaelis-Menten ceiling, DERIVED (spec §5a, re-derived
 /// on stage-1+4 physics): target 68.87 (pre-campaign good ground, a gauge choice
-/// per 0104) / (MM frac 0.8138 x Liebig tolerance 0.6035).
+/// per 0105) / (MM frac 0.8138 x Liebig tolerance 0.6035).
 const V_MAX: f64 = 140.2;
 /// Half-saturation supply, DERIVED: median axis_supply over land on stage-1+4
 /// physics (n = 401,148).
@@ -336,7 +336,7 @@ fn tilth_derivation_probe() {
     // on every run, so the "derivation" was really "reproduce whatever good
     // ground reads today" — and any drift in the base field would be silently
     // absorbed into V_max, gauging the ruler against the thing it measures.
-    // Decision 0104 fixes the target at the PRE-CAMPAIGN level; that is what
+    // Decision 0105 fixes the target at the PRE-CAMPAIGN level; that is what
     // makes it a gauge choice rather than a fit.
     const FROZEN_TARGET: f64 = 68.87;
     let target = FROZEN_TARGET;
