@@ -26,8 +26,8 @@ Ways on: NE, NW, S.
   [533] hobgoblin of Geogebege
   [534] hobgoblin of Neneonetea
   [535] a wild rust-monster
-  [536] a wild otyugh
-  [537] a wild xorn
+  [536] a wild xorn
+  [537] a wild otyugh
   [538] a wild carrion-crawler
 > needs
 The bugbear of Googo seems content.

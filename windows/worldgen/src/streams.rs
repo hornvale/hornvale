@@ -28,4 +28,9 @@ hornvale_kernel::stream_labels! {
     /// [`crate::disposition`] for why that key, and not the settlement's
     /// `EntityId`, its `BakeId`, or its bare current `cell-id`.
     SETTLEMENT_DISPOSITION = "settlement/disposition/v1" => "the per-settlement disposition draw, keyed on the occupation's (site, founded-year)";
+    /// The underworld chamber derivation (The Deep Realm). Keyed on a
+    /// ChamberAddr — a place in a fixed lattice, never a generation
+    /// ordinal. `crate::chamber`'s private `chamber_key` is the one place
+    /// the composed key is spelled.
+    CHAMBER = "chamber/v1" => "the underworld chamber derivation";
 }

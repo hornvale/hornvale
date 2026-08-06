@@ -32,6 +32,34 @@
 //! fixture stays a base-generated witness, not one authored by the code it
 //! is meant to check.
 
+//! ## Why a change to ONE species' niche drifts EVERY creature's trace
+//!
+//! Recorded because it is not obvious and it has now cost one investigation
+//! (The Deep Realm, Task 6, ledger #28). Re-authoring the xorn's and rust
+//! monster's condition niches drifted this fixture by ~1e-4 on the arousal of
+//! *unrelated peopled creatures* — human, goblin, hobgoblin — at an unchanged
+//! roster and tick count.
+//!
+//! The tempting explanation is a shared resource-competition normalisation.
+//! **There is none:** `per_species_suitability` hoists the supply fields out
+//! of its per-species loop, so each species' suitability is computed
+//! independently of every other's niche. The real path is longer:
+//!
+//! ```text
+//!   a species' condition niche
+//!     -> per_species_suitability
+//!     -> the demography report      (a COEXISTENCE FIT over the whole roster)
+//!     -> predator_pressure_from / prey_pressure_from   (SHARED fields)
+//!     -> every other creature's danger-sense and hunger
+//!     -> its affect arousal
+//! ```
+//!
+//! So the blast radius of *any* niche edit is every creature in the trace, not
+//! just the species edited. If this fixture drifts after a change that looks
+//! unrelated to the creatures whose lines moved, check whether the change
+//! touched anything the demography fit reads before concluding something is
+//! wrong.
+
 use hornvale_kernel::quantize::quantize;
 use hornvale_lab::health::simulate_world;
 

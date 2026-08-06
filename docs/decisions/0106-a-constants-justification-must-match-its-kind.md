@@ -1,4 +1,4 @@
-# 0105. A constant's justification must match its kind
+# 0106. A constant's justification must match its kind
 
 **Status:** Accepted (2026-08-05) · **Decider:** Nathan · **Relates:**
 [0009](0009-models-author-dice-roll.md),

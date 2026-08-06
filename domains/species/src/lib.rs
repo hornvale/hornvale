@@ -718,8 +718,21 @@ fn otyugh_condition_niche() -> ConditionNiche {
 /// Xorn condition niche: subterranean/mineral — an elemental that burrows
 /// through solid earth, so it reads as nearly climate-indifferent on the
 /// surface axes (low devotion everywhere); mighty (potency > 0) already
-/// buys most of its sovereignty floor. Authored within the measured seed-42
-/// land ranges.
+/// buys most of its sovereignty floor. Temperature/moisture/elevation are
+/// authored within the measured seed-42 land ranges, unchanged.
+///
+/// **Insolation re-authored (The Deep Realm, Task 6).** The old curve
+/// (`optimum: 0.05, width: 0.20`) approximated cave-dark by biasing toward
+/// the darkest *surface* cells — a proxy authored back when no subterranean
+/// substrate existed to score against directly. Now that one does
+/// (`hornvale_worldgen::subterranean_substrate` reads insolation as `0.0`
+/// exactly, always), the proxy is no longer needed to make a xorn read as
+/// dwelling in the dark, so this widens past the entire plausible surface
+/// insolation range (`~[0, 0.35]`) instead of narrowing further: at
+/// `width: 1.0` the response barely varies across that whole range, which
+/// is the genuinely-indifferent claim this niche has always made, now
+/// implemented on every axis rather than only some of them. Devotion stays
+/// at its old low value — this is a widening, not a strengthening.
 fn xorn_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -732,10 +745,12 @@ fn xorn_condition_niche() -> ConditionNiche {
             width: 0.60,
             devotion: 0.10,
         },
+        // Widened past the plausible surface range so the response is flat
+        // rather than dark-biased — see the frame note above.
         insolation: ConditionResponse {
-            optimum: 0.05,
-            width: 0.20,
-            devotion: 0.20,
+            optimum: 0.15,
+            width: 1.0,
+            devotion: 0.10,
         },
         elevation: ConditionResponse {
             optimum: 0.0,
@@ -746,9 +761,35 @@ fn xorn_condition_niche() -> ConditionNiche {
 }
 
 /// Rust monster condition niche: subterranean/cave mineral-eater — no
-/// potency, so unlike the xorn it is genuinely environment-placed, with a
-/// strong low-insolation (cave-dark) preference and a low-elevation lean.
-/// Authored within the measured seed-42 land ranges.
+/// potency, so unlike the xorn it is genuinely environment-placed. Cool
+/// stable rock temperature is an unchanged, real preference (mass alone
+/// still buys some sovereignty floor, so this is a soft lean, not a hard
+/// fence) authored within the measured seed-42 land ranges.
+///
+/// **Moisture, insolation and elevation re-authored (The Deep Realm, Task
+/// 6).** All three were originally proxies scored against the surface,
+/// authored back when no subterranean substrate existed to place a cave
+/// creature against directly:
+///
+/// - **moisture** moves from a mild `0.45` "somewhat wet" lean to `0.90` —
+///   exactly [`hornvale_worldgen::subterranean_substrate`]'s fixed
+///   `SUBTERRANEAN_MOISTURE`, so a real chamber is now a genuine match
+///   rather than an approximation of one — with devotion raised to `0.60`:
+///   this is meant as a real preference now that a real reading exists to
+///   have one about.
+/// - **insolation** moves from `0.03` (the darkest available *surface*
+///   cells, a proxy for "inside a cave") to `0.0` exactly — the true
+///   subterranean reading — with devotion raised to `0.70`, the strongest
+///   axis in this niche: darkness is this creature's defining trait.
+/// - **elevation** widens from `-500` (sub-sea-level, a second proxy for
+///   "underground" authored the same way) toward indifference. A chamber's
+///   elevation is simply the land above it, unchanged by depth
+///   (`subterranean_substrate` does not invent a metres-below-surface
+///   coordinate — see its own docs for why), so a fixed sub-sea-level
+///   optimum would now systematically under-score genuine caves sitting on
+///   ordinary high land. Once darkness and dampness are measured directly,
+///   altitude is not what actually distinguishes this creature's habitat,
+///   so the axis widens rather than relocating to a new fixed point.
 fn rust_monster_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -756,21 +797,23 @@ fn rust_monster_condition_niche() -> ConditionNiche {
             width: 20.0,
             devotion: 0.50,
         },
+        // Mirrors SUBTERRANEAN_MOISTURE exactly — see the frame note above.
         moisture: ConditionResponse {
-            optimum: 0.45,
-            width: 0.40,
-            devotion: 0.30,
+            optimum: 0.90,
+            width: 0.22,
+            devotion: 0.60,
         },
-        // avoids surface light — cave-dark preference.
+        // TRUE darkness, not a proxy — see the frame note above.
         insolation: ConditionResponse {
-            optimum: 0.03,
+            optimum: 0.0,
             width: 0.06,
-            devotion: 0.60,
+            devotion: 0.70,
         },
+        // Widened toward indifference — see the frame note above.
         elevation: ConditionResponse {
-            optimum: -500.0,
-            width: 1500.0,
-            devotion: 0.60,
+            optimum: 800.0,
+            width: 3200.0,
+            devotion: 0.25,
         },
     }
 }

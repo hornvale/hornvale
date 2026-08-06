@@ -69,7 +69,7 @@ target on every run, so it could not report drift — it would have re-gauged
 `V_max` from 140.2 to 118.9 and reported agreement. Now frozen, with drift shown
 beside it.
 **Rule:** an instrument's zero must not move with the thing it measures. This is
-decision 0105's shape arriving from a different direction: a check that cannot
+decision 0106's shape arriving from a different direction: a check that cannot
 fail is not a check.
 
 **6. A test that hunts for a fixture instead of constructing one.** The vessel's

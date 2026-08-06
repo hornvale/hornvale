@@ -1,11 +1,11 @@
-# 0106. Habitability is a relation, not a constant
+# 0107. Habitability is a relation, not a constant
 
 **Status:** Accepted (2026-08-05) · **Decider:** Nathan · **Relates:**
 [0011](0011-studies-are-data-metrics-are-code.md),
 [0016](0016-studies-preregister-hypotheses.md),
 [0097](0097-assert-the-robust-half-measure-the-fragile-half.md),
 [0103](0103-suitability-and-headcount-are-distinct-types.md),
-[0105](0105-a-constants-justification-must-match-its-kind.md)
+[0106](0106-a-constants-justification-must-match-its-kind.md)
 
 In the context of discovering that Hornvale carried **three mutually
 inconsistent oracles for the word "habitable"**, we decided that **habitability
@@ -104,5 +104,5 @@ settle it.
 
 The Tense spec §§2.1, 3.2 (`docs/superpowers/specs/2026-08-05-the-tense-design.md`);
 The Tilth spec (`2026-08-04-the-tilth-design.md`), whose stages 6 and 7 this
-record explains the failure of; decision 0105, whose `hornvale-choice` cell is
+record explains the failure of; decision 0106, whose `hornvale-choice` cell is
 where `K_m` and `V_max` sit.

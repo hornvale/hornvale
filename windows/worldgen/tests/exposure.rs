@@ -323,7 +323,7 @@ fn river_exposure_tracks_real_proximity() {
 ///
 /// Every test below is renamed to state what it now measures. A name that
 /// claims a partition the body no longer asserts is the failure mode decision
-/// 0105 is about — a wrong label defends itself.
+/// 0106 is about — a wrong label defends itself.
 /// The Generalist re-pin (2026-08-03): human joins the coexistence stack as
 /// a sixth competitor, redeciding seed 42's settlement placement once more —
 /// kobold's flagship no longer has exposure to a spring cell either.

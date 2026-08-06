@@ -74,6 +74,24 @@ property of **plans written as literal code listings**, which get reviewed for
 faithful transcription and not for whether the predicate they contain is the
 one the spec asked for.
 
+A fourth campaign puts the sharpening where the *repair* is. The Collation
+(2026-08-06) produced the same shape from its own plan text — a spec promising
+one test asserting a generated matrix's per-column figures equal the per-corpus
+reports' own, and a plan listing that asserted only that the rendered document
+*contains* each corpus id and each denominator, which any cell reading
+`(217/409)` satisfies. Review caught that. The replacement was a whole-file
+byte comparison of the matrix against its own committed copy, **proved to fire
+by a mutation**, and it passed a second review on that proof — while still
+being unable to fail for the reason the spec named, because the two figures
+came from duplicated tally code and rebaselining accepts both documents in the
+same pass. The whole-branch review caught the second one, and settled it by
+running the finding's own scenario: perturb one renderer, rebaseline, and watch
+the byte check go green while a cross-derivation test stays red. So making a
+check fail on command is necessary and is **not** sufficient: the mutation has
+to be the failure the check was promised against, and a check written to
+replace one that could not fire inherits the burden of proof rather than the
+credit.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -210,7 +228,7 @@ than only modulate — the defect The Vacancy named and The Keeping traced) and 
 **era** index (so a glacial maximum makes ground poor instead of switching it
 off). Three mutually inconsistent oracles for the word "habitable" — an era mask,
 a capacity test, and a separate refugia rule, the first two disagreeing over
-roughly half of all land — collapsed to one (decision 0106).
+roughly half of all land — collapsed to one (decision 0107).
 
 None of that is yet a promotion, and the reason is worth stating precisely. What
 the arc bought is that the model can now *express* the thing it was previously

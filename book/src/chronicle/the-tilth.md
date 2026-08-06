@@ -70,7 +70,7 @@ re-gauged `V_max` from 140.2 to 118.9 and called it agreement.
 It is now frozen at a fixed anchor with the drift reported beside it, and
 `V_max = 140.2` was re-derived rather than assumed. The general lesson —
 evaluate the curve, not the constant, and never let an instrument's zero float
-— is the same one decision 0105 reaches from the direction of provenance: a
+— is the same one decision 0106 reaches from the direction of provenance: a
 justification that cannot fail is not a justification.
 
 ## What it left

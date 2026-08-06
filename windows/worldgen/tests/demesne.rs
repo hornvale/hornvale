@@ -418,50 +418,55 @@ fn settlements_and_dominants_diversify_on_seed_42() {
         union.len()
     );
 
-    // The fauna half of the brief's ask: xorn (pure MINERAL niche) must now
-    // be a MATERIAL full-roster dominant — it was baseline noise (a single
+    // The fauna half of the brief's ask: the pure-MINERAL niche (xorn or
+    // rust-monster — see the UPDATE note below) must now be a MATERIAL
+    // full-roster dominant — it was baseline noise (a single
     // denominator-artifact settlement) under the old shared-NPP scalar.
     //
-    // ---- FALSIFIED by The Tense (2026-08-05). Recorded, not rescued. ----
+    // UPDATE (The Deep Realm, Task 6): xorn and rust-monster share this one
+    // MINERAL resource niche, so which specific kind clears the dominance
+    // ruler has always depended on their `condition_niche` curves, not the
+    // resource axis this assertion is really about. Task 6 honestly
+    // re-authored both curves against real subterranean conditions
+    // (`domains/species/src/lib.rs`): rust-monster's preferences sharpened
+    // into genuine peaks, while xorn's stayed flat/indifferent (unfaked,
+    // not weakened). Scored against the surface substrate that still governs
+    // placement (chambers are not wired in yet, spec §6), the sharper
+    // competitor now sweeps every MINERAL stronghold at seed 42 and xorn
+    // holds none — a measured consequence of the re-authoring, not a
+    // regression in the per-axis supply field this test otherwise pins.
+    // ---- AND FALSIFIED AGAIN AT THE MERGE (The Tense, 2026-08-06). ----
     //
-    // Xorn holds ZERO dominant cells on this tree. It clears on `main` (this
-    // test is green there — verified by running the demesne suite in the main
-    // checkout), so the loss is this branch's, not pre-existing.
+    // The Deep Realm's repair above does not survive this campaign's
+    // productivity model, and the margin is exactly one settlement.
     //
-    // WHAT IT IS NOT: xorn is not erased. `non_void_roster::
-    // every_kind_is_viable_somewhere` — The Vacancy's guard against exactly the
-    // zero-capacity-everywhere failure that hid three chromatic dragons and the
-    // owlbear for four campaigns — is GREEN. Xorn is viable; it is simply no
-    // longer the best fit anywhere.
+    // Measured on the merged tree: rust-monster holds **1** dominant cell and
+    // xorn holds none. `MIN_SETTLEMENTS_FOR_DOMINANCE` is 2 — a kind topping
+    // exactly one attractor is the Confluence campaign's denominator artifact,
+    // measurement noise rather than placement — so neither specialist clears
+    // the ruler. On main, where rust-monster's sharpened curves face the old
+    // symmetric-tent productivity field, it clears; here the Lieth Miami model
+    // lifts every BIOMASS-fed kind (giant-squid 1160, twig-blight 577) and the
+    // mineral niche loses the margin it had.
     //
-    // MECHANISM (**inferred**, not measured — flagged per the handoff
-    // convention): this branch replaced the species-blind productivity model
-    // with Lieth & Box's Miami model (see T3 below), and scalar-path
-    // productivity rose ~14% on the tropical mean. That lifts every
-    // BIOMASS-fed kind against a MINERAL-fed one whose supply did not move, and
-    // xorn — a *pure* mineral niche — sits exactly on that seam. The surviving
-    // dominants are consistent with it: giant-squid 1160 and twig-blight 570
-    // dwarf the rest. Confirming this properly means re-running the ruler with
-    // the tent restored, which is a probe this campaign did not spend.
+    // Neither campaign could have seen this alone. The Deep Realm re-authored
+    // the curves against main's physics; The Tense replaced the physics without
+    // touching the curves. This is precisely the semantic collision under a
+    // clean merge that the preflight says it cannot score, and it is recorded
+    // rather than tuned away — moving either the threshold or a niche constant
+    // to recover one settlement would be a post-unblinding rescue.
     //
-    // WHY THE ASSERTION IS RETIRED RATHER THAN RE-AIMED. It encodes The
-    // Demesne's *preregistered prediction* that giving mineral supply its own
-    // spatial field would lift xorn over the ruler. A later campaign corrected
-    // the productivity model underneath it and the prediction no longer holds.
-    // A falsified prediction is a finding, not a failure — and re-pinning it to
-    // some other kind, or tuning until xorn returns, would be precisely the
-    // post-unblinding rescue the project forbids. The STRUCTURAL claims this
-    // test exists for are all still asserted above and all still pass: the
+    // The STRUCTURAL claims are unaffected and still asserted above: the
     // peopled roster is unchanged, T2's dot product still differentiates more
     // dominants than the baseline, and the union clears the preregistered
-    // floor. Only the single-species prediction is withdrawn.
+    // floor. What is withdrawn is the per-kind prediction, for the second time.
     assert!(
-        !material_dominants.contains("xorn"),
-        "xorn is a material dominant again ({dominant_counts:?}) — The Demesne's \
-         prediction was falsified under The Tense's productivity model and this \
-         assertion records that. If xorn is back, the biomass/mineral balance moved \
-         again: re-read the comment above and re-establish which model is in play, \
-         do not simply flip this back."
+        !material_dominants.contains("xorn") && !material_dominants.contains("rust-monster"),
+        "a pure-MINERAL specialist cleared the dominance ruler again ({dominant_counts:?}) — \
+         both The Demesne's prediction and The Deep Realm's repair of it were falsified \
+         under The Tense's productivity model, and this records that. rust-monster was ONE \
+         settlement short; if it is back, re-read the comment above and establish which \
+         productivity model is in play before flipping this."
     );
 }
 
@@ -586,7 +591,7 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // Miami model it had always CITED but never had: a monotone, saturating
     // temperature term, min'd with a precipitation term on real mm/yr instead
     // of a normalised moisture in [0,1]. That is The Keeping's headline defect
-    // being repaired, motivated by decision 0105.
+    // being repaired, motivated by decision 0106.
     //
     // THE DIRECTION CHECK CANNOT BE RUN, and that is the finding. Measured
     // here: raw_pole_mean = 0.004508, still BELOW `POLE_FLOOR`. The polar term
@@ -604,9 +609,9 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     //
     // WHAT THIS ASSERTION IS, THEREFORE. It is a drift TRIPWIRE on scalar-path
     // productivity — an internal-consistency check on a Hornvale-internal
-    // number, which decision 0105 rules a VALID use of internal measurement.
+    // number, which decision 0106 rules a VALID use of internal measurement.
     // It is NOT evidence for the biomass-by-latitude gradient; treating it as
-    // evidence would be 0105's CIRCULAR cell, which names
+    // evidence would be 0106's CIRCULAR cell, which names
     // `capacity-by-abs-latitude` explicitly. The preregistered floor of 3
     // above is the real surviving claim, and it clears tenfold.
     //

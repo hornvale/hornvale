@@ -195,6 +195,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
 | `religion/deity/v2` | the deity-naming stream, epoch v2 |
 | `settlement/disposition/v1` | the per-settlement disposition draw, keyed on the occupation's (site, founded-year) |
+| `chamber/v1` | the underworld chamber derivation |
 
 ### hornvale-kernel (internal)
 

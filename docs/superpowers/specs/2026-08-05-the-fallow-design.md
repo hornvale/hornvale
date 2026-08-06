@@ -216,7 +216,7 @@ the instrument.
   seeded draws are the epoch-triggering additions (`windows/worldgen/CLAUDE.md`).
   Deriving variance from the era series keeps the stream contract intact.
 - **`h(tilth)` and the extraction rates are three new constants**, and decision
-  0105 binds them: each declares its kind, and none may be calibrated against
+  0106 binds them: each declares its kind, and none may be calibrated against
   Hornvale's own census if it is an Earth-contingent claim. Soil-degradation rates
   are Earth-contingent, so they are **cited or authored, never census-fitted.**
 

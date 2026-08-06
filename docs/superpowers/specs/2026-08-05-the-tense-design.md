@@ -241,7 +241,7 @@ state and adding no seeded draw (hence not epoch-triggering):
   soft rock lies smooth. This is what makes sigma *terrain-dependent*: the Alps
   hold refugia through a glacial maximum, the plains do not.
 - `k` is the one authored constant, and it is a fractal-dimension ratio rather
-  than a fitted knob. It declares its kind under decision 0105.
+  than a fitted knob. It declares its kind under decision 0106.
 
 **Deferred within this stage:** `MicroField.aspect` is shaded-to-sunlit slope
 aspect — the single most important real microclimate-refugium mechanism — and it

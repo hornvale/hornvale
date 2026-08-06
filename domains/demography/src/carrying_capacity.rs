@@ -34,7 +34,7 @@ pub struct CarryingInput {
     /// precipitation term is defined on a real total, and `climate.precip_at`
     /// already supplies one (`2000 · m^1.5`, Earth-ranged, provenance cited to
     /// the spec's model card). Taking the real total rather than re-deriving a
-    /// second conversion is decision 0105 applied — there was never a constant
+    /// second conversion is decision 0106 applied — there was never a constant
     /// here to author.
     pub precip_mm_yr: f64,
     /// Freshwater availability in `[0, 1]` (drainage/moisture, at root).
@@ -57,7 +57,7 @@ pub struct CarryingInput {
 // barren/marginal worlds with little land in EITHER band, not a failure of
 // the gradient itself) — so no adjustment was needed; frozen as measured,
 // not as a placeholder. A save-format constant from here on.
-/// kind: **hornvale-gauge** (decision 0105). Occurs exactly once, as a
+/// kind: **hornvale-gauge** (decision 0106). Occurs exactly once, as a
 /// multiplicative factor, and any change is absorbed downstream by
 /// `SETTLERS_PER_CAPACITY` — so its value is unobservable and needs no source,
 /// only this note, so nobody later "calibrates" an unmeasurable quantity.
@@ -68,7 +68,7 @@ const COAST_BONUS: f64 = 0.2;
 /// Lieth's Miami-model temperature term, normalised to its 3000 g/m²/yr
 /// asymptote so `BASE` keeps meaning "one unit of productivity".
 ///
-/// kind: **earth-biosphere** (decision 0105). Cited: Lieth & Box (1972), the
+/// kind: **earth-biosphere** (decision 0106). Cited: Lieth & Box (1972), the
 /// Miami model — `NPP_temp = 3000 / (1 + exp(1.315 − 0.119 T))`. The citation
 /// and the implementation now agree, which they did not before (The Keeping):
 /// the retired `temp_response` was a symmetric tent peaking at 22 °C, and this
@@ -87,7 +87,7 @@ fn npp_temperature(t_c: f64) -> f64 {
 
 /// Lieth's Miami-model precipitation term, normalised to the same asymptote.
 ///
-/// kind: **earth-biosphere** (decision 0105). Cited: Lieth & Box (1972) —
+/// kind: **earth-biosphere** (decision 0106). Cited: Lieth & Box (1972) —
 /// `NPP_precip = 3000 · (1 − exp(−0.000664 P))`, `P` in mm/yr. Saturating: wetter
 /// ground keeps helping, with diminishing return, and never turns harmful.
 fn npp_precipitation(precip_mm_yr: f64) -> f64 {
