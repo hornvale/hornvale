@@ -29,14 +29,34 @@ use std::collections::BTreeSet;
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
 /// The `presence_prob` buckets the gate-calibration readout reports, as
-/// `[low, high)` pairs. Chosen to match the spec's §2.3 table exactly.
-const PROB_BUCKETS: [(f64, f64); 6] = [
+/// `[low, high)` pairs, exhaustive over `[0, 1)` in 0.05-wide bins.
+///
+/// The original six bins were the spec's §2.3 table, which was exhaustive over
+/// land only because the pre-campaign gate read a single field (`Karst`
+/// proneness) whose land distribution happened to be bimodal. The gate now
+/// reads whichever process `cave_process` selects, whose range is the union of
+/// three, so a partial table would silently drop cells out of the readout.
+const PROB_BUCKETS: [(f64, f64); 20] = [
     (0.00, 0.05),
+    (0.05, 0.10),
+    (0.10, 0.15),
+    (0.15, 0.20),
     (0.20, 0.25),
     (0.25, 0.30),
     (0.30, 0.35),
     (0.35, 0.40),
     (0.40, 0.45),
+    (0.45, 0.50),
+    (0.50, 0.55),
+    (0.55, 0.60),
+    (0.60, 0.65),
+    (0.65, 0.70),
+    (0.70, 0.75),
+    (0.75, 0.80),
+    (0.80, 0.85),
+    (0.85, 0.90),
+    (0.90, 0.95),
+    (0.95, 1.00),
 ];
 
 /// Everything the campaign measures, accumulated over all seeds.
@@ -61,8 +81,15 @@ struct Readout {
     clustered: usize,
     /// Cave cells with no caved neighbour.
     solitary: usize,
-    /// Per `PROB_BUCKETS` entry: (land cells in bucket, caves in bucket).
-    gate: [(usize, usize); 6],
+    /// Per `PROB_BUCKETS` entry: (land cells in bucket, caves in bucket, sum
+    /// of those cells' nominal probabilities). The third element makes the
+    /// bucket's *mean* nominal readable alongside its midpoint — they differ
+    /// whenever a bucket's interior distribution is not uniform, which the
+    /// `[0.00,0.05)` bucket's mass at exactly zero guarantees.
+    gate: [(usize, usize, f64); 20],
+    /// Land cells whose nominal probability fell outside every bucket, i.e.
+    /// exactly 1.0. Reported so "exhaustive over land" stays checkable.
+    unbucketed: usize,
 }
 
 /// Verbatim copies of `features::belt_weight` / `presence_prob`, which are
@@ -107,10 +134,21 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
         }
         world_land += 1;
 
-        let prob = presence_prob(
-            terrain.cave_proneness_at(cell),
-            belt_weight(terrain.boundary_distance_at(cell)),
+        // The proneness the GATE reads — `cave_process`'s selected process,
+        // not `cave_proneness_at` (which is the Karst term alone). Bucketing
+        // on the Karst term was correct only while the gate read it; since the
+        // gate became kind-first, a Fracture or LavaTube cave was being
+        // credited to a probability that never gated it.
+        let selected = hornvale_terrain::cave_process(
+            &terrain.material_at(cell),
+            terrain.drainage_at(cell),
+            terrain.crust_age_at(cell),
+            terrain.boundary_distance_at(cell),
         );
+        // No supporting process is proneness zero: the cell cannot host a cave
+        // and its nominal probability is zero, which is a real bucket entry.
+        let proneness = selected.map_or(0.0, |(_, p)| p);
+        let prob = presence_prob(proneness, belt_weight(terrain.boundary_distance_at(cell)));
         let bucket = PROB_BUCKETS
             .iter()
             .position(|&(lo, hi)| prob >= lo && prob < hi);
@@ -132,11 +170,15 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
                 BandKind::Underneath => 4,
             }] += 1;
         }
-        if let Some(b) = bucket {
-            out.gate[b].0 += 1;
-            if cave.is_some() {
-                out.gate[b].1 += 1;
+        match bucket {
+            Some(b) => {
+                out.gate[b].0 += 1;
+                if cave.is_some() {
+                    out.gate[b].1 += 1;
+                }
+                out.gate[b].2 += prob;
             }
+            None => out.unbucketed += 1,
         }
     }
 
@@ -239,16 +281,23 @@ fn report(r: &Readout) {
         }
     );
 
-    println!("gate calibration — nominal presence_prob vs realized hit rate:");
+    let bucketed: usize = r.gate.iter().map(|&(c, _, _)| c).sum();
+    println!(
+        "gate calibration — nominal presence_prob vs realized hit rate \
+         ({bucketed} of {} land cells bucketed, {} outside every bucket):",
+        r.land, r.unbucketed
+    );
     for (i, &(lo, hi)) in PROB_BUCKETS.iter().enumerate() {
-        let (cells, hits) = r.gate[i];
+        let (cells, hits, prob_sum) = r.gate[i];
         if cells == 0 {
             continue;
         }
         println!(
-            "  [{lo:.2},{hi:.2})  cells={cells:>8}  caves={hits:>7}  realized={:.5}  nominal~{:.3}",
+            "  [{lo:.2},{hi:.2})  cells={cells:>8}  caves={hits:>7}  realized={:.5}  \
+             mid={:.3}  mean-nominal={:.5}",
             hits as f64 / cells as f64,
-            (lo + hi) / 2.0
+            (lo + hi) / 2.0,
+            prob_sum / cells as f64
         );
     }
 }
