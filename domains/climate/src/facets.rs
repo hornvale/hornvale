@@ -14,14 +14,43 @@ pub enum Medium {
     AirOverRock,
     /// Salt or fresh water — the sea column.
     Water,
+    /// Solid, with voids; you move through the gaps in it.
+    Rock,
 }
 
 /// How a realm is reached. This — not materiality — is what separates the
 /// world's own column (continuous movement with a medium change) from a plane
 /// (transit). An elemental plane is material and still not part of the column,
 /// which is what rules materiality out as the discriminator (The Stratum §3.4).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// The aperture is a scale, not a boolean (The Deep Realm §3.4): the seven
+/// rock rungs below are `Ord`-comparable against one another, from `Sealed`
+/// (least accessible) to `Merged` (most). **`Ord` is meaningful over the rock
+/// rungs only** — `Default` and `Dive` are not apertures at all (simply being
+/// in the overworld, or diving into water), so a comparison involving either
+/// of them is not meaningful, even though it compiles (ledger #18B).
+///
+/// Declaration order is load-bearing: the seven rock rungs come first, in
+/// spec order, then the two realm-entry modes. `Sealed` means "the void
+/// exists and is unreachable", so putting `Default`/`Dive` ahead of it would
+/// make the freely-walkable overworld sort as *less* accessible than a
+/// sealed void — a term anti-correlated with the scale it joins.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Access {
+    /// The void exists and is unreachable.
+    Sealed,
+    /// Things seep — water, air, small creatures.
+    Crack,
+    /// Shelter, occupied from outside.
+    CaveMouth,
+    /// Petra, a cut entrance, a stair.
+    WorkedWay,
+    /// Defended, machinery, closable.
+    Gate,
+    /// Mines; many apertures, one holding.
+    ShaftNet,
+    /// A settlement half underground.
+    Merged,
     /// Simply being there; the default band.
     Default,
     /// Entered by descending through water.
@@ -48,6 +77,15 @@ impl Realm {
         medium: Medium::Water,
         access: Access::Dive,
     };
+    /// The underworld — the rock column beneath the surface. `access` here
+    /// is the realm's *canonical* entrance (a cave mouth): the aperture of
+    /// any particular chamber is a per-place property the chamber lattice
+    /// carries (Task 2), and this value is not a claim about any specific
+    /// cave (ledger #18C).
+    pub const UNDERDARK: Realm = Realm {
+        medium: Medium::Rock,
+        access: Access::CaveMouth,
+    };
 
     /// The strata this realm holds, shallowest first.
     pub fn strata(&self) -> &'static [Stratum] {
@@ -59,6 +97,13 @@ impl Realm {
                 Stratum::Bathypelagic,
                 Stratum::Abyssal,
                 Stratum::Hadal,
+            ],
+            Medium::Rock => &[
+                Stratum::Regolith,
+                Stratum::Cover,
+                Stratum::Basement,
+                Stratum::Roots,
+                Stratum::Underneath,
             ],
         }
     }
@@ -81,6 +126,28 @@ pub enum Stratum {
     Abyssal,
     /// Trench depths, below 6000 m.
     Hadal,
+    /// The living skin: soil / weathered regolith. A rock depth *register* —
+    /// explicitly not something a chamber moves between (The Stratum §3).
+    /// Mirrors `hornvale_terrain::BandKind::Regolith` (decision 0094: a
+    /// shared roster, never a shared derivation — climate may not import
+    /// terrain).
+    Regolith,
+    /// Deposited / volcanic surface rock — the legible archive. Mirrors
+    /// `hornvale_terrain::BandKind::Cover`.
+    Cover,
+    /// Crystalline craton (terrain's inherited `Basement`). Mirrors
+    /// `hornvale_terrain::BandKind::Basement`.
+    Basement,
+    /// Deep crust: hot, high-pressure. Mirrors
+    /// `hornvale_terrain::BandKind::Roots`.
+    Roots,
+    /// The primordial substrate / threshold to the not-here. Measured empty
+    /// (0 of 55,947 caves — Task 0) but included regardless: rule 1a makes
+    /// `ChamberAddr.band` index this ladder, and the open
+    /// `MAP-cave-depth-weld` fix may make this band occur — omitting it
+    /// would relocate every address the day that fix lands. Mirrors
+    /// `hornvale_terrain::BandKind::Underneath`.
+    Underneath,
 }
 
 impl Stratum {
@@ -143,6 +210,16 @@ pub enum Formation {
     Upwelling,
     /// Open sea with no distinguishing community — the marine default.
     OpenWater,
+    /// Carbonate dissolution (wet limestone). Mirrors
+    /// `hornvale_terrain::CaveKind::Karst` (decision 0094: a shared roster,
+    /// never a shared derivation — climate may not import terrain).
+    KarstCave,
+    /// A drained basaltic/volcanic tube. Mirrors
+    /// `hornvale_terrain::CaveKind::LavaTube`.
+    LavaTube,
+    /// A fault/fracture void in tectonically active rock. Mirrors
+    /// `hornvale_terrain::CaveKind::Fracture`.
+    FractureCave,
 }
 
 /// A room's biome as a faceted expression. This is the truth; [`crate::Biome`]
@@ -216,7 +293,30 @@ impl BiomeExpr {
                 // `Surface` is unreachable for open water in practice; treat
                 // it as the shallowest water rather than inventing a Biome.
                 Stratum::Epipelagic | Stratum::Surface => Biome::Epipelagic,
+                // The rock bands never pair with `OpenWater`: it is a marine
+                // formation, and the rock strata only ever accompany a cave
+                // `Formation` (handled below). Named explicitly, rather than
+                // wildcarded, so a future stratum still has to justify
+                // itself here.
+                Stratum::Regolith
+                | Stratum::Cover
+                | Stratum::Basement
+                | Stratum::Roots
+                | Stratum::Underneath => unreachable!(
+                    "OpenWater never pairs with a rock stratum; caves carry \
+                     their own Formation"
+                ),
             },
+            // The underworld has no legacy Biome: this function exists only
+            // to keep Overworld/Waterworld consumers byte-identical (see the
+            // doc comment above), and nothing constructs a cave `BiomeExpr`
+            // through it — caves are a new realm outside the pre-Stratum
+            // taxonomy `Biome` projects (The Deep Realm, decision 0094).
+            // Named explicitly, rather than wildcarded.
+            Formation::KarstCave | Formation::LavaTube | Formation::FractureCave => unreachable!(
+                "cave formations have no legacy Biome projection; biome() is \
+                 never called with one"
+            ),
         }
     }
 

@@ -144,3 +144,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0102](0102-one-per-cell-was-an-index-artifact.md) | The one-community-per-cell rule is an index artifact, not a design position | Accepted |
 | [0103](0103-suitability-and-headcount-are-distinct-types.md) | Dimensionless suitability and headcount capacity are distinct types | Accepted |
 | [0104](0104-a-threshold-must-know-its-variates-distribution.md) | A threshold must know the distribution of the variate it reads — warp at the call site | Accepted |
+| [0105](0105-water-keeps-bands-rock-becomes-a-graph.md) | Water keeps bands, rock becomes a graph — supersedes The Stratum's D3 for the rock realm only | Accepted |
