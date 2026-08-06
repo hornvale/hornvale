@@ -256,18 +256,33 @@ is a lint on the absence of code.
 
 ## 8. Testing
 
-1. **The band is sea-level-relative, over a sweep.** For each of several seeds,
-   no land cell bands as `abyss` or `shelf` and no submarine cell bands as
-   `lowland`+. This is the assertion whose absence let 73.8% of land read
-   `shelf`; it must fail against today's code.
-2. **Require RED first.** Each test above is run against unfixed code and
-   observed to fail before the fix lands — the lesson from The Timekeeper, where
-   only "require RED" caught defects inside the detector itself.
-3. **A land room never reports a negative height.** Over a room sweep, on dry
-   land, the reported height is `>= 0`. Today 18.5% of sampled rooms violate it.
+1. **The emitted band matches the emitted height.** For every cell carrying a
+   height, `relief == relief_band(height_asl_m)`. This is the assertion that
+   pins the **call site**, and it is the one that matters: a unit test on
+   `relief_band` alone passes both before *and* after the fix, because the
+   defect is which argument the call site passes, not what the function
+   computes. (The Manikin's lesson — a mutation proves only what it perturbs.)
+2. **No land cell bands as marine, at globe scale.** Banding every land cell by
+   height puts zero of them in `abyss` or `shelf`. This is airtight rather than
+   statistical: a land cell is *defined* by `elevation >= sea_level`, so its
+   height is `>= 0` by construction. Today 8162 of seed 42's 11,066 land cells
+   band `shelf`, so it fails loudly against unfixed code.
+3. **Require RED first.** Each test above is run against unfixed code and
+   observed to fail *on its assertion*, not merely to fail compiling — the
+   lesson from The Timekeeper, where only "require RED" caught defects inside
+   the detector itself.
 4. **The datum is recoverable from the document.** `scene/surrounds/v2` carries
-   `sea_level_m`, and banding the emitted height reproduces the emitted band —
-   a self-consistency check a client could run.
+   `sea_level_m`, so a client can re-derive any band from `height_asl_m` alone.
+
+**A tempting assertion that is false, recorded so no one adds it.** "A room on
+dry land never reports a negative height" does *not* hold, and a test asserting
+it could never pass. A room's height is an integer-weighted blend of three
+corner cells while its `water` kind is a point sample of the dominant corner, so
+a shoreline room can be dry-land-dominant and still blend a few centimetres
+below sea level — the reported room is 0.2 m under. That asymmetry is real and
+out of scope (§12.4); the correct guards are the two above, which are stated over
+*cells* (where the invariant holds by definition) and over *self-consistency*
+(where it holds by construction).
 5. **Determinism unchanged.** Same seed → byte-identical world; the seed-42
    ledger's `sea-level-m` and `highest-elevation-m` are unchanged.
 6. **Type-audit tags** on every new pub boundary, and the `elevation-convention`
@@ -321,6 +336,12 @@ Verified by command, not inferred:
 3. **The band distribution may look wrong after the fix** because it is finally
    measuring the right thing (§9). A reviewer expecting Earth-like proportions
    may read a correct result as a regression.
+4. **The blend/point-sample asymmetry survives this campaign.** A room's height
+   is a three-corner weighted mean; its `water` kind and `biome` are point
+   samples of the dominant corner. At a shoreline they disagree by centimetres,
+   which is why the reported room reads 0.2 m below sea level under a forest
+   biome. This is not the reported defect (which was 2936 m, not 0.2 m) and is
+   deliberately not fixed here, but it bounds what any test may assert (§8).
 
 ## 13. Decisions (promoted from the ledger)
 
