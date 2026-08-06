@@ -148,3 +148,27 @@ in `hornvale-vessel`; the branch sat red until `83e46282` chased it. The rule
 held everywhere the drift and the test were in the same crate, and failed the
 one time they were not — which is the actual shape of the hazard, and a better
 guide than "remember to re-pin."
+
+## Follow-ups (promoted from the campaign's scratch register)
+
+Filed as idea-registry rows: `PROC-deferral-needs-a-watcher`,
+`RENDER-relief-band-calibration`, `TOOL-datum-bearing-audit`.
+
+Still open, recorded here because the worktree's register does not survive:
+
+- **`windows/locale/src/substrate.rs:28` is uncaught by the new type.** It
+  calls `.get()` on both operands before subtracting, so it is `f64 - f64` and
+  no type can police it. Correct today; unprotected tomorrow. Deliberately out
+  of scope (spec §4.4). Worth revisiting only if the `.get()`-first shape turns
+  out to be the common one rather than the exception — which
+  `TOOL-datum-bearing-audit` would establish.
+- **The two `examine` defects from the same bug report remain open** —
+  `LOC-examine-head-noun` (whole-string noun matching, so `examine forest`
+  fails on a room whose catalog key is `tropical seasonal forest`) and
+  `LOC-sky-is-one-noun` (the sky is a single opaque catalog entry, so
+  `examine moon` fails in a room naming two). Both are on main; neither is
+  this campaign's work. They are the *other* half of what the original report
+  found, and the elevation defect was the incidental one.
+
+**Settled at close, not deferred:** the `elevation-convention` waiver's status
+(§6) — audited, zero of five retired, doctrine corrected.
