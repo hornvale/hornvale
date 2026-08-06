@@ -1286,58 +1286,23 @@ mod tests {
         );
     }
 
-    /// Every corpus the matrix declares as a column has a committed report to
-    /// point at.
-    ///
-    /// The matrix links each column to `./trope-coverage-<id>.md`. Adding a
-    /// path to `CORPORA` without adding a line to
-    /// `scripts/regenerate-artifacts.sh` renders a column whose link is dead,
-    /// and nothing else in the workspace would notice: the golden tests only
-    /// cover the corpora they name, and CI's drift check compares files that
-    /// exist. This asserts the declared list and the committed artifacts stay
-    /// the same set.
-    ///
-    /// It also asserts id uniqueness for **every** declared corpus, because
-    /// this loop is the only place that already parses all of them. The two
-    /// hand-written per-corpus tests below assert uniqueness beside a frozen
-    /// count, and they stay — the count is the deliberate-freeze ratchet. But
-    /// a third catalogue arrives by adding one line to `CORPORA`, and the
-    /// duplicate-id hazard is not the kind that should wait for someone to
-    /// remember to hand-write a third test: `resolve` keys a `BTreeMap` by
-    /// `id`, so a copy-pasted id silently drops a situation, and every share
-    /// in the matrix divides a numerator counted over `corpus.situations` by
-    /// a denominator of `out.len()` — which is how a duplicate renders a
-    /// share above 100%. This is the generic backstop; those are the freeze.
-    #[test]
-    fn every_corpus_in_corpora_has_a_committed_column() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("workspace root");
-        for path in CORPORA {
-            let json = std::fs::read_to_string(root.join(path))
-                .unwrap_or_else(|e| panic!("`{path}` is declared in CORPORA but unreadable: {e}"));
-            let corpus =
-                load(&json).unwrap_or_else(|e| panic!("`{path}` does not parse as a corpus: {e}"));
-            let mut seen = BTreeSet::new();
-            for st in &corpus.situations {
-                assert!(
-                    seen.insert(st.id.as_str()),
-                    "`{path}` declares situation id `{}` twice — `resolve` keys a BTreeMap by \
-                     id, so one situation would vanish, the report would understate its \
-                     denominator, and a matrix share counted over the corpus but divided by \
-                     that denominator would render above 100%",
-                    st.id
-                );
-            }
-            let artifact = artifact_path(&corpus);
-            assert!(
-                root.join(&artifact).is_file(),
-                "`{path}` is a declared matrix column but `{artifact}` does not exist — the \
-                 matrix would render a dead link. Add a line to \
-                 scripts/regenerate-artifacts.sh and regenerate."
-            );
-        }
-    }
+    // The two guarantees that used to live here as one filesystem-walking unit
+    // test — every corpus declared in `CORPORA` has a committed column, and
+    // every declared corpus identifies its situations uniquely — are now in
+    // `cli/tests/trope_coverage.rs`, as
+    // `every_declared_matrix_column_links_to_a_committed_report` and
+    // `every_corpus_file_identifies_its_situations_uniquely`. Reaching the
+    // workspace root from here needed the build-path-embedding `env!` that
+    // `cli/tests/build_path_embedding.rs` freezes — it bakes the build
+    // directory into the shipped binary and narrows decision 0090's cross-host
+    // oracle, and the scan counts it whether or not it sits behind
+    // `#[cfg(test)]`. A test binary's embedded path never ships, so `tests/` is
+    // where a filesystem assertion belongs. That scan is a plain text match, so
+    // do not spell the variable out here either. Nothing that needs `CORPORA`
+    // at compile time is lost:
+    // the matrix's Columns table is rendered *from* `CORPORA`, so parsing a
+    // live `tropes matrix` run binds the declared list to the committed
+    // artifacts without importing anything from this binary-only crate.
 
     /// The live corpus is structurally sound: ids are unique, and there are
     /// exactly thirty-six situations.

@@ -293,6 +293,175 @@ fn committed_trope_matrix_matches_the_live_render() {
     );
 }
 
+/// The `## Columns` table's rows, as `(corpus id, the report link's href)`.
+///
+/// Scoped to that section rather than matched across the whole document: the
+/// Demand table below renders a backticked first cell too, and a bundle row
+/// must never be counted as a column.
+fn parse_matrix_columns(matrix: &str) -> Vec<(String, String)> {
+    matrix
+        .lines()
+        .skip_while(|l| !l.starts_with("## Columns"))
+        .skip(1)
+        .take_while(|l| !l.starts_with("## "))
+        .filter(|l| l.starts_with("| `"))
+        .filter_map(|l| {
+            let cells: Vec<&str> = l.split('|').map(str::trim).collect();
+            let id = cells.get(1)?.trim_matches('`').to_string();
+            let href = cells.get(4)?.rsplit_once("](")?.1.strip_suffix(')')?;
+            Some((id, href.to_string()))
+        })
+        .collect()
+}
+
+/// Every corpus the matrix declares as a column has a committed report to
+/// point at.
+///
+/// The matrix links each column to `./trope-coverage-<id>.md`. Adding a path
+/// to `tropes::CORPORA` without adding a line to
+/// `scripts/regenerate-artifacts.sh` renders a column whose link is dead, and
+/// nothing else in the workspace would notice: the golden tests only cover the
+/// corpora they name, and CI's drift check compares files that exist.
+/// `every_matrix_row_carries_its_own_column_s_headline_figures` walks the
+/// other direction — committed artifact to matrix row — so a declared corpus
+/// with no artifact is precisely the case it cannot see.
+///
+/// `CORPORA` is reached through the rendered matrix rather than imported.
+/// `hornvale` is a binary-only crate, so an integration test cannot name the
+/// constant; but the Columns table is rendered *from* it, one row per entry,
+/// so parsing those rows out of a live run binds the declared list to the
+/// committed artifacts just as tightly. It also binds the **rendered href**
+/// rather than re-deriving `artifact_path`'s convention here, so a change to
+/// how the link is spelled cannot leave this test checking a path the document
+/// no longer contains. A declared corpus whose *file* is missing fails earlier
+/// still: `tropes matrix` cannot render at all, and the status assertion
+/// catches it.
+///
+/// This lived in `cli/src/tropes.rs` as a unit test, where reaching the
+/// workspace root required `env!("CARGO_MANIFEST_DIR")` inside production
+/// source — see `build_path_embedding.rs` for what that costs decision 0090's
+/// cross-host oracle. Here the same `env!` is free: this binary never ships.
+#[test]
+fn every_declared_matrix_column_links_to_a_committed_report() {
+    let root = workspace_root();
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["tropes", "matrix"])
+        .current_dir(&root)
+        .output()
+        .expect("runs the binary");
+    assert!(
+        out.status.success(),
+        "tropes matrix failed — a corpus declared in CORPORA may be unreadable: {out:?}"
+    );
+    let matrix = String::from_utf8(out.stdout).expect("utf-8");
+
+    let columns = parse_matrix_columns(&matrix);
+    assert!(
+        columns.len() >= 2,
+        "the matrix's Columns table parsed as {} row(s); two catalogues are declared \
+         today, so this test just stopped checking anything. The table's shape moved — \
+         fix the parse rather than letting it pass vacuously.\n{matrix}",
+        columns.len()
+    );
+
+    for (id, href) in &columns {
+        let target = root.join("docs/audits").join(href.trim_start_matches("./"));
+        assert!(
+            target.is_file(),
+            "the matrix renders a column for `{id}` linking to `{href}`, but \
+             {} does not exist — the committed matrix would carry a dead link. \
+             Add a line to scripts/regenerate-artifacts.sh and regenerate.",
+            target.display()
+        );
+    }
+}
+
+/// Every corpus in `tropes/` identifies its situations uniquely, and every
+/// committed column is one of them.
+///
+/// `resolve` keys a `BTreeMap` by `id`, so a copy-pasted id silently drops a
+/// situation: the report prints a quietly smaller denominator, and every
+/// matrix share divides a numerator counted over `corpus.situations` by a
+/// denominator of `out.len()` — which is how a duplicate renders a share above
+/// 100%. The two hand-written per-corpus tests in `cli/src/tropes.rs` assert
+/// uniqueness beside a frozen count and they stay; the count is the
+/// deliberate-freeze ratchet. This is the generic backstop, so that a third
+/// catalogue is covered the day its file lands rather than waiting for someone
+/// to remember to hand-write a third test.
+///
+/// The sweep is over `tropes/*.trope.json` — a superset of what is declared —
+/// and the second assertion is what keeps that from being a weaker check than
+/// looping over `CORPORA`: every committed column must be backed by a swept
+/// file, so a declared corpus living outside `tropes/` fails loudly here
+/// rather than being skipped silently.
+#[test]
+fn every_corpus_file_identifies_its_situations_uniquely() {
+    let root = workspace_root();
+    let mut corpus_ids = std::collections::BTreeSet::new();
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(root.join("tropes"))
+        .expect("tropes/ is readable")
+        .map(|e| e.expect("readable directory entry").path())
+        .filter(|p| p.to_string_lossy().ends_with(".trope.json"))
+        .collect();
+    files.sort();
+    assert!(
+        files.len() >= 2,
+        "found {} corpus file(s) under tropes/; two are committed today, so this \
+         sweep just stopped checking anything",
+        files.len()
+    );
+
+    for path in &files {
+        let text = std::fs::read_to_string(path).expect("the corpus file is readable");
+        let json: serde_json::Value = serde_json::from_str(&text)
+            .unwrap_or_else(|e| panic!("{} is not JSON: {e}", path.display()));
+        let id = json["corpus"]
+            .as_str()
+            .unwrap_or_else(|| panic!("{} declares no `corpus` id", path.display()));
+        let situations = json["situations"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{} declares no `situations` array", path.display()));
+        assert!(
+            !situations.is_empty(),
+            "{} declares an empty corpus",
+            path.display()
+        );
+        let mut seen = std::collections::BTreeSet::new();
+        for st in situations {
+            let sid = st["id"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{} has a situation with no `id`", path.display()));
+            assert!(
+                seen.insert(sid),
+                "`{id}` declares situation id `{sid}` twice — `resolve` keys a BTreeMap by \
+                 id, so one situation would vanish, the report would understate its \
+                 denominator, and a matrix share counted over the corpus but divided by \
+                 that denominator would render above 100%"
+            );
+        }
+        corpus_ids.insert(id.to_string());
+    }
+
+    for entry in std::fs::read_dir(root.join("docs/audits")).expect("docs/audits is readable") {
+        let path = entry.expect("readable directory entry").path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let Some(id) = name
+            .strip_prefix("trope-coverage-")
+            .and_then(|n| n.strip_suffix(".md"))
+        else {
+            continue;
+        };
+        assert!(
+            corpus_ids.contains(id),
+            "`docs/audits/{name}` is a committed column for `{id}`, but no file under \
+             tropes/ declares that corpus id — so the uniqueness sweep above never \
+             covered it. Found: {corpus_ids:?}"
+        );
+    }
+}
+
 /// A report's headline, parsed out of `Stageable {s} of {t} ({i}
 /// inapplicable).` as `(stageable, total, inapplicable)`.
 ///
