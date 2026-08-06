@@ -18,7 +18,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellId, Seed};
-use hornvale_terrain::{CaveKind, TerrainPins};
+use hornvale_terrain::{BandKind, CaveKind, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -124,7 +124,13 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
                 CaveKind::LavaTube => 1,
                 CaveKind::Fracture => 2,
             }] += 1;
-            out.bands[(cave.depth_reach_bands.clamp(1, 4) - 1) as usize] += 1;
+            out.bands[match cave.deepest_band {
+                BandKind::Regolith => 0,
+                BandKind::Cover => 1,
+                BandKind::Basement => 2,
+                BandKind::Roots => 3,
+                BandKind::Underneath => 4,
+            }] += 1;
         }
         if let Some(b) = bucket {
             out.gate[b].0 += 1;

@@ -21,13 +21,12 @@ pub enum CaveKind {
 }
 
 /// A located cave at a cell.
-/// type-audit: bare-ok(count: depth_reach_bands)
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cave {
     /// Which process opened it.
     pub kind: CaveKind,
-    /// How many of the column's bands the void penetrates (1 = cover only).
-    pub depth_reach_bands: u32,
+    /// The deepest band of the cell's column the void penetrates.
+    pub deepest_band: BandKind,
 }
 
 /// Felsic index at or below which rock reads as mafic enough to have flowed
@@ -96,6 +95,53 @@ pub fn cave_process(
         .max_by(|(ia, (_, a)), (ib, (_, b))| a.total_cmp(b).then_with(|| ib.cmp(ia)))
         .map(|(_, kv)| kv)?;
     if best.1 <= 0.0 { None } else { Some(best) }
+}
+
+/// Proneness at or above which a process is strong enough to reach one band
+/// deeper than its host.
+const DEEP_PROCESS_PRONENESS: f64 = 0.5;
+
+/// The deepest band a cave of this kind penetrates, given the cell's column.
+///
+/// Mirrors [`deposit_depth`], which types an ore body's depth as a named
+/// [`BandKind`] rather than a count. The retired `depth_reach_bands` was
+/// `1 + (cave_proneness * 3.0) as u32`, which could not reach band 3 (it
+/// needed proneness >= 2/3 against a theoretical ceiling of 0.573) nor band 4
+/// (it needed exactly 1.0), so every cave in every world sat at band 2
+/// (spec §2.2). A band derived from bands cannot reproduce that failure.
+///
+/// This restores The Lode's own §5 intent — "depth-reach from `cave_proneness`
+/// x the cover/carbonate band depth" — whose band-depth half was never
+/// implemented.
+/// type-audit: bare-ok(ratio: proneness)
+pub fn cave_depth(
+    kind: CaveKind,
+    column: &crate::strata::StratigraphicColumn,
+    proneness: f64,
+) -> BandKind {
+    let strong = proneness >= DEEP_PROCESS_PRONENESS;
+    match kind {
+        // Dissolution works the sedimentary cover, and reaches the basement
+        // contact where the cover is thin on ancient rock (an unconformity)
+        // or where the process is strong.
+        CaveKind::Karst => {
+            if strong || column.unconformity {
+                BandKind::Basement
+            } else {
+                BandKind::Cover
+            }
+        }
+        // A tube is the flow it drained out of, so it never leaves the cover.
+        CaveKind::LavaTube => BandKind::Cover,
+        // Faults cut crystalline rock, and deep ones reach the roots.
+        CaveKind::Fracture => {
+            if strong {
+                BandKind::Roots
+            } else {
+                BandKind::Basement
+            }
+        }
+    }
 }
 
 /// Lineament proximity weight: features cluster into belts near plate contacts.
@@ -423,6 +469,80 @@ mod tests {
         );
         let (kind, _) = cave_process(&tied, 500.0, 0.9, Some(0)).expect("hosts a cave");
         assert_eq!(kind, CaveKind::Karst);
+    }
+
+    #[test]
+    fn cave_depth_differs_by_kind() {
+        use crate::strata::column;
+        // Thick cover (401 m) on young crust: no unconformity.
+        let thick = column(
+            35.0,
+            0.3,
+            true,
+            400.0,
+            1.0,
+            RockClass::Sandstone,
+            Basement::Continental,
+        );
+        assert!(!thick.unconformity, "fixture must NOT be an unconformity");
+        assert_eq!(cave_depth(CaveKind::Karst, &thick, 0.2), BandKind::Cover);
+        assert_eq!(cave_depth(CaveKind::LavaTube, &thick, 0.9), BandKind::Cover);
+        assert_eq!(
+            cave_depth(CaveKind::Fracture, &thick, 0.2),
+            BandKind::Basement
+        );
+    }
+
+    #[test]
+    fn a_strong_process_reaches_one_band_deeper() {
+        use crate::strata::column;
+        let thick = column(
+            35.0,
+            0.3,
+            true,
+            400.0,
+            1.0,
+            RockClass::Sandstone,
+            Basement::Continental,
+        );
+        assert_eq!(cave_depth(CaveKind::Karst, &thick, 0.9), BandKind::Basement);
+        assert_eq!(cave_depth(CaveKind::Fracture, &thick, 0.9), BandKind::Roots);
+    }
+
+    #[test]
+    fn karst_on_thin_cover_reaches_the_basement_contact() {
+        use crate::strata::column;
+        // Thin cover (11 m) on ancient basement (age 0.9): an unconformity, so
+        // dissolution reaches the contact however weak the process is.
+        let thin = column(
+            35.0,
+            0.9,
+            true,
+            10.0,
+            1.0,
+            RockClass::ReefLimestone,
+            Basement::Continental,
+        );
+        assert!(
+            thin.unconformity,
+            "fixture must actually be an unconformity"
+        );
+        assert_eq!(cave_depth(CaveKind::Karst, &thin, 0.1), BandKind::Basement);
+    }
+
+    #[test]
+    fn a_lava_tube_never_leaves_the_cover() {
+        use crate::strata::column;
+        let thin = column(
+            35.0,
+            0.9,
+            true,
+            10.0,
+            1.0,
+            RockClass::Basalt,
+            Basement::Continental,
+        );
+        assert_eq!(cave_depth(CaveKind::LavaTube, &thin, 1.0), BandKind::Cover);
     }
 
     #[test]

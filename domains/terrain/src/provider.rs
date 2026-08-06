@@ -286,12 +286,13 @@ impl GeneratedTerrain {
         } else {
             crate::features::CaveKind::Fracture
         };
-        // Depth-reach grows with proneness (deeper karst in wetter, more soluble rock).
-        let depth_reach_bands = 1 + (self.cave_proneness_at(id) * 3.0) as u32;
-        Some(crate::features::Cave {
-            kind,
-            depth_reach_bands,
-        })
+        // Depth reads the cell's stratigraphic column, not a dimensionless
+        // ratio (The Hollow, Task 3). The proneness passed is still the Karst
+        // term, because the TRANSITIONAL kind block above is still gated on it;
+        // Task 4 replaces both with the selected process's own proneness.
+        let deepest_band =
+            crate::features::cave_depth(kind, &self.column_at(id), self.cave_proneness_at(id));
+        Some(crate::features::Cave { kind, deepest_band })
     }
 
     /// The dominant ore deposit at a cell, if the point process places one.
