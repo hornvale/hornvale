@@ -6,7 +6,7 @@
 //! change.
 
 use hornvale_kernel::{Seed, World};
-use hornvale_vessel::{PossessOpts, Session, snapshot_json};
+use hornvale_vessel::{PossessOpts, Session, SpatialChannel, snapshot_json};
 
 fn world() -> World {
     hornvale_worldgen::build_world(
@@ -152,5 +152,115 @@ fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
     assert!(
         matches!(err, hornvale_vessel::VesselError::NoSettlement),
         "seed {seed} refused for the wrong reason: {err}"
+    );
+}
+
+#[test]
+fn out_of_doors_the_spatial_channel_is_the_walk_band_chart() {
+    let world = world();
+    let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let snap = session.snapshot().expect("a live session snapshots");
+    match &snap.spatial {
+        SpatialChannel::Walk { chart } => {
+            assert_eq!(chart.schema, "scene/surrounds/v1");
+            assert!(
+                !chart.cells.is_empty(),
+                "a chart with no cells shows nothing"
+            );
+        }
+        SpatialChannel::Chamber { .. } => {
+            panic!("the possession opens out of doors, not inside a building")
+        }
+    }
+}
+
+#[test]
+fn inside_a_building_the_spatial_channel_is_the_chamber_plan() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    session.handle("enter");
+    let snap = session.snapshot().expect("a live session snapshots");
+    match &snap.spatial {
+        SpatialChannel::Chamber { plan } => {
+            assert_eq!(plan.schema, "vessel/plan/v1");
+            assert_eq!(
+                plan.cells.len(),
+                (plan.extent.w * plan.extent.h) as usize,
+                "the emitted grid must stay total"
+            );
+        }
+        SpatialChannel::Walk { .. } => panic!("`enter` puts the possession inside"),
+    }
+}
+
+#[test]
+fn the_band_tag_is_what_the_client_switches_on() {
+    // The client reads `spatial.band` before anything else, so the wire tag
+    // is contract and a rename is a v2. Asserted on the BYTES, not the enum:
+    // a `#[serde(rename)]` slip is invisible to a match arm.
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let walk = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    assert!(
+        walk.contains(r#""band":"walk""#),
+        "walk tag missing: {walk:.200}"
+    );
+    session.handle("enter");
+    let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    assert!(
+        chamber.contains(r#""band":"chamber""#),
+        "chamber tag missing: {chamber:.200}"
+    );
+}
+
+/// The committed fixtures the Casement's pane tests decode.
+///
+/// Byte goldens, refreshed with `REBASELINE=1` like every other golden in
+/// this repo. A diff here means the wire shape moved, which is the epoch
+/// decision point — never rebaseline to make a red run green without
+/// deciding that first.
+#[test]
+fn the_client_fixtures_are_current() {
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+
+    let walk = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    session.handle("enter");
+    let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+
+    for (name, body) in [
+        ("snapshot-seed-42-walk.json", walk),
+        ("snapshot-seed-42-chamber.json", chamber),
+    ] {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures")
+            .join(name);
+        if std::env::var("REBASELINE").is_ok() {
+            std::fs::write(&path, &body).expect("the fixture directory exists");
+            continue;
+        }
+        let committed = std::fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("{name} is missing — run with REBASELINE=1"));
+        assert_eq!(
+            committed, body,
+            "{name} drifted: the vessel/session/v1 wire shape moved. Decide \
+             whether that is an epoch BEFORE rebaselining."
+        );
+    }
+}
+
+#[test]
+fn the_snapshot_stays_a_pure_read() {
+    // `Session::snapshot` documents that it never commits and never advances
+    // the turn counter. Adding a channel that BUILDS a chart is exactly the
+    // change that could break that, so it is asserted rather than assumed.
+    let world = world();
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    session.handle("look");
+    let a = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    let b = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
+    assert_eq!(
+        a, b,
+        "two snapshots with no verb between them must be identical"
     );
 }

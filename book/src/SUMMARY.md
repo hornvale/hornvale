@@ -304,6 +304,7 @@
 - [The Tolerance](./chronicle/the-tolerance.md)
 - [The Fare](./chronicle/the-fare.md)
 - [The Hollow](./chronicle/the-hollow.md)
+- [The Panes](./chronicle/the-panes.md)
 - [The Deep Realm](./chronicle/the-deep-realm.md)
 - [The Collation](./chronicle/the-collation.md)
 - [The Long Age](./chronicle/the-long-age.md)
