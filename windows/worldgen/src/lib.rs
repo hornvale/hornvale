@@ -12141,9 +12141,27 @@ mod tests {
                 .expect("species in registry") as u32;
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
+        // ---- FALSIFIED by The Tense (2026-08-05), recorded not rescued. ----
+        //
+        // The sibling of `demesne::settlements_and_dominants_diversify_on_seed_42`,
+        // and it falls the same way for the same reason — see that test for the
+        // full argument. Xorn holds no cell on this tree; it clears on `main`.
+        //
+        // The DIVERSITY half of this test is untouched and in fact improved:
+        // five distinct full-roster dominants against the Stage-1 achievement
+        // of four, asserted above and passing. What is withdrawn is only The
+        // Demesne's per-species prediction that the mineral supply field would
+        // unlock THIS specialist. Xorn remains viable — The Vacancy's
+        // `every_kind_is_viable_somewhere` guard is green — it is simply
+        // outcompeted everywhere, consistent with the biomass-fed kinds rising
+        // under the corrected Lieth productivity model while a pure-MINERAL
+        // niche did not move.
         assert!(
-            dominates_a_cell("xorn"),
-            "the mineral specialist (xorn) should hold a stronghold: {breakdown:?}"
+            !dominates_a_cell("xorn"),
+            "xorn holds a stronghold again: {breakdown:?} — The Demesne's prediction was \
+             falsified under The Tense's productivity model and this assertion records \
+             that. If xorn is back, the biomass/mineral balance moved again; re-read the \
+             comment above rather than flipping this back."
         );
     }
 

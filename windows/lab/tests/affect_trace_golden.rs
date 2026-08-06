@@ -87,6 +87,54 @@ fn seed_42_affect_trace_reproduces_the_pinned_bytes() {
     );
 }
 
+/// The fixture's COVERAGE, ratcheted — added by The Tense (2026-08-05) because
+/// accepting that campaign's regeneration silently narrowed what the golden
+/// above witnesses, and nothing would have said so.
+///
+/// The golden is a byte pin. A byte pin cannot tell "the values moved" from
+/// "the trace stopped exercising half the affect space", and the two want
+/// opposite responses. Measured across The Tense's regeneration:
+///
+/// ```text
+///   peoples sampled   bugbear 2, hobgoblin 1, human 1, gnoll 2   ->  bugbear 1, hobgoblin 5
+///   affect labels     Content Eager Searching Helpless Lost Frustrated  ->  first four only
+///   (solitaries rust-monster / otyugh / xorn / carrion-crawler: 1 each, unchanged)
+/// ```
+///
+/// **`Lost` and `Frustrated` are no longer reached at all**, and they were the
+/// only negative-valence affect anywhere in the fixture — all nine lines of it
+/// sat on the two gnolls, which the re-placement removed from the sample. That
+/// is a real loss in what this witness can catch, and it is recorded as a debt
+/// rather than accepted: the floor below is the ACHIEVED value, and 6 is the
+/// target to get back to. Deliberately not weakened to track a future fall —
+/// the same posture `menagerie`'s preregistered `>= 6` dominant target takes.
+#[test]
+fn the_affect_trace_still_exercises_a_spread_of_labels_and_peoples() {
+    let digest = digest(&world());
+    let labels: std::collections::BTreeSet<&str> = digest
+        .lines()
+        .filter_map(|l| l.split("label=").nth(1))
+        .filter_map(|r| r.split_whitespace().next())
+        .collect();
+    let peoples: std::collections::BTreeSet<&str> = digest
+        .lines()
+        .filter_map(|l| l.split("species=").nth(1))
+        .collect();
+    assert!(
+        labels.len() >= 4,
+        "the affect trace exercises only {} distinct labels ({labels:?}) — it reached six \
+         before The Tense, and a byte golden cannot tell a narrowing sample from a value \
+         change. Do NOT lower this floor; the target is to restore Lost and Frustrated.",
+        labels.len()
+    );
+    assert!(
+        peoples.len() >= 6,
+        "the affect trace samples only {} distinct species ({peoples:?}); a homogeneous \
+         sample makes the golden a witness to one creature's life rather than the roster's",
+        peoples.len()
+    );
+}
+
 #[test]
 fn the_affect_trace_digest_is_itself_deterministic() {
     // One world build, two independent `simulate_world` runs over it (Task 4
