@@ -273,8 +273,19 @@ impl GeneratedTerrain {
             return None;
         }
         let buf = self.material_at(id);
-        let near_fault = self.boundary_at(id).is_some();
-        let kind = crate::features::cave_kind(&buf, near_fault);
+        // TRANSITIONAL (The Hollow, Task 1 → Task 4): the retired
+        // `features::cave_kind` inlined verbatim so this task changes no live
+        // behaviour. It is asked only after a carbonate-gated existence test
+        // has already passed, so the two non-`Karst` arms are unreachable —
+        // that is the bug `features::cave_process` exists to fix, and Task 4
+        // replaces this whole body with it.
+        let kind = if buf.carbonate > 0.5 {
+            crate::features::CaveKind::Karst
+        } else if buf.silica < 0.3 {
+            crate::features::CaveKind::LavaTube
+        } else {
+            crate::features::CaveKind::Fracture
+        };
         // Depth-reach grows with proneness (deeper karst in wetter, more soluble rock).
         let depth_reach_bands = 1 + (self.cave_proneness_at(id) * 3.0) as u32;
         Some(crate::features::Cave {

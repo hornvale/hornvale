@@ -30,18 +30,72 @@ pub struct Cave {
     pub depth_reach_bands: u32,
 }
 
-/// The cave type implied by lithology: carbonate dissolves to karst, mafic
-/// (low-silica) volcanic drains to lava-tube, else a fault fracture.
-/// type-audit: bare-ok(flag: near_fault)
-pub fn cave_kind(buf: &MaterialBuffer, near_fault: bool) -> CaveKind {
-    if buf.carbonate > 0.5 {
-        CaveKind::Karst
-    } else if buf.silica < 0.3 {
-        CaveKind::LavaTube
-    } else {
-        let _ = near_fault; // fracture is the fallback; near_fault reinforces presence, not kind
-        CaveKind::Fracture
-    }
+/// Felsic index at or below which rock reads as mafic enough to have flowed
+/// as basalt. Matches the `silica < 0.3` boundary the retired `cave_kind`
+/// used, kept so the taxonomy's meaning does not silently shift.
+const MAFIC_SILICA_MAX: f64 = 0.3;
+
+/// Lava-tube proneness, `[0,1]`: a drained basaltic flow. Needs mafic rock
+/// (low `silica`), extrusive texture (fine `grain` — a pluton never flowed),
+/// and young crust, because old tubes collapse and are buried.
+/// type-audit: bare-ok(ratio: crust_age), bare-ok(ratio: return)
+pub fn lavatube_proneness(buf: &MaterialBuffer, crust_age: f64) -> f64 {
+    let mafic = ((MAFIC_SILICA_MAX - buf.silica) / MAFIC_SILICA_MAX).clamp(0.0, 1.0);
+    let extrusive = (1.0 - buf.grain).clamp(0.0, 1.0);
+    let youth = (1.0 - crust_age).clamp(0.0, 1.0);
+    (mafic * extrusive * youth).clamp(0.0, 1.0)
+}
+
+/// Fracture proneness, `[0,1]`: a fault void. Needs stress (proximity to a
+/// plate contact) and rock that breaks rather than flows — hard and
+/// unmetamorphosed. Reuses [`belt_weight`] for the stress term so fracture
+/// caves and ore belts read the same lineament field.
+/// type-audit: bare-ok(count: boundary_distance), bare-ok(ratio: return)
+pub fn fracture_proneness(buf: &MaterialBuffer, boundary_distance: Option<u32>) -> f64 {
+    let stress = belt_weight(boundary_distance);
+    let brittle = buf.induration * (1.0 - buf.metamorphic_grade);
+    (stress * brittle).clamp(0.0, 1.0)
+}
+
+/// The void-opening process this cell's rock best supports, with that
+/// process's own proneness — `None` where no process operates.
+///
+/// **Kind is chosen BEFORE existence is tested**, mirroring [`deposit_kind`].
+/// The retired `cave_kind` was asked only after a carbonate-gated existence
+/// test had already passed, so its two non-`Karst` branches — both of which
+/// require carbonate to be LOW — were unreachable (The Hollow, spec §2.1).
+///
+/// Selection is argmax over the three pronenesses rather than a priority
+/// ladder, so the mix follows the fields instead of a hand-chosen order.
+/// Ties break by `total_cmp` with declaration order as the deterministic
+/// tie-break.
+/// type-audit: bare-ok(count: drainage), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: return)
+pub fn cave_process(
+    buf: &MaterialBuffer,
+    drainage: f64,
+    crust_age: f64,
+    boundary_distance: Option<u32>,
+) -> Option<(CaveKind, f64)> {
+    let candidates = [
+        (
+            CaveKind::Karst,
+            crate::lithology::cave_proneness(buf, drainage),
+        ),
+        (CaveKind::LavaTube, lavatube_proneness(buf, crust_age)),
+        (
+            CaveKind::Fracture,
+            fracture_proneness(buf, boundary_distance),
+        ),
+    ];
+    let best = candidates
+        .iter()
+        .copied()
+        .enumerate()
+        // max_by returns the LAST maximum on a tie; negate the index so the
+        // earliest-declared kind wins instead.
+        .max_by(|(ia, (_, a)), (ib, (_, b))| a.total_cmp(b).then_with(|| ib.cmp(ia)))
+        .map(|(_, kv)| kv)?;
+    if best.1 <= 0.0 { None } else { Some(best) }
 }
 
 /// Lineament proximity weight: features cluster into belts near plate contacts.
@@ -249,10 +303,64 @@ mod tests {
     }
 
     #[test]
-    fn cave_kind_reads_lithology() {
-        assert_eq!(cave_kind(&buf(0.8, 0.5), false), CaveKind::Karst);
-        assert_eq!(cave_kind(&buf(0.1, 0.15), false), CaveKind::LavaTube);
-        assert_eq!(cave_kind(&buf(0.1, 0.6), true), CaveKind::Fracture);
+    fn each_kind_is_selectable_by_its_own_field() {
+        // Carbonate platform, wet, porous -> Karst.
+        let mut karst = buf(0.7, 0.5);
+        karst.porosity = 0.8;
+        let (kind, p) = cave_process(&karst, 500.0, 0.5, Some(4)).expect("karst rock hosts a cave");
+        assert_eq!(kind, CaveKind::Karst);
+        assert!(p > 0.0, "selected kind must carry a positive proneness");
+
+        // Young mafic fine-grained rock, no carbonate -> LavaTube.
+        let mut lava = buf(0.0, 0.1);
+        lava.grain = 0.1;
+        let (kind, _) = cave_process(&lava, 0.0, 0.05, None).expect("young basalt hosts a cave");
+        assert_eq!(kind, CaveKind::LavaTube);
+
+        // Hard unmetamorphosed rock right on a plate contact -> Fracture.
+        let mut frac = buf(0.0, 0.7);
+        frac.induration = 0.95;
+        let (kind, _) =
+            cave_process(&frac, 0.0, 0.9, Some(0)).expect("brittle fault rock hosts a cave");
+        assert_eq!(kind, CaveKind::Fracture);
+    }
+
+    #[test]
+    fn a_cell_supporting_no_process_hosts_no_cave() {
+        // Nothing to dissolve, fully felsic (no tube), perfectly plastic (nothing
+        // to fracture).
+        let mut inert = buf(0.0, 1.0);
+        inert.induration = 0.0;
+        assert_eq!(cave_process(&inert, 0.0, 0.9, None), None);
+    }
+
+    #[test]
+    fn selection_takes_the_strongest_process_not_a_fixed_order() {
+        // Weak carbonate against strong fracture conditions: fracture must win,
+        // which a Karst-first priority ladder would get wrong.
+        let mut b = buf(0.05, 0.7);
+        b.porosity = 0.05;
+        b.induration = 1.0;
+        assert!(
+            crate::lithology::cave_proneness(&b, 0.0) > 0.0,
+            "the karst term must be live, or a priority ladder would agree by accident"
+        );
+        let (kind, _) = cave_process(&b, 0.0, 0.9, Some(0)).expect("hosts a cave");
+        assert_eq!(kind, CaveKind::Fracture);
+
+        // An exact tie goes to the earliest-declared kind, which is what the
+        // negated index in the argmax tie-break buys: `max_by` would otherwise
+        // return the LAST maximum (Fracture).
+        let mut tied = buf(0.5, 0.7);
+        tied.porosity = 1.0;
+        tied.induration = 0.5;
+        assert_eq!(
+            crate::lithology::cave_proneness(&tied, 500.0),
+            fracture_proneness(&tied, Some(0)),
+            "the tie-break case must actually tie, or the assertion below is vacuous"
+        );
+        let (kind, _) = cave_process(&tied, 500.0, 0.9, Some(0)).expect("hosts a cave");
+        assert_eq!(kind, CaveKind::Karst);
     }
 
     #[test]
