@@ -89,7 +89,18 @@ leaves free is an embedder inventing, which the checker already forbids.
   specified there: `{noun, kind, datum, salience}` plus the cell, deliberately
   the focalizer's `Focalized.nouns` shape, so a creature on the map and a
   creature in the prose are the same examinable thing.
-- **The pane draws them**, and draws only lit cells.
+- **The pane draws them.** ~~and draws only lit cells.~~
+
+> **Correction (2026-08-07, at the close).** The struck clause is wrong and was
+> never built. There is no unlit concept for a *cell* at the wire: `plan_of`
+> emits the whole wall/floor/threshold grid unconditionally, `CellKind` is
+> closed at three variants with an explicit warning in its own doc against
+> widening it, and only `marks` are gated by sight. The implementation plan's
+> own step said "emit only lit **creatures** as marks", so the error is in this
+> sentence and nowhere downstream of it; the implementer declined to build
+> blank-rendering for a wire value that cannot occur and flagged it instead.
+> **What shipped: the map shows the full floor plan; sight hides creatures, not
+> geometry.** See [the chronicle](../../../book/src/chronicle/the-sighting.md).
 
 ## 4. Symmetric, deliberately
 

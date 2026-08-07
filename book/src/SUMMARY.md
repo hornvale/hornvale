@@ -309,6 +309,7 @@
 - [The Collation](./chronicle/the-collation.md)
 - [The Long Age](./chronicle/the-long-age.md)
 - [The Benchmark](./chronicle/the-benchmark.md)
+- [The Sighting](./chronicle/the-sighting.md)
 
 # Appendix: The Frontier
 

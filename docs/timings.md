@@ -441,3 +441,4 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-07T02:36:46Z | rebaseline | 112.913 | 136.768 | 8.616 | 1.29 | 0 | 1b6d3b40 | the-sighting | MacBookPro | 10 |
 | 2026-08-07T04:17:56Z | gate | 337.048 | 2553.404 | 81.700 | 7.82 | 0 | 7b2c48fc | the-sighting | MacBookPro | 10 |
 | 2026-08-07T04:20:44Z | rebaseline | 104.639 | 138.821 | 9.205 | 1.41 | 0 | 7b2c48fc | the-sighting | MacBookPro | 10 |
+| 2026-08-07T04:35:32Z | gate | 349.929 | 2568.873 | 98.502 | 7.62 | 0 | edec90f1 | the-sighting | MacBookPro | 10 |
