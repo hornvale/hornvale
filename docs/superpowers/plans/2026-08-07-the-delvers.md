@@ -6,10 +6,15 @@
 the first people in the Deep Realm and the first occupant of
 `LifeSchedule::Paced`, differentiated on the axes that actually reach a number.
 
-**Architecture:** Pure authoring plus two measurement instruments. No change to
-the tolerance model, the cave gate, terrain, or the chamber graph. The
-instruments (bind audit, pairwise distinctness) are built **before** the kinds so
-they cannot be tuned to the result.
+**Architecture:** Authoring, two measurement instruments, and one contained
+production change. The instruments (bind audit, pairwise distinctness) are built
+**before** the kinds so they cannot be tuned to the result. The production
+change (Task 3b) gives a chamber its real elevation by reading terrain's
+existing `top_depth_m`; the tolerance model, the cave gate, `cave_depth` and the
+chamber graph are all untouched.
+
+**Plan revised 2026-08-07** after Task 1's measurement reversed two G3
+decisions — see spec §10. Task 3b is new; P2 and P3 were withdrawn and replaced.
 
 **Tech Stack:** Rust 2024, `cargo nextest`, workspace deps limited to `serde`,
 `serde_json`, `libm`.
@@ -35,19 +40,36 @@ they cannot be tuned to the result.
   during The Warren and the third collided semantically. If it moved, stop and
   report before continuing.
 - **`make gate` in a worktree measures 22–37 min.** Budget `timeout: 3600000`.
+- **The `heavy:` `#[ignore]` reason is ONE verbatim canonical string.**
+  `cli/tests/heavy_tier.rs:63` defines it and `:124` asserts equality, not a
+  prefix match. Any heavy-tier ignore must read exactly:
+
+  ```
+  heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full
+  ```
+
+  An earlier revision of this plan invented a bespoke reason and reddened the
+  gate. Do not paraphrase it.
+- **`ConditionResponse` is re-exported from the kernel**, not owned by
+  `hornvale_species`. Import `hornvale_kernel::ConditionResponse`.
 - **The pre-commit hook runs `make quick` workspace-wide** regardless of staged
   paths. A task that changes a shared signature drags its call sites into the
   same commit; this is expected, not a failure.
 - **Do not touch these, at all:** `tolerance_liebig`, `tolerance_tiered`,
-  `subterranean_substrate`, `sovereignty_floor`, cave prevalence or clustering
-  in `domains/terrain`, and the two tripwires below.
-- **Two committed tripwires assert `ratio == 1.000` on purpose:**
-  `windows/worldgen/tests/warren_readout.rs:310` and
-  `windows/worldgen/tests/deep_realm_rehome.rs:301`. If either reddens, **STOP
-  and report** — the tolerance model changed and the spec's §10.3 and The
-  Warren's chronicle need re-measuring. Do not nudge the assertion.
-  `windows/worldgen/tests/warren_gate.rs:162` is a mirror of production code;
-  this campaign should not move it either.
+  `sovereignty_floor`, `cave_depth`, and cave prevalence or clustering in
+  `domains/terrain`.
+- **`subterranean_substrate` is modified by Task 3b and by no other task.**
+  Every other task treats it as untouchable.
+- **The two `ratio == 1.000` tripwires** (`warren_readout.rs:310`,
+  `deep_realm_rehome.rs:301`) are **expected to redden in Task 3b and nowhere
+  else.** In Task 3b they are re-measured per that task's Step 5 — read the new
+  ratio and pin it with a comment naming the cause. **In any other task, a red
+  tripwire means STOP and report**: something changed the model that was not
+  supposed to.
+- **`windows/worldgen/tests/warren_gate.rs:162` must never move.** It mirrors a
+  *Surface* kind's arithmetic, which no task in this campaign changes. If it
+  reddens — including in Task 3b — the depth change leaked into the surface
+  path. That is a bug, not a rebaseline.
 
 ---
 
@@ -223,7 +245,7 @@ check; a bespoke reason reddens the gate).
 const SETTLERS: [&str; 6] = ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll", "human"];
 
 #[test]
-#[ignore = "heavy: live worldgen over 3 seeds"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_shipped_roster_is_bound_by_elevation_on_essentially_all_land() {
     for seed in [42u64, 7, 1234] {
         let report = bind_shares(seed);
@@ -315,7 +337,7 @@ runs against the **current** roster, which contains kinds known to differ.
 /// cannot separate them it is broken, and every null it later reports is
 /// worthless.
 #[test]
-#[ignore = "heavy: live worldgen"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_probe_separates_two_kinds_known_to_differ() {
     let pairs = pairwise_correlations(42, &["kobold", "gnoll"]);
     let (_, r) = &pairs[0];
@@ -329,7 +351,7 @@ fn the_probe_separates_two_kinds_known_to_differ() {
 /// And able to report IDENTITY, against a pair that is identical by
 /// construction: a kind compared with itself.
 #[test]
-#[ignore = "heavy: live worldgen"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_probe_reports_unity_for_a_kind_against_itself() {
     let pairs = pairwise_correlations(42, &["goblin", "goblin"]);
     let (_, r) = &pairs[0];
@@ -410,18 +432,34 @@ values rejected at review in favour of measured ones (`f18d7b75`).
   desert-dwarf    66     Surface       (see below)          low-supply mix
 ```
 
-**Elevation `devotion` is the campaign's central authoring choice.** Task 1
-establishes that a devotion below ~0.45 makes elevation bind everywhere and the
-climate curves inert; above it, climate can bind near the optimum but the kind
-becomes sharply excluded away from it. **Choose the value that keeps
-`non_void_roster` green**, and state the choice and its consequence in the doc
-comment. If you raise it above the floor for any kind, P1 and P3 in the spec
-change and you must report that before continuing — they are preregistered.
+**Elevation `devotion` is the campaign's central authoring choice, and Task 1
+measured exactly what it controls.** A kind is elevation-bound on 100.00% of
+land iff its `devotion_elev` sits **below** `sovereignty_floor(mass, potency)`;
+above the floor, its climate curves genuinely bind. Measured on the shipped
+roster (spec §10.1):
 
-`desert-dwarf` is the deliberate control (Nathan's call): it is differentiated
-**only** on prepared axes — an arid temperature/moisture curve — and shares
-Hill's elevation response. It is expected to be indistinguishable from Hill. Say
-so in its doc comment.
+```
+  kobold    dev 0.95 vs floor 0.3078  ->  43.72% elevation-bound
+  hobgoblin dev 0.70 vs floor 0.4527  ->  74.77%
+  human     dev 0.30 vs floor 0.4477  -> 100.00%
+  gnoll     dev 0.40 vs floor 0.4954  -> 100.00%
+```
+
+So authoring above the floor is a **proven, shipped style**, not a new one.
+
+Author **desert-dwarf above its floor** (~0.44 at 66 kg) so its arid
+temperature and moisture curves actually bind — Nathan's decision 2026-08-07,
+reversing the earlier control framing. Desert becomes the first people in the
+roster whose climate niche selects. Record the floor, the chosen devotion, and
+the margin between them in its doc comment.
+
+Do **not** re-author gnoll, even though §10.2 diagnoses its identical defect —
+moving an existing people's capacity inside a roster epoch destroys the
+campaign's attribution.
+
+**Keep `non_void_roster` green** (Step 7). A devotion far above the floor makes
+a kind sharply excluded away from its optimum; kobold at 0.95 is the shipped
+proof that this is survivable, but verify rather than assume.
 
 - [ ] **Step 3: Write the five condition-niche fns and the eight registry rows**
 
@@ -537,6 +575,107 @@ Claude-Session: https://claude.ai/code/session_01H7tpnfEUvEu9wbedN1FiUc"
 Expect the rest of the workspace to be red after this commit — Task 4 is the
 repair, and the pre-commit hook's `make quick` (fmt/clippy/type-audit) is what
 must pass here, not the full suite.
+
+---
+
+## Task 3b: The depth coordinate — a chamber's real elevation
+
+**Added 2026-08-07 at Nathan's direction**, reversing spec §8 item 1. Full
+rationale in spec §10.3. Without this, Mountain and Duergar are one kind and no
+authoring choice can separate them.
+
+**This is a read over two committed derivations, not a new model.**
+`domains/terrain/src/strata.rs:107` already defines
+`BandSample.top_depth_m` — *"depth to the top of this band, metres below the
+surface"* — and `Cave.deepest_band` (`domains/terrain/src/features.rs:29`)
+names which band the void reaches:
+
+```
+height_asl_m(chamber) = height_asl_m(surface) - top_depth_m(cave.deepest_band)
+```
+
+**Files:**
+- Modify: `windows/worldgen/src/lib.rs` — `subterranean_substrate` (2189) and its
+  one caller inside `per_species_suitability` (~1232).
+- Modify: `windows/worldgen/tests/warren_readout.rs`,
+  `windows/worldgen/tests/deep_realm_rehome.rs` — the two tripwires, re-measured.
+- Modify: `docs/superpowers/specs/2026-08-06-the-warren-design.md` §10.3 and
+  `book/src/chronicle/the-warren.md`.
+
+**Interfaces:**
+- Produces: `pub fn subterranean_substrate(s: Substrate, depth_m: f64) -> Substrate` — the signature gains a depth argument. Its one caller supplies it; it has the terrain and the cell.
+
+**Hard boundaries — do not cross:**
+- Do **not** change `tolerance_liebig`, `tolerance_tiered`, `sovereignty_floor`,
+  or any floor.
+- Do **not** change `cave_depth`, cave prevalence, or clustering.
+  `MAP-cave-depth-weld` and `MAP-underworld-reachability` are terrain's levers,
+  calibrated by The Hollow against five preregistered criteria. You are
+  **reading** `deepest_band`, never tuning what produces it.
+- A `Surface` kind's arithmetic must stay **bit-identical**.
+  `windows/worldgen/tests/warren_gate.rs` pins this and **must not move**. If it
+  reddens, the depth change leaked into the surface path — that is a bug, not a
+  rebaseline.
+
+- [ ] **Step 1: Check main has not moved**
+
+- [ ] **Step 2: Write the failing test first**
+
+A subterranean kind's substrate must report an elevation strictly below the
+surface cell's, on a cell whose cave reaches a deep band; and equal to it when
+the depth is zero. Assert on real cells of seed 42, not a fabricated substrate.
+
+- [ ] **Step 3: Run it and confirm it fails**
+
+Expected: FAIL — `height_asl_m` currently passes through unchanged.
+
+- [ ] **Step 4: Implement**
+
+Give `subterranean_substrate` a `depth_m` parameter and subtract it from
+`height_asl_m`. In `per_species_suitability`, resolve the cell's column, find
+the band matching `cave.deepest_band`, and pass its `top_depth_m`.
+
+Read how the column is obtained before writing this — do not invent an API.
+`windows/vessel/src/session.rs:1045` (`chamber_column_here`) already resolves a
+column from a cell and is the pattern to follow.
+
+Document the choice in the function's doc: **which** band's depth is used and
+why, since `deepest_band` names the deepest the void reaches rather than where
+its occupants live.
+
+- [ ] **Step 5: Re-measure The Warren's tripwires — do NOT nudge them**
+
+Both `warren_readout.rs:310` and `deep_realm_rehome.rs:301` will redden. They
+say, in their own text, that a change means the campaign's claims need
+re-measuring rather than the assertion needing a nudge. **They anticipated a
+tolerance-model change; this is a substrate change, and the instruction still
+applies.**
+
+For each: run it, read the newly measured ratio, and pin **that**, with a
+comment naming The Delvers as the cause and stating that the masking has been
+lifted by *supplying elevation*, not by changing the minimum. Paste the observed
+numbers into the comment.
+
+- [ ] **Step 6: Confirm the surface path is untouched**
+
+```bash
+cargo nextest run -p hornvale-worldgen --test warren_gate --run-ignored all
+```
+Expected: PASS with **zero** mismatches, unchanged. If it fails, STOP and report
+— the change leaked into a Surface kind.
+
+- [ ] **Step 7: Update The Warren's spec and chronicle**
+
+`2026-08-06-the-warren-design.md` §10.3 and the chronicle's *"The minimum that
+cannot see the improvement"* section. The Warren's finding **keeps its claim** —
+*a non-lethal preference cannot matter while an unfloored axis is scarcer* is
+still true of the tolerance model. What changed is that its own mechanism is no
+longer limited by it, because the unfloored axis now carries real information
+underground. Write it as a finding that acquired a remedy one campaign later,
+which is what The Warren's closing section asked for. **No registry IDs in
+`book/`.**
+
+- [ ] **Step 8: fmt, clippy, commit**
 
 ---
 
@@ -753,27 +892,30 @@ seeds 42 + 25 more. **If Task 3 raised any elevation devotion above the
 sovereignty floor, this prediction changes** — report the real number and amend
 the spec's §5 rather than forcing the assertion.
 
-- [ ] **Step 3: P2 — Mountain ≡ Duergar, the predicted null**
+- [ ] **Step 3: P2′ — Mountain and Duergar are distinguishable, and depth is why**
 
-```rust
-/// **A PREREGISTERED NULL.** Mountain and Duergar share realm, elevation
-/// response and resource vector; they differ only in depth, which has no slot
-/// in the model — a chamber inherits `height_asl_m` from the ground above it
-/// (`subterranean_substrate`, worldgen lib.rs:2189). The spec predicts they
-/// are numerically the same kind, and this pins it.
-///
-/// If this reddens, something differentiates them that the campaign did not
-/// intend. That is a finding to chase, not an assertion to relax.
-#[test]
-#[ignore = "heavy: live worldgen over 25 seeds"]
-fn mountain_and_duergar_are_one_rank() { /* assert max |diff| < 1e-12 per cell */ }
-```
+Spec §10.3 **inverted** the original P2. Two halves, and the second is the
+mutation that makes the first mean anything:
 
-- [ ] **Step 4: P3 — Desert ≡ Hill, the control**
+1. Authored with different elevation optima — Mountain shallow, Duergar deep —
+   their capacity fields correlate **below 0.95**.
+2. With Task 3b's depth coordinate reverted (pass `depth_m = 0.0`), the same two
+   kinds correlate **above 0.999**.
 
-Correlation > 0.99 despite an authored arid niche. Cross-reference
-`BIO-gnoll-desert` in the doc comment: this is that row's second witness, and
-the first one that was predicted in advance.
+Without (2), a correlation below 0.95 could come from any authored difference.
+(2) is what attributes the separation to depth.
+
+- [ ] **Step 4: P3′ — Desert's climate curves bind**
+
+Spec §10.2 **withdrew and replaced** the original P3. With `devotion_elev`
+authored above its sovereignty floor, desert-dwarf's Liebig-binding axis is
+`temperature` or `moisture` on ≥ 20% of land cells, and its capacity correlates
+with Hill's **below 0.95**.
+
+In the doc comment, record the diagnosis this hands `BIO-gnoll-desert`: gnoll's
+authored moisture curve never binds because its `devotion_elev` of 0.40 sits
+below its floor of 0.4954. That is a mechanism the row did not have. **Do not
+re-author gnoll here.**
 
 - [ ] **Step 5: P4 — the discrimination control**
 
