@@ -191,6 +191,48 @@ indistinguishable from tuning. The spec now carries both the original false
 verdict and the outcome beneath it, unedited — the honesty of the record is
 the finding, not a footnote to it.
 
+### The shadow of that lesson: nothing measured the mechanism on the real subject until the last review
+
+The authored-exemplar probe was the campaign's best instrument, and it stayed
+its *only* instrument. Eight tasks answered "does this work?" against curated
+inputs — seven hue exemplars written to have spectral peaks, deliberately flat
+probe reflectances, hand-built fixtures. Every per-task review was correct.
+Every one was green.
+
+The question nobody was positioned to ask was **"and does it matter on real
+data?"** The whole-branch review asked it, drove the shipped path end to end
+on seed 42's actual terrain, and found that the bugbear-versus-human
+difference the exemplars put at 28/255 of green is **2/255** on real bedrock:
+the mechanism reaching all 31 cells and moving almost nothing, because the
+terrain model's reflectances are featureless ramps with no structure for a
+merged channel to destroy. The finding is the chronicle's; the process point
+is that it arrived at the last possible moment and very nearly did not arrive
+at all.
+
+This is structural, not a lapse. A task-scoped review compares an
+implementation to its brief — *"the brief measured the right thing against the
+wrong subject"* is outside its frame by construction. The same holds for the
+plan's tests: each was aimed at the input its own task named. Only a pass that
+owns the whole change can ask whether the composed thing does anything in the
+world, and this campaign had exactly one such pass.
+
+Two countermeasures, in cost order:
+
+1. **Name the real subject in the spec's claims, not only the metric.** H1–H4
+   are phrased over exemplars, or over "a fixed seed, room and observer".
+   None says *on the substrate the world actually produces*. A claim that
+   named it would have forced the measurement into a task rather than leaving
+   it to a reviewer's curiosity.
+2. **Make one end-to-end measurement a task, not a review activity.** The
+   whole-branch reviewer had to build a driver to obtain this number. That
+   driver is the thing that should have shipped as a test.
+
+Note how this relates to the dominant lesson. Six guards could not fail
+because they could not *see*. This is the same class one level up: the
+campaign's entire suite could not distinguish "the mechanism works" from "the
+mechanism matters," and no amount of mutation testing *inside* a task would
+have surfaced it. Vacuity has a scope, and the scope can be the campaign.
+
 ## Adjudications worth recording
 
 - **A re-export outside the brief's file list** (`pub use

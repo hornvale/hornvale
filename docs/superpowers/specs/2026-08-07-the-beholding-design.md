@@ -495,6 +495,51 @@ at high sun. *Falsified if quantization to `u8` eats the effect at the
 altitudes a real day produces at the flagship's latitude* — a live risk,
 since `at_elevation`'s attenuation is gentle near the zenith.
 
+**All four claims hold** (amended 2026-08-07). H1 and H2 were measured in
+Tasks 1–2, H3's outcome is recorded above, and H4's — including the probe that
+had to be moved above the horizon before it measured Rayleigh attenuation
+rather than the airmass clamp — is recorded under §9's risk 2.
+
+> **Recorded outcome (amended 2026-08-07, whole-branch review): the end-to-end
+> effect on real terrain, which none of H1–H4 asks about.**
+>
+> Driven through the shipped path — `Session::start(42)` → `purview(0)` →
+> `surrounds_scene_colored_in`, day 0.5 (sun altitude 78.567°), flagship room,
+> radius 4, 31 cells:
+>
+> | eye | `sight` | every one of the 31 cells |
+> |---|---|---|
+> | `Eyes::Own` (bugbear) | 3 channels / 2 chromatic, `yellow-blue` | `[123, 123, 102]` |
+> | `Eyes::Named("standard")` | 4 channels / 3 chromatic, `native` | `[123, 121, 102]` |
+> | `Eyes::Named("kobold")` | 3 channels / 2 chromatic, `yellow-blue` | `[122, 122, 102]` |
+>
+> **31 of 31 cells differ** between the possessed eye and the standard
+> observer, so H1's mechanism reaches production and not merely the probe.
+> **The entire difference is 2/255, in green alone**; red and blue are
+> byte-identical. Widened to 109 cells spanning 23 distinct lithologies
+> (globe level, radius 8): 104 differ, maximum single-channel delta over the
+> whole sample still **2**, still always green.
+>
+> **The exemplar figure is not the shipped effect size and must not be cited
+> as one.** On the seven authored hue exemplars the same two eyes are **28
+> apart in green** (`red`: bugbear `[155, 155, 64]`, human `[160, 127, 64]`) —
+> fourteen times what real terrain produces. The cause is the *subject*, not
+> the eye: `domains/terrain`'s lithology reflectances are featureless monotone
+> ramps, each of the 23 sampled materials rising smoothly from ≈0.105 at band
+> 0 to ≈0.254 at band 9 with no peak and no trough, and a merged medium/long
+> channel integrates a ramp to very nearly what separate channels do. There is
+> no spectral structure for the merge to destroy. The eye model is correct;
+> the world it looks at has almost nothing for it to see.
+>
+> This is a **null on the visible effect standing beside a confirmed result on
+> the mechanism**, and it is the mirror of H3: H3's first measurement was
+> falsified because the *instrument* was wrong; this one is confirmed-but-tiny
+> because the *subject* is featureless. The consequence is directional —
+> observer refinement cannot make colour visible. Spectral structure in
+> lithology reflectance can, which is a `domains/terrain` question rather than
+> a rendering one, carried forward in the idea registry as
+> `PIGMENT-spectral-lithology`.
+
 **Seeds, not a seed.** Every claim that needs a world sweeps seeds and fails
 loudly if none qualifies. Seed 42 alone has given four wrong readings in
 this project's history.

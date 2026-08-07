@@ -233,6 +233,68 @@ so: *0 tinted, 31 withheld*. The document still carries all thirty-one
 colours. It is the *drawing* that declines to assert them, which is the whole
 of the discipline in one line.
 
+## Two bytes of green
+
+The authored exemplars say a bugbear and a human are far apart. The world says
+they are two bytes apart. Both are true, and the distance between those two
+sentences is the most consequential thing the campaign measured.
+
+Driven end to end through the shipped path — a session opened on seed 42, the
+flagship's purview, noon with the sun at 78.567°, the thirty-one cells of a
+possession's chart — the three eyes emit:
+
+| eye | sight block | every one of the 31 cells |
+|---|---|---|
+| own (bugbear) | 3 channels, 2 chromatic, `yellow-blue` | `[123, 123, 102]` |
+| `standard` | 4 channels, 3 chromatic, `native` | `[123, 121, 102]` |
+| `kobold` | 3 channels, 2 chromatic, `yellow-blue` | `[122, 122, 102]` |
+
+**Thirty-one of thirty-one cells differ** between a bugbear's eye and the
+standard observer's. The mechanism genuinely reaches the pixels; it is not a
+no-op dressed in a caption. But the **entire** difference is 2 parts in 255,
+and all of it is in green — red and blue are byte-identical. Widened to a
+coarser chart of 109 cells spanning 23 distinct lithologies, 104 differ and
+the largest single-channel delta anywhere in the sample is still 2, still
+always green.
+
+On the seven authored hue exemplars the same two eyes, under the same light,
+are **28 apart in green**: the `red` exemplar reads `[155, 155, 64]` to a
+bugbear against `[160, 127, 64]` to a human. Fourteen times the effect, from
+the same code.
+
+**The cause is the subject, not the eye.** Bedrock reflectance as the terrain
+model produces it is a featureless monotone ramp. Every one of the 23 sampled
+materials rises smoothly from about 0.105 at the short end of the band grid to
+about 0.254 at the long end, with no peak and no trough between. A channel
+that merges the medium and long bands integrates such a ramp to very nearly
+what separate medium and long channels integrate it to, because a ramp has no
+spectral *structure* for the merge to destroy. The authored exemplars are the
+opposite — they were written with peaks — which is precisely why they
+separate. The eye model is correct; the world it is looking at has almost
+nothing for it to see.
+
+So the campaign's premise is delivered *mechanically* and is very nearly
+invisible *perceptually*. That is a null result on the visible effect standing
+beside a confirmed result on the mechanism, and it is the mirror image of the
+dichromacy claim above. There the first measurement was falsified because the
+**instrument** was wrong — a chromaticity that counted the rod. Here the
+result is confirmed but tiny because the **subject** is featureless. Both are
+the same mistake wearing different clothes: measuring something other than the
+thing one meant to measure.
+
+The consequence is directional, and it is worth stating rather than hedging.
+**Colour will not become visible by refining the observer.** A better merge, a
+third tier, a finer perception vector — none can recover a distinction the
+material never encoded. It becomes visible when lithology reflectances acquire
+real spectral structure, mineral absorption features rather than ramps, which
+is a question for the ground and not for the renderer. It is carried forward
+in [the idea registry](../frontier/idea-registry.md) beside the two models
+that would unlock colour indoors.
+
+The happy accident above therefore has a second face. Seed 42's flagship is a
+bugbear, so the default possession already looks through a dichromat's eyes —
+and, on this world's rock, sees very nearly what a human would.
+
 ## What the chamber band does not do
 
 Indoors, nothing is coloured, and the reason is that two models do not exist
