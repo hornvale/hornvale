@@ -207,6 +207,27 @@
 //! patronage_transfers 30, tribute_relations_at_now 164, max_subordinates 5,
 //! tribute_collected 8002.397, tribute_collection_events 4555,
 //! max_stores_at_now 249.052, vassal_flights 8, vassal_revolts 5`.
+//!
+//! ## THIS PANEL IS A STOPGAP — IT SHOULD BECOME A CENSUS TEST
+//!
+//! Nathan, 2026-08-07. The twelve-seed panel below is the shape this project
+//! is deliberately moving AWAY from: build a handful of worlds, count how
+//! many pass, and hope the handful is representative. It exists here only
+//! because a scalar floor read on seed 42 alone had already gone red on a
+//! distribution spanning three orders of magnitude, and something had to
+//! report the spread.
+//!
+//! **`the-assay` is the campaign that retires this pattern**, moving these
+//! N-world batteries onto the 1000-world census, where the population is the
+//! instrument rather than a sample of it. When it lands, this panel and its
+//! `FLOOR_PANEL` reporting should be re-expressed as census metrics with a
+//! real distributional criterion — which is also where the deferred
+//! calibration belongs, since a percentile chosen from twelve worlds is a
+//! percentile chosen from noise.
+//!
+//! Until then: the assertion here is INERTNESS ONLY and is deliberately weak.
+//! Do not mistake it for a calibrated bound, and do not tighten it from panel
+//! data — wait for the census.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
