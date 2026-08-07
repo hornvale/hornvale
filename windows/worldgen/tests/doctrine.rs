@@ -256,8 +256,33 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // so only the KIND constant moves — bugbear -> goblin. Seven candidates in
     // an eleven-seed window is also the reassuring half of the reading: folk
     // cult-forms are common, and this smoke test is nowhere near degenerate.
+    //
+    // Re-found again under The Delvers (C2c, 2026-08-07), and by the
+    // prescribed method: the bounded 50..=60 scan, never the deleted 1..=60
+    // sweep (decision 0093). Correcting the dwarf diets off the `MINERAL`
+    // trophic axis re-placed every world and seed 57's GOBLIN flagship went
+    // folk -> organized. The scan found TWENTY surviving folk flagships in the
+    // window, up from seven: (50, desert-dwarf), (51, desert-dwarf),
+    // (51, gully-dwarf), (51, mountain-dwarf), (52, desert-dwarf),
+    // (52, hobgoblin), (53, desert-dwarf), (54, desert-dwarf),
+    // (55, desert-dwarf), (55, kobold), (56, mountain-dwarf),
+    // (57, desert-dwarf), (58, desert-dwarf), (58, mountain-dwarf),
+    // (59, bugbear), (59, desert-dwarf), (59, duergar), (60, desert-dwarf),
+    // (60, gully-dwarf), (60, kobold).
+    //
+    // Seed 57 still carries exactly one, so as at The Tense only the KIND
+    // constant moves, and it is FORCED rather than chosen: goblin ->
+    // desert-dwarf, the sole folk flagship at that seed.
+    //
+    // Read the list, though: **desert-dwarf is folk on ten of the eleven
+    // seeds**, missing only 56. It is by a wide margin the roster's least
+    // organizable people, which is the same fact `diachronic::the_ladder_law`
+    // reports from the other side (desert-dwarf is the one dwarf that loses
+    // its prediction when the diets are corrected, while duergar gains one on
+    // four seeds). A dispersed arid forager does not build settlements big
+    // enough to throw off a shaman caste.
     const FOLK_SMOKE_SEED: u64 = 57;
-    const FOLK_SMOKE_KIND: &str = "goblin";
+    const FOLK_SMOKE_KIND: &str = "desert-dwarf";
     let w = generated(FOLK_SMOKE_SEED);
     let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
     let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");

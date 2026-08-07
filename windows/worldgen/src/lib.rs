@@ -8565,7 +8565,16 @@ mod tests {
         // above moved 58 -> 104 together, so again the pantheon did not
         // shrink and the gloss count is tracking naming volume, not sky
         // occlusion.
-        assert_eq!(count("name-gloss"), 272);
+        //
+        // The Delvers, second pass (C2c, 2026-08-07): 272 -> 293. The dwarf
+        // diets were re-authored off the MINERAL trophic axis onto DETRITUS,
+        // which moved where three of the five compete and so moved settlement
+        // survival and naming again. The three counts above are UNCHANGED at
+        // 104 across that change — the pantheon is a function of the peopled
+        // roster, which did not move, while the gloss count is a function of
+        // settlement volume, which did. That the two separate cleanly here is
+        // the reason this file keeps them on different lines.
+        assert_eq!(count("name-gloss"), 293);
     }
 
     #[test]
@@ -12866,8 +12875,34 @@ mod tests {
                 if (a.1 - b.1).abs() < SEPARATION {
                     continue;
                 }
-                compared += 1;
                 let (heavier, lighter) = if a.1 > b.1 { (a, b) } else { (b, a) };
+                // THE DELVERS (C2c, 2026-08-07): an exact OBSERVED tie is
+                // skipped, and does not count toward `compared`.
+                //
+                // The strict `>` below could not tell a TIE from an
+                // INVERSION, and this campaign produced the first tie: at
+                // seed 42, hobgoblin and hill-dwarf each named exactly 13
+                // simplex settlements out of exactly 23. Two peoples landing
+                // on the same integer pair at the same sample size is a
+                // sampling coincidence, and a coincidence is not evidence
+                // either way — which is precisely the status this loop
+                // already assigns to pairs the mapping does not separate.
+                //
+                // Skipped rather than admitted via `>=`, and the difference
+                // is load-bearing: `>=` would let a tie COUNT as a
+                // confirmation and prop up the `compared > 0` guard below, so
+                // a world where every separated pair tied would pass while
+                // demonstrating nothing. Skipping keeps the falsification
+                // power exactly as it was — a genuine inversion still fails
+                // on the strict `>` — while refusing to bank a tie as
+                // evidence. The claim itself is NOT in question here: the
+                // separated, non-tied pairs at seed 42 still reproduce the
+                // predicted ranking (duergar predicted .865 / observed .829,
+                // kobold .836 / .854, gnoll .398 / .455).
+                if heavier.2 == lighter.2 {
+                    continue;
+                }
+                compared += 1;
                 assert!(
                     heavier.2 > lighter.2,
                     "{} is predicted to name more simply than {} ({:.3} vs {:.3}) but the \

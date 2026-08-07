@@ -336,30 +336,45 @@ fn river_exposure_tracks_real_proximity() {
 ///
 /// Five dwarves join the coexistence stack as Settled peoples seven through
 /// eleven, redeciding seed 42's settlement placement across the whole map.
-/// All four toponymic partitions moved again, and again they moved together:
+/// All four toponymic partitions moved, and then moved AGAIN inside the same
+/// campaign when the dwarf diets were re-authored off the `MINERAL` trophic
+/// axis onto `DETRITUS` (`domains/species`, "dwarves eat the fungal food web,
+/// not the rock"). Both readings are recorded, because the difference between
+/// them is the clearest evidence in this file that these partitions track
+/// TROPHIC placement and not merely roster size:
 ///
 /// ```text
-///   hill    kobold roots it,  10 gap  (kobold TOOK IT BACK)
-///   valley  gnoll  roots it,  10 gap  (kobold LOST it, gnoll gained it)
-///   spring  NO rooter,        11 gap  (goblin/hobgoblin/human all lost it)
-///   marsh   5 root it,         6 gap  (human lost it; hill-dwarf gained it)
+///                  first authoring (MINERAL)      corrected diets (DETRITUS)
+///   hill      kobold roots,      10 gap        gnoll roots,             10 gap
+///   valley    gnoll roots,       10 gap        bugbear + duergar root,   9 gap
+///   spring    NO rooter,         11 gap        duergar + kobold +
+///                                              mountain-dwarf root,      8 gap
+///   marsh     5 root,             6 gap        6 root (duergar joins),   5 gap
 /// ```
 ///
-/// **Kobold traded `valley` back for `hill`, exactly reversing The Tense's
-/// swap.** That is the readable signal here: the highland specialist's
-/// flagship returned to a strict local elevation maximum once five more
-/// competitors re-sorted the map. It is the same quantity moving both ways
-/// under successive roster changes, which is what makes it a threshold rather
-/// than a trend, and it is a second reason not to have re-authored kobold's
-/// niche to chase it.
+/// **The corrected diets put the deep dwarves on the water.** Under the first
+/// authoring no Subterranean dwarf rooted any of the four; under the corrected
+/// one `duergar` roots THREE of them (marsh, spring, valley) — more than any
+/// other people at this seed — and `spring`, which nobody rooted at all a
+/// commit earlier, is rooted by `duergar` and `mountain-dwarf` together with
+/// `kobold`. A people that eats the fungal food web settles where water and
+/// rock meet, and the toponymy says so without anything having been authored
+/// to make it say so.
 ///
-/// Note also what did NOT happen: total gaps across these four concepts went
-/// 15 -> 37, but on 11 peoples rather than 6 — per-people that is 2.5 gaps
-/// against 3.4 before, i.e. proportionally MORE exposure, not less. The one
-/// dwarf that roots anything toponymic here is `hill-dwarf` (marsh), which is
-/// the surface farmer; neither Subterranean dwarf roots any of the four.
+/// **Kobold's `hill`/`valley` swap is now a three-cycle, and worth not
+/// chasing.** The Tense moved kobold off `hill` onto `valley`; the first dwarf
+/// authoring moved it back onto `hill`; the corrected diets moved it off both
+/// (it holds `spring` instead) and handed `hill` to gnoll and `valley` to
+/// bugbear + duergar. A quantity that has moved three times in three commits
+/// under changes that never touched kobold's own niche is a threshold being
+/// crossed, not a trend — which is the standing reason not to re-author that
+/// niche to stabilise it.
+///
+/// Note also what did NOT happen: total gaps across these four concepts are 32
+/// on 11 peoples, i.e. 2.9 per people against 3.4 for the pre-Delvers six.
+/// Proportionally MORE exposure, not less, on a roster nearly twice the size.
 #[test]
-fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
+fn spring_is_a_gap_at_seed_42_except_for_duergar_kobold_and_mountain_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -380,23 +395,24 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
         vec![
             "bugbear",
             "desert-dwarf",
-            "duergar",
             "gnoll",
             "goblin",
             "gully-dwarf",
             "hill-dwarf",
             "hobgoblin",
-            "human",
-            "kobold",
-            "mountain-dwarf"
+            "human"
         ],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 NO placed people roots 'spring' — goblin, hobgoblin and \
-         human all lost it when the dwarves re-sorted placement"
+        vec![
+            ("duergar", "Dnaddad".to_string()),
+            ("kobold", "Roraaxaa".to_string()),
+            ("mountain-dwarf", "Moppop".to_string()),
+        ],
+        "at seed 42 three peoples root 'spring' — BOTH Subterranean dwarves \
+         plus the highland kobold, and nobody rooted it at all one commit ago"
     );
 }
 
@@ -441,14 +457,15 @@ fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
 /// human among the gappers), the same shape family this test's own history
 /// already carries; renamed to name the new sole rooter.
 ///
-/// The Delvers re-pin (C2c, 2026-08-07): kobold TOOK `hill` BACK. Its
-/// flagship sits at hill's strict local elevation maximum again, rooting it
-/// as `Roxoro` — the same word The Generalist measured. `hill` splits 1/11
-/// Root, 10/11 Gap. See the file-level note on
-/// `spring_is_a_gap_for_every_placed_people_at_seed_42`: this is one half of
-/// a clean trade, kobold giving `valley` back in the same movement.
+/// The Delvers re-pin (C2c, 2026-08-07): the sole rooter is GNOLL, as
+/// `Pzoav`. Kobold briefly took `hill` back under the first dwarf authoring
+/// and lost it again when the diets were corrected off `MINERAL`, so this
+/// partition moved twice inside one campaign; the shape held at 1/11 Root,
+/// 10/11 Gap through both. See the file-level note on
+/// `spring_is_a_gap_at_seed_42_except_for_duergar_kobold_and_mountain_dwarf`
+/// for the full three-cycle and why it is a threshold rather than a trend.
 #[test]
-fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
+fn hill_is_a_gap_at_seed_42_except_for_gnoll_which_roots_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -474,21 +491,21 @@ fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
             "bugbear",
             "desert-dwarf",
             "duergar",
-            "gnoll",
             "goblin",
             "gully-dwarf",
             "hill-dwarf",
             "hobgoblin",
             "human",
+            "kobold",
             "mountain-dwarf"
         ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("kobold", "Roxoro".to_string())],
-        "at seed 42 kobold — the authored highland specialist — roots 'hill' \
-         again, having lost it under The Tense (see the doc comment)"
+        vec![("gnoll", "Pzoav".to_string())],
+        "at seed 42 gnoll roots 'hill'; kobold, the authored highland \
+         specialist, gaps it (see the doc comment)"
     );
 }
 
@@ -523,13 +540,15 @@ fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
 /// every placed people) but the roster gains "human" alongside the other
 /// five.
 ///
-/// The Delvers re-pin (C2c, 2026-08-07): kobold GAVE `valley` BACK and gnoll
-/// took it, as `Dsavshmaov`. `valley` still splits 1/11 Root, 10/11 Gap —
-/// the same shape, a different sole rooter. The other half of the trade is
-/// `hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it`; see the
-/// file-level note there. No dwarf roots `valley`.
+/// The Delvers re-pin (C2c, 2026-08-07): TWO peoples root `valley` — bugbear
+/// as `Godoa` and duergar as `Qagtaq` — so the partition leaves the 1-rooter
+/// shape it has carried through every prior re-pin and splits 2/11 Root, 9/11
+/// Gap. Under the first dwarf authoring gnoll held it alone; correcting the
+/// dwarf diets off `MINERAL` moved gnoll to `hill` and put a deep dwarf on a
+/// lowland concept for the first time. See the file-level note on
+/// `spring_is_a_gap_at_seed_42_except_for_duergar_kobold_and_mountain_dwarf`.
 #[test]
-fn valley_is_a_gap_at_seed_42_except_for_gnoll_which_roots_it() {
+fn valley_is_a_root_at_seed_42_for_bugbear_and_duergar() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -548,9 +567,8 @@ fn valley_is_a_gap_at_seed_42_except_for_gnoll_which_roots_it() {
     assert_eq!(
         gapped,
         vec![
-            "bugbear",
             "desert-dwarf",
-            "duergar",
+            "gnoll",
             "goblin",
             "gully-dwarf",
             "hill-dwarf",
@@ -563,8 +581,11 @@ fn valley_is_a_gap_at_seed_42_except_for_gnoll_which_roots_it() {
     );
     assert_eq!(
         rooted,
-        vec![("gnoll", "Dsavshmaov".to_string())],
-        "at seed 42 exactly one people roots 'valley' — gnoll"
+        vec![
+            ("bugbear", "Godoa".to_string()),
+            ("duergar", "Qagtaq".to_string()),
+        ],
+        "at seed 42 two peoples root 'valley' — bugbear and duergar"
     );
 }
 
@@ -615,18 +636,18 @@ fn valley_is_a_gap_at_seed_42_except_for_gnoll_which_roots_it() {
 /// supposed to look like. Had one of those five romanizations changed, that
 /// would have been a phonology bug and not a re-pin.
 ///
-/// The Delvers re-pin (C2c, 2026-08-07): `marsh` splits 5/11 Root, 6/11 Gap.
-/// HUMAN LOST IT (`Meashngeo` is gone) and `hill-dwarf` gained it as
-/// `Ngabsmab` — the only toponymic root any dwarf takes at seed 42, and it
-/// goes to the surface farmer rather than to either Subterranean kind, which
-/// is the authoring reading correctly.
+/// The Delvers re-pin (C2c, 2026-08-07): `marsh` splits 6/11 Root, 5/11 Gap.
+/// HUMAN LOST IT (`Meashngeo` is gone); `hill-dwarf` gained it as `Ngabsmab`
+/// and `duergar` as `Snadsnad`. Correcting the dwarf diets off `MINERAL` is
+/// what added duergar — under the first authoring hill-dwarf was the only
+/// dwarf rooting anything toponymic at all.
 ///
 /// **Case (2) again, verified rather than assumed.** All four peoples that
 /// rooted `marsh` before and still do kept BYTE-IDENTICAL roots (`Qadoo`,
-/// `Gshoovzngaov`, `Qaneo`, `Rorora`). The phonology did not move; entries
-/// appeared and disappeared where exposure did.
+/// `Gshoovzngaov`, `Qaneo`, `Rorora`) across BOTH movements. The phonology did
+/// not move; entries appeared and disappeared where exposure did.
 #[test]
-fn marsh_is_a_root_at_seed_42_for_five_peoples_including_the_hill_dwarf() {
+fn marsh_is_a_root_at_seed_42_for_six_peoples_including_two_dwarves() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -646,7 +667,6 @@ fn marsh_is_a_root_at_seed_42_for_five_peoples_including_the_hill_dwarf() {
         gapped,
         vec![
             "desert-dwarf",
-            "duergar",
             "goblin",
             "gully-dwarf",
             "human",
@@ -658,13 +678,14 @@ fn marsh_is_a_root_at_seed_42_for_five_peoples_including_the_hill_dwarf() {
         rooted,
         vec![
             ("bugbear", "Qadoo".to_string()),
+            ("duergar", "Snadsnad".to_string()),
             ("gnoll", "Gshoovzngaov".to_string()),
             ("hill-dwarf", "Ngabsmab".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 five of eleven placed peoples root 'marsh' — human lost \
-         it and hill-dwarf gained it"
+        "at seed 42 six of eleven placed peoples root 'marsh' — human lost \
+         it; hill-dwarf and duergar gained it"
     );
 }
 

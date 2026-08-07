@@ -564,25 +564,32 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
         "compared zero occupation pairs across seeds 42/7/1000 — this test proves nothing \
          until at least one site restacks (pairs={pairs})"
     );
-    // THE DELVERS RE-MEASURE (C2c, 2026-08-07): 1 -> 0, and this is the
-    // count reaching its FLOOR, which is worth stating plainly rather than
-    // bumping. Five settling peoples redecide deep-history settlement
-    // survival at all three seeds, and the one surviving tying pair (the
-    // seed-1000 gnoll chain) no longer ties. 2688 pairs compared, 0 ties.
+    // THE DELVERS, FIRST PASS (C2c, 2026-08-07): 1 -> 0, the count reaching
+    // its FLOOR. Five settling peoples redecided deep-history settlement
+    // survival at all three seeds and the one surviving tying pair (the
+    // seed-1000 gnoll chain) stopped tying: 2688 pairs compared, 0 ties. That
+    // was recorded as a COST rather than bumped, because with nothing tying,
+    // the per-tie assertions in the loop above — the invariant this test is
+    // named for — were vacuous, and the `pairs > 0` guard cannot tell a
+    // working key from a key that never ties.
     //
-    // WHAT THIS COSTS. The per-tie assertions in the loop above — the
-    // invariant this test is named for — are now VACUOUS on this corpus:
-    // nothing ties, so nothing is checked. The `pairs > 0` guard still fires
-    // if the corpus itself empties, but it cannot tell a working key from a
-    // key that never ties. The count is retained as the drift tripwire it has
-    // always been (5 -> 3 -> 1 -> 0 across four campaigns, each re-read
-    // rather than bumped); it is no longer evidence that ties behave.
-    // Restoring a witness means finding a seed whose corpus still produces
-    // one, which is a deliberate choice about the instrument and not a
-    // re-pin — recorded here rather than made silently.
+    // THE DELVERS, SECOND PASS (same day): 0 -> 2, and THE WITNESS IS BACK.
+    // Correcting the dwarf diets off the `MINERAL` trophic axis onto
+    // `DETRITUS` moved three of the five dwarves' competition and redecided
+    // survival again. Measured: 3422 pairs, 2 ties, BOTH at seed 1000 — the
+    // same world that has carried this witness through every prior re-pin, so
+    // the instrument returned to where it has always lived rather than
+    // landing somewhere new. The per-tie assertions above are load-bearing
+    // again, and nothing had to be chosen to make that true.
+    //
+    // Worth reading against its sibling: `the_material_fourth_key_barely_
+    // moves_the_stratigraphy` stayed at 0/0/0 across this same change. Ties
+    // came back; RESTACKING did not. Those are different properties of the
+    // key — two occupations comparing equal, versus the fourth key changing
+    // an order — and only the first has recovered its witness.
     assert_eq!(
-        ties, 0,
-        "measured 0 (seed 42) + 0 (seed 7) + 0 (seed 1000) = 0 tying pairs on the live \
+        ties, 2,
+        "measured 0 (seed 42) + 0 (seed 7) + 2 (seed 1000) = 2 tying pairs on the live \
          corpus; a different count means the key's tie conditions changed"
     );
 }
