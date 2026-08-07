@@ -35,10 +35,20 @@ decisions — see spec §10. Task 3b is new; P2 and P3 were withdrawn and replac
   `bare-ok(class: field)` — a malformed tag is a recurring plan-text defect.
 - **`cargo fmt` as the final step before every commit.** fmt-gate skips are the
   most common review finding.
-- **Run `git log --oneline HEAD..origin/main` at the start of every task.**
-  A literal step, not a principle. Main moved three times in one session
-  during The Warren and the third collided semantically. If it moved, stop and
-  report before continuing.
+- **Check BOTH `main` and `origin/main` at the start of every task.** A literal
+  step, not a principle:
+
+  ```bash
+  git fetch --quiet origin; git log --oneline HEAD..main; git log --oneline HEAD..origin/main
+  ```
+
+  **`origin/main` alone is not enough, and this plan learned that the hard
+  way.** On this repo a parallel session merges a campaign into the *local*
+  `main` in the primary checkout and pushes later, so `origin/main` can sit
+  stale at your branch point while `main` has advanced twenty commits. The
+  first two tasks of this campaign both reported "main has not moved" while
+  The Sighting had already landed locally. If either ref has moved, **stop and
+  report** — do not absorb inside a task.
 - **`make gate` in a worktree measures 22–37 min.** Budget `timeout: 3600000`.
 - **The `heavy:` `#[ignore]` reason is ONE verbatim canonical string.**
   `cli/tests/heavy_tier.rs:63` defines it and `:124` asserts equality, not a
@@ -140,7 +150,7 @@ optimum, which `non_void_roster` would catch.
 - [ ] **Step 1: Check main has not moved**
 
 ```bash
-git log --oneline HEAD..origin/main
+git fetch --quiet origin; git log --oneline HEAD..main; git log --oneline HEAD..origin/main
 ```
 Expected: empty. If not, STOP and report.
 
@@ -321,7 +331,7 @@ cell where the bug was invisible.
 - [ ] **Step 1: Check main has not moved**
 
 ```bash
-git log --oneline HEAD..origin/main
+git fetch --quiet origin; git log --oneline HEAD..main; git log --oneline HEAD..origin/main
 ```
 
 - [ ] **Step 2: Write the discrimination self-check FIRST**
