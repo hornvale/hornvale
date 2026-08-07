@@ -325,7 +325,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body
@@ -507,13 +509,16 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
-    /// per call; the outer `for (s, l, m) in corpus()` this test's body
-    /// runs binds `s` to one of those ALREADY-SEEDED structures, not to
-    /// something seedless. This is a forall-corpus-entry invariant, not a
-    /// false-positive flag.
+    /// per call; the outer `for (s, l, _) in corpus()` this test's body
+    /// runs (Fix round 3 correction — this one binds the method as `_`,
+    /// not `m` like its 7 siblings) binds `s` to one of those
+    /// ALREADY-SEEDED structures, not to something seedless. This is a
+    /// forall-corpus-entry invariant, not a false-positive flag.
     #[test]
     fn rule_4_two_chambers_cannot_disagree_about_a_doorway() {
         // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
@@ -555,7 +560,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body
@@ -607,7 +614,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body
@@ -683,7 +692,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body
@@ -714,7 +725,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body
@@ -743,7 +756,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body
@@ -784,7 +799,9 @@ mod tests {
 
     /// claim: invariant(seed: corpus SEEDS 0..192) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
-    /// corpus seedless. Both were false — `corpus()` (`classify.rs:298`)
+    /// corpus seedless. Both were false — `corpus()` (`classify.rs:301`,
+    /// not 298 as an earlier round of this correction said — 298 is the
+    /// first line of `corpus()`'s own doc comment, not the `fn` line)
     /// loops `for s in SEEDS` (`SEEDS: Range<u64> = 0..192`, line 271) and
     /// builds 384 seed-derived structures/lattices (both embedder methods)
     /// per call; the outer `for (s, l, m) in corpus()` this test's body

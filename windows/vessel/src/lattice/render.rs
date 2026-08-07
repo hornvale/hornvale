@@ -273,11 +273,13 @@ mod tests {
     /// claim: invariant(seed: corpus SEEDS 0..48) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
     /// corpus seedless. Both were false — `corpus()` (`render.rs:193`) loops
-    /// `for s in SEEDS` (`SEEDS: Range<u64> = 0..48`, line 174) and builds
-    /// 48 seed-derived structures/lattices per call; the outer
-    /// `for (s, l) in corpus()` this test's body runs binds `s` to one of
-    /// those ALREADY-SEEDED structures, not to something seedless. This is
-    /// a forall-corpus-entry invariant, not a false-positive flag.
+    /// `for s in SEEDS` (`SEEDS: Range<u64> = 0..48`, line 174) and pushes
+    /// TWO entries per seed (a `built()` and a `wild()` embed), so it
+    /// builds 96 seed-derived structures/lattices per call, not 48 (Fix
+    /// round 3 correction — 48 is the seed count, not the corpus size); the
+    /// outer `for (s, l) in corpus()` this test's body runs binds `s` to
+    /// one of those ALREADY-SEEDED structures, not to something seedless.
+    /// This is a forall-corpus-entry invariant, not a false-positive flag.
     #[test]
     fn a_doorway_is_drawn_once_per_declared_link() {
         for (s, l) in corpus() {
@@ -388,11 +390,13 @@ mod tests {
     /// claim: invariant(seed: corpus SEEDS 0..48) — Fix round 2 correction:
     /// the round-1 tag on this test claimed `seed: none` and called the
     /// corpus seedless. Both were false — `corpus()` (`render.rs:193`) loops
-    /// `for s in SEEDS` (`SEEDS: Range<u64> = 0..48`, line 174) and builds
-    /// 48 seed-derived structures/lattices per call; the outer
-    /// `for (s, l) in corpus()` this test's body runs binds `s` to one of
-    /// those ALREADY-SEEDED structures, not to something seedless. This is
-    /// a forall-corpus-entry invariant, not a false-positive flag.
+    /// `for s in SEEDS` (`SEEDS: Range<u64> = 0..48`, line 174) and pushes
+    /// TWO entries per seed (a `built()` and a `wild()` embed), so it
+    /// builds 96 seed-derived structures/lattices per call, not 48 (Fix
+    /// round 3 correction — 48 is the seed count, not the corpus size); the
+    /// outer `for (s, l) in corpus()` this test's body runs binds `s` to
+    /// one of those ALREADY-SEEDED structures, not to something seedless.
+    /// This is a forall-corpus-entry invariant, not a false-positive flag.
     #[test]
     fn the_mark_draws_once_at_the_standing_cell_and_the_legend_names_it() {
         // The mark is a CELL position, so the check is positional: the glyph lands

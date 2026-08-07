@@ -45,6 +45,58 @@
 //! `heavy_tier.rs` makes for its own token guards: canonical is not current,
 //! and a scan that is silent about its blind spot is worse than one that
 //! names it.
+//!
+//! ## Residual detection gaps, consolidated here so a reader finds them all
+//! in one place instead of scattered across function docs
+//!
+//! Each of these is verified (traced, grepped, or measured against the real
+//! scanner), not merely asserted — see the named function's own doc for the
+//! full trace.
+//!
+//! 1. **A `for`-pattern binding 9 or more identifiers is invisible.**
+//!    [`for_binding_idents`]'s `MAX_PATTERN_TOKENS = 8` window returns `None`
+//!    for a 9-element tuple pattern even when one of the 9 is spelled
+//!    `seed` — read as "not a for-loop at all," the same as `impl Trait for
+//!    Type`. No live pattern in this tree binds that many idents at this
+//!    commit.
+//! 2. **A nested `/* ... */` block comment miscounts depth.**
+//!    `BraceState::in_block_comment` does not handle nesting, so
+//!    `/* a /* b */ } */` closes it at the wrong `*/` and reads the `}`
+//!    between the two closers as live code. This corrupts only the
+//!    CURRENT function's own extracted body (dropping or extending it,
+//!    never hiding a later function's own detection — see that field's
+//!    doc for the distinction and how it was verified). No live nested
+//!    block comment exists in a `#[test]` body in this tree at this
+//!    commit.
+//! 3. **A raw string with an odd embedded-quote count, and a brace inside
+//!    it, leaks past its own end.** [`count_braces`] does not recognize
+//!    `r"..."`/`r#"..."#` as a string boundary; an embedded `"` toggles its
+//!    string-tracking regardless. An EVEN embedded-quote count resettles
+//!    correctly by the literal's true end regardless of any internal
+//!    miscount; an ODD count does not, and over-extends past it — but only
+//!    if a brace also falls inside the mis-toggled window. A workspace-wide
+//!    scan (149 `r#"..."#` literals at this commit) found none matching
+//!    that shape.
+//! 4. **A test that iterates a SEEDED HELPER's return value, without itself
+//!    writing a seed-shaped binding or a local `Seed(...)` call, is
+//!    invisible — demonstrated live, not hypothetical.**
+//!    `windows/vessel/src/lattice/classify.rs`'s and `render.rs`'s
+//!    `corpus()` functions each loop `for s in SEEDS { … Seed(s) … }`
+//!    internally, so every test that consumes `corpus()`'s output makes a
+//!    real seed-sweep claim — but a caller that destructures the result
+//!    with `_` instead of `s` (or via `.find()`/`.into_iter().find()`
+//!    rather than a `for` loop) carries no seed-shaped token and no local
+//!    `Seed(...)` call of its own, so nothing here fires. Nine confirmed,
+//!    untagged, at this commit:
+//!    `classify.rs:385,413,467,656` and `render.rs:221,254,302,336,441`.
+//!    **Deliberately not fixed**: detecting that a *called* function
+//!    sweeps seeds is interprocedural analysis, out of scope for a
+//!    source-level, per-function scan like this one.
+//! 5. **The detected-count floor (`DETECTED_SEED_LOOPING_FLOOR`) is a
+//!    floor, not an exact count**, so its SLACK against the live total
+//!    grows every time a seed-looping test is added without a matching
+//!    floor bump — see that constant's own doc for why `>=` is the right
+//!    check here anyway, and what a large slack would mean.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -173,14 +225,15 @@ fn has_seed_closure(body: &str) -> bool {
 /// can't misattribute a much later, unrelated `in` to a for-loop that never
 /// had one.
 ///
-/// **Residual silent miss, named in the module doc:** `MAX_PATTERN_TOKENS`
-/// bounds that window, and a pattern binding strictly more idents than the
-/// window allows returns `None` — a real for-loop, not a false `impl … for
-/// …`, read as "not a for-loop at all." Measured directly against this
-/// function: a 9-element tuple pattern like `for (a, b, c, d, e, f, g, h,
-/// i) in …` is NOT detected even when one of those 9 is spelled `seed`,
-/// while an 8-element one is. No live pattern in this tree binds that many
-/// idents at this commit.
+/// **Residual silent miss, named in the module doc's "Residual detection
+/// gaps" list (item 1):** `MAX_PATTERN_TOKENS` bounds that window, and a
+/// pattern binding strictly more idents than the window allows returns
+/// `None` — a real for-loop, not a false `impl … for …`, read as "not a
+/// for-loop at all." Measured directly against this function: a 9-element
+/// tuple pattern like `for (a, b, c, d, e, f, g, h, i) in …` is NOT
+/// detected even when one of those 9 is spelled `seed`, while an
+/// 8-element one is. No live pattern in this tree binds that many idents
+/// at this commit.
 fn for_binding_idents<'a>(tokens: &[&'a str], for_idx: usize) -> Option<Vec<&'a str>> {
     const MAX_PATTERN_TOKENS: usize = 8;
     let mut idents = Vec::new();
@@ -365,11 +418,23 @@ struct BraceState {
     /// not a theoretical one:** Rust's block comments CAN nest, and a
     /// nested one — `/* a /* b */ } */` — closes `in_block_comment` at the
     /// FIRST `*/` (the inner one), so the `}` between the inner and outer
-    /// closer is read as live code and counted, miscounting depth and
-    /// potentially hiding whatever function follows. No live nested block
-    /// comment was found in a `#[test]` body in this tree at this commit,
-    /// but that is, again, a fact about this commit's sources, not a
-    /// structural guarantee.
+    /// closer is read as live code and counted, miscounting depth.
+    ///
+    /// **What that miscount actually does — verified directly, not
+    /// asserted: it silently drops the rest of THAT function's own body
+    /// from the scan (or, symmetrically, absorbs trailing lines into it);
+    /// it does NOT hide a following function.** A synthetic
+    /// `fn a() { /* outer /* inner */ } */ }` immediately followed by a
+    /// real seed-looping `fn b()` still reports `b` — confirmed by running
+    /// [`seed_looping_tests_in`] against exactly that text and reading its
+    /// output — because `fn_name` is checked on every line independently,
+    /// with no dependency on where a previous function's body was judged to
+    /// end. See `count_braces`'s doc for the general form of this
+    /// correction (an earlier version of THIS doc made the same
+    /// "hides a following function" overstatement the raw-string doc did).
+    /// No live nested block comment was found in a `#[test]` body in this
+    /// tree at this commit (`grep -rn '/\*.*/\*'`), but that is, again, a
+    /// fact about this commit's sources, not a structural guarantee.
     in_block_comment: bool,
 }
 
@@ -385,12 +450,30 @@ struct BraceState {
 /// inside one (legal there, e.g. `r#"contains "quotes" fine"#`) is read as
 /// an ordinary closing quote, potentially miscounting whatever brace text
 /// follows on the same conceptual literal. This is a SILENT MISS, not a
-/// visibly wrong body length — a desync can just as easily truncate a
-/// function's scanned body (hiding whatever comes after) as extend it
-/// (absorbing unrelated later code), and either failure mode is invisible
-/// without deliberately checking body length against the source.
+/// visibly wrong body length.
 ///
-/// The precise failure mechanism: each embedded `"` inside a raw string
+/// **What actually gets corrupted when this fires — precisely, because
+/// "hides a function" is too strong a claim and was wrong once already
+/// (see `BraceState.in_block_comment`'s doc): `function_body` is called
+/// fresh, with a fresh `BraceState`, once per detected `#[test]` — a
+/// desync inside ONE call can only ever mis-extract THAT call's own
+/// reported body. It CANNOT hide a later function's own detection, because
+/// [`seed_looping_tests_in`]'s outer loop calls [`fn_name`] on every line
+/// independently, with no dependency on where any earlier function's body
+/// was judged to end.** Concretely, a desync either (a) truncates — depth
+/// falsely reaches `<= 0` before the function's true end, silently
+/// dropping the rest of THAT function's own body from the scan (a possible
+/// false NEGATIVE on it, if the missing tail held a seed signal), or (b)
+/// over-extends — depth never resettles at the true end and absorbs
+/// trailing lines (possibly containing later `#[test]` fns' own source)
+/// into THIS function's reported body (a possible false POSITIVE on it, if
+/// the absorbed text holds a seed signal — exactly what happened to
+/// `the_readout_law` before this file's own brace counter was fixed).
+/// Either way, every function keeps getting found and scanned; what an
+/// individual desync can corrupt is only ever the CURRENT function's own
+/// classification.
+///
+/// The precise mechanism for a raw string specifically: each embedded `"`
 /// wrongly toggles `in_string`, so text strictly BETWEEN an odd-indexed and
 /// an even-indexed embedded quote is (wrongly) read as ordinary code, and a
 /// brace there IS counted when it should not be — while a brace outside any
@@ -398,11 +481,11 @@ struct BraceState {
 /// wrongs) skipped, because the surrounding text is still inside the
 /// wrongly-toggled "string." An EVEN total of embedded quotes returns
 /// `in_string` to `true` by the time the real closing delimiter is reached,
-/// so the state resettles correctly there (no truncation/overextension of
-/// FOLLOWING functions) even though a brace inside one of the internal
-/// windows was still miscounted; an ODD total does not resettle, and leaks
-/// the string state into whatever comes after — the `the_readout_law` class
-/// of bug this file already had.
+/// so THIS function's own extraction resettles correctly there (case (a)/(b)
+/// above do not occur for it) even though a brace inside one of the
+/// internal windows was still miscounted along the way; an ODD total does
+/// not resettle, which is case (b) — over-extension past this function's
+/// true end.
 ///
 /// `tools/type-audit/src/stream_label.rs`'s
 /// `raw_scan_sees_a_literal_inside_cfg_test_but_the_outside_tests_scan_does_not`
@@ -411,15 +494,19 @@ struct BraceState {
 /// were checked directly (both carry a `r#"..."#` fixture holding `"` and
 /// `{`/`}`) by instrumenting this exact function against the real file and
 /// printing the extracted body: **both terminate at their true end,
-/// unaffected** — each fixture's only embedded quote pair brackets a bare
-/// word (`"astronomy"`) with no brace inside it, so the internal
-/// miscounting window this mechanism opens happens to contain nothing that
-/// would be miscounted. A workspace-wide scan for a raw string with an ODD
-/// embedded-quote count AND at least one brace inside it (the shape that
-/// would leak state into a following function) found none at this commit.
-/// That is a fact about this commit's raw strings, not a proof the
-/// mechanism above is unreachable — an odd count only needs one write to
-/// exist, and this scan does not run itself as a pre-commit check.
+/// unaffected.** Fixture 1 carries ONE embedded quote pair
+/// (`"astronomy"`); fixture 2 carries TWO (`"production/literal"` and
+/// `"astronomy"`) — both counts are even, and neither fixture has a brace
+/// inside either pair's bracketed text, so the internal miscounting window
+/// this mechanism opens happens to contain nothing that would be
+/// miscounted, in both fixtures. A workspace-wide scan for a raw string
+/// with an ODD embedded-quote count AND at least one brace inside it (case
+/// (b), over-extension past ITS OWN end) found none at this commit — 149
+/// `r#"..."#` raw strings in the tree (re-counted for this fix round; no
+/// `r"..."`/multi-`#` form exists here), 0 matching that shape. That is a
+/// fact about this commit's raw strings, not a proof the mechanism above
+/// is unreachable — an odd count only needs one write to exist, and this
+/// scan does not run itself as a pre-commit check.
 fn count_braces(line: &str, depth: &mut i32, started: &mut bool, state: &mut BraceState) {
     let chars: Vec<char> = line.chars().collect();
     let mut i = 0;
