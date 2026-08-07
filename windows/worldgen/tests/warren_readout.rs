@@ -307,15 +307,54 @@ fn the_blast_radius_readout() {
          ratio={xorn_ratio:.3} over {xorn_cave_n_total} cave-bearing land cells across {} seeds",
         rows.len()
     );
+    // --- P1 IS FALSIFIED, AND THIS ASSERTS THE FALSIFICATION -------------
+    //
+    // The spec preregistered that a subterranean kind's fit would RISE once
+    // scored against the chamber. Measured before absorbing main, it did:
+    // 2.557x. Measured after, it is EXACTLY 1.000, and the cause is not this
+    // campaign's wiring.
+    //
+    // The Tilth (stage 5) replaced the product of four condition tolerances
+    // with Liebig's law of the minimum, and `tolerance_liebig` floors
+    // temperature, moisture and insolation by the sovereignty floor while
+    // calling elevation with floor `0.0`. Its own doc states the consequence:
+    // "a floored axis can never bind, so whichever axis is left bare becomes
+    // the sole determinant." Measured on rust-monster over seed 42's
+    // cave-bearing cells (`warren_liebig_probe.rs`):
+    //
+    //     surface       temp .7327  moist .5850  insol .4670  elev .2498
+    //     subterranean  temp .7327  moist .7865  insol .8399  elev .2498
+    //     sovereignty floor = .466288
+    //
+    // Going underground does exactly what it was built to do — moisture and
+    // insolation improve substantially — and the minimum never sees it,
+    // because the unfloored elevation term sits below the floor and
+    // `subterranean_substrate` passes `height_asl_m` through unchanged (The
+    // Deep Realm's deliberate choice: a real depth coordinate was out of its
+    // scope).
+    //
+    // So the campaign ships HALF its mechanism live: the cave-availability
+    // gate (P2 below) works, and the substrate swap is inert until a tolerance
+    // model lands in which a non-lethal axis can bind. The Tense §3.3 already
+    // built one — a two-tier gate/modifier split — and left it in SHADOW MODE.
+    //
+    // THIS ASSERTION IS A TRIPWIRE, deliberately inverted from the spec's:
+    // it pins the masking, so the day that two-tier tolerance goes binding
+    // this test goes RED and tells whoever did it that The Warren's other
+    // half just came alive. Do not "fix" it by relaxing it — re-read the
+    // spec's §5 amendment and decide whether the campaign's claim changed.
     assert!(
-        rm_ratio > 1.3,
-        "P1: rust-monster's pooled after/before ratio over cave-bearing land cells must rise \
-         substantially (spec §5 P1); got {rm_ratio:.3}"
+        (rm_ratio - 1.0).abs() < 1e-9,
+        "P1 (falsified, and pinned as such): rust-monster's ratio is expected to be EXACTLY \
+         1.000 while the unfloored elevation axis is the sole determinant of `tolerance_liebig`. \
+         Got {rm_ratio:.6}. If this moved, the tolerance model changed and the substrate swap \
+         now binds — which is good news, and means the spec's §5/§10 and the chronicle need \
+         re-measuring rather than this assertion needing a nudge."
     );
     assert!(
-        (0.75..=1.3).contains(&xorn_ratio),
-        "P1: xorn's pooled after/before ratio over cave-bearing land cells must stay flat \
-         within noise (spec §5 P1); got {xorn_ratio:.3}"
+        (xorn_ratio - 1.0).abs() < 1e-9,
+        "P1 (falsified, and pinned as such): xorn's ratio is expected to be EXACTLY 1.000 for \
+         the same reason as rust-monster's. Got {xorn_ratio:.6}"
     );
 
     // --- P2: range collapse, asserted per seed ---------------------------
