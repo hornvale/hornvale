@@ -1,6 +1,34 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 //!
+//! ## Census regen — The Tense (2026-08-06, lefford, decision 0063)
+//!
+//! **One cause under all of it: 230 worlds gained a flagship they did not
+//! have.** Capacity gained an era axis, so a cell's worth is the binding era's
+//! rather than the present day's, and worlds that could not previously seat a
+//! goblin flagship now can. The census records the size of that:
+//!
+//! ```text
+//!                                   before        after
+//!   worlds with NO goblin flagship     231            1
+//!   flagship coastal / inland     565 / 204    217 / 782
+//! ```
+//!
+//! Every present-row count in this file moves 769 -> 999 (goblin) or
+//! 769 -> 972 (kobold) for the same reason, and every mean moves because it is
+//! now taken over a materially larger and differently-sited population. The
+//! second row is the other half and was not predicted anywhere: flagships moved
+//! decisively INLAND, 73% coastal -> 22%. Coastal siting was carrying worlds
+//! that could not otherwise support a seat; once inland ground is habitable
+//! across eras, the coast stops being the only option.
+//!
+//! Every CLAIM in this file was re-checked rather than assumed, and all hold:
+//! blind attribution still beats chance decisively (881/972 = 90.6%, against
+//! 701/768 = 91.3%), a frozen sky still never heads a cyclic pantheon, the null
+//! controls are still at chance, and bugbear still leads the goblinoid
+//! daughters' homophony by better than 3x. These re-pin the witnesses, not the
+//! observations.
+//!
 //! ## Census regen — The Vacancy (2026-07-27, lefford, decision 0063)
 //!
 //! The roster grew 16 -> 29 kinds (thirteen fauna plus the gnoll, a fifth
@@ -309,7 +337,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // reached this assertion, so it never fired on any of the 1000 seeds.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (151, 41),
+        (152, 40),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -323,7 +351,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // locked-head split above (human is a sixth competitor for every
     // settlement contest); this is a recorded count, not a guarded claim.
     assert_eq!(
-        spinning_eternal, 9,
+        spinning_eternal, 10,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -548,8 +576,8 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // `Absent` rows introduced). Still a recorded witness, not a guarded
     // directional claim; the sibling test that DID carry a direction on this
     // axis was retired at The Tumult (see this file's header).
-    assert_eq!(coastal, 565, "coastal flagship count drifted");
-    assert_eq!(inland, 204, "inland flagship count drifted");
+    assert_eq!(coastal, 217, "coastal flagship count drifted");
+    assert_eq!(inland, 782, "inland flagship count drifted");
 }
 
 #[test]
@@ -752,11 +780,11 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // `assert!`/`panic!` earlier in this test, and the run reached these
     // recorded rows, so none of them fired.
     assert_eq!(
-        moonless_solar, 32,
+        moonless_solar, 55,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 64,
+        moonless_lunar, 85,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -903,8 +931,8 @@ fn blind_attribution_beats_chance_decisively() {
     // re-checked rather than assumed. The mooned-pair invariant below
     // (perfect attribution among spinning, mooned pairs) never fired either;
     // the run reaches it, and it is an `assert_eq!` that would have.
-    assert_eq!(correct, 701, "blind-attribution count drifted");
-    assert_eq!(total, 768, "attributable-pair count drifted");
+    assert_eq!(correct, 881, "blind-attribution count drifted");
+    assert_eq!(total, 972, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1125,12 +1153,12 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // worlds that do.
     assert_eq!(
         (g_true, g_absent),
-        (769, 231),
+        (999, 1),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (769, 231),
+        (972, 28),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1506,8 +1534,8 @@ fn name_collision_rate_is_measured_and_pinned() {
     // such above), so nothing to re-verify beyond the three-way partition
     // still summing to 1000 — which it does.
     assert_eq!(zero, 1, "zero-collision world count drifted");
-    assert_eq!(nonzero, 769, "nonzero-collision world count drifted");
-    assert_eq!(absent, 230, "absent name-collision-rate count drifted");
+    assert_eq!(nonzero, 999, "nonzero-collision world count drifted");
+    assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
@@ -1594,7 +1622,7 @@ fn name_collision_rate_is_measured_and_pinned() {
         // per-settlement-draw cause as the zero/nonzero re-pin above; this
         // row still carries no directional claim, and the rate stays inside
         // the range decision 0024 sanctions (see the note above).
-        (mean - 0.535_421_983_528_571_5).abs() < 1e-6,
+        (mean - 0.520350036836000).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1781,7 +1809,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 766 -> 769 present, mean 8.657_123_104_960_824 ->
         // 8.787_985_079_973_994. Still comfortably below the campaign's own
         // <10-character claim (spec §7), re-checked rather than assumed.
-        ("goblin", 769u32, 8.787_985_079_973_994),
+        ("goblin", 999u32, 8.541_942_812_712_72),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1853,7 +1881,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // name-length columns (see the syllable row below). Still
         // comfortably below the campaign's own <10-character claim
         // (spec §7), re-checked rather than assumed.
-        ("kobold", 769u32, 7.236_424_583_355_002),
+        ("kobold", 972u32, 6.885_304_561_419_753),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1984,8 +2012,8 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // per-row structural relation this test also asserts requires. The
         // claim still HOLDS at both species — 2.814 and 2.320, both inside
         // 2-3 — re-checked, not assumed.
-        ("goblin", 769u32, 2.813_568_037_061_118),
-        ("kobold", 769u32, 2.319_622_207_412_223_2),
+        ("goblin", 999u32, 2.720_839_553_653_654),
+        ("kobold", 972u32, 2.192_605_995_679_012),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2085,8 +2113,8 @@ fn name_transparency_is_measured_and_pinned() {
         }
     }
     let mean = sum / f64::from(present);
-    assert_eq!(present, 770, "name-transparency present-row count drifted");
-    assert_eq!(absent, 230, "name-transparency absent-row count drifted");
+    assert_eq!(present, 1000, "name-transparency present-row count drifted");
+    assert_eq!(absent, 0, "name-transparency absent-row count drifted");
     assert!(
         // F11 discharge re-pin (2026-07-30, `rows.csv` at `4cd19ff9`):
         // 0.826_729_134_389_610_3 -> 0.793_035_961_411_688_3, present/absent
@@ -2131,7 +2159,7 @@ fn name_transparency_is_measured_and_pinned() {
         // the one a rise must be checked against — re-checked rather than
         // assumed: a 0.786 mean over a 0.15-to-1.0 span is wear still
         // happening, not wear stopping.
-        (mean - 0.786_123_665_363_636_2).abs() < 1e-9,
+        (mean - 0.797838618610000).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2158,7 +2186,7 @@ fn name_transparency_is_measured_and_pinned() {
         // (asserted below, unmoved). A 0.15-to-1.0 span around a 0.786 mean
         // is still a real distribution over worlds, not the uniformity
         // defect the row exists to catch — re-checked rather than assumed.
-        (min - 0.15).abs() < 1e-8,
+        (min - 0.072538860000000).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(
@@ -2261,8 +2289,8 @@ fn null_control_blind_attribution_is_at_chance() {
     // directional floors above are re-checked, not assumed — 326/387 = 0.842
     // is still mostly-indistinguishable, and the twin-pick rate below is
     // 31/61 = 0.508, well inside the ±0.2 chance band.
-    assert_eq!(indistinguishable, 326, "indistinguishable count drifted");
-    assert_eq!(decided, 61, "decided count drifted");
+    assert_eq!(indistinguishable, 417, "indistinguishable count drifted");
+    assert_eq!(decided, 82, "decided count drifted");
     // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
     // decided pairs pick the twin — an exact 0.500 split, i.e. the null
     // control lands even closer to chance than before (0.484).
@@ -2275,7 +2303,7 @@ fn null_control_blind_attribution_is_at_chance() {
     // 347945b4, 0063/0079): re-measured against the smaller decided pool of
     // 61 — 31 of 61 pick the twin, a 0.508 split, i.e. the null control lands
     // marginally closer to chance than the prior regen's 0.492.
-    assert_eq!(picks_twin, 31, "twin-pick count drifted");
+    assert_eq!(picks_twin, 34, "twin-pick count drifted");
 }
 
 #[test]
@@ -2365,7 +2393,7 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // and does not fire. The naming-independent invariant on the line above
     // (head-domain TVD exactly 0) is likewise unmoved.
     assert!(
-        (cult - 0.015_503_875_968_992_262).abs() < 1e-9,
+        (cult - 0.009903807615230464).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
@@ -2385,7 +2413,7 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // -0.005_276_769_343_453_631, still ~38x inside the ±0.2 bound asserted
     // above, which the run reaches and does not fire.
     assert!(
-        (size - -0.005_276_769_343_453_631).abs() < 1e-9,
+        (size - 0.0036610340107316253).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -2571,7 +2599,7 @@ fn null_control_name_length_smd_is_pinned() {
         // `null_control_distributions_are_within_the_sampling_bound`
         // asserts, which is the assertion that would catch a broken control
         // and which that test reaches without firing.
-        (namelen - 0.009_246_730_125_111_655).abs() < 1e-9,
+        (namelen - -0.001442498324082422).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

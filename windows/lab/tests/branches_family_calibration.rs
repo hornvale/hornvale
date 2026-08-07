@@ -219,12 +219,21 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
         // — the whole population turned over — and the tail is now five seeds
         // wide rather than one, 995/1000 clean.
         //
+        // The Tense (2026-08-06): seed 625 JOINS the tail, {47, 731, 752, 797,
+        // 825} -> {47, 625, 731, 752, 797, 825}, 994/1000 clean. A one-seed
+        // move, and re-derived rather than forced back to empty exactly as
+        // this assertion's message instructs. The three sibling sweeps
+        // (monophyly, divergence-real, inventory-closure) still pass with no
+        // exceptions, which is the boundary check this row's doc names: had
+        // those moved too it would be a boundary break rather than a re-pin.
+        //
         // This is the fourth observation of a tail the doc above has always
         // described as a STATISTICAL near-certainty: 2 seeds under The Words,
-        // 0 under `root/v2`, 1 at The Wearing, 5 now. Five in a thousand is
+        // 0 under `root/v2`, 1 at The Wearing, 5 at The Tolerance, 6 now. Six in a
+        // thousand is
         // well within what independent proto-root draws produce by chance, and
         // the re-pin keeps the EXCEPTION-LIST form rather than relaxing to a
-        // rate — a sixth coincidence still fails loudly and names its seed.
+        // rate — a seventh coincidence still fails loudly and names its seed.
         //
         // Checked, not assumed, before re-pinning: the sibling STRUCTURAL
         // guards are all green on this same census —
@@ -233,7 +242,7 @@ fn clean_outgroup_kobold_holds_on_every_swept_seed() {
         // `inventory_closure_holds_on_every_swept_seed_for_every_daughter`
         // each pass with no exceptions. A real family-boundary break would
         // have moved those too; a widening chance tail moves only this one.
-        vec![47, 731, 752, 797, 825],
+        vec![47, 625, 731, 752, 797, 825],
         "clean-outgroup-kobold coincided with the goblinoid family on seeds \
          {failures:?} — re-derive and re-pin, don't force back to empty"
     );
@@ -319,7 +328,10 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // hobgoblin 2.487 -> 2.486 (goblin and bugbear are unmoved to 1e-9).
     // The aggregate ordering holds decisively (4.483 >= 3.058 >= 2.486).
     // The Toponym (name-gloss epoch): 2.486 -> 2.487.
-    assert!((mh - 2.448).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Tense (2026-08-06): hobgoblin 2.448 -> 2.449, bugbear 4.483 ->
+    // 4.418, goblin UNMOVED at 3.000. The aggregate ordering — the
+    // preregistered claim — still holds decisively: 4.418 >= 3.000 >= 2.449.
+    assert!((mh - 2.449).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
@@ -362,7 +374,14 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // pins and what the census shows.
     assert_eq!(bg, 866, "bugbear>=goblin rate drifted: {bg}/{n}");
     assert_eq!(gh, 713, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    // The Tense (2026-08-06): bugbear>=hobgoblin 908 -> 907, a ONE-seed move.
+    // The other three per-seed rates are unmoved (866 / 713 / 589) across a
+    // census regen that re-placed every world and gave 230 of them a goblin
+    // flagship they did not have — which is itself the reassuring reading:
+    // this test's claim is that the loudness ordering holds in AGGREGATE and
+    // not per seed, and the per-seed rates turn out to be near-invariant under
+    // a large placement change.
+    assert_eq!(bh, 907, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
     assert_eq!(chain, 589, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
@@ -561,10 +580,26 @@ fn homophony_count_is_measured_and_pinned() {
     // narrowest this row has recorded — a future regen that narrows it again
     // may falsify the claim outright, which would be a finding to report, not
     // a bound to widen. These re-pin the witnesses, not the observation.
-    assert!((mg - 3.997).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 3.390).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 12.974).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 4.248).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Tense (2026-08-06, canonical census on lefford at the merged SHA):
+    // goblin 3.997 -> 4.319, hobgoblin 3.390 -> 4.310, bugbear 12.974 ->
+    // 14.508, kobold 4.248 -> 4.791. All four rise together this time, which
+    // is the roster-competition signature again and not one daughter moving:
+    // era-varying capacity re-placed every world, and 230 worlds that had no
+    // goblin flagship at all now have one, so each daughter's surviving
+    // periphery — and the naming draws over it — is drawn from a materially
+    // larger population.
+    //
+    // The claim was re-checked rather than assumed, because the note above
+    // flagged the previous margin as the narrowest ever recorded and warned
+    // that a further narrowing would falsify it outright. It did NOT narrow:
+    // bugbear leads by 3.36x over goblin and 3.37x over hobgoblin, against
+    // 3.25x/3.83x before. The goblin margin — the binding one — widened. So
+    // this re-pins the witnesses, not the observation, and the row's warning
+    // stands unspent for the next regen.
+    assert!((mg - 4.319).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 4.310).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 14.508).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 4.791).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -648,6 +648,38 @@ pub fn carrying_inputs_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    carrying_inputs_at(geo, terrain, climate, &EraAdjust::present(terrain))
+}
+
+/// [`carrying_inputs_of`] at one era (The Tense §3.1).
+///
+/// Two of the inputs move with the era and the rest do not:
+///
+/// - **`temperature_c`** gains the era's albedo-cooling offset. This is the term
+///   that makes an ice age reduce productivity instead of switching cells off.
+/// - **`is_land` and `coastal`** are taken against the era's sea level rather
+///   than today's, so a glacial low-stand exposes continental shelf *as land
+///   that grows food* — matching [`substrate_field_at`]'s elevation re-datum, so
+///   the two cannot disagree about where the coast is.
+///
+/// Moisture, precipitation, river proximity and unrest stay era-invariant,
+/// because no era term for them exists (see [`EraAdjust`]). Precipitation riding
+/// present moisture while temperature moves is a known asymmetry, recorded rather
+/// than hidden: a colder world should also be a drier one, and that is the
+/// successor to this stage.
+///
+/// At [`EraAdjust::present`] this is bit-identical to the unparameterised form —
+/// `is_ocean` is defined as `elevation_at < sea_level`, which is exactly what the
+/// era comparison reduces to when the era's sea level is today's.
+/// type-audit: bare-ok(count: return)
+pub fn carrying_inputs_at(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    adjust: &EraAdjust,
+) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    let is_ocean_at = |c: hornvale_kernel::CellId| terrain.elevation_at(c) < adjust.sea_level;
+
     // The Confluence: freshwater rides proximity to the real river network,
     // not a smooth drainage/moisture proxy — so K spikes near rivers and
     // settlements condense there (emergent). A moisture floor keeps
@@ -656,22 +688,31 @@ pub fn carrying_inputs_of(
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let coastal = geo.neighbors(cell).iter().any(|n| is_ocean_at(*n));
         let moisture = climate.moisture_at(cell);
         // Seawater is not freshwater: coastal access is priced by the
         // coast bonus in carrying_capacity, not smuggled in here.
         let freshwater = (moisture * MOISTURE_FLOOR_WEIGHT)
             .max(*river_prox.get(cell))
             .clamp(0.0, 1.0);
-        let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
-        let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
+        // ARIDITY NO LONGER FOLDS IN (The Tilth, stage 1). Moisture was counted
+        // TWICE: once as the Liebig limiter inside `carrying_capacity`, and again
+        // here as a hostility penalty — ~10x through the limiter AND a further 2x
+        // through hostility at moisture 0.1, so ~20x total on merely semi-arid
+        // ground. Lieth's saturating precipitation term now carries the water
+        // signal on its own, so `hostility` keeps only what it was named for:
+        // tectonic unrest.
+        let hostility = terrain.unrest_at(cell).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
             // LAND, not habitability (step B): the habitability mask conflated
             // land with a temperate band and a moisture floor, and the latter two
             // are already graded by `npp`/`hostility` inside `carrying_capacity`.
-            is_land: !terrain.is_ocean(cell),
-            temperature_c: climate.mean_temperature_at(cell).get(),
-            moisture,
+            is_land: !is_ocean_at(cell),
+            temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
+            // The REAL annual total, not normalised moisture: `precip_at` already
+            // maps the moisture field to Earth-ranged mm/yr with its provenance
+            // cited, and Lieth's precipitation term is defined on that total.
+            precip_mm_yr: climate.precip_at(cell).get(),
             freshwater,
             coastal,
             hostility,
@@ -1005,6 +1046,103 @@ pub fn axis_supply(
         .sum()
 }
 
+/// Liebig's law of the minimum over a species' four condition responses: the
+/// **binding** axis limits, exactly as `carrying_capacity` takes
+/// `min(temperature, precipitation)`. Temperature, moisture and insolation are
+/// buffered by the species' `sovereignty_floor`; **elevation is passed `0.0`**.
+///
+/// ## Two attempts to fix that asymmetry, both reverted, both measured
+///
+/// This arrangement is defective and the two obvious repairs are worse. Recorded
+/// here so the next reader does not spend a session rediscovering it; the full
+/// argument is `docs/superpowers/specs/2026-08-05-the-tense-design.md`.
+///
+/// - **Floor elevation too** (The Tilth stage 6.1). Fixes the real pathology
+///   below, but nothing can then be excluded by anything: goblin read capacity
+///   ~37 on a −50 °C cell, per-cell species diversity went to 3.55 against a
+///   [1.5, 3.0] band ("oatmeal" is ~4), and kobold — a deliberate highland
+///   specialist — took 17.9% of settlements against a 10% cap.
+/// - **Unfloor temperature instead** (stage 7). Makes cold exclude, and
+///   reproduces the pathology on the new axis: temperature then binds on 100% of
+///   land for goblin and human, and gnoll's median capacity falls to 0.00. Both
+///   preregistered hypotheses failed.
+///
+/// **The defect is the flatness, not the floors.** A floored axis can never bind,
+/// so whichever axis is unfloored becomes the sole determinant wherever it dips
+/// below the others' floor — the same bug in either arrangement. Two *kinds* of
+/// constraint are being expressed through one operator: lethal **gates**, which
+/// must reach zero, and **preferences**, which sovereignty should floor. The fix
+/// is to stop mixing them under one `min()` (spec §3.3), not to re-arrange which
+/// axis is bare.
+///
+/// The measured pathology this leaves standing, for the record: with elevation
+/// unfloored, a wide low-`devotion` elevation curve evaluates to a near-constant
+/// below every other axis's floor, so **elevation binds on 100% of land for
+/// goblin, gnoll and human** and their authored temperature, moisture and
+/// insolation curves determine nothing anywhere. `devotion` is the curve's peak
+/// height, not its breadth — that naming is what produced the mis-authoring.
+///
+/// Note it was harmless before stage 5. The pre-Liebig form multiplied the four
+/// responses, and under a *product* every axis always contributes — an unfloored
+/// term suppresses magnitude without erasing the others' variation. The minimum
+/// is what converts it from a scale factor into a veto.
+///
+/// Shared by [`per_species_suitability`] and [`per_species_capacity`] so the two
+/// cannot drift apart on the one rule they must agree about.
+fn tolerance_liebig(cn: &hornvale_species::ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
+    cn.temperature
+        .eval(s.temperature_c, floor_buf)
+        .min(cn.moisture.eval(s.moisture, floor_buf))
+        .min(cn.insolation.eval(s.insolation, floor_buf))
+        .min(cn.elevation.eval(s.height_asl_m.get(), 0.0))
+}
+
+/// **The Tense §3.3's two-tier tolerance — SHADOW MODE, not yet binding.**
+///
+/// `tolerance_liebig` above expresses two different *kinds* of constraint through
+/// one `min()`, and that is why no arrangement of floors could be made to work
+/// (see its doc for the two attempts and their measurements). A floored axis can
+/// never bind, so whichever axis is left bare becomes the sole determinant
+/// wherever it dips below the others' floor.
+///
+/// This separates them:
+///
+/// ```text
+///   tolerance = gate  x  modifier
+///   gate      = product over LETHAL-LIMIT axes, unfloored, able to reach 0
+///   modifier  = min over PREFERENCE axes, each floored by sovereignty
+/// ```
+///
+/// - **Temperature is the gate.** It is the one axis with a genuine
+///   physiological limit; homeostatic buffering is the right model for "prefers
+///   warmth, tolerates less" and the wrong one for −50 °C.
+/// - **Moisture, insolation and elevation are modifiers.** Sovereignty floors
+///   them, so a well-defended species is never excluded *by a preference* — which
+///   is what BIO-26 actually claims.
+///
+/// Moisture is left a modifier here despite desiccation being lethal, because
+/// nothing in the model excludes on moisture today and promoting it would be a
+/// second new exclusion landing in the same change. `tense_shadow.rs` measures
+/// both variants; the choice is recorded there rather than assumed here.
+///
+/// **Nothing calls this yet.** It exists so the cutover switches to code whose
+/// disagreement with the era mask has already been measured, rather than
+/// discovering it afterwards.
+/// type-audit: bare-ok(ratio: floor_buf), bare-ok(ratio: return)
+pub fn tolerance_tiered(
+    cn: &hornvale_species::ConditionNiche,
+    s: &Substrate,
+    floor_buf: f64,
+) -> f64 {
+    let gate = cn.temperature.eval(s.temperature_c, 0.0);
+    let modifier = cn
+        .moisture
+        .eval(s.moisture, floor_buf)
+        .min(cn.insolation.eval(s.insolation, floor_buf))
+        .min(cn.elevation.eval(s.height_asl_m.get(), floor_buf));
+    gate * modifier
+}
+
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_biosphere` index order tags the fields.
@@ -1103,18 +1241,197 @@ pub fn per_species_suitability(
                 // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
                 // Michaelis-Menten saturation maps a supply magnitude onto
                 // `[0, 1)`, so everything below is a *dimensionless suitability*
-                // and NOT a capacity, however much the function's old `_k` name
-                // suggested otherwise. A per-species capacity — which The
-                // Keeping's §8 identifies as the successor's real need — is this
-                // product WITHOUT the saturation, so the supply's units survive.
+                // and NOT a capacity — which is what this function is for. The
+                // dimensional counterpart, with headcount units, is
+                // [`per_species_capacity`].
                 let saturated = supply / (1.0 + supply);
-                saturated
-                    * cn.temperature.eval(s.temperature_c, floor_buf)
-                    * cn.moisture.eval(s.moisture, floor_buf)
-                    * cn.insolation.eval(s.insolation, floor_buf)
-                    * cn.elevation.eval(s.height_asl_m.get(), 0.0)
+                // LIEBIG, not a product (The Tilth, stage 5). The base field
+                // takes `min(temperature, precipitation)` — the law of the
+                // minimum — and this layer used to MULTIPLY four tolerances,
+                // so one half of the model obeyed Liebig and the other did not.
+                // Measured, the product compressed the result ~4x (median
+                // min-of-conditions on good ground is 0.5692), which is most of
+                // why every newly-opened cell came out unsurvivable.
+                //
+                // Merge note (main absorbed 2026-08-06): main's side of this
+                // conflict is the PRODUCT form this stage deliberately replaced,
+                // carrying main's rename of the elevation field. Kept Liebig —
+                // the measured change — and moved the rename inside
+                // `tolerance_liebig`, which is where the field is now read.
+                saturated * tolerance_liebig(cn, s, floor_buf)
             });
             (tag as u32, k)
+        })
+        .collect()
+}
+
+/// Stage 5's dimensional Michaelis-Menten ceiling, in **headcount**. DERIVED, not
+/// authored (decision 0106; The Tilth spec §5a): `68.87 / (0.8138 × 0.6035)`, where
+/// 68.87 is the median capacity on today's good ground, 0.8138 the MM fraction at
+/// good-ground supply, and 0.6035 the measured median Liebig tolerance there. The
+/// target is the *pre-campaign* good-ground level, which is legitimate gauge-fixing:
+/// the absolute headcount scale is a Hornvale choice, while stage 1 fixed the
+/// *relative* pattern.
+/// type-audit: bare-ok(count)
+pub const CAPACITY_V_MAX: f64 = 140.2;
+
+/// Half-saturation supply for [`CAPACITY_V_MAX`]. DERIVED: the median
+/// `axis_supply` over land (n = 401,148 cell-species samples over five seeds). A
+/// half-saturation constant belongs where the supply it half-saturates actually
+/// sits.
+/// type-audit: bare-ok(ratio)
+pub const CAPACITY_K_M: f64 = 0.03004;
+
+/// Per-species **capacity**, in headcount — the dimensional counterpart of
+/// [`per_species_suitability`] and what the deep-history bake reasons in.
+///
+/// The difference is decision 0103's whole point. `per_species_suitability`
+/// saturates at a dimensionless `1.0`, which discards the supply's magnitude;
+/// this saturates at [`CAPACITY_V_MAX`] with half-saturation [`CAPACITY_K_M`], so
+/// the result carries units and `capacity := suitability` cannot typecheck.
+/// Tolerance combines by Liebig ([`tolerance_liebig`]), matching the base field.
+///
+/// Returns one [`CapacityMap`] per entry of `species_biosphere`, tagged by that
+/// slice's position — a **build-local dense index, never identity**, exactly as
+/// [`per_species_suitability`] documents.
+///
+/// The return needs only an `index` verdict: the `u32` is the build-local tag, and
+/// the capacity itself is a [`CapacityMap`] rather than a bare primitive — which is
+/// decision 0103 doing exactly the work it was ratified for.
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+pub fn per_species_capacity(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+    regime: &RotationRegime,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
+) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    let hoisted = EraInvariantSupply::build(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        regime,
+    );
+    per_species_capacity_at(
+        geo,
+        terrain,
+        climate,
+        &hoisted,
+        &EraAdjust::present(terrain),
+        species_biosphere,
+    )
+}
+
+/// The parts of the capacity pipeline that do **not** move with the era, built
+/// once and reused across a whole era series (The Tense §3.1).
+///
+/// This is the campaign's affordability, in a struct. Measured, per call:
+/// insolation 160 ms, mineral 0.3 ms, detritus 0.0 ms, against ~2 ms for
+/// everything the era does move. Hoisting these turns a 25-era replay from ~25x
+/// into ~1.1x.
+///
+/// `marine` is here on a narrower argument than the other three. It reads
+/// `climate.biome_map()`, which *would* move with a properly era-adjusted
+/// climate — but no era biome recomputation exists, and no shipped kind weights
+/// the `MARINE_FORAGE` axis, so it is inert either way. It is hoisted because
+/// today it cannot vary, not because it never could; a marine people or an era
+/// biome model would move it out of this struct.
+///
+/// Every field is a dimensionless per-cell supply or insolation ratio, which is
+/// what the axis dot product in [`axis_supply`] consumes.
+/// type-audit: bare-ok(ratio: insolation), bare-ok(ratio: mineral), bare-ok(ratio: detritus), bare-ok(ratio: marine)
+#[derive(Debug, Clone)]
+pub struct EraInvariantSupply {
+    /// Annual-mean insolation per cell — ~100% of the pipeline's cost, and a
+    /// pure function of latitude and obliquity, neither of which the era series
+    /// varies.
+    pub insolation: hornvale_kernel::CellMap<f64>,
+    /// Mineral supply — terrain only.
+    pub mineral: hornvale_kernel::CellMap<f64>,
+    /// Detritus supply — terrain only.
+    pub detritus: hornvale_kernel::CellMap<f64>,
+    /// Marine forage supply — see the caveat above.
+    pub marine: hornvale_kernel::CellMap<f64>,
+}
+
+impl EraInvariantSupply {
+    /// Build the hoisted fields once for a world.
+    /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
+    #[must_use]
+    pub fn build(
+        geo: &Geosphere,
+        terrain: &GeneratedTerrain,
+        climate: &GeneratedClimate,
+        obliquity_deg: f64,
+        insolation_scalar: f64,
+        regime: &RotationRegime,
+    ) -> Self {
+        Self {
+            insolation: insolation_field(geo, obliquity_deg, insolation_scalar, regime),
+            mineral: mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE),
+            detritus: detritus_supply_field(geo, terrain),
+            marine: marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE),
+        }
+    }
+}
+
+/// [`per_species_capacity`] at one era, reusing hoisted era-invariant supply.
+///
+/// Everything rebuilt here genuinely moves with the era: the substrate (via the
+/// temperature offset and the sea-level re-datum), the base carrying capacity
+/// (whose NPP is a function of that temperature), and the two supply fields that
+/// ride it — `forage` off carrying, `prey` off forage.
+///
+/// At [`EraAdjust::present`] this is bit-identical to [`per_species_capacity`],
+/// which is what makes the seam safe to introduce ahead of the behaviour change
+/// that will use it (`era_substrate.rs` asserts it).
+/// type-audit: bare-ok(index: return)
+pub fn per_species_capacity_at(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    hoisted: &EraInvariantSupply,
+    adjust: &EraAdjust,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
+) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    let base_carrying = hornvale_demography::carrying_capacity(
+        geo,
+        &carrying_inputs_at(geo, terrain, climate, adjust),
+    );
+    let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
+    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let prey = prey_supply_field(geo, &forage);
+
+    species_biosphere
+        .iter()
+        .enumerate()
+        .map(|(tag, bio)| {
+            let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
+            let cn = &bio.condition_niche;
+            let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                let s = substrate.get(cell);
+                use hornvale_kernel::{
+                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                };
+                let per_axis = [
+                    (PHOTOSYNTHATE, base_carrying.at(cell)),
+                    (PLANT_FORAGE, *forage.get(cell)),
+                    (MINERAL, *hoisted.mineral.get(cell)),
+                    (DETRITUS, *hoisted.detritus.get(cell)),
+                    (ANIMAL_PREY, *prey.get(cell)),
+                    (MARINE_FORAGE, *hoisted.marine.get(cell)),
+                ];
+                let supply = axis_supply(&bio.niche, &per_axis);
+                let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
+                headcount * tolerance_liebig(cn, s, floor_buf)
+            });
+            let map = hornvale_kernel::ecology::CapacityMap::new(raw)
+                .expect("a Michaelis-Menten product of non-negative terms is finite and >= 0");
+            (tag as u32, map)
         })
         .collect()
 }
@@ -1640,22 +1957,108 @@ pub fn substrate_field(
     insolation_scalar: f64,
     regime: &RotationRegime,
 ) -> hornvale_kernel::CellMap<Substrate> {
-    let sea_level = terrain.sea_level();
+    let insolation = insolation_field(geo, obliquity_deg, insolation_scalar, regime);
+    substrate_field_at(
+        geo,
+        terrain,
+        climate,
+        &insolation,
+        &EraAdjust::present(terrain),
+    )
+}
+
+/// The per-cell insolation field, split out of [`substrate_field`] so it can be
+/// **hoisted** (The Tense §3.1).
+///
+/// It is ~100% of `substrate_field`'s cost and ~82% of the whole capacity
+/// pipeline's: `annual_mean_insolation` integrates 48 orbital samples with ~9
+/// libm transcendentals each, about 430 per cell and 17.6M per field, while
+/// temperature, moisture and elevation together measure 0.0 ms.
+///
+/// It is also **era-invariant under the era model that exists**: `bake_eras`
+/// varies exactly the albedo temperature offset and eustatic sea level per era,
+/// never obliquity, and this is a pure function of `(latitude, obliquity,
+/// insolation_scalar)`. So a 25-era replay builds this once, and the marginal
+/// cost of an era is the ~2 ms of everything else. If a later campaign makes
+/// obliquity vary per era — orbital forcing does change it — this becomes
+/// era-varying and the cost returns; memoising the integral on the exact
+/// latitude bit pattern would recover ~4× of it byte-identically (40,962 cells
+/// carry only 10,301 distinct latitudes).
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(ratio: return)
+pub fn insolation_field(
+    geo: &Geosphere,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+    regime: &RotationRegime,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| match regime {
+        RotationRegime::Spinning { .. } => {
+            annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
+        }
+        RotationRegime::Locked => {
+            insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
+        }
+    })
+}
+
+/// What one era changes about the world the habitat model reads (The Tense
+/// §3.1). Exactly the two quantities `bake_eras` already derives per era, named
+/// so a caller cannot supply one and forget the other.
+///
+/// Deliberately NOT a moisture offset. A colder world is also a drier one, but
+/// `bake_eras` models no such term today, and inventing one here would be a
+/// physics change smuggled into a threading change. Recorded as the natural
+/// successor.
+/// type-audit: bare-ok(diagnostic-value: temp_offset), bare-ok(diagnostic-value: sea_level)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EraAdjust {
+    /// The era's albedo-cooling offset, added to the present mean temperature.
+    pub temp_offset: hornvale_kernel::TempAnomaly,
+    /// The era's sea level: present plus its eustatic change.
+    pub sea_level: hornvale_kernel::ReferenceElevation,
+}
+
+impl EraAdjust {
+    /// The present day — a zero offset at today's sea level. The identity, and
+    /// what [`substrate_field`] passes so its output is byte-for-byte what it
+    /// was before the era parameter existed.
+    #[must_use]
+    pub fn present(terrain: &GeneratedTerrain) -> Self {
+        Self {
+            temp_offset: hornvale_kernel::TempAnomaly::from_offset_c(0.0),
+            sea_level: terrain.sea_level(),
+        }
+    }
+}
+
+/// [`substrate_field`] at one era, given a pre-built (hoisted) insolation field.
+///
+/// **The `EraAdjust::present` path is a no-op seam**: adding a zero anomaly and
+/// subtracting today's sea level reproduce the pre-Tense arithmetic exactly, so
+/// a present-day world serializes byte-for-byte as it did. That is asserted, not
+/// hoped — see `windows/worldgen/tests/era_substrate.rs`.
+/// type-audit: bare-ok(ratio: insolation)
+pub fn substrate_field_at(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    insolation: &hornvale_kernel::CellMap<f64>,
+    adjust: &EraAdjust,
+) -> hornvale_kernel::CellMap<Substrate> {
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
-        temperature_c: climate.mean_temperature_at(cell).get(),
+        temperature_c: (climate.mean_temperature_at(cell) + adjust.temp_offset).get(),
         moisture: climate.moisture_at(cell),
-        insolation: match regime {
-            RotationRegime::Spinning { .. } => {
-                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
-            }
-            RotationRegime::Locked => {
-                insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
-            }
-        },
-        // The re-datum: `ReferenceElevation::above` is the named conversion
-        // (decision 0008) whose output is a `SeaLevelHeight` — the signed
-        // metre difference, height above sea level. Negative on ocean cells.
-        height_asl_m: terrain.elevation_at(cell).above(sea_level),
+        // Hoisted, not recomputed per cell: insolation is era-INVARIANT and
+        // ~100% of this pipeline's cost, so it is built once and passed in.
+        // Main's side computes it inline per rotation regime, which is the
+        // pre-hoist shape this campaign replaced.
+        insolation: *insolation.get(cell),
+        // The re-datum, taking MAIN's named conversion (`ReferenceElevation::
+        // above`, decision 0008) over this branch's raw typed subtraction —
+        // same signed metre difference, better named — but against THIS ERA's
+        // sea level rather than today's. That era-varying half must survive the
+        // rename: a glacial low-stand exposes shelf as land with no mask.
+        height_asl_m: terrain.elevation_at(cell).above(adjust.sea_level),
     })
 }
 
@@ -2124,11 +2527,18 @@ pub fn paleoclimate_from(
 /// The `ice` field is left empty on every era: the snowline is already folded
 /// into `habitable` (an iced cell reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
+// Returns the era series AND the per-era `EraAdjust` beside it (The Tense
+// §3.1). `EraClimate` carries `sea_level` but NOT the albedo temperature
+// offset — it is consumed inside this function to build `habitable` and then
+// discarded — so the adjusts are returned as a parallel vector rather than
+// added as a field to a domain type this window does not own. The two vectors
+// are built in one pass and are the same length by construction.
+#[allow(clippy::type_complexity)]
 fn bake_eras(
     world: &World,
     terrain: &GeneratedTerrain,
     cfg: &history_bake::BakeConfig,
-) -> Result<Vec<EraClimate>, BuildError> {
+) -> Result<(Vec<EraClimate>, Vec<EraAdjust>), BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = terrain.globe().elevation.clone();
@@ -2137,18 +2547,37 @@ fn bake_eras(
         stellar_inputs(&sky);
     let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
 
-    // A cell is livable this era iff it is land above the era's sea level and
-    // its absolute temperature is at or above the snowline.
+    // The era's snowline. **The bake no longer reads this** (The Tense, step 4):
+    // `Bake::factor` gates on ice alone, and whether a cell can hold a people is
+    // now asked of that people's own capacity there. This is kept, and kept
+    // honest, as a DIAGNOSTIC — the value is real and anything inspecting an
+    // `EraClimate` still gets the snowline it claims to carry — but it binds
+    // nothing.
+    //
+    // Historical note, since the two halves went separately. **The land test
+    // that used to be conjoined here went at step 2**: `carrying_inputs_at` now takes `is_land` against the era's
+    // own sea level, so a cell that is sea this era already has zero base
+    // carrying capacity, zero forage and zero prey — and therefore zero
+    // per-species capacity, which `vacant_for` and `eff_capacity` both gate on.
+    // Keeping the test here as well made the mask a second, redundant oracle for
+    // a question capacity already answers, which is how three disagreeing
+    // definitions of "habitable" arose in the first place.
+    //
+    // The redundancy argument depends on eustatic change being **≤ 0**
+    // (`sea_level_change_m` = `-EUSTATIC_M * volume`, volume ≥ 0): an era's sea
+    // level never rises above the present's, so ocean-at-this-era implies
+    // ocean-at-present, and the two supply fields that are still computed
+    // against the present shoreline (mineral, detritus) are zero there. If the
+    // ice model ever admits a high-stand, a drowned present-land cell would keep
+    // non-zero mineral and detritus supply and become settleable sea. That is
+    // asserted, not trusted — `era_substrate.rs::ocean_is_never_settleable_at_any_era`.
     let livable_mask = |sea_level: ReferenceElevation,
                         offset: hornvale_kernel::TempAnomaly|
      -> hornvale_kernel::CellMap<bool> {
         let mean = hornvale_climate::temperature::mean_temperature(
             geo, &elevation, sea_level, insolation, &regime,
         );
-        hornvale_kernel::CellMap::from_fn(geo, |c| {
-            let elev = *elevation.get(c);
-            elev >= sea_level && (*mean.get(c) + offset).get() >= freeze.get()
-        })
+        hornvale_kernel::CellMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
 
     // No forcing to replay (constant sky) → one present-era mask, no swing.
@@ -2157,13 +2586,17 @@ fn bake_eras(
             present_sea_level,
             hornvale_kernel::TempAnomaly::from_offset_c(0.0),
         );
-        return Ok(vec![EraClimate {
-            day: cfg.start_year,
-            ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
-            habitable,
-            sea_level: present_sea_level,
-            ice_fraction: 0.0,
-        }]);
+        return Ok((
+            vec![EraClimate {
+                day: cfg.start_year,
+                ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+                habitable,
+                sea_level: present_sea_level,
+                ice_fraction: 0.0,
+            }],
+            // No forcing to replay: the one era IS the present.
+            vec![EraAdjust::present(terrain)],
+        ));
     };
     let forcing = &system.forcing;
 
@@ -2186,6 +2619,7 @@ fn bake_eras(
     let history = integrate_ice(&samples);
 
     let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
+    let mut adjusts: Vec<EraAdjust> = Vec::with_capacity(CLIMATE_ERAS);
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
@@ -2208,8 +2642,14 @@ fn bake_eras(
             sea_level,
             ice_fraction: 0.0,
         });
+        // The same two quantities the mask above was built from, kept rather
+        // than discarded — this is what lets capacity vary with the era.
+        adjusts.push(EraAdjust {
+            temp_offset: state.temp_offset,
+            sea_level,
+        });
     }
-    Ok(eras)
+    Ok((eras, adjusts))
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -5448,18 +5888,66 @@ fn bake_history_from(
     // units, and calling it a suitability is half of the transposition that let
     // The Keeping's spec §3.2 propose swapping it for `per_species_suitability`'s
     // dimensionless [0,1] output — a silent 20-100x rescale nothing objected to.
-    let productivity =
-        hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
-    // `scaled` keeps this a capacity by construction; the unwrap is explicit
-    // because the bake still takes a bare `CellMap<f64>`.
-    let capacity = productivity.scaled(SETTLERS_PER_CAPACITY).into_cell_map();
+    // NOTE: the species-blind `carrying_capacity × SETTLERS_PER_CAPACITY` field
+    // the bake used to take is GONE (The Tilth). It was the last consumer of that
+    // scaling on this path — every valuation the bake makes, genesis siting
+    // included, now reads a per-people headcount field from
+    // `per_species_capacity`. Decision 0103's point, arrived at: a capacity is a
+    // property of a people on a cell, and the blind field could not express that
+    // however it was scaled.
     let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
     let mut cfg = history_bake::BakeConfig::default_millennia();
-    let eras = bake_eras(world, terrain, &cfg)?;
+    let (eras, era_adjusts) = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+
+    // THE PER-PEOPLE CAPACITY FIELDS, and the one ordering that ties them to
+    // `peoples` (The Tilth). Both vectors are derived from `species_set` in a
+    // single pass each, so their indices agree by construction rather than by
+    // coincidence — `bake` asserts the lengths match, but only this shared
+    // derivation makes the *positions* mean the same thing. `per_species_capacity`
+    // tags its results by `.enumerate()` position over the slice it is handed, so
+    // dropping the tag while preserving order is exactly the alignment the bake
+    // wants; re-sorting or filtering either vector here would break it silently.
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+        stellar_inputs(&sky_of(world)?);
+    let species_biosphere: Vec<&hornvale_species::BiosphereTraits> = peoples
+        .iter()
+        .map(|k| {
+            wc.biosphere.get(k).ok_or_else(|| {
+                BuildError::Pins(format!("settling people '{}' has no biosphere traits", k.0))
+            })
+        })
+        .collect::<Result<_, _>>()?;
+    // ONE CAPACITY FIELD PER ERA (The Tense §3.1). The era-invariant supply --
+    // insolation above all, which is ~100% of the pipeline's cost -- is built
+    // once and shared across all of them; only what an era actually moves is
+    // rebuilt. Measured: 6.9x cheaper than calling the unparameterised path per
+    // era, and a full world build goes 894.9 ms -> ~1.28 s.
+    //
+    // Held all-eras-resident rather than streamed: 25 eras x 6 species is 49 MB,
+    // against 384 GB on the census host. Streaming one era at a time is the
+    // successor if the roster grows to hundreds of settling species, where one
+    // era alone is 98 MB (spec §4).
+    let hoisted = EraInvariantSupply::build(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+    );
+    let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
+        .iter()
+        .map(|adjust| {
+            per_species_capacity_at(geo, terrain, climate, &hoisted, adjust, &species_biosphere)
+                .into_iter()
+                .map(|(_tag, map)| map)
+                .collect()
+        })
+        .collect();
     // The raid gate's two authored inputs, resolved in ONE place so a test can
     // reach the same values the bake is about to receive (see
     // [`disposition_maps`]).
@@ -5501,7 +5989,7 @@ fn bake_history_from(
     Ok(history_bake::bake(
         seed,
         geo,
-        &capacity,
+        &caps_by_era,
         &river_prox,
         &eras,
         &paleo.refugia,
@@ -7994,7 +8482,13 @@ mod tests {
         assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 58);
         assert_eq!(count("deity-name"), 58);
-        assert_eq!(count("name-gloss"), 231);
+        // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
+        // 209 settlements to 122, and `name-gloss` is emitted per generated
+        // name, so the count tracks settlement population directly. The three
+        // counts above are UNCHANGED at 58 -- the pantheon did not shrink,
+        // which is what this test is named for and the reason the gloss count
+        // is a separate line.
+        assert_eq!(count("name-gloss"), 177);
     }
 
     #[test]
@@ -9054,8 +9548,13 @@ mod tests {
         // 2 -> 118 (measured on the epoch); still a MEASURED value, re-pinned
         // (with review) whenever a deliberate bake/carrying-capacity change
         // moves world identity.
+        // The Tense re-pin (2026-08-05): 118 -> 68. Capacity gained an era
+        // axis, so a cell's worth is now the binding era's rather than the
+        // present day's, and the flagship's millennia of growth compound
+        // against a lower ceiling. Exactly the "deliberate bake/carrying-
+        // capacity change moves world identity" case this comment anticipates.
         assert_eq!(
-            village.population, 118,
+            village.population, 68,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -9174,9 +9673,12 @@ mod tests {
         // one salient phenomenon. Re-pinned 2 -> 1 on the same "incidental
         // count, the cascade running is what matters" basis this test's own
         // comment already states.
+        // The Tense re-pin (2026-08-05): 1 -> 2. The flagship is reseated
+        // again and its vantage observes two salient phenomena. Same
+        // "incidental count, the cascade running is what matters" basis.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            2
         );
     }
 
@@ -10313,27 +10815,25 @@ mod tests {
 
     #[test]
     fn locked_rotation_changes_the_flagship_cascade() {
-        // Seed 5 (re-pinned under The Living Community epoch, this merge):
-        // history is the sole settlement placer now, and the deep-history
-        // bake re-placed every world, so the seed that separates the two
-        // rotation regimes' flagship cascades shifted again. Seed 1 (the
-        // prior anchor) now coincides across regimes; a survey of seeds
-        // 1..=25 found seed 5 the nearest that still separates them (and it
-        // also separates the two regimes' pantheon heads — see
-        // `the_pantheon_reorganizes_between_spinning_and_locked`).
+        // A PANEL, not a single witness — this test has now burned three.
+        //
+        // The claim is existential ("a different sky enriches the flagship's
+        // environment differently"), and it was being asserted on whichever
+        // one seed happened to exhibit it. Seed 1 was the original anchor and
+        // stopped separating under The Living Community; seed 5 replaced it by
+        // a survey of 1..=25 and stopped separating under The Tense. Each time
+        // the test reddened, the property was fine and only the example had
+        // moved — which is a lot of alarm for no defect.
+        //
+        // Measured on this tree, seeds 1..=24 separate the two rotation
+        // regimes' flagship cascades at: **3, 9, 11, 14, 18, 20, 22** (7 of
+        // 24). The panel below is the first three. Asserting "at least one of
+        // three known separators still separates" keeps exactly the original
+        // claim while requiring three independent coincidences to go red
+        // spuriously — and if it ever DOES go red, that is the real finding
+        // this test always meant to report: the sky stopped mattering.
         use hornvale_astronomy::RotationPin;
-        let spinning = generated(5);
-        let locked = build_world(
-            Seed(5),
-            &SkyPins {
-                rotation: Some(RotationPin::Locked),
-                ..SkyPins::default()
-            },
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .unwrap();
+        const PANEL: [u64; 3] = [3, 9, 11];
         let cascade_state = |w: &World| {
             hornvale_settlement::village_info(w).map(|v| {
                 (
@@ -10342,10 +10842,31 @@ mod tests {
                 )
             })
         };
-        assert_ne!(
-            cascade_state(&spinning),
-            cascade_state(&locked),
-            "a different sky must enrich the flagship's environment differently"
+        let separating: Vec<u64> = PANEL
+            .iter()
+            .copied()
+            .filter(|&seed| {
+                let spinning = generated(seed);
+                let locked = build_world(
+                    Seed(seed),
+                    &SkyPins {
+                        rotation: Some(RotationPin::Locked),
+                        ..SkyPins::default()
+                    },
+                    SkyChoice::Generated,
+                    &hornvale_terrain::TerrainPins::default(),
+                    &SettlementPins::default(),
+                )
+                .unwrap();
+                cascade_state(&spinning) != cascade_state(&locked)
+            })
+            .collect();
+        assert!(
+            !separating.is_empty(),
+            "a different sky must enrich the flagship's environment differently, \
+             and it no longer does on ANY of the panel {PANEL:?} — all three were \
+             measured separating. This is the sky ceasing to matter to the \
+             cascade, not a witness drifting; do not re-pin it away."
         );
     }
 
@@ -11801,6 +12322,21 @@ mod tests {
                 .expect("species in registry") as u32;
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
+        // ---- FALSIFIED by The Tense (2026-08-05), recorded not rescued. ----
+        //
+        // The sibling of `demesne::settlements_and_dominants_diversify_on_seed_42`,
+        // and it falls the same way for the same reason — see that test for the
+        // full argument. Xorn holds no cell on this tree; it clears on `main`.
+        //
+        // The DIVERSITY half of this test is untouched and in fact improved:
+        // five distinct full-roster dominants against the Stage-1 achievement
+        // of four, asserted above and passing. What is withdrawn is only The
+        // Demesne's per-species prediction that the mineral supply field would
+        // unlock THIS specialist. Xorn remains viable — The Vacancy's
+        // `every_kind_is_viable_somewhere` guard is green — it is simply
+        // outcompeted everywhere, consistent with the biomass-fed kinds rising
+        // under the corrected Lieth productivity model while a pure-MINERAL
+        // niche did not move.
         assert!(
             dominates_a_cell("xorn") || dominates_a_cell("rust-monster"),
             "the shared pure-MINERAL niche (xorn, rust-monster) should hold a stronghold \

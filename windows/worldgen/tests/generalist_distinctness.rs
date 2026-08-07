@@ -160,16 +160,36 @@ const MIN_SETTLEABLE_CELLS: usize = 100_000;
 ///
 /// | case | cv(human variant) | cv(goblin) | cv_ratio | \|ratio − 1\| | n cells |
 /// |---|---|---|---|---|---|
-/// | real (human's own niche) | 0.4641 | 0.4871 | 0.9528 | **0.0472** | 142,587 |
-/// | mutated (human's `condition_niche` ← goblin's) | 0.4813 | 0.4871 | 0.9882 | **0.0118** | 142,590 |
+/// | real (human's own niche) | 1.0675 | 1.0827 | 0.9859 | **0.0141** | 438,018 |
+/// | mutated (human's `condition_niche` ← goblin's) | 1.0793 | 1.0826 | 0.9969 | **0.0031** | 437,968 |
 ///
-/// `0.02` sits strictly between the two measured gaps, with margin on both
-/// sides (real is 136% above the floor; mutated is 41% below it) - see
+/// **Re-derived by The Tense (2026-08-06), by this floor's own rule rather than
+/// by lowering it to pass.** The rule is that the floor sits strictly between
+/// the two measured gaps; both gaps moved, so the floor moves with them. The
+/// prior numbers were real 0.0472 / mutated 0.0118 against a floor of 0.02.
+///
+/// What actually happened is worth reading before touching this again, because
+/// "the gap shrank 3.3x" invites the wrong conclusion. Era-varying capacity
+/// gives cold ground real capacity, so the scored cell population TRIPLED
+/// (142,587 → 438,018) and both species' fit dispersions MORE THAN DOUBLED
+/// (human 0.4641 → 1.0675, goblin 0.4871 → 1.0827). Against that much larger
+/// and more varied sample the two peoples' dispersions are relatively closer,
+/// which is what the falling gap records.
+///
+/// The DISCRIMINATOR did not weaken — it sharpened. Real-vs-mutated separation
+/// is now 4.55x (0.0141 / 0.0031) against 4.00x before. This test can still
+/// tell human's niche from goblin's, and slightly better than it could; what it
+/// can no longer do is clear an absolute floor calibrated against a
+/// three-times-smaller sample.
+///
+/// `0.007` sits strictly between the two measured gaps, with margin on both
+/// sides (real is 101% above the floor; mutated is 56% below it) — the same
+/// two-sided construction the 0.02 had, re-measured. See
 /// `substituting_goblins_niche_for_humans_is_detected` for the mutation
 /// proof this margin is drawn from, and this file's module doc comment for
 /// why elevation's `devotion` specifically cannot be part of what widened
 /// the real gap, and for the width-only reading's own numbers.
-const CV_RATIO_GAP_FLOOR: f64 = 0.02;
+const CV_RATIO_GAP_FLOOR: f64 = 0.007;
 
 /// Population coefficient of variation (stddev / mean) of `vals`.
 ///

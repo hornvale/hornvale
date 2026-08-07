@@ -303,6 +303,8 @@
 - [The Keeping](./chronicle/the-keeping.md)
 - [The Tolerance](./chronicle/the-tolerance.md)
 - [The Fare](./chronicle/the-fare.md)
+- [The Tilth](./chronicle/the-tilth.md)
+- [The Tense](./chronicle/the-tense.md)
 - [The Hollow](./chronicle/the-hollow.md)
 - [The Panes](./chronicle/the-panes.md)
 - [The Deep Realm](./chronicle/the-deep-realm.md)

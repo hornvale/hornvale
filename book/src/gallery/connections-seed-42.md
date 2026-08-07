@@ -14,12 +14,12 @@ The flagship settlement, on the world's largest connected landmass. Its
 own overland routes reach two neighboring settlements directly.
 
 ```text
-The connections of Goodogododaga
-================================
+The connections of cell 13980
+=============================
 
-A natural route runs to Gododaga and Daoga, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+cell 13980 opens onto no sea-lane and no natural overland route of its own: whatever reaches it must cross open country, adjacency by adjacency.
 
-Goodogododaga sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
+cell 13980 sits within the largest connected stretch of the known world (3525 cells, the largest of 10 real regions the map resolves into) -- well-linked, nothing here is stranded.
 ```
 
 ## A hub on a different shore
@@ -30,13 +30,12 @@ but with no natural corridor at all bridging it back to the flagship's
 larger region.
 
 ```text
-The connections of Nenato
-=========================
+The connections of cell 28435
+=============================
 
-Nenato is linked by sea-lane to Dodadodo, cell 28374, and Bo -- a current-borne crossing, not a road.
-A natural route runs to Gebogebo, Bo, Geoboge, and Toa, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
+cell 28435 is linked by sea-lane to cell 1828, cell 28374, and cell 28427 -- a current-borne crossing, not a road.
 
-Nenato's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
+cell 28435's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.
 ```
 
 ## The world, in sum

@@ -1,12 +1,16 @@
 # The Tilth — productivity is a property, tolerance is a relation
 
-**Status:** Draft for review (2026-08-04) · **Campaign:** the-tilth ·
+**Status:** SHIPPED (merged 2026-08-06) — see [The Tilth chronicle](../../../book/src/chronicle/the-tilth.md). Stages 6 and 7 were landed, measured and REVERTED; their successor is The Tense §3.3, still unwired · **Campaign:** the-tilth ·
 **Supersedes:** the step ordering in
 [The Keeping §8](2026-08-04-the-keeping-design.md#8-redirect-after-task-0),
 overturned twice by measurement · **Builds on:** decisions
 [0100](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0100-fact-phenomenon-myth.md),
 [0103](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0103-suitability-and-headcount-are-distinct-types.md),
-and The Keeping's step B (`CarryingInput.is_land`)
+and The Keeping's step B (`CarryingInput.is_land`) · **Amended by:**
+[stage 6, the unfloored axis](2026-08-05-the-unfloored-axis-design.md) — §3.3's
+Liebig minimum turned the one axis that is passed `floor 0.0` (elevation) from a
+scale factor into a veto, and measurement found it binding on 100% of land for
+three of the six settling peoples
 
 ## 1. The thesis
 
@@ -223,6 +227,304 @@ Larger than step B, which moved seed 42 by one fact.
 - Expect re-pins across `demesne`, `history_emit`, `lens_purity`, lab
   `metrics.rs`, and the `beta`/`approach-ease` calibrations. Each must carry a
   **direction argument**, per the practice step B established.
+
+## 5a. The three constants, derived (2026-08-04)
+
+§6 names fitted constants as this campaign's central risk, since its thesis is
+that the model already carries too much unexplained arithmetic. All three are
+therefore **measured or externally anchored, and shown** —
+`windows/worldgen/tests/tilth_probe.rs` is the instrument, run over the five
+probe seeds.
+
+```
+  K_m    = 0.08036     median axis_supply over land            (n = 183,078)
+  V_max  = 176.0       SOLVED, not read off:
+                         target 68.87   median capacity on good ground today
+                                        (n = 3,056, top decile)
+                       / MM frac 0.6874 at good-ground supply p90 = 0.17668
+                       / tolerance 0.5692  median min-of-conditions (Liebig) for
+                                        the BEST-FIT settler on good ground
+                                        (p10 0.3485, p90 0.6576)
+  precipitation        NO NEW CONSTANT. `climate.precip_at(cell)` already exists:
+                       precip_mm_yr(m) = 2000.0 * m^1.5, Earth-ranged, provenance
+                       "a documented approximation (spec §5 model card)"
+```
+
+Three things worth stating about this derivation:
+
+- **`V_max` had to be solved *through* the Michaelis-Menten fraction**, not read
+  off. An earlier version of the probe printed the target (68.87) as though it
+  were `V_max`; that would have under-scaled every world by ~2.6x. The factors
+  are measured, the arithmetic is stated, and the result is checkable.
+- **The calibration is anchored on the case the model already gets right** - good
+  ground, top decile - and the marginal cases then fall wherever the model puts
+  them. That is what makes H1-H3 falsifiable rather than fitted.
+- **`P_FULL` is RETRACTED — there was never a constant to author.** Nathan asked
+  whether the scale should be per-world, and checking found `precip_at` already
+  in `domains/climate`: `precip_mm_yr(m) = 2000.0 * m^1.5`, Earth-ranged, with its
+  provenance already cited to the spec's model card. My `P_FULL` would have been a
+  **second, inconsistent conversion of the same quantity** — precisely the
+  duplication this campaign exists to remove — and it was *linear*, where the real
+  function's `1.5` exponent exists to stop mid-range moisture reading as tropical.
+  At median land moisture 0.3707 mine said 741 mm/yr; `precip_mm_yr` says **451**,
+  which matches Earth's *median* land far better than my mean-anchored figure.
+  **Stage 1 consumes `precip_at`.**
+
+  On the per-world question the answer is **no, and it already isn't**: `moisture`
+  is a physical budget (upwind evaporation, orographic rainout, continental
+  drying) clamped to `[0,1]`, never normalised per world. So a dry world genuinely
+  reads dry and `precip_mm_yr` returns low mm/yr — an Athas stays an Athas.
+  Per-world normalisation would be the *bug*: it would rescale every world's
+  driest ground to average and erase exactly the thing that makes such a world
+  distinctive.
+
+The measured tolerance figure also upgrades §2.3 from illustration to data: the
+median min-of-conditions on good ground is **0.5692**, so the product form's
+compression can be quoted against real distributions rather than the
+plausible-looking factors §2.3 currently uses. Recorded as a followup.
+
+## 5b. Provenance audit — three states, and the worst one is not "missing"
+
+Nathan asked whether the provenance of the math is clearly explained in the code.
+Audited: the discipline **exists and is uneven**, in three distinct states.
+
+**Sourced and honest.** `sovereignty_floor`: *"AUTHORED biological prior (not
+census-calibrated)."* `carrying_capacity`'s constants: *"CALIBRATED
+(the-gathering, 2026-07-13): measured against the 200-seed census … frozen as
+measured, not as a placeholder."* `precip_mm_yr`: *"a documented approximation
+(spec §5 model card)."* These are auditable.
+
+**Described but unsourced** — the entire moisture budget:
+
+```rust
+const EVAP: f64 = 0.5;         /// Precipitable water added per upwind step over ocean
+const OROG_K: f64 = 0.07;      /// Orographic rainout coefficient
+const CONVECTIVE: f64 = 0.005; /// Convective rainout per overland step in a rising band
+const DECAY: f64 = 0.006;      /// Fractional decay of precipitable water per overland step
+```
+
+Every one says *what it is*. Not one says **where the number came from** — no
+measurement, no citation, no "authored".
+
+**Falsely sourced.** `carrying_capacity` cites Lieth's Miami model and does not
+implement it (§2.1). **This is worse than being unsourced**, because a citation
+*stops the reader checking*, and it is why the defect survived four campaigns
+while its calibration ran green. The lesson generalises past this campaign: an
+unsourced constant is a gap a reader can see, and a wrongly-sourced formula is a
+gap that actively defends itself.
+
+**What this campaign owes:** stage 1's Lieth adoption states its coefficients
+*with* the citation they actually satisfy, and the retracted `P_FULL` is replaced
+by a call to the function that already carries provenance. Repairing the moisture
+budget's four unsourced constants is out of scope and recorded as a followup — it
+is a different campaign, and probably the one §7 q2's fertility term belongs to.
+
+## 5c. What does not transfer to a non-Earth world
+
+Nathan asked whether other properties drift on an Athas, a Mon Cala, a Pandora.
+
+| world | representable? | what happens |
+|---|---|---|
+| **Athas**-like (hot, arid) | **yes, and improving** | exactly what step B's `is_land` and stage 1's monotone temperature term unlock |
+| **Mon Cala**-like (ocean) | geometrically yes (`--ocean-fraction`) | **uninhabitable**: every settler is terrestrial and `MARINE_FORAGE` has no settling consumer (The Keeping's F10) |
+| **Pandora**-like (low-g, dense air) | **no** | Hornvale defines no planetary radius, hence no surface gravity, so there is no gravity-dependent biology to drift |
+
+The deepest non-transferable assumption is not a single constant: **adopting Lieth
+imports Earth's photosynthetic chemistry as a universal.** Its coefficients are
+fitted to Earth's biosphere — Earth's CO₂, water-carbon life, a G-type spectrum —
+and Hornvale *generates star classes*, so a red-dwarf world receives different
+insolation while keeping Earth's photosynthetic response curve. The same holds for
+`FORAGE_FRACTION`/`PREY_FRACTION` (~10% trophic transfer is an Earth observation)
+and for `snow_fraction` being centred on 0 °C (assumes water).
+
+This is a limit to **state, not to fix**. Adopting Lieth makes the Earth
+assumption explicit and citable where the tent made it invisible, which is an
+improvement even though it does not remove it. A world whose biosphere is not
+water-carbon around a Sun-like star is outside this model's scope, and saying so
+is more honest than a tent that quietly assumed the same thing.
+
+## 5d. Stage 1 + 4 measured (2026-08-05) — two findings, one a self-correction
+
+Implemented and measured before stage 5, per the ledgered decision to keep the two
+increments separately attributable. **Not yet committed**: see the note at the end.
+
+### The support exploded, and the count FELL
+
+```
+  cells with K>0 for >=1 settler   was 3038/8130/3944/5231/2140
+                                   now 11010/17636/16033/11209  (~all land)
+  seed 42                          232 settlements -> 157;  14,562 facts -> 10,369
+```
+
+Lieth's "never reaches zero" did exactly what it promised — essentially all land now
+carries non-zero capacity. But **settlements went down**, which is the opposite of
+the campaign's direction, and the reason is that Lieth's water term is *stricter*
+than what it replaced:
+
+```
+  at median land moisture 0.3707  ->  precip_mm_yr = 2000 * m^1.5 = 451 mm/yr
+    old water term (RAW moisture)     0.371
+    new water term (Lieth precip)     0.259     = 70% of the old
+  temperature, temperate band:  15C tent 0.650 / Lieth 0.615
+                                22C tent 1.000 / Lieth 0.786
+                                30C tent 0.600 / Lieth 0.905
+```
+
+Raw moisture in `[0,1]` was silently a **much more generous** water term than
+Lieth's saturating function on a real mm/yr total. So good ground got worse while
+extreme ground became barely viable, and the net is fewer settlements. This is not
+a defect in stage 1 — it is the model being honest for the first time — but it means
+**`V_max` and `K_m` must be RE-DERIVED on the new physics before stage 5**, because
+they were measured against the old capacity distribution. The staged sequencing is
+what caught that; an all-at-once landing would have used stale constants.
+
+### §2.4's mechanism was WRONG, and this measurement proves it
+
+H1 did **not** move: `goblin`, `bugbear` and `gnoll` still win **zero** best-fit
+cells on every seed. Only `human` gained (0/0/154/36 → 34/734/748/168).
+
+§2.4 claimed the base field, being *"shaped like a temperate generalist,"* scored
+every species against an implicit incumbent and so amplified whoever most resembled
+it. **That is algebraically impossible.** Best-fit is
+
+```
+  argmax_sp  eff(c, sp)  =  argmax_sp  [ capacity(c) x K_sp(c) ]  =  argmax_sp  K_sp(c)
+```
+
+because `capacity(c)` is **species-blind and therefore cancels out of the argmax**.
+The base field cannot influence who wins a cell, no matter what shape it has. The
+monopoly is decided entirely inside `K_sp` — that is, by `axis_supply` and the
+condition combination — so **only stage 5 can break it.**
+
+This is a genuine falsification of the spec's stated mechanism, and it sharpens H1
+rather than weakening it: if the monopoly breaks at stage 5, the cause is
+unambiguously the **product-versus-Liebig** change, because that is the only
+remaining term that treats species differently. The staged split bought exactly the
+attribution it was designed to buy — and it also bought this correction, which an
+all-at-once landing would have hidden behind a working result.
+
+### Not committed yet
+
+Stage 1 + 4 moves world identity substantially (232 → 157 settlements on seed 42),
+so committing it demands a full rebaseline and re-pin pass — which stage 5 would
+then immediately redo, since it changes the same numbers again. The measurement is
+recorded here instead, and the two stages will land together with **one**
+rebaseline. That is a deliberate deviation from the ledgered "land 1+4, then land
+5" sequencing: the *attribution* the split existed to protect is secured above,
+analytically and empirically, so the remaining value of separate commits is
+bookkeeping, not evidence.
+
+## 5e. H1 tested (2026-08-05) — partially confirmed, with a precise residual
+
+Because the species-blind capacity cancels from `argmax` (§5d), best-fit territory
+depends *only* on how the per-species term combines. So H1 is testable as a **pure
+measurement** — both rules computed over the same cells, no production change, exact
+attribution. Pooled over the five probe seeds:
+
+```
+  species         PRODUCT   LIEBIG min
+  kobold            24880        29134
+  goblin                0  ->      458
+  hobgoblin         40160        34652
+  bugbear               0  ->      927
+  gnoll                 0  ->        0      <- STILL excluded
+  human              1818         1687
+  species winning ANY territory:  3/6  ->  5/6
+```
+
+**The combination rule was the cause for two of the three exclusions.** Swapping
+the product for Liebig's minimum moves `goblin` and `bugbear` off zero, and flattens
+the distribution (hobgoblin −14%, kobold +17%). That confirms §2.3's diagnosis and
+justifies stage 5 on measured grounds rather than on tidiness.
+
+**H1's stated threshold — all six on at least three of five seeds — is NOT met.**
+`gnoll` wins nothing, and its cause is different in kind:
+
+```
+  moisture 0.12 (gnoll's optimum) -> precip  83 mm/yr -> Lieth water term 0.054
+  moisture 0.37 (median land)     -> precip 450 mm/yr -> Lieth water term 0.258
+  gnoll moisture tolerance:  0.874 at its optimum, 0.538 at median land
+```
+
+Gnoll is *perfectly tolerant* of the ground it is authored for and that ground has
+**almost no productivity** — and gnoll eats `ANIMAL_PREY 0.65 + PLANT_FORAGE 0.35`,
+both pure functions of `base_carrying`. So the arid specialist starves in the desert
+it was designed for: on wet ground its tolerance excludes it, and on dry ground
+there is nothing to eat. **This is a trophic exclusion, not a field or a
+combination-rule exclusion**, and it is The Keeping's trophic finding arriving for a
+specific species under the corrected model.
+
+So the campaign splits its own hypothesis cleanly: **stage 5 fixes what the
+combination rule broke, and cannot fix what the food web excludes.** Gnoll needs a
+non-photosynthate resource niche — the roster work of §8 step D — and no amount of
+work on productivity or tolerance will seat it. Recording that as the campaign's
+boundary is more useful than a partial pass or a rescued threshold, and per decision
+0016 the threshold is **not** moved to make H1 read green.
+
+## 5f. The synthetic phase diagram (2026-08-05) — the real diagnosis
+
+Nathan's proposal: sweep a grid of hand-specified situations instead of probing a
+handful of generated worlds. The sampling argument is decisive — a generated world
+offers only the *narrow joint distribution* terrain and climate happen to produce
+together, so no five-seed probe ever visits cold-and-wet or hot-and-arid-with-food
+at all. `tilth_phase_diagram.rs` sweeps **168 situations** (8 temperatures × 7
+moistures × 3 elevations) with **no terrain sculpting and no climate generation**,
+in milliseconds rather than the ~2 s per world a real build costs.
+
+It was built to separate two causes — *tolerance-limited* (nobody fits) versus
+*food-limited* (nobody can eat) — and the answer is **neither**:
+
+```
+  settled                        168 / 168
+  unsettled, TOLERANCE-limited     0
+  unsettled, FOOD-limited          0
+```
+
+Every situation is settleable, and the winner is `hobgoblin` in 112 of 168 and
+`kobold` in the remaining 56 — *all* of which are the 3500 m band. Goblin, bugbear,
+gnoll and human win essentially nothing across the entire climate space.
+
+### The cause: buffered axes cannot discriminate
+
+`ConditionResponse::eval` is `floor + (1 − floor) · devotion · exp(−z²/2)`, and
+`sovereignty_floor(mass, potency)` supplies that floor for temperature, moisture and
+insolation — **but elevation is passed `0.0`** (*"sovereignty buffers physiology but
+not geometry"*). Measured at the extremes:
+
+```
+  at -20 C, moisture 0.02:  hobgoblin temp eval 0.455   kobold temp eval 0.407
+                            -- floored; they CANNOT fall below ~0.31-0.50
+  elevation (floor 0.0):    kobold  3500 m 0.361  /  100 m 0.012
+                            hobgoblin 3500 m 0.047  /  100 m 0.375
+```
+
+So on three of four axes every species retains 31–50% suitability *no matter how
+hostile the ground*, which means those axes are nearly **non-discriminating**: they
+cannot exclude anyone, so they cannot award territory to anyone either. **Elevation
+is the only axis that can decide a cell**, because it is the only one with a hard
+zero — and that is exactly why the map partitions into "kobold above 3000 m,
+hobgoblin everywhere else."
+
+Hobgoblin wins the everywhere-else because it has both the highest sovereignty floor
+among the lowlanders (0.453) *and* the heaviest `PLANT_FORAGE` weight (0.65) against
+the largest supply axis. It is not out-competing anyone on climate; it is winning a
+contest the climate axes were never able to hold.
+
+### What this reframes
+
+- **H1's residual is not gnoll-specific.** Four of six species win nothing across
+  the whole of climate space, and the reason is structural rather than per-species.
+- **Stage 5 risks overshooting into homogeneity, not fragmentation.** §6's risk 4
+  anticipated over-fragmentation; the measured danger is the opposite — one species
+  everywhere, because a large `V_max` plus a high floor makes trivial supply
+  sufficient. All 168 situations clearing the viability bar is that warning.
+- **The lever is the floor, not the roster.** Authoring more species cannot help
+  while three of four axes are buffered into indifference; a new species would land
+  in the same undifferentiated contest. Either the sovereignty floor falls, or more
+  axes get hard stakes of the kind kobold's elevation already is.
+
+That is a different campaign from this one, and stating it is more useful than
+raising `V_max` until the map looks varied.
 
 ## 6. Risks
 

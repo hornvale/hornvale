@@ -40,6 +40,29 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Re-scanned across seeds 42/1/2/3/5/7/11/13/23/1000; seed 7 carried 2
 /// colliding material-core groups and became the witness.
 ///
+/// **Moved a THIRD time under The Tense (2026-08-05), and the guard is why we
+/// know again.** Era-varying capacity re-placed every world and seed 1's
+/// collisions went to ZERO (716 occupations, no colliding material-core group
+/// at all). Re-scanned the same family of seeds plus 0/4/6/8/9/10:
+///
+/// ```text
+///   seed   6: 175 occupations, 5 colliding groups, 10 records   <- witness
+///   seed   7: 493 occupations, 3 groups,  6 records
+///   seed   3: 517 occupations, 2 groups,  4 records
+///   seeds 4, 5, 23: 1 group each;  0, 1, 2, 8, 9, 10, 11, 13, 42, 1000: none
+/// ```
+///
+/// **Seed 6** is the witness now, chosen for MARGIN rather than continuity: at
+/// five colliding groups it carries more than any seed this test has ever used,
+/// which is the property that keeps it from going vacuous a fifth time.
+///
+/// That this is the fourth witness in three days is itself the finding. The
+/// campaign retrospective carries it as an open follow-up: the file's header
+/// records that a synthetic ID SHIFT was considered and rightly rejected as
+/// near-vacuous, but that is a different thing from CONSTRUCTING two records
+/// with genuinely equal material cores, and the hunt is not obviously
+/// sustainable at this rate.
+///
 /// **Moved again at the main absorb (2026-08-04), and the guard is why we
 /// know.** Composing The Keeping's `is_land` decomposition with this
 /// campaign's raid gate emptied seed 7 in turn — 853 occupations, **zero**
@@ -67,7 +90,7 @@ fn witness_world() -> World {
 
 /// The seed [`witness_world`] builds. A witness, not a claim — see that
 /// function's doc for why it moved off 42, and then off 7.
-const WITNESS_SEED: u64 = 1;
+const WITNESS_SEED: u64 = 6;
 
 /// Two occupations with identical material cores but different entity ids
 /// must produce identical derived output. The witness seed measurably contains

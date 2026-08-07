@@ -49,7 +49,19 @@ fn world() -> hornvale_kernel::World {
 /// again: `Godogododaga` -> `Goodogododaga` (one more `o`, back to the
 /// pre-Contour spelling by coincidence of the draw, not a reversion of the
 /// epoch).
-const GRIEVANCE_NPC: &str = "bugbear of Goodogododaga";
+///
+/// It happened a SIXTH time with The Tense (2026-08-05): capacity gained an
+/// era axis, seed 42 re-placed from 209 settlements to 122, and the flagship's
+/// name went `Goodogododaga` -> **`Googo`**. Re-verified from
+/// `book/src/gallery/possession-seed-42.md`, which is the source this constant
+/// must always be read from: it renders `bugbear of Googo` in the room line,
+/// the `map` legend and `whoami` alike.
+///
+/// NOTE the near-miss: seed 42's CHIEF bugbear settlement in the almanac is
+/// `Dadogogodaga`, a different place entirely. Reading the rename off the
+/// almanac instead of the possession artifact gives a plausible wrong answer,
+/// because this NPC does not live in the chief settlement.
+const GRIEVANCE_NPC: &str = "bugbear of Googo";
 
 fn out_text(t: Turn) -> String {
     match t {
