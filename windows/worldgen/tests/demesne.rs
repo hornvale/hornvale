@@ -341,9 +341,10 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// fifth people (the gnoll), measured at seed 42 to also place a settlement —
 /// re-pinned 4 -> 5. The Generalist adds a sixth people (human), measured at
 /// seed 42 to also place a settlement — re-pinned 5 -> 6. The Delvers (C2c)
-/// adds five dwarves, measured at seed 42 to place settlements for all five —
-/// re-pinned 6 -> 11.
-const BASELINE_PEOPLED_KINDS_42: usize = 11;
+/// adds three dwarves, measured at seed 42 to place settlements for all three
+/// — re-pinned 6 -> 9. (It briefly read 11 while the campaign carried five
+/// dwarves; spec §11 withdrew Mountain and Duergar.)
+const BASELINE_PEOPLED_KINDS_42: usize = 9;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -400,15 +401,14 @@ fn world_42() -> World {
 /// The paragraph's whole argument rests on "every peopled species' authored
 /// niche is a pure `PLANT_FORAGE`/`ANIMAL_PREY` blend with ZERO weight on
 /// `PHOTOSYNTHATE`/`MINERAL`/`DETRITUS`". That is now false, and deliberately
-/// so: `duergar` and `mountain-dwarf` each weight `MINERAL` at 0.70 and
-/// `gully-dwarf` weights `DETRITUS` at 0.70. The future stage this doc
-/// predicted ("e.g. a mining kobold niche weighted onto `MINERAL`") is the
-/// campaign that shipped — it just arrived as a mining *dwarf*. So the
-/// peopled-by count is re-pinned 6 -> 11 as a measurement, and the assertion
+/// so: `gully-dwarf` weights `DETRITUS` at 0.50 and `desert-dwarf` carries a
+/// three-way vector. The `MINERAL` half of the expiry was withdrawn with the
+/// two subterranean kinds (spec §11) — no people weights `MINERAL` today —
+/// but the premise stays broken, because a `DETRITUS`-weighted people is
+/// exactly as much a counterexample as a `MINERAL`-weighted one. So the
+/// peopled-by count is re-pinned 6 -> 9 as a measurement, and the assertion
 /// message no longer claims the structural reason, because the structure
-/// changed. Note the consequence measured a few lines down: with peoples now
-/// competing on the mineral axis, the pure-MINERAL specialists lose ground
-/// rather than gain it.
+/// changed.
 #[test]
 fn settlements_and_dominants_diversify_on_seed_42() {
     let world = world_42();
@@ -652,24 +652,29 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // says tolerance belongs. Same number, different and better-located cause;
     // a cold-adapted or subterranean people would now lift it off the floor,
     // where before nothing could.
-    // THE DELVERS RE-PIN (C2c, 2026-08-07): 35.4171 -> 36.0986. The MECHANISM
+    // THE DELVERS RE-PIN (C2c, 2026-08-07): 35.4171 -> 35.8831. The MECHANISM
     // is the roster, exactly as the paragraph above says it must be — this
     // number is a mean over the SETTLED peoples' per-species carrying
-    // capacity, and the settling roster went from six to eleven, so five new
+    // capacity, and the settling roster went from six to nine, so three new
     // tolerance curves entered the average. Nothing latitudinal moved.
+    //
+    // It read 36.0986 while the campaign carried five dwarves; withdrawing
+    // Mountain and Duergar (spec §11) moved it to 35.8831 rather than back to
+    // 35.4171, which is what a mean over a CHANGED population does — the two
+    // kinds' contribution was never separable from the other three's.
     //
     // The paragraph above ends with a prediction: "a cold-adapted or
     // subterranean people would now lift [the poles] off the floor, where
-    // before nothing could." TWO SUBTERRANEAN PEOPLES ARRIVED AND IT DID NOT.
-    // Measured here: raw_pole_mean 0.004508 -> 0.004574, still an order of
-    // magnitude under POLE_FLOOR = 0.01, so the ratio is still exactly
-    // 100 * trop_mean and still carries no polar information. Recorded, not
-    // rescued: living underground is not the same axis as tolerating polar
-    // cold, and neither duergar nor mountain-dwarf was authored onto the
-    // latter. The degeneracy this assertion documents is unchanged.
+    // before nothing could." That prediction is once again UNTESTED: the two
+    // subterranean peoples that would have tested it are withdrawn, and while
+    // they were present it did NOT come true (raw_pole_mean 0.004508 ->
+    // 0.004574, still an order of magnitude under POLE_FLOOR = 0.01).
+    // Recorded, not rescued: living underground is not the same axis as
+    // tolerating polar cold. The degeneracy this assertion documents is
+    // unchanged, and the ratio is still exactly 100 * trop_mean.
     assert!(
-        (ratio - 36.0986).abs() < 1e-3,
-        "scalar-path productivity drifted: {ratio:.4} (expected ~36.0986). NOTE this is \
+        (ratio - 35.8831).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~35.8831). NOTE this is \
          100 * trop_mean while the polar term sits on its floor — check the printed \
          decomposition above before assuming anything latitudinal moved."
     );

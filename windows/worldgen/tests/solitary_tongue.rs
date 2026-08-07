@@ -437,16 +437,20 @@ fn render_lexicon_snapshot(lex: &Lexicon) -> String {
 /// list defect. Extended, not derived, for the same reason as above.
 ///
 /// The Delvers (C2c, 2026-08-07) extends it a third time, deliberately rather
-/// than by discovery: five dwarves are peoples seven through eleven. They are
+/// than by discovery: three dwarves are peoples seven through nine. They are
 /// APPENDED, not sorted in — this array's order is arrival order and is part
 /// of the golden's pinned row order, exactly as the paragraph above says.
+/// (The campaign briefly listed five; spec §11 withdrew Mountain and Duergar
+/// as inexpressible depth kinds, and the two entries are removed rather than
+/// left as dead names, because `language_of_in` fails loudly on an unknown
+/// species and a stale entry here would be a hard error, not a silent gap.)
 ///
-/// **These five are the first peoples over `LIFESPAN_THRESHOLD_YEARS`**, so
+/// **These three are the first peoples over `LIFESPAN_THRESHOLD_YEARS`**, so
 /// they are the first to enter this golden on the SLOW language-drift regime.
 /// That is the case the byte-identity guard's own message anticipates ("a
 /// campaign that authors a long-lived people will legitimately change this
 /// golden, and must say so"); this comment is the saying-so.
-const PEOPLES: [&str; 11] = [
+const PEOPLES: [&str; 9] = [
     "goblin",
     "hobgoblin",
     "bugbear",
@@ -454,10 +458,8 @@ const PEOPLES: [&str; 11] = [
     "gnoll",
     "human",
     "desert-dwarf",
-    "duergar",
     "gully-dwarf",
     "hill-dwarf",
-    "mountain-dwarf",
 ];
 
 /// Claim (c), BYTE-IDENTITY: every settled people's full lexicon at seed 42

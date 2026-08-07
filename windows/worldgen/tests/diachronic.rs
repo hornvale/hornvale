@@ -216,44 +216,31 @@ type Row = (
 // change, forcing `doctrine.rs`'s SOC-1 smoke test to be re-found. Smaller
 // settlements on average; some cross down, some cross up.
 // THE DELVERS RE-MEASURE (C2c, 2026-08-07). The table grew from 30 rows to
-// 55: the five dwarves are Settled peoples seven through eleven, and all five
-// place on all five seeds. Re-measured wholesale rather than extended, and the
-// interesting part is that TWO PRE-EXISTING ROWS MOVED, in opposite
-// directions:
+// 45: the three dwarves are Settled peoples seven through nine, and all three
+// place on all five seeds. Re-measured wholesale rather than extended.
+//
+// The campaign re-measured this table three times — five dwarves on `MINERAL`
+// diets, five on `DETRITUS`, then three on `DETRITUS` after spec §11 withdrew
+// Mountain and Duergar as inexpressible depth kinds. **Every witnessed COUNT
+// held through all three.** What moved, every time, is `cult_form`, which
+// reads `organized` iff a settlement's emergent castes include a shaman, and
+// castes are downstream of settlement scale: a settling people added or
+// removed re-decides placement on every seed, so some flagships cross the
+// caste threshold and some cross back. That is this comment's own "it moves
+// BOTH ways" rule reporting a real consequence, not a mispinning.
+//
+// Against the FINAL shipped table, 27 of the 30 pre-Delvers rows are
+// byte-identical to their pre-campaign values. The three that are not:
 //
 //   seed 2 hobgoblin  Counted    -> Predictive  (gained a prediction)
+//   seed 3 hobgoblin  Counted    -> Predictive  (gained a prediction)
 //   seed 3 kobold     Predictive -> Counted     (lost one)
 //
-// Both witnessed COUNTS are unchanged (49 and 53) — they observe exactly what
-// they observed before. What moved is `cult_form`, which reads `organized` iff
-// a settlement's emergent castes include a shaman, and castes are downstream
-// of settlement scale. Five new settling peoples re-decide placement on every
-// seed, so some flagships cross the caste threshold and some cross back. That
-// is this comment's own "it moves BOTH ways" rule reporting a real
-// consequence for the second time, not a mispinning — and it is why the table
-// is re-measured rather than having five blocks appended to it.
-//
-// RE-MEASURED A SECOND TIME IN THE SAME CAMPAIGN (2026-08-07), after the dwarf
-// diets were corrected off the `MINERAL` trophic axis onto `DETRITUS`. NINE
-// rows moved, and every witnessed COUNT again held — so this is the caste
-// threshold once more, never the ladder:
-//
-//   seed 1 duergar         Predictive -> Counted
-//   seed 2 duergar         Counted    -> Predictive
-//   seed 2 mountain-dwarf  Counted    -> Predictive
-//   seed 3 duergar         Counted    -> Predictive
-//   seed 3 mountain-dwarf  Counted    -> Predictive
-//   seed 4 desert-dwarf    Predictive -> Counted
-//   seed 4 duergar         Counted    -> Predictive
-//   seed 4 kobold          Counted    -> Predictive
-//   seed 5 duergar         Counted    -> Predictive
-//
-// **DUERGAR MOVED ON ALL FIVE SEEDS**, and net it goes from organized on 1 of
-// 5 to organized on 4 of 5. That is the sharpest single reading in this table:
-// taking the deep hold off a lithovore diet and onto the fungal food web puts
-// it in settlements large enough to carry a shaman caste. Only one non-dwarf
-// row moved (seed 4 kobold, upward), which is the ordinary collateral of
-// re-placement rather than anything about kobold.
+// and all three keep their witnessed counts (49, 32, 53). Note that seed 3
+// hobgoblin was Counted under BOTH the pre-campaign roster and the five-dwarf
+// roster and is Predictive only at three — the caste threshold is not
+// monotone in roster size, which is the standing reason to read these rows as
+// a threshold rather than a trend.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -273,14 +260,6 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        6472,
-        None,
-    ),
-    (
-        1,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -336,14 +315,6 @@ const LADDER_TABLE: &[Row] = &[
         Some(36531.74198950235),
     ),
     (
-        1,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
-    ),
-    (
         2,
         "bugbear",
         LadderRung::Unknown,
@@ -358,14 +329,6 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         81,
         None,
-    ),
-    (
-        2,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
     ),
     (
         2,
@@ -424,14 +387,6 @@ const LADDER_TABLE: &[Row] = &[
         Some(36337.174658835705),
     ),
     (
-        2,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        81,
-        Some(36337.174658835705),
-    ),
-    (
         3,
         "bugbear",
         LadderRung::Unknown,
@@ -446,14 +401,6 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         53,
         None,
-    ),
-    (
-        3,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
     ),
     (
         3,
@@ -491,9 +438,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         32,
-        None,
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -512,14 +459,6 @@ const LADDER_TABLE: &[Row] = &[
         None,
     ),
     (
-        3,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        53,
-        Some(36125.669504115634),
-    ),
-    (
         4,
         "bugbear",
         LadderRung::Unknown,
@@ -530,14 +469,6 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "desert-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        3785,
-        None,
-    ),
-    (
-        4,
-        "duergar",
         LadderRung::Unknown,
         LadderRung::Predictive,
         3785,
@@ -563,9 +494,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "gully-dwarf",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         2067,
-        None,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -595,17 +526,9 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
-    ),
-    (
-        4,
-        "mountain-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         5,
@@ -622,14 +545,6 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         500,
         None,
-    ),
-    (
-        5,
-        "duergar",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
     ),
     (
         5,
@@ -682,14 +597,6 @@ const LADDER_TABLE: &[Row] = &[
     (
         5,
         "kobold",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        500,
-        Some(36556.47532198732),
-    ),
-    (
-        5,
-        "mountain-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         500,

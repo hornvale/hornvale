@@ -386,19 +386,13 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // single-concept cohort, appended per this module's absolute rule rather
     // than folded into any earlier peopled-kind cohort (0, 2).
     &["human-kind"],
-    // Epoch 9 — The Delvers (2026-08-07): the dwarf family, five kinds.
-    // ONE cohort, not five: the campaign is one arrival event and one epoch,
-    // and five cohorts would assert five successive language epochs — a
+    // Epoch 9 — The Delvers (2026-08-07): the dwarf family, three kinds.
+    // ONE cohort, not three: the campaign is one arrival event and one epoch,
+    // and three cohorts would assert three successive language epochs — a
     // stronger claim about the world's history than this campaign makes.
     // Appended rather than folded into an earlier peopled-kind cohort (0, 2,
     // 8), per this module's absolute rule.
-    &[
-        "desert-dwarf-kind",
-        "duergar-kind",
-        "gully-dwarf-kind",
-        "hill-dwarf-kind",
-        "mountain-dwarf-kind",
-    ],
+    &["desert-dwarf-kind", "gully-dwarf-kind", "hill-dwarf-kind"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

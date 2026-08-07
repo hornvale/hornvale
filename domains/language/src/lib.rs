@@ -412,13 +412,13 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
-            // THE DELVERS (C2c): five daughters of one proto, and the first
+            // THE DELVERS (C2c): three daughters of one proto, and the first
             // family since goblinoid where that word means anything. Each row
             // below DIVERGES from `family_proto`'s `KindId("dwarf")` vector
             // (labiality 0.40, vowel_space 0.35, voicing 0.60, sibilance
             // 0.35, voice_loudness 0.60) — the divergence is precisely what
-            // the sound-change cascade consumes, so five identical daughters
-            // would be five names for one tongue.
+            // the sound-change cascade consumes, so three identical daughters
+            // would be three names for one tongue.
             //
             // The proto reading is a low, back, consonant-heavy tongue:
             // narrow vowel space, moderate labiality, voiced, unsibilant,
@@ -436,25 +436,6 @@ pub mod speech {
                     voice_loudness: 0.80,
                     tonality: 0.0,
                     exotic: ExoticManner::None,
-                },
-            ),
-            (
-                KindId("duergar"),
-                ArticulationVector {
-                    // the quietest and most closed daughter — sound carries
-                    // in a chamber, so a deep tongue is clipped rather than
-                    // projected, and its voicing drops with its volume.
-                    labiality: 0.25,
-                    vowel_space: 0.25,
-                    voicing: 0.40,
-                    sibilance: 0.45,
-                    voice_loudness: 0.35,
-                    tonality: 0.0,
-                    // `ExoticManner::Ejective`'s FIRST witness in the roster
-                    // (kobold holds `Trill`; `Click` is still unwitnessed).
-                    // A sharp egressive burst is what a hushed, hard-edged
-                    // tongue uses where a loud one would simply shout.
-                    exotic: ExoticManner::Ejective,
                 },
             ),
             (
@@ -483,20 +464,6 @@ pub mod speech {
                     voicing: 0.65,
                     sibilance: 0.30,
                     voice_loudness: 0.55,
-                    tonality: 0.0,
-                    exotic: ExoticManner::None,
-                },
-            ),
-            (
-                KindId("mountain-dwarf"),
-                ArticulationVector {
-                    // loud and closed: speech over hammering and running
-                    // stone, with the proto's narrow vowel space kept.
-                    labiality: 0.30,
-                    vowel_space: 0.30,
-                    voicing: 0.55,
-                    sibilance: 0.30,
-                    voice_loudness: 0.75,
                     tonality: 0.0,
                     exotic: ExoticManner::None,
                 },
@@ -621,7 +588,7 @@ pub mod speech {
                     top: "steward",
                 },
             ),
-            // THE DELVERS (C2c): the dwarf family's five vocabularies. Each
+            // THE DELVERS (C2c): the dwarf family's three vocabularies. Each
             // kind's `top` rung names what its `SocietyVector.status_basis`
             // says earns standing — `loremaster` for Knowledge, `overseer`
             // for Rank, `eldest` for a Communal band — so the words and the
@@ -637,19 +604,6 @@ pub mod speech {
                     // its 0.75 `sky_attention` is the same claim.
                     shaman: "starreader",
                     top: "waterwarden",
-                },
-            ),
-            (
-                KindId("duergar"),
-                Lexicon {
-                    noun: "deephold",
-                    worker_override: Some("drudge"),
-                    warrior: "ironhand",
-                    artisan: "graver",
-                    shaman: "grimseer",
-                    // Rank, plainly: the top of this hold is the one who
-                    // compels the rest of it.
-                    top: "overseer",
                 },
             ),
             (
@@ -675,19 +629,6 @@ pub mod speech {
                     top: "thane",
                 },
             ),
-            (
-                KindId("mountain-dwarf"),
-                Lexicon {
-                    noun: "delve",
-                    worker_override: Some("miner"),
-                    warrior: "shieldward",
-                    artisan: "forgemaster",
-                    shaman: "deepsinger",
-                    // Knowledge: mastery ranks this people, so its top rung
-                    // is the one who holds the most of it.
-                    top: "loremaster",
-                },
-            ),
         ]
         .into_iter()
         .collect()
@@ -700,8 +641,8 @@ pub mod speech {
     /// by a kind. `check_integrity` (`windows/worldgen/src/components.rs`)
     /// requires an entry here for every label held by two or more kinds, so a
     /// campaign that adds a second member to a family MUST add its proto in
-    /// the same commit — The Delvers added five dwarves and this row together
-    /// for exactly that reason.
+    /// the same commit — The Delvers added three dwarves and this row
+    /// together for exactly that reason.
     /// type-audit: bare-ok(identifier-text)
     pub fn family_proto() -> ComponentStore<KindId, ArticulationVector> {
         [
@@ -741,13 +682,13 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
-            // THE DELVERS (C2c): proto-Dwarf, ancestor of all five daughters
+            // THE DELVERS (C2c): proto-Dwarf, ancestor of all three daughters
             // in `articulation_registry`. A low, back, consonant-heavy tongue:
             // narrow vowel space, moderate lip rounding, well voiced, little
             // sibilance, and carrying — the reading a people that speaks over
-            // stone and wind arrives at. `exotic: None`, so duergar's
-            // `Ejective` is an INNOVATION in the daughter rather than an
-            // inheritance every sibling then had to lose.
+            // stone and wind arrives at. `exotic: None` — the daughters
+            // innovate away from the proto rather than losing an inherited
+            // manner.
             (
                 KindId("dwarf"),
                 ArticulationVector {

@@ -183,19 +183,23 @@ fn depth_landscape_measured() {
     // 18-row (6 peoples x 3 seeds) landscape — re-measured and re-pinned
     // exactly below.
     //
-    // The Delvers re-pin (C2c, 2026-08-07): the five dwarves are Settled
-    // peoples seven through eleven and every one of them places at every
-    // seed 1..=3, so the grid is the full 33-row (11 peoples x 3 seeds)
+    // The Delvers re-pin (C2c, 2026-08-07): the three dwarves are Settled
+    // peoples seven through nine and every one of them places at every
+    // seed 1..=3, so the grid is the full 27-row (9 peoples x 3 seeds)
     // landscape. **The eighteen pre-existing rows are byte-identical** —
     // re-measured, not assumed: a people's morphological depth is drawn per
     // people and does not move when the roster around it grows, even though
     // settlement PLACEMENT moved everywhere (which is what redecided the
-    // lexicons' exposure, a different quantity). The dwarf rows are the only
-    // new information here.
+    // lexicons' exposure, a different quantity).
+    //
+    // **The roster cut to three (spec §11) moved NOTHING here.** This grid
+    // was first pinned at 33 rows with five dwarves; withdrawing duergar and
+    // mountain-dwarf deleted their six rows and left the other twenty-seven
+    // byte-identical, which is the same per-people independence stated above,
+    // now measured in the shrinking direction as well as the growing one.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
         (1, "desert-dwarf", MorphDepth::None, MorphDepth::None),
-        (1, "duergar", MorphDepth::Affix, MorphDepth::None),
         (1, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "gully-dwarf", MorphDepth::None, MorphDepth::None),
@@ -203,10 +207,8 @@ fn depth_landscape_measured() {
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
         (1, "human", MorphDepth::Affix, MorphDepth::Affix),
         (1, "kobold", MorphDepth::None, MorphDepth::None),
-        (1, "mountain-dwarf", MorphDepth::None, MorphDepth::Affix),
         (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
         (2, "desert-dwarf", MorphDepth::Particle, MorphDepth::None),
-        (2, "duergar", MorphDepth::Particle, MorphDepth::Affix),
         (2, "gnoll", MorphDepth::None, MorphDepth::Particle),
         (2, "goblin", MorphDepth::None, MorphDepth::None),
         (2, "gully-dwarf", MorphDepth::None, MorphDepth::Particle),
@@ -214,10 +216,8 @@ fn depth_landscape_measured() {
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
         (2, "human", MorphDepth::None, MorphDepth::None),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
-        (2, "mountain-dwarf", MorphDepth::None, MorphDepth::Affix),
         (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
         (3, "desert-dwarf", MorphDepth::Affix, MorphDepth::None),
-        (3, "duergar", MorphDepth::Affix, MorphDepth::None),
         (3, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "gully-dwarf", MorphDepth::None, MorphDepth::None),
@@ -225,7 +225,6 @@ fn depth_landscape_measured() {
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
         (3, "human", MorphDepth::Particle, MorphDepth::None),
         (3, "kobold", MorphDepth::None, MorphDepth::Affix),
-        (3, "mountain-dwarf", MorphDepth::Particle, MorphDepth::None),
     ];
     assert_eq!(
         measured, expect,

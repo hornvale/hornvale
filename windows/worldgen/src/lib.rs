@@ -8538,20 +8538,22 @@ mod tests {
     /// this test's stated policy of re-pinning an exact count over weakening
     /// it.
     ///
-    /// The Delvers re-pin (C2c, 2026-08-07): five dwarves are the seventh
-    /// through eleventh Settled peoples, and five more peopled pantheons
-    /// form — all three 58s move to 104 in lockstep, which is again exactly
+    /// The Delvers re-pin (C2c, 2026-08-07): three dwarves are the seventh
+    /// through ninth Settled peoples, and three more peopled pantheons
+    /// form — all three 58s move to 88 in lockstep, which is again exactly
     /// the shape this test guards: the pantheon must not SHRINK, and growing
-    /// by five peoples' belief-sets is expected. `name-gloss` moved for the
-    /// same reason its own history already documents (a roster change
-    /// redecides settlement survival and naming).
+    /// by three peoples' belief-sets is expected. (It read 104 while the
+    /// campaign carried five dwarves; spec §11 withdrew two, and 104 - 88 =
+    /// 16 is eight beliefs per withdrawn kind, not one.) `name-gloss` moved
+    /// for the same reason its own history already documents (a roster
+    /// change redecides settlement survival and naming).
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 104, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 104);
-        assert_eq!(count("deity-name"), 104);
+        assert_eq!(count("is-belief"), 88, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 88);
+        assert_eq!(count("deity-name"), 88);
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
@@ -8574,7 +8576,16 @@ mod tests {
         // roster, which did not move, while the gloss count is a function of
         // settlement volume, which did. That the two separate cleanly here is
         // the reason this file keeps them on different lines.
-        assert_eq!(count("name-gloss"), 293);
+        //
+        // The Delvers, third pass (C2c, 2026-08-07): 293 -> 213, when the
+        // roster was cut from five dwarves to three (spec §11). It did NOT
+        // return to the pre-Delvers 177 — the three surviving dwarves still
+        // hold attractors the six-people roster left to others, so a
+        // withdrawal is not the inverse of an addition. The pantheon counts
+        // above moved with it (104 -> 88) because two peopled pantheons went
+        // away; the two quantities are still tracking different things and
+        // still separate cleanly.
+        assert_eq!(count("name-gloss"), 213);
     }
 
     #[test]
@@ -8820,7 +8831,6 @@ mod tests {
         let settling_peoples: std::collections::BTreeSet<&'static str> = [
             "bugbear",
             "desert-dwarf",
-            "duergar",
             "gnoll",
             "goblin",
             "gully-dwarf",
@@ -8828,7 +8838,6 @@ mod tests {
             "hobgoblin",
             "human",
             "kobold",
-            "mountain-dwarf",
         ]
         .into_iter()
         .collect();
@@ -12897,8 +12906,12 @@ mod tests {
                 // on the strict `>` — while refusing to bank a tie as
                 // evidence. The claim itself is NOT in question here: the
                 // separated, non-tied pairs at seed 42 still reproduce the
-                // predicted ranking (duergar predicted .865 / observed .829,
-                // kobold .836 / .854, gnoll .398 / .455).
+                // predicted ranking (the numbers recorded when this comment
+                // was written were duergar's .865 / .829, kobold's
+                // .836 / .854 and gnoll's .398 / .455; duergar has since been
+                // withdrawn with the rest of the depth roster, spec §11, and
+                // the assertion below has held through that without being
+                // touched).
                 if heavier.2 == lighter.2 {
                     continue;
                 }
@@ -12979,12 +12992,12 @@ mod tests {
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| *k)
             .collect();
-        // The Delvers (C2c) re-pin: 6 -> 11, the five dwarves. Each carries
+        // The Delvers (C2c) re-pin: 6 -> 9, the three dwarves. Each carries
         // its own authored `Dispersion` row, so the spread this test proves
-        // is handed through rather than defaulted covers all eleven.
+        // is handed through rather than defaulted covers all nine.
         assert_eq!(
             peoples.len(),
-            11,
+            9,
             "the settling roster moved; re-read this test before re-pinning it"
         );
 

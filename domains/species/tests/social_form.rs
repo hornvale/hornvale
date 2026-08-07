@@ -50,14 +50,12 @@ fn every_kind_has_the_authored_social_form() {
         ("gnoll", SocialForm::Settled),
         // The Generalist (C2-0): the sixth people.
         ("human", SocialForm::Settled),
-        // The Delvers (C2c): the five dwarves, peoples seven through eleven.
+        // The Delvers (C2c): the three dwarves, peoples seven through nine.
         // A family is a shared descent and a shared tongue, not a shared
-        // constitution — but all five settle, so all five are `Settled`.
+        // constitution — but all three settle, so all three are `Settled`.
         ("desert-dwarf", SocialForm::Settled),
-        ("duergar", SocialForm::Settled),
         ("gully-dwarf", SocialForm::Settled),
         ("hill-dwarf", SocialForm::Settled),
-        ("mountain-dwarf", SocialForm::Settled),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
@@ -71,7 +69,7 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
     // settling peoples — the same set the pre-Eremite psyche key-set held for
     // the original four. The Vacancy T9 adds the gnoll, a fifth; The
     // Generalist (C2-0) adds the human, a sixth; The Delvers (C2c) adds the
-    // five dwarves, taking the roster to eleven. After The Eremite the
+    // three dwarves, taking the roster to nine. After The Eremite the
     // dragons carry a mind while staying Solitary, so psyche is a SUPERSET of
     // Settled (Settled ⊆ psyche), not equal — hence a named pin.
     //
@@ -90,17 +88,15 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
         [
             "bugbear",
             "desert-dwarf",
-            "duergar",
             "gnoll",
             "goblin",
             "gully-dwarf",
             "hill-dwarf",
             "hobgoblin",
             "human",
-            "kobold",
-            "mountain-dwarf"
+            "kobold"
         ],
-        "Settled is exactly the eleven settling peoples (ascending KindId)"
+        "Settled is exactly the nine settling peoples (ascending KindId)"
     );
     for &name in &settled {
         assert!(

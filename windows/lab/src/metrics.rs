@@ -7224,9 +7224,15 @@ mod tests {
         // MINERAL trophic axis. Same cause as every entry above -- the
         // denominator of named goblin settlements moved once more -- and the
         // naming machinery is again untouched. Still inside the 2-3 target.
+        // Third pass, same day: 2.464_285_714_285_714_4 ->
+        // 2.487_804_878_048_780_5, when the roster was cut from five dwarves
+        // to three (spec §11). It did NOT return to the pre-Delvers
+        // 2.333_333_333_333_333_5 — placement is decided by the whole
+        // competitive field, so removing two competitors is not the inverse of
+        // adding them. Still inside the 2-3 target, which is the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.464_285_714_285_714_4)
+            MetricValue::Number(2.487_804_878_048_780_5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -7311,9 +7317,16 @@ mod tests {
         // independently. What matters for the row's actual claim is
         // unchanged: both peoples read inside the 2-3 target and kobold is
         // still live rather than Absent.
+        //
+        // Third pass, same day: 2.772_727_272_727_273 ->
+        // 2.884_615_384_615_384_6, when the roster was cut from five dwarves
+        // to three (spec §11). Kobold and goblin ROSE together again, and
+        // neither returned to its pre-Delvers value (2.8 and 2.333). Both
+        // still read inside the 2-3 target and kobold is still live rather
+        // than Absent, which is the whole of the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.772_727_272_727_273)
+            MetricValue::Number(2.884_615_384_615_384_6)
         );
     }
 
@@ -7429,10 +7442,14 @@ mod tests {
         // Second pass, same day: 0.553_191_489_361_702_1 ->
         // 0.521_531_100_478_468_8, the dwarf-diet correction re-placing seed
         // 42's settlements once more. Still strictly between 0 and 1.
-        assert_eq!(
-            share, 0.521_531_100_478_468_8,
-            "seed 42 transparency drifted"
-        );
+        // Third pass, same day: 0.521_531_100_478_468_8 -> 0.6 EXACTLY, when
+        // the roster was cut from five dwarves to three (spec §11). A round
+        // value is worth reading twice rather than accepting: it is NOT the
+        // degenerate 0 or 1 this row guards against, and the strict-bounds
+        // check above (which is the row's actual claim) is asserted
+        // separately and still bites. The denominator is not reachable here —
+        // `share` arrives as an opaque `Number` — so no fraction is invented.
+        assert_eq!(share, 0.6, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -8090,14 +8107,30 @@ mod tests {
         // witness lived two campaigns ago (with kobold, then gnoll); it
         // returns there with a third species, which is a reminder that the
         // seed is an instrument and not a claim.
+        //
+        // THIRD PASS, same day: cutting the roster from five dwarves to three
+        // (spec §11) re-placed every world once more and seed 1's bugbear lost
+        // `island`. Re-swept 0..60 over all NINE placed peoples by the
+        // identical method and took the earliest pair rooting BOTH concepts:
+        // **(1, gnoll)**. TWENTY-THREE pairs qualify now (1/gnoll, 2/bugbear,
+        // 2/gnoll, 7/bugbear, 11/hobgoblin, 11/human, 12/hobgoblin, 21/gnoll,
+        // 23/gnoll, 26/hobgoblin, 28/desert-dwarf, 34/desert-dwarf,
+        // 34/hobgoblin, 35/desert-dwarf, 36/gully-dwarf, 40/hobgoblin,
+        // 48/human, 54/hobgoblin, 58/bugbear, 58/gnoll, 59/bugbear,
+        // 59/desert-dwarf, 59/hobgoblin) — between the twenty-six of the
+        // second pass and the twenty-one of the first, so the witness is not
+        // simply a function of roster size. The SEED did not move and the
+        // species returns to gnoll, which carried this witness one campaign
+        // ago; there is no same-seed second species at seed 1, so this
+        // witness is load-bearing alone.
         let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
-        let lexicon = lex(&view, "bugbear").expect("seed 1 bugbears hold a lexicon");
+            independently_steeped_concepts(&view, "gnoll").expect("gnoll is in the roster");
+        let lexicon = lex(&view, "gnoll").expect("seed 1 gnolls hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 1 bugbears must root {concept} for this test to bite"
+                "seed 1 gnolls must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -8433,10 +8466,15 @@ mod tests {
         // itself the point it has been making since Sculpting: the biome is
         // downstream of which cell wins, and cells are re-decided by every
         // world-byte change. `flagship-subsistence` is STILL "farming".
-        assert_eq!(
-            m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
-        );
+        //
+        // Third pass, same day: temperate-forest -> taiga, when the roster was
+        // cut from five dwarves to three (spec §11). Same reading as the
+        // five-dwarf first pass, reached from the other direction; the value
+        // has now oscillated between exactly these two biomes four times.
+        // `flagship-subsistence` is STILL "farming" through all four, which is
+        // the stable fact here — the seat is farmable, and which farmable
+        // biome it is, is not a claim this list makes.
+        assert_eq!(m("flagship-biome"), MetricValue::Text("taiga".to_string()));
         // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
         // Consistent with the biome move directly above -- it reseated onto
         // temperate-forest, inland -- rather than an independent fact.
@@ -9434,9 +9472,28 @@ mod tests {
         // hobgoblin) under The Contour. No seed appears twice in the list, so
         // NO same-seed corroboration exists for any candidate; this witness is
         // load-bearing alone, as the previous two were.
-        let view = FullView::build(Seed(31), &SkyPins::default()).unwrap();
-        let steeped = independently_steeped_concepts(&view, "hobgoblin")
-            .expect("hobgoblin is placed at seed 31");
+        //
+        // THIRD PASS, same day: cutting the roster from five dwarves to three
+        // (spec §11) re-placed every world and seed 31's hobgoblin lost a
+        // band. Re-swept by the identical method (0..150, peoples read
+        // dynamically off `FullView::components().perception`).
+        //
+        // ELEVEN qualifying pairs — (5, bugbear), (5, hobgoblin),
+        // (16, hobgoblin), (17, hobgoblin), (24, hobgoblin), (63, bugbear),
+        // (71, bugbear), (75, hobgoblin), (111, desert-dwarf),
+        // (130, hobgoblin), (133, gnoll) — against seven, four and three
+        // before it. The count has now risen at three successive re-sweeps
+        // while the roster went 6 -> 11 -> 9, so "more peoples means more
+        // bands" is NOT the mechanism it looked like on the first pass.
+        //
+        // Witness is **(5, bugbear)**, the earliest qualifying pair — the
+        // SAME pair the first Delvers pass chose, returning after one
+        // intervening re-witness. And for the FIRST time in this test's
+        // history there IS same-seed corroboration: (5, hobgoblin) qualifies
+        // too, so the witness is no longer load-bearing alone.
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
+        let steeped =
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

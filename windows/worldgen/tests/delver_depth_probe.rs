@@ -1,5 +1,13 @@
 //! THE DELVERS — how deep is a cave, in metres?
 //!
+//! **The coordinate measured here was never built.** Task 3b (the depth
+//! subtraction) was WITHDRAWN on this probe's own evidence — a median
+//! habitable depth of 0.0 m means the subtraction barely moves the value an
+//! elevation curve reads, so it could not have carried the two subterranean
+//! dwarves it existed to separate, and both kinds were cut with it (spec
+//! §11.3). The probe stays because it is the measurement that justified the
+//! withdrawal, and it is the input the successor biome campaign inherits.
+//!
 //! Measurement only. This exists because the campaign's Task 3b proposes to
 //! give a chamber its real elevation —
 //! `height_asl_m(chamber) = height_asl_m(surface) - top_depth_m(deepest_band)`

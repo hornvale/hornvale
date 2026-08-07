@@ -587,10 +587,22 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // came back; RESTACKING did not. Those are different properties of the
     // key — two occupations comparing equal, versus the fourth key changing
     // an order — and only the first has recovered its witness.
+    // THE DELVERS, THIRD PASS (same day): 2 -> 0, back to the FLOOR. Cutting
+    // the roster from five dwarves to three (spec §11) redecided survival a
+    // third time and the two seed-1000 ties stopped tying: 3763 pairs
+    // compared, 0 ties. Recorded as a COST, exactly as the first pass was,
+    // and NOT bumped: with nothing tying, the per-tie assertions in the loop
+    // above — the invariant this test is named for — are vacuous again, and
+    // the `pairs > 0` guard cannot tell a working key from a key that never
+    // ties. Three passes in one day at 1 -> 0 -> 2 -> 0 is the honest
+    // reading: this witness is a coincidence of one seed's occupation
+    // chains, not a stable property, and a campaign that needs it should
+    // widen the seed sweep rather than hope.
     assert_eq!(
-        ties, 2,
-        "measured 0 (seed 42) + 0 (seed 7) + 2 (seed 1000) = 2 tying pairs on the live \
-         corpus; a different count means the key's tie conditions changed"
+        ties, 0,
+        "measured 0 (seed 42) + 0 (seed 7) + 0 (seed 1000) = 0 tying pairs on the live \
+         corpus over {pairs} compared pairs; the per-tie assertions above are VACUOUS at \
+         this count — a different count means the key's tie conditions changed"
     );
 }
 

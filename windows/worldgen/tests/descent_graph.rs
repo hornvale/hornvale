@@ -77,11 +77,13 @@ fn a_genesis_occupation_is_its_own_clan_root_and_has_no_forebear() {
     // as a sixth genesis-seeded people, moving the genesis-root count from
     // 17 to 21.
     //
-    // The Delvers re-pin (C2c, 2026-08-07): the five dwarves join as the
-    // seventh through eleventh genesis-seeded peoples, 21 -> 34. Measured,
-    // not computed: a people's genesis roots are however many proto-
-    // communities the bake seeds it, which is not one per people.
-    assert_eq!(genesis.len(), 34, "seed 42 has 34 genesis roots");
+    // The Delvers re-pin (C2c, 2026-08-07): the three dwarves join as the
+    // seventh through ninth genesis-seeded peoples, 21 -> 28. Measured, not
+    // computed: a people's genesis roots are however many proto-communities
+    // the bake seeds it, which is not one per people — it read 34 while the
+    // campaign carried five dwarves (spec §11 withdrew two), and 34 - 28 = 6
+    // is three roots per withdrawn kind, not one.
+    assert_eq!(genesis.len(), 28, "seed 42 has 28 genesis roots");
     for o in genesis {
         assert_eq!(clan_root_of(&w, o.id), o.id);
         assert!(forebear_of(&w, o.id).is_none());
