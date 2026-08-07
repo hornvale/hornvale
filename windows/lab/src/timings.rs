@@ -1000,6 +1000,8 @@ mod tests {
 
     // --- top_contributors -----------------------------------------------------
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a Contributor row, no world seed at all (pure timing-analysis fixtures)
     #[test]
     fn top_contributors_ranks_by_absolute_seconds_gained_descending() {
         let baseline = vec![d("a", 10.0), d("b", 10.0), d("c", 10.0)];

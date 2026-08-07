@@ -7172,6 +7172,8 @@ mod tests {
     /// The vowel set comes from the phonology's own inventory, so a language
     /// that never drew `u` does not count a `u` as a nucleus. Guards the
     /// tempting hard-coded `aeiou`.
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// Segment
     #[test]
     fn vowel_graphemes_come_from_the_inventory_not_a_hardcoded_alphabet() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -7536,6 +7538,8 @@ mod tests {
     /// cannot come back: a THREE-concept gloss is truthful, and the retired
     /// ordered-pair enumeration called it false. Also pins what the check
     /// still rejects — a concept outside the site vector, and a repeat.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a &&str concept name, no world seed at all
     #[test]
     fn a_three_concept_gloss_is_a_truthful_composition() {
         let site: Vec<String> = ["coast", "river", "temperate-forest", "sun"]
@@ -8281,6 +8285,7 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42)
     #[test]
     fn composition_varies_across_settlements_at_seed_42() {
         // The Niche's headline: refutes the task-C "oatmeal" (identical
@@ -8865,6 +8870,7 @@ mod tests {
     /// every unit test in this file uses. These three are taken from that
     /// failing set; the full list was `[21, 70, 130, 153, 187, 308, 371, 471,
     /// 502, 571, 836, 847, 849, 855]`.
+    /// claim: invariant(forall-seed) — over [21,70,130]
     #[test]
     fn monophyly_goblinoid_holds_on_the_seeds_the_unfiltered_universe_broke() {
         for seed in [21u64, 70, 130] {
@@ -8974,6 +8980,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — over [1,7,42]
     #[test]
     fn a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor() {
         // The test-only serpent roster exercises the tonal path (spec §11): a
@@ -9005,6 +9012,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,123,500]
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {

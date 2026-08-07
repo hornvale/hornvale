@@ -225,34 +225,49 @@ fn fn_name(line: &str) -> Option<&str> {
     if end == 0 { None } else { Some(&rest[..end]) }
 }
 
+/// Brace-counting state that must persist ACROSS lines: a `"..."` string
+/// literal can continue onto the next physical line (a trailing `\` line
+/// continuation, as `windows/lab/src/timings.rs`'s test fixtures use for
+/// multi-line JSON literals), so `in_string`/`escaped` are fields here
+/// rather than locals re-initialized per line — the bug this once was
+/// (resetting to "not in a string" at the start of every line) silently
+/// missed exactly that continuation and miscounted the next line's braces.
+#[derive(Default)]
+struct BraceState {
+    /// Whether the scan is currently inside a `"..."` string literal.
+    in_string: bool,
+    /// Whether the previous character was an unconsumed `\` escape inside
+    /// a string literal.
+    escaped: bool,
+}
+
 /// Count `{`/`}` on one line toward `depth`/`started`, skipping characters
-/// inside a `//` line comment or a `"..."` string literal (escape-aware) so
-/// a brace spelled out in a string — `.split("... mod tests {\n")`, which
-/// this very file's `the_readout_law` test contains — cannot desynchronize
-/// the depth count. Does not handle block comments (`/* */`) or raw strings
-/// (`r"..."`/`r#"..."#`); none of this tree's test bodies use either to
-/// hide a brace, and a real one would show up as a wildly wrong body length
-/// under manual review of a lint failure, not a silent miss.
-fn count_braces(line: &str, depth: &mut i32, started: &mut bool) {
-    let mut in_string = false;
-    let mut escaped = false;
+/// inside a `//` line comment or a `"..."` string literal (escape-aware, and
+/// carried across lines via `state`) so a brace spelled out in a string —
+/// `.split("... mod tests {\n")`, which this very file's `the_readout_law`
+/// test contains — cannot desynchronize the depth count. Does not handle
+/// block comments (`/* */`) or raw strings (`r"..."`/`r#"..."#`); none of
+/// this tree's test bodies use either to hide a brace, and a real one would
+/// show up as a wildly wrong body length under manual review of a lint
+/// failure, not a silent miss.
+fn count_braces(line: &str, depth: &mut i32, started: &mut bool, state: &mut BraceState) {
     let chars: Vec<char> = line.chars().collect();
     let mut i = 0;
     while i < chars.len() {
         let ch = chars[i];
-        if in_string {
-            if escaped {
-                escaped = false;
+        if state.in_string {
+            if state.escaped {
+                state.escaped = false;
             } else if ch == '\\' {
-                escaped = true;
+                state.escaped = true;
             } else if ch == '"' {
-                in_string = false;
+                state.in_string = false;
             }
             i += 1;
             continue;
         }
         if ch == '"' {
-            in_string = true;
+            state.in_string = true;
             i += 1;
             continue;
         }
@@ -273,15 +288,16 @@ fn count_braces(line: &str, depth: &mut i32, started: &mut bool) {
 
 /// The text of the function opening at `lines[start]`, from its first `{` to
 /// the matching `}` (brace-depth counting via [`count_braces`], which skips
-/// string and line-comment content).
+/// string and line-comment content and carries string state across lines).
 fn function_body(lines: &[&str], start: usize) -> String {
     let mut depth: i32 = 0;
     let mut started = false;
+    let mut state = BraceState::default();
     let mut body = String::new();
     for line in &lines[start..] {
         body.push_str(line);
         body.push('\n');
-        count_braces(line, &mut depth, &mut started);
+        count_braces(line, &mut depth, &mut started, &mut state);
         if started && depth <= 0 {
             break;
         }
