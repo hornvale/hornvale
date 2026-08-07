@@ -129,6 +129,24 @@ Of 57 tests that build a world inside a seed loop, three use multiple seeds
 | `worldgen/exposure::every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep` | ∀concept ∃seed | up to 9 Full | 8.412 s |
 | `worldgen/diachronic::a_crisis_fires_on_a_real_generated_sky` | ∃seed | up to **200** Full | 7.617 s |
 
+**Correction, found while planning (2026-08-07).** This spec's first draft routed
+`a_crisis_fires` to a hand-built synthetic world, on the model of decision 0093's
+own Stage 3 (`windows/worldgen/tests/doctrine.rs`'s `synthetic_flagship`). **That
+is not feasible, and the plan must not assume it.** `crisis_from` calls
+`observations_from` (`windows/worldgen/src/chorus.rs:1671`), which opens with
+`crate::sky_of(world)?` and refuses anything but a `Sky::Generated`, then derives
+its event list from real orbital mechanics via
+`hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), …)`. A crisis
+additionally needs ≥ `K_PREDICT` (8) witnessed events of one recurrence class and
+a miss-run in the tail. None of that can be hand-committed as facts.
+
+The crisis therefore routes to **`claim: rate(census: crisis-fires)` plus one
+live arm at a census-identified seed** — see §5 and Stage 4. This is the better
+answer anyway: the census does the searching once, in release, on lefford, and
+the seed it finds is recorded rather than re-hunted on every commit. Note the
+generated *sky* is cheap (0.0020 s/world, §3.2); it is `climate+settlements` at
+81% that makes the current sweep expensive.
+
 ~16.5 s against a 352 s median gate — **4.7%**. This campaign is not justified
 on that. It is justified on two other properties:
 
@@ -230,6 +248,10 @@ claim: invariant(census: <metric>)        forall s. P(w_s), s over the census
         -> Flag column asserted all-true; a violation names the seed
 claim: behavior(synthetic)                P(w_synthetic)
         -> hand-built world carrying the committed fact; zero builds
+        -> available ONLY when the behaviour reads committed facts. A
+           derivation that re-derives from a generated sky or a sculpted
+           globe cannot be synthesised — see §3.4's correction, where
+           `crisis_from` fails this test and routes to a rate instead.
 claim: invariant(forall-seed)             forall s in S. P(w_s), S pinned/small
         -> stays live (see §6.6)
 claim: readout(preregistered, 0016)       a measured distribution
@@ -312,25 +334,39 @@ fails it; a check that a *fresh* fixture passes.
 **Status:** Not Started
 **Gate:** no check moves until this stage's mutation evidence is recorded.
 
-### Stage 3 — The three hunts
-**Goal:** `a_crisis_fires` → synthetic world with a committed crisis-shaped
-fact plus the live positive arm at one fixed seed; `hydro_witness` and
-`exposure` → coverage metrics (needs Stage 4's regen to land).
-**Success:** the hunts deleted; coverage assertions green against the
-regenerated fixture; each retirement's before/after cost recorded.
-**Tests:** the new synthetic behaviour test; the coverage assertions.
+### Stage 3 — The metrics the retirements need
+**Goal:** register the new metrics, each with a unit test driving its extractor
+over a live view. No test is retired in this stage and no fixture is
+regenerated — the columns do not exist in `rows.csv` yet.
+- `hydro-variant-coverage` (Terrain rung, `Categorical`): the sorted set of
+  `Hydro` variants `hydro_at` reads anywhere on this world, rendered as a
+  stable joined string. The census has `karst-fraction`/`aquifer-fraction` but
+  nothing for `Aquitard`/`Runoff`/`Spring`.
+- `toponymic-roots-won` (Full rung, `Numeric`): how many of the world's
+  toponymic-domain concepts reach `ExposureClass::Steeped` for some placed
+  people.
+- `crisis-fires` (Full rung, `Flag`): whether `crisis_from` returns `Some` for
+  any placed people at the preregistered epoch.
+**Success:** `cargo run -p hornvale -- lab list-metrics` shows all three; each
+has a unit test that builds one live view and asserts the extractor's shape.
+**Tests:** one per metric, at the shallowest rung that metric needs.
 **Status:** Not Started
 
-### Stage 4 — The first tranche and one census regen
-**Goal:** new metrics — per-variant hydro coverage (the census has
-`karst-fraction`/`aquifer-fraction` but nothing for `Aquitard`/`Runoff`/
-`Spring`), toponymic roots-won per world, and the tranche's worldgen scalar
-invariants. Then **one** census regen.
-**Success:** `rows.csv` carries the new columns; the gate-side assertions pass;
-`make lab-diff STUDY=the-census` reviewed for unintended movement.
-**Tests:** one gate assertion per new metric.
+### Stage 4 — One census regen, then retire the three hunts
+**Goal:** regenerate the census so the three new columns exist, review the
+diff, then write the gate-side assertions and delete the hunts.
+**Success:** `rows.csv` carries the new columns; `make lab-diff
+STUDY=the-census` reviewed for unintended movement in the pre-existing columns;
+the three hunts deleted; each retirement's before/after cost recorded; the
+`crisis-fires` live arm pinned to a seed **read out of the regenerated census**,
+with that seed named in the test's doc comment.
+**Tests:** a coverage assertion per variant; a roots-won assertion; a
+`crisis-fires` rate assertion plus the one live structural arm.
 **Status:** Not Started
 **Carve-out:** the regen needs Nathan's explicit authorization.
+**Ordering note:** Stage 3 cannot be verified end-to-end before this stage,
+because a metric's column does not exist until a regen writes it. That is
+inherent to the census's cadence, not an accident of sequencing.
 
 ### Stage 5 — Within-binary rebuild merge
 **Goal:** collapse tests that each rebuild the same seed set inside one binary
