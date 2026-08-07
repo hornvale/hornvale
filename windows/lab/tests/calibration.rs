@@ -2877,6 +2877,54 @@ fn some_census_world_steeps_every_toponymic_concept() {
     );
 }
 
+/// A live prediction crisis occurs — the property
+/// `windows/worldgen/tests/diachronic.rs` held by building up to 200 worlds to
+/// find one, now measured over 1,000 (The Assay). The rate is the finding the
+/// hunt could never report: the hunt knew only that its search terminated, and
+/// could not say whether it stopped at seed 1 or seed 187.
+///
+/// Rate at the 2026-08-07 regen (`d36be41b`), n = 1000:
+/// `crisis-fires: true 659 · false 341 · Absent 0` — two worlds in three hold
+/// a live prediction crisis. That is the campaign's thesis in one number: the
+/// retired hunt was never slow, it was uninformative — it could report only
+/// that a crisis existed *somewhere* in its search range, never that the
+/// mechanism is this common.
+#[test]
+fn a_prediction_crisis_occurs_and_the_census_reports_its_rate() {
+    let result = &*DRIFT;
+    let column = result
+        .metric_names
+        .iter()
+        .position(|n| *n == "crisis-fires")
+        .expect("the census carries crisis-fires");
+    let (mut fired, mut measured, mut absent) = (0usize, 0usize, 0usize);
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        match row.values[column] {
+            MetricValue::Flag(true) => {
+                fired += 1;
+                measured += 1;
+            }
+            MetricValue::Flag(false) => measured += 1,
+            _ => absent += 1,
+        }
+    }
+    assert!(
+        measured > 0,
+        "crisis-fires was Absent on every census world ({absent})"
+    );
+    assert!(
+        fired > 0,
+        "no world in {measured} exhibits a live prediction crisis at the hundredth \
+         year — the mechanism ships unexercised. Do NOT weaken \
+         PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN to force a hit; those are \
+         the spec's own considered values."
+    );
+    println!("crisis-fires: {fired}/{measured} worlds ({absent} absent)");
+}
+
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).
 fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;

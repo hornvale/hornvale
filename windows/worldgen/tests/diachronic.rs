@@ -543,8 +543,8 @@ fn the_ladder_law() {
 fn the_prophecy_law() {
     // C9 (The Corrigendum): the taught prediction is no longer
     // omniscient, so it is no longer necessarily the TRUE future event
-    // (see `a_crisis_fires_on_a_real_generated_sky` for a seed where
-    // it's demonstrably wrong). What still holds, and is the real law
+    // (see `a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine`
+    // for a seed where it's demonstrably wrong). What still holds, and is the real law
     // now: a Predictive culture's taught day, when `Some`, is EXACTLY
     // what the naive model computes from that culture's OWN witnessed
     // days for its own top recurrence class -- self-consistency between
@@ -642,45 +642,54 @@ fn diachronic_is_deterministic() {
     }
 }
 
+/// The seed whose crisis this test exercises, READ OUT OF THE CENSUS rather
+/// than hunted at test time (The Assay). At the 2026-08-07 regen (`d36be41b`,
+/// n = 1000), the census's `crisis-fires` column reports `true 659 · false
+/// 341 · Absent 0` -- two worlds in three hold a live prediction crisis -- and
+/// seed 0 is the first seed in that column with `true`. Replace this value
+/// only from a regenerated census's `crisis-fires` column, never by widening a
+/// search.
+const CRISIS_SEED: u64 = 0;
+
+/// A live crisis's own structure, on one world. What the census cannot say:
+/// that a crisis's predicted and actual days differ, and that a culture
+/// holding one also holds a doctrine.
+///
+/// This is a `claim: structural(seed: CRISIS_SEED)` — one build, no search.
+/// The frequency question it used to answer badly (by sweeping up to 200
+/// worlds for a single instance, and reporting only that the search
+/// terminated -- never whether it stopped at seed 1 or seed 187) is now
+/// `hornvale-lab::calibration::a_prediction_crisis_occurs_and_the_census_reports_its_rate`,
+/// over 1,000 worlds. If this seed ever stops holding a crisis, that is a
+/// census question first: regenerate, read the column, re-pin.
 #[test]
-fn a_crisis_fires_on_a_real_generated_sky() {
-    // C9 (The Corrigendum) T1/T3: prove the naive model's crisis
-    // detection fires on at least one live seed, not only on synthetic
-    // data. If none of 1..=200 shows one, WIDEN the search range and
-    // document the range that was needed -- never weaken
-    // PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN just to force a
-    // hit; those are the spec's own considered values (decision ledger
-    // #2).
+fn a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine() {
+    let w = generated(CRISIS_SEED);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let at = at(EPOCH_2);
+
     let mut found = None;
-    for seed in 1..=200u64 {
-        let w = generated(seed);
-        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-        for (kind, _) in placed_peoples(&w) {
-            if let Some(crisis) = crisis_from(&w, kind, at(EPOCH_2), &terrain, &climate).unwrap() {
-                found = Some((seed, kind.to_string(), crisis));
-                break;
-            }
-        }
-        if found.is_some() {
+    for (kind, _) in placed_peoples(&w) {
+        if let Some(crisis) = crisis_from(&w, kind, at, &terrain, &climate).unwrap() {
+            found = Some((kind.to_string(), crisis));
             break;
         }
     }
-    let (seed, kind, crisis) = found.unwrap_or_else(|| {
+    let (kind, crisis) = found.unwrap_or_else(|| {
         panic!(
-            "no seed in 1..=200 exhibited a live prediction crisis by day {EPOCH_2} -- widen \
-            the search range rather than shipping this mechanism unexercised"
+            "seed {CRISIS_SEED} no longer exhibits a crisis at day {EPOCH_2}. This seed \
+             was read out of the census's `crisis-fires` column; regenerate the census \
+             and re-pin CRISIS_SEED from it. Do NOT reintroduce a seed sweep here \
+             (decision 0093), and do NOT weaken the tolerance constants."
         )
     });
     assert!(
         crisis.last_predicted != crisis.last_actual,
-        "seed {seed} {kind}: a crisis's own last predicted/actual days must differ"
+        "seed {CRISIS_SEED} {kind}: a crisis's predicted and actual days must differ"
     );
-    let w = generated(seed);
-    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     assert!(
         doctrine_from(&w, &kind, &terrain, &climate).is_some(),
-        "seed {seed} {kind}: a Predictive-rung culture with a crisis must hold a doctrine"
+        "seed {CRISIS_SEED} {kind}: a culture holding a crisis must hold a doctrine"
     );
 }
