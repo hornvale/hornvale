@@ -895,10 +895,23 @@ impl<'w> Session<'w> {
     /// "Resolves exactly as `provoke`/`soothe` do" is load-bearing rather than
     /// descriptive, and The Sighting is why: `colocated_npc` is now narrowed by
     /// sight, so a creature the possession cannot see reads as not-hostile here
-    /// — the same answer an absent one gives. Reporting hostility for a
-    /// withheld creature would leak its disposition state through a `bool`,
-    /// which is the leak this method's shared resolution exists to avoid
-    /// re-inventing.
+    /// — the same answer an absent one gives.
+    ///
+    /// **What that achieves, stated precisely** (fix round 4 corrects fix round
+    /// 3's claim). It does NOT make a withheld creature's hostility
+    /// undiscoverable: `SessionSnapshot::social` folds `self.npcs` *unfiltered*
+    /// and ships `label` + `grievance` + this very `hostile` bool for every
+    /// derived NPC, co-located or not. That is pre-existing and deliberately
+    /// disclosed — [`crate::snapshot::SocialEntry`]'s own doc says membership is
+    /// world truth, that a consumer must filter it, and that rendering it
+    /// unfiltered ships a cheat pane — and The Sighting does not touch it.
+    ///
+    /// What the narrowing achieves is that this method cannot *drift* from the
+    /// verbs it documents itself against. A caller reading `would_turn_hostile`
+    /// as "is the creature I am about to provoke hostile" would otherwise get
+    /// `true` for a creature `provoke` refuses to act on — an answer about a
+    /// creature the same session has just declined to reach. One resolution,
+    /// one answer.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
     pub fn would_turn_hostile(&self, who: &str) -> bool {
         self.colocated_npc(who)
@@ -2221,6 +2234,18 @@ impl<'w> Session<'w> {
             .iter()
             .map(|npc| agent_position(&self.ledger, npc, self.day))
             .collect();
+        // ...and WHO the possession could sense as of that same moment (The
+        // Sighting, fix round 4). A departure is narrated about a creature that
+        // is, by the time it is narrated, no longer here — so the CURRENT sensed
+        // roster can never contain it, and gating a departure on "sensed now"
+        // would silently delete every departure line. The honest question for a
+        // departure is whether the player could see the creature WHILE IT WAS
+        // HERE, and this is the only moment that question is still answerable.
+        let sensed_before: std::collections::BTreeSet<EntityId> = self
+            .sensed_npcs(self.sighting().as_ref())
+            .iter()
+            .map(|npc| npc.entity)
+            .collect();
         let from = self.day;
         self.day = WorldTime {
             day: self.day.day + days,
@@ -2338,7 +2363,7 @@ impl<'w> Session<'w> {
                 if let Err(e) = self.absorb_here() {
                     return Turn::Out(format!("error: {e}"));
                 }
-                Turn::Out(self.narrate_motion(moved, &before))
+                Turn::Out(self.narrate_motion(moved, &before, &sensed_before))
             }
             Err(e) => Turn::Out(format!("Time falters: {e}")),
         }
@@ -2353,18 +2378,66 @@ impl<'w> Session<'w> {
     /// tick); both halves are read back from ledgers, never decorative
     /// flavor text. The generic "stirred" line is the fallback only for
     /// motion that never touches the player's own room.
-    fn narrate_motion(&self, moved: usize, before: &[RoomAddr]) -> String {
+    ///
+    /// # Gated on sight, and ASYMMETRICALLY — the fifth reader
+    ///
+    /// This is the richest of the disclosure channels The Sighting had to close
+    /// (fix round 4) and the last one found: it asserts presence **unprompted**,
+    /// with identity, without the player naming anything —
+    /// `You notice <label> here now.` — and `handle` puts no band guard on
+    /// `wait`, so it fires indoors.
+    ///
+    /// The gate cannot be one predicate, because the two transitions ask
+    /// different questions of different moments:
+    ///
+    /// - **An arrival** is about a creature that is here NOW, so it is gated on
+    ///   the CURRENT sensed roster. A creature that arrived into a cell sight
+    ///   does not reach has not been observed arriving.
+    /// - **A departure** is about a creature that is, by the time this runs,
+    ///   no longer here at all — so the current roster can never contain it and
+    ///   gating on it would delete every departure line ever printed. The honest
+    ///   question is whether the player could see the creature WHILE IT WAS
+    ///   HERE, which is why `wait` captures `sensed_before` at the same instant
+    ///   it captures `before`. Watching something you never saw arrive go is the
+    ///   same disclosure as watching it arrive.
+    ///
+    /// A redacted transition falls through to the generic "stirred" line, which
+    /// reports a COUNT of committed facts world-wide and claims nothing about
+    /// this room — motion without identity, which is what the player is entitled
+    /// to.
+    ///
+    /// **Latent, not demonstrable end-to-end.** A 200-turn indoor sweep never
+    /// fired either branch on seed 42, whose structure produces only the
+    /// `stirred` fallback (`possession_moves.rs` books that lost end-to-end
+    /// coverage as an open followup). The branch is live code all the same, and
+    /// `narrate_motion_does_not_name_a_creature_sight_withheld` pins it by
+    /// feeding the vector directly — "I could not reach it" is not coverage.
+    fn narrate_motion(
+        &self,
+        moved: usize,
+        before: &[RoomAddr],
+        sensed_before: &std::collections::BTreeSet<EntityId>,
+    ) -> String {
         if moved == 0 {
             return "Time passes; the world keeps its shape.".to_string();
         }
+        let sensed_now: std::collections::BTreeSet<EntityId> = self
+            .sensed_npcs(self.sighting().as_ref())
+            .iter()
+            .map(|npc| npc.entity)
+            .collect();
         let mut arrived: Vec<&str> = Vec::new();
         let mut departed: Vec<&str> = Vec::new();
         for (npc, prior) in self.npcs.iter().zip(before) {
             let was_here = *prior == self.agent.position;
             let is_here = agent_position(&self.ledger, npc, self.day) == self.agent.position;
             match (was_here, is_here) {
-                (false, true) => arrived.push(npc.label.as_str()),
-                (true, false) => departed.push(npc.label.as_str()),
+                (false, true) if sensed_now.contains(&npc.entity) => {
+                    arrived.push(npc.label.as_str())
+                }
+                (true, false) if sensed_before.contains(&npc.entity) => {
+                    departed.push(npc.label.as_str())
+                }
                 _ => {}
             }
         }
@@ -4466,6 +4539,88 @@ mod tests {
             !session.would_turn_hostile(&label),
             "`would_turn_hostile` rides the same resolution, so it must not \
              report a withheld creature's disposition either"
+        );
+
+        // THE FOURTH, and the richest (fix round 4). `wait`'s own narration
+        // asserts presence UNPROMPTED, with identity — the player names nothing
+        // and is simply told the creature is here. Fed directly rather than
+        // reached through a tick, because it cannot be reached: a 200-turn
+        // indoor sweep never fired either branch on seed 42, whose structure
+        // produces only the `stirred` fallback. A latent branch still needs a
+        // test; "I could not reach it" is not coverage.
+        //
+        // A real, packable room that is NOT this one: the last path digit
+        // stepped one place. Built rather than invented so `RoomAddr::pack`
+        // (which rejects any digit >= 4) still accepts it.
+        let elsewhere = {
+            let mut path = room.path.clone();
+            let last = path.last_mut().expect("a walk-band address has a path");
+            *last = (*last + 1) % 4;
+            RoomAddr {
+                face: room.face,
+                path,
+            }
+        };
+        let nowhere: std::collections::BTreeSet<EntityId> = Default::default();
+
+        // THE ARRIVAL. `before` says the creature was elsewhere; the ledger
+        // still says it is here; `moved` is nonzero so the early return does
+        // not swallow the call.
+        let arriving: Vec<RoomAddr> = session
+            .npcs
+            .iter()
+            .map(|npc| {
+                if npc.entity == who {
+                    elsewhere.clone()
+                } else {
+                    agent_position(&session.ledger, npc, session.day)
+                }
+            })
+            .collect();
+        let narrated = session.narrate_motion(1, &arriving, &nowhere);
+        assert!(
+            !narrated.contains(&label),
+            "`wait` must not announce the ARRIVAL of a creature sight withheld — \
+             it is the only channel that names a creature the player never asked \
+             about: {narrated}"
+        );
+
+        // THE DEPARTURE, gated on a different moment and so checked separately:
+        // `before` says the creature WAS here, the ledger now says it left, and
+        // the sensed-before set says the player could not see it while it was.
+        // Watching something go that you never saw arrive is the same
+        // disclosure as watching it arrive.
+        let was_here: Vec<RoomAddr> = session
+            .npcs
+            .iter()
+            .map(|npc| agent_position(&session.ledger, npc, session.day))
+            .collect();
+        let fact = crate::liveness::place_agent(who, &elsewhere, session.day);
+        session
+            .ledger
+            .commit(fact, &session.registry)
+            .expect("agent-at is registered");
+        assert!(
+            !session.colocated_npcs().iter().any(|n| n.entity == who),
+            "precondition: the creature really left the room"
+        );
+        let leaving = session.narrate_motion(1, &was_here, &nowhere);
+        assert!(
+            !leaving.contains(&label),
+            "`wait` must not announce the DEPARTURE of a creature the player \
+             could not see while it was here: {leaving}"
+        );
+
+        // THE POSITIVE CONTROL, and it is what stops both assertions above
+        // being vacuous. The identical departure vector, with the creature in
+        // the sensed-before set, MUST name it — otherwise the two negatives
+        // would pass simply because this branch never narrates anything.
+        let seen: std::collections::BTreeSet<EntityId> = [who].into_iter().collect();
+        let announced = session.narrate_motion(1, &was_here, &seen);
+        assert!(
+            announced.contains(&label),
+            "a departure the player COULD see must still be narrated — without \
+             this the gate above could be suppressing everything: {announced}"
         );
     }
 
