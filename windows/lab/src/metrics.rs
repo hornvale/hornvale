@@ -3520,7 +3520,72 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(spearman_defensibility_capacity),
         },
+        Metric {
+            name: "toponymic-core-size",
+            doc: "How many concepts this world's registry reports in the `toponymic` \
+                  domain (The Assay). The denominator for `toponymic-roots-won`, kept \
+                  as its own column so a registry change is distinguishable from a \
+                  worlds change.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                MetricValue::Number(toponymic_core(v).len() as f64)
+            }),
+        },
+        Metric {
+            name: "toponymic-roots-won",
+            doc: "How many toponymic-domain concepts reach `ExposureClass::Steeped` for \
+                  at least one placed people (The Assay). Replaces \
+                  `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a \
+                  witness: a concept no world in the census ever steeps is a \
+                  structurally dead gate, and the census says so as a rate.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                MetricValue::Number(toponymic_roots_won(v) as f64)
+            }),
+        },
     ]
+}
+
+/// This world's toponymic-domain concepts, derived from its own registry
+/// exactly as `windows/worldgen/tests/exposure.rs` did before The Assay
+/// retired that sweep — so ADDING an unreachable toponymic concept moves this
+/// metric instead of slipping past it.
+fn toponymic_core(view: &FullView) -> Vec<String> {
+    view.world()
+        .registry
+        .concepts()
+        .filter(|c| concept_domain(&c.name) == Some("toponymic"))
+        .map(|c| c.name.clone())
+        .collect()
+}
+
+/// How many of `toponymic_core` reach `Steeped` for at least one placed people.
+/// A people whose exposure map fails to derive contributes nothing rather than
+/// aborting the metric: the census records a world's measurement, and one
+/// people's failure is not the world's.
+fn toponymic_roots_won(view: &FullView) -> usize {
+    let core = toponymic_core(view);
+    let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+    let mut won: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for (species, _) in hornvale_worldgen::placed_peoples(world) {
+        let Ok(exposures) = hornvale_worldgen::exposure_from(world, species, terrain, climate)
+        else {
+            continue;
+        };
+        for concept in &core {
+            if matches!(
+                exposures.get(concept.as_str()),
+                Some(hornvale_language::ExposureClass::Steeped)
+            ) {
+                won.insert(concept.clone());
+            }
+        }
+    }
+    won.len()
 }
 
 /// Every placed culture's account, read straight off the world (C4
@@ -7013,8 +7078,11 @@ mod tests {
         //
         // +1 for The Assay (Task 4: hydro-variant-coverage, replacing
         // `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability
-        // sweep with a census column).
-        assert_eq!(registry().len(), 184);
+        // sweep with a census column), +2 more for The Assay (Task 5:
+        // toponymic-core-size and toponymic-roots-won, replacing
+        // `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a
+        // witness with two census columns).
+        assert_eq!(registry().len(), 186);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -8284,6 +8352,33 @@ mod tests {
             names.len(),
             "the set must not repeat a variant"
         );
+    }
+
+    /// Both toponymic columns read a real Full-rung world, and the won count never
+    /// exceeds the core size. Not an assertion that seed 0 wins ALL of them — that
+    /// is the census's question (`calibration.rs`), over 1,000 worlds.
+    #[test]
+    fn toponymic_roots_won_reads_a_real_world_and_is_bounded_by_the_core() {
+        let view = FullView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let built = BuiltView::Full(view);
+        let all = registry();
+        let value = |name: &str| {
+            let m = all
+                .iter()
+                .find(|m| m.name == name)
+                .expect("metric is registered");
+            match m.extract.apply(&built) {
+                MetricValue::Number(n) => n,
+                other => panic!("{name} must be Number, got {other:?}"),
+            }
+        };
+        let core = value("toponymic-core-size");
+        let won = value("toponymic-roots-won");
+        assert!(
+            core > 0.0,
+            "no concept reports the toponymic domain — the derivation broke"
+        );
+        assert!(won >= 0.0 && won <= core, "won {won} outside [0, {core}]");
     }
 
     #[test]

@@ -33,7 +33,11 @@ const TRIPWIRE_SEEDS: [u64; 3] = [0, 1, 2];
 /// The metric columns this tripwire guards: every metric The Assay moved a
 /// check onto. Empty until Task 4 adds the first — an empty guard list is a
 /// green test, deliberately, so this task lands before the metrics exist.
-const GUARDED: &[&str] = &["hydro-variant-coverage"];
+const GUARDED: &[&str] = &[
+    "hydro-variant-coverage",
+    "toponymic-core-size",
+    "toponymic-roots-won",
+];
 
 /// The canonical census and its committed rows.
 const STUDY: &str = "../../studies/the-census.study.json";
