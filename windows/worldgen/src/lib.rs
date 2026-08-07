@@ -12919,8 +12919,13 @@ mod tests {
         }
         assert!(
             compared > 0,
-            "no two peoples' predicted simplex shares differ by {SEPARATION} — the shape \
-             mapping carries no per-culture signal to test, which is itself the failure"
+            "nothing was compared. TWO causes reach this line and the difference matters: \
+             either no two peoples' PREDICTED simplex shares differ by {SEPARATION} (the shape \
+             mapping carries no per-culture signal to test), or every separated pair landed on \
+             an exact OBSERVED tie and was skipped (the mapping separates them in principle but \
+             the world does not realize it). Both are failures, and both are failures of the \
+             MODEL rather than of this test — but they are different failures, so print the \
+             pairs before concluding which one you have."
         );
 
         // And the separation has to be VISIBLE, not merely correctly
