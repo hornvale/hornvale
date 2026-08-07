@@ -41,6 +41,8 @@ fn regimes() -> Vec<SkyPins> {
 /// Tier 0's first claim: there is a sun and it owns the day sky. Every
 /// generated sky keeps exactly one top-salience DaySky body, whatever the
 /// seed, regime, or hour.
+/// claim: sanctioned-sweep(mixed-regime battery, 3 of 4 sub-regimes
+/// pinned — no census home for the pinned sub-regimes)
 #[test]
 fn every_generated_sky_keeps_the_one_sun_tier_0_promises() {
     let tier0 = ConstantSun.phenomena(&ctx(0.0));
@@ -76,6 +78,8 @@ fn every_generated_sky_keeps_the_one_sun_tier_0_promises() {
 /// Tier 0's second claim: nothing outshines the sun. Refinement adds
 /// moons, stars, seasons, and tides BENEATH it — strictly, so the sun
 /// stays the unique maximum, not merely a co-maximum.
+/// claim: sanctioned-sweep(mixed-regime battery, 3 of 4 sub-regimes
+/// pinned — no census home for the pinned sub-regimes)
 #[test]
 fn refinement_adds_structure_only_beneath_the_sun() {
     for pins in regimes() {
@@ -105,6 +109,8 @@ fn refinement_adds_structure_only_beneath_the_sun() {
 /// Tier 0's report puts "the sun" in the sky's visible bodies at every
 /// hour; the generated report keeps it there (a superset, never a
 /// retraction), and keeps the report deterministic like tier 0's.
+/// claim: sanctioned-sweep(mixed-regime battery, 3 of 4 sub-regimes
+/// pinned — no census home for the pinned sub-regimes)
 #[test]
 fn the_sun_never_leaves_the_visible_bodies_list() {
     let coarse = ConstantSun.sky_at(WorldTime { day: 0.0 });
@@ -132,6 +138,8 @@ fn the_sun_never_leaves_the_visible_bodies_list() {
 /// Refinement may add a period to the sun (a spinning world's day) or
 /// keep it aperiodic (a locked world, like tier 0 itself) — but the
 /// period it adds must be the world's own day length, not an invention.
+/// claim: sanctioned-sweep(mixed-regime battery, 3 of 4 sub-regimes
+/// pinned — no census home for the pinned sub-regimes)
 #[test]
 fn the_suns_added_period_is_the_day_the_calendar_already_holds() {
     for pins in regimes() {

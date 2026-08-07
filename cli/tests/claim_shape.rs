@@ -128,15 +128,15 @@ fn has_seed_closure(body: &str) -> bool {
         while let Some(rel) = body[cursor..].find(method) {
             let after = cursor + rel + method.len();
             let rest = body[after..].trim_start();
-            if let Some(params_and_more) = rest.strip_prefix('|') {
-                if let Some(end) = params_and_more.find('|') {
-                    let params = &params_and_more[..end];
-                    for part in params.split(',') {
-                        let ident = part.trim().trim_start_matches('&').trim();
-                        let ident = ident.strip_prefix("mut ").unwrap_or(ident).trim();
-                        if seed_shaped(ident) {
-                            return true;
-                        }
+            if let Some(params_and_more) = rest.strip_prefix('|')
+                && let Some(end) = params_and_more.find('|')
+            {
+                let params = &params_and_more[..end];
+                for part in params.split(',') {
+                    let ident = part.trim().trim_start_matches('&').trim();
+                    let ident = ident.strip_prefix("mut ").unwrap_or(ident).trim();
+                    if seed_shaped(ident) {
+                        return true;
                     }
                 }
             }
@@ -169,7 +169,7 @@ fn has_seed_for_loop(tokens: &[&str]) -> bool {
 /// parameter, a `SEEDS`-like constant, or a call through `map_seeds`.
 fn is_seed_looping(body: &str) -> bool {
     let tokens = tokenize(body);
-    if tokens.iter().any(|&t| t == "map_seeds") {
+    if tokens.contains(&"map_seeds") {
         return true;
     }
     if tokens.iter().any(|&t| looks_like_seeds_const(t)) {
@@ -331,6 +331,14 @@ fn the_tag_parser_accepts_every_shape_and_rejects_near_misses() {
     assert_eq!(claim_shape(""), None);
 }
 
+/// claim: structural(scanner self-test) — this test's body carries the fixture
+/// string `"for seed in 0..8u64 { ... }"` as literal text, not code, but the
+/// scanner in this file reads whole-file bytes and does not distinguish a
+/// string literal from a real loop (module doc, "does not special-case
+/// string or comment literals"). That makes this test self-referentially
+/// seed-looping by the scanner's own signal, though it builds zero worlds and
+/// samples nothing — it drives a pure function over three fixed fixture
+/// strings, once each.
 #[test]
 fn the_scan_flags_an_untagged_seed_loop_and_passes_a_tagged_one() {
     let untagged = untagged_in(

@@ -299,6 +299,7 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    /// claim: invariant(forall-seed) — member-count floor
     #[test]
     fn every_figure_meets_the_minimum_member_count() {
         for seed in 0..32u64 {
@@ -315,6 +316,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — description text shape
     #[test]
     fn describe_has_no_digits_and_names_a_region() {
         for seed in 0..32u64 {
@@ -372,6 +374,7 @@ mod tests {
     /// own internals: for every produced figure, `on_ecliptic` must agree
     /// with an outside recomputation via `ecliptic_of` at the system's
     /// genesis obliquity.
+    /// claim: invariant(forall-seed) — on_ecliptic vs independent recomputation
     #[test]
     fn on_ecliptic_matches_an_independent_recomputation_across_seeds() {
         for seed in 0..32u64 {

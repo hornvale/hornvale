@@ -463,6 +463,7 @@ mod tests {
         assert!(notes[0].contains("was sought"));
     }
 
+    /// claim: invariant(forall-seed) — per-moon distance/spacing/tide inequalities
     #[test]
     fn every_generated_moon_satisfies_the_inequalities() {
         for seed in 0..64 {
@@ -500,6 +501,7 @@ mod tests {
     /// — deterministically, from the same single `MOON_INCLINATIONS` stream
     /// draw either way (index-stability; the pre-inclination draws (count,
     /// masses, distances) are pinned unchanged by `golden_seed_42.rs`).
+    /// claim: invariant(forall-seed) — inclination range conditioned on formation
     #[test]
     fn every_moon_draws_an_inclination_in_range() {
         for seed in 0..64 {
@@ -527,6 +529,8 @@ mod tests {
     /// mechanism, over a wider seed sweep than `every_moon_draws_an_
     /// inclination_in_range` — the brief's Step 1 test, asserting against
     /// production `generate_moons` rather than pinning its own arithmetic.
+    /// claim: invariant(forall-seed) — restates the inclination-range check over a
+    /// wider sweep
     #[test]
     fn impact_moons_are_regular_and_captured_moons_are_irregular() {
         for seed in 0..400u64 {
@@ -554,6 +558,7 @@ mod tests {
     /// never have a retrograde moon before now can. Above 90° is retrograde;
     /// among captured moons the rate should land in a broad plausible band,
     /// neither ~0 nor ~1.
+    /// claim: rate(forall-seed, [0.3, 0.7]) — retrograde fraction among captured moons
     #[test]
     fn some_captured_moons_are_retrograde() {
         let mut retrograde = 0u32;
@@ -617,6 +622,7 @@ mod tests {
     /// Eclipse Seasons: every admitted moon draws an ascending-node
     /// longitude in [0, 360)°, deterministically, from its own stream —
     /// the pre-node draws are pinned unchanged by `golden_seed_42.rs`.
+    /// claim: invariant(forall-seed) — node longitude range
     #[test]
     fn every_moon_draws_a_node_longitude_in_range() {
         for seed in 0..64 {
@@ -715,6 +721,8 @@ mod tests {
     /// trails the planet's by only the drawn jitter — always coeval, never
     /// decoupled. A distribution claim over seeds, calling production
     /// `generate_moons` and `planet_age` rather than recomputing either.
+    /// claim: invariant(forall-seed) — density/age band for impact moons, with an
+    /// embedded vacuity guard (checked > 20) riding on the same sweep
     #[test]
     fn impact_moons_are_iron_poor_and_coeval() {
         let mut checked = 0u32;
@@ -741,6 +749,8 @@ mod tests {
     /// age is decoupled from the planet's (drawn independently, always
     /// within `[0, planet_age]` since the body cannot postdate its own
     /// capture-by-a-planet-that-already-exists).
+    /// claim: invariant(forall-seed) — density/age band for captured moons, with
+    /// embedded vacuity guards (captured > 20, icy > 0) riding on the same sweep
     #[test]
     fn captured_moons_have_alien_density_and_decoupled_age() {
         let mut icy = 0u32;
@@ -882,6 +892,8 @@ mod tests {
     /// uniform draws still averages 1/(k+1) of the range (1/3 for k=2, 1/4
     /// for k=3) — the innermost slot is a minimum-of-several, not a single
     /// draw near the floor, regardless of the admission constraints.
+    /// claim: rate(forall-seed, own-stated bands) — a distribution claim over seeds,
+    /// not a per-seed assertion (function's own doc comment)
     #[test]
     fn the_innermost_moon_is_an_impact_child_and_the_outermost_tends_to_stray() {
         let (mut inner_impact, mut inner_total) = (0u32, 0u32);

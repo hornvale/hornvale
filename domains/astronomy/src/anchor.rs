@@ -325,6 +325,8 @@ mod tests {
 
     /// SKY-22: retrograde is drawn — rare (authored prior 10%) but real
     /// over a population, and deterministic per seed.
+    /// claim: rate(forall-seed, [5, 40] retrograde count of >150 spinning) —
+    /// retrograde drawn rare but real over the population
     #[test]
     fn retrograde_spin_is_drawn_rare_but_real() {
         let mut retro = 0u32;

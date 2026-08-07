@@ -175,6 +175,7 @@ mod tests {
         assert!(a.len() <= 4);
     }
 
+    /// claim: invariant(forall-seed) — Kepler relation and monotone period/orbit
     #[test]
     fn kepler_holds_and_periods_are_monotone_in_axis() {
         for seed in 0..64u64 {
@@ -229,6 +230,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — exclusion-band check per wanderer
     #[test]
     fn no_wanderer_crowds_the_anchor() {
         for seed in 0..64u64 {
