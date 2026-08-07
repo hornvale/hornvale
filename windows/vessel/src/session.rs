@@ -3457,6 +3457,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none — seam_world() fixture) — false-positive
+    /// seed-loop flag; `s` binds an NPC social status
     #[test]
     fn the_opening_snapshot_carries_every_channel() {
         let world = seam_world();
@@ -3577,6 +3579,8 @@ mod tests {
         assert_eq!(a, b, "the read is pure — no hidden state advances");
     }
 
+    /// claim: structural(seed: none — seam_world() fixture) — false-positive
+    /// seed-loop flag; `s` binds an NPC social status
     #[test]
     fn provoking_shows_up_in_the_social_channel() {
         let world = seam_world();

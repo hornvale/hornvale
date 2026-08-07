@@ -805,6 +805,8 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// swing f64; pinned RotationPin::Locked
     #[test]
     fn locked_world_zeroes_swing_and_omits_bands() {
         use hornvale_astronomy::{RotationPin, SkyPins};

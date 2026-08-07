@@ -433,6 +433,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — determinism, over 0..8
     #[test]
     fn the_embedding_is_pure() {
         for seed in 0..8u64 {
@@ -442,6 +443,7 @@ mod tests {
         }
     }
 
+    /// claim: reachability(seed: 0..8) — non-degeneracy: the seed is not ignored
     #[test]
     fn the_seed_is_read_at_all() {
         // Where a chamber count leaves freedom, the split position is the
@@ -453,6 +455,7 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-seed) — over 0..8
     #[test]
     fn no_chamber_is_degenerate() {
         for seed in 0..8u64 {

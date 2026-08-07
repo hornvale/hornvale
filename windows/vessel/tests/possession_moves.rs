@@ -45,6 +45,8 @@ fn day_zero_session_is_unchanged_until_you_wait() {
     assert_eq!(session.committed_agent_at_count(), 0); // a test accessor added in this task
 }
 
+/// claim: structural(seed: none — world() fixture) — false-positive
+/// seed-loop flag; `s` binds a &str label
 #[test]
 fn waiting_moves_an_npc_and_it_is_observed() {
     let w = world();
