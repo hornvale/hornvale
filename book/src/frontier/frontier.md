@@ -688,6 +688,150 @@ which magic forces climate is a chaotic forward integrator, so it must
 re-derive from the seed at full precision and can never be checkpointed from a
 save's quantized floats.
 
+### The named layer — what the drawn lemma set is for
+
+Sequencing draws a culture's lemma set without saying what a lemma is *for*.
+It is the design's second layer, and the two layers differ on every property
+that matters. **Productions are discovered; accords are invented.** A
+production is a fact about the seed's physics. An accord is a *named*
+mid-level derivation — cultural, per-seed, historically caused, and worth
+nothing in the next world. That seam explains an asymmetry the design would
+otherwise have to assert: fluency in the productions transfers between
+playthroughs and knowledge of the accords does not, because the lower layer
+is found and the upper layer is made.
+
+**Naming is therefore the progression, and the power cap.** If a derivation
+becomes cheap only once it is named, then the accord vocabulary is a budget
+the player curates rather than a list handed over, and the practical ceiling
+is that budget's size. This closes the leak MAP-gate-by-incidence names: a
+determined caster who routes around the named layer by deriving from scratch
+pays the full proof length every time, so unbounded flexibility stays
+unbounded in principle and prohibitive in practice. Mathematics and cuisine
+both run on exactly this — a lemma worth reusing gets a name, which is how a
+field's working vocabulary stays small while its reachable space does not.
+
+**The drawn set is what defeats procedural oatmeal, and it defeats it by
+compression rather than by variety.** Ten thousand derivable spells are less
+perceptibly various than six named ones, because oatmeal is a legibility
+failure and more oats do not fix it. But a *randomly* drawn accord set is the
+same failure one level up: six arbitrary composites are still arbitrary.
+Drawing them from what a culture actually needed and proved — a besieged
+coast and a plague yield a different vocabulary than deep mines and a long
+winter — makes the difference legible because it has causes the `explain`
+verb can walk back. MAP-two-axis-options then binds the draw: an accord set
+varying on one axis is six flavours of *more*, so the selector must
+guarantee joint variation, checkable at generation time.
+
+The per-seed vocabulary is the roguelike identification game moved up a
+level, and improved by the move. A potion's identity is an arbitrary
+mapping and can only be narrowed by exclusion; an accord is a composition of
+productions already known, so it can be **read**. Identification becomes
+proof-reading, admits partial results — three of five steps, expensive,
+shares a sub-derivation with something named — and supports a profession,
+since inspecting a derivation should cost far less than performing one.
+
+**A spell corpus is the instrument that sets the parameters.** Decision 0095
+makes a corpus an instrument carrying a declared bias, and the trope matrix
+is the working example. A published spell list read the same way answers what
+this section otherwise has to guess: how many named units a satisfying space
+carries, and at what depth of composition. Escoffier says five; a class-based
+list says eight schools and then contradicts itself; a componential system
+says fifty cells and uses far fewer. Those are extractable numbers and they
+are the generator's parameters. The corpus wants storing as decomposition and
+provenance rather than as text — which is what the tvtropes corpus already
+does, and which is also what its licence permits.
+
+### Who performs the proof — the second factorisation
+
+The balance sheet above sorts traditions by *what they spend*. A second and
+orthogonal factorisation sorts them by **who runs the search**, and the two
+together place a tradition far more tightly than either alone. Negating the
+scholastic model one definitional property at a time generates the others:
+negate *the mage performs the search* and get the cleric (someone else
+proved it) and the shaman (a prover who may argue); negate *the mage holds
+the rules* and get the druid, whose proofs are held by a place and a season;
+negate *acquisition is by study* and get the sorcerer, in whom the proof is
+compiled at birth; negate *derivation repeats on demand* and get the pact.
+Negating *the rules are impersonal* gives a form with no common name — a rule
+set indexed to a person, so that two casters get different results from the
+same production.
+
+One axis will not hold them, which is the usual sign that there are two.
+Sorcery owns its rules and runs no search; clericism runs no search and owns
+none; wizardry owns and searches; shamanism searches by negotiation over
+rules it does not own. **Rule ownership × search-at-cast, four corners, all
+occupied** — and because a tradition is a position rather than a name, an
+*unoccupied* position is a foundable one. A world can lack a tradition it is
+capable of, and a culture can invent it during play.
+
+The dimensional prompts then supply tradition signatures without further
+design. Rate: study runs on days, sorcery is instantaneous, druidry is
+seasonal because the world sets the tempo. Direction: wizardry accumulates,
+sorcery is steady and must therefore grow somewhere other than its rule set,
+druidry oscillates, shamanism drifts as a relationship does, and a tradition
+losing its canon decays — the cultural-memory economy pointed at magic.
+Homogeneity decides which traditions need per-caster generation and which
+need per-institution: every wizard's repertoire differs, every cleric of one
+god shares a table.
+
+### The vision and the closed canon
+
+Two corners repay detail because the axes sharpen them past their usual
+descriptions.
+
+**Shamanism is black-box proof search.** The petitioner does not hold the
+prover's rule set, so the craft is probing another agent's capabilities and
+the central skill is distinguishing *cannot* from *will not* — a limit maps
+the rule set permanently, a preference is negotiable and reveals what the
+prover wants. A petition returns a proof, a refusal, or **a proof other than
+the one intended**, and that third case is the entire bargain-granted-sideways
+register, falling out of handing a goal to an agent with goals of its own
+rather than needing to be written. It makes specification, not power, the
+difficulty.
+
+It also makes the vision literal rather than decorative. A prover deriving
+over rules the petitioner does not hold must report in its own vocabulary, so
+**the symbolic vision is a type mismatch and decoding it is the type
+conversion** — a genuine proof in a language not yet held. The Teller renders
+it; difficulty is a real quantity (how much of that prover's vocabulary has
+been mapped, so a tradition's progression *is* dictionary growth); partial
+decoding yields a derivation with a hole in it; and a mis-decode does not
+error, it substitutes a wrong but well-formed symbol and **runs**, producing
+a real working that does something else. Two constraints decide whether it
+lands: the symbols must be motivated by the culture's own bestiary,
+geography and myth or the puzzle is a substitution cipher, and the generator
+must know whether a vision is decodable from the petitioner's current
+dictionary, so that acting on a partial reading is a decision rather than a
+trap. Interpretation is properly communal, which is what the social graph is
+already for, and disagreement about meaning is playable.
+
+**Necromancy is the tradition whose prover is dead**, which is a structural
+definition where salvage above is an economic one, and the two describe the
+same corner. A dead prover proves nothing new, so the canon cannot grow and
+advancement is archaeology rather than study. Because rules can be indexed to
+persons, what is recovered is a *particular* practitioner's idiosyncratic
+repertoire — which makes famous dead casters resources the world contains and
+factions contest, and which is the only route by which a whole named
+vocabulary is acquired at once, naming rationale included and unexplained.
+Recovery degrades the source, so a rule drawn from a spoiled one may be
+subtly wrong: a production that still fires and yields something adjacent.
+Recency of death is a gradient — the lately dead retain goals and can refuse,
+approaching shamanism; the long dead are rule tables with nobody home, and
+consulting them is extraction. The taboo follows from the arithmetic rather
+than from sentiment: a closed canon that degrades on use is a finite
+non-renewable cultural resource, so the objection is conservation, which
+reasonable people hold and can argue, and which makes the practice
+licensable rather than merely hunted.
+
+One artifact falls out of the two together and is the cluster's best
+advertisement for deriving rather than authoring. An ancestor mis-decodes a
+vision; the resulting accord works well enough to keep; it is named, taught
+and canonised; and three centuries later a people practise a rite that does
+something quietly other than what was asked for. **A canon can contain a
+fossilised mistranslation** — discoverable, nobody's fault, with a provenance
+chain `explain` can walk. Errors with causes, which is what a world that
+derives its own history should be able to produce without anyone writing it.
+
 ---
 
 ## The expressive-culture cluster
