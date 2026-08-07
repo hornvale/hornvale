@@ -950,6 +950,16 @@ impl<'w> Session<'w> {
             "examine" if self.inside.is_some() && !rest.is_empty() => {
                 Turn::Out(self.examine_chamber(rest))
             }
+            // The underworld's own band, mirroring the two arms above: a cave
+            // chamber's rock is not the surface locale's canopy and forest, so
+            // resolving an underground `examine` against `examine`'s own prose
+            // catalog is the defect The Handle's Task 4 fixes — it fell through
+            // to the bare arm below, which reads the LOCALE overhead, and
+            // answered "You see no rock here." about the very rock the descent
+            // had just named.
+            "examine" if self.underground.is_some() && !rest.is_empty() => {
+                Turn::Out(self.examine_underground(rest))
+            }
             "examine" => self.examine(rest),
             // `back` retraces the WALK-band trail, so it stays refused where `go`
             // no longer is: the capability this campaign built is intra-chamber
@@ -1196,6 +1206,38 @@ impl<'w> Session<'w> {
             "[underground]\nThe rock here is {}. Ways on: out.",
             stratum_word(chamber.stratum)
         )
+    }
+
+    /// The underworld's examinable catalog. The band has its own because you
+    /// cannot see the forest from inside the rock — resolving an underground
+    /// `examine` against the surface locale's nouns is the defect this fixes
+    /// (The Handle, Task 4).
+    fn underground_nouns(&self) -> Vec<crate::focalize::Noun> {
+        let chamber = self
+            .underground
+            .expect("guarded by self.underground.is_some() at the call site");
+        let stratum = stratum_word(chamber.stratum);
+        vec![
+            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {stratum}.")),
+            crate::focalize::Noun::new(
+                stratum,
+                stratum,
+                &format!("{stratum} — the rock of this chamber."),
+            ),
+        ]
+    }
+
+    /// `examine <noun>` UNDERGROUND: the band's own catalog only — never the
+    /// surface locale's, which is the defect The Handle's Task 4 fixes. The
+    /// refusal is BYTE-IDENTICAL to the outdoor and chamber paths' (§6):
+    /// two wordings for one question is exactly the drift this campaign
+    /// exists to remove.
+    fn examine_underground(&self, noun: &str) -> String {
+        let wanted = noun.trim().to_lowercase();
+        match self.underground_nouns().iter().find(|n| n.matches(&wanted)) {
+            Some(n) => n.datum.clone(),
+            None => format!("You see no {noun} here."),
+        }
     }
 
     /// Absorb the current room's projection into knowledge.
@@ -3885,6 +3927,40 @@ mod tests {
         assert!(
             !out.contains(INDOOR_CHART_REFUSAL),
             "map underground must not take the indoor refusal: {out}"
+        );
+    }
+
+    /// The Handle, Task 4: an underground `examine` must resolve against the
+    /// band's OWN catalog, not fall through to the surface locale's — which is
+    /// what `session.rs`'s dispatch did before this fix (the bare `"examine"`
+    /// arm has no `self.underground` guard, so it ran `examine(rest)` against
+    /// whatever the surface locale above the chamber names). This is the
+    /// campaign's only instance never reproduced live before now: the
+    /// controller could not reach a cave by walking (400 steps, none found),
+    /// and `delve_at` is crate-private, so only an in-crate test can drive it
+    /// directly at a hand-picked open cave the way
+    /// `lateral_movement_is_refused_underground` does.
+    #[test]
+    fn underground_examine_answers_for_the_rock_it_names() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        let shown = match session.delve_at(cell, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            shown.contains("You worm down into the dark"),
+            "not underground: {shown}"
+        );
+        let reply = match session.handle("examine rock") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "the underworld names rock and then refuses it: {reply}"
         );
     }
 }
