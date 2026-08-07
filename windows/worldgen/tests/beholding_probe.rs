@@ -28,6 +28,34 @@ fn swatches(p: &hornvale_species::PerceptionVector) -> Vec<[u8; 3]> {
 }
 
 /// H2 — the human row is not privileged.
+///
+/// Four assertions, four different failure modes, and none subsumes
+/// another:
+///
+/// 1. **The flat sweep.** Guards the normalization path across the
+///    intensity range (clamping/scaling/rounding in `to_srgb`). It does
+///    **not** guard curve *shape*: on a spectrally flat reflectance under a
+///    flat illuminant, `signal[c] / norm[c]` reduces to the flat value
+///    regardless of what shape the channel curve has, as long as the norm
+///    is self-derived from that same curve (which every non-hue-5 arm's
+///    `build()` always does). A hue-5 arm that silently substituted a
+///    different, but still self-normalized, curve set would pass this loop
+///    unnoticed — confirmed by mutation; see the fix-round note in
+///    `task-2-report.md`.
+/// 2. **The exemplar sweep.** Pushes the seven authored, spectrally
+///    *structured* hue reflectances through both observers and compares
+///    `to_srgb` output. A structured reflectance is what makes a curve-shape
+///    difference observable at all — this is the assertion the flat sweep
+///    structurally cannot be.
+/// 3. **The channel-identity check.** Senses a per-band delta reflectance
+///    (1.0 at exactly one band, 0.0 elsewhere) under a flat illuminant,
+///    which recovers each channel's raw curve value at that band with *no*
+///    normalization in the way — the one comparison self-normalization
+///    cannot launder away — for every band and every channel.
+/// 4. **The projection identity check.** The two observers' `norms()` must
+///    be the same carried constants, not independently (re)computed ones —
+///    the carried-vs-derived byte-identity landmine Task 1's own kernel
+///    tests guard from the other side.
 #[test]
 fn the_human_row_derives_exactly_the_standard_observer() {
     let reg = perception_registry();
@@ -37,6 +65,8 @@ fn the_human_row_derives_exactly_the_standard_observer() {
     let derived = observer_for(human);
     let standard = hornvale_kernel::color::standard_observer();
     let light = flat_light();
+
+    // 1. The flat sweep.
     for step in 0..=10 {
         let v = step as f64 / 10.0;
         let r = Reflectance::new([v; BANDS]).unwrap();
@@ -47,6 +77,43 @@ fn the_human_row_derives_exactly_the_standard_observer() {
              case; reflectance {v} disagreed"
         );
     }
+
+    // 2. The exemplar sweep: spectrally structured reflectances, the thing
+    // a flat reflectance cannot exercise.
+    for concept in HUE_CONCEPTS {
+        let r = hue_exemplar(concept).expect("every hue concept has an exemplar");
+        assert_eq!(
+            derived.to_srgb(&derived.sense(&r, &light)),
+            standard.to_srgb(&standard.sense(&r, &light)),
+            "hue exemplar '{concept}' disagreed between the derived and \
+             standard observer"
+        );
+    }
+
+    // 3. Channel identity: a per-band delta reflectance recovers each
+    // channel's raw curve value at that band, unnormalized.
+    for band in 0..BANDS {
+        let mut bands = [0.0; BANDS];
+        bands[band] = 1.0;
+        let delta = Reflectance::new(bands).unwrap();
+        let d_signal = derived.sense(&delta, &light);
+        let s_signal = standard.sense(&delta, &light);
+        assert_eq!(
+            d_signal.get(),
+            s_signal.get(),
+            "band {band}'s per-channel curve values disagreed between the \
+             derived and standard observer"
+        );
+    }
+
+    // 4. Projection identity: the CARRIED normalizers, not recomputed ones.
+    assert_eq!(
+        derived.projection().map(|p| p.norms()),
+        standard.projection().map(|p| p.norms()),
+        "the projection's normalizers must be the SAME carried constants, \
+         not independently (re)computed ones"
+    );
+
     assert_eq!(derived.channels(), standard.channels());
     assert_eq!(derived.roles(), standard.roles());
 }
