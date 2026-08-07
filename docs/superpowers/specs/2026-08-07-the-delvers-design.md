@@ -665,3 +665,98 @@ prediction.** The campaign ships whichever answer it gets:
 deliberate. The Long Age shipped its null as the headline; the same discipline
 applies here. Under no circumstance is a threshold moved after unblinding to
 make one branch true.
+
+---
+
+## 11. Amendment — the roster is cut to three, and Task 3b is withdrawn
+
+**Nathan's decision, 2026-08-07.** C2c ships **Hill, Gully and Desert**.
+**Mountain and Duergar are deferred** to a successor campaign that makes the
+underworld a place.
+
+### 11.1 Why: the fake this campaign existed to avoid, committed by this campaign
+
+The Warren's retrospective states C2c's founding hazard exactly: authoring
+Mountain and Duergar under the old model *"would have meant authoring them with
+a low-insolation surface curve, which is precisely the fake the previous
+campaign spent itself removing."*
+
+This campaign avoided the low-**insolation** version and then committed the
+low-**elevation** version of the identical error. Duergar was authored at an
+elevation optimum of 300 m to mean *deep*, on the strength of a depth
+subtraction (Task 3b) that had not landed. **Depth-below-surface and
+elevation-above-sea-level are different quantities**: a deep chamber under a
+mountain is at *high* ASL; a shallow cave in a marsh is at *low* ASL. So the
+authored curve selected lowlands, and the measured result — duergar rooting
+`marsh`, `spring` and `valley`, more toponyms than any other people at seed 42 —
+was read at first as an emergent finding about a fungal food web wanting damp
+ground. **It was not.** It was the elevation curve doing exactly what it says.
+
+Task 3b would not have rescued it. `delver_depth_probe.rs` measured the median
+depth over habitable caves at **0.0 m**, so the subtraction mostly does not move
+the value the curve reads.
+
+**A kind whose defining trait the model cannot express is rung 2 — the trap this
+programme's ladder exists to name.** Hill, Gully and Desert are expressible
+today. Mountain and Duergar are not, and shipping them would be the programme
+declining its own acceptance criterion in the campaign that discovered the gap.
+
+### 11.2 What replaces it: the underworld becomes a place
+
+Registered as `BIO-kinds-declare-biomes` (Nathan, 2026-08-07). **The sea already
+solved this and the land never inherited the solution.** `Epipelagic`,
+`Mesopelagic`, `Bathypelagic` and `Abyssal` are depth-named biomes carrying a
+decaying supply multiplier (`.45 / .15 / .05 / .02`,
+`windows/worldgen/src/lib.rs:961`), so in the ocean depth and darkness are a
+**place type**, not a coordinate pushed through a tolerance curve. Decision 0105
+gave rock an addressed chamber graph and nobody ever gave it biomes.
+
+An underworld biome is near-free: `f(CaveKind, Cave::deepest_band)`, both
+already committed, no new draws. Species-declares-its-biomes generalizes
+`HabitatRealm`, which The Warren measured to be the one mechanism in this model
+that can **select** rather than merely modulate. Travel stays unconstrained —
+`traversal.rs` already gates movement on biome; habitat would gate settlement.
+
+### 11.3 Consequences
+
+- **Task 3b is withdrawn.** Its justification was separating Mountain from
+  Duergar. With both deferred it would redden both Warren tripwires and move the
+  census for the benefit of two fauna kinds, inside a roster campaign. The
+  biome design supersedes it: a biome expresses depth better than an ASL
+  subtraction, and §10.6 already measured the subtraction as nearly flat.
+  **The two tripwires therefore stay green, and this campaign does not touch
+  `subterranean_substrate` at all.**
+- **`habitat_realm_registry` returns to exactly xorn and rust-monster.**
+  `the_subterranean_roster_is_exactly_the_two_rehomed_kinds` stays green
+  **unchanged** — the deliberate edit Task 5 planned there no longer happens.
+- **`family_proto` is still required.** Three kinds still carry the `dwarf`
+  family label, so the multi-member-family invariant still binds and
+  `cli/src/proto.rs`'s generalisation beyond `goblinoid` is still in scope.
+- **`LifeSchedule::Paced` still gets its first occupants** — all three surface
+  dwarves are `Paced(4.0)`. The coverage table still moves `Declared` →
+  `Witnessed`, and `generation_length_of` still closes The Long Age's open
+  code-reading gap.
+- **Roster arithmetic:** biosphere 35 → **33**; psyche/perception/dispersion
+  14 → **12**; settling peoples 11 → **9**.
+
+### 11.4 The preregistrations, restated
+
+- **P1** stands unchanged (the bind theorem).
+- **P2″ is withdrawn entirely.** There are no two subterranean kinds to compare.
+  The question it asked — does depth carry enough variance to separate two kinds
+  — passes to the biome campaign, with §10.6's measurement as its input.
+- **P3′ stands.** Desert is the campaign's climate demonstrator and is
+  unaffected.
+- **P4 becomes Gully / Hill / Desert** pairwise below 0.95 — still the control
+  that proves the distinctness probe discriminates.
+- **P5 stands** (three Paced kinds are read).
+- **P6 stands**, magnitude still unpredicted.
+
+### 11.5 What C2c's headline becomes
+
+Not "the first people in the Deep Realm." That claim is withdrawn and it was
+never true: settlements are cell-keyed, so a subterranean kind lives on the
+surface of a cell that has a cave in it. The headline is the discovery itself —
+**the realm gate places a kind at a cave mouth, not underground, and the model
+has no vocabulary for the inside of the world because the sea got biomes and the
+rock got a graph.**
