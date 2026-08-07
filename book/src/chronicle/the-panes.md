@@ -25,6 +25,14 @@ sentence is exactly as true after this campaign as before it. Nothing in the
 spatial channel carries an occupant; nothing in either pane can hide a cell
 you have not seen.
 
+(**Superseded by [The Sighting](./the-sighting.md), 2026-08-07.** Creatures now
+draw as `marks` on the plan and the `sensed` channel is narrowed sim-side by
+field of view. The cells themselves are still never hidden — the pane draws the
+full floor plan and sight withholds *creatures*, not geometry — and the
+occlusion term is inert in every world that ships, because every chamber is
+convex. The section below is left as written, because the ordering argument it
+makes is the reason this campaign shipped as it did.)
+
 That ordering was chosen at the opening fork with the cost in view: the seam
 is worth proving before the picture is worth staring at. A channel that ships
 occupants before it ships a stable shape has to move both at once, and a pane
@@ -203,7 +211,11 @@ mitigation applied *"if the benchmark says one is needed."*
 
 The benchmark said it was not. 1.249 ms native, against the repository's
 measured 3.6–3.8× native-to-wasm ratio, is roughly **4.6 ms of snapshot per
-turn** in the browser. A human pressing a key does not perceive five
+turn** in the browser. (**Correction, [The Sighting](./the-sighting.md),
+2026-08-07:** that ratio was itself an extrapolation, and the first direct
+measurement of a turn through the wasm ABI puts it at **1.57–1.78×**. The
+browser figure here is therefore about 2.2 ms, not 4.6 — which strengthens the
+conclusion rather than moving it.) A human pressing a key does not perceive five
 milliseconds, and the 4.75 ms figure it would double was never a budget — it
 was a measurement. Building a memo against an imperceptible cost is the
 premature optimization that measure-first discipline exists to prevent, so the
@@ -226,7 +238,9 @@ session-level benchmark nobody had built.
 
 This campaign built it. Verb handling costs **1.071 ms native** on the
 pre-channel baseline; multiplied through the same 3.6–3.8× ratio it is about
-**4.0 ms** of wasm turn. That does not contradict the 4.75 ms floor — it
+**4.0 ms** of wasm turn (the ratio has since been measured directly at
+1.57–1.78× — see [The Sighting](./the-sighting.md) — which puts this nearer
+1.8 ms). That does not contradict the 4.75 ms floor — it
 **corroborates** it from an independent instrument built four campaigns later
 on a session that now runs an action queue. The debt is paid, and the answer
 is that the floor did not move materially.

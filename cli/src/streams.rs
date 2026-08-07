@@ -373,6 +373,17 @@ mod tests {
                 "religion/deity v2",
                 "room/chambers v1",
                 "room/furnishing v1",
+                // The Sighting: where a chamber's ANCHORS land in its cells,
+                // a third sibling in the layout family. Additive at v1 — a
+                // NEW label, so it perturbs no existing stream — and it is
+                // the label in this roster with the SMALLEST blast radius:
+                // an anchor placement is FRAME-tier (decision 0069), never
+                // serialized and never a fact's object, so bumping it could
+                // not corrupt a saved world even in principle. Versioned
+                // from birth anyway, because 0073 fixes epoch granularity at
+                // declaration and an unversioned label can only gain a
+                // version by a rename.
+                "room/layout/anchors v1",
                 "room/layout/grown v1",
                 "room/layout/rectilinear v1",
                 // The Tolerance: the per-settlement disposition draw, a

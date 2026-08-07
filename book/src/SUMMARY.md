@@ -313,6 +313,7 @@
 - [The Warren](./chronicle/the-warren.md)
 - [The Benchmark](./chronicle/the-benchmark.md)
 - [The Handle](./chronicle/the-handle.md)
+- [The Sighting](./chronicle/the-sighting.md)
 
 # Appendix: The Frontier
 

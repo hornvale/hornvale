@@ -18,9 +18,13 @@
 //! is an ANCHOR at a wall cell, never `CellKind::Window`." The palette
 //! inherits that discipline exactly: type-level attributes (all walls are
 //! grey) may join an entry; **individual** things standing on a cell may not,
-//! and belong in a marks list keyed by cell. The Sighting is what adds one —
-//! this schema has no marks field yet, because a field nothing writes cannot
-//! be seen to be wrong.
+//! and belong in a marks list keyed by cell. The Sighting is that list's
+//! first writer: `SessionPlan.marks` carries [`PlanMark`], each one a
+//! `scene/surrounds/v2` [`Mark`](hornvale_scene::Mark) plus a cell — the same
+//! shape deliberately, because it is the focalizer's `Focalized.nouns` shape
+//! too, and that identity is what makes map and prose two grains of one
+//! lens. A creature on the pane and a creature in the prose are the same
+//! examinable thing; a free-form shape here would break that join.
 //!
 //! # Emit-only. Never persist this.
 //!
@@ -90,6 +94,36 @@ pub struct PlanPoint {
     pub y: i32,
 }
 
+/// A single individual standing on a cell of the plan — the palette's
+/// deliberate complement, keyed by position rather than shared by type.
+///
+/// The shape is a `scene/surrounds/v2` [`Mark`](hornvale_scene::Mark) plus a
+/// cell, and that is not an invention: `Mark`'s own doc chose `{noun, kind,
+/// datum, salience}` because it is the focalizer's `Focalized.nouns` shape,
+/// "because that identity is what makes map and prose two grains of one
+/// lens." Reusing it here means a creature on this pane and the same
+/// creature named in the prose are the same examinable thing — `examine
+/// goblin` resolves identically whichever grain asked. A free-form shape
+/// here (a different field set, a different key order) would sever that
+/// join for no gain, since every field a mark could reasonably carry is
+/// already in `Mark`.
+/// type-audit: bare-ok(index: x), bare-ok(index: y), bare-ok(identifier-text: noun), bare-ok(identifier-text: kind), bare-ok(prose: datum), bare-ok(index: salience)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PlanMark {
+    /// Column, lattice-local — the same frame [`PlanPoint`] uses.
+    pub x: i32,
+    /// Row, lattice-local.
+    pub y: i32,
+    /// The examinable noun, shared with the prose's own noun catalog.
+    pub noun: String,
+    /// What kind of thing this is: `"settlement"`, `"agent"`, …
+    pub kind: String,
+    /// One line about it — the datum `examine` prints.
+    pub datum: String,
+    /// Rank key; lower is more salient.
+    pub salience: u32,
+}
+
 /// One `vessel/plan/v1` document. Field order is JSON key order and is
 /// contract — never reorder.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(index: chamber), bare-ok(index: at), bare-ok(count: of), bare-ok(index: cells)
@@ -112,6 +146,11 @@ pub struct SessionPlan {
     pub cells: Vec<u32>,
     /// The cell the possession stands in.
     pub you: PlanPoint,
+    /// The individuals standing on the plan, ascending by `(salience,
+    /// noun)` so the bytes do not depend on discovery order. Empty is
+    /// `[]`, never an omitted key — an omitted key and an empty list would
+    /// be two representations of "nobody here."
+    pub marks: Vec<PlanMark>,
 }
 
 /// Project `lattice` into `vessel/plan/v1`.
@@ -121,10 +160,45 @@ pub struct SessionPlan {
 /// `HashMap` is banned workspace-wide anyway, decision 0005).
 ///
 /// `at`/`of`/`chamber`/`you` come from the session, which owns them;
-/// this function knows nothing about sessions.
+/// this function knows nothing about sessions. `marks` comes from the
+/// caller too — this function is pure over the lattice and knows nothing
+/// about sight, so it neither filters nor sorts marks by visibility; the
+/// caller decides which individuals are visible and passes only those.
+///
+/// Each mark's cell is checked against the extent with `debug_assert!`, not
+/// a hard panic and not a silent filter. A silent filter would hide a bug
+/// in whatever built `marks` (a Task 5 concern, not this module's); a panic
+/// in this snapshot path would turn that same bug into a crash of the
+/// player's turn. `debug_assert!` catches it in every test and debug run —
+/// which is where this campaign's own coverage lives — without putting a
+/// release build at risk of a panic over player-visible state.
 /// type-audit: bare-ok(index: at), bare-ok(count: of), bare-ok(index: chamber)
-pub fn plan_of(lattice: &Lattice, at: usize, of: usize, chamber: u64, you: Cell) -> SessionPlan {
+pub fn plan_of(
+    lattice: &Lattice,
+    at: usize,
+    of: usize,
+    chamber: u64,
+    you: Cell,
+    mut marks: Vec<PlanMark>,
+) -> SessionPlan {
     let e = lattice.extent;
+    for m in &marks {
+        debug_assert!(
+            m.x >= e.x && m.x < e.x + e.w && m.y >= e.y && m.y < e.y + e.h,
+            "mark cell is inside the extent: ({}, {}) is outside x[{}, {}) y[{}, {})",
+            m.x,
+            m.y,
+            e.x,
+            e.x + e.w,
+            e.y,
+            e.y + e.h
+        );
+    }
+    marks.sort_by(|a, b| {
+        a.salience
+            .cmp(&b.salience)
+            .then_with(|| a.noun.cmp(&b.noun))
+    });
     let mut interned: BTreeMap<CellKind, u32> = BTreeMap::new();
     let mut palette: Vec<PaletteEntry> = Vec::new();
     let mut cells: Vec<u32> = Vec::with_capacity((e.w * e.h) as usize);
@@ -163,6 +237,7 @@ pub fn plan_of(lattice: &Lattice, at: usize, of: usize, chamber: u64, you: Cell)
         palette,
         cells,
         you: PlanPoint { x: you.0, y: you.1 },
+        marks,
     }
 }
 
@@ -218,7 +293,7 @@ mod tests {
 
     #[test]
     fn the_index_grid_is_total_over_the_extent() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1));
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
         assert_eq!(
             p.cells.len(),
             (p.extent.w * p.extent.h) as usize,
@@ -229,7 +304,7 @@ mod tests {
 
     #[test]
     fn every_index_names_a_real_palette_entry() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1));
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
         for (i, &ix) in p.cells.iter().enumerate() {
             assert!(
                 (ix as usize) < p.palette.len(),
@@ -241,7 +316,7 @@ mod tests {
 
     #[test]
     fn the_palette_holds_no_entry_the_building_does_not_use() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1));
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
         for (ix, entry) in p.palette.iter().enumerate() {
             assert!(
                 p.cells.contains(&(ix as u32)),
@@ -253,7 +328,7 @@ mod tests {
 
     #[test]
     fn a_wall_owns_no_chamber_and_a_floor_owns_exactly_one() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1));
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
         for entry in &p.palette {
             let expected = match entry.kind.as_str() {
                 "wall" => 0,
@@ -277,7 +352,7 @@ mod tests {
         // doorway" has two right answers. The palette must not pick one.
         let mut lat = tiny();
         lat.cells.insert(Cell(1, 0), CellKind::Threshold(0, 1));
-        let p = plan_of(&lat, 0, 2, 7, Cell(1, 1));
+        let p = plan_of(&lat, 0, 2, 7, Cell(1, 1), Vec::new());
         let door = p
             .palette
             .iter()
@@ -289,7 +364,7 @@ mod tests {
     #[test]
     fn identical_cell_kinds_share_one_palette_entry() {
         // The whole economy of the palette: 8 wall cells, 1 palette entry.
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1));
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
         assert_eq!(
             p.palette.len(),
             2,
@@ -301,14 +376,85 @@ mod tests {
     #[test]
     fn the_projection_is_deterministic() {
         let lat = tiny();
-        let a = serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1))).unwrap();
-        let b = serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1))).unwrap();
+        let a = serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1), Vec::new())).unwrap();
+        let b = serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1), Vec::new())).unwrap();
         assert_eq!(a, b, "same lattice, same bytes");
     }
 
     #[test]
     fn the_standing_cell_is_carried_verbatim() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1));
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
         assert_eq!((p.you.x, p.you.y), (1, 1));
+    }
+
+    /// A mark on the floor cell at `(1, 1)` of `tiny()`.
+    ///
+    /// `kind` is [`crate::purview::AGENT_MARK_KIND`], not a literal, even though
+    /// this fixture exercises extent and ordering and never a real creature: it
+    /// is the nearest copy-source a later campaign would crib a `PlanMark` from,
+    /// and a synthetic `"creature"` here is exactly how the value that fix round
+    /// 1 unified would get re-forked.
+    fn mark(noun: &str, salience: u32) -> PlanMark {
+        PlanMark {
+            x: 1,
+            y: 1,
+            noun: noun.to_string(),
+            kind: crate::purview::AGENT_MARK_KIND.to_string(),
+            datum: format!("{noun} stands here."),
+            salience,
+        }
+    }
+
+    #[test]
+    fn marks_round_trip_into_the_plan() {
+        let goblin = mark("goblin", 5);
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![goblin.clone()]);
+        assert_eq!(p.marks, vec![goblin]);
+    }
+
+    #[test]
+    fn marks_serialize_in_ascending_salience_then_noun_order() {
+        // Submitted out of order on purpose: the projection, not the caller,
+        // must be what makes the bytes deterministic.
+        let submitted = vec![mark("zeta", 5), mark("alpha", 5), mark("beta", 1)];
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), submitted);
+        let order: Vec<(u32, &str)> = p
+            .marks
+            .iter()
+            .map(|m| (m.salience, m.noun.as_str()))
+            .collect();
+        assert_eq!(
+            order,
+            vec![(1, "beta"), (5, "alpha"), (5, "zeta")],
+            "marks must be ascending by (salience, noun) regardless of \
+             discovery order, or the emitted bytes would depend on it"
+        );
+    }
+
+    #[test]
+    fn an_empty_marks_list_serializes_as_an_empty_array_not_an_omitted_key() {
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        assert!(p.marks.is_empty());
+        let json = serde_json::to_string(&p).unwrap();
+        assert!(
+            json.contains("\"marks\":[]"),
+            "an empty marks list must still emit the key, as `[]` — an \
+             omitted key would be a second representation of \"nobody here\": {json}"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "mark cell is inside the extent")]
+    fn a_mark_outside_the_extent_trips_the_debug_assertion() {
+        // `tiny()`'s extent is 3x3 at the origin; (99, 99) is nowhere near it.
+        let outside = PlanMark {
+            x: 99,
+            y: 99,
+            noun: "ghost".to_string(),
+            kind: crate::purview::AGENT_MARK_KIND.to_string(),
+            datum: "A ghost, somehow off the map.".to_string(),
+            salience: 1,
+        };
+        let _ = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![outside]);
     }
 }
