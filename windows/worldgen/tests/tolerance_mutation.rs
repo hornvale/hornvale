@@ -183,7 +183,15 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
 /// The six settling peoples (post-Generalist roster), mirroring
 /// `tolerance_baseline.rs`'s constant of the same name.
-const PEOPLES_WITH_HUMAN: [&str; 6] =
+/// **THE DELVERS (C2c, 2026-08-07): RENAMED, NOT WIDENED.** The roster is
+/// eleven peoples now, so the old name `PEOPLES_WITH_HUMAN` read as
+/// "the peoples, plus human" — i.e. as the whole roster — and is a lie by
+/// omission at arity 6. It is renamed to say what it actually is: the
+/// population this campaign's readout was PREREGISTERED over, frozen at the
+/// six peoples that existed when The Generalist measured. Widening it to
+/// eleven would silently change what every assertion below measured, which is
+/// the exact failure a frozen population must never suffer.
+const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
     ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"];
 
 /// The raid-initiative threshold the gate compares a drawn disposition
@@ -264,7 +272,7 @@ fn authored(wc: &WorldComponents) -> (BTreeMap<KindId, f64>, BTreeMap<KindId, f6
     let mut locations = BTreeMap::new();
     let mut spreads = BTreeMap::new();
     for (kind, psyche) in wc.psyche.iter() {
-        if !PEOPLES_WITH_HUMAN.contains(&kind.0) {
+        if !PEOPLES_AS_OF_THE_GENERALIST.contains(&kind.0) {
             continue;
         }
         locations.insert(*kind, psyche.threat_response);
@@ -311,7 +319,7 @@ fn population(wc: &WorldComponents) -> (Vec<Settlement>, BTreeMap<KindId, u64>) 
                 });
                 *initiated.entry(people).or_default() += 1;
             }
-            if !PEOPLES_WITH_HUMAN.contains(&rec.core.people.0) {
+            if !PEOPLES_AS_OF_THE_GENERALIST.contains(&rec.core.people.0) {
                 continue;
             }
             rows.push(Settlement {
@@ -461,7 +469,7 @@ fn zero_dispersion_collapses_between_settlement_variance() {
     // THE NAMED ZERO-DISPERSION BASELINE (task ruling 2). Reported for every
     // settling people, alongside the authored arm it is the control for.
     println!("--- zero-dispersion baseline (matched pair, seeds {SEEDS:?}) ---");
-    for name in PEOPLES_WITH_HUMAN {
+    for name in PEOPLES_AS_OF_THE_GENERALIST {
         let people = KindId(name);
         let real = between_settlement_variance(&pop, people, None, &locations, &spreads);
         let zeroed =

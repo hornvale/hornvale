@@ -331,8 +331,35 @@ fn river_exposure_tracks_real_proximity() {
 /// 6/6 Gap), the shape `river`/`ford` already carry. Renamed to match, per
 /// this test's own established policy of renaming to the shape rather than
 /// asserting a "discriminates" claim that is no longer true.
+///
+/// # The Delvers re-measure (C2c, 2026-08-07)
+///
+/// Five dwarves join the coexistence stack as Settled peoples seven through
+/// eleven, redeciding seed 42's settlement placement across the whole map.
+/// All four toponymic partitions moved again, and again they moved together:
+///
+/// ```text
+///   hill    kobold roots it,  10 gap  (kobold TOOK IT BACK)
+///   valley  gnoll  roots it,  10 gap  (kobold LOST it, gnoll gained it)
+///   spring  NO rooter,        11 gap  (goblin/hobgoblin/human all lost it)
+///   marsh   5 root it,         6 gap  (human lost it; hill-dwarf gained it)
+/// ```
+///
+/// **Kobold traded `valley` back for `hill`, exactly reversing The Tense's
+/// swap.** That is the readable signal here: the highland specialist's
+/// flagship returned to a strict local elevation maximum once five more
+/// competitors re-sorted the map. It is the same quantity moving both ways
+/// under successive roster changes, which is what makes it a threshold rather
+/// than a trend, and it is a second reason not to have re-authored kobold's
+/// niche to chase it.
+///
+/// Note also what did NOT happen: total gaps across these four concepts went
+/// 15 -> 37, but on 11 peoples rather than 6 — per-people that is 2.5 gaps
+/// against 3.4 before, i.e. proportionally MORE exposure, not less. The one
+/// dwarf that roots anything toponymic here is `hill-dwarf` (marsh), which is
+/// the surface farmer; neither Subterranean dwarf roots any of the four.
 #[test]
-fn spring_is_a_gap_at_seed_42_except_for_goblin_hobgoblin_and_human() {
+fn spring_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -350,17 +377,26 @@ fn spring_is_a_gap_at_seed_42_except_for_goblin_hobgoblin_and_human() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "kobold"],
+        vec![
+            "bugbear",
+            "desert-dwarf",
+            "duergar",
+            "gnoll",
+            "goblin",
+            "gully-dwarf",
+            "hill-dwarf",
+            "hobgoblin",
+            "human",
+            "kobold",
+            "mountain-dwarf"
+        ],
         "the set of peoples gapping 'spring' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![
-            ("goblin", "Nebao".to_string()),
-            ("hobgoblin", "Negao".to_string()),
-            ("human", "Kozme".to_string()),
-        ],
-        "at seed 42 three placed peoples root 'spring' — goblin, hobgoblin, human"
+        Vec::<(&str, String)>::new(),
+        "at seed 42 NO placed people roots 'spring' — goblin, hobgoblin and \
+         human all lost it when the dwarves re-sorted placement"
     );
 }
 
@@ -404,8 +440,15 @@ fn spring_is_a_gap_at_seed_42_except_for_goblin_hobgoblin_and_human() {
 /// maximum, rooting it as `Roxoro`. `hill` splits again (1/6 Root, 5/6 Gap,
 /// human among the gappers), the same shape family this test's own history
 /// already carries; renamed to name the new sole rooter.
+///
+/// The Delvers re-pin (C2c, 2026-08-07): kobold TOOK `hill` BACK. Its
+/// flagship sits at hill's strict local elevation maximum again, rooting it
+/// as `Roxoro` — the same word The Generalist measured. `hill` splits 1/11
+/// Root, 10/11 Gap. See the file-level note on
+/// `spring_is_a_gap_for_every_placed_people_at_seed_42`: this is one half of
+/// a clean trade, kobold giving `valley` back in the same movement.
 #[test]
-fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
+fn hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -427,14 +470,25 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
+        vec![
+            "bugbear",
+            "desert-dwarf",
+            "duergar",
+            "gnoll",
+            "goblin",
+            "gully-dwarf",
+            "hill-dwarf",
+            "hobgoblin",
+            "human",
+            "mountain-dwarf"
+        ],
         "the set of peoples gapping 'hill' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        Vec::<(&str, String)>::new(),
-        "at seed 42 NO people roots 'hill' — kobold, the authored highland \
-         specialist, lost it under The Tense (see the doc comment)"
+        vec![("kobold", "Roxoro".to_string())],
+        "at seed 42 kobold — the authored highland specialist — roots 'hill' \
+         again, having lost it under The Tense (see the doc comment)"
     );
 }
 
@@ -468,8 +522,14 @@ fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
 /// a sixth competitor; the partition shape is unchanged (still a Gap for
 /// every placed people) but the roster gains "human" alongside the other
 /// five.
+///
+/// The Delvers re-pin (C2c, 2026-08-07): kobold GAVE `valley` BACK and gnoll
+/// took it, as `Dsavshmaov`. `valley` still splits 1/11 Root, 10/11 Gap —
+/// the same shape, a different sole rooter. The other half of the trade is
+/// `hill_is_a_gap_at_seed_42_except_for_kobold_which_roots_it`; see the
+/// file-level note there. No dwarf roots `valley`.
 #[test]
-fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_it() {
+fn valley_is_a_gap_at_seed_42_except_for_gnoll_which_roots_it() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -487,13 +547,24 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human"],
+        vec![
+            "bugbear",
+            "desert-dwarf",
+            "duergar",
+            "goblin",
+            "gully-dwarf",
+            "hill-dwarf",
+            "hobgoblin",
+            "human",
+            "kobold",
+            "mountain-dwarf"
+        ],
         "the set of peoples gapping 'valley' at seed 42 moved"
     );
     assert_eq!(
         rooted,
-        vec![("kobold", "Raxoroo".to_string())],
-        "at seed 42 exactly one people roots 'valley' — kobold"
+        vec![("gnoll", "Dsavshmaov".to_string())],
+        "at seed 42 exactly one people roots 'valley' — gnoll"
     );
 }
 
@@ -543,8 +614,19 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42_except_kobold_which_roots_
 /// exposure appeared, which is exactly what an upstream placement change is
 /// supposed to look like. Had one of those five romanizations changed, that
 /// would have been a phonology bug and not a re-pin.
+///
+/// The Delvers re-pin (C2c, 2026-08-07): `marsh` splits 5/11 Root, 6/11 Gap.
+/// HUMAN LOST IT (`Meashngeo` is gone) and `hill-dwarf` gained it as
+/// `Ngabsmab` — the only toponymic root any dwarf takes at seed 42, and it
+/// goes to the surface farmer rather than to either Subterranean kind, which
+/// is the authoring reading correctly.
+///
+/// **Case (2) again, verified rather than assumed.** All four peoples that
+/// rooted `marsh` before and still do kept BYTE-IDENTICAL roots (`Qadoo`,
+/// `Gshoovzngaov`, `Qaneo`, `Rorora`). The phonology did not move; entries
+/// appeared and disappeared where exposure did.
 #[test]
-fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_goblin() {
+fn marsh_is_a_root_at_seed_42_for_five_peoples_including_the_hill_dwarf() {
     let w = world();
     let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
     let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
@@ -562,7 +644,14 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_goblin() {
     rooted.sort_unstable();
     assert_eq!(
         gapped,
-        vec!["goblin"],
+        vec![
+            "desert-dwarf",
+            "duergar",
+            "goblin",
+            "gully-dwarf",
+            "human",
+            "mountain-dwarf"
+        ],
         "the set of peoples gapping 'marsh' at seed 42 moved"
     );
     assert_eq!(
@@ -570,11 +659,12 @@ fn marsh_is_a_root_for_every_placed_people_at_seed_42_except_goblin() {
         vec![
             ("bugbear", "Qadoo".to_string()),
             ("gnoll", "Gshoovzngaov".to_string()),
+            ("hill-dwarf", "Ngabsmab".to_string()),
             ("hobgoblin", "Qaneo".to_string()),
-            ("human", "Meashngeo".to_string()),
             ("kobold", "Rorora".to_string()),
         ],
-        "at seed 42 five of six placed peoples root 'marsh' — goblin lost it"
+        "at seed 42 five of eleven placed peoples root 'marsh' — human lost \
+         it and hill-dwarf gained it"
     );
 }
 

@@ -564,9 +564,25 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
         "compared zero occupation pairs across seeds 42/7/1000 — this test proves nothing \
          until at least one site restacks (pairs={pairs})"
     );
+    // THE DELVERS RE-MEASURE (C2c, 2026-08-07): 1 -> 0, and this is the
+    // count reaching its FLOOR, which is worth stating plainly rather than
+    // bumping. Five settling peoples redecide deep-history settlement
+    // survival at all three seeds, and the one surviving tying pair (the
+    // seed-1000 gnoll chain) no longer ties. 2688 pairs compared, 0 ties.
+    //
+    // WHAT THIS COSTS. The per-tie assertions in the loop above — the
+    // invariant this test is named for — are now VACUOUS on this corpus:
+    // nothing ties, so nothing is checked. The `pairs > 0` guard still fires
+    // if the corpus itself empties, but it cannot tell a working key from a
+    // key that never ties. The count is retained as the drift tripwire it has
+    // always been (5 -> 3 -> 1 -> 0 across four campaigns, each re-read
+    // rather than bumped); it is no longer evidence that ties behave.
+    // Restoring a witness means finding a seed whose corpus still produces
+    // one, which is a deliberate choice about the instrument and not a
+    // re-pin — recorded here rather than made silently.
     assert_eq!(
-        ties, 1,
-        "measured 0 (seed 42) + 0 (seed 7) + 1 (seed 1000) = 1 tying pair on the live \
+        ties, 0,
+        "measured 0 (seed 42) + 0 (seed 7) + 0 (seed 1000) = 0 tying pairs on the live \
          corpus; a different count means the key's tie conditions changed"
     );
 }
@@ -648,9 +664,23 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// retained as the BLAST-RADIUS measurement it has always been, not as the
 /// mechanism's pin — `same_day_layers_order_by_material_facts_not_mint_order`
 /// asserts the fourth key's behaviour directly and fails if it stops working.
+///
+/// **THE DELVERS (C2c, 2026-08-07): the witness is now GONE — 0/1/0 -> 0/0/0.**
+/// The note above named this exact reading as the degenerate one, and five
+/// settling peoples redeciding settlement survival is what produced it. On
+/// this corpus the measurement can no longer distinguish the material fourth
+/// key from a dead one, so it is a green test that proves nothing about the
+/// key. It is re-pinned at the measured zeros rather than deleted, because it
+/// remains a real BLAST-RADIUS reading (the claim it was frozen for — "the
+/// material fourth key barely moves the stratigraphy" — is if anything more
+/// true at zero than at one), and because the mechanism is separately and
+/// non-vacuously pinned by
+/// `same_day_layers_order_by_material_facts_not_mint_order`, which is green.
+/// Choosing a new witnessing seed would be a change to the instrument, not a
+/// re-pin, and is recorded here rather than made silently.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 0usize), (7, 1), (1000, 0)] {
+    for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 0)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

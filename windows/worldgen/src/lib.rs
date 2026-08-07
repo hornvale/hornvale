@@ -8537,20 +8537,35 @@ mod tests {
     /// settlement survival and naming); re-pinned rather than dropped, per
     /// this test's stated policy of re-pinning an exact count over weakening
     /// it.
+    ///
+    /// The Delvers re-pin (C2c, 2026-08-07): five dwarves are the seventh
+    /// through eleventh Settled peoples, and five more peopled pantheons
+    /// form — all three 58s move to 104 in lockstep, which is again exactly
+    /// the shape this test guards: the pantheon must not SHRINK, and growing
+    /// by five peoples' belief-sets is expected. `name-gloss` moved for the
+    /// same reason its own history already documents (a roster change
+    /// redecides settlement survival and naming).
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
         let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 58, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 58);
-        assert_eq!(count("deity-name"), 58);
+        assert_eq!(count("is-belief"), 104, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 104);
+        assert_eq!(count("deity-name"), 104);
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
         // counts above are UNCHANGED at 58 -- the pantheon did not shrink,
         // which is what this test is named for and the reason the gloss count
         // is a separate line.
-        assert_eq!(count("name-gloss"), 177);
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): 177 -> 272. Five settling
+        // peoples re-decide placement across the whole map, so both the
+        // settlement population and the deity names grew; the three counts
+        // above moved 58 -> 104 together, so again the pantheon did not
+        // shrink and the gloss count is tracking naming volume, not sky
+        // occlusion.
+        assert_eq!(count("name-gloss"), 272);
     }
 
     #[test]
@@ -8781,19 +8796,37 @@ mod tests {
         // the live psyche key-set (now a superset of Settled).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
-        // The `Settled` set is exactly the six peoples (The Vacancy T9 added
-        // the gnoll; The Generalist added the human).
+        // The `Settled` set is exactly the settling peoples (The Vacancy T9
+        // added the gnoll; The Generalist added the human; The Delvers added
+        // the five dwarves, taking the roster from six to eleven). Named, not
+        // counted — the constant it is compared against carries no arity in
+        // its name, so widening the roster again cannot leave a stale count
+        // behind.
         let settled: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| k.0)
             .collect();
-        let six_peoples: std::collections::BTreeSet<&'static str> =
-            ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"]
-                .into_iter()
-                .collect();
-        assert_eq!(settled, six_peoples, "Settled is exactly the six peoples");
+        let settling_peoples: std::collections::BTreeSet<&'static str> = [
+            "bugbear",
+            "desert-dwarf",
+            "duergar",
+            "gnoll",
+            "goblin",
+            "gully-dwarf",
+            "hill-dwarf",
+            "hobgoblin",
+            "human",
+            "kobold",
+            "mountain-dwarf",
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            settled, settling_peoples,
+            "Settled is exactly the settling peoples"
+        );
 
         // The wild-agentified `{Solitary, Gregarious}` set: the twenty-one
         // mobile, non-settled kinds (ten pre-Vacancy, The Vacancy T7's six,
@@ -12906,9 +12939,12 @@ mod tests {
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| *k)
             .collect();
+        // The Delvers (C2c) re-pin: 6 -> 11, the five dwarves. Each carries
+        // its own authored `Dispersion` row, so the spread this test proves
+        // is handed through rather than defaulted covers all eleven.
         assert_eq!(
             peoples.len(),
-            6,
+            11,
             "the settling roster moved; re-read this test before re-pinning it"
         );
 

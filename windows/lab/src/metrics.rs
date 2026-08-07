@@ -7212,9 +7212,16 @@ mod tests {
         // `BuiltView` (the metric returns an opaque `Number`) and inventing a
         // plausible-looking fraction would be a fabricated provenance. Still
         // inside the 2-3 target, which is what the row exists to assert.
+        // The Delvers re-pin (C2c, 2026-08-07): 2.333_333_333_333_333_5 ->
+        // 2.346_153_846_153_846_3. Five settling peoples redecide seed 42's
+        // placement everywhere, so goblin's named-settlement DENOMINATOR
+        // moved again — the same placement reshuffle every entry above
+        // records, and not a drift in the naming machinery, which no dwarf
+        // touches. Decimal for the same reason as the entry above. Still
+        // inside the 2-3 target, which is the row's actual claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.333_333_333_333_333_5)
+            MetricValue::Number(2.346_153_846_153_846_3)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -7280,9 +7287,17 @@ mod tests {
         // here). Note this row's history: the comment above records kobold
         // settlements going ABSENT once, so a live non-Absent value here is
         // itself the reassuring half of the reading.
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): 2.8 ->
+        // 2.553_191_489_361_702_3. Kobold FELL while goblin ROSE
+        // (2.333 -> 2.346) — opposite directions again, which is this row's
+        // own stated signature of placement reshuffling rather than a
+        // directional drift in the naming machinery, and no dwarf touches the
+        // naming machinery. Both peoples still read inside the 2-3 target,
+        // and kobold is still live rather than Absent.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.8)
+            MetricValue::Number(2.553_191_489_361_702_3)
         );
     }
 
@@ -7389,8 +7404,14 @@ mod tests {
         // would be invented rather than measured. The row's actual claim --
         // strictly between 0 and 1, so still a distribution -- is asserted
         // separately above and holds.
+        // The Delvers re-pin (C2c, 2026-08-07): 0.529_850_746_268_656_7 ->
+        // 0.553_191_489_361_702_1. Five settling peoples re-place seed 42's
+        // settlements, the same settlement-survival shift every re-pin above
+        // records. Decimal, not a fraction, for the same reason. Still
+        // strictly between 0 and 1, so the distribution claim -- the row's
+        // actual assertion, made separately above -- holds unweakened.
         assert_eq!(
-            share, 0.529_850_746_268_656_7,
+            share, 0.553_191_489_361_702_1,
             "seed 42 transparency drifted"
         );
     }
@@ -7931,7 +7952,17 @@ mod tests {
             // Note the coverage cost, since the MERGE note above claimed it as
             // a gain: at six concepts this exercised the river, elevation and
             // karst gate classes; at two it exercises the river gate only.
-            vec!["river", "ford"],
+            //
+            // The Delvers re-pin (C2c, 2026-08-07): back to three — "marsh"
+            // returns alongside "river" and "ford". Five settling peoples
+            // re-place seed 7's settlements, and goblin's reach WIDENS rather
+            // than narrows this time, which is the direction the precondition
+            // has now moved in both ways across four campaigns. Re-pin the
+            // set, do not swap the seed, per the precedent above; the claim is
+            // untouched. The coverage cost noted above is partly repaid: at
+            // three concepts the river gate class and the karst/wetland gate
+            // are both exercised again.
+            vec!["river", "ford", "marsh"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -8007,14 +8038,32 @@ mod tests {
         // 24/bugbear, 28/bugbear, 34/hobgoblin), so both terrain gates remain
         // emphatically live and this is a population that moved, not a rule
         // that died.
-        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        //
+        // The Delvers re-witness (C2c, 2026-08-07): seed 1's gnolls no longer
+        // root `island` — five settling peoples reseat settlements everywhere
+        // and the flood-fill half of the witness is lost for the third time.
+        // The precondition caught it again rather than letting the test pass
+        // on nothing.
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE, not by picking a passing seed:
+        // swept 0..60 over all ELEVEN placed peoples and took the earliest
+        // pair rooting BOTH concepts. That is **(2, gnoll)** — the seed moved
+        // by one again and the species did not move at all. TWENTY-ONE pairs
+        // qualify in the window now (2/gnoll, 2/hill-dwarf, 3/bugbear,
+        // 7/bugbear, 11/bugbear, 11/gnoll, 11/hobgoblin, 23/gnoll, 24/gnoll,
+        // 26/hobgoblin, 36/desert-dwarf, 38/gnoll, 38/human, 40/hobgoblin,
+        // 45/goblin, 47/human, 53/gnoll, 54/gnoll, 58/hobgoblin,
+        // 59/gully-dwarf, 59/hobgoblin), up from eight — a wider roster makes
+        // this witness strictly easier to find, so both terrain gates are
+        // more emphatically live than before, not less.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
         let steeped =
             independently_steeped_concepts(&view, "gnoll").expect("gnoll is in the default roster");
-        let lexicon = lex(&view, "gnoll").expect("seed 1 gnolls hold a lexicon");
+        let lexicon = lex(&view, "gnoll").expect("seed 2 gnolls hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 1 gnolls must root {concept} for this test to bite"
+                "seed 2 gnolls must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -8334,10 +8383,15 @@ mod tests {
         // temperate-forest. `flagship-subsistence` above is unchanged at
         // "farming", so the cascade still reads a farmable seat -- only the
         // biome under it moved.
-        assert_eq!(
-            m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
-        );
+        //
+        // The Delvers re-pin (C2c, 2026-08-07): temperate-forest -> taiga.
+        // Five settling peoples shift the world-wide competitive landscape
+        // settlement genesis resolves, which moves which cell goblin's
+        // flagship wins — the same class of movement every entry in this long
+        // list records, re-derived empirically rather than carried.
+        // `flagship-subsistence` above is STILL "farming", so the cascade
+        // still reads a farmable seat; only the biome under it moved, again.
+        assert_eq!(m("flagship-biome"), MetricValue::Text("taiga".to_string()));
         // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
         // Consistent with the biome move directly above -- it reseated onto
         // temperate-forest, inland -- rather than an independent fact.
@@ -9292,9 +9346,33 @@ mod tests {
         // previous witness there is NO same-seed second species corroborating
         // it this time — 59 and 129 are different worlds. Recorded rather than
         // papered over: this witness is load-bearing alone.
-        let view = FullView::build(Seed(133), &SkyPins::default()).unwrap();
+        //
+        // The Delvers re-witness (C2c, 2026-08-07): five settling peoples
+        // reseat settlements everywhere and seed 133's kobold no longer spans
+        // all six staple bands. Re-swept by the identical method (0..150,
+        // every placed people read dynamically off
+        // `FullView::components().perception`, which is why the five new
+        // peoples were swept without touching this code).
+        //
+        // THE PROPERTY GOT SLIGHTLY COMMONER, reversing The Tense's direction:
+        // FOUR qualifying pairs — (5, bugbear), (17, hobgoblin), (71, human),
+        // (118, gnoll) — against The Tense's three, and 0..40 contains two
+        // where The Tense's sweep found none in that whole window. More
+        // peoples competing means more settlements sited across more crop
+        // bands, so a "spans all six" property gets easier to witness.
+        //
+        // Witness is (5, bugbear). NEITHER continuity axis was available —
+        // no kobold and no seed-133 pair qualifies — so the choice falls back
+        // on the earliest qualifying pair, the same selection-free rule
+        // `the_independent_reading_steeps_island_and_hill_where_the_lexicon_
+        // roots_them` uses. It is at least continuous with this test's own
+        // deeper history: bugbear was the witness species at both (83,
+        // bugbear) and (16, bugbear). As at The Tense, there is NO same-seed
+        // second species corroborating it, so this witness is load-bearing
+        // alone; recorded rather than papered over.
+        let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "kobold").expect("kobold is placed at seed 133");
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

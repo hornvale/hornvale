@@ -80,7 +80,7 @@
 //! not a substitute for the per-settlement numbers above.
 //!
 //! Six settling peoples (The Generalist folded human in): bugbear, gnoll,
-//! goblin, hobgoblin, human, kobold — `PEOPLES_WITH_HUMAN` mirrors
+//! goblin, hobgoblin, human, kobold — `PEOPLES_AS_OF_THE_GENERALIST` mirrors
 //! `generalist_baseline.rs`'s constant of the same name.
 //!
 //! World-building idiom reused verbatim from `generalist_baseline.rs`/
@@ -123,10 +123,19 @@ use std::collections::{BTreeMap, BTreeSet};
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
 /// The six settling peoples (post-Generalist roster) — mirrors
-/// `generalist_baseline.rs`'s `PEOPLES_WITH_HUMAN` verbatim, so Task 1's
+/// `generalist_baseline.rs`'s `PEOPLES_AS_OF_THE_GENERALIST` verbatim, so Task 1's
 /// population here matches the campaign's current roster rather than the
 /// pre-human five.
-const PEOPLES_WITH_HUMAN: [&str; 6] =
+///
+/// **THE DELVERS (C2c, 2026-08-07): RENAMED, NOT WIDENED.** The roster is
+/// eleven peoples now, so the old name `PEOPLES_WITH_HUMAN` read as
+/// "the peoples, plus human" — i.e. as the whole roster — and is a lie by
+/// omission at arity 6. It is renamed to say what it actually is: the
+/// population this campaign's readout was PREREGISTERED over, frozen at the
+/// six peoples that existed when The Generalist measured. Widening it to
+/// eleven would silently change what every assertion below measured, which is
+/// the exact failure a frozen population must never suffer.
+const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
     ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"];
 
 /// The raid-initiative threshold on authored `threat_response`, mirroring
@@ -142,7 +151,7 @@ const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// victim-side proxy described in the module doc; `1.0`/`0.0` so it can share
 /// [`mean`]/[`variance`] with the gate-input column).
 struct SettlementRow {
-    /// The settlement's people (one of [`PEOPLES_WITH_HUMAN`]).
+    /// The settlement's people (one of [`PEOPLES_AS_OF_THE_GENERALIST`]).
     people: &'static str,
     /// The gate's own input for `people`: authored `threat_response`.
     gate_input: f64,
@@ -177,7 +186,7 @@ fn measure_one(
     let mut victims_counted: u64 = 0;
     for rec in &history.records {
         let people = rec.core.people;
-        if !PEOPLES_WITH_HUMAN.contains(&people.0) {
+        if !PEOPLES_AS_OF_THE_GENERALIST.contains(&people.0) {
             continue;
         }
         let gate_input = *threat_response.get(&people).unwrap_or_else(|| {
@@ -232,7 +241,7 @@ fn report_pre_dispersion_raid_rates() {
     // psyche registry.
     let mut threat_response: BTreeMap<KindId, f64> = BTreeMap::new();
     for (kind, psyche) in wc.psyche.iter() {
-        if PEOPLES_WITH_HUMAN.contains(&kind.0) {
+        if PEOPLES_AS_OF_THE_GENERALIST.contains(&kind.0) {
             threat_response.insert(*kind, psyche.threat_response);
         }
     }
@@ -283,7 +292,7 @@ fn report_pre_dispersion_raid_rates() {
         "world-level (census, summed over {worlds_sampled} worlds): raided = {world_raided}, fled = {world_fled}"
     );
 
-    for name in PEOPLES_WITH_HUMAN {
+    for name in PEOPLES_AS_OF_THE_GENERALIST {
         let gate_vals = &per_people_gate_input[name];
         let raid_vals = &per_people_raided[name];
         let n = raid_vals.len();
@@ -324,7 +333,7 @@ fn authored_inputs(wc: &WorldComponents) -> (BTreeMap<KindId, f64>, BTreeMap<Kin
     let mut locations = BTreeMap::new();
     let mut spreads = BTreeMap::new();
     for (kind, psyche) in wc.psyche.iter() {
-        if !PEOPLES_WITH_HUMAN.contains(&kind.0) {
+        if !PEOPLES_AS_OF_THE_GENERALIST.contains(&kind.0) {
             continue;
         }
         locations.insert(*kind, psyche.threat_response);
@@ -347,7 +356,7 @@ fn authored_inputs(wc: &WorldComponents) -> (BTreeMap<KindId, f64>, BTreeMap<Kin
 /// settlement in the same run, which is what makes this a matched pair rather
 /// than a before/after spanning the `a025e55a` merge (task ruling 2).
 struct ReadoutRow {
-    /// The settlement's people (one of [`PEOPLES_WITH_HUMAN`]).
+    /// The settlement's people (one of [`PEOPLES_AS_OF_THE_GENERALIST`]).
     people: &'static str,
     /// The gate input this settlement's community actually drew, under the
     /// authored dispersion.
@@ -477,7 +486,7 @@ fn readout_population(
 
         for rec in &history.records {
             let people = rec.core.people;
-            if !PEOPLES_WITH_HUMAN.contains(&people.0) {
+            if !PEOPLES_AS_OF_THE_GENERALIST.contains(&people.0) {
                 continue;
             }
             cov.records_roster += 1;
@@ -656,7 +665,7 @@ fn report_the_preregistered_readout() {
 
     // Peoples ordered by authored dispersion, widest first — the order H2's
     // prediction is stated in.
-    let mut by_sigma: Vec<(&'static str, f64)> = PEOPLES_WITH_HUMAN
+    let mut by_sigma: Vec<(&'static str, f64)> = PEOPLES_AS_OF_THE_GENERALIST
         .iter()
         .map(|n| (*n, spreads[&KindId(n)]))
         .collect();
@@ -794,7 +803,7 @@ fn report_the_preregistered_readout() {
         ("initiated", &initiated),
         ("was raided", &victim),
     ] {
-        let residual: f64 = PEOPLES_WITH_HUMAN
+        let residual: f64 = PEOPLES_AS_OF_THE_GENERALIST
             .iter()
             .map(|n| {
                 let p = mean(&col[n]);

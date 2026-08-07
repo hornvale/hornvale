@@ -215,6 +215,23 @@ type Row = (
 // collapse: seed 57's bugbear flagship went folk -> ORGANIZED over the same
 // change, forcing `doctrine.rs`'s SOC-1 smoke test to be re-found. Smaller
 // settlements on average; some cross down, some cross up.
+// THE DELVERS RE-MEASURE (C2c, 2026-08-07). The table grew from 30 rows to
+// 55: the five dwarves are Settled peoples seven through eleven, and all five
+// place on all five seeds. Re-measured wholesale rather than extended, and the
+// interesting part is that TWO PRE-EXISTING ROWS MOVED, in opposite
+// directions:
+//
+//   seed 2 hobgoblin  Counted    -> Predictive  (gained a prediction)
+//   seed 3 kobold     Predictive -> Counted     (lost one)
+//
+// Both witnessed COUNTS are unchanged (49 and 53) — they observe exactly what
+// they observed before. What moved is `cult_form`, which reads `organized` iff
+// a settlement's emergent castes include a shaman, and castes are downstream
+// of settlement scale. Five new settling peoples re-decide placement on every
+// seed, so some flagships cross the caste threshold and some cross back. That
+// is this comment's own "it moves BOTH ways" rule reporting a real
+// consequence for the second time, not a mispinning — and it is why the table
+// is re-measured rather than having five blocks appended to it.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -226,6 +243,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
+    (
+        1,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -242,6 +275,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         1,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "hill-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
         "hobgoblin",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -265,12 +314,36 @@ const LADDER_TABLE: &[Row] = &[
         Some(36531.74198950235),
     ),
     (
+        1,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
+    ),
+    (
         2,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
         81,
         Some(36337.174658835705),
+    ),
+    (
+        2,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
+        2,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
     ),
     (
         2,
@@ -288,16 +361,29 @@ const LADDER_TABLE: &[Row] = &[
         49,
         Some(36337.174658835705),
     ),
-    // The Tense (2026-08-05): dropped Predictive -> Counted. Witnessed count
-    // UNCHANGED at 49 — same observations, no priesthood left to turn them
-    // into a prediction. See this table's doc comment.
+    (
+        2,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        49,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
+        "hill-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        49,
+        Some(36337.174658835705),
+    ),
     (
         2,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         49,
-        None,
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -316,12 +402,36 @@ const LADDER_TABLE: &[Row] = &[
         Some(36337.174658835705),
     ),
     (
+        2,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        81,
+        None,
+    ),
+    (
         3,
         "bugbear",
         LadderRung::Unknown,
         LadderRung::Predictive,
         53,
         Some(36125.669504115634),
+    ),
+    (
+        3,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
+    ),
+    (
+        3,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
     ),
     (
         3,
@@ -339,9 +449,22 @@ const LADDER_TABLE: &[Row] = &[
         32,
         Some(36125.669504115634),
     ),
-    // The Tense (2026-08-05): dropped Predictive -> Counted. Witnessed count
-    // UNCHANGED at 32 — same observations, no priesthood left to turn them
-    // into a prediction. See this table's doc comment.
+    (
+        3,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        32,
+        Some(36125.669504115634),
+    ),
+    (
+        3,
+        "hill-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        32,
+        Some(36125.669504115634),
+    ),
     (
         3,
         "hobgoblin",
@@ -362,9 +485,17 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
+    ),
+    (
+        3,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        53,
+        None,
     ),
     (
         4,
@@ -373,6 +504,22 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         3785,
         Some(36540.36159622378),
+    ),
+    (
+        4,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        3785,
+        None,
     ),
     (
         4,
@@ -385,6 +532,22 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "goblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        2067,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        2067,
+        None,
+    ),
+    (
+        4,
+        "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         2067,
@@ -406,9 +569,6 @@ const LADDER_TABLE: &[Row] = &[
         2067,
         Some(36540.36159622378),
     ),
-    // The Tense (2026-08-05): dropped Predictive -> Counted. Witnessed count
-    // UNCHANGED at 3785 — same observations, no priesthood left to turn them
-    // into a prediction. See this table's doc comment.
     (
         4,
         "kobold",
@@ -416,6 +576,14 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Counted,
         3785,
         None,
+    ),
+    (
+        4,
+        "mountain-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
     ),
     (
         5,
@@ -427,6 +595,22 @@ const LADDER_TABLE: &[Row] = &[
     ),
     (
         5,
+        "desert-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
+        "duergar",
+        LadderRung::Unknown,
+        LadderRung::Counted,
+        500,
+        None,
+    ),
+    (
+        5,
         "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
@@ -436,6 +620,22 @@ const LADDER_TABLE: &[Row] = &[
     (
         5,
         "goblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        304,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        304,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "hill-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         304,
@@ -460,6 +660,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         5,
         "kobold",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "mountain-dwarf",
         LadderRung::Unknown,
         LadderRung::Predictive,
         500,

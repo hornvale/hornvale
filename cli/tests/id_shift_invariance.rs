@@ -69,11 +69,48 @@ use std::collections::{BTreeMap, BTreeSet};
 /// colliding material-core groups — so the guard reddened rather than letting
 /// the test pass on nothing. Re-scanned across the same ten seeds on the
 /// merged tree: 1 and 1000 carry 2 colliding groups (4 records) each; 3, 5 and
-/// 13 carry 1; 42, 2, 7, 11 and 23 carry none. **Seed 1** is the witness now —
-/// 901 occupations, 2 colliding material-core groups of 2, and 24 colliding
-/// founding-key groups for the second test. A WITNESS is being re-pinned here,
-/// never the claim: both anti-vacuity guards and every assertion below are
-/// untouched, and the property they assert is the one The Salt froze.
+/// 13 carry 1; 42, 2, 7, 11 and 23 carry none. **Seed 1** was the witness at
+/// that point — 901 occupations, 2 colliding material-core groups of 2, and 24
+/// colliding founding-key groups for the second test. A WITNESS is being
+/// re-pinned here, never the claim: both anti-vacuity guards and every
+/// assertion below are untouched, and the property they assert is the one The
+/// Salt froze.
+///
+/// **Moved a third time by The Tense (2026-08-05), to seed 6** — recorded
+/// here after the fact, because that campaign bumped [`WITNESS_SEED`] and left
+/// this paragraph narrating seed 1. The constant and its own doc had drifted
+/// apart, which is the same stale-label defect the guards below exist to
+/// prevent in the DATA; The Delvers repairs it in the PROSE.
+///
+/// **Moved a fourth time by The Delvers (C2c, 2026-08-07), to seed 5.** Five
+/// settling peoples redecide deep-history settlement survival everywhere, and
+/// seed 6 dropped to **zero** colliding material-core groups (253
+/// occupations) — so the guard reddened rather than letting the test pass on
+/// nothing, for the third campaign running. Re-scanned across the same seed
+/// list on this tree, by the identical method:
+///
+/// ```text
+///   seed    occs   material groups   founding groups
+///   42       518          1                21
+///   1        791          0                26
+///   2        953          1                41
+///   3        755          1                34
+///   5       1118          2                30
+///   6        253          0                 9   <- outgoing witness
+///   7        815          0                28
+///   11      1158          0                33
+///   13      1567          2                63
+///   23       816          1                24
+///   1000     607          0                18
+/// ```
+///
+/// **Seed 5** is the witness now: 1118 occupations, 2 colliding material-core
+/// groups of 2, and 30 colliding founding-key groups. Chosen because it is the
+/// EARLIEST seed in this list carrying TWO material-core groups rather than
+/// one — the same shape the seed-1 witness had, so the test bites exactly as
+/// hard as it did before rather than being reduced to a single group. Seed 13
+/// would also qualify and is held in reserve. Again: a witness re-pinned,
+/// never the claim.
 fn witness_world() -> World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
@@ -89,12 +126,12 @@ fn witness_world() -> World {
 }
 
 /// The seed [`witness_world`] builds. A witness, not a claim — see that
-/// function's doc for why it moved off 42, and then off 7.
-const WITNESS_SEED: u64 = 6;
+/// function's doc for why it moved off 42, then off 7, then off 1, then off 6.
+const WITNESS_SEED: u64 = 5;
 
 /// Two occupations with identical material cores but different entity ids
 /// must produce identical derived output. The witness seed measurably contains
-/// such pairs (at seed 1: 4 occupations sit in 2 colliding material-core
+/// such pairs (at seed 5: 4 occupations sit in 2 colliding material-core
 /// groups, largest group size 2) — no synthetic id shift is needed to exercise
 /// the property.
 #[test]
@@ -115,7 +152,7 @@ fn identical_material_cores_yield_identical_flesh_despite_different_ids() {
     assert!(
         !colliding.is_empty(),
         "the witness seed must contain at least one material-core collision \
-         (measured at seed 1: 4 occupations spread across 2 colliding groups, \
+         (measured at seed 5: 4 occupations spread across 2 colliding groups, \
          largest group size 2) -- zero colliding groups means this test is \
          vacuous and proves nothing about id-invariance"
     );

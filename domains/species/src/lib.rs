@@ -3824,7 +3824,7 @@ mod tests {
         // With the god-struct gone, the four registries author independently.
         // The cross-registry invariants the world relies on: biosphere and
         // family cover the SAME full kind set, and psyche/perception share
-        // exactly one key-set — the six peoples plus the three minded
+        // exactly one key-set — the eleven peoples plus the three minded
         // dragons — every one of which also carries a biosphere row.
         let bio = biosphere_registry();
         let fam = family_of();
@@ -3833,8 +3833,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            30,
-            "thirty kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human)"
+            35,
+            "thirty-five kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll, The Generalist added the human, The Delvers added the five dwarves)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -3842,19 +3842,19 @@ mod tests {
 
         // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
         // psyche, and since The Vigil every minded SPEAKER also perceives, so
-        // the two stores again share one key-set — nine kinds, not the six
-        // peoples alone.
+        // the two stores again share one key-set — fourteen kinds, not the
+        // eleven peoples alone.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 9, "six peoples + three minded dragons");
+        assert_eq!(psy.len(), 14, "eleven peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            9,
-            "perception is the six peoples + the three dragons (The Vigil)"
+            14,
+            "perception is the eleven peoples + the three dragons (The Vigil)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -3946,16 +3946,19 @@ mod tests {
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples), then with The Vacancy's T7 (seven more
         // biosphere-only fauna), T8 (five more, four marine plus the
-        // amphibious giant crocodile), T9 (the gnoll, the fifth people), and
-        // The Generalist (the human, the sixth people); ComponentStore key
-        // order is lexicographic.
+        // amphibious giant crocodile), T9 (the gnoll, the fifth people), The
+        // Generalist (the human, the sixth people), and The Delvers (the five
+        // dwarves, peoples seven through eleven); ComponentStore key order is
+        // lexicographic, so the family scatters rather than clustering.
         assert_eq!(
             names,
             vec![
                 "black-dragon",
                 "bugbear",
                 "carrion-crawler",
+                "desert-dwarf",
                 "dire-wolf",
+                "duergar",
                 "giant-constrictor-snake",
                 "giant-crocodile",
                 "giant-elk",
@@ -3966,10 +3969,13 @@ mod tests {
                 "giant-squid",
                 "gnoll",
                 "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
                 "hobgoblin",
                 "human",
                 "killer-whale",
                 "kobold",
+                "mountain-dwarf",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
@@ -4340,7 +4346,19 @@ mod tests {
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
         assert_eq!(
             society,
-            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"]
+            vec![
+                "bugbear",
+                "desert-dwarf",
+                "duergar",
+                "gnoll",
+                "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
+                "hobgoblin",
+                "human",
+                "kobold",
+                "mountain-dwarf"
+            ]
         );
         // dragons are minded (psyche) but not Settled — no society vector
         assert!(society_registry().get(&KindId("red-dragon")).is_none());

@@ -50,6 +50,14 @@ fn every_kind_has_the_authored_social_form() {
         ("gnoll", SocialForm::Settled),
         // The Generalist (C2-0): the sixth people.
         ("human", SocialForm::Settled),
+        // The Delvers (C2c): the five dwarves, peoples seven through eleven.
+        // A family is a shared descent and a shared tongue, not a shared
+        // constitution — but all five settle, so all five are `Settled`.
+        ("desert-dwarf", SocialForm::Settled),
+        ("duergar", SocialForm::Settled),
+        ("gully-dwarf", SocialForm::Settled),
+        ("hill-dwarf", SocialForm::Settled),
+        ("mountain-dwarf", SocialForm::Settled),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
@@ -57,14 +65,19 @@ fn every_kind_has_the_authored_social_form() {
 }
 
 #[test]
-fn settled_kinds_are_exactly_the_six_peoples() {
+fn settled_kinds_are_exactly_the_settling_peoples() {
     // The byte-identity keystone: the settlement roster (and every gate re-keyed
     // off the retired "has a psyche" proxy onto `Settled`) is exactly the
     // settling peoples — the same set the pre-Eremite psyche key-set held for
-    // the original four. The Vacancy T9 adds the gnoll, a fifth, and The
-    // Generalist (C2-0) adds the human, a sixth. After The Eremite the
+    // the original four. The Vacancy T9 adds the gnoll, a fifth; The
+    // Generalist (C2-0) adds the human, a sixth; The Delvers (C2c) adds the
+    // five dwarves, taking the roster to eleven. After The Eremite the
     // dragons carry a mind while staying Solitary, so psyche is a SUPERSET of
     // Settled (Settled ⊆ psyche), not equal — hence a named pin.
+    //
+    // The name no longer counts: a count baked into a test name is how the
+    // next campaign inherits a wrong one, and this list has now been widened
+    // three times.
     let bio = biosphere_registry();
     let psy = psyche_registry();
     let settled: Vec<&str> = bio
@@ -74,8 +87,20 @@ fn settled_kinds_are_exactly_the_six_peoples() {
         .collect();
     assert_eq!(
         settled,
-        ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
-        "Settled is exactly the six peoples (ascending KindId)"
+        [
+            "bugbear",
+            "desert-dwarf",
+            "duergar",
+            "gnoll",
+            "goblin",
+            "gully-dwarf",
+            "hill-dwarf",
+            "hobgoblin",
+            "human",
+            "kobold",
+            "mountain-dwarf"
+        ],
+        "Settled is exactly the eleven settling peoples (ascending KindId)"
     );
     for &name in &settled {
         assert!(

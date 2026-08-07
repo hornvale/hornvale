@@ -14,7 +14,7 @@
 //!
 //! **Task 6 extension (the preregistered readout, 2026-08-04):** the campaign's
 //! actual measurement, over the roster WITH human folded in
-//! ([`PEOPLES_WITH_HUMAN`], six peoples, not [`PEOPLES`]'s five - `measure_one`
+//! ([`PEOPLES_AS_OF_THE_GENERALIST`], six peoples, not [`PEOPLES_BEFORE_THE_GENERALIST`]'s five - `measure_one`
 //! now takes the peoples list as a parameter so Task 1's pre-human baseline and
 //! Task 6's post-human readout can share one world-building body without
 //! silently changing what "settleable land" means for Task 1's own frozen
@@ -115,16 +115,28 @@ const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 /// human joins - so `measure_one` filters `wc.biosphere` down to exactly
 /// these before ever calling `per_species_suitability`, rather than measuring
 /// "settleable" against the whole 29-kind fauna+peoples roster. Frozen as
-/// Task 1 shipped it; Task 6's readout uses [`PEOPLES_WITH_HUMAN`] instead,
+/// Task 1 shipped it; Task 6's readout uses [`PEOPLES_AS_OF_THE_GENERALIST`] instead,
 /// never this constant, so this population and its "settleable land" never
 /// silently changes meaning underneath the existing pre-human assertions.
-const PEOPLES: [&str; 5] = ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"];
+const PEOPLES_BEFORE_THE_GENERALIST: [&str; 5] =
+    ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"];
 
-/// The post-human roster (Task 6): [`PEOPLES`] plus `"human"` - the exact set
+/// **THE DELVERS (C2c, 2026-08-07): RENAMED, NOT WIDENED.** The roster is
+/// eleven peoples now, so the old name `PEOPLES_WITH_HUMAN` read as
+/// "the peoples, plus human" — i.e. as the whole roster — and is a lie by
+/// omission at arity 6. It is renamed to say what it actually is: the
+/// population this campaign's readout was PREREGISTERED over, frozen at the
+/// six peoples that existed when The Generalist measured. Widening it to
+/// eleven would silently change what every assertion below measured, which is
+/// the exact failure the doc above already warns about for the pre-human
+/// roster.
+///
+/// The post-human roster (Task 6): [`PEOPLES_BEFORE_THE_GENERALIST`] plus
+/// `"human"` - the exact set
 /// §4 of the design spec measures the readout over ("human's per-cell
 /// competitive share... against the five existing peoples' shares on the
 /// same cells").
-const PEOPLES_WITH_HUMAN: [&str; 6] =
+const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
     ["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"];
 
 /// The four condition axes, sampled over the settleable-cell population, in
@@ -450,7 +462,7 @@ fn report_land_distribution_and_pre_human_fits() {
     let mut per_people: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
 
     for seed in SEEDS {
-        let (axes, fits, _shares) = measure_one(Seed(seed), &PEOPLES);
+        let (axes, fits, _shares) = measure_one(Seed(seed), &PEOPLES_BEFORE_THE_GENERALIST);
         temperature.extend(axes.temperature);
         moisture.extend(axes.moisture);
         insolation.extend(axes.insolation);
@@ -500,7 +512,7 @@ fn report_land_distribution_and_pre_human_fits() {
 }
 
 /// Task 6: the campaign's preregistered readout (design spec §4). Builds the
-/// same 30 seeds a second time (`PEOPLES_WITH_HUMAN`, not `PEOPLES`) so
+/// same 30 seeds a second time (`PEOPLES_AS_OF_THE_GENERALIST`, not `PEOPLES_BEFORE_THE_GENERALIST`) so
 /// human is folded into the packer, and reports H1/H2/H3's numbers - never
 /// asserts them, per the pre-flight ruling recorded on
 /// `report_land_distribution_and_pre_human_fits` above and repeated in the
@@ -518,7 +530,7 @@ fn report_the_preregistered_gause_readout() {
     let mut per_people_share: BTreeMap<&'static str, Vec<f64>> = BTreeMap::new();
 
     for seed in SEEDS {
-        let (axes, fits, shares) = measure_one(Seed(seed), &PEOPLES_WITH_HUMAN);
+        let (axes, fits, shares) = measure_one(Seed(seed), &PEOPLES_AS_OF_THE_GENERALIST);
         temperature.extend(axes.temperature);
         moisture.extend(axes.moisture);
         elevations.extend(axes.elevation);

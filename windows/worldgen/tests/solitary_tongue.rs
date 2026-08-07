@@ -435,7 +435,30 @@ fn render_lexicon_snapshot(lex: &Lexicon) -> String {
 /// this array again did not notice (Tasks 2-4 gate review, Fix round 1,
 /// Finding 1) — the fourth instance of this campaign's count-baked-into-a-
 /// list defect. Extended, not derived, for the same reason as above.
-const PEOPLES: [&str; 6] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll", "human"];
+///
+/// The Delvers (C2c, 2026-08-07) extends it a third time, deliberately rather
+/// than by discovery: five dwarves are peoples seven through eleven. They are
+/// APPENDED, not sorted in — this array's order is arrival order and is part
+/// of the golden's pinned row order, exactly as the paragraph above says.
+///
+/// **These five are the first peoples over `LIFESPAN_THRESHOLD_YEARS`**, so
+/// they are the first to enter this golden on the SLOW language-drift regime.
+/// That is the case the byte-identity guard's own message anticipates ("a
+/// campaign that authors a long-lived people will legitimately change this
+/// golden, and must say so"); this comment is the saying-so.
+const PEOPLES: [&str; 11] = [
+    "goblin",
+    "hobgoblin",
+    "bugbear",
+    "kobold",
+    "gnoll",
+    "human",
+    "desert-dwarf",
+    "duergar",
+    "gully-dwarf",
+    "hill-dwarf",
+    "mountain-dwarf",
+];
 
 /// Claim (c), BYTE-IDENTITY: every settled people's full lexicon at seed 42
 /// (a real derived, settled world) equals the golden captured in this
@@ -529,11 +552,15 @@ fn peoples_lexicons_are_unchanged_from_the_pre_campaign_golden() {
         "a settled people's full seed-42 lexicon drifted from The Solitary Tongue's captured \
          golden. READ THE DIFF BEFORE ACTING -- there are two very different causes. (1) If a \
          `root`/`compound` line became a DIFFERENT `root`/`compound` line, the phonology moved: \
-         cascade_regime_of is no longer resolving every Settled people whose lifespan is under \
-         LIFESPAN_THRESHOLD_YEARS to CascadeRegime::SETTLED. All six peoples authored today are \
-         under it (gnoll is highest at ~81.5 yr), so for this fixture the rule is unchanged and a \
-         drift is still a BUG -- do not rebaseline. A campaign that authors a long-lived people \
-         will legitimately change this golden, and must say so. (2) If words only \
+         cascade_regime_of is no longer resolving each Settled people to the regime its \
+         lifespan selects at LIFESPAN_THRESHOLD_YEARS. THE ROSTER NOW STRADDLES THAT THRESHOLD: \
+         the six pre-Delvers peoples are all under it (gnoll is highest at ~81.5 yr) and take \
+         CascadeRegime::SETTLED, while all FIVE DWARVES are far over it (267-278 yr under \
+         LifeSchedule::paced(4.0)) and take the slow regime. So a drift in a NON-dwarf row is \
+         still a BUG -- do not rebaseline it -- while a dwarf row moving may mean the threshold \
+         or the pace factor moved, which is a different investigation. A campaign that authors a \
+         people on the other side of the threshold from its family will legitimately change this \
+         golden, and must say so. (2) If words only \
          appeared/disappeared or a `gap` merely changed its REASON, while every word present in \
          both versions is byte-identical, then the language did not change at all: upstream \
          SETTLEMENT PLACEMENT moved which biomes these peoples live beside, and the lexicon is \

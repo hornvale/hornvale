@@ -12,24 +12,25 @@ use hornvale_worldgen::components::WorldComponents;
 #[test]
 fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
-    // biosphere = the canonical entity set (all 30 kinds today — The Vacancy
+    // biosphere = the canonical entity set (all 35 kinds today — The Vacancy
     // T7 added seven, T8 added five (four marine plus the amphibious giant
-    // crocodile), T9 added the gnoll, The Generalist added the human).
-    assert_eq!(wc.biosphere.len(), 30);
+    // crocodile), T9 added the gnoll, The Generalist added the human, The
+    // Delvers added the five dwarves).
+    assert_eq!(wc.biosphere.len(), 35);
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at
-    // nine; the subset assertion is kept (not replaced by equality) because a
-    // future non-speaking perceiver — an owl with eyes and no words — must
-    // stay expressible.
+    // fourteen; the subset assertion is kept (not replaced by equality)
+    // because a future non-speaking perceiver — an owl with eyes and no
+    // words — must stay expressible.
     for k in wc.perception.ids() {
         assert!(wc.psyche.contains(k), "perceiver {k:?} carries a mind");
     }
-    assert_eq!(wc.psyche.len(), 9, "six peoples + three minded dragons");
+    assert_eq!(wc.psyche.len(), 14, "eleven peoples + three minded dragons");
     assert_eq!(
         wc.perception.len(),
-        9,
-        "the six peoples + the three dragons perceive (The Vigil)"
+        14,
+        "the eleven peoples + the three dragons perceive (The Vigil)"
     );
     for k in wc.psyche.ids() {
         assert!(
@@ -46,9 +47,9 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let lex = hornvale_language::lexicon_registry();
     // The Solitary Tongue gave the three chromatic dragons a frozen Draconic
     // tongue; The Vigil gave them eyes. Articulation and lexicon are keyed to
-    // exactly the MINDED kinds — the psyche key-set (six peoples + three
-    // dragons, 9), since The Generalist added human — and perception now
-    // coincides with them.
+    // exactly the MINDED kinds — the psyche key-set (eleven peoples + three
+    // dragons, 14), since The Delvers added the five dwarves — and perception
+    // now coincides with them.
     let minded: Vec<_> = wc.psyche.ids().collect();
     assert_eq!(
         art.ids().collect::<Vec<_>>(),
@@ -65,21 +66,26 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     // have failed if any speaker lacked perception, so re-deriving that same
     // subset relation here would just restate an enforced rule and pass
     // vacuously every time `assemble()` succeeds. What `check_integrity`
-    // does NOT pin is which nine kinds occupy the roster today — a
+    // does NOT pin is which fourteen kinds occupy the roster today — a
     // subset-only invariant is silent on names. Assert the roster fact
     // instead: at THIS commit, perception coincides with articulation
-    // exactly, by name — the six settling peoples plus the three chromatic
+    // exactly, by name — the eleven settling peoples plus the three chromatic
     // dragons — spelled out so a future non-speaking perceiver (an owl with
     // eyes and no words) reads as a real change to this list, not a passing
     // test that never looked.
     let named_roster: Vec<hornvale_kernel::KindId> = [
         "black-dragon",
         "bugbear",
+        "desert-dwarf",
+        "duergar",
         "gnoll",
         "goblin",
+        "gully-dwarf",
+        "hill-dwarf",
         "hobgoblin",
         "human",
         "kobold",
+        "mountain-dwarf",
         "red-dragon",
         "white-dragon",
     ]
@@ -89,7 +95,7 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let perceivers: Vec<_> = wc.perception.ids().copied().collect();
     assert_eq!(
         perceivers, named_roster,
-        "perception must key exactly the six peoples + three dragons, by name (The Vigil)"
+        "perception must key exactly the eleven peoples + three dragons, by name (The Vigil)"
     );
     assert_eq!(
         art.ids().copied().collect::<Vec<_>>(),
