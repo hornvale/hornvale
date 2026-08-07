@@ -7,7 +7,11 @@
 //! array to keep length-synced with the grid — and the attributes actually
 //! coming are not one character wide (a colour triple, an occupant's
 //! `EntityId`, a temperature). A palette absorbs them as FIELDS ON AN ENTRY,
-//! costing nothing per cell.
+//! costing nothing per cell. The colour triple has since landed as
+//! [`PaletteEntry::color`] — but as an empty `Option` slot, not a value: the
+//! building-fabric and interior-illuminant models it would need are
+//! unshipped, and inventing either from the bedrock's daylight reflectance is
+//! exactly what `RENDER-sourced-effects` forbids.
 //!
 //! # Types here, instances elsewhere
 //!
@@ -57,7 +61,7 @@ use std::collections::BTreeMap;
 pub const PLAN_SCHEMA: &str = "vessel/plan/v1";
 
 /// One distinct cell **type** in a plan. Not a cell: many cells share one.
-/// type-audit: bare-ok(identifier-text: kind), bare-ok(index: chambers)
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(index: chambers), bare-ok(artifact: color)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PaletteEntry {
     /// `"wall"`, `"floor"` or `"threshold"` — the `CellKind` discriminant,
@@ -68,6 +72,14 @@ pub struct PaletteEntry {
     /// because that question has two right answers, and this must not pick
     /// one of them.
     pub chambers: Vec<usize>,
+    /// The cell type's display colour, absent until a building has a fabric to
+    /// read a reflectance from. `CellKind::Wall` is "the building's fabric" and
+    /// carries no material, and indoors the illuminant is not the sun — so this
+    /// stays `None` rather than borrowing the bedrock's colour under daylight,
+    /// which would assert two things the world does not model.
+    /// type-audit: bare-ok(artifact: color)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<[u8; 3]>,
 }
 
 /// The plan's bounds, in lattice-local cells.
@@ -247,14 +259,17 @@ fn entry_for(kind: CellKind) -> PaletteEntry {
         CellKind::Wall => PaletteEntry {
             kind: "wall".to_string(),
             chambers: Vec::new(),
+            color: None,
         },
         CellKind::Floor(i) => PaletteEntry {
             kind: "floor".to_string(),
             chambers: vec![i],
+            color: None,
         },
         CellKind::Threshold(a, b) => PaletteEntry {
             kind: "threshold".to_string(),
             chambers: vec![a, b],
+            color: None,
         },
     }
 }
@@ -456,5 +471,20 @@ mod tests {
             salience: 1,
         };
         let _ = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![outside]);
+    }
+
+    #[test]
+    fn a_palette_entry_carries_a_colour_slot_that_is_empty_this_campaign() {
+        // The slot is additive and unpopulated ON PURPOSE. A building's fabric
+        // has no material model (CellKind::Wall is "the building's fabric" and
+        // carries nothing), and indoors the light is not the noon sun. Filling
+        // this from bedrock under daylight would assert two things the world
+        // does not model. See MAP-building-fabric and MAP-interior-light.
+        let plan = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        for e in &plan.palette {
+            assert!(e.color.is_none(), "{} must not claim a colour yet", e.kind);
+        }
+        let json = serde_json::to_string(&plan).unwrap();
+        assert!(!json.contains("\"color\""), "an absent slot emits no key");
     }
 }

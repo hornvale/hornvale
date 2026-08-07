@@ -4,10 +4,12 @@
 //! projection already absorbs on every visit, so a possession that draws the
 //! chart is byte-identical to one that never does.
 
-use crate::{Knowledge, VesselError, liveness};
+use crate::eyes::Eyes;
+use crate::{Agent, Knowledge, VesselError, liveness};
+use hornvale_astronomy::Calendar;
 use hornvale_kernel::{Ledger, RoomAddr, RoomId, World, WorldTime};
 use hornvale_locale::LocaleContext;
-use hornvale_scene::{Mark, SurroundsScene, surrounds_scene_in};
+use hornvale_scene::{Mark, Sight, SurroundsScene, surrounds_scene_colored_in, surrounds_scene_in};
 
 /// The chart's sense radius, in BFS rings. A constant this slice; the seam
 /// for a per-species radius is `Agent::perception` (EXP-3), untouched here.
@@ -60,10 +62,17 @@ pub fn chart_centre(position: &RoomAddr, zoom_out: u32) -> RoomAddr {
     }
 }
 
-/// Build the chart the possession draws: the fog-free scene, then the
-/// epistemic and agent overlays. `zoom_out` coarsens by truncating the
-/// observer's path — zoom in this mesh is not an aggregation, it is the same
-/// builder one rung up the address space.
+/// Build the chart the possession draws: the fog-free scene (coloured
+/// through `eyes` when it resolves to an observer, else the plain path),
+/// then the epistemic and agent overlays. `zoom_out` coarsens by truncating
+/// the observer's path — zoom in this mesh is not an aggregation, it is the
+/// same builder one rung up the address space.
+///
+/// **The colour layer runs first, the overlays after — exactly as before The
+/// Beholding.** `remembered` state and NPC marks are written onto `scene`
+/// below, unchanged in order and content; colouring only changes what a cell
+/// already drawn looks like, never which cells are drawn or what stands on
+/// them.
 /// type-audit: bare-ok(count: zoom_out)
 #[allow(clippy::too_many_arguments)]
 pub fn purview_scene(
@@ -75,16 +84,50 @@ pub fn purview_scene(
     ledger: &Ledger,
     at: WorldTime,
     zoom_out: u32,
+    agent: &Agent,
+    eyes: &Eyes,
+    calendar: Option<&Calendar>,
 ) -> Result<SurroundsScene, VesselError> {
     let depth = position.depth();
     let centre = chart_centre(position, zoom_out);
     let keep = depth.saturating_sub(zoom_out) as usize;
-    // `surrounds_scene_in`, NOT `surrounds_scene`: the session already holds a
-    // built `LocaleContext`, and building a fresh one costs ~1.2 s (measured)
-    // against ~2 ms of actual per-cell work. `map` runs every turn, so the
-    // convenience wrapper would make the verb unusable.
-    let mut scene = surrounds_scene_in(world, ctx, &centre, PURVIEW_RADIUS, at)
-        .map_err(|e| VesselError::Build(e.to_string()))?;
+    // `surrounds_scene_in`/`surrounds_scene_colored_in`, NOT their `_in`-less
+    // wrappers: the session already holds a built `LocaleContext`, and
+    // building a fresh one costs ~1.2 s (measured) against ~2 ms of actual
+    // per-cell work. `map` runs every turn, so the convenience wrapper would
+    // make the verb unusable.
+    let mut scene = match crate::eyes::resolve(eyes, agent) {
+        Some((observer, name)) => {
+            // The possession's own standing latitude — not the (possibly
+            // coarsened) chart centre's — so the sun altitude answers "what
+            // hour is it where the possession stands," the same latitude
+            // regardless of `zoom_out`.
+            let latitude = position.coord().latitude;
+            let (light, sun_altitude_deg) = crate::eyes::daylight_at(world, calendar, at, latitude);
+            surrounds_scene_colored_in(
+                world,
+                ctx,
+                &centre,
+                PURVIEW_RADIUS,
+                at,
+                &observer,
+                &light,
+                Sight {
+                    observer: name,
+                    // Overwritten by the builder from `observer` itself —
+                    // see `Sight`'s own doc.
+                    channels: 0,
+                    chromatic: 0,
+                    projection: String::new(),
+                    preserves: String::new(),
+                    sun_altitude_deg,
+                },
+            )
+            .map_err(|e| VesselError::Build(e.to_string()))?
+        }
+        None => surrounds_scene_in(world, ctx, &centre, PURVIEW_RADIUS, at)
+            .map_err(|e| VesselError::Build(e.to_string()))?,
+    };
 
     // Every room this session has walked, as an address.
     let walked: Vec<RoomAddr> = knowledge
@@ -179,6 +222,139 @@ mod tests {
         .expect("seed 42 builds")
     }
 
+    /// The positive control. "Is it coloured" cannot tell a withheld colour from
+    /// a rendered one — both look grey — so this asserts a DIFFERENCE.
+    #[test]
+    // `PossessOpts::default()` then one field reassignment reads plainer here
+    // than a struct-update literal would for a two-variable setup (`own`,
+    // `human`) that share every other field.
+    #[allow(clippy::field_reassign_with_default)]
+    fn two_eyes_on_one_world_disagree_about_colour() {
+        let w = world();
+        let mut own = PossessOpts::default();
+        own.eyes = crate::eyes::Eyes::Own;
+        let mut human = PossessOpts::default();
+        human.eyes = crate::eyes::Eyes::Named("standard".to_string());
+
+        let (a, _) = Session::start(&w, &own).unwrap();
+        let (b, _) = Session::start(&w, &human).unwrap();
+        let (sa, sb) = (a.purview(0).unwrap(), b.purview(0).unwrap());
+
+        let coloured = sa.cells.iter().filter(|c| c.color.is_some()).count();
+        assert!(
+            coloured > 0,
+            "the possessed agent's eyes must colour the chart at all"
+        );
+
+        let differ = sa
+            .cells
+            .iter()
+            .zip(&sb.cells)
+            .filter(|(x, y)| x.color != y.color)
+            .count();
+        // If the flagship species IS human, the two are legitimately identical.
+        let species = a.agent().species.clone();
+        if species == "human" {
+            assert_eq!(
+                differ, 0,
+                "a human possession and the standard observer are one eye"
+            );
+        } else {
+            assert!(
+                differ > 0,
+                "possessing a {species} must not produce the human's colours on \
+                 any cell; got {differ} differing of {coloured} coloured"
+            );
+        }
+    }
+
+    #[test]
+    #[allow(clippy::field_reassign_with_default)]
+    fn eyes_off_restores_a_byte_identical_uncoloured_chart() {
+        // The negative control — WITH its positive control, because a
+        // suppress-everything path passes green against nothing.
+        let w = world();
+        let mut off = PossessOpts::default();
+        off.eyes = crate::eyes::Eyes::Off;
+        let (a, _) = Session::start(&w, &off).unwrap();
+        let s = a.purview(0).unwrap();
+        let json = hornvale_scene::surrounds_json(&s);
+        assert!(
+            !json.contains("\"color\""),
+            "declining the observer step emits no colour"
+        );
+        assert!(!json.contains("\"sight\""), "and no declaration either");
+
+        let (b, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let lit = hornvale_scene::surrounds_json(&b.purview(0).unwrap());
+        assert!(
+            lit.contains("\"color\""),
+            "the DEFAULT path must colour, or the test above proves nothing"
+        );
+    }
+
+    /// H4 — the light moves the colour.
+    #[test]
+    #[allow(clippy::field_reassign_with_default)]
+    fn a_low_sun_reddens_the_chart_relative_to_a_high_one() {
+        let w = world();
+        let mk = |day: f64| {
+            let mut o = PossessOpts::default();
+            o.day = hornvale_kernel::WorldTime { day };
+            Session::start(&w, &o).unwrap().0.purview(0).unwrap()
+        };
+        // Noon against a genuine ABOVE-horizon low sun, at the flagship's own
+        // latitude (~-5.72°). Day 0.32 puts the sun at 6.911°, measured; noon
+        // puts it at 78.567°. The day fraction matters: the probe this test
+        // shipped with (0.27) lands the sun at -13.442°, BELOW the horizon,
+        // where `at_elevation` clamps to MAX_AIRMASS — so it confirmed H4 at
+        // the clamp rather than through Rayleigh attenuation, which is a
+        // weaker reading than the hypothesis claims. 0.32 exercises the
+        // mechanism itself (R:B 1.917 against noon's 1.206).
+        let noon = mk(0.5);
+        let low = mk(0.32);
+        let ratio = |s: &hornvale_scene::SurroundsScene| -> Option<f64> {
+            let mut r = 0.0f64;
+            let mut b = 0.0f64;
+            for c in &s.cells {
+                if let Some(px) = c.color {
+                    r += px[0] as f64;
+                    b += px[2] as f64;
+                }
+            }
+            (b > 0.0).then_some(r / b)
+        };
+        let (n, d) = (ratio(&noon), ratio(&low));
+        let (n, d) = (
+            n.expect("noon colours some cells"),
+            d.expect("the low sun colours some cells"),
+        );
+        // The low probe must actually be above the horizon, or this test
+        // measures the MAX_AIRMASS clamp instead of the attenuation.
+        let low_alt = low
+            .sight
+            .as_ref()
+            .map(|s| s.sun_altitude_deg)
+            .expect("a coloured chart declares its sight");
+        assert!(
+            low_alt > 0.0,
+            "the low probe must sit ABOVE the horizon to exercise Rayleigh \
+             attenuation rather than at_elevation's clamp; got {low_alt}°"
+        );
+        assert_ne!(
+            noon.sight.as_ref().map(|s| s.sun_altitude_deg),
+            Some(low_alt),
+            "the two probes must actually sit at different sun altitudes, or this \
+             test measures nothing"
+        );
+        assert!(
+            d > n,
+            "H4 FALSIFIED — a low sun did not redden the chart (low-sun R:B {d} \
+             at {low_alt}°, noon R:B {n}). Report the measured altitudes; do not \
+             retune K."
+        );
+    }
+
     #[test]
     fn the_starting_room_is_here_and_nothing_is_remembered_yet() {
         let w = world();
@@ -230,6 +406,45 @@ mod tests {
             coarse.cells.iter().filter(|c| c.state == "here").count(),
             1,
             "the observer's ancestor is the coarse chart's centre"
+        );
+    }
+
+    /// F4 — the doc comment on `purview_scene`'s latitude line (above) says
+    /// the sun altitude answers "what hour is it where the possession
+    /// stands," using `position.coord().latitude` and not the (possibly
+    /// coarsened) chart centre's — but nothing pinned that before this
+    /// test, and mutating it left all 459 vessel tests green. Zoom 4 is the
+    /// review's own measured shape (6.910970° at zoom 0 moved to 6.913082°
+    /// under the bug).
+    #[test]
+    fn zooming_out_does_not_move_the_agents_declared_sun_altitude() {
+        let w = world();
+        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let position = session.agent().position.clone();
+        let zoom_out = 4;
+
+        // Anti-vacuity: the coarsened chart centre must actually sit at a
+        // DIFFERENT latitude than the agent's own room, or a bug that read
+        // the wrong one would be invisible to the comparison below.
+        let centre = chart_centre(&position, zoom_out);
+        assert_ne!(
+            centre.coord().latitude,
+            position.coord().latitude,
+            "zoom {zoom_out} must coarsen to a room at a genuinely different \
+             latitude, or this test cannot discriminate which one the sun \
+             altitude was computed from"
+        );
+
+        let fine = session.purview(0).unwrap();
+        let coarse = session.purview(zoom_out).unwrap();
+        let fine_alt = fine.sight.as_ref().map(|s| s.sun_altitude_deg);
+        let coarse_alt = coarse.sight.as_ref().map(|s| s.sun_altitude_deg);
+        assert!(fine_alt.is_some(), "a coloured chart declares its sight");
+        assert_eq!(
+            fine_alt, coarse_alt,
+            "the sun altitude must answer \"what hour is it where the possession \
+             stands,\" the AGENT's own latitude regardless of zoom — zoom \
+             {zoom_out} moved it from {fine_alt:?} to {coarse_alt:?}"
         );
     }
 

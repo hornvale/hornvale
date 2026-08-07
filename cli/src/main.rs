@@ -509,6 +509,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 day: WorldTime { day },
                 echo: true,
                 wild_agents: true,
+                eyes: hornvale_vessel::eyes::Eyes::Own,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -524,6 +525,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 day: WorldTime { day },
                 echo: false,
                 wild_agents: true,
+                eyes: hornvale_vessel::eyes::Eyes::Own,
             },
             stdin.lock(),
             stdout.lock(),
@@ -1515,6 +1517,27 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             // context anyway, and taking the same route for both keeps the
             // two lenses reading the same document.
             let scene = if lens == "colour" {
+                // The CLI, not the scene builder, owns the star's daylight —
+                // the same illuminant `surrounds_scene_colored_in` used to
+                // compute internally, moved out so a caller can colour a
+                // chart under any light. This must agree with what the
+                // `sight` block declares below: `daylight_at` (the vessel's
+                // own light-plus-altitude pairing, spec §4.6) is the one
+                // call that builds both, so the declared
+                // `sun_altitude_deg` can never drift from the light the
+                // scene was actually lit with — two independent
+                // computations of "which light" is exactly how a caption
+                // and a picture end up disagreeing (The Beholding, F1).
+                let calendar = world_builder::sky_of(&world)
+                    .ok()
+                    .and_then(|sky| sky.calendar().cloned());
+                let latitude = room.coord().latitude;
+                let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
+                    &world,
+                    calendar.as_ref(),
+                    WorldTime { day },
+                    latitude,
+                );
                 hornvale_scene::surrounds_scene_colored_in(
                     &world,
                     &ctx,
@@ -1522,6 +1545,15 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     radius,
                     WorldTime { day },
                     &hornvale_kernel::color::standard_observer(),
+                    &light,
+                    hornvale_scene::Sight {
+                        observer: "standard".to_string(),
+                        channels: 0,
+                        chromatic: 0,
+                        projection: String::new(),
+                        preserves: String::new(),
+                        sun_altitude_deg,
+                    },
                 )
             } else {
                 hornvale_scene::surrounds_scene_in(&world, &ctx, &room, radius, WorldTime { day })

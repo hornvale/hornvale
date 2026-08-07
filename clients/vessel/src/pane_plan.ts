@@ -6,6 +6,7 @@
 // restyle (CLIENT-atmosphere, CLIENT-alive-map) a pure client change.
 
 import type { PlanMark, PlanPayload, Snapshot } from "./snapshot.ts";
+import { type PaneCell, type PaneGrid, parseColor } from "./pane_cell.ts";
 
 /** The glyph for each cell kind. The mark `@` is deliberately the same one
  * the walk-band chart uses: the plan and the chart are one verb's two bands,
@@ -31,13 +32,13 @@ const UNKNOWN = "?";
 /** The mark for the cell the possession stands in. */
 const YOU = "@";
 
-/** The glyph rows for this snapshot's floor plan, or `null` when there is no
+/** The cell grid for this snapshot's floor plan, or `null` when there is no
  * plan to draw — out of doors, on a sim that emits no spatial channel, or on
  * a payload that fails validation.
  *
  * Refusing beats drawing something wrong: a short or clamped map looks
  * plausible and is not visibly incorrect, which is the worse failure. */
-export function planRows(snap: Snapshot): string[] | null {
+export function planCells(snap: Snapshot): PaneGrid | null {
   const spatial = snap.spatial;
   if (!spatial || spatial.band !== "chamber") return null;
   const plan: PlanPayload = spatial.plan;
@@ -77,18 +78,33 @@ export function planRows(snap: Snapshot): string[] | null {
     return null;
   }
 
-  const rows: string[] = [];
+  const grid: PaneGrid = [];
   for (let y = 0; y < h; y++) {
-    let row = "";
+    const row: PaneCell[] = [];
     for (let x = 0; x < w; x++) {
       const entry = plan.palette[plan.cells[y * w + x]];
       // `GLYPH` has a null prototype (see its declaration), so an unknown
       // `kind` — including the string `"constructor"` — simply misses and
       // falls through to `UNKNOWN` rather than resolving up a prototype
       // chain that a plain object literal would have had.
-      row += GLYPH[entry.kind] ?? UNKNOWN;
+      const glyph = GLYPH[entry.kind] ?? UNKNOWN;
+      // `entry.color` is the cell TYPE's own colour — a wall's fabric, a
+      // floor's. Carried here at the ground rule's default: true, since
+      // this is the type's own glyph. The mark and `@` overlays below are
+      // this pane's other two instances of the same rule (see `PaneCell`'s
+      // doc in `pane_cell.ts`) — both force `color: null` when they draw
+      // over this cell, because a creature or the possession standing on a
+      // floor is not the floor.
+      //
+      // Every palette entry's `color` is absent this campaign — Task 6
+      // shipped the slot deliberately empty, with no building-fabric or
+      // interior-illuminant model yet to read a reflectance from — so
+      // `parseColor` returns `null` for every cell today. The plumbing
+      // stays anyway: the chamber-band campaign that fills the slot needs
+      // no client change, only a colour on the wire.
+      row.push({ glyph, color: parseColor(entry.color) });
     }
-    rows.push(row);
+    grid.push(row);
   }
 
   // Individuals standing on the plan (The Sighting). `marks` is optional —
@@ -126,13 +142,14 @@ export function planRows(snap: Snapshot): string[] | null {
     // conventional glyph, and matches `terrain_glyph`'s own habit of
     // reserving a distinct mark per distinct thing.
     const glyph = mark.noun.charAt(0).toLowerCase();
-    const row = rows[gy];
     // Marks are already sorted ascending by `(salience, noun)` on the Rust
     // side, so this array's order is deterministic bytes, not discovery
     // order — this loop must not re-sort it. If two marks somehow land on
     // one cell, later-in-the-array wins: a deliberate, cheap tie-break
     // rather than an attempt to re-derive Rust's own salience ordering here.
-    rows[gy] = row.slice(0, gx) + glyph + row.slice(gx + 1);
+    // Ground rule: `color: null`, not the palette's — a creature is not the
+    // floor it stands on (see `PaneCell`'s doc in `pane_cell.ts`).
+    grid[gy][gx] = { glyph, color: null };
   }
 
   // The mark draws OVER the cell beneath it — including over any creature
@@ -145,8 +162,9 @@ export function planRows(snap: Snapshot): string[] | null {
   const mx = plan.you.x - plan.extent.x;
   const my = plan.you.y - plan.extent.y;
   if (mx >= 0 && mx < w && my >= 0 && my < h) {
-    const row = rows[my];
-    rows[my] = row.slice(0, mx) + YOU + row.slice(mx + 1);
+    // Ground rule, same as a mark's: the possession is not the floor it
+    // stands on.
+    grid[my][mx] = { glyph: YOU, color: null };
   }
-  return rows;
+  return grid;
 }

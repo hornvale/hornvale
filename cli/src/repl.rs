@@ -408,6 +408,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     day: WorldTime { day: 0.0 },
                     echo: false,
                     wild_agents: true,
+                    eyes: hornvale_vessel::eyes::Eyes::Own,
                 };
                 match hornvale_vessel::Session::start(world, &opts) {
                     Err(e) => writeln!(output, "error: {e}")?,

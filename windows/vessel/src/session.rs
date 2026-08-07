@@ -191,6 +191,8 @@ verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser);
                    indoors, the floor plan of the building you are in
+  eyes [who]       whose eyes you see colour through (a species, 'own',
+                   'standard', or 'off'); bare, it says what yours drop
   go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw);
                    the bare direction works on its own too
   dive             descend a layer of the water column; 'surface' comes back
@@ -236,6 +238,9 @@ pub struct Session<'w> {
     /// A clone of the world's registry, extended with `AGENT_AT` (registered
     /// per-session, never at genesis — spec §3).
     registry: ConceptRegistry,
+    /// Whose eyes the possession's chart is coloured through (The Beholding,
+    /// Task 4), carried from `PossessOpts::eyes`.
+    eyes: crate::eyes::Eyes,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
     /// The world's terrain, sculpted once at `start` (The Shuttle), so every
@@ -563,6 +568,7 @@ impl<'w> Session<'w> {
             projection: IdentityProjection,
             ledger,
             registry,
+            eyes: opts.eyes.clone(),
             npcs,
             terrain,
             climate,
@@ -1049,6 +1055,9 @@ impl<'w> Session<'w> {
             &self.ledger,
             self.day,
             zoom_out,
+            &self.agent,
+            &self.eyes,
+            self.calendar.as_ref(),
         )
     }
 
@@ -1091,6 +1100,11 @@ impl<'w> Session<'w> {
             "map" if self.inside.is_some() && rest.is_empty() => self.out(self.plan_here()),
             "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
             "map" => self.map(rest),
+            // Bare `eyes` reports whose eyes the chart is coloured through and
+            // what their projection drops; `eyes <name>` switches them (The
+            // Beholding, Task 5).
+            "eyes" if rest.is_empty() => Turn::Out(self.eyes_report()),
+            "eyes" => self.set_eyes(rest),
             // `go` is band-aware for the same reason `look` and `map` are, and
             // this arm is the reversal The Blocking owes The Lintel: indoors a
             // compass bearing means one CELL, not one locale. §1b.6's law is
@@ -2614,9 +2628,82 @@ impl<'w> Session<'w> {
             // footer is omitted, never fabricated from the wrong depth.
             Err(_) => Vec::new(),
         };
-        Turn::Out(hornvale_scene::render_surrounds_ascii(
-            &scene, "terrain", &ways,
-        ))
+        // The colour lens is the default draw — Task 4's headline claim is
+        // that a possession sees as its own kind does, so the chart must
+        // already show that rather than requiring an opt-in. `Eyes::Off`
+        // falls all the way back to the plain terrain lens: no observer, no
+        // tint, no escape sequence — the same posture a screen reader takes.
+        let lens = if self.eyes == crate::eyes::Eyes::Off {
+            "terrain"
+        } else {
+            "colour"
+        };
+        Turn::Out(hornvale_scene::render_surrounds_ascii(&scene, lens, &ways))
+    }
+
+    /// Bare `eyes`: whose eyes the chart is coloured through, the arity of
+    /// what they see, and what the projection drops. `Eyes::Off` reports the
+    /// decline honestly rather than describing an observer that is not in
+    /// use.
+    /// type-audit: bare-ok(prose: return)
+    fn eyes_report(&self) -> String {
+        let Some((observer, name)) = crate::eyes::resolve(&self.eyes, &self.agent) else {
+            return "Your eyes are off: the chart draws no colour, and carries no sight \
+                    declaration."
+                .to_string();
+        };
+        let channels = observer.channels();
+        let chromatic = observer.chromatic_channels();
+        let preserves = observer
+            .projection()
+            .map(hornvale_kernel::color::Projection::preserves)
+            .unwrap_or("no projection");
+        // `ocular_reason` wants the PERCEPTION VECTOR the observer was built
+        // from, which `resolve` does not carry back out (it hands back the
+        // built `Observer`) — so it is looked up a second time, by the same
+        // name `resolve` used, from the same registry `observer_named`
+        // reads. "standard" has no row (it is the kernel's own observer, not
+        // a species'), so it gets its own sentence rather than a lookup that
+        // would always miss.
+        let reason = hornvale_species::perception_registry()
+            .get_by_label(&name)
+            .map(hornvale_worldgen::observer::ocular_reason)
+            .unwrap_or_else(|| {
+                "the standard observer is an authored full trichromat: every hue exemplar \
+                 stays distinct, unmerged"
+                    .to_string()
+            });
+        format!(
+            "You see through {name}'s eyes: {channels} channels ({chromatic} chromatic). \
+             {reason}. The projection preserves {preserves}."
+        )
+    }
+
+    /// `eyes own` / `eyes off` / `eyes <name>`: switch whose eyes the chart
+    /// is coloured through. An unknown name is refused loudly, naming what
+    /// was asked for and listing the roster — generation never guesses (spec
+    /// §4.6), so this never silently falls back to a default eye.
+    fn set_eyes(&mut self, rest: &str) -> Turn {
+        match rest {
+            "own" => {
+                self.eyes = crate::eyes::Eyes::Own;
+                Turn::Out(self.eyes_report())
+            }
+            "off" => {
+                self.eyes = crate::eyes::Eyes::Off;
+                Turn::Out(self.eyes_report())
+            }
+            name => {
+                if hornvale_worldgen::observer::observer_named(name).is_none() {
+                    return Turn::Out(format!(
+                        "There is no observer named '{name}'. Known: {}.",
+                        hornvale_worldgen::observer::observer_roster().join(", ")
+                    ));
+                }
+                self.eyes = crate::eyes::Eyes::Named(name.to_string());
+                Turn::Out(self.eyes_report())
+            }
+        }
     }
 
     /// Every noun this lens has surfaced, at either grain: the prose's own
@@ -4066,13 +4153,23 @@ mod tests {
                 "{line:?} indoors must refuse rather than ignore the argument"
             );
         }
-        // Out of doors both paths are untouched.
+        // Out of doors both paths are untouched. The default eyes are `Own`
+        // (colour on), so the walk-band chart now draws the colour lens
+        // (The Beholding, Task 5) — this assertion used to read "terrain"
+        // and was wrong for the default path once that shipped.
         session.handle("out");
         let chart = match session.handle("map") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("map must not release"),
         };
-        assert!(chart.contains("[lens: terrain"), "{chart}");
+        assert!(chart.contains("[lens: colour"), "{chart}");
+        // `eyes off` falls all the way back to the plain terrain lens.
+        session.handle("eyes off");
+        let bare = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(bare.contains("[lens: terrain"), "{bare}");
     }
 
     #[test]

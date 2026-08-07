@@ -89,6 +89,7 @@ pub mod disposition;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
+pub mod observer;
 pub mod render;
 pub mod schedule;
 pub mod settlement_pins;

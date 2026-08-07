@@ -50,6 +50,7 @@ fn opts() -> PossessOpts {
         day: hornvale_kernel::WorldTime { day: 0.0 },
         echo: false,
         wild_agents: true,
+        eyes: hornvale_vessel::eyes::Eyes::Own,
     }
 }
 

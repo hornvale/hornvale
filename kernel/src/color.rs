@@ -271,24 +271,124 @@ impl Signal {
     }
 }
 
+/// What a channel contributes to sight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChannelRole {
+    /// Carries hue. A projection may read it; chromaticity counts it.
+    Chromatic,
+    /// Carries brightness only. A real eye has such channels (rods), and
+    /// their signal cannot be told from intensity — so no projection reads
+    /// one and no chromaticity metric counts one.
+    Achromatic,
+}
+
+/// A named way of putting a signal on a three-channel screen, and what it
+/// preserves.
+///
+/// Named after the discipline that already solved this problem: every map
+/// projection is a lie, and cartography's answer is not to find a true one —
+/// it is to name the projection on the map and say which invariant it
+/// preserves.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Projection {
+    /// The registered name, e.g. "native" or "yellow-blue".
+    name: &'static str,
+    /// What survives the projection. The caption's load-bearing half.
+    preserves: &'static str,
+    /// Which channel drives R, G, B. Every index must name a `Chromatic`
+    /// channel on the observer that carries this projection — that check
+    /// happens in [`Observer::with_roles`], not here, because roles live on
+    /// the observer and a `Projection` is built before one is attached.
+    /// type-audit: bare-ok(index)
+    rgb: [usize; 3],
+    /// Per-channel normalizer: the response a unit-reflectance surface
+    /// under a unit illuminant gives on that channel, indexed by *output
+    /// slot* (not by channel). **Carried, not derived** — this is a
+    /// byte-identity requirement, not a style choice: the shipped constants
+    /// for [`standard_observer`] are the *rounded* channel sums, so
+    /// deriving them live from the curves would move every colour the
+    /// standard observer has ever emitted.
+    /// type-audit: bare-ok(ratio)
+    norms: [f64; 3],
+}
+
+impl Projection {
+    /// Validating constructor: every normalizer must be finite and
+    /// non-zero (a zero normalizer would divide every signal by zero).
+    ///
+    /// This cannot validate `rgb` against channel roles — roles live on the
+    /// [`Observer`], not the projection, so a `Projection` can be built
+    /// before any observer exists. That check belongs to and happens in
+    /// [`Observer::with_roles`].
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: preserves), bare-ok(index: rgb), bare-ok(ratio: norms)
+    pub fn new(
+        name: &'static str,
+        preserves: &'static str,
+        rgb: [usize; 3],
+        norms: [f64; 3],
+    ) -> Result<Self, UnitError> {
+        for n in norms {
+            if !n.is_finite() || n == 0.0 {
+                return Err(UnitError {
+                    unit: "projection",
+                    value: n,
+                    reason: "every normalizer must be finite and non-zero",
+                });
+            }
+        }
+        Ok(Self {
+            name,
+            preserves,
+            rgb,
+            norms,
+        })
+    }
+
+    /// The registered name.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// What this projection preserves.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn preserves(&self) -> &'static str {
+        self.preserves
+    }
+
+    /// The per-output-slot normalizers, exactly as carried — bit-exact, not
+    /// re-derived. This is what lets a caller (or a test) tell a *carried*
+    /// constant from a *derived* one before either has been rounded through
+    /// `to_srgb`'s `u8` output, which can absorb a difference this
+    /// accessor cannot.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn norms(&self) -> &[f64; 3] {
+        &self.norms
+    }
+}
+
 /// An eye: one sensitivity curve per channel. Humans have three photopic
 /// channels plus rods; other creatures have other counts, which is the
 /// whole reason the channel set is a `Vec` and not an array.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Observer {
     channels: Vec<Spectrum>,
-    /// Whether this observer's signal has a real (non-false-colour) sRGB
-    /// image. True only for [`standard_observer`].
-    srgb_native: bool,
+    /// What each channel contributes to sight, one per channel.
+    roles: Vec<ChannelRole>,
+    /// This observer's declared way of putting a signal on a screen, if it
+    /// has one. `None` for anything built with [`Observer::new`].
+    projection: Option<Projection>,
 }
 
 impl Observer {
     /// Validating constructor: at least one channel.
     ///
-    /// An observer built this way is **not** sRGB-native: [`to_srgb`]
+    /// An observer built this way has **no projection**: [`to_srgb`]
     /// returns `None`, because a signal from an arbitrary channel set has
     /// no truthful three-channel image and any mapping would be a
-    /// false-colour choice the caller must declare (RENDER-9).
+    /// false-colour choice the caller must declare (RENDER-9). Every
+    /// channel is [`ChannelRole::Chromatic`] — use [`Observer::with_roles`]
+    /// to declare an achromatic channel or attach a projection.
     ///
     /// [`to_srgb`]: Observer::to_srgb
     pub fn new(channels: Vec<Spectrum>) -> Result<Self, UnitError> {
@@ -299,9 +399,57 @@ impl Observer {
                 reason: "an observer needs at least one channel",
             });
         }
+        let roles = vec![ChannelRole::Chromatic; channels.len()];
         Ok(Self {
             channels,
-            srgb_native: false,
+            roles,
+            projection: None,
+        })
+    }
+
+    /// Validating constructor: one role per channel, at least one
+    /// `Chromatic` channel, and — when a projection is present — every
+    /// `rgb` index in range and naming a `Chromatic` channel.
+    ///
+    /// This is the constructor that lets an eye declare a rod (an
+    /// [`ChannelRole::Achromatic`] channel) and, optionally, a real sRGB
+    /// image via a [`Projection`]. Without the index check, a projection
+    /// could silently read an achromatic channel and show brightness as a
+    /// hue.
+    pub fn with_roles(
+        channels: Vec<Spectrum>,
+        roles: Vec<ChannelRole>,
+        projection: Option<Projection>,
+    ) -> Result<Self, UnitError> {
+        if channels.is_empty() || channels.len() != roles.len() {
+            return Err(UnitError {
+                unit: "observer",
+                value: roles.len() as f64,
+                reason: "an observer needs one role per channel and at least one channel",
+            });
+        }
+        if !roles.contains(&ChannelRole::Chromatic) {
+            return Err(UnitError {
+                unit: "observer",
+                value: roles.len() as f64,
+                reason: "an observer needs at least one chromatic channel",
+            });
+        }
+        if let Some(p) = &projection {
+            for idx in p.rgb {
+                if !matches!(roles.get(idx), Some(ChannelRole::Chromatic)) {
+                    return Err(UnitError {
+                        unit: "observer",
+                        value: idx as f64,
+                        reason: "a projection may only name an in-range chromatic channel",
+                    });
+                }
+            }
+        }
+        Ok(Self {
+            channels,
+            roles,
+            projection,
         })
     }
 
@@ -309,6 +457,26 @@ impl Observer {
     /// type-audit: bare-ok(count: return)
     pub fn channels(&self) -> usize {
         self.channels.len()
+    }
+
+    /// The role of each channel, in channel order.
+    pub fn roles(&self) -> &[ChannelRole] {
+        &self.roles
+    }
+
+    /// This observer's declared projection, if it has one.
+    pub fn projection(&self) -> Option<&Projection> {
+        self.projection.as_ref()
+    }
+
+    /// How many channels are [`ChannelRole::Chromatic`] — the length of
+    /// every [`Observer::chromaticity`] result.
+    /// type-audit: bare-ok(count: return)
+    pub fn chromatic_channels(&self) -> usize {
+        self.roles
+            .iter()
+            .filter(|r| **r == ChannelRole::Chromatic)
+            .count()
     }
 
     /// The three-way product: `signal[c] = Σ_b r[b] · i[b] · s[c][b]`.
@@ -333,32 +501,74 @@ impl Observer {
         Signal(out)
     }
 
-    /// Project a signal to display bytes, or `None` when this observer has
-    /// no truthful sRGB image.
+    /// Each `Chromatic` channel's share of the chromatic total — the
+    /// discriminability substrate. An `Achromatic` channel (a rod) is
+    /// excluded from both the numerator and the denominator, so a louder
+    /// rod can never move a chromaticity: before roles existed, the rod
+    /// carried hue information and every observer with one measured as a
+    /// full trichromat regardless of its photopic channel count.
     ///
-    /// Only [`standard_observer`] is sRGB-native. For anything else the
-    /// answer is `None` on purpose: the caller must choose and *caption* a
+    /// A zero chromatic total (e.g. total darkness) returns an all-zero
+    /// vector rather than propagating `NaN`.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn chromaticity(&self, signal: &Signal) -> Vec<f64> {
+        let s = signal.get();
+        let mut total = 0.0;
+        for (value, role) in s.iter().zip(&self.roles) {
+            if *role == ChannelRole::Chromatic {
+                total += *value;
+            }
+        }
+        let mut out = Vec::with_capacity(self.chromatic_channels());
+        for (value, role) in s.iter().zip(&self.roles) {
+            if *role == ChannelRole::Chromatic {
+                out.push(if total == 0.0 { 0.0 } else { value / total });
+            }
+        }
+        out
+    }
+
+    /// Squared Euclidean distance between two signals' chromaticities — the
+    /// discriminability metric. Squared for the reason given on
+    /// [`Signal::distance_to`].
+    ///
+    /// Signals of differing length compare as [`f64::INFINITY`], the same
+    /// posture [`Signal::distance_to`] takes: they come from different
+    /// observers and are not comparable at all.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn chromatic_distance(&self, a: &Signal, b: &Signal) -> f64 {
+        if a.get().len() != self.channels.len() || b.get().len() != self.channels.len() {
+            return f64::INFINITY;
+        }
+        let ca = self.chromaticity(a);
+        let cb = self.chromaticity(b);
+        let mut sum = 0.0;
+        for (x, y) in ca.iter().zip(&cb) {
+            let d = x - y;
+            sum += d * d;
+        }
+        sum
+    }
+
+    /// Project a signal to display bytes, or `None` when this observer has
+    /// no declared [`Projection`].
+    ///
+    /// Only observers carrying a projection ([`standard_observer`], or
+    /// anything built via [`Observer::with_roles`] with one) have a
+    /// truthful three-channel image. For anything else the answer is
+    /// `None` on purpose: the caller must choose and *caption* a
     /// false-colour mapping rather than have one invented here, because the
     /// caption — not the picture — carries the honesty (RENDER-9).
     /// type-audit: bare-ok(artifact: return)
     pub fn to_srgb(&self, signal: &Signal) -> Option<[u8; 3]> {
-        if !self.srgb_native || signal.get().len() != 4 {
+        let p = self.projection.as_ref()?;
+        if signal.get().len() != self.channels.len() {
             return None;
         }
-        // Channel order is [short, medium, long, scotopic]; the scotopic
-        // channel carries no hue and is not projected. The photopic
-        // channels are normalized by the response a unit-reflectance
-        // surface under a unit illuminant would produce, so a white surface
-        // under flat light lands at white rather than at an arbitrary
-        // scale.
         let s = signal.get();
         let mut out = [0u8; 3];
-        // Long → red, medium → green, short → blue.
-        for (slot, (raw, norm)) in
-            out.iter_mut()
-                .zip([(s[2], LONG_NORM), (s[1], MEDIUM_NORM), (s[0], SHORT_NORM)])
-        {
-            let linear = (raw / norm).clamp(0.0, 1.0);
+        for (slot, (idx, norm)) in out.iter_mut().zip(p.rgb.iter().zip(p.norms.iter())) {
+            let linear = (s[*idx] / norm).clamp(0.0, 1.0);
             *slot = encode_srgb_byte(linear);
         }
         Some(out)
@@ -405,10 +615,29 @@ pub fn standard_observer() -> Observer {
     let medium = Spectrum([0.00, 0.01, 0.10, 0.45, 0.90, 1.00, 0.72, 0.28, 0.05, 0.00]);
     let long = Spectrum([0.00, 0.01, 0.06, 0.25, 0.60, 0.92, 1.00, 0.75, 0.30, 0.06]);
     let scotopic = Spectrum([0.00, 0.15, 0.55, 0.95, 1.00, 0.68, 0.25, 0.05, 0.00, 0.00]);
-    Observer {
-        channels: vec![short, medium, long, scotopic],
-        srgb_native: true,
-    }
+    // rgb indexes CHANNELS (long=2 -> red, medium=1 -> green, short=0 ->
+    // blue); norms is indexed by OUTPUT SLOT (slot 0 = red = LONG_NORM).
+    // These two orderings are easy to cross, and doing so is the most
+    // likely bug in a change here — the_standard_observers_bytes_have_not_moved
+    // is what catches it.
+    let projection = Projection::new(
+        "native",
+        "the observer's own channels, carried straight to the screen",
+        [2, 1, 0],
+        [LONG_NORM, MEDIUM_NORM, SHORT_NORM],
+    )
+    .expect("the native projection's norms are nonzero finite constants");
+    Observer::with_roles(
+        vec![short, medium, long, scotopic],
+        vec![
+            ChannelRole::Chromatic,
+            ChannelRole::Chromatic,
+            ChannelRole::Chromatic,
+            ChannelRole::Achromatic,
+        ],
+        Some(projection),
+    )
+    .expect("the standard observer's own construction is always valid")
 }
 
 #[cfg(test)]
@@ -668,13 +897,13 @@ mod tests {
 
     #[test]
     fn a_four_channel_synthetic_observer_still_has_no_srgb_image() {
-        // Isolates the `srgb_native` half of `to_srgb`'s guard. Its sibling
-        // test uses a FIVE-channel observer, so the `len() != 4` check
-        // answers there and the flag is never exercised — the assertion
-        // passes by the wrong path, and stays green even if every observer
-        // is marked sRGB-native. (Verified by mutation: flipping
-        // `Observer::new`'s `srgb_native` to `true` reddens this test and
-        // nothing else.)
+        // Isolates the *no-projection* half of `to_srgb`'s guard. Its
+        // sibling test uses a FIVE-channel observer, so the
+        // `len() != self.channels.len()` check answers there and the
+        // projection is never exercised — the assertion passes by the wrong
+        // path, and stays green even if every observer carries a
+        // projection. (Verified by mutation: giving `Observer::new` a
+        // native projection reddens this test and nothing else.)
         //
         // Four channels is not a contrived count. It is exactly what
         // campaign 2 will build — a deuteranope is the standard observer
@@ -721,12 +950,16 @@ mod tests {
             .iter()
             .map(|c| c.get().iter().sum::<f64>())
             .collect();
-        // Rounded to two places: the constants are the normalizers used by
-        // to_srgb, and a curve edit that does not update them would make a
-        // white surface stop projecting to white.
-        assert_eq!((sums[0] * 100.0).round() / 100.0, SHORT_NORM);
-        assert_eq!((sums[1] * 100.0).round() / 100.0, MEDIUM_NORM);
-        assert_eq!((sums[2] * 100.0).round() / 100.0, LONG_NORM);
+        let p = obs.projection().expect("the standard observer projects");
+        // Rounded to two places: the projection's norms are what to_srgb
+        // uses, and a curve edit that does not update them would make a
+        // white surface stop projecting to white. `sums` is indexed by
+        // CHANNEL (0=short, 1=medium, 2=long); `p.norms` is indexed by
+        // OUTPUT SLOT (0=red=long, 1=green=medium, 2=blue=short) — the two
+        // orderings are deliberately crossed here.
+        assert_eq!((sums[0] * 100.0).round() / 100.0, p.norms[2]);
+        assert_eq!((sums[1] * 100.0).round() / 100.0, p.norms[1]);
+        assert_eq!((sums[2] * 100.0).round() / 100.0, p.norms[0]);
     }
 
     #[test]
@@ -737,5 +970,108 @@ mod tests {
         for b in 1..BANDS {
             assert_eq!(BAND_CENTERS_NM[b] - BAND_CENTERS_NM[b - 1], 40.0);
         }
+    }
+
+    #[test]
+    fn a_projection_may_not_name_an_achromatic_channel() {
+        // The whole point of roles: a rod carries no hue, so no projection may
+        // read one. Without this, `observer_for` could silently build an eye
+        // that shows brightness as blue.
+        let curves = vec![
+            Spectrum::new([0.5; BANDS]).unwrap(),
+            Spectrum::new([0.5; BANDS]).unwrap(),
+            Spectrum::new([0.5; BANDS]).unwrap(),
+        ];
+        let roles = vec![
+            ChannelRole::Chromatic,
+            ChannelRole::Chromatic,
+            ChannelRole::Achromatic,
+        ];
+        // Index 2 is the achromatic channel.
+        let p = Projection::new("bad", "nothing", [2, 1, 0], [1.0, 1.0, 1.0]).unwrap();
+        let err = Observer::with_roles(curves, roles, Some(p)).unwrap_err();
+        assert_eq!(err.unit, "observer");
+    }
+
+    #[test]
+    fn a_projection_may_not_index_past_the_channel_set() {
+        let curves = vec![Spectrum::new([0.5; BANDS]).unwrap()];
+        let roles = vec![ChannelRole::Chromatic];
+        let p = Projection::new("bad", "nothing", [0, 0, 7], [1.0, 1.0, 1.0]).unwrap();
+        assert!(Observer::with_roles(curves, roles, Some(p)).is_err());
+    }
+
+    #[test]
+    fn an_observer_needs_a_role_per_channel_and_one_chromatic_channel() {
+        let one = || Spectrum::new([0.5; BANDS]).unwrap();
+        // Mismatched lengths.
+        assert!(
+            Observer::with_roles(vec![one(), one()], vec![ChannelRole::Chromatic], None).is_err()
+        );
+        // An eye that carries no hue at all is not an eye this model can use.
+        assert!(Observer::with_roles(vec![one()], vec![ChannelRole::Achromatic], None).is_err());
+    }
+
+    #[test]
+    fn chromaticity_ignores_the_achromatic_channel() {
+        // THE POINT OF THE WHOLE TASK, and the spec's M3. Two observers whose
+        // chromatic channels are identical and whose achromatic channel differs
+        // wildly must report the SAME chromaticity. Before roles existed, the
+        // rod carried hue information and every dichromat measured as a
+        // trichromat.
+        let short = Spectrum::new([1.0, 1.0, 1.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).unwrap();
+        let long = Spectrum::new([0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0, 0.0, 0.0]).unwrap();
+        let quiet_rod = Spectrum::new([0.0; BANDS]).unwrap();
+        let loud_rod = Spectrum::new([1.0; BANDS]).unwrap();
+        let roles = vec![
+            ChannelRole::Chromatic,
+            ChannelRole::Chromatic,
+            ChannelRole::Achromatic,
+        ];
+        let a = Observer::with_roles(vec![short, long, quiet_rod], roles.clone(), None).unwrap();
+        let b = Observer::with_roles(vec![short, long, loud_rod], roles, None).unwrap();
+        let r = Reflectance::new([0.4; BANDS]).unwrap();
+        let light = Illuminant::new([1.0; BANDS]).unwrap();
+        let ca = a.chromaticity(&a.sense(&r, &light));
+        let cb = b.chromaticity(&b.sense(&r, &light));
+        assert_eq!(
+            ca.len(),
+            2,
+            "chromaticity has one entry per CHROMATIC channel"
+        );
+        assert_eq!(ca, cb, "a louder rod must not move the chromaticity");
+    }
+
+    #[test]
+    fn the_standard_observers_bytes_have_not_moved() {
+        // Two assertions below guard two DIFFERENT things; neither
+        // subsumes the other.
+        //
+        // The `norms()` assertion is bit-exact and catches CARRIED-vs-
+        // DERIVED: `Projection` carries its normalizers rather than
+        // deriving them, because the shipped constants are the ROUNDED
+        // channel sums — deriving live would move every colour the
+        // standard observer has ever emitted. A live-derived version
+        // differs from the carried constants by about 1 ULP on this
+        // model's curves, and `to_srgb`'s `u8` rounding at this mid-grey
+        // fixture ABSORBS that ULP — so only a comparison taken *before*
+        // quantization to a byte can catch a derive-instead-of-carry
+        // regression. (Confirmed by mutation below.)
+        //
+        // The `to_srgb` byte assertion is a *different* pin: the rgb/norms
+        // crossed-ordering guard (channel index vs. output slot). The
+        // norms assertion alone cannot see that bug, because it never
+        // touches `rgb`.
+        let obs = standard_observer();
+        let light = Illuminant::new([1.0; BANDS]).unwrap();
+        let mid = obs.sense(&Reflectance::new([0.5; BANDS]).unwrap(), &light);
+        let p = obs.projection().expect("the standard observer projects");
+        assert_eq!(p.name(), "native");
+        assert_eq!(
+            p.norms(),
+            &[LONG_NORM, MEDIUM_NORM, SHORT_NORM],
+            "norms must be the CARRIED constants, not a live-derived channel sum"
+        );
+        assert_eq!(obs.to_srgb(&mid).unwrap(), [188, 188, 188]);
     }
 }

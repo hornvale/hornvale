@@ -143,8 +143,46 @@ pub struct SurroundsCell {
     pub marks: Vec<Mark>,
 }
 
+/// The eye a coloured chart was seen through, and what its projection to
+/// sRGB preserves. Declared rather than derived because a document alone
+/// cannot say which species looked, and a caller must be able to say so —
+/// but `channels`, `chromatic`, `projection`, and `preserves` are
+/// **overwritten by the builder** from the [`hornvale_kernel::color::Observer`]
+/// actually used to colour the chart, discarding whatever the caller put
+/// there. That overwrite is the whole reason this block can be trusted: a
+/// caller can name an eye (`observer`) and a sun angle (`sun_altitude_deg`)
+/// — the two things a bare `Observer` cannot supply — but it cannot make
+/// the document claim an arity or a projection the eye did not actually
+/// have.
+/// type-audit: bare-ok(identifier-text: observer), bare-ok(count: channels), bare-ok(count: chromatic), bare-ok(identifier-text: projection), bare-ok(prose: preserves), bare-ok(diagnostic-value: sun_altitude_deg)
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Sight {
+    /// The species (or other named eye) the caller asserts this chart was
+    /// coloured for — not knowable from an `Observer` alone, so it survives
+    /// the builder's overwrite untouched.
+    pub observer: String,
+    /// How many channels the observer actually senses with.
+    pub channels: u32,
+    /// How many of those channels are chromatic (see
+    /// [`hornvale_kernel::color::ChannelRole`]).
+    pub chromatic: u32,
+    /// The observer's projection name (`Projection::name`), or `"none"`
+    /// when the observer carries no projection to sRGB.
+    pub projection: String,
+    /// What that projection preserves (`Projection::preserves`).
+    pub preserves: String,
+    /// The sun's elevation above the horizon, degrees — the caller's own
+    /// datum; the builder does not know or check it.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub sun_altitude_deg: f64,
+}
+
 /// One `scene/surrounds/v2` document. Field order is the JSON key order and
-/// is contract — never reorder.
+/// is contract — never reorder. `sight` is the one exception to "never
+/// reorder" in letter only: it was appended after `legend` rather than
+/// inserted, so every document built before the colour declaration existed
+/// is still byte-identical, and `#[serde(skip_serializing_if)]` means an
+/// uncoloured document emits no `sight` key at all.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(diagnostic-value: day), bare-ok(count: radius), bare-ok(count: depth), bare-ok(identifier-text: orientation), bare-ok(identifier-text: biome_legend), bare-ok(identifier-text: water_legend), bare-ok(identifier-text: relief_legend), bare-ok(diagnostic-value: sea_level_m)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SurroundsScene {
@@ -181,6 +219,13 @@ pub struct SurroundsScene {
     pub cells: Vec<SurroundsCell>,
     /// The chart's noun catalog, ascending by `noun`.
     pub legend: Vec<LegendEntry>,
+    /// The eye this chart was coloured for, and what its projection
+    /// preserves — absent (and the key entirely omitted) unless this scene
+    /// was built through [`surrounds_scene_colored_in`]. Appended after
+    /// `legend` rather than inserted, so an uncoloured document's bytes are
+    /// unchanged by this field's existence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sight: Option<Sight>,
 }
 
 /// Build the `scene/surrounds/v2` document for `room` at `radius` rings,
@@ -314,6 +359,7 @@ pub fn surrounds_scene_in(
         sea_level_m: hornvale_kernel::quantize(ctx.terrain().globe().sea_level.get()),
         cells,
         legend,
+        sight: None,
     })
 }
 
@@ -346,7 +392,7 @@ pub fn surrounds_scene(
 }
 
 /// Build a `scene/surrounds/v2` document with a colour layer, as seen by
-/// `observer` under the world star's daylight.
+/// `observer` under the caller-supplied `light`.
 ///
 /// A separate entry point rather than a parameter on
 /// [`surrounds_scene_in`]: every committed artifact goes through the
@@ -356,13 +402,25 @@ pub fn surrounds_scene(
 /// mapping for a non-standard observer is a false-colour choice the caller
 /// must declare (RENDER-9), not one this builder may invent.
 ///
-/// The light is the star's daylight spectrum, not its light at the
-/// observer's own sun elevation: `scene/surrounds/v2` carries no sun angle,
-/// and inventing one here would make the chart's colours disagree with a
-/// prose renderer that knows the real hour. A caller with an elevation in
-/// hand should say so — `hornvale_astronomy::illuminant::at_elevation` is
-/// the seam, and the day it belongs on is a `scene/surrounds/v3` question.
+/// This builder no longer computes its own light: it used to derive the
+/// world star's daylight internally, which meant a caller could never
+/// colour a chart under any other illuminant — dusk, an interior lantern, a
+/// non-solar sky — without a second entry point. `light` is now the
+/// caller's, and the returned document's `sight` block is how the choice is
+/// disclosed rather than left implicit: `channels`, `chromatic`,
+/// `projection`, and `preserves` are read from `observer` itself and
+/// overwrite whatever the caller's `sight` argument claimed, so the
+/// declaration cannot lie about the eye that was actually used. Only
+/// `observer` (a species name, unknowable from an `Observer`) and
+/// `sun_altitude_deg` (the caller's own datum) survive untouched — see
+/// [`Sight`].
+///
+/// Eight parameters: the `world`/`ctx`/`room`/`radius`/`at` quintet is
+/// shared with every other surrounds builder, and `observer`/`light`/
+/// `sight` are the colour layer's own three — splitting either group into a
+/// struct would just move the field count, not reduce it.
 /// type-audit: bare-ok(count: radius)
+#[allow(clippy::too_many_arguments)]
 pub fn surrounds_scene_colored_in(
     world: &World,
     ctx: &LocaleContext,
@@ -370,12 +428,10 @@ pub fn surrounds_scene_colored_in(
     radius: u32,
     at: WorldTime,
     observer: &hornvale_kernel::color::Observer,
+    light: &hornvale_kernel::color::Illuminant,
+    sight: Sight,
 ) -> Result<SurroundsScene, SceneError> {
     let mut scene = surrounds_scene_in(world, ctx, room, radius, at)?;
-    let star = hornvale_astronomy::star::generate_star(
-        world.seed.derive(hornvale_astronomy::streams::ROOT),
-    );
-    let light = hornvale_astronomy::illuminant::daylight(&star);
     for cell in scene.cells.iter_mut() {
         let addr = hornvale_kernel::RoomId(cell.room)
             .unpack()
@@ -383,8 +439,21 @@ pub fn surrounds_scene_colored_in(
         let reflectance = ctx
             .reflectance_at(&addr)
             .map_err(|e| SceneError::Build(e.to_string()))?;
-        cell.color = observer.to_srgb(&observer.sense(&reflectance, &light));
+        cell.color = observer.to_srgb(&observer.sense(&reflectance, light));
     }
+    scene.sight = Some(Sight {
+        channels: observer.channels() as u32,
+        chromatic: observer.chromatic_channels() as u32,
+        projection: observer
+            .projection()
+            .map_or("none", |p| p.name())
+            .to_string(),
+        preserves: observer
+            .projection()
+            .map_or("nothing (no projection)", |p| p.preserves())
+            .to_string(),
+        ..sight
+    });
     Ok(scene)
 }
 
@@ -653,8 +722,50 @@ mod tests {
         assert_eq!(ids, sorted, "cell order is contract: ascending room id");
     }
 
+    /// The world star's daylight, the same illuminant the CLI's `colour`
+    /// lens builds now that `surrounds_scene_colored_in` no longer computes
+    /// it internally.
+    fn daylight_for(w: &hornvale_kernel::World) -> hornvale_kernel::color::Illuminant {
+        let star = hornvale_astronomy::star::generate_star(
+            w.seed.derive(hornvale_astronomy::streams::ROOT),
+        );
+        hornvale_astronomy::illuminant::daylight(&star)
+    }
+
+    /// A `Sight` whose four builder-owned fields are deliberately wrong
+    /// placeholders — every caller of this helper is exercising a path that
+    /// either overwrites them or doesn't care what they say, and a
+    /// plausible-looking placeholder would hide a builder that forgot to
+    /// overwrite.
+    fn sight_of(observer: &str, sun_altitude_deg: f64) -> Sight {
+        Sight {
+            observer: observer.to_string(),
+            channels: 0,
+            chromatic: 0,
+            projection: String::new(),
+            preserves: String::new(),
+            sun_altitude_deg,
+        }
+    }
+
+    /// A world, a `LocaleContext` built over it, and the flagship
+    /// observer's room — the shared fixture the sight-declaration tests
+    /// build on, reusing the module's existing `world()`/`observer()`
+    /// helpers rather than adding a second world-builder.
+    fn fixture_world() -> (
+        hornvale_kernel::World,
+        hornvale_locale::LocaleContext,
+        RoomAddr,
+    ) {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let room = observer(&w);
+        (w, ctx, room)
+    }
+
     fn colored(w: &hornvale_kernel::World, radius: u32) -> SurroundsScene {
         let ctx = hornvale_locale::LocaleContext::build(w).unwrap();
+        let light = daylight_for(w);
         surrounds_scene_colored_in(
             w,
             &ctx,
@@ -662,6 +773,8 @@ mod tests {
             radius,
             WorldTime { day: 0.0 },
             &hornvale_kernel::color::standard_observer(),
+            &light,
+            sight_of("standard", 0.0),
         )
         .unwrap()
     }
@@ -743,6 +856,7 @@ mod tests {
             Spectrum::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap(),
         ])
         .unwrap();
+        let light = daylight_for(&w);
         let s = surrounds_scene_colored_in(
             &w,
             &ctx,
@@ -750,6 +864,8 @@ mod tests {
             2,
             WorldTime { day: 0.0 },
             &dichromat,
+            &light,
+            sight_of("dichromat", 0.0),
         )
         .unwrap();
         assert!(!s.cells.is_empty());
@@ -764,7 +880,9 @@ mod tests {
     /// Everything else about a coloured chart must be the coloured chart's
     /// only difference: the colour layer is additive, and if it perturbed a
     /// biome index or a mark the committed artifacts would be at risk the
-    /// moment anything switched builders.
+    /// moment anything switched builders. `sight` is stripped alongside
+    /// `color` — both are new, additive-only fields the coloured builder
+    /// sets and the uncoloured one never does.
     #[test]
     fn coloring_changes_nothing_but_the_color() {
         let w = world();
@@ -773,6 +891,7 @@ mod tests {
         for cell in stripped.cells.iter_mut() {
             cell.color = None;
         }
+        stripped.sight = None;
         assert_eq!(plain, stripped);
     }
 
@@ -802,6 +921,7 @@ mod tests {
         let (lat, lon) = place_latlon(&w, v.id).expect("the flagship has coordinates");
         let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
 
+        let light = daylight_for(&w);
         let distinct = |depth: u32, radius: u32| -> (usize, usize) {
             let s = surrounds_scene_colored_in(
                 &w,
@@ -810,6 +930,8 @@ mod tests {
                 radius,
                 WorldTime { day: 0.0 },
                 &hornvale_kernel::color::standard_observer(),
+                &light,
+                sight_of("standard", 0.0),
             )
             .unwrap();
             let colors: BTreeSet<Option<[u8; 3]>> = s.cells.iter().map(|c| c.color).collect();
@@ -1017,5 +1139,107 @@ mod tests {
             // print it so a future reader can see the spread across seeds.
             println!("seed {seed}: sea level {:.1} m", sea.get());
         }
+    }
+
+    #[test]
+    fn an_uncoloured_document_is_byte_identical_to_one_built_before_sight_existed() {
+        // `sight` and `color` are both skipped when absent, so the uncoloured
+        // path must emit not one extra byte. This is what protects the three
+        // committed gallery charts and the gallery scene JSON.
+        let (w, ctx, room) = fixture_world();
+        let s = surrounds_scene_in(&w, &ctx, &room, 2, WorldTime { day: 0.0 }).unwrap();
+        let json = crate::surrounds_json(&s);
+        assert!(
+            !json.contains("\"sight\""),
+            "uncoloured documents carry no sight block"
+        );
+        assert!(
+            !json.contains("\"color\""),
+            "uncoloured documents carry no colour"
+        );
+    }
+
+    #[test]
+    fn the_sight_block_reports_the_observer_actually_used_not_the_one_claimed() {
+        // A caller that lies about the projection must be corrected by the
+        // builder, or the caption is unenforceable and RENDER-9's honesty is
+        // decorative.
+        let (w, ctx, room) = fixture_world();
+        let obs = hornvale_kernel::color::standard_observer();
+        let light =
+            hornvale_astronomy::illuminant::daylight(&hornvale_astronomy::star::generate_star(
+                w.seed.derive(hornvale_astronomy::streams::ROOT),
+            ));
+        let claimed = Sight {
+            observer: "bugbear".to_string(),
+            channels: 99,
+            chromatic: 99,
+            projection: "a lie".to_string(),
+            preserves: "everything".to_string(),
+            sun_altitude_deg: 12.5,
+        };
+        let s = surrounds_scene_colored_in(
+            &w,
+            &ctx,
+            &room,
+            2,
+            WorldTime { day: 0.0 },
+            &obs,
+            &light,
+            claimed,
+        )
+        .unwrap();
+        let sight = s
+            .sight
+            .expect("a coloured document carries its declaration");
+        assert_eq!(
+            sight.projection, "native",
+            "the builder overwrites the claim"
+        );
+        assert_eq!(sight.channels, 4);
+        assert_eq!(sight.chromatic, 3);
+        // The two fields the builder CANNOT know are the caller's and survive.
+        assert_eq!(sight.observer, "bugbear");
+        assert_eq!(sight.sun_altitude_deg, 12.5);
+    }
+
+    #[test]
+    fn a_dimmer_light_yields_dimmer_colour() {
+        // The caller-supplied illuminant must actually reach the pixels — the
+        // positive control for Task 4's H4.
+        let (w, ctx, room) = fixture_world();
+        let obs = hornvale_kernel::color::standard_observer();
+        let bright =
+            hornvale_kernel::color::Illuminant::new([1.0; hornvale_kernel::color::BANDS]).unwrap();
+        let dim =
+            hornvale_kernel::color::Illuminant::new([0.2; hornvale_kernel::color::BANDS]).unwrap();
+        let mk = |l| {
+            surrounds_scene_colored_in(
+                &w,
+                &ctx,
+                &room,
+                2,
+                WorldTime { day: 0.0 },
+                &obs,
+                l,
+                sight_of("standard", 0.0),
+            )
+            .unwrap()
+        };
+        let (a, b) = (mk(&bright), mk(&dim));
+        let lit: Vec<_> = a.cells.iter().filter_map(|c| c.color).collect();
+        assert!(!lit.is_empty(), "the probe must find coloured cells at all");
+        let mut moved = 0;
+        for (x, y) in a.cells.iter().zip(&b.cells) {
+            if let (Some(p), Some(q)) = (x.color, y.color)
+                && q[0] < p[0]
+            {
+                moved += 1;
+            }
+        }
+        assert!(
+            moved > 0,
+            "dimming the illuminant must darken at least one cell"
+        );
     }
 }

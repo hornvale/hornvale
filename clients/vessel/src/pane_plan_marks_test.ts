@@ -6,7 +6,15 @@
 
 import { assertEquals } from "@std/assert";
 import { parseSnapshot } from "./snapshot.ts";
-import { planRows } from "./pane_plan.ts";
+import { planCells } from "./pane_plan.ts";
+import type { PaneGrid } from "./pane_cell.ts";
+
+/** Flatten a grid to plain glyph rows — see `pane_plan_test.ts`'s copy of
+ * this helper for why every pre-colour test keeps this shape rather than
+ * asserting on `PaneCell` objects directly. */
+function glyphRows(grid: PaneGrid | null): string[] | null {
+  return grid ? grid.map((row) => row.map((c) => c.glyph).join("")) : null;
+}
 
 // The occupied fixture, not the plain one: the plain chamber fixture's
 // script is `enter` alone at turn 1, before any tick populates occupancy,
@@ -33,10 +41,10 @@ const OCCUPIED = Deno.readTextFileSync(
 
 Deno.test("a mark renders its glyph at its cell", () => {
   const snap = parseSnapshot(OCCUPIED)!;
-  const rows = planRows(snap)!;
+  const grid = planCells(snap)!;
   // The fixture's one mark: noun "bugbear of Bobakoba" at (5, 3),
   // lattice-local == pane-local since this plan's extent origin is (0, 0).
-  assertEquals(rows[3][5], "b");
+  assertEquals(grid[3][5].glyph, "b");
 });
 
 Deno.test("marks draw over the floor but never over `@`", () => {
@@ -57,7 +65,36 @@ Deno.test("marks draw over the floor but never over `@`", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), ["#@#"]);
+  assertEquals(glyphRows(planCells(snap)), ["#@#"]);
+});
+
+Deno.test("a mark's cell withholds colour even when the floor beneath it supplies one", () => {
+  // Sibling to the `@`-overlay test above, and the same ground rule (see
+  // `PaneCell`'s doc in `pane_cell.ts`): a creature standing on a floor is
+  // not the floor. The floor entry supplies a real colour here on purpose
+  // — an absent colour would let this pass whether or not the withholding
+  // actually ran, which is not a discriminating assertion (fix-round 1
+  // verified this by mutation: see the task report).
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "chamber",
+      plan: {
+        schema: "vessel/plan/v1",
+        extent: { x: 0, y: 0, w: 3, h: 1 },
+        palette: [
+          { kind: "wall", chambers: [] },
+          { kind: "floor", chambers: [0], color: [9, 9, 9] },
+        ],
+        cells: [0, 1, 0],
+        you: { x: 0, y: 0 },
+        marks: [{ x: 1, y: 0, noun: "goblin", kind: "agent", datum: "d", salience: 1 }],
+      },
+    },
+  }))!;
+  const grid = planCells(snap)!;
+  assertEquals(grid[0][1].glyph, "g");
+  assertEquals(grid[0][1].color, null);
 });
 
 Deno.test("a mark outside the extent is ignored, not thrown on and not clamped", () => {
@@ -78,7 +115,7 @@ Deno.test("a mark outside the extent is ignored, not thrown on and not clamped",
   // Not thrown (the parse above didn't throw), and not clamped onto the
   // nearest in-bounds cell — the row is exactly as it would be with no
   // mark at all.
-  assertEquals(planRows(snap), ["@."]);
+  assertEquals(glyphRows(planCells(snap)), ["@."]);
 });
 
 Deno.test("an absent `marks` key renders the plan unchanged", () => {
@@ -98,7 +135,7 @@ Deno.test("an absent `marks` key renders the plan unchanged", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), ["#@"]);
+  assertEquals(glyphRows(planCells(snap)), ["#@"]);
 });
 
 Deno.test("a malformed mark entry is refused, not thrown on — and its siblings still draw", () => {
@@ -128,7 +165,7 @@ Deno.test("a malformed mark entry is refused, not thrown on — and its siblings
   // palette entry (referenced by index from every cell, so one bad entry
   // can corrupt the whole grid), a malformed mark only affects itself: the
   // rest of the plan, and every other mark, still draws.
-  assertEquals(planRows(snap), ["@.k"]);
+  assertEquals(glyphRows(planCells(snap)), ["@.k"]);
 });
 
 Deno.test("an extent missing x/y is refused, not thrown on, once a mark is present", () => {
@@ -155,7 +192,7 @@ Deno.test("an extent missing x/y is refused, not thrown on, once a mark is prese
       },
     },
   }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(glyphRows(planCells(snap)), null);
 });
 
 Deno.test("two marks on the same cell: last in the array wins, deliberately", () => {
@@ -181,5 +218,5 @@ Deno.test("two marks on the same cell: last in the array wins, deliberately", ()
       },
     },
   }))!;
-  assertEquals(planRows(snap), ["b"]);
+  assertEquals(glyphRows(planCells(snap)), ["b"]);
 });
