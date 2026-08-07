@@ -1149,6 +1149,32 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "hydro-variant-coverage",
+            doc: "Which `Hydro` variants `hydro_at` reads anywhere on this world, as \
+                  `+`-joined names in `Hydro::ALL` order (The Assay). Replaces \
+                  `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability \
+                  sweep: a variant no world in the census shows is structurally dead, \
+                  and 1,000 worlds say so with a rate where 8 said so with a flag.",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let mut seen: std::collections::BTreeSet<hornvale_terrain::Hydro> =
+                    std::collections::BTreeSet::new();
+                for cell in geo.cells() {
+                    seen.insert(v.terrain.hydro_at(cell));
+                }
+                // `Hydro::ALL` order, not BTreeSet order, so the string is stable
+                // against a future reordering of the enum's `Ord` derivation.
+                let joined = hornvale_terrain::Hydro::ALL
+                    .iter()
+                    .filter(|h| seen.contains(h))
+                    .map(|h| h.name())
+                    .collect::<Vec<_>>()
+                    .join("+");
+                MetricValue::Text(joined)
+            }),
+        },
+        Metric {
             name: "aquifer-fraction",
             doc: "Fraction of land cells whose hydrogeology classifies as an \
                   aquifer (The Ground, spec §3)",
@@ -6984,7 +7010,11 @@ mod tests {
         // place the two campaigns' metric sets could have been silently
         // reconciled to a wrong number, which is why both provenance comments
         // are kept rather than one replacing the other.
-        assert_eq!(registry().len(), 183);
+        //
+        // +1 for The Assay (Task 4: hydro-variant-coverage, replacing
+        // `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability
+        // sweep with a census column).
+        assert_eq!(registry().len(), 184);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -8221,6 +8251,38 @@ mod tests {
         );
         assert!(
             matches!(m("fertile-land-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
+    }
+
+    /// The coverage metric reads a real Terrain-rung world and reports a non-empty
+    /// set drawn only from `Hydro::ALL`'s names. Deliberately NOT an assertion
+    /// about WHICH variants seed 0 shows — that is the census's question, asserted
+    /// over 1,000 worlds in `windows/lab/tests/calibration.rs`, not here over one.
+    #[test]
+    fn hydro_variant_coverage_reads_a_real_world() {
+        let view = TerrainView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let metric = registry()
+            .into_iter()
+            .find(|m| m.name == "hydro-variant-coverage")
+            .expect("the metric is registered");
+        let MetricValue::Text(joined) = metric.extract.apply(&BuiltView::Terrain(view)) else {
+            panic!("hydro-variant-coverage must be Text");
+        };
+        assert!(!joined.is_empty(), "seed 0 shows no hydro variant at all");
+        let names: Vec<&str> = joined.split('+').collect();
+        let legal: Vec<&str> = hornvale_terrain::Hydro::ALL
+            .iter()
+            .map(|h| h.name())
+            .collect();
+        for name in &names {
+            assert!(legal.contains(name), "{name:?} is not a Hydro variant name");
+        }
+        let mut sorted = names.clone();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            names.len(),
+            "the set must not repeat a variant"
         );
     }
 

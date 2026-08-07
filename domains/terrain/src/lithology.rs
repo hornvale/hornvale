@@ -317,6 +317,29 @@ impl Hydro {
         Hydro::Runoff,
         Hydro::Karst,
     ];
+
+    /// This variant's stable name, used by the census's
+    /// `hydro-variant-coverage` column and by the reachability assertion in
+    /// `windows/lab/tests/calibration.rs`.
+    ///
+    /// These strings are COLUMN CONTENT in a committed artifact, which makes
+    /// them a save-format-adjacent contract: never rename one. If a VARIANT is
+    /// ever renamed, keep the name it already emitted here — the enum's
+    /// identifier and its census name are allowed to diverge, and the census's
+    /// history is worth more than their agreeing.
+    ///
+    /// It lives on the type rather than in `windows/lab` so there is one
+    /// definition and a new variant cannot be added without naming it.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn name(&self) -> &'static str {
+        match self {
+            Hydro::Aquifer => "aquifer",
+            Hydro::Aquitard => "aquitard",
+            Hydro::Spring => "spring",
+            Hydro::Runoff => "runoff",
+            Hydro::Karst => "karst",
+        }
+    }
 }
 
 /// Classify hydrogeology from porosity/carbonate (spec §3). Pointwise matrix
@@ -1171,6 +1194,21 @@ mod tests {
         b.porosity = 0.05;
         assert_eq!(hydrogeology(&b, false), Hydro::Aquitard);
         assert!(cave_proneness(&b, 10.0) < 0.1);
+    }
+
+    /// Every `Hydro::name` is distinct and non-empty — the property the census's
+    /// joined coverage string depends on, since two variants sharing a name would
+    /// make one of them permanently invisible to the coverage assertion in
+    /// `windows/lab/tests/calibration.rs`.
+    #[test]
+    fn hydro_names_are_distinct_and_nonempty() {
+        let mut seen: std::collections::BTreeSet<&'static str> = std::collections::BTreeSet::new();
+        for variant in Hydro::ALL {
+            let name = variant.name();
+            assert!(!name.is_empty(), "{variant:?} has an empty name");
+            assert!(seen.insert(name), "{variant:?} reuses the name {name:?}");
+        }
+        assert_eq!(seen.len(), Hydro::ALL.len());
     }
 
     #[test]
