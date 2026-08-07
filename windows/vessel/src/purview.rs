@@ -303,9 +303,16 @@ mod tests {
             o.day = hornvale_kernel::WorldTime { day };
             Session::start(&w, &o).unwrap().0.purview(0).unwrap()
         };
-        // Noon against a little before dawn, at the flagship's own latitude.
+        // Noon against a genuine ABOVE-horizon low sun, at the flagship's own
+        // latitude (~-5.72°). Day 0.32 puts the sun at 6.911°, measured; noon
+        // puts it at 78.567°. The day fraction matters: the probe this test
+        // shipped with (0.27) lands the sun at -13.442°, BELOW the horizon,
+        // where `at_elevation` clamps to MAX_AIRMASS — so it confirmed H4 at
+        // the clamp rather than through Rayleigh attenuation, which is a
+        // weaker reading than the hypothesis claims. 0.32 exercises the
+        // mechanism itself (R:B 1.917 against noon's 1.206).
         let noon = mk(0.5);
-        let dusk = mk(0.27);
+        let low = mk(0.32);
         let ratio = |s: &hornvale_scene::SurroundsScene| -> Option<f64> {
             let mut r = 0.0f64;
             let mut b = 0.0f64;
@@ -317,21 +324,34 @@ mod tests {
             }
             (b > 0.0).then_some(r / b)
         };
-        let (n, d) = (ratio(&noon), ratio(&dusk));
+        let (n, d) = (ratio(&noon), ratio(&low));
         let (n, d) = (
             n.expect("noon colours some cells"),
-            d.expect("dusk colours some cells"),
+            d.expect("the low sun colours some cells"),
+        );
+        // The low probe must actually be above the horizon, or this test
+        // measures the MAX_AIRMASS clamp instead of the attenuation.
+        let low_alt = low
+            .sight
+            .as_ref()
+            .map(|s| s.sun_altitude_deg)
+            .expect("a coloured chart declares its sight");
+        assert!(
+            low_alt > 0.0,
+            "the low probe must sit ABOVE the horizon to exercise Rayleigh \
+             attenuation rather than at_elevation's clamp; got {low_alt}°"
         );
         assert_ne!(
             noon.sight.as_ref().map(|s| s.sun_altitude_deg),
-            dusk.sight.as_ref().map(|s| s.sun_altitude_deg),
+            Some(low_alt),
             "the two probes must actually sit at different sun altitudes, or this \
              test measures nothing"
         );
         assert!(
             d > n,
-            "H4 FALSIFIED — a low sun did not redden the chart (dusk R:B {d}, \
-             noon R:B {n}). Report the measured altitudes; do not retune K."
+            "H4 FALSIFIED — a low sun did not redden the chart (low-sun R:B {d} \
+             at {low_alt}°, noon R:B {n}). Report the measured altitudes; do not \
+             retune K."
         );
     }
 

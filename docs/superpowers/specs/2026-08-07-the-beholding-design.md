@@ -1,6 +1,9 @@
 # The Beholding — design
 
-**Status:** approved at G3 (Nathan, 2026-08-07). Planning.
+**Status:** approved at G3 (Nathan, 2026-08-07). Implemented; amended at the
+close with the measured outcomes of H3 and H4 (§6, §9) — the pre-code
+predictions are left standing exactly as frozen, with the results recorded
+beneath them.
 **Date:** 2026-08-07
 **Campaign:** The Beholding — colour reaches the possession panes, through
 the possessed agent's own eyes.
@@ -471,6 +474,21 @@ repair it. **If it still fails, the null ships as the headline**: the model
 produces species that see differently but not species that are colour-blind,
 and the spec is wrong rather than the constant needing a retune.
 
+> **Outcome (amended 2026-08-07, Task 2 measured, Task 9 recorded). H3
+> HOLDS.** Bugbear separates `red` from `green` by **0.0541** against human's
+> **0.0680**, on the seven authored exemplars under a flat illuminant
+> (`a_dichromat_separates_red_from_green_less_than_a_trichromat_does`,
+> `windows/worldgen/tests/beholding_probe.rs`).
+>
+> The sequence matters and is not being tidied away. The claim was frozen
+> **false** on pre-roles evidence (~0.025 human against ~0.026 bugbear, M3),
+> and it was repaired by exactly the mechanism M3 diagnosed — excluding the
+> achromatic rod channel from the chromaticity metric (§4.1, §4.3). **No
+> constant was retuned**, and the merge formulas in §4.4 are the ones frozen
+> here. The first measurement is better read as a measurement of the
+> *instrument* than of the eye: the model was not failing to produce
+> dichromats; the metric was counting a channel that carries no hue.
+
 **H4 — the light moves the colour.** For a fixed seed, room and observer,
 the emitted triples at a low sun altitude are redder (higher R:B ratio) than
 at high sun. *Falsified if quantization to `u8` eats the effect at the
@@ -524,9 +542,23 @@ Each becomes an idea-registry row.
 1. **H3 may stay false.** Merging two cone curves may not be enough to
    produce confusable pairs among seven exemplars chosen to be distinct.
    Ship the null; do not retune the merge to rescue it.
+   **Did not materialise (amended 2026-08-07).** H3 holds at 0.0541 against
+   0.0680 once the achromatic channel is excluded; see §6's outcome note.
+   The risk's instruction was honoured — nothing was retuned — and the
+   repair was the enabling change this spec had already named, not a
+   rescue.
 2. **H4 may be eaten by `u8`.** If the day's altitude range moves fewer than
    one quantization step, the light channel is real but invisible. Measure
    before claiming; the fallback finding is a measured threshold altitude.
+   **Did not materialise (amended 2026-08-07), but a neighbouring trap
+   did.** H4 holds: R:B is 1.917 at a sun altitude of 6.911° against 1.206
+   at noon's 78.567°, both at seed 42's flagship latitude (≈ −5.72°). The
+   trap is that the effect is strongly non-linear near the horizon, so the
+   task's first probe (day 0.27) landed the sun at **−13.442° — below the
+   horizon**, where `at_elevation` clamps to `MAX_AIRMASS`; it reported R:B
+   31.0, which confirms the clamp rather than Rayleigh attenuation. The
+   shipped test now probes day 0.32 and asserts its low sun is above the
+   horizon before comparing.
 3. **The bedrock/ground discipline is easy to lose.** Three renderers now
    apply it (ASCII lens, chart pane, plan pane) and only one of them has a
    test today.

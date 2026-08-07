@@ -314,6 +314,7 @@
 - [The Benchmark](./chronicle/the-benchmark.md)
 - [The Handle](./chronicle/the-handle.md)
 - [The Sighting](./chronicle/the-sighting.md)
+- [The Beholding](./chronicle/the-beholding.md)
 
 # Appendix: The Frontier
 

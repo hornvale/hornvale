@@ -164,6 +164,22 @@ the word *brown* that is actually nearest. Self-scorable, and already scored:
 the census pins mean hue-depth at 4 and 2 respectively, and flattening the
 derivation reddens the claim.
 
+*Sharpened by [The Beholding](./chronicle/the-beholding.md) (2026-08-07),
+which pushed the same single scalar past the word and into the picture.* Two
+observers derived from nothing but night vision now emit different pixels
+from the same rock in the same light, and the pixels are captioned with what
+the projection dropped. What makes this a sharpening rather than a repeat is
+the shape of its central claim: the prediction that a dichromat separates red
+from green less than a trichromat does was frozen **false**, on a measurement
+taken before any code existed, with a standing instruction to ship the null.
+It came true — 0.0541 against 0.0680 — without a single constant moving,
+because the falsification had correctly diagnosed the *metric* rather than
+the model. A chromaticity that counts an achromatic channel makes every eye
+with a rod a trichromat. That is the divergence method turned on its own
+instrument, which is a stronger result than another confirmation would have
+been, and it lowers rather than raises the confidence owed to any
+observer-varying claim whose metric has not itself been probed.
+
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no
 account of what the land could support and nothing to catch an absurd
