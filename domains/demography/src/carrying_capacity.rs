@@ -9,7 +9,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere};
 
 /// The bare per-cell climate/terrain inputs the composition root assembles.
 /// Demography never imports those domains; it sees only this.
-/// type-audit: bare-ok(flag: is_land), pending(wave-3: temperature_c), bare-ok(ratio: moisture), bare-ok(ratio: freshwater), bare-ok(flag: coastal), bare-ok(ratio: hostility)
+/// type-audit: bare-ok(flag: is_land), pending(wave-3: temperature_c), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(ratio: freshwater), bare-ok(flag: coastal), bare-ok(ratio: hostility)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CarryingInput {
     /// Whether the cell is dry land (elevation at or above sea level).
@@ -30,8 +30,13 @@ pub struct CarryingInput {
     pub is_land: bool,
     /// Annual-mean temperature, °C.
     pub temperature_c: f64,
-    /// Moisture in `[0, 1]`.
-    pub moisture: f64,
+    /// Annual precipitation, mm/yr. **Not** normalised moisture: Lieth's
+    /// precipitation term is defined on a real total, and `climate.precip_at`
+    /// already supplies one (`2000 · m^1.5`, Earth-ranged, provenance cited to
+    /// the spec's model card). Taking the real total rather than re-deriving a
+    /// second conversion is decision 0106 applied — there was never a constant
+    /// here to author.
+    pub precip_mm_yr: f64,
     /// Freshwater availability in `[0, 1]` (drainage/moisture, at root).
     pub freshwater: f64,
     /// Whether the cell borders the ocean.
@@ -52,15 +57,41 @@ pub struct CarryingInput {
 // barren/marginal worlds with little land in EITHER band, not a failure of
 // the gradient itself) — so no adjustment was needed; frozen as measured,
 // not as a placeholder. A save-format constant from here on.
+/// kind: **hornvale-gauge** (decision 0106). Occurs exactly once, as a
+/// multiplicative factor, and any change is absorbed downstream by
+/// `SETTLERS_PER_CAPACITY` — so its value is unobservable and needs no source,
+/// only this note, so nobody later "calibrates" an unmeasurable quantity.
 const BASE: f64 = 1.0;
-const TEMP_OPTIMUM_C: f64 = 22.0;
-const TEMP_TOLERANCE_C: f64 = 20.0;
 const FRESHWATER_BONUS: f64 = 0.5;
 const COAST_BONUS: f64 = 0.2;
 
-/// Temperature response in `[0,1]`: a triangular tolerance around the optimum.
-fn temp_response(t: f64) -> f64 {
-    (1.0 - (t - TEMP_OPTIMUM_C).abs() / TEMP_TOLERANCE_C).clamp(0.0, 1.0)
+/// Lieth's Miami-model temperature term, normalised to its 3000 g/m²/yr
+/// asymptote so `BASE` keeps meaning "one unit of productivity".
+///
+/// kind: **earth-biosphere** (decision 0106). Cited: Lieth & Box (1972), the
+/// Miami model — `NPP_temp = 3000 / (1 + exp(1.315 − 0.119 T))`. The citation
+/// and the implementation now agree, which they did not before (The Keeping):
+/// the retired `temp_response` was a symmetric tent peaking at 22 °C, and this
+/// is **monotone increasing and saturating with no optimum at all**. Above 22 °C
+/// the two moved in opposite directions, and the tent reached *exactly zero* a
+/// little above freezing where Lieth predicts ~26% of maximum — which is why no
+/// world was ever inhabited cold.
+///
+/// A tent *is* a meaningful curve; it is a **tolerance** curve, and tolerance
+/// belongs per-species in `ConditionNiche`, never in a species-blind
+/// productivity field. Productivity is a property of ground; habitability is a
+/// relation between a species and a place.
+fn npp_temperature(t_c: f64) -> f64 {
+    1.0 / (1.0 + hornvale_kernel::math::exp(1.315 - 0.119 * t_c))
+}
+
+/// Lieth's Miami-model precipitation term, normalised to the same asymptote.
+///
+/// kind: **earth-biosphere** (decision 0106). Cited: Lieth & Box (1972) —
+/// `NPP_precip = 3000 · (1 − exp(−0.000664 P))`, `P` in mm/yr. Saturating: wetter
+/// ground keeps helping, with diminishing return, and never turns harmful.
+fn npp_precipitation(precip_mm_yr: f64) -> f64 {
+    1.0 - hornvale_kernel::math::exp(-0.000664 * precip_mm_yr.max(0.0))
 }
 
 /// The carrying-capacity field: `0.0` at sea, else the NPP proxy scaled by
@@ -83,8 +114,10 @@ pub fn carrying_capacity(geo: &Geosphere, inputs: &CellMap<CarryingInput>) -> Ca
         if !i.is_land {
             return 0.0;
         }
-        // Miami NPP proxy: Liebig minimum of temperature and moisture responses.
-        let npp = temp_response(i.temperature_c).min(i.moisture.clamp(0.0, 1.0));
+        // Liebig's law of the minimum over Lieth's two terms — the one feature
+        // of the Miami model that survived the original translation, and the one
+        // this campaign keeps unchanged.
+        let npp = npp_temperature(i.temperature_c).min(npp_precipitation(i.precip_mm_yr));
         let bonus = 1.0
             + FRESHWATER_BONUS * i.freshwater.clamp(0.0, 1.0)
             + if i.coastal { COAST_BONUS } else { 0.0 };
@@ -102,11 +135,14 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
-    fn input(land: bool, t: f64, m: f64, fw: f64, coast: bool, host: f64) -> CarryingInput {
+    /// `p_mm` is annual precipitation in mm/yr (see [`CarryingInput`]), not a
+    /// normalised moisture — the fixtures below quote real totals so the Lieth
+    /// terms are exercised on the range they are defined for.
+    fn input(land: bool, t: f64, p_mm: f64, fw: f64, coast: bool, host: f64) -> CarryingInput {
         CarryingInput {
             is_land: land,
             temperature_c: t,
-            moisture: m,
+            precip_mm_yr: p_mm,
             freshwater: fw,
             coastal: coast,
             hostility: host,
@@ -118,9 +154,9 @@ mod tests {
         let geo = Geosphere::new(2);
         // cell 0 at sea, 1 wet-temperate land, 2 hot desert land.
         let inputs = CellMap::from_fn(&geo, |c| match c.0 {
-            0 => input(false, 15.0, 0.8, 0.9, true, 0.0),
-            1 => input(true, 15.0, 0.8, 0.9, true, 0.0),
-            _ => input(true, 40.0, 0.05, 0.05, false, 0.8),
+            0 => input(false, 15.0, 1400.0, 0.9, true, 0.0),
+            1 => input(true, 15.0, 1400.0, 0.9, true, 0.0),
+            _ => input(true, 40.0, 20.0, 0.05, false, 0.8),
         });
         let k = carrying_capacity(&geo, &inputs);
         assert_eq!(k.at(CellId(0)), 0.0, "the sea supports no settlers");
@@ -136,8 +172,8 @@ mod tests {
         let geo = Geosphere::new(2);
         // Warm+dry and cool+wet should both be limited by their scarce factor.
         let inputs = CellMap::from_fn(&geo, |c| match c.0 {
-            0 => input(true, 25.0, 0.1, 0.5, false, 0.0), // moisture-limited
-            _ => input(true, 25.0, 0.9, 0.5, false, 0.0), // ample both
+            0 => input(true, 25.0, 60.0, 0.5, false, 0.0), // water-limited
+            _ => input(true, 25.0, 1700.0, 0.5, false, 0.0), // ample both
         });
         let k = carrying_capacity(&geo, &inputs);
         assert!(

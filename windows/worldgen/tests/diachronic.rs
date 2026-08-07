@@ -194,6 +194,27 @@ type Row = (
 // and its witnessed count matches goblin/hobgoblin's exactly at every seed
 // (measured live) — it joins the solar-only pair, now a trio, not the
 // lunar-witnessing group. The world-global predicted day is unchanged.
+//
+// The Tense re-pin (2026-08-05), and it REVERSES the claim above that "every
+// placed culture now clears the SOC-1 gate". Three peoples dropped Predictive
+// -> Counted -- seed 2 hobgoblin, seed 3 hobgoblin, seed 4 kobold -- so the
+// folk-only rows this comment recorded as "gone" have partly come back.
+//
+// The shape of the loss is the interesting part, and it is uniform across all
+// three: the witnessed COUNT is UNCHANGED (49, 32, 3785 respectively) and only
+// the prediction is gone. They observe exactly what they observed before; what
+// they no longer have is a priesthood to turn observation into forecast.
+// `cult_form` reads `organized` iff a settlement's emergent castes include a
+// shaman, and castes are downstream of settlement scale -- which fell across
+// the board when capacity gained an era axis (seed 42: 209 settlements -> 122,
+// chief populations down a third to a half). So this is the ladder's own
+// structural rule ("no Numbered or higher without doctrine") reporting a real
+// consequence, not a mispinning.
+//
+// It moves BOTH ways, which is why to read it as a threshold rather than a
+// collapse: seed 57's bugbear flagship went folk -> ORGANIZED over the same
+// change, forcing `doctrine.rs`'s SOC-1 smoke test to be re-found. Smaller
+// settlements on average; some cross down, some cross up.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -267,13 +288,16 @@ const LADDER_TABLE: &[Row] = &[
         49,
         Some(36337.174658835705),
     ),
+    // The Tense (2026-08-05): dropped Predictive -> Counted. Witnessed count
+    // UNCHANGED at 49 — same observations, no priesthood left to turn them
+    // into a prediction. See this table's doc comment.
     (
         2,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         49,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
@@ -315,13 +339,16 @@ const LADDER_TABLE: &[Row] = &[
         32,
         Some(36125.669504115634),
     ),
+    // The Tense (2026-08-05): dropped Predictive -> Counted. Witnessed count
+    // UNCHANGED at 32 — same observations, no priesthood left to turn them
+    // into a prediction. See this table's doc comment.
     (
         3,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         32,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -379,13 +406,16 @@ const LADDER_TABLE: &[Row] = &[
         2067,
         Some(36540.36159622378),
     ),
+    // The Tense (2026-08-05): dropped Predictive -> Counted. Witnessed count
+    // UNCHANGED at 3785 — same observations, no priesthood left to turn them
+    // into a prediction. See this table's doc comment.
     (
         4,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         5,
