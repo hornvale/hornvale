@@ -89,14 +89,12 @@ export function planCells(snap: Snapshot): PaneGrid | null {
       // chain that a plain object literal would have had.
       const glyph = GLYPH[entry.kind] ?? UNKNOWN;
       // `entry.color` is the cell TYPE's own colour — a wall's fabric, a
-      // floor's — so it is a truthful claim about this cell only while
-      // `glyph` is that type's own mark. The mark and `@` overlays below
-      // both replace this cell's colour with `null` when they draw over it,
-      // the same ground rule `pane_chart.ts`'s `glyphFor` states and ports
-      // from `terrain_glyph` in `windows/scene/src/surrounds_ascii.rs`: a
-      // creature or the possession standing on a floor is not the floor,
-      // and colouring it the floor's colour would describe ground the
-      // reader can no longer see.
+      // floor's. Carried here at the ground rule's default: true, since
+      // this is the type's own glyph. The mark and `@` overlays below are
+      // this pane's other two instances of the same rule (see `PaneCell`'s
+      // doc in `pane_cell.ts`) — both force `color: null` when they draw
+      // over this cell, because a creature or the possession standing on a
+      // floor is not the floor.
       //
       // Every palette entry's `color` is absent this campaign — Task 6
       // shipped the slot deliberately empty, with no building-fabric or
@@ -149,8 +147,8 @@ export function planCells(snap: Snapshot): PaneGrid | null {
     // order — this loop must not re-sort it. If two marks somehow land on
     // one cell, later-in-the-array wins: a deliberate, cheap tie-break
     // rather than an attempt to re-derive Rust's own salience ordering here.
-    // `color: null`, not the palette's: a creature is not the floor it
-    // stands on (see the ground-rule comment above the palette draw).
+    // Ground rule: `color: null`, not the palette's — a creature is not the
+    // floor it stands on (see `PaneCell`'s doc in `pane_cell.ts`).
     grid[gy][gx] = { glyph, color: null };
   }
 
@@ -164,8 +162,8 @@ export function planCells(snap: Snapshot): PaneGrid | null {
   const mx = plan.you.x - plan.extent.x;
   const my = plan.you.y - plan.extent.y;
   if (mx >= 0 && mx < w && my >= 0 && my < h) {
-    // `color: null` for the same reason a mark's is: the possession is not
-    // the floor it stands on.
+    // Ground rule, same as a mark's: the possession is not the floor it
+    // stands on.
     grid[my][mx] = { glyph: YOU, color: null };
   }
   return grid;

@@ -7,9 +7,24 @@
 // every edit; one cell object per cell does not.
 
 /** One cell of a pane's grid: the glyph to draw, and the colour to draw it
- * in, if any. `color` is `null` whenever the sim withheld it — no `color`
- * key on the wire, a malformed value, or (see each pane's own comment) a
- * glyph that is not honestly describable by the sim's bedrock reflectance. */
+ * in, if any. `color` is `null` whenever the sim withheld it (no `color` key
+ * on the wire, or a malformed value — see `parseColor`) or when a pane
+ * withholds it itself.
+ *
+ * **The ground rule, stated once here because both panes apply it:** the
+ * sim's colour describes a SURFACE — the walk chart's is the cell's bedrock
+ * reflectance (`windows/scene/src/surrounds_ascii.rs`'s `terrain_glyph`
+ * names this explicitly), the floor plan's is a palette entry's cell-type
+ * colour (`windows/vessel/src/plan.rs::PaletteEntry::color`). Either way it
+ * is a truthful claim about the cell only while `glyph` is actually drawing
+ * that surface. Wherever a pane overrides the glyph to name something else
+ * standing on the cell instead — the observer (`@`), a creature, water
+ * covering the ground — the surface's colour describes something the
+ * reader can no longer see, and gets forced to `null` regardless of what
+ * the payload sent. A river tinted the colour of the rock beneath it, or a
+ * creature tinted the colour of the floor it stands on, is the failure this
+ * rule exists to prevent. Each call site below is one instance of this one
+ * rule, not an independent decision. */
 export interface PaneCell {
   /** The character this cell draws. */
   glyph: string;

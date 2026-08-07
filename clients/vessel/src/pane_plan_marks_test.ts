@@ -68,6 +68,35 @@ Deno.test("marks draw over the floor but never over `@`", () => {
   assertEquals(glyphRows(planCells(snap)), ["#@#"]);
 });
 
+Deno.test("a mark's cell withholds colour even when the floor beneath it supplies one", () => {
+  // Sibling to the `@`-overlay test above, and the same ground rule (see
+  // `PaneCell`'s doc in `pane_cell.ts`): a creature standing on a floor is
+  // not the floor. The floor entry supplies a real colour here on purpose
+  // — an absent colour would let this pass whether or not the withholding
+  // actually ran, which is not a discriminating assertion (fix-round 1
+  // verified this by mutation: see the task report).
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "chamber",
+      plan: {
+        schema: "vessel/plan/v1",
+        extent: { x: 0, y: 0, w: 3, h: 1 },
+        palette: [
+          { kind: "wall", chambers: [] },
+          { kind: "floor", chambers: [0], color: [9, 9, 9] },
+        ],
+        cells: [0, 1, 0],
+        you: { x: 0, y: 0 },
+        marks: [{ x: 1, y: 0, noun: "goblin", kind: "agent", datum: "d", salience: 1 }],
+      },
+    },
+  }))!;
+  const grid = planCells(snap)!;
+  assertEquals(grid[0][1].glyph, "g");
+  assertEquals(grid[0][1].color, null);
+});
+
 Deno.test("a mark outside the extent is ignored, not thrown on and not clamped", () => {
   const snap = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v1",

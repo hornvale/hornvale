@@ -108,10 +108,9 @@ export function chartCells(snap: Snapshot): PaneGrid | null {
     const row = -cell.w;
     const col = 2 * cell.v + (cell.up ? 0 : 1) + cell.w;
     const { glyph, ground } = glyphFor(cell, waterLegend);
-    // The colour is BEDROCK reflectance (see `glyphFor`'s doc): it is only
-    // a truthful claim about the cell when `glyph` is drawing that ground,
-    // so a non-ground glyph (`YOU`, a water glyph) gets `null` regardless of
-    // what the payload sent — withheld, not merely unparsed.
+    // The ground rule (see `PaneCell`'s doc in `pane_cell.ts`): withheld,
+    // not merely unparsed, on a non-ground glyph (`YOU`, a water glyph) —
+    // regardless of what the payload sent.
     const color = ground ? parseColor(cell.color) : null;
     placed.set(`${row},${col}`, { glyph, color });
     rMin = Math.min(rMin, row);
@@ -159,17 +158,16 @@ function parseCell(raw: unknown): ChartCell | null {
  * distinctions live, and duplicating that table here would be a second
  * thing to keep in step with no test able to see the drift.
  *
- * The `ground` half is ported from `terrain_glyph` in
- * `windows/scene/src/surrounds_ascii.rs`: the sim's per-cell `color` is the
- * reflectance of the cell's *bedrock*, so it is a truthful claim about the
- * cell only when the glyph drawn there *is* that ground. Where the glyph
- * has been overridden to name something else — the observer standing here,
- * or the water covering the ground — the bedrock colour describes something
- * the reader cannot see, and the caller withholds it rather than tinting a
- * river the colour of the rock beneath it. */
+ * `ground` is this pane's instance of `PaneCell`'s ground rule (see its doc
+ * in `pane_cell.ts`), ported from `terrain_glyph` in
+ * `windows/scene/src/surrounds_ascii.rs`: `false` for the observer's own
+ * cell and for any water glyph, `true` for land — the caller uses this to
+ * decide whether `cell.color` is a truthful claim to carry. */
 function glyphFor(cell: ChartCell, waterLegend: string[]): { glyph: string; ground: boolean } {
+  // Not ground: `@` names the observer, not the bedrock beneath them.
   if (cell.state === "here") return { glyph: YOU, ground: false };
   const water = waterLegend[cell.water];
+  // Not ground: water covers the bedrock the colour would describe.
   if (water !== undefined && WATER_KINDS.has(water)) return { glyph: "~", ground: false };
   return { glyph: cell.state === "remembered" ? "," : ".", ground: true };
 }

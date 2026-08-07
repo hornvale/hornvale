@@ -358,6 +358,20 @@ Deno.test("a chart cell carries the sim's colour, and only where it is ground", 
   );
 });
 
+Deno.test("the observer's own cell withholds colour even when the payload supplies one", () => {
+  // Ground rule (see `PaneCell`'s doc in `pane_cell.ts`): `@` names the
+  // observer, not the bedrock beneath them. The payload supplies a real
+  // colour here on purpose — an absent colour would let this pass whether
+  // or not the withholding actually ran, which is not a discriminating
+  // assertion (fix-round 1 verified this by mutation: see the task report).
+  const snap = snapshotWithChart([
+    { v: 0, w: 0, up: true, seam: false, state: "here", water: 3, color: [99, 88, 77] },
+  ]);
+  const cell = chartCells(snap)!.flat()[0];
+  assertEquals(cell.glyph, "@");
+  assertEquals(cell.color, null);
+});
+
 Deno.test("a cell with no colour key is uncoloured, not crashed", () => {
   const snap = snapshotWithChart([
     { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3 },
