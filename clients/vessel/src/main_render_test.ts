@@ -12,6 +12,7 @@ import "./dom_shim.ts";
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { renderInto } from "./main.ts";
+import { parseSnapshot, sightOf } from "./snapshot.ts";
 
 Deno.test("a sim-authored noun containing markup becomes text, never an element", () => {
   // pane_plan.ts draws mark.noun.charAt(0) — a sim-authored character. The
@@ -47,14 +48,49 @@ Deno.test("like-coloured neighbours share one span", () => {
 });
 
 Deno.test("the caption states whose eyes and what the projection drops", () => {
-  const host = document.createElement("pre");
-  renderInto(host, [[{ glyph: ".", color: null }]], {
-    observer: "bugbear",
-    channels: 3,
-    chromatic: 2,
-    projection: "yellow-blue",
-    preserves: "the short-to-long opposition; the red-green axis is not carried",
+  // Fix round 1: driven through the REAL seam — `parseSnapshot` then
+  // `sightOf` — not a hand-built `Sight` object handed straight to
+  // `renderInto`. A reviewer found the original version of this test
+  // exercised only `renderInto`'s own caption string, so a `sightOf` bug
+  // (it was mutated to `return null;` unconditionally) left every test
+  // green: the wire-to-caption path had a gap no single unit test covered.
+  const json = JSON.stringify({
+    schema: "vessel/session/v1",
+    turn: 0,
+    day: 0.5,
+    self: { agent: "1", species: "bugbear", settlement: "X", population: 118, room: 7 },
+    sensed: { room: { schema: "locale/room/v2", id: 7, exits: [] }, sky: "Night.", present: [] },
+    known: { entries: [] },
+    social: [],
+    narration: { prose: "", nouns: [] },
+    spatial: {
+      band: "walk",
+      chart: {
+        schema: "scene/surrounds/v2",
+        sight: {
+          observer: "bugbear",
+          channels: 3,
+          chromatic: 2,
+          projection: "yellow-blue",
+          preserves: "the short-to-long opposition; the red-green axis is not carried",
+        },
+      },
+    },
   });
-  assertStringIncludes(host.textContent ?? "", "bugbear");
-  assertStringIncludes(host.textContent ?? "", "yellow-blue");
+  const snap = parseSnapshot(json)!;
+  const sight = sightOf(snap);
+
+  const host = document.createElement("pre");
+  renderInto(host, [[{ glyph: ".", color: null }]], sight);
+  const text = host.textContent ?? "";
+  // All FIVE rendered fields, not just two — a reviewer mutation dropped
+  // `channels`, `chromatic`, and `preserves` from the caption string
+  // entirely and only the two-assertion version of this test stayed green.
+  // `preserves` is this campaign's whole honesty claim: the caption exists
+  // to say what the projection KEEPS, not merely to name it.
+  assertStringIncludes(text, "bugbear");
+  assertStringIncludes(text, "3 channel");
+  assertStringIncludes(text, "2 chromatic");
+  assertStringIncludes(text, "yellow-blue");
+  assertStringIncludes(text, "the short-to-long opposition; the red-green axis is not carried");
 });
