@@ -136,3 +136,27 @@ reading read as an observation.
 - 6 of 7 significant words unresolvable before; 0 after.
 - 95 commits absorbed from four campaigns across three absorptions.
 - No epoch: keystone identity fixtures byte-identical to main's tip.
+
+## Pin discipline: a deliberate violation, and it was the wrong call
+
+Ten commits, one deferral — and unlike The Benchmark's, this one was *planned*.
+Task 2 added `Regime.descriptor_noun`, which drifted three vessel goldens, and
+the plan explicitly instructed Tasks 2–4 not to re-pin because "Task 5 owns the
+artifact pass in one place." The reasoning was that a single artifact diff is
+easier to review than three.
+
+The cost is that the branch then sat **knowingly red for three consecutive
+tasks**. Every dispatch had to carry "these two failures are expected, anything
+else is a finding", and the guard against a *new* failure hiding among them was
+each implementer correctly re-identifying which two were the known ones. They
+all did. Nothing hid. But the protection was attention, which is precisely what
+a re-pin-in-the-drifting-commit rule exists to replace.
+
+**Do:** re-pin in the commit that drifts, even when several commits will drift
+the same file. Reviewing three small artifact diffs in their own commits is not
+harder than reviewing one large one — it is easier, because each diff has one
+cause standing next to it. A known-red window is a camouflage window, and its
+width is the number of commits you have to hold in your head.
+
+The keystone half was clean: `cli/tests/fixtures/` diffs to **zero lines**
+against main's tip, so the refreeze was a no-op and no world byte moved.
