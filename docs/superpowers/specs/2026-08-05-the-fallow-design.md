@@ -1,6 +1,6 @@
 # The Fallow — the land has a capital account, and it can be spent
 
-**Status:** Draft for review (2026-08-05) · **Campaign:** the-fallow ·
+**Status:** NOT IMPLEMENTED — premise falsified. H1's baseline of "1 layer" was never real (16 measured at the time). Do not implement §3.1 without re-reading; The Tense reached the era-varying capacity this spec wanted a soil stock to approximate · **Campaign:** the-fallow ·
 **Follows:** [The Tilth](2026-08-04-the-tilth-design.md), whose stage 1 is now
 visibly *half* of a change · **Registry:** `BIO-land-capital`,
 `BIO-reliability-not-mean`, `BIO-subsistence-feeds-capacity`

@@ -1,5 +1,7 @@
 # The Tense — capacity is written in the eternal present
 
+**Status:** SHIPPED (merged 2026-08-06) — see [The Tense chronicle](../../../book/src/chronicle/the-tense.md) and decision 0107. §3.3 (two-tier gates/modifiers) and §3.4 (within-cell temperature distribution) are SPECIFIED AND UNBUILT; `tolerance_tiered` exists in shadow and is called by nothing.
+
 **Campaign:** the-tense · **Runs on `campaign/the-tilth` itself**, as further
 stages, not on a branch of its own · **Supersedes:** The Tilth stages 6 and 7,
 which are patches on the layer below this one and were reverted in `511d1fa9`

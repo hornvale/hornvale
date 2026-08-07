@@ -1,5 +1,7 @@
 # The unfloored axis — a stage-6 amendment to The Tilth
 
+**Status:** SUPERSEDED by The Tense §3.3 — both stages it specifies were landed, measured and reverted in `511d1fa9`. Kept for the numbers in `tolerance_liebig`'s doc comment and for its prediction, which came true: it reasoned that a campaign branched off `main` would mint a colliding `0104`, and one did.
+
 **Not its own campaign.** This is **The Tilth, stage 6**, on
 `campaign/the-tilth`, amending
 [`2026-08-04-the-tilth-design.md`](2026-08-04-the-tilth-design.md).

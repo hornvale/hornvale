@@ -1,6 +1,6 @@
 # The Tilth — productivity is a property, tolerance is a relation
 
-**Status:** Draft for review (2026-08-04) · **Campaign:** the-tilth ·
+**Status:** SHIPPED (merged 2026-08-06) — see [The Tilth chronicle](../../../book/src/chronicle/the-tilth.md). Stages 6 and 7 were landed, measured and REVERTED; their successor is The Tense §3.3, still unwired · **Campaign:** the-tilth ·
 **Supersedes:** the step ordering in
 [The Keeping §8](2026-08-04-the-keeping-design.md#8-redirect-after-task-0),
 overturned twice by measurement · **Builds on:** decisions

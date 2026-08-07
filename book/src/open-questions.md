@@ -255,7 +255,18 @@ that no one predicted: replacing a gate with a continuous squeeze **compresses
 the variance between worlds**. A seed that had been permanently dead now carries
 36 communities across 70 sites; the flagship seed fell from 209 settlements to
 122, its chief settlements losing a third to a half of their people. Dead worlds
-live and rich worlds thin. Whether the middle those worlds are converging on is
+live and rich worlds thin.
+
+The thousand-world census puts a number on the lower half at the close, and it
+is larger than the anecdote suggested: **231 of a thousand worlds could not seat
+a goblin flagship before, and one cannot after.** A quarter of the sample
+crossed from nameless to peopled, which is a real gain in how much of the seed
+space is worth visiting, and it is the half of this trade that is unambiguously
+good. The same census found flagships moving decisively inland — 73% coastal to
+22% — which nothing predicted and which no bet in this chapter had claimed
+either way.
+
+Whether the middle those worlds are converging on is
 the right middle is a question about the scale constant and the response curves,
 and it is open — but it is now *separable* from the structure, which it was not
 before, because the gate and the scale used to be the same knob.

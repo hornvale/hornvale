@@ -111,6 +111,46 @@ fit everywhere.
 comparison across all participants, not the one curve being edited. "Evaluate the
 curve, not the constant" is necessary and was not sufficient.
 
+**10. `--theirs` and `--ours` are FILE operations, never hunk operations.**
+Clearing the last unmerged path, `git checkout --theirs lib.rs` replaced the
+whole file with main's, silently reverting two of this campaign's core physics
+changes — Liebig-not-product and the era-varying substrate. It then **built
+clean and passed clippy**, because main's file is internally consistent. Caught
+only by grepping for the resolved lines.
+**Rule:** on a file where both sides changed behaviour, resolve hunks. The
+absence of `<<<<<<<` is not evidence a merge is correct; grep for what you
+believe you kept.
+
+**11. Renumbering a decision into the next free slot is a race against main.**
+This campaign collided twice in one session — `0104` with The Hollow, then, four
+hours after renumbering, `0105` with The Deep Realm. `make preflight` reported
+GO both times because its slug-collision check resolves the LOCAL `main` ref,
+which a long-running worktree has by definition not pulled.
+**Rule:** resolve `origin/main`, or mint the number at merge rather than at
+write. Captured as `PROC-preflight-resolves-local-main`.
+
+**12. The census must be the LAST thing before the gate, not the first.** I ran
+it, re-pinned ~35 calibration constants against it, and then absorbed main —
+which moved worldgen and made the fixture stale, exactly as `fixture_staleness`
+then reported. The re-run cost 12 minutes and the pins all held, so the loss was
+small, but the ordering rule is general: anything that moves worldgen invalidates
+a census, and absorbing main moves worldgen.
+
+**13. A test that regenerates a fixture usually already exists — look before
+hand-rolling.** I wrote an ad-hoc `fs::write` into the occupancy drift check
+when `regenerate_occupancy_readout` was thirty lines below, deliberately
+non-heavy so CI cannot self-heal the artifact. Worse, I ran my version inside a
+parallel nextest invocation, so the write raced sibling tests reading the same
+file and produced a spurious second failure.
+**Rule:** grep the file for an existing regen path first, and run a
+fixture-writing test alone.
+
+**14. Read a red performance ceiling as contention first.** `session_cost`
+reported 8.032 ms against an 8 ms ceiling on lefford and looked like a
+regression; on a quiet box it measures 3.017 ms, 2.7x under. The ceilings are
+calibrated on a different host, and that run had 48 heavy tests in flight. The
+test's own header says exactly this, and it was right.
+
 ## Open follow-ups
 
 - **`id_shift_invariance` needs constructing, not re-hunting.** Three witness
@@ -125,6 +165,17 @@ curve, not the constant" is necessary and was not sufficient.
   them moves placement.
 - **Ocean exclusion now rides supply rather than the era mask** and is the most
   likely site of a silent regression; `era_substrate.rs` guards it.
+- **The strategy family shows no horizon/lifetime ordering at all.** §4.3a claims
+  a generational patron's relation persists where an immediate one's does not.
+  Measured across five patron peoples the relationship is absent, not weakened —
+  gnoll 0.2/325 d, bugbear 0.3/250 d, hobgoblin 0.5/225 d, human 0.75/450 d,
+  kobold 0.8/200 d. The old assertion read only the two extremes, which invert
+  the claim while human at 0.75 holds the longest median. A rank correlation over
+  the whole roster is the honest instrument; human is sampled at 126 relations
+  against hobgoblin's 603, so the medians are not even comparably supported.
+- **Human and goblin are close to ecological synonyms** — captured as
+  `BIO-niche-discriminates-weakly`. The discriminator survived and sharpened, but
+  the absolute gap fell 3.3x and nothing watches the trend.
 - **`tolerance_tiered` is landed and called by nothing.** It should either be
   wired or removed; dead successors rot. It is also now **blocking**: the kobold
   re-authoring cannot be done sensibly while elevation is an unfloored axis under

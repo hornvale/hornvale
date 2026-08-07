@@ -227,8 +227,19 @@ never stored. The present frame is a *query* over the communities still alive,
 not a separate tier of state. Because the world is finite and equilibrating,
 displacement is kept perpetually alive without a floor: era-varying
 habitability (glacial advance and retreat) drives sustained migration, and a
-preregistered census gate *aborts the build* if displacement fails to fire at
-volume. On the world that campaign measured, displacement resolved as climate
+preregistered gate fails the build if displacement stops firing.
+
+Two things about that sentence changed under The Tense and are worth stating
+plainly, because the shape of the claim moved rather than its truth. First,
+*habitability* is no longer a mask laid over the world: it is a **relation
+between a people, a cell and an era**, expressed as that people's carrying
+capacity there (decision 0107). Cold ground is not switched off, it is made
+poor, and a species is excluded by arithmetic rather than by decree. Second,
+the displacement gate is no longer read off one world. Migration now scales
+with how much a given world's climate actually moves, so a mild deep past and
+an inert bake are indistinguishable from a single seed; the gate reads a
+**spread** — total volume across a panel, plus a requirement that displacement
+fires on more than one world. On the world that campaign measured, displacement resolved as climate
 **migration**, not war — vacant land let a frozen-out community move rather
 than raid — so organised conflict was deferred to a later campaign of the
 program, which has since arrived (see the conflict section below). Two measured

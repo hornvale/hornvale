@@ -84,6 +84,18 @@ ground is either admitted or annihilated. A continuous squeeze produces middling
 ones. **Dead worlds live and rich worlds thin**, and the variance between worlds
 compresses toward the middle.
 
+At the close, the thousand-world census turned that from an anecdote into a
+measurement, and it is the strongest evidence this arc produced. Before the
+change, **231 of a thousand worlds could not seat a goblin flagship at all**.
+After it, **one**. A quarter of the entire sample crossed from nameless to
+peopled — seed 1234 was not a lucky case but a representative one.
+
+The same census carried a second result nobody had predicted. Flagships moved
+decisively **inland**: 73% of them sat on a coast before, 22% after. Coastal
+siting had been carrying worlds that could not otherwise support a seat at all.
+Once ground away from the water is habitable across every era rather than only
+the mild ones, the coast stops being the only place a people can begin.
+
 Whether that middle is the right place to sit is a genuinely open question, and
 this campaign does not answer it. It is a question about the scale constant and
 the shape of the response curves, not about the collapse — which is the useful
