@@ -159,8 +159,21 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bios`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
     let ks = hornvale_worldgen::per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
     );
 
     let submerged: Vec<hornvale_kernel::CellId> =

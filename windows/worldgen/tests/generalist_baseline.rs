@@ -192,6 +192,20 @@ fn measure_one(
         .filter(|(k, _)| peoples.contains(&k.0))
         .map(|(_, b)| b)
         .collect();
+    // Same filter, same order, so the realm slice stays index-aligned with
+    // `bios` — every shipped person is absent from the sparse habitat-realm
+    // store and defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .filter(|(k, _)| peoples.contains(&k.0))
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
 
     let world = build_world(
         seed,
@@ -226,6 +240,7 @@ fn measure_one(
         insolation_scalar,
         &regime,
         &bios,
+        &realm,
     );
     // The exact substrate `per_species_suitability` builds internally (same
     // geo/terrain/climate/obliquity/insolation_scalar/regime) - not a

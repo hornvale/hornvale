@@ -24,8 +24,9 @@
 //! letting one rot, forces a deliberate edit here.
 
 use hornvale_species::{
-    ActivityCycle, LifeSchedule, MetabolicClass, SocialForm, StatusBasis, biosphere_registry,
-    perception_registry, psyche_registry, society_registry,
+    ActivityCycle, HabitatRealm, LifeSchedule, MetabolicClass, SocialForm, StatusBasis,
+    biosphere_registry, habitat_realm_registry, perception_registry, psyche_registry,
+    society_registry,
 };
 
 /// How well a declared state is exercised by the shipped roster.
@@ -432,4 +433,31 @@ fn every_authored_kind_is_allometric_today() {
         "no kind is authored with a non-default life schedule yet, but found: {paced:?}"
     );
     assert_eq!(reg.len(), 30, "the roster is unchanged by this campaign");
+}
+
+#[test]
+fn the_subterranean_roster_is_exactly_the_two_rehomed_kinds() {
+    // THE WARREN: C2a re-authored these two for true darkness and
+    // SUBTERRANEAN_MOISTURE and nothing scored them there. This store is the
+    // consumer half. It ships with exactly these two; C2c's Mountain and
+    // Duergar dwarves are the next rows, and adding one is a deliberate edit.
+    let reg = habitat_realm_registry();
+    let sub: Vec<&str> = reg
+        .iter()
+        .filter(|(_, r)| **r == HabitatRealm::Subterranean)
+        .map(|(k, _)| k.0)
+        .collect();
+    assert_eq!(sub, vec!["rust-monster", "xorn"], "ascending by KindId");
+    assert_eq!(reg.len(), 2, "the store is sparse: absence means Surface");
+}
+
+#[test]
+fn every_kind_in_the_realm_store_has_a_biosphere_row() {
+    // Referential integrity, mirroring the peopled-cluster checks in
+    // windows/worldgen/src/components.rs: a realm for a kind that does not
+    // exist is a typo that would otherwise be silent.
+    let bio = biosphere_registry();
+    for (kind, _) in habitat_realm_registry().iter() {
+        assert!(bio.get(kind).is_some(), "{} has no biosphere row", kind.0);
+    }
 }

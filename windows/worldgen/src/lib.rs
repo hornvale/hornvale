@@ -1161,6 +1161,16 @@ pub fn tolerance_tiered(
 /// survives a save/load boundary. The other `.enumerate()` sites in this
 /// file that mint a `(tag as u32, ..)` pair share this exact contract.
 ///
+/// **`species_realm` is a parallel slice** (The Warren): same order, same
+/// length as `species_biosphere` — `species_realm[tag]` names the realm for
+/// `species_biosphere[tag]`, enforced by a `debug_assert_eq!` on the two
+/// lengths. A caller building one from `species_biosphere`'s own iteration
+/// must rebuild both together, the same discipline the paragraph above
+/// states for `species`/`mass_map`/`.composition` tags. An index past the
+/// slice's end (never expected, since the two are always built together)
+/// defaults to [`hornvale_species::HabitatRealm::SURFACE`], the same default
+/// a kind absent from [`WorldComponents::habitat_realm`](crate::components::WorldComponents::habitat_realm) carries.
+///
 /// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
@@ -1188,6 +1198,7 @@ pub fn tolerance_tiered(
 /// authored onto the `MARINE_FORAGE` axis would get a non-zero K at sea from
 /// this same product, unchanged.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+#[allow(clippy::too_many_arguments)]
 pub fn per_species_suitability(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
@@ -1196,7 +1207,13 @@ pub fn per_species_suitability(
     insolation_scalar: f64,
     regime: &RotationRegime,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
 ) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+    debug_assert_eq!(
+        species_realm.len(),
+        species_biosphere.len(),
+        "species_realm must be parallel to species_biosphere — same order, same length"
+    );
     let base_inputs = carrying_inputs_of(geo, terrain, climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
     let substrate = substrate_field(
@@ -1207,6 +1224,12 @@ pub fn per_species_suitability(
         insolation_scalar,
         regime,
     );
+    // The Warren: the subterranean reading of every cell, hoisted exactly as
+    // the surface `substrate` is. Built unconditionally and read only by a
+    // `Subterranean` kind; `subterranean_substrate` is pure, so this costs one
+    // map and no draws.
+    let subterranean =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| subterranean_substrate(*substrate.get(cell)));
     // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
     // loop below — each is a pure function of terrain/climate, built once
     // and shared by every species' dot product.
@@ -1222,8 +1245,29 @@ pub fn per_species_suitability(
         .map(|(tag, bio)| {
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
+            let realm = species_realm
+                .get(tag)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-                let s = substrate.get(cell);
+                // The Warren: which realm's substrate this kind is scored
+                // against, and — for a subterranean kind only — whether the
+                // cell actually holds a cave at all. A `Surface` kind's
+                // arithmetic is UNTOUCHED: same field, same reading, and the
+                // `availability` factor below is exactly 1.0, an IEEE-754
+                // no-op (verified over the roster's real values, bit-
+                // difference 0).
+                let (s, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => (substrate.get(cell), 1.0),
+                    hornvale_species::HabitatRealm::Subterranean => (
+                        subterranean.get(cell),
+                        if terrain.cave_at(cell).is_some() {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                    ),
+                };
                 // Rank-restored supply via the extracted helper: the axis
                 // dot product, not the old summed-uptake scalar.
                 use hornvale_kernel::{
@@ -1249,16 +1293,19 @@ pub fn per_species_suitability(
                 // takes `min(temperature, precipitation)` — the law of the
                 // minimum — and this layer used to MULTIPLY four tolerances,
                 // so one half of the model obeyed Liebig and the other did not.
-                // Measured, the product compressed the result ~4x (median
-                // min-of-conditions on good ground is 0.5692), which is most of
-                // why every newly-opened cell came out unsurvivable.
+                // Measured, the product compressed the result ~4x.
                 //
-                // Merge note (main absorbed 2026-08-06): main's side of this
-                // conflict is the PRODUCT form this stage deliberately replaced,
-                // carrying main's rename of the elevation field. Kept Liebig —
-                // the measured change — and moved the rename inside
-                // `tolerance_liebig`, which is where the field is now read.
-                saturated * tolerance_liebig(cn, s, floor_buf)
+                // THE WARREN's `availability` stays OUTSIDE that minimum, and
+                // deliberately. It is not a tolerance — it is a presence mask
+                // in {0.0, 1.0} answering "does this cell hold a cave at all",
+                // and folding it into `tolerance_liebig` would type it as a
+                // fifth environmental axis, which it is not. (Arithmetically
+                // the two agree: for a mask in {0,1} against a tolerance in
+                // [0,1], `min` and `*` give the same answer. The distinction
+                // kept here is semantic, so a later reader does not mistake
+                // the gate for a condition curve.) `1.0` for every `Surface`
+                // kind, an IEEE-754 no-op.
+                saturated * tolerance_liebig(cn, s, floor_buf) * availability
             });
             (tag as u32, k)
         })
@@ -1484,6 +1531,20 @@ pub(crate) fn demography_report_with_beta_from(
     // contract; the order equals the default roster's `registry()`-key order.
     let species_biosphere: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, bio)| bio).collect();
+    // The Warren: which realm each kind (same order) lives in, built from the
+    // SAME `wc.biosphere` iteration as `species_biosphere` above, so the two
+    // stay index-aligned — a kind absent from the sparse
+    // `WorldComponents::habitat_realm` store defaults to `Surface`.
+    let species_realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(kind, _)| {
+            wc.habitat_realm
+                .get(kind)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
 
     let per_species_k = per_species_suitability(
         geo,
@@ -1493,6 +1554,7 @@ pub(crate) fn demography_report_with_beta_from(
         insolation_scalar,
         &regime,
         &species_biosphere,
+        &species_realm,
     );
     // `tag as u32` here is the same build-local dense index documented on
     // `per_species_suitability` — never serialized, never identity.
@@ -9074,6 +9136,22 @@ mod tests {
         .unwrap()
     }
 
+    /// The Warren: `wc.biosphere`-ordered realm slice, built the same way
+    /// `demography_report_with_beta_from` builds its own — a test-module
+    /// helper so every in-file `per_species_suitability` caller stays
+    /// index-aligned with `wc.biosphere.iter()` without repeating the map.
+    fn species_realm_of(wc: &WorldComponents) -> Vec<hornvale_species::HabitatRealm> {
+        wc.biosphere
+            .iter()
+            .map(|(kind, _)| {
+                wc.habitat_realm
+                    .get(kind)
+                    .copied()
+                    .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+            })
+            .collect()
+    }
+
     /// C1 T2: the dominant race is the peopled kind maximizing
     /// `Σ(population × mass)`, deterministic across rebuilds; `world_name`
     /// is that race's capitalized word for "earth" (its endonym).
@@ -9130,6 +9208,7 @@ mod tests {
             wc.deity.clone(),
             wc.culture.clone(),
             wc.material.clone(),
+            wc.habitat_realm.clone(),
         )
         .expect("cloned canonical stores stay integrity-valid");
 
@@ -9337,6 +9416,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 
@@ -9431,6 +9511,7 @@ mod tests {
             lexicon,
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
@@ -10989,6 +11070,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 
@@ -11977,6 +12059,7 @@ mod tests {
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
         let bio: Vec<&hornvale_species::BiosphereTraits> =
             wc.biosphere.iter().map(|(_, b)| b).collect();
+        let realm = species_realm_of(&wc);
         let ks = per_species_suitability(
             geo,
             &terrain,
@@ -11985,6 +12068,7 @@ mod tests {
             insolation_scalar,
             &regime,
             &bio,
+            &realm,
         );
 
         // wc.biosphere.ids() = registry() key order (ascending KindId):
@@ -12037,6 +12121,7 @@ mod tests {
         let wc = WorldComponents::assemble().unwrap();
         let bio: Vec<&hornvale_species::BiosphereTraits> =
             wc.biosphere.iter().map(|(_, b)| b).collect();
+        let realm = species_realm_of(&wc);
         let ks = per_species_suitability(
             geo,
             &terrain,
@@ -12045,6 +12130,7 @@ mod tests {
             insolation_scalar,
             &regime,
             &bio,
+            &realm,
         );
         let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
         assert_eq!(land.len(), 11_066, "P5's land-cell count (spec §1)");

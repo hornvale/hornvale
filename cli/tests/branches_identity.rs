@@ -310,6 +310,7 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
         ComponentStore::new(),
         ComponentStore::new(),
         ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("the peopled-only component set is well-formed");
     let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain reconstructs");
