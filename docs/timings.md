@@ -24,6 +24,16 @@ then rewrites the baseline. A red run never records. That file is the one to
 read with `git log -p`; *this* one keeps the wall time of each deliberate run,
 including `make ci` itself under the label `ci`.
 
+**A pre-commit `gate` row names the tree it gated, not `HEAD` at run time.**
+`timed.sh` stamps `git rev-parse --short HEAD`, and a commit gate by definition
+runs *before* the commit it clears — so the automatic stamp is always the
+PARENT. Left alone that reads as the previous commit having been gated twice,
+which is the opposite of what the ledger is for. So the `commit` column is
+corrected by hand after the commit lands (The Sighting's two 2026-08-06 `gate`
+rows were stamped `92177164`, Task 4's SHA, and name `21ff57b9` — the Task 5
+tree they actually gated). The correction is to the LABEL, never to a measured
+number: no wall, user, sys or ratio value in this file is ever edited.
+
 The first row is backfilled by hand from the fast-gate-tiers investigation
 (2026-07-13): the pre-tiering `cargo test --workspace` on an M1 Max under
 ~8 parallel sessions — the 43.5-min worst case that motivated the tiering.
@@ -411,5 +421,7 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-06T19:48:18Z | gate | 350.346 | 2554.864 | 80.639 | 7.52 | 0 | d36a6a79 | the-benchmark | MacBookPro | 10 |
 | 2026-08-06T20:00:48Z | gate | 326.865 | 2554.833 | 65.095 | 8.02 | 0 | 58230387 | the-benchmark | MacBookPro | 10 |
 | 2026-08-06T20:02:40Z | rebaseline | 104.930 | 136.389 | 6.706 | 1.36 | 0 | 58230387 | the-benchmark | MacBookPro | 10 |
-| 2026-08-06T23:35:40Z | gate | 363.912 | 2555.297 | 73.436 | 7.22 | 0 | 92177164 | the-sighting | MacBookPro | 10 |
-| 2026-08-06T23:47:00Z | gate | 460.403 | 2579.029 | 101.528 | 5.82 | 0 | 92177164 | the-sighting | MacBookPro | 10 |
+| 2026-08-06T23:35:40Z | gate | 363.912 | 2555.297 | 73.436 | 7.22 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
+| 2026-08-06T23:47:00Z | gate | 460.403 | 2579.029 | 101.528 | 5.82 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:18:33Z | gate | 418.504 | 2619.181 | 86.871 | 6.47 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:21:14Z | rebaseline | 150.639 | 141.205 | 5.745 | 0.98 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |

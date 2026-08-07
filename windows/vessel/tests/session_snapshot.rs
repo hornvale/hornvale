@@ -234,34 +234,53 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     let SpatialChannel::Chamber { plan } = &snap.spatial else {
         panic!("`enter` puts the possession inside")
     };
+    let marks = plan.marks.clone();
+    let extent = plan.extent;
+    let you = plan.you;
 
     assert!(
-        !plan.marks.is_empty(),
+        !marks.is_empty(),
         "a chamber holding a co-located creature must draw it: present = {:?}",
         snap.sensed.present
     );
-    for mark in &plan.marks {
+    for mark in &marks {
         // The NPC's OWN noun, not a generic one — the join `PlanMark` took the
         // focalizer's shape for.
         assert!(
-            snap.sensed
-                .present
-                .iter()
-                .any(|p| p.label == mark.noun && mark.datum.contains(&p.felt)),
-            "mark {:?} names no creature `sensed.present` reports",
-            mark
+            snap.sensed.present.iter().any(|p| p.label == mark.noun),
+            "mark {mark:?} names no creature `sensed.present` reports"
         );
-        assert_eq!(mark.kind, "creature", "a creature's mark says what it is");
+        // `"agent"`, the SAME word `scene/surrounds/v2` marks this creature with
+        // one band up (`purview::AGENT_MARK_KIND`). A second word for one thing
+        // would make a client learn two vocabularies to draw one creature.
+        assert_eq!(mark.kind, "agent", "a creature's mark says what it is");
         // Inside the extent, and standing on a cell it could stand on: the
         // plan's own grid is total, so a mark outside it would be undrawable.
-        let e = &plan.extent;
         assert!(
-            mark.x >= e.x && mark.x < e.x + e.w && mark.y >= e.y && mark.y < e.y + e.h,
-            "mark {mark:?} is outside the extent {e:?}"
+            mark.x >= extent.x
+                && mark.x < extent.x + extent.w
+                && mark.y >= extent.y
+                && mark.y < extent.y + extent.h,
+            "mark {mark:?} is outside the extent {extent:?}"
         );
         assert!(
-            !(mark.x == plan.you.x && mark.y == plan.you.y),
+            !(mark.x == you.x && mark.y == you.y),
             "a creature was drawn in the possession's own cell — §7 rule 5"
+        );
+    }
+
+    // `PlanMark.datum` promises to be "the datum `examine` prints". Asserted
+    // against the verb rather than against a literal, because a literal cannot
+    // tell the two apart when only one of them moves (fix round 1: they had
+    // already diverged, and no test could see it).
+    for mark in &marks {
+        let printed = match session.handle(&format!("examine {}", mark.noun)) {
+            hornvale_vessel::Turn::Out(t) | hornvale_vessel::Turn::Released(t) => t,
+        };
+        assert_eq!(
+            printed, mark.datum,
+            "the mark's datum is not what `examine {}` prints",
+            mark.noun
         );
     }
 }

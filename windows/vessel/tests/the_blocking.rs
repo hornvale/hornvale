@@ -9,7 +9,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
-use hornvale_vessel::{PossessOpts, Session, Turn};
+use hornvale_vessel::{PossessOpts, Session, SpatialChannel, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 fn world() -> World {
@@ -187,13 +187,69 @@ fn map_out_indoors_refuses_and_names_the_verb_that_fixes_it() {
 }
 
 #[test]
+fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
+    // The Sighting, fix round 1. The regression this pins was MEASURED, not
+    // hypothesised: outdoors `examine <label>` answered from the chart's legend,
+    // and stepping through a doorway made the same noun answer "You see no
+    // <label> here." — in the band whose plan was drawing a mark bearing exactly
+    // that noun. The Lintel's water jar, one band lower.
+    //
+    // The assertion is byte equality rather than "both answer", because a band
+    // boundary is exactly where two renderers of one fact drift apart. One noun,
+    // one datum (`the_purview.rs::a_noun_at_both_grains_resolves_to_one_datum`),
+    // now across a band as well as across two grains.
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.handle("wait");
+    let label = session
+        .snapshot()
+        .expect("a live session snapshots")
+        .sensed
+        .present
+        .first()
+        .expect("one tick puts a creature in the possession's room")
+        .label
+        .clone();
+
+    let outdoors = out(session.handle(&format!("examine {label}")));
+    assert!(
+        !outdoors.starts_with("You see no"),
+        "precondition: the noun answers OUT of doors: {outdoors}"
+    );
+
+    inside(&mut session);
+    let indoors = out(session.handle(&format!("examine {label}")));
+    assert_eq!(
+        indoors, outdoors,
+        "'{label}' is drawn on the plan inside; examine must answer it, and answer \
+         it with the SAME line the walk band gives"
+    );
+}
+
+#[test]
 fn every_noun_the_plan_depicts_is_examinable() {
     // The parity contract's tested half (spec §6), generalizing
     // `the_purview.rs::examine_accepts_exactly_the_union_of_both_grains`.
+    //
+    // **THE WALK IS TWO LISTS, NOT ONE (The Sighting, fix round 1).** This test
+    // used to walk `plan_legend_nouns()` alone — the ASCII render's LEGEND — and
+    // that was sufficient only while the legend was everything the plan depicted.
+    // `vessel/plan/v1` now carries `marks`, and a mark is depicted by every
+    // definition that matters: it has a cell, a noun, and a pane that draws it.
+    // A legend-only walk cannot see one, so a campaign adding a depicted field
+    // would repeat The Lintel — a noun `look` names and `examine` denies —
+    // with the parity test green. Any future depicted list belongs in `depicted`
+    // below, in the commit that adds it.
+    //
+    // `wait` before `enter` is load-bearing and is asserted rather than assumed:
+    // `liveness::Occupancy` is only populated by a tick, so a bare `enter` draws
+    // no marks at all and the widened half of this walk would cover nothing while
+    // reading as coverage.
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    session.handle("wait");
     inside(&mut session);
-    let nouns = session.plan_legend_nouns();
+    let mut nouns = session.plan_legend_nouns();
     assert!(
         !nouns.is_empty(),
         "a plan whose legend names nothing cannot be checked, and a player cannot \
@@ -209,6 +265,23 @@ fn every_noun_the_plan_depicts_is_examinable() {
             "the legend names {glyph:?} but the picture never draws it: {plan}"
         );
     }
+
+    // The plan's OTHER depicted list: the creatures standing on its cells.
+    let marks = match session
+        .snapshot()
+        .expect("a live session snapshots")
+        .spatial
+    {
+        SpatialChannel::Chamber { plan } => plan.marks,
+        SpatialChannel::Walk { .. } => panic!("`enter` puts the possession inside"),
+    };
+    assert!(
+        !marks.is_empty(),
+        "no mark is drawn, so the widened half of this walk checks nothing — \
+         a parity test that silently covers nothing is the failure it exists to prevent"
+    );
+    nouns.extend(marks.iter().map(|m| m.noun.clone()));
+
     for noun in &nouns {
         let reply = out(session.handle(&format!("examine {noun}")));
         assert!(

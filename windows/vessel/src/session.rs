@@ -53,18 +53,13 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 /// type-audit: bare-ok(count)
 const SIGHT_RADIUS: i32 = crate::lattice::CHAMBER_SIDE / 2;
 
-/// What [`crate::plan::PlanMark::kind`] a creature carries — the plan's
-/// counterpart to `scene/surrounds/v2`'s `"settlement"`, and deliberately not
-/// `"agent"`, which that schema already spends on the possessed agent alone.
-const CREATURE_MARK_KIND: &str = "creature";
-
-/// A creature's rank on the plan (lower is more salient). Ten, the same rank
-/// `scene/surrounds/v2` gives the flagship settlement, because a living thing is
-/// the most salient thing a floor plan can draw and nothing else writes a
-/// `PlanMark` yet — the ordering this constant participates in is currently
-/// creature-against-creature, where `plan_of`'s noun tie-break decides.
-/// type-audit: bare-ok(index)
-const CREATURE_SALIENCE: u32 = 10;
+// A creature's `kind`, `datum` and `salience` on the plan are NOT this module's
+// to invent: they are `crate::purview`'s `AGENT_MARK_KIND`, `creature_datum` and
+// `AGENT_SALIENCE`, the same three the walk-band chart marks the same creature
+// with. Fix round 1's finding is why they are shared rather than restated — this
+// module's first draft wrote its own `"creature"` kind and a felt-state datum,
+// so one creature answered `examine` with two different sentences depending on
+// which side of a doorway the player was standing. See `Session::sighting`.
 
 /// The ways-on name for the aperture leading DEEPER into a structure — a
 /// direction, not a thing, because a chamber address carries no bearing and the
@@ -659,7 +654,10 @@ impl<'w> Session<'w> {
         // 1.249 ms, so a second derivation — or one per creature — would be a
         // budget item rather than noise. `None` out of doors.
         let sighting = self.sighting();
-        let here: Vec<(EntityId, PresentEntry)> = self
+        // The species rides along beside the `PresentEntry` because a creature's
+        // MARK datum is an identity line (`purview::creature_datum`), not the
+        // felt state `present` carries — and `PresentEntry` has no species field.
+        let here: Vec<(EntityId, String, PresentEntry)> = self
             .colocated_npcs()
             .iter()
             .map(|npc| {
@@ -676,6 +674,7 @@ impl<'w> Session<'w> {
                 );
                 (
                     npc.entity,
+                    npc.species.clone(),
                     PresentEntry {
                         entity: npc.entity.0.get(),
                         label: npc.label.clone(),
@@ -701,30 +700,32 @@ impl<'w> Session<'w> {
         };
         let present: Vec<PresentEntry> = here
             .iter()
-            .filter(|(who, _)| !hidden(who))
-            .map(|(_, entry)| entry.clone())
+            .filter(|(who, _, _)| !hidden(who))
+            .map(|(_, _, entry)| entry.clone())
             .collect();
 
         // The same shadowcast decides the marks, so the pane and the sensed
         // channel cannot disagree about who is here.
+        //
+        // `kind`, `datum` and `salience` are the walk-band chart's own
+        // (`crate::purview`), not this module's. Fix round 1's finding: the
+        // first draft minted a `"creature"` kind and a felt-state datum here, so
+        // one creature answered `examine` with two different sentences depending
+        // on which side of a doorway the player stood — the exact drift §6
+        // forbids, one band lower than The Lintel's jar.
         let marks: Vec<crate::plan::PlanMark> = sighting
             .as_ref()
             .map(|s| {
                 here.iter()
-                    .filter_map(|(who, entry)| {
+                    .filter_map(|(who, species, entry)| {
                         let cell = *s.placed.get(who)?;
                         s.lit.contains(&cell).then(|| crate::plan::PlanMark {
                             x: cell.0,
                             y: cell.1,
                             noun: entry.label.clone(),
-                            kind: CREATURE_MARK_KIND.to_string(),
-                            // The sentence `needs` prints for this creature,
-                            // verbatim: the mark on the plan, the entry in
-                            // `sensed.present` and the line in the prose are one
-                            // examinable thing, which is the whole reason
-                            // `PlanMark` took the focalizer's shape.
-                            datum: format!("The {} {}.", entry.label, entry.felt),
-                            salience: CREATURE_SALIENCE,
+                            kind: crate::purview::AGENT_MARK_KIND.to_string(),
+                            datum: crate::purview::creature_datum(&entry.label, species),
+                            salience: crate::purview::AGENT_SALIENCE,
                         })
                     })
                     .collect()
@@ -2032,6 +2033,33 @@ impl<'w> Session<'w> {
         // and `examine_chamber` read it through — the plan asked for reuse rather
         // than a fourth derivation of `chamber_interior_of`, and this is it.
         let chamber = self.chamber_interior_here()?;
+        // THE KIND JOIN IS ONLY WELL-DEFINED WHILE A CHAMBER'S KINDS ARE
+        // DISTINCT, and nothing upstream enforces that: `pattern::compose` keeps
+        // duplicates (`first_of.entry(p.kind).or_insert(id)`), and `INVENTORY`
+        // already carries one duplicated kind (`Ground`) that only stays out of
+        // one chamber because `draw` filters the pair on `built`. Add a second
+        // pattern of an existing kind at the same `built` and the `find` below
+        // silently collapses two distinct room anchors onto one chamber cell —
+        // the second creature is then refused and vanishes from `marks` while
+        // staying in `sensed.present`, indistinguishable from the legitimate
+        // cell-taken case. Silent creature loss is the hardest class to notice
+        // later, so it fails loudly in every test and debug run instead.
+        debug_assert!(
+            {
+                let mut kinds: Vec<_> = chamber
+                    .ids()
+                    .iter()
+                    .map(|&a| chamber.anchor(a).kind)
+                    .collect();
+                let before = kinds.len();
+                kinds.sort();
+                kinds.dedup();
+                kinds.len() == before
+            },
+            "chamber {} composes two anchors of one kind, so the kind join is no \
+             longer injective and a creature would be silently dropped",
+            inside.at
+        );
         let cells = crate::lattice::anchor_cells(&chamber, &inside.lattice, inside.at, inside.seed);
 
         let mut held = crate::lattice::Occupancy::default();
@@ -2125,6 +2153,45 @@ impl<'w> Session<'w> {
         }
         if let Some(detail) = crate::chamber_prose::glyph_detail(&wanted) {
             return detail.to_string();
+        }
+        // A CREATURE THE PLAN DEPICTS, answered last (The Sighting, fix round 1).
+        //
+        // Three things about this arm, each of which was a decision:
+        //
+        // 1. **It closes a band regression.** Outdoors `examine <label>` resolves
+        //    through the chart's legend and answers; before this arm, walking
+        //    through a doorway made the same noun stop answering — while the plan
+        //    inside was drawing a mark bearing exactly that noun. §6 obliges
+        //    every depicted noun to answer, and The Lintel's water jar is what
+        //    happens when it does not.
+        // 2. **It answers with the SAME sentence the outdoor path does**
+        //    ([`crate::purview::creature_datum`], one definition, two callers),
+        //    because `a_noun_at_both_grains_resolves_to_one_datum` makes one
+        //    noun → one datum a tested contract and a band boundary must not be
+        //    the place it quietly stops holding.
+        // 3. **It is gated on SIGHT, not on co-location.** Only a creature this
+        //    turn's `marks` actually draws can be examined. A creature the
+        //    shadowcast withheld must still refuse, or `examine` would be a side
+        //    channel straight around the redaction `snapshot` just performed.
+        //
+        // Answered LAST, after the anchors and the glyph legend, for two reasons:
+        // prose is the constitutionally primary surface (§3.5), so an anchor noun
+        // wins any tie; and `sighting()` is the one costly read on this path
+        // (`anchor_cells`, 42 us median / 410 us p99), so it is paid only when
+        // nothing cheaper answered.
+        if let Some(sighting) = self.sighting() {
+            for npc in self.colocated_npcs() {
+                if npc.label.to_lowercase() != wanted {
+                    continue;
+                }
+                let seen = sighting
+                    .placed
+                    .get(&npc.entity)
+                    .is_some_and(|c| sighting.lit.contains(c));
+                if seen {
+                    return crate::purview::creature_datum(&npc.label, &npc.species);
+                }
+            }
         }
         format!("You see no {noun} here.")
     }
@@ -4202,6 +4269,14 @@ mod tests {
             "some anchor of this room draws OUTSIDE it — without one this test asserts nothing",
         );
 
+        let label = session
+            .npcs
+            .iter()
+            .find(|n| n.entity == who)
+            .expect("the creature is derived")
+            .label
+            .clone();
+
         session.occupancy.place(who, &room, near);
         let snap = session.snapshot().unwrap();
         assert_eq!(
@@ -4210,6 +4285,10 @@ mod tests {
             "precondition: a creature in sight IS sent"
         );
         assert_eq!(marks_of(&session).len(), 1, "precondition: and IS drawn");
+        assert!(
+            !session.examine_chamber(&label).starts_with("You see no"),
+            "precondition: and ANSWERS examine while it is depicted"
+        );
 
         session.occupancy.place(who, &room, far);
         let snap = session.snapshot().unwrap();
@@ -4221,6 +4300,16 @@ mod tests {
         assert!(
             marks_of(&session).is_empty(),
             "and must not be drawn either — one shadowcast decides both"
+        );
+        // THE SIDE CHANNEL, closed. `examine_chamber` answers a creature's noun
+        // (fix round 1, so the noun does not stop answering at a doorway) — but
+        // gated on SIGHT, not on co-location. Ungated it would hand back the
+        // creature `snapshot` had just structurally redacted, one verb later.
+        let refused = session.examine_chamber(&label);
+        assert!(
+            refused.starts_with("You see no"),
+            "examine must refuse a creature sight withheld, or it is a side \
+             channel around the redaction: {refused}"
         );
     }
 
