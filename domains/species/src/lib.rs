@@ -1710,6 +1710,334 @@ fn human_condition_niche() -> ConditionNiche {
     }
 }
 
+// ---------------------------------------------------------------------------
+// THE DELVERS (C2c): the dwarf family — five kinds on one measured rule.
+//
+// The five niches below are authored against a MEASURED theorem rather than
+// against taste, and the theorem decides which axis each kind's identity may
+// live on. `tolerance_liebig` (`windows/worldgen/src/lib.rs`) floors
+// temperature/moisture/insolation by `sovereignty_floor(mass, potency)` and
+// passes elevation a literal `0.0`, while
+// `hornvale_kernel::ConditionResponse::eval` is
+// `floor + (1 - floor) * devotion * exp(-z²/2)`. So elevation's value never
+// exceeds its own `devotion`, and the other three never fall below the floor:
+//
+//     elevation is the Liebig minimum on EVERY cell
+//         iff  devotion_elev < sovereignty_floor(mass, potency)
+//
+// `windows/worldgen/tests/delver_bind_audit.rs` measured that closed form on
+// the shipped roster over seeds 42 / 7 / 1234 and confirmed it EXACTLY — every
+// kind below its floor is elevation-bound on 100.00% of land, and the three
+// authored above their floor are not (kobold 43-51%, hobgoblin 69-77%,
+// bugbear 71-78%). Mass sets the floor; the AUTHORED devotion decides the
+// bind. This roster uses both modes deliberately:
+//
+//   kind             mass   sov. floor   dev_el   mode     identity carried by
+//   desert-dwarf     66.0     0.443252     0.70   ABOVE    climate (arid)
+//   duergar          72.0     0.449823     0.30   below    elevation (deep)
+//   gully-dwarf      62.0     0.438477     0.30   below    elevation (low)
+//   hill-dwarf       70.0     0.447705     0.30   below    elevation (mid)
+//   mountain-dwarf   72.0     0.449823     0.30   below    elevation (high)
+//
+// (Floors computed live from `hornvale_kernel::sovereignty_floor(Mass, 0.0)`,
+// not copied from a plan — the plan's own table was wrong in the fourth
+// decimal for two of the five.)
+//
+// Four of the five are BELOW their floor, so their temperature, moisture and
+// insolation curves are *prepared* in the organ-builder's sense — engraved,
+// installed, connected to no rank. Each of those four says so in its own doc
+// comment rather than implying a climate preference the model will never
+// read. Desert-dwarf is the exception and the campaign's deliberate one: at
+// devotion 0.70 against a floor of 0.443252 (a margin of 0.256748) its arid
+// curves genuinely bind, making it the first people in the roster whose
+// CLIMATE niche selects. Spec §10.2.
+//
+// Elevation optima are cited against the same settleable-land percentile
+// table every other people uses ([`ConditionNiche`]'s doc: p15=142, p25=621,
+// p35=1004, p50=1561, p65=2166, p75=2651, p85=3251, p95=4148 m above sea
+// level).
+// ---------------------------------------------------------------------------
+
+/// Desert dwarf condition niche: the roster's first CLIMATE-selected people.
+///
+/// **Authored ABOVE its sovereignty floor, deliberately.** At 66.0 kg and
+/// potency 0.0 the floor is `0.443252`; this niche's `devotion_elev` is
+/// `0.70`, a margin of `0.256748` ABOVE it. By the measured theorem in the
+/// block comment above, that means elevation is NOT the automatic Liebig
+/// minimum — the temperature and moisture curves below actually bind, and
+/// they are authored to be genuinely arid rather than decorative. Elevation
+/// only takes the minimum where `0.70 * exp(-z²/2)` falls under the floor,
+/// i.e. more than ~2880 m from the 700 m optimum — on land above ~3.6 km,
+/// which is above p85 (3251 m). Everywhere below that, climate decides.
+///
+/// This is a shipped style, not a new one: kobold (0.95) and hobgoblin and
+/// bugbear (0.70) already sit above their floors and are measurably not
+/// elevation-bound. The cost is the mirror of the benefit — a kind authored
+/// far above its floor is sharply excluded away from its optimum, which is
+/// why `windows/worldgen/tests/non_void_roster.rs` is this authoring's gate.
+///
+/// The desert climate tile is `domains/climate`'s `Desert`
+/// (`temp_c >= 20` and `moisture < 0.2`), the same tile gnoll and
+/// giant-scorpion stake. Gnoll is NOT re-authored here even though the bind
+/// audit diagnosed its defect — its `devotion_elev` of 0.40 sits BELOW its
+/// floor of 0.4954, so its authored moisture curve has never once bound.
+/// Moving an existing people's capacity inside a roster epoch would destroy
+/// this campaign's attribution (spec §10.2).
+fn desert_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // hot, clear of the Desert tile's >= 20 C floor with margin. Narrow
+        // (8.0) because this is the axis that must actually select: at
+        // devotion 0.70 the response spans [floor, 0.833], so a cell 12 C off
+        // the optimum reads at the floor and a cell on it reads nearly twice
+        // that.
+        temperature: ConditionResponse {
+            optimum: 28.0,
+            width: 8.0,
+            devotion: 0.70,
+        },
+        // deep inside the Desert tile's < 0.20 moisture band, and the second
+        // axis authored to bind. Settleable-land moisture runs p5 0.24 /
+        // p50 0.49 / p95 0.70, so an optimum of 0.12 puts the great majority
+        // of land well off this curve — which is the aridity claim, stated as
+        // a number.
+        moisture: ConditionResponse {
+            optimum: 0.12,
+            width: 0.15,
+            devotion: 0.65,
+        },
+        // Insolation is a pure function of latitude (BIO-insolation-is-latitude), and the
+        // settleable band is narrow (p5 0.19 / p50 0.25 / p95 0.31). The
+        // subtropical desert belt sits at its upper end, so the optimum leans
+        // high, but the curve is wide and only moderately devoted: this is a
+        // latitude-honest reading, not a second aridity claim. Inside the
+        // kind's own arid stronghold — where temperature and moisture are
+        // both satisfied — this becomes the binding axis, which is the
+        // correct reading of "nothing in the climate constrains a desert
+        // dwarf in the desert".
+        insolation: ConditionResponse {
+            optimum: 0.28,
+            width: 0.35,
+            devotion: 0.45,
+        },
+        // Wide and shallow-centred near p25 (621 m): desert basins and their
+        // margins. The width (3000.0) is what keeps elevation OUT of the
+        // minimum across ordinary land, so the climate axes can be the ones
+        // that speak.
+        elevation: ConditionResponse {
+            optimum: 700.0,
+            width: 3000.0,
+            devotion: 0.70,
+        },
+    }
+}
+
+/// Duergar condition niche: the deep dwarf — `Subterranean`, and the kind
+/// whose identity is DEPTH.
+///
+/// **Elevation is the sole binding axis, by construction.** `devotion_elev`
+/// is `0.30` against a sovereignty floor of `0.449823` at 72.0 kg, so by the
+/// measured theorem above this kind is the Liebig minimum on elevation on
+/// 100% of land, always. The temperature, moisture and insolation curves
+/// below are honest readings of a chamber and are consumed by nothing: they
+/// are floored at `0.449823` and can never fall under `0.30 * bump`. They are
+/// authored, not implied to work.
+///
+/// **Why a DEEP dwarf has a LOW elevation optimum.** The elevation axis is
+/// metres above sea level, and Task 3b makes a chamber's reading the surface
+/// height MINUS the depth to the top of its deepest band
+/// (`domains/terrain/src/strata.rs`'s `BandSample.top_depth_m`). A deeper
+/// chamber therefore reads LOWER, not deeper — "duergar prefers deep" is
+/// exactly "duergar prefers low underground elevation", and 300 m is the
+/// value that says it. Against mountain-dwarf's 2600 m under the same
+/// mountains, the difference between the two kinds is the depth of the
+/// chamber and nothing else, which is what P2″ measures.
+///
+/// Measured depth distribution (`windows/worldgen/tests/delver_depth_probe.rs`,
+/// seeds 42 / 7 / 1234): two thirds of caves sit in `Cover`/`Basement` at 0 m
+/// to ~1800 m of depth, and the `Roots` third at 14-21 km becomes correctly
+/// uninhabitable. The median habitable depth is 0.0 m on every seed, so this
+/// optimum is authored knowing the variance it must find is a thin tail.
+fn duergar_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // Cool stable rock, mirroring rust-monster's reading. PREPARED: the
+        // subterranean substrate passes the surface cell's temperature
+        // through unchanged, and this axis is floored above the elevation
+        // term regardless, so it never binds.
+        temperature: ConditionResponse {
+            optimum: 10.0,
+            width: 22.0,
+            devotion: 0.35,
+        },
+        // Exactly `subterranean_substrate`'s fixed `SUBTERRANEAN_MOISTURE`
+        // (0.90), the same value rust-monster was re-authored onto by The
+        // Deep Realm — a real chamber is a match rather than an approximation
+        // of one. PREPARED: floored, never the minimum.
+        moisture: ConditionResponse {
+            optimum: 0.90,
+            width: 0.20,
+            devotion: 0.40,
+        },
+        // TRUE darkness — `subterranean_substrate` reads insolation as `0.0`
+        // exactly, always. Narrow because a duergar's dark is not a lean but
+        // its whole world. PREPARED: floored, never the minimum.
+        insolation: ConditionResponse {
+            optimum: 0.0,
+            width: 0.06,
+            devotion: 0.40,
+        },
+        // THE axis that binds. 300 m of underground elevation: below p25
+        // (621 m), and reachable only by a chamber whose depth has eaten most
+        // of the rock above it. Width 1400.0 matches hill-dwarf's so the two
+        // differ in WHERE they sit, not in how choosy they are.
+        elevation: ConditionResponse {
+            optimum: 300.0,
+            width: 1400.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Gully dwarf condition niche: the lowland scavenger, and the roster's
+/// lowest-sitting dwarf.
+///
+/// **Elevation is the sole binding axis, by construction.** `devotion_elev`
+/// is `0.30` against a sovereignty floor of `0.438477` at 62.0 kg — the
+/// lowest floor of the five, and still comfortably above 0.30 — so this kind
+/// is elevation-bound on 100% of land. The three climate curves below are
+/// honest but PREPARED: floored at `0.438477`, they can never fall under
+/// `0.30 * bump`, so nothing consumes them. Stated rather than implied.
+fn gully_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // temperate-to-warm, wide and unfussy — a scavenger eats what the
+        // weather leaves. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 17.0,
+            width: 26.0,
+            devotion: 0.25,
+        },
+        // damp lowland margins: floodplain, marsh edge, the wet ground where
+        // detritus accumulates. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.62,
+            width: 0.40,
+            devotion: 0.25,
+        },
+        // centred on the settleable-land insolation median (0.25), wide —
+        // this kind makes no claim about light. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.40,
+            devotion: 0.20,
+        },
+        // THE axis that binds: 150 m, at p15 (142 m) — coastal plain, river
+        // bottom and the bottom of every gully. The narrowest width of the
+        // five (900.0), because "low" is this kind's whole ecological
+        // statement and a wide curve would erase it.
+        elevation: ConditionResponse {
+            optimum: 150.0,
+            width: 900.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Hill dwarf condition niche: the surface farmer-herder, the family's
+/// middle kind, and the one every other dwarf is read against.
+///
+/// **Elevation is the sole binding axis, by construction.** `devotion_elev`
+/// is `0.30` against a sovereignty floor of `0.447705` at 70.0 kg — the same
+/// mass and the same devotion as human, which the bind audit measured
+/// elevation-bound on 100.00% of land on every seed. The three climate curves
+/// below are PREPARED: floored at `0.447705`, they never reach under
+/// `0.30 * bump` and so are never the Liebig minimum. They are authored
+/// honestly and they do not work; that is the model, not an oversight.
+fn hill_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // temperate uplands: cooler than human's 14.0, on the cold side of
+        // the settleable band (p5 3.27 / p50 14.59 / p95 31.59 C).
+        // PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 11.0,
+            width: 20.0,
+            devotion: 0.35,
+        },
+        // moist enough to farm, just above the settleable median (0.49) —
+        // terraced grain and pasture, not irrigation. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.55,
+            width: 0.35,
+            devotion: 0.35,
+        },
+        // at the settleable-land insolation median. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.25,
+            width: 0.32,
+            devotion: 0.30,
+        },
+        // THE axis that binds: 900 m, between p25 (621 m) and p35 (1004 m) —
+        // genuine hill country, above gully-dwarf's 150 m and well below
+        // mountain-dwarf's 2600 m. The three surface dwarves' optima are
+        // spaced so that no two overlap inside one width.
+        elevation: ConditionResponse {
+            optimum: 900.0,
+            width: 1400.0,
+            devotion: 0.30,
+        },
+    }
+}
+
+/// Mountain dwarf condition niche: the miner of the high stone —
+/// `Subterranean`, and the shallow half of the depth pair.
+///
+/// **Elevation is the sole binding axis, by construction.** `devotion_elev`
+/// is `0.30` against a sovereignty floor of `0.449823` at 72.0 kg (the
+/// highest floor of the five), so this kind is elevation-bound on 100% of
+/// land. The climate curves below read a chamber honestly and bind nothing:
+/// floored at `0.449823`, they never reach under `0.30 * bump`.
+///
+/// **Read against duergar, its only real comparison.** Both are
+/// `Subterranean`, both 72.0 kg, both `MINERAL`-dominant, both `Paced`. Once
+/// Task 3b gives a chamber its real elevation
+/// (`surface height − top_depth_m`), the ONLY thing separating their capacity
+/// fields is this optimum: 2600 m here, 300 m there. A shallow chamber under
+/// a high peak reads high; a deep one reads low. Whether the depth field
+/// carries enough spatial variance for that to actually separate them is the
+/// campaign's open question (P2″, spec §10.6) — the depth probe measured a
+/// median habitable depth of 0.0 m, so the answer is genuinely in doubt and
+/// is reported rather than asserted.
+fn mountain_dwarf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // cold stone under a high peak. PREPARED: never binds.
+        temperature: ConditionResponse {
+            optimum: 5.0,
+            width: 20.0,
+            devotion: 0.35,
+        },
+        // exactly `subterranean_substrate`'s `SUBTERRANEAN_MOISTURE` (0.90),
+        // following rust-monster. PREPARED: never binds.
+        moisture: ConditionResponse {
+            optimum: 0.90,
+            width: 0.22,
+            devotion: 0.35,
+        },
+        // TRUE darkness (`subterranean_substrate` reads `0.0`), but wider
+        // than duergar's: a mountain dwarf's halls open onto the daylight it
+        // trades with. PREPARED: never binds.
+        insolation: ConditionResponse {
+            optimum: 0.0,
+            width: 0.12,
+            devotion: 0.30,
+        },
+        // THE axis that binds: 2600 m, at p75 (2651 m) — the high stone, the
+        // highest optimum of the five and the shallow half of the depth pair.
+        elevation: ConditionResponse {
+            optimum: 2600.0,
+            width: 1500.0,
+            devotion: 0.30,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1839,6 +2167,13 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
         // its ratio at 1.02, flat within noise. Listed because it LIVES
         // underground, not because scoring it there will move it.
         (KindId("xorn"), HabitatRealm::Subterranean),
+        // The Delvers (C2c): the first PEOPLES scored underground, and the
+        // first rows here that are not fauna. Both are 72.0 kg,
+        // MINERAL-dominant and `Paced`; the depth coordinate Task 3b supplies
+        // is the only thing that can separate them, which is what makes this
+        // pair the campaign's open question rather than its assumption.
+        (KindId("duergar"), HabitatRealm::Subterranean),
+        (KindId("mountain-dwarf"), HabitatRealm::Subterranean),
     ]
     .into_iter()
     .collect()
@@ -2308,6 +2643,132 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 schedule: LifeSchedule::Allometric,
             },
         ),
+        // THE DELVERS (C2c): the dwarf family, five kinds at once — the
+        // roster's seventh through eleventh peoples and its first
+        // multi-member family since goblinoid.
+        //
+        // **`ResourceVector` is where the differentiation actually lands.**
+        // BIO-supply-drowns-niche records that supply magnitude spans orders
+        // of magnitude while tolerance is bounded in `[0, 1]`; read as a
+        // defect that is the row's complaint, read as a lever it is this
+        // family's loudest channel. A miner, a farmer and a scavenger differ
+        // by orders of magnitude where a hot dwarf and a cold dwarf differ by
+        // nothing (spec §3.1).
+        //
+        // **All five are `LifeSchedule::paced(4.0)`, and the schedule is a
+        // FAMILY trait.** Authoring only the two cave-dwellers long-lived
+        // would claim that living underground is what makes a dwarf live for
+        // centuries; it is not, and the roster should not say so. This is
+        // `LifeSchedule::Paced`'s first occupant — The Long Age shipped the
+        // variant with an empty witness list and named C2c as the campaign
+        // that must fill it. Measured through `hornvale_species::life_history`
+        // at `MetabolicClass::Endotherm`:
+        //
+        //   kind             mass   allometric   paced(4.0)   maturity   generation
+        //   gully-dwarf      62.0      66.95 y     267.79 y     53.56 y     117.83 y
+        //   desert-dwarf     66.0      68.00 y     272.01 y     54.40 y     119.68 y
+        //   hill-dwarf       70.0      69.01 y     276.04 y     55.21 y     121.46 y
+        //   duergar          72.0      69.50 y     277.99 y     55.60 y     122.32 y
+        //   mountain-dwarf   72.0      69.50 y     277.99 y     55.60 y     122.32 y
+        //
+        // The factor has to CLEAR something to be read: `cascade_regime_of`
+        // (`windows/worldgen/src/lib.rs`) switches a Settled people onto the
+        // slow language-drift regime at `LIFESPAN_THRESHOLD_YEARS = 120.0`, and
+        // a 70 kg endotherm reads 69.01 y under pure allometry. 4.0 clears the
+        // threshold on all five with a wide margin, so the schedule is
+        // observable rather than decorative.
+        //
+        // **`pace_of_life` and `reproductive_tempo` SATURATE at exactly 1.0**
+        // at this factor, because `factor × raw × pace_multiplier` passes
+        // `MAX_PACE_MULTIPLIER = 1.5` (`allometry.rs`). Measured, not
+        // predicted: all five read 1.0000 on both. That is deliberate and
+        // stated (The Long Age §3.5) — saturating there is preferred to
+        // rescaling every kind in the roster — and it means those two channels
+        // are uninformative for a dwarf. `lifespan`, `age_at_maturity` and
+        // `generation_length` stay linear and unbounded, which is where the
+        // longevity is actually legible.
+        (
+            KindId("desert-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(66.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // DELIBERATELY LOW-SUM (0.60, against every other kind's
+                // 1.00). Uptake weights are a direction dotted into the
+                // per-cell supply vector, so a sub-unit sum is the one place
+                // in this model that can say "this people takes less from a
+                // cell than a farmer does" — a sparse desert forager working
+                // ground that supports few. Departing from the sum-to-one
+                // convention is stated here rather than left for a reader to
+                // notice; it lowers supply, and therefore K, uniformly.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.35), (ANIMAL_PREY, 0.25)]).unwrap(),
+                condition_niche: desert_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
+        (
+            KindId("duergar"),
+            BiosphereTraits {
+                mass: Mass::new(72.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // MINERAL-dominant like mountain-dwarf, but its second axis
+                // is ANIMAL_PREY rather than PLANT_FORAGE: a deep people
+                // grows nothing and hunts what shares its dark.
+                niche: ResourceVector::new(&[(MINERAL, 0.70), (ANIMAL_PREY, 0.30)]).unwrap(),
+                condition_niche: duergar_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(62.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // DETRITUS-dominant — the roster's first PEOPLE on the
+                // scavenger axis otyugh, carrion-crawler and shrieker hold.
+                // That is the whole ecological distance between this kind and
+                // hill-dwarf, and it is orders of magnitude wide.
+                niche: ResourceVector::new(&[(DETRITUS, 0.70), (PLANT_FORAGE, 0.30)]).unwrap(),
+                condition_niche: gully_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(70.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // PLANT_FORAGE-dominant: a farmer and herder, leaning harder
+                // on plants than human's 0.55/0.45 and much harder than
+                // bugbear's predatory 0.15/0.85.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.70), (ANIMAL_PREY, 0.30)]).unwrap(),
+                condition_niche: hill_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
+        (
+            KindId("mountain-dwarf"),
+            BiosphereTraits {
+                mass: Mass::new(72.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // MINERAL-dominant: the roster's first PEOPLE on the axis
+                // xorn and rust-monster hold alone. PLANT_FORAGE second — a
+                // mining people still eats, and trades down the mountain for
+                // the rest.
+                niche: ResourceVector::new(&[(MINERAL, 0.70), (PLANT_FORAGE, 0.30)]).unwrap(),
+                condition_niche: mountain_dwarf_condition_niche(),
+                potency: 0.0,
+                social_form: SocialForm::Settled,
+                schedule: LifeSchedule::paced(4.0).unwrap(),
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -2407,6 +2868,83 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 threat_response: 0.5,
                 deliberation_latency: 0.6,
                 time_horizon: 0.75,
+            },
+        ),
+        // THE DELVERS (C2c): the five dwarves. The family's shared reading is
+        // a LONG `time_horizon` — every one of them sits above human's 0.75 —
+        // and that is not decoration: `paced(4.0)` gives them 268-278 years
+        // and a 118-122 year generation length, so a dwarf genuinely plans
+        // past the span a human can. The differences among the five are the
+        // ecology each lives in, not the family they belong to.
+        (
+            KindId("desert-dwarf"),
+            MindVector {
+                // patient rather than pugnacious: a sparse-forage people
+                // cannot afford to lose members to a fight it could walk
+                // away from.
+                threat_response: 0.45,
+                // slow and considered — the family reading, and the correct
+                // one for a people whose next water is a day's march away.
+                deliberation_latency: 0.7,
+                // the longest of the five: route, well and season knowledge
+                // is the capital a desert people actually holds.
+                time_horizon: 0.9,
+            },
+        ),
+        (
+            KindId("duergar"),
+            MindVector {
+                // the harshest reading in the family and the roster's second
+                // highest after gnoll's 0.85: a coercive deep society meets
+                // a threat by standing on it.
+                threat_response: 0.9,
+                // fast, not deliberate — an order given is an order acted on;
+                // the deliberation happens above, not here.
+                deliberation_latency: 0.35,
+                // long, but the shortest of the five: what a duergar plans
+                // for is the next seam, not the next century.
+                time_horizon: 0.8,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            MindVector {
+                // flees: a scavenger that stands its ground against anything
+                // larger stops being a scavenger.
+                threat_response: 0.2,
+                // the fastest of the five, and the only one below the
+                // manikin's midpoint — opportunism is a decision made before
+                // the opportunity leaves.
+                deliberation_latency: 0.4,
+                // long by family, short by dwarf: enough to keep a midden and
+                // a lineage, not enough to keep a chronicle.
+                time_horizon: 0.8,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            MindVector {
+                // stands, moderately: a settled farmer defends its steading
+                // but is not looking for the fight.
+                threat_response: 0.6,
+                // slow and considered, the family's characteristic reading.
+                deliberation_latency: 0.75,
+                // a farmer plans in seasons and a long-lived farmer plans in
+                // generations of orchard and terrace.
+                time_horizon: 0.85,
+            },
+        ),
+        (
+            KindId("mountain-dwarf"),
+            MindVector {
+                // stands: a hold with a door defends the door.
+                threat_response: 0.7,
+                // the slowest deliberation in the roster — a people whose
+                // works outlast it does not decide quickly.
+                deliberation_latency: 0.8,
+                // matches desert-dwarf's 0.9 for a different reason: a delve
+                // is dug across lifetimes, so the plan outlives the planner.
+                time_horizon: 0.9,
             },
         ),
     ]
@@ -2512,6 +3050,62 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
                 perception: 0.20,
             },
         ),
+        // THE DELVERS (C2c): the five dwarves, spread across nearly the whole
+        // range the roster uses. The ordering principle is the one the
+        // goblinoid rows already established — an institution that drills is
+        // an institution that narrows — so the coercive deep hold is the
+        // narrowest kind in the roster and the institution-free scavenger
+        // band is the widest of the five. Human stays the widest overall on
+        // every axis, which is its own campaign's claim and is not disturbed.
+        (
+            KindId("desert-dwarf"),
+            Dispersion {
+                mind: 0.20,
+                society: 0.16,
+                perception: 0.14,
+            },
+        ),
+        (
+            KindId("duergar"),
+            Dispersion {
+                // the narrowest row in the registry, below the dragons' 0.08
+                // on society and perception: a society organized around
+                // coercion suppresses variance more thoroughly than a
+                // military hierarchy does, because dissent is not merely
+                // untrained but punished.
+                mind: 0.07,
+                society: 0.03,
+                perception: 0.05,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            Dispersion {
+                // second only to human: no caste, no guild, no hall, nothing
+                // that would make two gully dwarves resemble each other.
+                mind: 0.30,
+                society: 0.25,
+                perception: 0.18,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            Dispersion {
+                mind: 0.15,
+                society: 0.12,
+                perception: 0.10,
+            },
+        ),
+        (
+            KindId("mountain-dwarf"),
+            Dispersion {
+                // a guild society narrows temperament the way hobgoblin's
+                // drill does, and for the same reason.
+                mind: 0.11,
+                society: 0.07,
+                perception: 0.08,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -2602,6 +3196,80 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 sociality: Sociality::Hierarchic,
                 status_basis: StatusBasis::Knowledge,
                 in_group_radius: 0.8,
+            },
+        ),
+        // THE DELVERS (C2c): the five dwarves. Each row is argued from the
+        // kind's ECOLOGY, per decision 0021 — 5E supplies mass and CR and
+        // nothing else, so no moral canon rides along with the names. The
+        // five deliberately do not share a social reading: a family is a
+        // shared descent and a shared tongue, not a shared constitution.
+        (
+            KindId("desert-dwarf"),
+            SocietyVector {
+                // consensus, not command. A dispersed people whose members
+                // are separated for long stretches by the distances between
+                // water cannot enforce a standing authority, and does not
+                // need one.
+                sociality: Sociality::Communal,
+                // what earns standing is knowing where the water, the route
+                // and the season are — the same reasoning that puts
+                // `starreader` at the top of its lexicon.
+                status_basis: StatusBasis::Knowledge,
+                // wide: scattered kin who meet rarely must count distant
+                // relations as "us" or lose them entirely.
+                in_group_radius: 0.65,
+            },
+        ),
+        (
+            KindId("duergar"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                // dominance and position, plainly — the harsh reading of the
+                // family, and `StatusBasis::Rank`'s reading of a society
+                // organized around who may compel whom.
+                status_basis: StatusBasis::Rank,
+                // THE NARROWEST "us" IN THE ROSTER (0.15, against gnoll's 0.7
+                // and human's 0.8). This is the insularity, stated as a
+                // number: a deep hold that meets outsiders as competitors for
+                // the same seams draws the circle at the hold's own door.
+                in_group_radius: 0.15,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            SocietyVector {
+                // no authority worth the name: a scavenger band has nothing
+                // to command and nothing to command it with.
+                sociality: Sociality::Communal,
+                // what is found is shared — the same risk-pooling logic that
+                // earned gnoll `Generosity`, arrived at from the opposite
+                // direction: not a windfall too large to keep, but a find too
+                // small to be worth fighting over.
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.5,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                // a settled surplus people: standing comes from what the hall
+                // sets out, which is what a good harvest is FOR.
+                status_basis: StatusBasis::Generosity,
+                in_group_radius: 0.6,
+            },
+        ),
+        (
+            KindId("mountain-dwarf"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                // craft and lore: a mining and smithing people ranks by
+                // mastery, and its top rung is a `loremaster`, not a warlord.
+                status_basis: StatusBasis::Knowledge,
+                // narrow but not insular — the hold is "us", the trade
+                // partners down the mountain are not, and that is a working
+                // arrangement rather than duergar's hostility.
+                in_group_radius: 0.4,
             },
         ),
     ]
@@ -2730,6 +3398,78 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 sky_attention: 0.65,
             },
         ),
+        // THE DELVERS (C2c): the five dwarves. `sky_attention` is CELESTIAL
+        // vs terrestrial attention, not aerialness (`perception_lens.ambient
+        // = 1.5 - sky_attention`), so the two Subterranean kinds are authored
+        // near zero on it and high on `night_vision`. That authoring is
+        // HONEST rather than mechanical: it reaches the perception consumers —
+        // the hue ladder in `pack_depths`, the exposure lens — even though it
+        // reaches nothing in the capacity model, which reads only mass,
+        // potency, the resource vector and the condition niche.
+        (
+            KindId("desert-dwarf"),
+            PerceptionVector {
+                // the same strategy gnoll's row argues for on the same
+                // climate tile: shelter through the peak heat, move at the
+                // cooler margins.
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.65,
+                // THE HIGHEST IN THE ROSTER (above human's 0.65). An open-
+                // country people that crosses trackless ground at night
+                // navigates by the sky, and that is a claim about where its
+                // attention goes, not about where its body is.
+                sky_attention: 0.75,
+            },
+        ),
+        (
+            KindId("duergar"),
+            PerceptionVector {
+                // there is no day underground; the schedule is the dark one.
+                activity: ActivityCycle::Nocturnal,
+                // the sharpest night eye in the roster, above kobold's and
+                // the dragons' 0.9 — a people that has never needed a torch.
+                night_vision: 0.95,
+                // the lowest in the roster: a duergar may go a lifetime
+                // without seeing the sky, and nothing in its attention is
+                // shaped by it.
+                sky_attention: 0.05,
+            },
+        ),
+        (
+            KindId("gully-dwarf"),
+            PerceptionVector {
+                // works the margins of the day, where what it scavenges is
+                // least contested.
+                activity: ActivityCycle::Crepuscular,
+                night_vision: 0.7,
+                // eyes on the ground — that is where the food is.
+                sky_attention: 0.2,
+            },
+        ),
+        (
+            KindId("hill-dwarf"),
+            PerceptionVector {
+                // a surface farmer keeps the sun's hours.
+                activity: ActivityCycle::Diurnal,
+                // better than a human's by a wide margin, worse than any
+                // dwarf that lives in the dark.
+                night_vision: 0.6,
+                // reads the sky for weather and season, which is a farmer's
+                // reason to look up and a moderate one.
+                sky_attention: 0.5,
+            },
+        ),
+        (
+            KindId("mountain-dwarf"),
+            PerceptionVector {
+                activity: ActivityCycle::Nocturnal,
+                night_vision: 0.9,
+                // a shade above duergar's: this kind's halls have doors onto
+                // the daylight it trades through, so the sky is at least a
+                // thing it has seen.
+                sky_attention: 0.1,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -2789,6 +3529,18 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         // a label held by >= 2 kinds. The dwarf and elf families of C2c/C2d
         // will be the roster's first new multi-member families.
         (KindId("human"), "human"),
+        // THE DELVERS (C2c): five kinds, ONE label — the roster's first new
+        // multi-member family since goblinoid, and the first ever added as a
+        // family rather than grown into one. The moment the second of these
+        // rows exists, `check_integrity`
+        // (`windows/worldgen/src/components.rs`) requires a matching
+        // `family_proto` entry keyed `KindId("dwarf")` in `hornvale_language`;
+        // that row lands in the same commit, because it must.
+        (KindId("desert-dwarf"), "dwarf"),
+        (KindId("duergar"), "dwarf"),
+        (KindId("gully-dwarf"), "dwarf"),
+        (KindId("hill-dwarf"), "dwarf"),
+        (KindId("mountain-dwarf"), "dwarf"),
     ]
     .into_iter()
     .collect()
@@ -2855,6 +3607,17 @@ pub const KIND_CONCEPTS: &[(&str, &str)] = &[
     ("giant-crocodile-kind", "a giant crocodile"),
     // The Generalist (C2-0): the sixth people.
     ("human-kind", "a human"),
+    // The Delvers (C2c): the dwarf family's five. Glosses are authored, so
+    // `duergar` reads as itself — it is a kind name, not a compound of one.
+    // These five ids are what `domains/language/src/accession.rs`'s epoch-9
+    // cohort lists; `cli/tests/accession.rs` checks the two agree in BOTH
+    // directions, and commit `ee4e6a00` records that omitting the cohort also
+    // changes which proto-root each concept draws.
+    ("desert-dwarf-kind", "a desert dwarf"),
+    ("duergar-kind", "a duergar"),
+    ("gully-dwarf-kind", "a gully dwarf"),
+    ("hill-dwarf-kind", "a hill dwarf"),
+    ("mountain-dwarf-kind", "a mountain dwarf"),
 ];
 
 /// The `*-kind` concept naming `species`, or `None` when the species has no
