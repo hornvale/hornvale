@@ -409,6 +409,45 @@ mod tests {
         );
     }
 
+    /// F4 — the doc comment on `purview_scene`'s latitude line (above) says
+    /// the sun altitude answers "what hour is it where the possession
+    /// stands," using `position.coord().latitude` and not the (possibly
+    /// coarsened) chart centre's — but nothing pinned that before this
+    /// test, and mutating it left all 459 vessel tests green. Zoom 4 is the
+    /// review's own measured shape (6.910970° at zoom 0 moved to 6.913082°
+    /// under the bug).
+    #[test]
+    fn zooming_out_does_not_move_the_agents_declared_sun_altitude() {
+        let w = world();
+        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let position = session.agent().position.clone();
+        let zoom_out = 4;
+
+        // Anti-vacuity: the coarsened chart centre must actually sit at a
+        // DIFFERENT latitude than the agent's own room, or a bug that read
+        // the wrong one would be invisible to the comparison below.
+        let centre = chart_centre(&position, zoom_out);
+        assert_ne!(
+            centre.coord().latitude,
+            position.coord().latitude,
+            "zoom {zoom_out} must coarsen to a room at a genuinely different \
+             latitude, or this test cannot discriminate which one the sun \
+             altitude was computed from"
+        );
+
+        let fine = session.purview(0).unwrap();
+        let coarse = session.purview(zoom_out).unwrap();
+        let fine_alt = fine.sight.as_ref().map(|s| s.sun_altitude_deg);
+        let coarse_alt = coarse.sight.as_ref().map(|s| s.sun_altitude_deg);
+        assert!(fine_alt.is_some(), "a coloured chart declares its sight");
+        assert_eq!(
+            fine_alt, coarse_alt,
+            "the sun altitude must answer \"what hour is it where the possession \
+             stands,\" the AGENT's own latitude regardless of zoom — zoom \
+             {zoom_out} moved it from {fine_alt:?} to {coarse_alt:?}"
+        );
+    }
+
     #[test]
     fn the_purview_is_idempotent() {
         let w = world();

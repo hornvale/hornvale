@@ -187,6 +187,92 @@ fn a_dichromat_separates_red_from_green_less_than_a_trichromat_does() {
     );
 }
 
+/// F3 — each of the three arms `observer_for` can build (hue 5's `native`,
+/// hue 4's `native-anomalous`, hue ≤ 3's `yellow-blue`) gets its own direct
+/// coverage of the projection it declares, rather than relying on the
+/// vessel `vessel/session/v1` goldens — an incidental guard that only
+/// exercised seed 42's single flagship species (bugbear, the `yellow-blue`
+/// arm) and is re-baselineable on any drift, colour or not. Two mutations
+/// slipped past that golden entirely: swapping the `preserves` strings
+/// between arms, and building `norms` in *channel* order rather than the
+/// *output-slot* order `Projection::rgb` names (`build`'s own doc, spec
+/// §4.2). Each assertion below is chosen so at least one of those two
+/// mutations reddens it; `native-anomalous` in particular (goblin, hue 4)
+/// had zero coverage anywhere before this — nothing in the vessel goldens
+/// exercises a species at that hue tier.
+#[test]
+fn each_arm_declares_its_own_projection_name_preserves_and_slot_ordered_norms() {
+    let reg = perception_registry();
+    let white = Reflectance::new([1.0; BANDS]).unwrap();
+    let flat = flat_light();
+
+    // hue 5 — human, `native`. This arm clones `standard_observer()`
+    // wholesale (H2), so its norms are the CARRIED literals, not anything
+    // this test derives live — re-deriving them would just restate
+    // `build`'s own computation and could not catch either mutation this
+    // test exists for.
+    let human = reg.get(&hornvale_species::KindId("human")).unwrap();
+    let native = observer_for(human);
+    let proj = native.projection().expect("hue 5 declares a projection");
+    assert_eq!(proj.name(), "native");
+    assert_eq!(
+        proj.preserves(),
+        "the observer's own channels, carried straight to the screen"
+    );
+    // rgb = [long, medium, short] = [2, 1, 0] (kernel `standard_observer`'s
+    // own comment); norms in OUTPUT-SLOT order is [LONG_NORM, MEDIUM_NORM,
+    // SHORT_NORM].
+    assert_eq!(proj.norms(), &[3.95, 3.51, 1.98]);
+
+    // hue 4 — goblin, `native-anomalous`. LIVE and previously uncovered.
+    let goblin = reg.get(&hornvale_species::KindId("goblin")).unwrap();
+    let anomalous = observer_for(goblin);
+    let proj = anomalous.projection().expect("hue 4 declares a projection");
+    assert_eq!(proj.name(), "native-anomalous");
+    assert_eq!(
+        proj.preserves(),
+        "three chromatic channels; the red-green axis is narrowed, not removed"
+    );
+    // rgb = [2, 1, 0] again (spec §4.4): slot order reads channel 2 (L')
+    // into R, channel 1 (M') into G, channel 0 (S) into B — the REVERSE of
+    // channel order, which is exactly what makes this arm able to tell the
+    // two orderings apart.
+    let signal = anomalous.sense(&white, &flat);
+    let slot_order = [signal.get()[2], signal.get()[1], signal.get()[0]];
+    let channel_order = [signal.get()[0], signal.get()[1], signal.get()[2]];
+    assert_ne!(
+        slot_order, channel_order,
+        "this arm's rgb permutation must differ from identity, or a slot-vs-\
+         channel-order mutation would be invisible to the assertion below"
+    );
+    assert_eq!(proj.norms(), &slot_order);
+
+    // hue ≤ 3 — bugbear, `yellow-blue`.
+    let bugbear = reg.get(&hornvale_species::KindId("bugbear")).unwrap();
+    let dichromat = observer_for(bugbear);
+    let proj = dichromat
+        .projection()
+        .expect("hue <= 3 declares a projection");
+    assert_eq!(proj.name(), "yellow-blue");
+    assert_eq!(
+        proj.preserves(),
+        "the short-to-long opposition; the red-green axis is not carried"
+    );
+    // rgb = [1, 1, 0]: the merged channel drives BOTH red and green, blue
+    // reads the short channel. Channel order (a bug) would instead read the
+    // ACHROMATIC rod (channel 2) into the blue slot — a large, easily
+    // distinguished difference.
+    let signal = dichromat.sense(&white, &flat);
+    let slot_order = [signal.get()[1], signal.get()[1], signal.get()[0]];
+    let channel_order = [signal.get()[0], signal.get()[1], signal.get()[2]];
+    assert_ne!(
+        slot_order, channel_order,
+        "this arm's rgb permutation must differ from identity, or a slot-vs-\
+         channel-order mutation would be invisible to the assertion below"
+    );
+    assert_eq!(proj.norms(), &slot_order);
+}
+
 #[test]
 fn the_roster_names_resolve_and_an_unknown_one_does_not() {
     let roster = observer_roster();

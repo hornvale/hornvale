@@ -622,7 +622,7 @@ pub fn standard_observer() -> Observer {
     // is what catches it.
     let projection = Projection::new(
         "native",
-        "the observer's own channels are the screen's; this is not a translation",
+        "the observer's own channels, carried straight to the screen",
         [2, 1, 0],
         [LONG_NORM, MEDIUM_NORM, SHORT_NORM],
     )

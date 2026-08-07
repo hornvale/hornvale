@@ -183,10 +183,18 @@ pub fn ocular_reason(p: &PerceptionVector) -> String {
              pulled halfway together, so red and green narrow but do not vanish"
         ),
         depth => {
+            // `(nv - 0.5) / 0.5` is subtraction-then-division on an
+            // arbitrary authored `night_vision`, so it is not guaranteed to
+            // land on a value with a short decimal expansion even when the
+            // spec's model card states it as one (bugbear's 0.7 gives
+            // 0.3999999999999999, not 0.4) — this is a player-visible
+            // string (`eyes_report`, Session::set_eyes), so the fraction is
+            // rounded for display; the merge itself still runs at full
+            // precision above.
             let t = ((nv - 0.5) / 0.5).clamp(0.0, 1.0);
             format!(
                 "night-vision {nv} gives hue depth {depth}: the medium and long \
-                 channels are merged {t} of the way, so red and green fall on one axis"
+                 channels are merged {t:.2} of the way, so red and green fall on one axis"
             )
         }
     }
@@ -230,6 +238,28 @@ mod tests {
             ..PerceptionVector::MANIKIN
         };
         assert_eq!(scotopic_gain(&p), 1.0);
+    }
+
+    #[test]
+    fn ocular_reason_rounds_the_merge_fraction_for_display() {
+        // Bugbear's night_vision (0.7) is exactly the case that surfaced
+        // this: `(0.7 - 0.5) / 0.5` is 0.3999999999999999 in f64, not the
+        // spec's clean 0.4 — and `ocular_reason` is player-visible
+        // (`eyes_report`, reachable through the `eyes` verb), so raw noise
+        // must never reach the reader.
+        let p = PerceptionVector {
+            night_vision: 0.7,
+            ..PerceptionVector::MANIKIN
+        };
+        let reason = ocular_reason(&p);
+        assert!(
+            reason.contains("0.40"),
+            "expected the rounded fraction 0.40 in {reason:?}"
+        );
+        assert!(
+            !reason.contains("0.3999999999999999"),
+            "raw float noise reached a player-visible string: {reason:?}"
+        );
     }
 
     #[test]

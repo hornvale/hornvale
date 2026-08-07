@@ -1517,17 +1517,27 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             // context anyway, and taking the same route for both keeps the
             // two lenses reading the same document.
             let scene = if lens == "colour" {
-                // The CLI, not the scene builder, now owns the star's
-                // daylight — this is the same illuminant
-                // `surrounds_scene_colored_in` used to compute internally,
-                // moved out so a caller can colour a chart under any
-                // light. Keeping the CLI's own construction identical to
-                // the old internal one is what keeps `--render ascii`'s
-                // bytes unchanged apart from the one new `sight:` line.
-                let star = hornvale_astronomy::star::generate_star(
-                    world.seed.derive(hornvale_astronomy::streams::ROOT),
+                // The CLI, not the scene builder, owns the star's daylight —
+                // the same illuminant `surrounds_scene_colored_in` used to
+                // compute internally, moved out so a caller can colour a
+                // chart under any light. This must agree with what the
+                // `sight` block declares below: `daylight_at` (the vessel's
+                // own light-plus-altitude pairing, spec §4.6) is the one
+                // call that builds both, so the declared
+                // `sun_altitude_deg` can never drift from the light the
+                // scene was actually lit with — two independent
+                // computations of "which light" is exactly how a caption
+                // and a picture end up disagreeing (The Beholding, F1).
+                let calendar = world_builder::sky_of(&world)
+                    .ok()
+                    .and_then(|sky| sky.calendar().cloned());
+                let latitude = room.coord().latitude;
+                let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
+                    &world,
+                    calendar.as_ref(),
+                    WorldTime { day },
+                    latitude,
                 );
-                let light = hornvale_astronomy::illuminant::daylight(&star);
                 hornvale_scene::surrounds_scene_colored_in(
                     &world,
                     &ctx,
@@ -1542,7 +1552,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                         chromatic: 0,
                         projection: String::new(),
                         preserves: String::new(),
-                        sun_altitude_deg: 0.0,
+                        sun_altitude_deg,
                     },
                 )
             } else {
