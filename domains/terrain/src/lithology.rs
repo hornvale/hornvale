@@ -298,18 +298,22 @@ pub enum Hydro {
 }
 
 impl Hydro {
-    /// Every variant, so a witness test (`domains/terrain/tests/
-    /// hydro_witness.rs`, The Witness Task 6) derives its checklist from the
-    /// type rather than from an author re-typing the enum's members by hand.
+    /// Every variant, so the reachability assertion
+    /// (`windows/lab/tests/calibration.rs`'s
+    /// `every_hydro_variant_is_reachable_somewhere_in_the_census`, The Assay
+    /// Task 8 — formerly `domains/terrain/tests/hydro_witness.rs`'s 8-seed
+    /// sweep, The Witness Task 6, retired once the census carried the same
+    /// coverage over 1,000 worlds) derives its checklist from the type
+    /// rather than from an author re-typing the enum's members by hand.
     /// `Hydro::Spring`/`Hydro::Aquifer` were unreachable from the real
     /// derivation on every seed for this model's entire life (F5) and no
     /// hand-built checklist would have caught that on its own — adding a
     /// variant here enrolls it in the guard automatically, which is the
     /// property a hand-maintained list cannot offer. `PartialOrd`/`Ord`
     /// (declaration order, derived above) exist only so the guard can
-    /// collect witnessed variants into a `BTreeSet` (the project bans
-    /// `HashSet`) — as with `RockClass`, there is no meaningful ranking
-    /// between hydrogeologic classes.
+    /// collect witnessed variants into a `BTreeSet`/`BTreeMap` (the project
+    /// bans `HashSet`/`HashMap`) — as with `RockClass`, there is no
+    /// meaningful ranking between hydrogeologic classes.
     pub const ALL: [Hydro; 5] = [
         Hydro::Aquifer,
         Hydro::Aquitard,
@@ -1173,8 +1177,12 @@ mod tests {
         // `assemble_material` for a thousand census seeds even though these
         // pure-function tests were green). See
         // `a_real_world_produces_a_porous_non_carbonate_cell` for the
-        // world-derived check, and `hydro_witness.rs` (Task 6) for the
-        // cross-seed reachability guard. `hydrogeology` is pointwise matrix
+        // world-derived check, and the census's
+        // `every_hydro_variant_is_reachable_somewhere_in_the_census`
+        // (`windows/lab/tests/calibration.rs`, The Assay Task 8) for the
+        // cross-seed reachability guard — formerly `hydro_witness.rs`'s
+        // 8-seed sweep (Task 6), retired once the census carried the same
+        // coverage over 1,000 worlds. `hydrogeology` is pointwise matrix
         // petrophysics only (The Witness, Task 5b) — it never returns
         // `Spring`; that promotion is a geometric contact tested in
         // `provider.rs`'s `promote_to_spring_only_touches_aquifer_with_a_lower_non_aquifer_neighbor`.

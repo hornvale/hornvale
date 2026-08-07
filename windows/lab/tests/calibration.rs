@@ -2745,6 +2745,70 @@ fn obliquity_range_is_wider_on_moonless_worlds() {
     );
 }
 
+/// Every `Hydro` variant is reachable from the real derivation — the property
+/// `domains/terrain/tests/hydro_witness.rs` held over 8 seeds, now held over
+/// 1,000 (The Assay). A variant that is structurally dead reads 0 worlds here,
+/// and the failure names it; a variant that is merely rare reads a small share
+/// and passes, which the 8-seed sweep could not distinguish.
+///
+/// Shares at the 2026-08-07 regen (`d36be41b`), n = 1000 worlds: every
+/// variant is at 100.0% — `aquifer`, `aquitard`, `spring`, `runoff`, and
+/// `karst` all appear on all 1,000 worlds, and only one combination is ever
+/// observed (`"aquifer+aquitard+spring+runoff+karst"`). That is zero
+/// variance, not an interesting distribution: this assertion is a guard that
+/// will move if a variant ever dies, not a spread that tells us anything
+/// today. It is also the honest reading of what the retired 8-seed sweep was
+/// actually testing — every variant it certified was already showing up on
+/// the very first world of every run, 1,000 times over.
+#[test]
+fn every_hydro_variant_is_reachable_somewhere_in_the_census() {
+    let result = &*DRIFT;
+    let column = result
+        .metric_names
+        .iter()
+        .position(|n| *n == "hydro-variant-coverage")
+        .expect("the census carries hydro-variant-coverage");
+
+    let mut worlds_showing: std::collections::BTreeMap<&str, usize> =
+        std::collections::BTreeMap::new();
+    for variant in hornvale_terrain::Hydro::ALL {
+        worlds_showing.insert(variant.name(), 0);
+    }
+    let mut measured = 0usize;
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        let MetricValue::Text(joined) = &row.values[column] else {
+            continue;
+        };
+        measured += 1;
+        for name in joined.split('+').filter(|s| !s.is_empty()) {
+            if let Some(count) = worlds_showing.get_mut(name) {
+                *count += 1;
+            } else {
+                panic!("seed {} reports unknown hydro name {name:?}", row.seed);
+            }
+        }
+    }
+    assert!(
+        measured > 0,
+        "no world in the census reported hydro coverage"
+    );
+
+    let dead: Vec<&str> = worlds_showing
+        .iter()
+        .filter(|(_, n)| **n == 0)
+        .map(|(name, _)| *name)
+        .collect();
+    assert!(
+        dead.is_empty(),
+        "these Hydro variants appear on 0 of {measured} census worlds — unreachable \
+         from the real derivation, and no sweep width saves them: {dead:?}. \
+         Shares: {worlds_showing:?}"
+    );
+}
+
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).
 fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;

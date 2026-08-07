@@ -4,7 +4,11 @@
 //! indistinguishable from a rule that works — `AppliedRule.changed` records
 //! it, and nothing read that record. `Tonogenesis` was in that state for
 //! every cascade that drew it before a merger (F7). This is the rule-shaped
-//! twin of `domains/terrain/tests/hydro_witness.rs` (The Witness, Task 6):
+//! twin of the census's
+//! `every_hydro_variant_is_reachable_somewhere_in_the_census` assertion
+//! (`windows/lab/tests/calibration.rs`, The Assay Task 8 — originally
+//! `domains/terrain/tests/hydro_witness.rs`, The Witness, Task 6, retired
+//! once the census carried the same coverage over 1,000 worlds):
 //! it derives its checklist from [`RuleKind::ALL`] (the type itself), then
 //! sweeps a small fixed seed set looking for a real derivation that changes
 //! a word with each kind — the same property `windows/worldgen/tests/
