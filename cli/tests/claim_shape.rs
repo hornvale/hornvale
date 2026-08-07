@@ -172,6 +172,15 @@ fn has_seed_closure(body: &str) -> bool {
 /// Type`, where "for" is a keyword with no `in` anywhere nearby) — so this
 /// can't misattribute a much later, unrelated `in` to a for-loop that never
 /// had one.
+///
+/// **Residual silent miss, named in the module doc:** `MAX_PATTERN_TOKENS`
+/// bounds that window, and a pattern binding strictly more idents than the
+/// window allows returns `None` — a real for-loop, not a false `impl … for
+/// …`, read as "not a for-loop at all." Measured directly against this
+/// function: a 9-element tuple pattern like `for (a, b, c, d, e, f, g, h,
+/// i) in …` is NOT detected even when one of those 9 is spelled `seed`,
+/// while an 8-element one is. No live pattern in this tree binds that many
+/// idents at this commit.
 fn for_binding_idents<'a>(tokens: &[&'a str], for_idx: usize) -> Option<Vec<&'a str>> {
     const MAX_PATTERN_TOKENS: usize = 8;
     let mut idents = Vec::new();
@@ -206,12 +215,51 @@ fn has_seed_for_loop(tokens: &[&str]) -> bool {
     false
 }
 
+/// Every identifier token that appears ANYWHERE inside a `Seed(...)` call's
+/// argument span — the whole parenthesized expression (paren-depth
+/// matched, so nested calls like `Seed(0x51ED ^ u64::from(octaves))` are
+/// walked past correctly), not merely the first token.
+///
+/// Fix round 2: the original version here (`tokens.windows(2)`) only ever
+/// looked at the token immediately after `Seed(`, so
+/// `Seed(0x51ED ^ u64::from(octaves))` — a real, live pattern in
+/// `kernel/src/noise.rs` — never surfaced `octaves` as a seed-correlated
+/// identifier. This scans the raw `body` text rather than the token stream,
+/// because [`tokenize`] already dropped the parens that mark the argument
+/// span's boundary.
+fn seed_construction_args(body: &str) -> Vec<&str> {
+    let mut args = Vec::new();
+    let bytes = body.as_bytes();
+    let mut cursor = 0;
+    while let Some(rel) = body[cursor..].find("Seed(") {
+        let start = cursor + rel + "Seed(".len();
+        let mut depth: i32 = 1;
+        let mut i = start;
+        while i < bytes.len() && depth > 0 {
+            match bytes[i] {
+                b'(' => depth += 1,
+                b')' => depth -= 1,
+                _ => {}
+            }
+            i += 1;
+        }
+        // `i` sits just past the matching `)` (ASCII, so `i - 1` is always a
+        // valid UTF-8 boundary) when balanced, or at the end of `body` when
+        // not — either way a safe slice bound.
+        let end = if depth == 0 { i - 1 } else { bytes.len() };
+        args.extend(tokenize(&body[start..end]));
+        cursor = start;
+    }
+    args
+}
+
 /// Does `tokens` contain a `for` loop whose pattern binds an identifier that
 /// is later passed to `Seed(...)` — catching `for i in 0..N { … Seed(i) … }`,
 /// where the loop binding is not seed-shaped by name but is demonstrably
 /// USED as a seed downstream. Decision 0093's literal shape (a `for` loop
 /// feeding a world build), just spelled with a loop variable this scan's
-/// naming heuristic alone would miss (Fix round 1, Critical, Class 2).
+/// naming heuristic alone would miss (Fix round 1, Critical, Class 2; the
+/// argument-span widening is Fix round 2).
 ///
 /// Correlation is scoped to "anywhere in this function's tokens" rather than
 /// to the loop's own braces (this scan does not track block boundaries) —
@@ -219,12 +267,8 @@ fn has_seed_for_loop(tokens: &[&str]) -> bool {
 /// `Seed(...)` call happen to share a variable name but are otherwise
 /// unrelated, which was not observed anywhere in this tree when this was
 /// added.
-fn has_seed_via_construction(tokens: &[&str]) -> bool {
-    let seed_args: Vec<&str> = tokens
-        .windows(2)
-        .filter(|w| w[0] == "Seed")
-        .map(|w| w[1])
-        .collect();
+fn has_seed_via_construction(tokens: &[&str], body: &str) -> bool {
+    let seed_args = seed_construction_args(body);
     if seed_args.is_empty() {
         return false;
     }
@@ -256,7 +300,7 @@ fn is_seed_looping(body: &str) -> bool {
     if has_seed_for_loop(&tokens) {
         return true;
     }
-    if has_seed_via_construction(&tokens) {
+    if has_seed_via_construction(&tokens, body) {
         return true;
     }
     has_seed_closure(body)
@@ -316,9 +360,16 @@ struct BraceState {
     /// Whether the previous character was an unconsumed `\` escape inside
     /// a string literal.
     escaped: bool,
-    /// Whether the scan is currently inside a `/* ... */` block comment
-    /// (does not handle nesting — Rust's block comments CAN nest, but this
-    /// tree's test bodies were not observed to).
+    /// Whether the scan is currently inside a `/* ... */` block comment.
+    /// **Does not handle nesting, and nesting is a real silent-miss risk,
+    /// not a theoretical one:** Rust's block comments CAN nest, and a
+    /// nested one — `/* a /* b */ } */` — closes `in_block_comment` at the
+    /// FIRST `*/` (the inner one), so the `}` between the inner and outer
+    /// closer is read as live code and counted, miscounting depth and
+    /// potentially hiding whatever function follows. No live nested block
+    /// comment was found in a `#[test]` body in this tree at this commit,
+    /// but that is, again, a fact about this commit's sources, not a
+    /// structural guarantee.
     in_block_comment: bool,
 }
 
@@ -329,18 +380,46 @@ struct BraceState {
 /// `.split("... mod tests {\n")`, which this very file's `the_readout_law`
 /// test once tripped this exact way — cannot desynchronize the depth count.
 ///
-/// **Known gap, not inert:** a raw string (`r"..."`/`r#"..."#`) is NOT
-/// recognized as a string boundary — an embedded `"` inside one (legal
-/// there, e.g. `r#"contains "quotes" fine"#`) would be read as an ordinary
-/// closing quote, potentially miscounting whatever brace text follows on the
-/// same conceptual literal. This is a SILENT MISS, not a visibly wrong body
-/// length — a desync can just as easily truncate a function's scanned body
-/// (hiding whatever comes after) as extend it (absorbing unrelated later
-/// code), and either failure mode is invisible without deliberately checking
-/// body length against the source. 147 raw-string literals exist in this
-/// tree at this commit; none was found to trip this while writing this
-/// scanner, but "not yet observed to fail" is an empirical fact about this
-/// commit's sources, not a structural guarantee about future ones.
+/// **Known gap, and it is NOT inert today.** A raw string (`r"..."`/
+/// `r#"..."#`) is not recognized as a string boundary — an embedded `"`
+/// inside one (legal there, e.g. `r#"contains "quotes" fine"#`) is read as
+/// an ordinary closing quote, potentially miscounting whatever brace text
+/// follows on the same conceptual literal. This is a SILENT MISS, not a
+/// visibly wrong body length — a desync can just as easily truncate a
+/// function's scanned body (hiding whatever comes after) as extend it
+/// (absorbing unrelated later code), and either failure mode is invisible
+/// without deliberately checking body length against the source.
+///
+/// The precise failure mechanism: each embedded `"` inside a raw string
+/// wrongly toggles `in_string`, so text strictly BETWEEN an odd-indexed and
+/// an even-indexed embedded quote is (wrongly) read as ordinary code, and a
+/// brace there IS counted when it should not be — while a brace outside any
+/// such window still gets (rightly, by the accidental combination of two
+/// wrongs) skipped, because the surrounding text is still inside the
+/// wrongly-toggled "string." An EVEN total of embedded quotes returns
+/// `in_string` to `true` by the time the real closing delimiter is reached,
+/// so the state resettles correctly there (no truncation/overextension of
+/// FOLLOWING functions) even though a brace inside one of the internal
+/// windows was still miscounted; an ODD total does not resettle, and leaks
+/// the string state into whatever comes after — the `the_readout_law` class
+/// of bug this file already had.
+///
+/// `tools/type-audit/src/stream_label.rs`'s
+/// `raw_scan_sees_a_literal_inside_cfg_test_but_the_outside_tests_scan_does_not`
+/// and
+/// `a_literal_in_production_code_is_still_flagged_alongside_an_exempt_test_module`
+/// were checked directly (both carry a `r#"..."#` fixture holding `"` and
+/// `{`/`}`) by instrumenting this exact function against the real file and
+/// printing the extracted body: **both terminate at their true end,
+/// unaffected** — each fixture's only embedded quote pair brackets a bare
+/// word (`"astronomy"`) with no brace inside it, so the internal
+/// miscounting window this mechanism opens happens to contain nothing that
+/// would be miscounted. A workspace-wide scan for a raw string with an ODD
+/// embedded-quote count AND at least one brace inside it (the shape that
+/// would leak state into a following function) found none at this commit.
+/// That is a fact about this commit's raw strings, not a proof the
+/// mechanism above is unreachable — an odd count only needs one write to
+/// exist, and this scan does not run itself as a pre-commit check.
 fn count_braces(line: &str, depth: &mut i32, started: &mut bool, state: &mut BraceState) {
     let chars: Vec<char> = line.chars().collect();
     let mut i = 0;
@@ -590,13 +669,31 @@ fn every_seed_looping_test_in_the_repo_declares_its_claim_shape() {
 
 /// The floor below which the repo-wide DETECTED seed-looping population
 /// (tagged or not — see [`seed_looping_tests_in`]) must never drop without a
-/// deliberate, reviewed reason. Recorded at Fix round 1 (the tuple-pattern
-/// and `Seed(...)`-correlation detection fixes below `has_seed_for_loop`/
-/// `has_seed_via_construction`). Lower this number ONLY in the same commit
+/// deliberate, reviewed reason. Recorded at Fix round 2, after the
+/// tuple-pattern, `Seed(...)`-correlation, and `Seed(...)`-argument-span
+/// detection fixes (`has_seed_for_loop`/`has_seed_via_construction`/
+/// `seed_construction_args`). Lower this number ONLY in the same commit
 /// that deliberately removes or merges a real seed-looping test — never as
 /// an unexamined side effect of a detection regression elsewhere in this
 /// file.
-const DETECTED_SEED_LOOPING_FLOOR: usize = 283;
+///
+/// **This is a floor, not the frozen-corpus exact-equality this tree uses
+/// elsewhere (a tropes corpus's situation count, a census's row count) —
+/// deliberately**, because the population this counts is not a frozen
+/// corpus: ordinary campaign work adds new seed-looping tests continuously,
+/// and an exact-equality check would demand a floor bump on every such PR
+/// for a reason unrelated to THIS lint. `>=` absorbs additions for free and
+/// still catches the one failure mode this exists for — a silent drop. The
+/// cost is real, not merely theoretical: the floor's SLACK (the gap between
+/// this number and the live total) grows every time a seed-looping test is
+/// added without a matching floor bump, and a large slack is exactly the
+/// blind spot `heavy_tier.rs`'s own token-guard retrospective warns about —
+/// a guard that is not wrong yet is not the same as a guard that is still
+/// checking anything. Re-record this number whenever it is convenient to
+/// (there is no requirement to do it on every PR), and treat a slack that
+/// has grown by dozens as a sign the ratchet has gone quiet rather than as
+/// evidence nothing moved.
+const DETECTED_SEED_LOOPING_FLOOR: usize = 284;
 
 /// The non-vacuity ratchet `cli/tests/heavy_tier.rs:117-120`'s
 /// `!heavy.is_empty()` models, for this scan. `every_seed_looping_test_in_

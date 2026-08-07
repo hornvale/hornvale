@@ -160,6 +160,12 @@ mod tests {
         assert_eq!(fbm_2d(s, 1.5, 2.5, 1), value_noise_2d(s, 1.5, 2.5));
     }
 
+    /// claim: structural(seed: 1..=18 derived via `Seed(0x51ED ^ octaves)`) —
+    /// the save-format contract that `Fbm::sample` returns exactly what
+    /// `fbm_2d` returns, forall octaves; caught only after Fix round 2
+    /// widened `Seed(...)`-argument correlation past a bare identifier to
+    /// the whole paren span (the seed here is `Seed(0x51ED ^
+    /// u64::from(octaves))`, not `Seed(octaves)`)
     #[test]
     fn precomputed_fbm_is_bit_identical_to_the_free_function() {
         // The save-format contract: `Fbm::sample` must return the exact bits
