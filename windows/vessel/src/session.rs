@@ -1004,8 +1004,39 @@ impl<'w> Session<'w> {
 
     /// This session's chart, `zoom_out` rungs coarser than the walk depth.
     /// Reads only — the chart never mutates the session.
+    ///
+    /// # A WALK-BAND read, and the assertion is what makes that true
+    ///
+    /// The chart marks **every derived NPC** with a noun and a datum, ungated
+    /// ([`crate::purview_scene`]) — so calling it while the possession is inside
+    /// a chamber would disclose exactly the creature the chamber band has
+    /// withheld, straight past four gated verbs (The Sighting, fix round 5).
+    ///
+    /// Nothing does today, and that was verified rather than assumed: `map`
+    /// indoors draws the plan and `map out` refuses; `snapshot`'s `Walk` arm
+    /// runs only when `inside` is `None`; `examine` indoors routes to
+    /// `examine_chamber`, and the one path that slips past that guard — a BARE
+    /// `examine` while inside — returns "Examine what?" before reaching any
+    /// chart. But every one of those is a fact about **dispatch**, and this
+    /// method is `pub`: a caller that has not read `handle` can reach it from
+    /// inside a chamber with nothing to stop them.
+    ///
+    /// So the precondition is asserted where a future caller would trip it,
+    /// rather than stated in a doc a future caller will not read.
+    /// `debug_assert!` rather than a hard refusal deliberately: it fires in
+    /// every test and debug run — which is where this campaign's coverage lives
+    /// — while costing nothing in release and, crucially, not changing a public
+    /// `Result` contract that today has no error case for this. A caller who
+    /// genuinely wants the walk-band chart from indoors is asking a real
+    /// question (what does the land outside look like?) and should get a
+    /// deliberate method with a redacted mark list, not a silent pass here.
     /// type-audit: bare-ok(count: zoom_out)
     pub fn purview(&self, zoom_out: u32) -> Result<hornvale_scene::SurroundsScene, VesselError> {
+        debug_assert!(
+            self.inside.is_none(),
+            "the walk-band chart marks every derived NPC ungated, so drawing it \
+             from inside a chamber would disclose a creature sight withheld"
+        );
         crate::purview_scene(
             self.world,
             &self.ctx,
@@ -4584,6 +4615,24 @@ mod tests {
              it is the only channel that names a creature the player never asked \
              about: {narrated}"
         );
+
+        // ...AND ITS POSITIVE CONTROL, symmetric with the departure arm's below
+        // (fix round 5). Without it, an arrival guard restricted to nothing at
+        // all — `if false && sensed_now.contains(…)` — suppresses every arrival
+        // line the game can print and every test in the crate stays green. The
+        // review measured exactly that: 442 passed under that mutation. A gate
+        // needs both halves pinned, or only one direction of breaking it is
+        // visible.
+        session.occupancy.place(who, &room, near);
+        let seen_arriving = session.narrate_motion(1, &arriving, &nowhere);
+        assert!(
+            seen_arriving.contains(&label),
+            "an arrival the player CAN see must still be narrated — without this \
+             the gate above could be suppressing everything: {seen_arriving}"
+        );
+        // Back out of sight for the departure checks below, which are about the
+        // creature the player could NOT see.
+        session.occupancy.place(who, &room, far);
 
         // THE DEPARTURE, gated on a different moment and so checked separately:
         // `before` says the creature WAS here, the ledger now says it left, and
