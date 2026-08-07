@@ -108,6 +108,7 @@ fn mean_pairwise_distinctiveness(accounts: &[&Account]) -> f64 {
 /// spec §6, as amended by decision ledger #13). A failure here is a
 /// campaign FINDING, not a bug: STOP and report the measured values rather
 /// than tuning any threshold.
+/// claim: readout — calibration-lab convention; kept (audit §3.3)
 #[test]
 fn the_dial_separates_the_poles() {
     const MEASURED_SEEDS: [u64; 4] = [1, 2, 3, 42];

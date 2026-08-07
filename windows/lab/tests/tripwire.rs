@@ -130,6 +130,8 @@ fn deepest_guarded_rung() -> BuildDepth {
 /// test — not a human noticing months later — is what turns red. Green by
 /// construction while `GUARDED` is empty; gains teeth as Tasks 4-6 register
 /// metrics.
+/// claim: invariant(forall-seed) — the tripwire mechanism itself (Task 2/3):
+/// green by construction while GUARDED is empty
 #[test]
 fn the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds() {
     if GUARDED.is_empty() {

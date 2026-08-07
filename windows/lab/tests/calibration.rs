@@ -232,6 +232,8 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
     }
 }
 
+/// claim: invariant(census: tidally-locked, belief-kind-<species>) — reads
+/// the committed DRIFT census fixture, pinned per ADR 0016
 #[test]
 fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The invariant is PHYSICAL: a tidally-locked world offers no
@@ -1028,6 +1030,8 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 /// mechanism can return the next time repair moves.
 const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 0] = [];
 
+/// claim: readout(preregistered, 0016) — reads the committed DRIFT census
+/// fixture; pinned counts with two named detector-limit exceptions
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
@@ -2762,6 +2766,8 @@ fn obliquity_range_is_wider_on_moonless_worlds() {
 /// today. It is also the honest reading of what the retired 8-seed sweep was
 /// actually testing — every variant it certified was already showing up on
 /// the very first world of every run, 1,000 times over.
+/// claim: reachability(census: hydro-variant-coverage) — the retired
+/// hydro_witness hunt's census-backed replacement (The Assay, Task 8)
 #[test]
 fn every_hydro_variant_is_reachable_somewhere_in_the_census() {
     let result = &*DRIFT;

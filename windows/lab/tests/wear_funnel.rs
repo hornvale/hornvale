@@ -247,6 +247,8 @@ struct NamedSettlement {
     surface: String,
 }
 
+/// claim: readout(loose floor only, non-empty + monotone rungs) — own
+/// comment: "an instrument, not a calibration"; over FUNNEL_SEEDS
 #[test]
 fn the_wear_funnel_is_reproducible() {
     let mut total_morphemes = 0usize;
