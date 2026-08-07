@@ -902,18 +902,27 @@ seeds 42 + 25 more. **If Task 3 raised any elevation devotion above the
 sovereignty floor, this prediction changes** — report the real number and amend
 the spec's §5 rather than forcing the assertion.
 
-- [ ] **Step 3: P2′ — Mountain and Duergar are distinguishable, and depth is why**
+- [ ] **Step 3: P2″ — does depth carry enough variance to separate two kinds?**
 
-Spec §10.3 **inverted** the original P2. Two halves, and the second is the
-mutation that makes the first mean anything:
+Spec §10.6 restated this. It is **reported, not asserted** — the campaign ships
+either answer, and both readings are frozen in advance so the result cannot be
+interpreted after unblinding:
 
-1. Authored with different elevation optima — Mountain shallow, Duergar deep —
-   their capacity fields correlate **below 0.95**.
-2. With Task 3b's depth coordinate reverted (pass `depth_m = 0.0`), the same two
-   kinds correlate **above 0.999**.
+- `r < 0.95` — depth carries enough spatial variance to separate two
+  subterranean kinds; the degeneracy is resolved.
+- `r >= 0.95` — it does not, and the missing quantity is now measured:
+  **variance, not the coordinate.** The depth field is nearly constant over
+  habitable caves (median 0.0 m — `delver_depth_probe.rs`). A sharper finding
+  than the original "depth is inexpressible", and unreachable without building
+  the coordinate first.
 
-Without (2), a correlation below 0.95 could come from any authored difference.
-(2) is what attributes the separation to depth.
+**Do not move the threshold after seeing the number.** Write the measured `r`
+and the corresponding branch into the test's doc comment.
+
+The mutation is what makes either branch mean anything, and it **is** asserted:
+with Task 3b's depth reverted (`depth_m = 0.0`), Mountain and Duergar must
+correlate **above 0.999**. Without it, a low correlation could come from any
+authored difference and a high one from a probe that computes nothing.
 
 - [ ] **Step 4: P3′ — Desert's climate curves bind**
 
