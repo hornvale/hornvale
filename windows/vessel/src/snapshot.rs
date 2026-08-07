@@ -200,7 +200,7 @@ pub struct Narration {
 #[serde(tag = "band", rename_all = "lowercase")]
 pub enum SpatialChannel {
     /// Not inside a built structure: the walk-band chart,
-    /// `scene/surrounds/v1` embedded verbatim. One schema, one owner — the
+    /// `scene/surrounds/v2` embedded verbatim. One schema, one owner — the
     /// same move `sensed.room` makes with `locale/room/v2`. Covers standing
     /// out of doors, **and** the two bands that fold into it (submerged,
     /// underground) — see the enum's own doc for why.

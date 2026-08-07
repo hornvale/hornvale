@@ -1,4 +1,4 @@
-// The `scene/surrounds/v1` reader: the walk band's cells in, glyph rows out.
+// The `scene/surrounds/v2` reader: the walk band's cells in, glyph rows out.
 //
 // NOT a port of `windows/scene/src/surrounds_ascii.rs`. That file is 543
 // lines, nearly all of it lens machinery — lens tables, the colour
@@ -8,6 +8,17 @@
 // decision 0022 licenses; they are not expected to agree glyph-for-glyph.
 
 import type { Snapshot } from "./snapshot.ts";
+
+/** The chart schema tag this pane understands. A different tag — absent,
+ * unrecognised, or a future epoch that reuses a field name with new
+ * meaning — is refused rather than read, the same discipline
+ * `snapshot.ts`'s `parseSnapshot` applies to the envelope. This is an
+ * allowlist of the one known-good tag, not a denylist of prior ones: a
+ * denylist fails open on a schema nobody anticipated, which is exactly the
+ * failure mode a *renamed* field degrades safely from but a *reused* field
+ * does not — a silently wrong map is what this whole client exists to
+ * avoid drawing. */
+const SURROUNDS_SCHEMA = "scene/surrounds/v2";
 
 /** One cell of the chart, as much of it as this pane reads. Lattice fields
  * are `null` on a seam cell — `surrounds.rs` sets them `None` because "the
@@ -56,10 +67,11 @@ export function chartRows(snap: Snapshot): string[] | null {
   const spatial = snap.spatial;
   if (!spatial || spatial.band !== "walk") return null;
   const chart = spatial.chart as
-    | { cells?: unknown; water_legend?: unknown }
+    | { schema?: unknown; cells?: unknown; water_legend?: unknown }
     | null
     | undefined;
   if (chart === null || typeof chart !== "object") return null;
+  if (chart.schema !== SURROUNDS_SCHEMA) return null;
   if (!Array.isArray(chart.cells) || chart.cells.length === 0) return null;
   // `.map`, never `.filter`: `cell.water` is a positional index into this
   // legend, so dropping a non-string entry would shift every index after it
