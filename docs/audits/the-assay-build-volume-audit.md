@@ -147,6 +147,17 @@ set can be hand-committed to stand in). **Destination:**
 `claim: rate(census: crisis-fires)` plus one live structural arm at a
 census-identified seed (Stage 3's third metric, Stage 4's retirement).
 
+**Correction (2026-08-07, Task 10 fix round 1):** the retirement commit
+(`1f7ac9da`)'s message claimed "Wall time for --test diachronic: 137.9s
+baseline -> 36.9s measured." That comparison is cross-host and invalid: 137.9
+s is **lefford's** sum of the whole 7-test `diachronic` binary
+(`docs/timings/test-baseline-lefford.tsv`), while 36.9 s is a run on
+**ambrose** (this Mac, 12 cores) — a different machine, not a before/after of
+the same one. The honest same-host saving is this section's own figure: the
+retired test's **13.132 s on lefford**, 9.53% of that binary's 137.864 s sum.
+The remaining 124.8 s of lefford's `diachronic` sum is not this task's
+retirement target — see Task 11.
+
 ### 2.4 New finding: `non_void_roster::every_kind_is_viable_somewhere`
 
 `windows/worldgen/tests/non_void_roster.rs`. Its own comment states the
