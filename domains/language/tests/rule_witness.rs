@@ -11,9 +11,13 @@
 //! once the census carried the same coverage over 1,000 worlds):
 //! it derives its checklist from [`RuleKind::ALL`] (the type itself), then
 //! sweeps a small fixed seed set looking for a real derivation that changes
-//! a word with each kind — the same property `windows/worldgen/tests/
-//! exposure.rs`'s concept sweep already has, generalised from a
-//! hand-written concept list to an enum's own variants (spec §4, guard 2).
+//! a word with each kind — the same property
+//! `some_census_world_steeps_every_toponymic_concept`
+//! (`windows/lab/tests/calibration.rs`, The Assay Task 9 — originally
+//! `windows/worldgen/tests/exposure.rs`'s concept sweep, retired once the
+//! census carried the same coverage over 1,000 worlds) already has,
+//! generalised from a hand-written concept list to an enum's own variants
+//! (spec §4, guard 2).
 //!
 //! # Two different properties, and this guard is the second one
 //!

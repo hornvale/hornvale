@@ -1293,11 +1293,13 @@ fn lexicon_is_regular_for_both_species() {
 /// keeps the two copies in step are a campaign, not a followup.
 ///
 /// The gate itself is sound and that was checked rather than assumed:
-/// `windows/worldgen/tests/exposure.rs` is 19/19 green, including
-/// `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap` and
-/// `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`. No
-/// world is misclassifying anything. Only the lab's copy of the rulebook is
-/// out of date.
+/// `windows/worldgen/tests/exposure.rs` was 19/19 green at the time,
+/// including `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap`
+/// and `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`
+/// (the latter retired by The Assay Task 9; the same property now lives in
+/// `some_census_world_steeps_every_toponymic_concept`, this file). No world
+/// is misclassifying anything. Only the lab's copy of the rulebook is out of
+/// date.
 #[test]
 fn lexicon_is_exposure_sound_for_both_species() {
     let result = &*DRIFT;
@@ -2806,6 +2808,72 @@ fn every_hydro_variant_is_reachable_somewhere_in_the_census() {
         "these Hydro variants appear on 0 of {measured} census worlds — unreachable \
          from the real derivation, and no sweep width saves them: {dead:?}. \
          Shares: {worlds_showing:?}"
+    );
+}
+
+/// Every toponymic concept wins a root somewhere — the property
+/// `windows/worldgen/tests/exposure.rs` held by building up to 9 worlds to
+/// find a witness, now held over 1,000 (The Assay).
+///
+/// Two columns rather than a ratio, because they fail differently: a drop in
+/// `toponymic-roots-won` is a worlds change, while a change in
+/// `toponymic-core-size` is a REGISTRY change and means someone added a
+/// concept — possibly an unreachable one, which is exactly what the retired
+/// sweep existed to catch.
+///
+/// Values at the 2026-08-07 regen (`d36be41b`), n = 1000: `toponymic-core-size`
+/// is 7 on every single world — it is derived from the registry via
+/// `register_all`, which runs unconditionally, so the registry's concept set
+/// does not depend on the seed. That makes it a cross-commit drift detector,
+/// not a per-world variable, which is why it stays its own column rather than
+/// folding into a ratio. `toponymic-roots-won` ranges from 2 to 7 with a mean
+/// of 5.28, and only 131 of 1,000 worlds (13.1%) reach all seven. So this
+/// assertion passes (`max == core == 7`) — but the interesting fact is not the
+/// pass, it is that steeping every concept is atypical: the retired sweep
+/// asked "does *some* world win each concept" and got yes, while the census
+/// can say how typical that is, and the answer is not very.
+#[test]
+fn some_census_world_steeps_every_toponymic_concept() {
+    let result = &*DRIFT;
+    let idx = |name: &str| {
+        result
+            .metric_names
+            .iter()
+            .position(|n| *n == name)
+            .unwrap_or_else(|| panic!("the census carries {name}"))
+    };
+    let (won_i, core_i) = (idx("toponymic-roots-won"), idx("toponymic-core-size"));
+
+    let mut best = 0.0f64;
+    let mut best_seed = None;
+    let mut cores: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        if let MetricValue::Number(core) = row.values[core_i] {
+            cores.insert(core as u64);
+        }
+        if let MetricValue::Number(won) = row.values[won_i]
+            && won > best
+        {
+            best = won;
+            best_seed = Some(row.seed);
+        }
+    }
+    assert_eq!(
+        cores.len(),
+        1,
+        "the toponymic core size differs across census worlds ({cores:?}) — it is \
+         derived from the registry, so every world must agree"
+    );
+    let core = *cores.iter().next().expect("one core size") as f64;
+    assert!(core > 0.0, "no concept reports the toponymic domain");
+    assert_eq!(
+        best, core,
+        "no census world steeps all {core} toponymic concepts — the best is {best} \
+         (seed {best_seed:?}). One or more concepts is a structurally dead gate; the \
+         retired 9-world sweep would have failed on every seed too."
     );
 }
 
