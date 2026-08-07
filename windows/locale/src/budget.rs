@@ -330,6 +330,8 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — off-gate (heavy:); budget-minority and
+    /// determinism per seed over 0..25
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn census_budget_and_spacing_hold_across_seeds() {

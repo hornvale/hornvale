@@ -311,6 +311,9 @@ fn worlds_survive_reload_byte_identically() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// claim: invariant(forall-seed) — off-gate (heavy:); builds each world by
+/// spawning the CLI as a subprocess, which this lint's module doc names as
+/// a blind spot it happens to still flag by loop-variable naming
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn graded_pins_never_fail_above_min() {

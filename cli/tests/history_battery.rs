@@ -167,6 +167,9 @@ fn measure(seed: u64, depth: BuildDepth) -> Row {
     }
 }
 
+/// claim: rate(forall-seed, per-seed firing floors + a pooled volume floor
+/// SWEEP_MIGRATION_FLOOR) — off-gate (heavy:); also exercises seed 42 at
+/// BuildDepth::Full for cascade-depth coverage
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn history_gates_full_world_and_cross_seed() {

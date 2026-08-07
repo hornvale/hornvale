@@ -23,17 +23,24 @@
 //! `map_seeds` — and, if any fire, requires a `claim:` tag in the doc-comment
 //! block directly above the function.
 //!
-//! **Known blind spot: a world built by subprocess is invisible to this
-//! scan.** `cli/tests/sky_exit_criterion.rs::graded_pins_never_fail_above_min`
-//! loops seeds `1..=20` and builds a world per seed by *spawning the CLI as a
-//! subprocess* — there is no seed-shaped `for`/closure/constant inside the
-//! test's own source for a source-level scan to find, because the loop
-//! variable there is not seed-shaped in the way this scan checks, and even
-//! where it is, no regex or token scan can see across a process boundary into
-//! what the spawned binary does with its argument. This is the same class of
-//! admission `heavy_tier.rs` makes for its own token guards: canonical is not
-//! current, and a scan that is silent about its blind spot is worse than one
-//! that names it.
+//! **Known blind spot: a world built by subprocess is invisible to what this
+//! scan can VERIFY, even on the rare occasion it flags the loop.**
+//! `cli/tests/sky_exit_criterion.rs::graded_pins_never_fail_above_min` loops
+//! seeds `1..=20` and builds a world per seed by *spawning the CLI as a
+//! subprocess* (Task 1's audit: no `build_world|generate(|BuildDepth::`
+//! world-building regex can see that as a world build at all). This scan
+//! happens to flag it anyway, because its loop variable is spelled `seed` —
+//! but that is a coincidence of naming, not evidence the scan understands
+//! what the loop does. A test that built worlds the same way through a
+//! non-seed-named binding (`for n in 1..=20`, or a hardcoded per-call
+//! argument with no loop at all) would be genuinely invisible, and nothing
+//! here rules that shape out elsewhere in the tree. Once a subprocess is
+//! involved, no source-level scan — regex, token, or this one — can see
+//! across the process boundary to confirm the tag it demands describes what
+//! the spawned binary actually did. This is the same class of admission
+//! `heavy_tier.rs` makes for its own token guards: canonical is not current,
+//! and a scan that is silent about its blind spot is worse than one that
+//! names it.
 
 use std::fs;
 use std::path::{Path, PathBuf};

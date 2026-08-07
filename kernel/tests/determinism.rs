@@ -104,6 +104,8 @@ fn same_seed_yields_byte_identical_worlds() {
     assert_eq!(mini_genesis(Seed(42)), mini_genesis(Seed(42)));
 }
 
+/// claim: reachability(seed: 1..=4) — non-degeneracy: mini_genesis is not a
+/// constant function
 #[test]
 fn different_seeds_yield_different_worlds() {
     // Village naming draws from the seed, so worlds should differ.
