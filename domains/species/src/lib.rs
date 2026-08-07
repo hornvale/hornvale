@@ -2724,10 +2724,12 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(72.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
-                // MINERAL-dominant like mountain-dwarf, but its second axis
-                // is ANIMAL_PREY rather than PLANT_FORAGE: a deep people
-                // grows nothing and hunts what shares its dark.
-                niche: ResourceVector::new(&[(MINERAL, 0.70), (ANIMAL_PREY, 0.30)]).unwrap(),
+                // The fungal food web, leaning harder on it than
+                // mountain-dwarf because a deep people has no surface to
+                // trade with: fungus, and the animals that eat fungus.
+                // Fermented on both sides — a cave larder is a fermentation
+                // problem before it is a hunting one.
+                niche: ResourceVector::new(&[(DETRITUS, 0.60), (ANIMAL_PREY, 0.40)]).unwrap(),
                 condition_niche: duergar_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
@@ -2739,11 +2741,21 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(62.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
-                // DETRITUS-dominant — the roster's first PEOPLE on the
-                // scavenger axis otyugh, carrion-crawler and shrieker hold.
-                // That is the whole ecological distance between this kind and
-                // hill-dwarf, and it is orders of magnitude wide.
-                niche: ResourceVector::new(&[(DETRITUS, 0.70), (PLANT_FORAGE, 0.30)]).unwrap(),
+                // A SURFACE scavenger, on the axis otyugh, carrion-crawler
+                // and shrieker hold. It shares `DETRITUS` with the two cave
+                // dwarves but arrives at it from the opposite direction —
+                // they farm fungus in the dark, this one works refuse in the
+                // light — so it keeps the largest `PLANT_FORAGE` share of
+                // the three and the smallest `DETRITUS` one. What actually
+                // separates it from them is the realm gate and an elevation
+                // optimum eight hundred metres below hill-dwarf's; the diet
+                // axis is not doing that work.
+                niche: ResourceVector::new(&[
+                    (DETRITUS, 0.50),
+                    (PLANT_FORAGE, 0.35),
+                    (ANIMAL_PREY, 0.15),
+                ])
+                .unwrap(),
                 condition_niche: gully_dwarf_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
@@ -2770,11 +2782,36 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(72.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
-                // MINERAL-dominant: the roster's first PEOPLE on the axis
-                // xorn and rust-monster hold alone. PLANT_FORAGE second — a
-                // mining people still eats, and trades down the mountain for
-                // the rest.
-                niche: ResourceVector::new(&[(MINERAL, 0.70), (PLANT_FORAGE, 0.30)]).unwrap(),
+                // **A subterranean people eats the fungal food web, not the
+                // rock.** An earlier draft put this kind and duergar on
+                // `MINERAL` at 0.70, reasoning from mining. That was wrong,
+                // and wrong in a way worth recording: `MINERAL` is a
+                // *trophic* axis — "soil/rock nutrients", a `Stock` a
+                // creature draws sustenance from — and its only other
+                // holders are xorn and rust-monster at 1.0, the roster's two
+                // lithovores. Dwarves mine rock; they do not eat it. Mining
+                // is an extraction economy, and this model has no axis for
+                // one. The error zeroed xorn's strongholds, which was the
+                // correct consequence of a false claim.
+                //
+                // What a cave people actually eats: fungus, the animals that
+                // eat fungus, and fermented products of both. `DETRITUS` is
+                // the nearest honest axis — "dead organic matter available
+                // to decomposers and scavengers" — and it carries the
+                // fungal crop by the same conflation `MARINE_FORAGE` makes
+                // between production and the prey web it supports. Stated
+                // rather than assumed: the model does not resolve fungus
+                // from its substrate, so a fungiculturalist and a
+                // detritivore are one axis here.
+                //
+                // PLANT_FORAGE second, where duergar has none: a mountain
+                // people has a surface and trades down it.
+                niche: ResourceVector::new(&[
+                    (DETRITUS, 0.55),
+                    (PLANT_FORAGE, 0.25),
+                    (ANIMAL_PREY, 0.20),
+                ])
+                .unwrap(),
                 condition_niche: mountain_dwarf_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,

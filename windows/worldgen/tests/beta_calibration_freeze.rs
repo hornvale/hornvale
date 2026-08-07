@@ -47,6 +47,47 @@
 //! interprets its measured effect was re-measured, exactly as the
 //! Weak-knob/Stage-B caveat below anticipated.
 //!
+//! **Roster-era re-baseline (The Delvers, 2026-08-07)**: the ceiling is no
+//! longer a literal. The band above was preregistered against a **four**-people
+//! roster, and its upper bound says so in its own words — "comfortably below
+//! undifferentiated *oatmeal* sharing (`strife` → 4, **the species count**)".
+//! `3.0` was therefore never an absolute quantity; it was **75% of oatmeal**,
+//! and oatmeal is the size of the peopled roster. That dependency was invisible
+//! because it was compiled into a number.
+//!
+//! The Delvers authored five dwarves, taking the peopled set from six to
+//! eleven. Measured at the frozen β=2.0:
+//!
+//! | seed | claimed diversity |
+//! |------|--------------------|
+//! | 1    | 3.482679506037277  |
+//! | 2    | 3.838770075608982  |
+//! | 3    | 3.337629505782417  |
+//! | 4    | 3.198540797722292  |
+//! | 42   | 3.261262287035959  |
+//!
+//! mean ≈ 3.4238. Against the stale literal that is a breach. Against the
+//! quantity the bound actually meant it is a **large improvement**: 3.42 of a
+//! possible 11 is **31% of oatmeal**, where the original band permitted 75%.
+//! Absolute diversity rose because there are more peoples to share a cell;
+//! diversity *relative to undifferentiated sharing* fell by more than half. The
+//! five new kinds are partitioning space rather than piling onto it, which is
+//! precisely what the bound exists to check.
+//!
+//! So the ceiling is now **derived** — `0.75 × peopled_count` — which preserves
+//! the original preregistration exactly at a roster of four and cannot rot
+//! again. The floor stays the absolute `1.5`: monoculture drives `strife` to 1
+//! whatever the roster size, so that half never scaled. **`BETA = 2.0` is
+//! unchanged**; as in the niche-era re-baseline above, only the band that
+//! interprets its effect moved.
+//!
+//! Stated plainly because it is a post-unblinding change to a preregistered
+//! bound: this was authorized deliberately (Nathan, 2026-08-07) rather than
+//! adjusted to make a suite green, it re-derives the bound's *rule* instead of
+//! fitting its *value* to the measurement, and it is recorded in the campaign's
+//! chronicle. The honest cost: a ceiling that scales with the roster is a
+//! weaker discriminator on a large roster than a literal was on a small one.
+//!
 //! **Weak-knob / Stage-B caveat** (carried from `coexist::BETA`'s doc and the
 //! A16b sweep's module doc): against the shipped roster's near-tied
 //! carrying capacities, β only moves claimed-cell diversity across a narrow
@@ -165,6 +206,15 @@ fn beta_yields_realistic_coexistence() {
     // read to the peopled species so it keeps measuring what it always
     // measured until that re-measurement lands.
     let wc = peopled_components();
+    // Both halves of the band, named so the assertion states its own
+    // direction rather than presenting two magic numbers.
+    /// Absolute lower bound: winner-take-all monoculture drives `strife` to
+    /// 1 regardless of how many peoples exist, so this does NOT scale.
+    const MONOCULTURE_FLOOR: f64 = 1.5;
+    /// Upper bound as a fraction of "oatmeal" — undifferentiated sharing,
+    /// where `strife` approaches the peopled-species count. `0.75` preserves
+    /// the original preregistration exactly: `3.0` against a 4-people roster.
+    const OATMEAL_FRACTION: f64 = 0.75;
 
     let per_seed: Vec<(u64, f64)> = SEEDS
         .iter()
@@ -173,10 +223,21 @@ fn beta_yields_realistic_coexistence() {
 
     let mean: f64 = per_seed.iter().map(|(_, d)| *d).sum::<f64>() / per_seed.len() as f64;
 
+    // THE DELVERS: the ceiling is DERIVED from the live peopled count, not
+    // written as a literal. See the module doc's roster-era re-baseline for
+    // why — a literal `3.0` silently encoded "the roster has four peoples",
+    // and rotted the moment one didn't.
+    let oatmeal = wc.psyche.len() as f64;
+    let ceiling = OATMEAL_FRACTION * oatmeal;
+
     assert!(
-        (1.5..=3.0).contains(&mean),
+        (MONOCULTURE_FLOOR..=ceiling).contains(&mean),
         "mean per-claimed-cell diversity at beta={} across seeds {per_seed:?} = {mean}, \
-         expected in the niche-era re-baselined band [1.5, 3.0] (monoculture ~1, oatmeal ~4)",
+         expected in [{MONOCULTURE_FLOOR}, {ceiling}] — the floor is absolute (monoculture \
+         is 1 whatever the roster size) and the ceiling is {OATMEAL_FRACTION} x oatmeal, \
+         where oatmeal = {oatmeal} peopled species. If this fails ABOVE the ceiling the \
+         world has gone undifferentiated; BELOW the floor it has gone monocultural. Do not \
+         replace the derived ceiling with a literal.",
         hornvale_demography::BETA
     );
 }
