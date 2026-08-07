@@ -2500,6 +2500,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: union across seeds 1..=20 at GLOBE_LEVEL) —
+    /// off-gate (heavy:); an existence probe, not a per-world assertion
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn waterfalls_exist_across_a_seed_sweep() {

@@ -775,6 +775,8 @@ mod tests {
     /// histogram tests the transform instead of the draw.
     const UNIFORMITY_WORLDS: std::ops::RangeInclusive<u64> = 1..=12;
 
+    /// claim: rate(forall-decile, [0.065, 0.135] share of samples) — decile
+    /// distribution over a small fixed UNIFORMITY_WORLDS set
     #[test]
     fn uniformize_turns_the_cave_gate_noise_into_a_uniform_variate() {
         use crate::provider::GeneratedTerrain;

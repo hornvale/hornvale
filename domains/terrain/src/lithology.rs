@@ -1019,6 +1019,7 @@ mod tests {
         assert!(classes.len() >= 3, "world felt monolithic: {classes:?}");
     }
 
+    /// claim: reachability(seed: union over [1,7,42,99], not census-eligible)
     #[test]
     fn alluvium_and_coal_are_reachable_across_seeds() {
         use std::collections::BTreeSet;
@@ -1054,6 +1055,7 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: union over [1,7,42,99], not census-eligible)
     #[test]
     fn andesite_is_reachable_across_seeds() {
         use std::collections::BTreeSet;
@@ -1088,6 +1090,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: union over [1,7,42,99], not census-eligible —
+    /// domain-crate unit test, not a Settlements/Full census row)
     #[test]
     fn active_and_passive_margins_both_appear_across_seeds() {
         let mut saw_active = false;

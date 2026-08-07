@@ -1216,6 +1216,7 @@ mod tests {
         assert!(ring_mean(0.25) > ring_mean(0.40));
     }
 
+    /// claim: invariant(forall-seed) — lobed-envelope azimuthal variation
     #[test]
     fn envelope_rims_are_lobed_not_circular() {
         // At a fixed angular distance near the rim, envelope varies with
@@ -1246,6 +1247,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — craton count/id/rescale invariants
     #[test]
     fn craton_draws_are_sequential_and_in_range() {
         for seed in 0..16u64 {
@@ -1281,6 +1283,8 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — repulsion increases min pairwise angle,
+    /// same draw count before/after
     #[test]
     fn repulsion_reduces_crowding_without_new_draws() {
         // Minimum pairwise angular separation over a craton set.
@@ -1393,6 +1397,8 @@ mod tests {
         assert_eq!(assembly, assemble_cratons(&cratons));
     }
 
+    /// claim: invariant(forall-seed) — repeated assemble_cratons calls are
+    /// byte-identical
     #[test]
     fn assembly_is_draw_free() {
         // `assemble_cratons` takes no `Seed`/`Stream` — its signature is
@@ -1702,6 +1708,8 @@ mod tests {
         assert_eq!(field.thickness_at(center).get(), CRUST_KM_MAX);
     }
 
+    /// claim: invariant(forall-seed) — supply band, including a small pinned
+    /// (continents: Some(1)) sub-sweep
     #[test]
     fn continental_supply_is_the_area_the_rescale_budgets() {
         // Empty set: no supply.

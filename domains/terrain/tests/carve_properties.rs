@@ -268,6 +268,7 @@ fn shelf_width_hops(
 /// sea-trim (ruling #5c, `trim_to_sea`) is booked at the generate level —
 /// generate-level composition is carve + trim, and the trimmed volume is
 /// additional oceanic loss on top of these carve-internal books.
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn mass_balance_holds() {
     let geo = Geosphere::new(4);
@@ -411,6 +412,7 @@ fn harder_rock_cuts_less() {
 /// `age_index >= 2` — old enough to have drifted off the live hotspot dome
 /// and cooled into reef-building range (`cap_atolls`'s own eligibility
 /// rule).
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn atolls_only_on_warm_submerged_seamounts() {
     let geo = Geosphere::new(4);
@@ -581,6 +583,7 @@ fn trim_recaps_hold_after_the_final_solve() {
 /// whatever basement the re-cap shaved. Also asserts the retained
 /// `trim_ocean_loss_m3` equals the replayed trim's volume — the booking is
 /// real, not a doc claim (review Critical 2).
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn generate_level_books_account_for_every_eroded_unit() {
     let geo = Geosphere::new(4);
@@ -643,6 +646,7 @@ fn generate_level_books_account_for_every_eroded_unit() {
 /// own `trails_are_age_ordered_chains_upstream_of_plate_motion` tests) are
 /// still age-ordered, strictly-decaying chains once wired through
 /// `globe::generate` — every hotspot contributes `TRAIL_STEPS + 1` entries.
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn trails_exist_age_ordered() {
     let geo = Geosphere::new(4);
@@ -675,6 +679,8 @@ fn trails_exist_age_ordered() {
 /// connected component on average — the v2 wall read as exactly 1. Heavy:
 /// full genesis at L5 over 40 seeds.
 #[test]
+/// claim: rate(forall-seed, mean > 1.5) — off-gate (heavy:), a mean
+/// component-count claim over 40 seeds, not a hunt
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn arcs_are_discrete() {
     use hornvale_terrain::BoundaryKind;
@@ -723,6 +729,12 @@ fn arcs_are_discrete() {
 /// criterion has never been observed to hold; tail dominance is what the
 /// physics actually produces, and Census-III will carry this note.
 #[test]
+/// claim: rate(forall-seed, tail-dominance ratio >= 1.5x) — off-gate (heavy:).
+/// The spec's own words call this "hunt-shaped" (spec §5), but Task 1's review
+/// read it directly and found it sweeps all 40 seeds unconditionally and pools
+/// a cell-level rate, closer to rate/invariant than a hunt; needs new
+/// cell/entity-level aggregation metrics before it can move (spec §6 item 7),
+/// not a lift-and-shift — see docs/audits/the-assay-build-volume-audit.md
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn shelf_width_asymmetry() {
     let geo = Geosphere::new(5);
@@ -812,6 +824,8 @@ fn flooded_fraction(elevation: &CellMap<ReferenceElevation>, sea_level: Referenc
 const V2_EUSTATIC_SWING_BASELINE: f64 = 0.00011887;
 
 #[test]
+/// claim: rate(forall-seed, mean >= V2_EUSTATIC_SWING_BASELINE) — off-gate
+/// (heavy:), a mean-swing claim over 4 seeds against a historical baseline
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn eustatic_dividend_regression() {
     let geo = Geosphere::new(5);
