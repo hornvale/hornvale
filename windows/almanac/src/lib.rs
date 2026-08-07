@@ -667,6 +667,10 @@ mod tests {
             sky: SkyReport {
                 description: "A golden sun hangs fixed at zenith.".to_string(),
                 bodies: vec!["the sun".to_string()],
+                body_phrases: vec![(
+                    "the sun".to_string(),
+                    "A golden sun hangs fixed at zenith.".to_string(),
+                )],
             },
             climate: ClimateReport {
                 temperature_c: 18.0,

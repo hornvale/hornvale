@@ -814,7 +814,10 @@ impl<'w> Session<'w> {
                 nouns: focalized
                     .nouns
                     .into_iter()
-                    .map(|(noun, datum)| NounEntry { noun, datum })
+                    .map(|n| NounEntry {
+                        noun: n.display,
+                        datum: n.datum,
+                    })
                     .collect(),
             },
             spatial,
@@ -1120,6 +1123,16 @@ impl<'w> Session<'w> {
             "examine" if self.inside.is_some() && !rest.is_empty() => {
                 Turn::Out(self.examine_chamber(rest))
             }
+            // The underworld's own band, mirroring the two arms above: a cave
+            // chamber's rock is not the surface locale's canopy and forest, so
+            // resolving an underground `examine` against `examine`'s own prose
+            // catalog is the defect The Handle's Task 4 fixes — it fell through
+            // to the bare arm below, which reads the LOCALE overhead, and
+            // answered "You see no rock here." about the very rock the descent
+            // had just named.
+            "examine" if self.underground.is_some() && !rest.is_empty() => {
+                Turn::Out(self.examine_underground(rest))
+            }
             "examine" => self.examine(rest),
             // `back` retraces the WALK-band trail, so it stays refused where `go`
             // no longer is: the capability this campaign built is intra-chamber
@@ -1366,6 +1379,38 @@ impl<'w> Session<'w> {
             "[underground]\nThe rock here is {}. Ways on: out.",
             stratum_word(chamber.stratum)
         )
+    }
+
+    /// The underworld's examinable catalog. The band has its own because you
+    /// cannot see the forest from inside the rock — resolving an underground
+    /// `examine` against the surface locale's nouns is the defect this fixes
+    /// (The Handle, Task 4).
+    fn underground_nouns(&self) -> Vec<crate::focalize::Noun> {
+        let chamber = self
+            .underground
+            .expect("guarded by self.underground.is_some() at the call site");
+        let stratum = stratum_word(chamber.stratum);
+        vec![
+            crate::focalize::Noun::new("the rock", "rock", &format!("The rock here is {stratum}.")),
+            crate::focalize::Noun::new(
+                stratum,
+                stratum,
+                &format!("{stratum} — the rock of this chamber."),
+            ),
+        ]
+    }
+
+    /// `examine <noun>` UNDERGROUND: the band's own catalog only — never the
+    /// surface locale's, which is the defect The Handle's Task 4 fixes. The
+    /// refusal is BYTE-IDENTICAL to the outdoor and chamber paths' (§6):
+    /// two wordings for one question is exactly the drift this campaign
+    /// exists to remove.
+    fn examine_underground(&self, noun: &str) -> String {
+        let wanted = noun.trim().to_lowercase();
+        match self.underground_nouns().iter().find(|n| n.matches(&wanted)) {
+            Some(n) => n.datum.clone(),
+            None => format!("You see no {noun} here."),
+        }
     }
 
     /// Absorb the current room's projection into knowledge.
@@ -2583,12 +2628,12 @@ impl<'w> Session<'w> {
     /// union — `examine` must be able to tell "the lens failed" from "no
     /// grain surfaced that noun", and only the latter is a bare absence.
     /// type-audit: bare-ok(identifier-text: return)
-    pub fn lens_nouns(&self) -> Result<Vec<(String, String)>, VesselError> {
-        let mut out: Vec<(String, String)> = self.focalized()?.nouns;
+    pub fn lens_nouns(&self) -> Result<Vec<crate::focalize::Noun>, VesselError> {
+        let mut out: Vec<crate::focalize::Noun> = self.focalized()?.nouns;
         let scene = self.purview(0)?;
         for e in &scene.legend {
-            if !out.iter().any(|(n, _)| n.eq_ignore_ascii_case(&e.noun)) {
-                out.push((e.noun.clone(), e.datum.clone()));
+            if !out.iter().any(|n| n.display.eq_ignore_ascii_case(&e.noun)) {
+                out.push(crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum));
             }
         }
         Ok(out)
@@ -2610,17 +2655,38 @@ impl<'w> Session<'w> {
             Ok(f) => f,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
-        if let Some((_, detail)) = prose.nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
-            return Turn::Out(detail.clone());
+        if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
+            return Turn::Out(n.datum.clone());
         }
         let scene = match self.purview(0) {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
+        // The chart legend resolves by the same word rule as the prose catalog,
+        // deriving a mark's words mechanically — safe for a plain
+        // `<kind> of <place>` construction in a way it is not for a
+        // comma-qualified room descriptor, which declares its noun phrase
+        // instead (The Handle, spec §2).
+        //
+        // A legend entry DUPLICATING a prose entry is skipped, and that is the
+        // load-bearing half. The legend keys its ground mark on the whole raw
+        // descriptor, so deriving from it re-admits exactly the qualifiers the
+        // prose entry deliberately declined: without this, `examine hollow`
+        // failed against the prose catalog and then succeeded against the
+        // legend's copy of the same name, in the same room, with different
+        // wording. The documented precedence — "a noun named by both grains
+        // resolves to the prose datum" — has to cover the grains DISAGREEING
+        // about a word, not merely which datum to print.
         match scene
             .legend
             .iter()
-            .find(|e| e.noun.to_lowercase() == wanted)
+            .filter(|e| {
+                !prose
+                    .nouns
+                    .iter()
+                    .any(|n| n.display.eq_ignore_ascii_case(&e.noun))
+            })
+            .find(|e| crate::focalize::Noun::new(&e.noun, &e.noun, &e.datum).matches(&wanted))
         {
             Some(e) => Turn::Out(e.datum.clone()),
             None => Turn::Out(format!("You see no {noun} here.")),
@@ -3292,6 +3358,84 @@ mod tests {
             !reply.starts_with("You see no"),
             "a lens failure must never masquerade as 'nothing here': got \
              {reply:?}"
+        );
+    }
+
+    /// The chart legend resolves by word, not by whole string. This arm is a
+    /// SECOND matcher, separate from the prose catalog's, and The Handle's plan
+    /// changed only the first — so a walker could `examine forest` but not
+    /// `examine bugbear`, with the mark's full name sitting in the legend the
+    /// `map` verb had just printed. Two matchers for one question is how they
+    /// drift; this pins the second to the same rule as the first.
+    #[test]
+    fn a_legend_mark_resolves_by_word_and_not_only_by_its_whole_name() {
+        let w = seam_world();
+        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let scene = session.purview(0).expect("the chart builds");
+        let mark = scene
+            .legend
+            .iter()
+            .find(|e| e.noun.split_whitespace().count() > 1)
+            .expect("some legend entry is a multi-word name");
+        let head = mark
+            .noun
+            .split_whitespace()
+            .next()
+            .expect("a multi-word name has a first word")
+            .to_lowercase();
+        let reply = match session.examine(&head) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "the legend names {:?} and examine refuses its first word {head:?}: {reply}",
+            mark.noun
+        );
+    }
+
+    /// The two grains must not disagree about a WORD. The chart legend keys its
+    /// ground mark on the whole raw descriptor, so deriving words from it
+    /// re-admits the qualifiers the prose entry declined by declaring only its
+    /// noun phrase. Before the duplicate-skip, `examine hollow` was refused by
+    /// the prose catalog and then answered by the legend's copy of the same
+    /// name — same room, same thing, two different answers depending on which
+    /// matcher got there.
+    #[test]
+    fn a_qualifier_the_prose_entry_declined_is_not_readmitted_by_the_legend() {
+        let w = seam_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        // Walk until the descriptor carries a qualifier; the flagship's own
+        // ("buttressed canopy") has none, so it cannot exercise this.
+        let mut qualifier = None;
+        for _ in 0..8 {
+            let prose = session.focalized().expect("the lens renders");
+            let qualified = prose
+                .nouns
+                .iter()
+                .find_map(|n| n.display.split_once(", ").map(|(_, tail)| tail.to_string()));
+            if let Some(tail) = qualified {
+                qualifier = tail
+                    .split(|c: char| !c.is_alphanumeric())
+                    .find(|w| w.chars().count() >= 4)
+                    .map(str::to_lowercase);
+                if qualifier.is_some() {
+                    break;
+                }
+            }
+            let _ = session.handle("go n");
+        }
+        let Some(word) = qualifier else {
+            // Not a pass: say so rather than reporting green on nothing.
+            panic!("no comma-qualified descriptor within 8 rooms of the flagship");
+        };
+        let reply = match session.handle(&format!("examine {word}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            reply.starts_with("You see no"),
+            "{word:?} is a qualifier, not a noun, and the legend re-admitted it: {reply}"
         );
     }
 
@@ -4338,6 +4482,40 @@ mod tests {
         assert!(
             !out.contains(INDOOR_CHART_REFUSAL),
             "map underground must not take the indoor refusal: {out}"
+        );
+    }
+
+    /// The Handle, Task 4: an underground `examine` must resolve against the
+    /// band's OWN catalog, not fall through to the surface locale's — which is
+    /// what `session.rs`'s dispatch did before this fix (the bare `"examine"`
+    /// arm has no `self.underground` guard, so it ran `examine(rest)` against
+    /// whatever the surface locale above the chamber names). This is the
+    /// campaign's only instance never reproduced live before now: the
+    /// controller could not reach a cave by walking (400 steps, none found),
+    /// and `delve_at` is crate-private, so only an in-crate test can drive it
+    /// directly at a hand-picked open cave the way
+    /// `lateral_movement_is_refused_underground` does.
+    #[test]
+    fn underground_examine_answers_for_the_rock_it_names() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session.terrain.clone().expect("seed 42 builds terrain");
+        let (cell, cave) = find_cave_cell(&terrain, world.seed, true);
+        let shown = match session.delve_at(cell, cave) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("delve must not release"),
+        };
+        assert!(
+            shown.contains("You worm down into the dark"),
+            "not underground: {shown}"
+        );
+        let reply = match session.handle("examine rock") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            !reply.starts_with("You see no"),
+            "the underworld names rock and then refuses it: {reply}"
         );
     }
 

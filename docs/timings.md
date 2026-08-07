@@ -450,6 +450,8 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-06T19:48:18Z | gate | 350.346 | 2554.864 | 80.639 | 7.52 | 0 | d36a6a79 | the-benchmark | MacBookPro | 10 |
 | 2026-08-06T20:00:48Z | gate | 326.865 | 2554.833 | 65.095 | 8.02 | 0 | 58230387 | the-benchmark | MacBookPro | 10 |
 | 2026-08-06T20:02:40Z | rebaseline | 104.930 | 136.389 | 6.706 | 1.36 | 0 | 58230387 | the-benchmark | MacBookPro | 10 |
+| 2026-08-07T00:33:04Z | rebaseline | 149.462 | 138.208 | 8.684 | 0.98 | 0 | 27d3fa42 | the-handle | MacBookPro | 10 |
+| 2026-08-07T00:50:13Z | gate | 520.580 | 2678.804 | 123.832 | 5.38 | 0 | 27d3fa42 | the-handle | MacBookPro | 10 |
 | 2026-08-06T23:35:40Z | gate | 363.912 | 2555.297 | 73.436 | 7.22 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
 | 2026-08-06T23:47:00Z | gate | 460.403 | 2579.029 | 101.528 | 5.82 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
 | 2026-08-07T00:18:33Z | gate | 418.504 | 2619.181 | 86.871 | 6.47 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
@@ -477,9 +479,17 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-06T23:08:59Z | gate | 787.233 | 4367.422 | 152.497 | 5.74 | 0 | 979508f8 | campaign/the-tilth | ambrose | 12 |
 | 2026-08-07T00:23:52Z | gate | 806.086 | 4339.758 | 157.964 | 5.58 | 0 | ae85d279 | campaign/the-tilth | ambrose | 12 |
 | 2026-08-07T00:26:15Z | rebaseline | 142.897 | 169.763 | 8.039 | 1.24 | 0 | ae85d279 | campaign/the-tilth | ambrose | 12 |
+| 2026-08-07T01:45:45Z | rebaseline | 197.448 | 185.091 | 8.013 | 0.98 | 0 | c84c39f2 | the-handle | MacBookPro | 10 |
+| 2026-08-07T01:58:00Z | gate | 645.780 | 4277.908 | 136.641 | 6.84 | 0 | d31599d1 | the-handle | MacBookPro | 10 |
 | 2026-08-07T00:57:07Z | rebaseline | 237.637 | 188.426 | 7.357 | 0.82 | 0 | 386e3fd5 | the-delvers | MacBookPro | 10 |
 | 2026-08-07T01:41:30Z | gate | 792.789 | 3535.051 | 115.633 | 4.60 | 0 | 4731b926 | the-delvers | MacBookPro | 10 |
 | 2026-08-07T02:16:28Z | gate | 617.082 | 4086.449 | 88.953 | 6.77 | 0 | a2ab54fd | the-delvers | MacBookPro | 10 |
 | 2026-08-07T02:31:47Z | gate | 689.853 | 4100.118 | 96.138 | 6.08 | 0 | 16873d47 | the-delvers | MacBookPro | 10 |
+| 2026-08-07T02:52:38Z | rebaseline | 163.328 | 182.160 | 8.696 | 1.17 | 0 | af7e740d | the-handle | MacBookPro | 10 |
+| 2026-08-07T03:02:42Z | gate | 604.761 | 4330.421 | 133.278 | 7.38 | 0 | af7e740d | the-handle | MacBookPro | 10 |
+| 2026-08-07T12:59:55Z | rebaseline | 121.999 | 178.413 | 6.762 | 1.52 | 0 | f034d089 | the-handle | MacBookPro | 10 |
+| 2026-08-07T13:08:41Z | gate | 518.384 | 4082.029 | 86.863 | 8.04 | 0 | f034d089 | the-handle | MacBookPro | 10 |
 | 2026-08-07T12:15:37Z | gate | 591.033 | 4406.664 | 124.325 | 7.67 | 0 | 91d979dd | the-sighting | MacBookPro | 10 |
 | 2026-08-07T12:18:36Z | rebaseline | 127.277 | 179.163 | 8.232 | 1.47 | 0 | 91d979dd | the-sighting | MacBookPro | 10 |
+| 2026-08-07T13:16:07Z | rebaseline | 134.623 | 179.342 | 7.217 | 1.39 | 0 | 4564a3c0 | the-handle | MacBookPro | 10 |
+| 2026-08-07T13:24:57Z | gate | 529.350 | 4175.021 | 105.854 | 8.09 | 0 | 4564a3c0 | the-handle | MacBookPro | 10 |

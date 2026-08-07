@@ -785,6 +785,28 @@ reading the picture did. What changed is that "the render depicts something the
 command language denies" has stopped being a thing a human must remember to look
 for.
 
+**Re-scored again by [The Handle](./chronicle/the-handle.md) (2026-08-06), which
+refutes that last sentence and narrows the row.** The parity contract was real
+and it held — for the floor plan it was written against. It said nothing about
+the other four surfaces that name things: the room's own prose, the sky, the
+chart legend, and the underworld. All four were denying nouns they had just
+printed, and the way it came to light was a human reading a transcript and
+saying so, which is exactly what the sentence claimed had stopped being
+necessary. Six of the seven significant words in the starting room's catalog did
+not resolve.
+
+The correction is about the *scope of a mechanization*, not its value. A check
+converts the row it covers and leaves the rest of the ledger reading as though
+it were covered too — which is the more dangerous state, because the lament that
+"only a human noticed" gets quietly retired while remaining true everywhere the
+check does not reach. The Handle widens the check from one render to every
+catalog surface, and it also finds the limit of the wider version: the check
+asserts that *declared* nouns resolve, and is structurally blind to
+over-admission, which a mutation demonstrated and only a separate,
+opposite-facing test caught. So the row now reads: parity is mechanized in both
+the plan and the prose, in one direction, and the second direction is held by
+regression tests rather than by a rule.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
