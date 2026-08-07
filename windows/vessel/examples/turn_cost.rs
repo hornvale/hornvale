@@ -313,6 +313,168 @@
 //! left as a finding rather than fixed here. A future re-measurement that
 //! wants a clean `day-advancing` comparison, or byte-identical snapshots
 //! between the two paths, needs the same `day` on both sides.
+//!
+//! ## Measured — after creature sighting (The Sighting, Task 6)
+//!
+//! Date: 2026-08-06. Box: `MacBookPro` (`hostname -s`). Quiet box: another
+//! session's `cargo nextest run` had this box at `uptime` 1-min load
+//! 19-42 when this task started; measurement waited it out and ran at
+//! 1-min load 3.5-4.7 throughout (recorded beside every reading in the
+//! campaign's Task 6 report). This re-measures what Tasks 2-5 (the anchor
+//! embedding, the shadowcast, creature marks — all inside
+//! `Session::snapshot`) cost, against the "Task 1" baseline recorded above
+//! (before those tasks landed).
+//!
+//! Native, `--release`, three runs, verbatim:
+//!
+//! ```text
+//! run 1:
+//! Session::start   median  690.916 ms
+//! handle(verb)     median    0.955 ms
+//! snapshot()+json  median    1.273 ms
+//!   moving        n=10  handle median   10.874 ms   snapshot()+json median    3.706 ms
+//!   day-advancing n=5   handle median    5.397 ms   snapshot()+json median    1.166 ms
+//!   neither       n=35  handle median    0.154 ms   snapshot()+json median    1.300 ms
+//! snapshot bytes   walk 12273, chamber 4813
+//!
+//! run 2:
+//! Session::start   median  656.913 ms
+//! handle(verb)     median    0.916 ms
+//! snapshot()+json  median    1.203 ms
+//!   moving        n=10  handle median   10.375 ms   snapshot()+json median    3.324 ms
+//!   day-advancing n=5   handle median    5.480 ms   snapshot()+json median    1.112 ms
+//!   neither       n=35  handle median    0.143 ms   snapshot()+json median    1.203 ms
+//! snapshot bytes   walk 12273, chamber 4813
+//!
+//! run 3:
+//! Session::start   median  704.534 ms
+//! handle(verb)     median    0.929 ms
+//! snapshot()+json  median    1.263 ms
+//!   moving        n=10  handle median   11.093 ms   snapshot()+json median    3.537 ms
+//!   day-advancing n=5   handle median    6.041 ms   snapshot()+json median    1.184 ms
+//!   neither       n=35  handle median    0.155 ms   snapshot()+json median    1.239 ms
+//! snapshot bytes   walk 12273, chamber 4813
+//! ```
+//!
+//! Through the wasm ABI (`make wasm-vessel` immediately before, so the
+//! `.wasm` is fresh), `node clients/vessel/wasm/turn_bench.mjs
+//! book/src/gallery/vessel.wasm`, three runs, verbatim:
+//!
+//! ```text
+//! run 1:
+//! Session::start   median 2215.719 ms
+//! hv_handle(verb)  median    3.804 ms
+//! snapshot+decode  median    0.017 ms
+//!   moving        n=10  handle median   19.508 ms   snapshot+decode median    0.018 ms
+//!   day-advancing n=5   handle median    5.336 ms   snapshot+decode median    0.019 ms
+//!   neither       n=35  handle median    3.757 ms   snapshot+decode median    0.014 ms
+//! snapshot bytes   walk 12204, chamber 4764
+//!
+//! run 2:
+//! Session::start   median 2159.620 ms
+//! hv_handle(verb)  median    3.846 ms
+//! snapshot+decode  median    0.015 ms
+//!   moving        n=10  handle median   19.828 ms   snapshot+decode median    0.018 ms
+//!   day-advancing n=5   handle median    5.513 ms   snapshot+decode median    0.022 ms
+//!   neither       n=35  handle median    3.757 ms   snapshot+decode median    0.014 ms
+//! snapshot bytes   walk 12204, chamber 4764
+//!
+//! run 3:
+//! Session::start   median 2175.545 ms
+//! hv_handle(verb)  median    3.864 ms
+//! snapshot+decode  median    0.016 ms
+//!   moving        n=10  handle median   19.969 ms   snapshot+decode median    0.017 ms
+//!   day-advancing n=5   handle median    5.429 ms   snapshot+decode median    0.022 ms
+//!   neither       n=35  handle median    3.767 ms   snapshot+decode median    0.015 ms
+//! snapshot bytes   walk 12204, chamber 4764
+//! ```
+//!
+//! **Deltas, slowest-of-three against slowest-of-three (native), and
+//! slowest-of-three against the single Task 1 wasm run (wasm had no triple
+//! reading recorded)** — every figure is `Task 6 - Task 1`, stated as a
+//! number:
+//!
+//! Native: `handle(verb)` pooled 1.087 -> 0.955 ms (**-0.132 ms**, within
+//! noise); `snapshot()+json` pooled 1.267 -> 1.273 ms (**+0.006 ms**, flat).
+//! By class: `moving` handle 12.231 -> 11.093 ms (**-1.138 ms**); `moving`
+//! `snapshot()+json` 1.259 -> 3.706 ms (**+2.447 ms, 2.94x** — the real
+//! signal, see below); `day-advancing` handle 6.729 -> 6.041 ms
+//! (**-0.688 ms**); `day-advancing` snapshot 1.308 -> 1.184 ms
+//! (**-0.124 ms**); `neither` handle 0.167 -> 0.155 ms (**-0.012 ms**);
+//! `neither` snapshot 1.267 -> 1.300 ms (**+0.033 ms**). Bytes: walk
+//! 12273 -> 12273 (**+0**, unchanged — the walk band never touches a
+//! chamber); chamber 4802 -> 4813 (**+11 B**).
+//!
+//! Wasm: `hv_handle` pooled 3.685 -> 3.864 ms (**+0.179 ms**);
+//! `snapshot+decode` pooled 0.015 -> 0.017 ms (**+0.002 ms**, negligible).
+//! By class: `moving` handle 15.115 -> 19.969 ms (**+4.854 ms, 1.32x**);
+//! `moving` snapshot+decode 0.016 -> 0.018 ms (**+0.002 ms**);
+//! `day-advancing` handle 5.482 -> 5.513 ms (**+0.031 ms**, flat);
+//! `day-advancing` snapshot+decode 0.026 -> 0.022 ms (**-0.004 ms**);
+//! `neither` handle 2.553 -> 3.767 ms (**+1.214 ms, 1.48x** — see the
+//! surprise below); `neither` snapshot+decode 0.014 -> 0.015 ms
+//! (**+0.001 ms**). Bytes: walk 12204 -> 12204 (**+0**); chamber
+//! 4753 -> 4764 (**+11 B**, matching native's chamber delta exactly — the
+//! creature-mark datum this campaign added).
+//!
+//! **The real signal is `moving`-class `snapshot()+json`, native: 2.94x.**
+//! `enter` is the turn where the possession first stands inside a chamber,
+//! and `snapshot()` derives `sighting()` fresh and uncached on every call —
+//! `anchor_cells` alone costs 42 us median / 410 us p99 / 437 us max
+//! (Task 5's own bench), and the shadowcast and the marks roster ride
+//! alongside it. That this shows up in the `moving` class rather than
+//! spread evenly is a median-pooling artifact, not a claim that only
+//! `enter`/`out` pay it: of the 10 pooled `moving` samples (2 per run x 5
+//! runs — `enter` then `out`), only `enter`'s snapshot is taken while
+//! already indoors, so 5 of 10 samples sit near the new indoor cost and 5
+//! sit near the old outdoor cost; `xs[len/2]` on that split lands on the
+//! indoor group. `look`/`map` right after `enter` are `Neither`-class and
+//! ALSO indoors, paying the same new cost — but diluted to invisibility by
+//! 33 outdoor `Neither` samples in the pooled median (35 total), which is
+//! why the pooled `neither` `snapshot()+json` figure above reads flat
+//! (+0.033 ms) despite two of its constituent samples costing roughly as
+//! much extra as `moving` does.
+//!
+//! **A surprise worth flagging rather than fully explaining: wasm's
+//! `neither`-class `hv_handle` grew 1.214 ms (1.48x) while native's
+//! `neither`-class `handle(verb)` alone stayed flat.** The likely mechanism
+//! is architectural, not a wasm-specific regression: `hv_handle` bundles
+//! `session.snapshot()` construction *inside* every call (the Task 1
+//! finding above), so an indoor `Neither`-class turn through wasm pays the
+//! new `sighting()` cost as part of `hv_handle` itself, where the native
+//! side pays it only in the separately-measured `snapshot()` figure. Given
+//! the sample-mixing effect just described for native `moving`, it is
+//! plausible wasm's tighter per-sample distribution puts more of its 10
+//! genuinely-indoor `Neither` samples (out of 35 pooled) past the sorted
+//! midpoint than native's does — but this bench reports medians only, not
+//! raw samples, so that account is a hypothesis consistent with the
+//! numbers, not a verified mechanism. It does not change any ceiling
+//! (`cli/tests/session_cost.rs` gates the native dev-profile path only,
+//! never wasm), and a future task that wants to settle it should dump raw
+//! per-sample timings rather than re-deriving them from medians.
+//!
+//! **`sighting()` call-site count, one indoor turn:** across this bench's
+//! own `SEQUENCE`, an indoor turn that is plain `look` or `map` calls
+//! `sighting()` exactly **once** — from `snapshot()` alone, since neither
+//! `describe_chamber_here` nor `plan_here` touches it (`plan_here` reads
+//! `inside.lattice`, embedded once at `enter`, not re-derived per turn).
+//! But `sighting()` (`windows/vessel/src/session.rs`) is not memoized on
+//! `self` — every caller re-derives it fresh — and Task 5's fix rounds
+//! added three more callers reachable from a single indoor turn: `needs()`
+//! calls it unconditionally on every invocation; `colocated_npc` (and so
+//! `provoke`/`soothe`/the `pub` `would_turn_hostile`) calls it on every
+//! resolution attempt; `examine_chamber` calls it only after a creature
+//! LABEL already matched (hoisted below the anchor/glyph checks so an
+//! ordinary miss pays nothing). A turn that both asks `needs` (or
+//! `examine`s a creature, or `provoke`s/`soothe`s one) AND separately reads
+//! `snapshot()` — which every wasm turn does, bundled, and which a native
+//! CLI turn does only if a caller asks — therefore performs **two**
+//! independent `sighting()` derivations, not one, and a client calling the
+//! `pub` `would_turn_hostile` again after `handle()` (it takes no `&mut
+//! self`, so nothing stops a second call) adds a third. At ~42 us median
+//! each this is not a budget item today, but it is a real duplication
+//! worth naming rather than restructuring here — Task 6's brief asked to
+//! report it, not to fix it.
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session};
