@@ -491,3 +491,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-07T13:08:41Z | gate | 518.384 | 4082.029 | 86.863 | 8.04 | 0 | f034d089 | the-handle | MacBookPro | 10 |
 | 2026-08-07T12:15:37Z | gate | 591.033 | 4406.664 | 124.325 | 7.67 | 0 | 91d979dd | the-sighting | MacBookPro | 10 |
 | 2026-08-07T12:18:36Z | rebaseline | 127.277 | 179.163 | 8.232 | 1.47 | 0 | 91d979dd | the-sighting | MacBookPro | 10 |
+| 2026-08-07T13:16:07Z | rebaseline | 134.623 | 179.342 | 7.217 | 1.39 | 0 | 4564a3c0 | the-handle | MacBookPro | 10 |
+| 2026-08-07T13:24:57Z | gate | 529.350 | 4175.021 | 105.854 | 8.09 | 0 | 4564a3c0 | the-handle | MacBookPro | 10 |
