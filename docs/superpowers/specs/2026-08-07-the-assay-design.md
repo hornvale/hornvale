@@ -123,11 +123,29 @@ Gate tests (non-`#[ignore]`d) by the deepest build they reach:
 Of 57 tests that build a world inside a seed loop, three use multiple seeds
 *only* to locate an instance — all three in the commit gate:
 
+**Duration attribution corrected (Task 1's audit, ledger #14).** The table below
+originally read 7.617 s and 8.412 s for the two worldgen hunts. Those are
+`docs/timings/test-baseline-MacBookPro.tsv` values — the baseline recorded
+2026-07-30, **pre-Weir and stale by a perf campaign**. lefford's post-Weir
+baseline reads **13.132 s** and **12.262 s** for the same two tests, verified
+line by line during Task 1's review. The lefford figures are the reference and
+are used below. The three hunts therefore cost more than first stated; the
+campaign's justification is still the tail and the margin, not the seconds.
+
 | test | shape | builds | measured |
 |---|---|---|---|
-| `terrain/hydro_witness::every_hydro_variant_is_witnessed_on_a_real_world` | ∀variant ∃seed | 8 × L6 globe, breaks on seed 0 | **0.51 s** |
-| `worldgen/exposure::every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep` | ∀concept ∃seed | up to 9 Full | 8.412 s |
-| `worldgen/diachronic::a_crisis_fires_on_a_real_generated_sky` | ∃seed | up to **200** Full | 7.617 s |
+| `terrain/hydro_witness::every_hydro_variant_is_witnessed_on_a_real_world` | ∀variant ∃seed | 8 × L6 globe, breaks on seed 0 | **0.51 s** (measured live on this Mac, debug — absent from both baselines) |
+| `worldgen/exposure::every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep` | ∀concept ∃seed | up to 9 Full | **12.262 s** (lefford) |
+| `worldgen/diachronic::a_crisis_fires_on_a_real_generated_sky` | ∃seed | up to **200** Full | **13.132 s** (lefford) |
+
+**A fourth hunt exists.** Task 1's audit found
+`windows/worldgen/tests/non_void_roster.rs::every_kind_is_viable_somewhere`
+(sweeps seeds `[1, 7, 42, 99]`; its own doc comment calls itself "a 'somewhere,
+ever' existence check, not a distributional claim"; **30.891 s** on lefford — the
+most expensive of the four). It is **recorded, not retired**: §7 decomposed this
+campaign's scope to the mechanism plus one tranche, and finding exactly this kind
+of thing for the follow-on was the audit's job. It is also the strongest single
+argument that the follow-on is worth running.
 
 **Correction, found while planning (2026-08-07).** This spec's first draft routed
 `a_crisis_fires` to a hand-built synthetic world, on the model of decision 0093's
@@ -147,8 +165,11 @@ the seed it finds is recorded rather than re-hunted on every commit. Note the
 generated *sky* is cheap (0.0020 s/world, §3.2); it is `climate+settlements` at
 81% that makes the current sweep expensive.
 
-~16.5 s against a 352 s median gate — **4.7%**. This campaign is not justified
-on that. It is justified on two other properties:
+~25.9 s against a 352 s median gate — **7.4%** (and ~56.8 s / 16.1% if the
+fourth hunt is counted, which this campaign does not retire). Note the three
+figures come from two different hosts, so read the total as an order of
+magnitude, not a measurement. This campaign is still not justified on cost. It is
+justified on two other properties:
 
 - **Unbounded tail.** All three are cheap only because the break hits early.
   `a_crisis_fires`'s own comment plans for the tail: *"If none of 1..=200 shows
