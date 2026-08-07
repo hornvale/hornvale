@@ -15,7 +15,47 @@
 //! A drift that moves only seeds outside `TRIPWIRE_SEEDS` still waits for the
 //! regen; the full proof remains `calibration.rs`'s ignored
 //! `census_fixture_matches_live_run`. This bounds staleness, it does not
-//! eliminate it (spec §10).
+//! eliminate it (spec §10). It also does not guard a row's *refusal status*:
+//! when `row.refusal.is_some()` the loop `continue`s before building or
+//! comparing anything, so a tripwire seed whose refusal goes stale — a world
+//! that used to refuse now builds, or the reverse — is silently skipped
+//! rather than flagged. Confirmed below under "Mutation evidence".
+//!
+//! # Mutation evidence
+//!
+//! Recorded 2026-08-07, against the census fixture committed at `d36be41b`
+//! (regenerated on the canonical host, lefford).
+//!
+//! **The tripwire catches a genuine value drift.** With the fixture
+//! untouched, the test passes in 11.330s. Editing exactly one cell — seed 0's
+//! `crisis-fires` value in the committed `rows.csv`, from `true` to `false`,
+//! leaving every other cell untouched — turns the test red with this verbatim
+//! output:
+//!
+//! ```text
+//!     FAIL [   4.072s] (1/1) hornvale-lab::tripwire the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds
+//!   stderr ───
+//!     thread 'the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds' (559802970) panicked at windows/lab/tests/tripwire.rs:137:13:
+//!     assertion `left == right` failed: STALE CENSUS FIXTURE: metric "crisis-fires" at seed 0 reads Flag(true) live but Flag(false) in the committed rows.csv. The worldgen path moved after the fixture was authored, so every census-backed assertion in windows/lab/tests/ is measuring old worlds. Regenerate with `bash scripts/census-run.sh`, review `make lab-diff STUDY=the-census`, and commit the result.
+//!       left: Flag(true)
+//!      right: Flag(false)
+//! ```
+//!
+//! Restoring the cell (`git checkout` of the fixture, confirmed clean with
+//! `git diff --exit-code`) returns the test to green (11.409s). The guard
+//! fires on the exact metric, seed, and both values, as designed.
+//!
+//! **The refusal-skip gap is real, and confirmed rather than assumed.**
+//! Restoring the fixture first, then setting seed 0's `refusal` cell (the
+//! last CSV column, empty by default) to a non-empty probe string —
+//! `"probe: refusal-staleness test"` — while leaving `crisis-fires` at its
+//! true, correct value: the test still **passes** (7.209s — about 4s faster,
+//! consistent with seed 0's build being skipped entirely once
+//! `row.refusal.is_some()` short-circuits the loop before `built()` runs).
+//! No assertion for seed 0 ever executes. This is the expected, worse
+//! outcome named above: a stale refusal status is invisible to this guard.
+//! Restoring the fixture (`git checkout`, confirmed clean) returns the test
+//! to its normal green (11.314s).
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
