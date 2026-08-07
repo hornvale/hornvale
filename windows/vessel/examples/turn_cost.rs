@@ -531,6 +531,59 @@
 //! `Cell`/`RefCell`, so interior mutability is available to whoever takes
 //! this on — recorded here as an owed followup, with the measured numbers,
 //! so that work starts from a measurement rather than rediscovering one.
+//!
+//! ## Re-measured at the merge — the world moved, not the code
+//!
+//! Date: 2026-08-07. Box: `hostname -s` as configured that day. Profile:
+//! `--release`. Everything above this heading was measured against a seed-42
+//! world that **The Tense reseeded while The Sighting was still running**:
+//! the settlement went `Goodogododaga` -> `Googo`, and the structure the
+//! possession enters went from two chambers with a 19x10 first room to four
+//! with a 19x19 one. The readings above are not wrong — they are correctly
+//! taken measurements of a world that no longer exists, and they are kept
+//! verbatim as the archaeology of how the campaign reasoned. These are the
+//! same measurements re-taken on the merged tree.
+//!
+//! A true matched pair: three runs of THIS FILE at `main` (before The
+//! Sighting, after The Tense) against three on the merged branch, same box,
+//! same session, back to back.
+//!
+//! ```text
+//! main (before):   moving snapshot()+json median  0.969 / 0.945 / 0.940 ms
+//!                  snapshot bytes   walk 12333, chamber 5314
+//! branch (after):  moving snapshot()+json median  3.307 / 3.373 / 3.380 ms
+//!                  snapshot bytes   walk 12333, chamber 5325
+//! ```
+//!
+//! Slowest-of-three against slowest-of-three, the convention used above:
+//! `moving`-class `snapshot()+json` **0.969 -> 3.380 ms (+2.411 ms, 3.49x)**,
+//! against the 1.259 -> 3.706 ms (2.94x) recorded on the smaller room. Bytes:
+//! walk **12333 -> 12333 (+0**, unchanged — the walk band never touches a
+//! chamber); chamber **5314 -> 5325 (+11 B)**, the identical eleven-byte
+//! delta measured on the old world, which is the right answer: the field
+//! added is `"marks":[…]` and its size does not depend on the room.
+//!
+//! The isolated derivation, re-measured the same way — through
+//! `would_turn_hostile`, the one `pub` path that calls `sighting()` exactly
+//! once — 200 reps, median, three runs per profile:
+//!
+//! ```text
+//! release:  indoor 3.4163 / 3.2979 / 3.3693 ms   outdoor 0.0017-0.0020 ms
+//! dev:      indoor 8.5250 / 8.4220 / 8.1939 ms   outdoor 0.0036-0.0039 ms
+//! ```
+//!
+//! So **~8.5 ms dev / ~3.4 ms release per derivation** (was ~8.5 / ~3.7), and
+//! the memo gain figures scale with it: roughly **6.8 ms release for the
+//! `wait` pair, ~11.6 ms through the ABI** at the measured ~1.7x. The dev
+//! figure did not move, which is why `INDOOR_SNAPSHOT_BUDGET_MS`'s 18.0
+//! basis still holds — that ceiling is keyed on the dev profile, and
+//! `cli/tests/session_cost.rs` enforces it live on every gate rather than
+//! trusting this comment.
+//!
+//! **The lesson, since it cost a merge:** a benchmark's fixture world is a
+//! dependency, and a parallel campaign can bump it without touching a line
+//! of the code being timed. Re-take a load-bearing cost figure AFTER
+//! absorbing main, not before.
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session};

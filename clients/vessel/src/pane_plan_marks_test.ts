@@ -12,11 +12,21 @@ import { planRows } from "./pane_plan.ts";
 // script is `enter` alone at turn 1, before any tick populates occupancy,
 // so its `marks` is `[]` — asserting mark behaviour against it would
 // assert on an empty array and pass vacuously. `wait; enter` gives the
-// occupied fixture a real mark at (3,1): the bugbear's noun, kind
-// `"agent"`, salience 5.
+// occupied fixture a real mark: the bugbear's noun, kind `"agent"`,
+// salience 5.
+//
+// SEED 1, not seed 42, and the other two pane fixtures are still seed 42's.
+// The Sighting was written when seed 42's world happened to put a creature in
+// the chamber the possession walks into; The Tense reseeded that world and the
+// creature stopped following it inside. Sight was untouched — most seeds still
+// exercise it — but a fixture whose whole job is to carry a mark cannot be
+// taken from a world that has none. The Rust side searches for a qualifying
+// world rather than pinning one (windows/vessel/tests/common/mod.rs); a golden
+// cannot sweep, so this one file stays concrete and is named for the seed it is
+// actually taken at.
 const OCCUPIED = Deno.readTextFileSync(
   new URL(
-    "../../../windows/vessel/tests/fixtures/snapshot-seed-42-chamber-occupied.json",
+    "../../../windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json",
     import.meta.url,
   ),
 );
@@ -24,9 +34,9 @@ const OCCUPIED = Deno.readTextFileSync(
 Deno.test("a mark renders its glyph at its cell", () => {
   const snap = parseSnapshot(OCCUPIED)!;
   const rows = planRows(snap)!;
-  // The fixture's one mark: noun "bugbear of Goodogododaga" at (3, 1),
+  // The fixture's one mark: noun "bugbear of Bobakoba" at (5, 3),
   // lattice-local == pane-local since this plan's extent origin is (0, 0).
-  assertEquals(rows[1][3], "b");
+  assertEquals(rows[3][5], "b");
 });
 
 Deno.test("marks draw over the floor but never over `@`", () => {

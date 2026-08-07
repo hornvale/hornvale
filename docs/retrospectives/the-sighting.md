@@ -155,13 +155,32 @@ timed precisely enough that a reader can check whether that path still exists.
 A second instance in the same campaign: a committed doc claimed a sighting
 derivation costs 42 µs. That was the anchor-placement sweep alone — **one line
 of the derivation** — quoted as the cost of the whole. The real figure is
-~8.5 ms dev / ~3.7 ms release, understated by about 195×. Found by
+~8.5 ms dev / ~3.4 ms release, understated by about 195×. Found by
 re-measuring, not by reading, and independently re-measured by the reviewer
 before it was believed.
 
 **Corollary, and it is now twice-evidenced:** a measured number's *scope* is
 as perishable as its value. Re-measure a cited figure at the point of citation
 when the citation is load-bearing.
+
+**A third instance, and this one arrived at the merge itself.** Every cost
+figure this campaign measured was taken against a seed-42 world that The Tense
+reseeded while the campaign was still running: two chambers became four, and
+the first room went 19×10 → 19×19. Nothing was wrong with the measurements and
+nothing was wrong with the code; the *world under both* had moved. The whole
+matched pair had to be run again on the merged tree — three release runs of
+`turn_cost` on main and three on the branch, three each in both profiles for
+the isolated derivation — and the headline moved with it: the moving-class
+`snapshot()+json` rise is **3.49× (0.969 → 3.380 ms) on the larger room**,
+against the 2.94× (1.259 → 3.706 ms) originally recorded on the smaller.
+
+The generalization is the one worth keeping: **a benchmark's fixture is a
+dependency, and a parallel campaign can bump it.** Ancestry checks cannot see
+this — `make preflight` returned a clean verdict on the semantics — and neither
+can a test suite, because a cost figure in prose is asserted by nobody. The
+only mechanism that caught it was re-running the measurement at the merge,
+which is now the recommendation: **if a campaign's chronicle cites a number
+measured against a shipped world, re-take it after absorbing main, not before.**
 
 ---
 
@@ -236,6 +255,52 @@ died with the worktree.
   remain repo-wide — CLI help text, module docs, and one intentionally-named
   golden, `surrounds_v1_bytes_are_pinned`. Outside the task's scoped three
   files and predating the campaign. Worth a sweep someday.
+
+## The merge lesson: the evidence for the headline rested on an accident of one world
+
+The campaign's headline feature — creatures drawn on the chamber pane — was
+evidenced by five tests and one committed client fixture, all of which depended
+on a single world fact: *in seed 42, after one tick, a creature is co-located in
+the chamber the possession enters.* The Tense reseeded that world in parallel and
+the fact became false. Sight was untouched and still worked; seeds 1, 3, 4, 5, 6,
+7 and twelve more of the first twenty-four still drew a mark. **Seed 42 simply
+stopped being a world that exercises the feature.**
+
+Three things about how it surfaced are worth keeping.
+
+**The tests caught it, and they caught it because every one of them asserts its
+own precondition.** Not one passed vacuously on an empty `marks` array. The
+campaign's "measure, don't narrate" discipline is what turned a silent loss of
+coverage into six loud, specific failures naming exactly the world fact that had
+changed. That is the discipline paying for itself at the moment it mattered most.
+
+**Nothing caught it at plan time, and `make preflight` structurally cannot.** It
+compares ancestry and peeks at the other checkout; it has no opinion about world
+facts. The merge was textually near-clean — one conflict, in a fixture — which
+is the recurring shape: *a zero-conflict merge hiding a semantic collision*, the
+same class as The Tumult / The Waterline and The Deep Realm / The Panes.
+
+**The fix was not to re-point at a working seed.** Moving seed 42 → seed 7 would
+have reproduced the identical fragility one campaign later, for whoever reseeds
+next. The five tests now **search** `0u64..64` for a world that satisfies their
+precondition and assert against that — the idiom `lattice::anchor_cells`'s own
+property batteries already used one rung down, now applied to whole worlds. The
+search is loud in both directions: it stops at its first hit (19 of the first 24
+seeds qualify, so it usually costs one or two world builds) and it *panics*,
+naming the range and the property, when nothing matches. A sweep that quietly
+found nothing and let its test pass would be strictly worse than the hardcoded
+seed it replaced.
+
+The one thing that could not sweep is the client fixture, because a golden is
+one file holding the bytes of one world. It stays concrete, moved to seed 1,
+**renamed to say so**, and guarded by an assertion that fails by name the day
+seed 1 stops drawing a creature. A fixture called `seed-42` holding seed 1's
+bytes would have been the quiet lie a golden exists to prevent.
+
+**The generalization:** a test whose precondition is an *emergent property of a
+generated world* has a dependency the type system cannot see and the gate cannot
+name. Prefer searching a seed range over pinning a seed; where a pin is
+unavoidable, make the pin assert the property it was chosen for.
 
 ## One non-finding worth recording as a non-finding
 

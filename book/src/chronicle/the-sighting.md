@@ -319,6 +319,13 @@ repository assumed, and the measured figure is an upper bound besides, because
 the native benchmark stops its timer before serializing the snapshot while the
 ABI figure includes it.
 
+These three absolute figures are the one part of this section **not** re-taken
+at the merge, and the reason is that they do not need to be: the finding is the
+*ratio*, and a ratio whose numerator and denominator are the same turn on the
+same world moves together when the world does. The two milliseconds columns
+belong to the pre-Tense seed-42 world and should be read as of it; the ratio
+between them is a property of the boundary, not of the room.
+
 The archaeology is the better half of the finding. The 3.6–3.8× figure was not
 a guess: it was a valid handle-to-handle measurement, correctly taken and
 correctly recorded. It was **superseded ninety-six minutes later** by a commit
@@ -349,7 +356,7 @@ blind to the two indoor non-moving samples that were already over. The new
 rather than the combined turn, where it drops to four and becomes noise. Its
 basis is three quiet runs at 8.910, 8.503 and 8.530 ms, doubled at the slowest.
 
-Deriving a sighting costs **~8.5 ms in dev and ~3.7 ms in release**, per call.
+Deriving a sighting costs **~8.5 ms in dev and ~3.4 ms in release**, per call.
 A committed doc had claimed 42 µs, which was the anchor-placement sweep alone —
 one line of the derivation — quoted as the cost of the whole. Understated by
 about 195×, and caught by re-measuring rather than by reading.
@@ -359,14 +366,32 @@ Memoizing it is **deferred deliberately, with the numbers written down.**
 the day advance *on purpose*: that is what makes the departure narration
 possible. A memo keyed wrong would silently collapse them and reintroduce the
 bug two fix rounds went into removing — a bug whose symptom is absence. The
-gain would be about 7.4 ms of release time for the pair, roughly 12.6 ms
+gain would be about 6.8 ms of release time for the pair, roughly 11.6 ms
 through the ABI, against a turn a human already cannot perceive.
 
-The payload barely moved. The walk-band snapshot is unchanged at 12,273 bytes;
-the chamber band grew from 4,802 to 4,813 — **eleven bytes** for the marks
+The payload barely moved. The walk-band snapshot is unchanged at 12,333 bytes;
+the chamber band grew from 5,314 to 5,325 — **eleven bytes** for the marks
 field and its contents in the fixture. The per-band snapshot cost for moving
-verbs went from 1.259 to 3.706 ms, a 2.94× rise that is entirely the sighting
+verbs went from 0.969 to 3.380 ms, a 3.49× rise that is entirely the sighting
 derivation and entirely indoors.
+
+Every number in this section was **re-taken at the merge**, on a world that had
+moved underneath it. The Sighting was written in parallel with The Tense, which
+reseeded the seed-42 flagship — the settlement went `Goodogododaga` → `Googo`,
+and the structure the possession walks into went from two chambers with a 19×10
+first room to four with a 19×19 one. Every cost figure above had been measured
+against the smaller room. Carrying them forward and adjusting the prose around
+them would have been the cheaper move and the wrong one, so the whole matched
+pair was run again on the merged tree: three release runs of `turn_cost` on
+main, three on the branch, and three each in both profiles for the isolated
+derivation. The findings survived the re-measurement and one of them got
+sharper — the rise is **3.49× on the larger room, against 2.94× on the smaller**
+— which is exactly what a per-cell derivation should do when the room roughly
+doubles. What did not survive was the arithmetic, and it is worth saying that a
+figure can be honestly measured, correctly recorded, and false eleven days
+later for reasons that have nothing to do with the code it describes. That is
+the same lesson this campaign already learned once, from the other end, about
+the 3.6–3.8× wasm ratio.
 
 ## Two smaller things, both latent defects on main
 

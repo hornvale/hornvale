@@ -12,6 +12,8 @@ use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
+mod common;
+
 fn world() -> World {
     build_world(
         Seed(42),
@@ -203,7 +205,33 @@ fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
     // boundary is exactly where two renderers of one fact drift apart. One noun,
     // one datum (`the_purview.rs::a_noun_at_both_grains_resolves_to_one_datum`),
     // now across a band as well as across two grains.
-    let w = world();
+    //
+    // THE WORLD IS SEARCHED FOR, NOT PINNED, and the search predicate is the
+    // test's own precondition spelled out: a creature the walk band reports,
+    // still drawn on the plan once the doorway is crossed. Written against seed
+    // 42 alone, this test read as a parity bug the day The Tense reseeded that
+    // world — `examine` answered "You see no <label> here." indoors and was
+    // RIGHT to, because the creature genuinely was not in the chamber. The old
+    // message presumed a mark was drawn without ever checking; the search makes
+    // that presumption a filter instead.
+    let (seed, w) = common::world_where(
+        "a creature the walk band reports is still drawn on the plan indoors",
+        |s| {
+            s.handle("wait");
+            let Some(label) = s
+                .snapshot()
+                .expect("a live session snapshots")
+                .sensed
+                .present
+                .first()
+                .map(|p| p.label.clone())
+            else {
+                return false;
+            };
+            s.handle("enter");
+            common::is_inside(s) && common::marks_of(s).iter().any(|m| m.noun == label)
+        },
+    );
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     session.handle("wait");
     let label = session
@@ -212,7 +240,7 @@ fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
         .sensed
         .present
         .first()
-        .expect("one tick puts a creature in the possession's room")
+        .expect("the seed was chosen because one tick puts a creature here")
         .label
         .clone();
 
@@ -223,6 +251,15 @@ fn a_creatures_noun_answers_the_same_line_on_both_sides_of_a_doorway() {
     );
 
     inside(&mut session);
+    // The precondition the old version left implicit, and the reason its failure
+    // message was misleading: `examine` is only obliged to answer a noun the
+    // plan DEPICTS, so a red assertion below means something only once the mark
+    // is known to be there.
+    assert!(
+        common::marks_of(&session).iter().any(|m| m.noun == label),
+        "precondition: seed {seed} was chosen because '{label}' is drawn on the \
+         plan indoors — without a mark, examine refusing it is correct, not a bug"
+    );
     let indoors = out(session.handle(&format!("examine {label}")));
     assert_eq!(
         indoors, outdoors,
@@ -250,7 +287,12 @@ fn every_noun_the_plan_depicts_is_examinable() {
     // `liveness::Occupancy` is only populated by a tick, so a bare `enter` draws
     // no marks at all and the widened half of this walk would cover nothing while
     // reading as coverage.
-    let w = world();
+    //
+    // And the WORLD is searched for rather than pinned, for the same reason one
+    // rung up: whether a creature stands in the chamber you enter is an accident
+    // of a particular seed, and The Tense removed that accident from seed 42
+    // without touching the parity contract this test is about.
+    let (seed, w) = common::world_that_draws_a_creature();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     session.handle("wait");
     inside(&mut session);
@@ -282,8 +324,9 @@ fn every_noun_the_plan_depicts_is_examinable() {
     };
     assert!(
         !marks.is_empty(),
-        "no mark is drawn, so the widened half of this walk checks nothing — \
-         a parity test that silently covers nothing is the failure it exists to prevent"
+        "seed {seed} was chosen BECAUSE it draws a mark, so an empty list here \
+         means the search and this walk disagree — and a parity test that \
+         silently covers nothing is the failure it exists to prevent"
     );
     nouns.extend(marks.iter().map(|m| m.noun.clone()));
 

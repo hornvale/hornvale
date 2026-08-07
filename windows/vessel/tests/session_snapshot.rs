@@ -8,6 +8,18 @@
 use hornvale_kernel::{Seed, World};
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel, snapshot_json};
 
+mod common;
+
+/// The seed the **client fixture** is taken at.
+///
+/// A golden cannot sweep — it is one file holding the bytes of one world — so
+/// this stays concrete while the tests around it search (see `common/mod.rs`).
+/// It is the lowest seed in `common::SIGHT_SEEDS` that draws a creature, and
+/// `the_client_fixtures_are_current` asserts that it still does, loudly: if a
+/// future reseed moves this world the way The Tense moved seed 42, the fixture
+/// says so by name instead of quietly freezing an empty `marks` array.
+const OCCUPIED_SEED: u64 = 1;
+
 fn world() -> World {
     hornvale_worldgen::build_world(
         Seed(42),
@@ -241,10 +253,15 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
     // which only runs on a tick, so before the first `wait` NO creature has a
     // fine-layer position and the embedding has nothing to place. The fixture
     // script is `enter` alone, at turn 1.
-    let world = world();
+    //
+    // THE WORLD IS SEARCHED FOR, NOT PINNED. Whether any creature happens to be
+    // standing in the chamber you walk into is an accident of a particular
+    // world, and The Tense's reseed of seed 42 removed that accident without
+    // touching sight at all. See `common/mod.rs`; the search is loud when it
+    // comes up empty.
+    let (seed, world) = common::world_that_draws_a_creature();
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    session.handle("wait");
-    session.handle("enter");
+    common::step_inside(&mut session);
     let snap = session.snapshot().expect("a live session snapshots");
     let SpatialChannel::Chamber { plan } = &snap.spatial else {
         panic!("`enter` puts the possession inside")
@@ -255,7 +272,8 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
 
     assert!(
         !marks.is_empty(),
-        "a chamber holding a co-located creature must draw it: present = {:?}",
+        "seed {seed} was chosen BECAUSE it draws a creature, so an empty plan \
+         here means the search and the snapshot disagree: present = {:?}",
         snap.sensed.present
     );
     for mark in &marks {
@@ -311,11 +329,19 @@ fn a_creature_standing_in_the_chamber_reaches_the_plan() {
 /// taken at turn 1 on the script `enter` alone, so no tick has ever run, the
 /// within-room `Occupancy` is still its empty default, and its `marks` array is
 /// therefore `[]` — legitimately, not because nothing writes the field. That
-/// makes it the wrong fixture to decode a mark from, so `…-chamber-occupied.json`
-/// is taken one `wait` earlier and carries a real creature. It is ADDITIVE: the
-/// two older fixtures' scripts are untouched, because changing one to gain a mark
-/// would have moved `turn`, `day` and `narration` in a file whose whole job is to
-/// hold those still.
+/// makes it the wrong fixture to decode a mark from, so
+/// `snapshot-seed-1-chamber-occupied.json` is taken one `wait` earlier and
+/// carries a real creature. It is ADDITIVE: the two older fixtures' scripts are
+/// untouched, because changing one to gain a mark would have moved `turn`,
+/// `day` and `narration` in a file whose whole job is to hold those still.
+///
+/// **And the third is taken at a DIFFERENT SEED**, which is the one thing here
+/// worth stopping on. Seed 42 is the flagship, and the other two fixtures are
+/// its. But seed 42's world no longer puts a creature in the chamber you walk
+/// into — The Tense reseeded it — and a fixture whose whole job is to carry a
+/// mark cannot be taken from a world that has none. It is named for the seed it
+/// is actually taken at, because a fixture named `seed-42` holding seed 1's
+/// bytes is the kind of quiet lie a golden exists to prevent.
 #[test]
 fn the_client_fixtures_are_current() {
     let world = world();
@@ -325,19 +351,39 @@ fn the_client_fixtures_are_current() {
     session.handle("enter");
     let chamber = hornvale_vessel::snapshot_json(&session.snapshot().unwrap());
 
-    let (mut occupied_session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-    occupied_session.handle("wait");
-    occupied_session.handle("enter");
+    let occupied_world = common::build(OCCUPIED_SEED).expect("the fixture's seed builds");
+    let (mut occupied_session, _) =
+        Session::start(&occupied_world, &PossessOpts::default()).unwrap();
+    common::step_inside(&mut occupied_session);
+    // The fixture's reason for existing, asserted rather than assumed. A golden
+    // cannot sweep, so this is the one place a concrete seed is still pinned —
+    // and a pinned seed is exactly what The Tense's reseed falsified. Fail here,
+    // by name, rather than silently re-freezing an empty `marks` array that the
+    // Casement's pane test would then decode nothing from.
+    assert!(
+        !common::marks_of(&occupied_session).is_empty(),
+        "seed {OCCUPIED_SEED} no longer draws a creature in the chamber it \
+         enters, so `snapshot-seed-{OCCUPIED_SEED}-chamber-occupied.json` \
+         cannot carry the mark it exists to carry. Re-point OCCUPIED_SEED at a \
+         seed that does (the sweeping tests in this crate name one), rename the \
+         fixture to match, and update clients/vessel/src/pane_plan_marks_test.ts, \
+         which decodes it by name AND by coordinate."
+    );
     let occupied = hornvale_vessel::snapshot_json(&occupied_session.snapshot().unwrap());
 
     for (name, body) in [
-        ("snapshot-seed-42-walk.json", walk),
-        ("snapshot-seed-42-chamber.json", chamber),
-        ("snapshot-seed-42-chamber-occupied.json", occupied),
+        ("snapshot-seed-42-walk.json".to_string(), walk),
+        ("snapshot-seed-42-chamber.json".to_string(), chamber),
+        // Named from the constant, so the file on disk and the seed it was
+        // taken at cannot drift apart in a later re-point.
+        (
+            format!("snapshot-seed-{OCCUPIED_SEED}-chamber-occupied.json"),
+            occupied,
+        ),
     ] {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures")
-            .join(name);
+            .join(&name);
         if std::env::var("REBASELINE").is_ok() {
             std::fs::write(&path, &body).expect("the fixture directory exists");
             continue;

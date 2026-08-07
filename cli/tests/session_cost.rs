@@ -132,7 +132,12 @@ const START_BUDGET_MS: f64 = 10500.0;
 /// comment says so ("Re-run the bench, not this test, when you want to know
 /// what moved or which verb class is responsible"). The `--release` bench
 /// (below) found the real signal: `moving`-class `snapshot()+json` grew
-/// 1.259 ms -> 3.706 ms (**2.94x**), because `enter` is where the possession
+/// 1.259 ms -> 3.706 ms (**2.94x**) — **re-measured at the merge as
+/// 0.969 -> 3.380 ms (3.49x)**, once The Tense's reseed of seed 42 replaced
+/// the 19x10 first chamber with a 19x19 one; the original pair is kept as
+/// taken, on the smaller room, and the matched re-measurement is recorded in
+/// `turn_cost.rs`'s closing section. The mechanism is unchanged: `enter` is
+/// where the possession
 /// first stands inside a chamber and `snapshot()` derives `sighting()`
 /// fresh, uncached, on every call. A single indoor `enter` turn's combined
 /// `handle` (11.093 ms) + `snapshot()+json` (3.706 ms) is 14.799 ms under

@@ -3185,6 +3185,72 @@ mod tests {
         .expect("seed 42 builds")
     }
 
+    fn world_at(seed: u64) -> Option<World> {
+        build_world(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .ok()
+    }
+
+    /// The XOR applied to `Inside::seed` by
+    /// [`perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`]
+    /// and by the search that picks its world. An arbitrary constant — its only
+    /// job is to be a DIFFERENT draw of the same placement — but it must be the
+    /// same constant in both places, or the search filters on one experiment
+    /// while the test runs another.
+    /// type-audit: bare-ok(constructor-edge)
+    const PERTURBATION: u64 = 0x5169_4741_u64;
+
+    /// The seeds [`world_where`] searches. Wide enough that "no world in here
+    /// draws a creature" is a finding about the sim rather than about the
+    /// sample, and cheap in practice because the search stops at its first hit
+    /// — 19 of the first 24 seeds qualify.
+    const SIGHT_SEEDS: std::ops::Range<u64> = 0..64;
+
+    /// The first seed in [`SIGHT_SEEDS`] whose fresh possession satisfies
+    /// `pred`, with the world it was built from.
+    ///
+    /// **Why a search and not a seed.** These tests originally stood on seed
+    /// 42, on the accident that its opening chamber happened to hold a
+    /// creature after one tick. The Tense reseeded that world and the accident
+    /// went away — sight was untouched and still worked on most seeds, but the
+    /// evidence for it had been pinned to one world that stopped exercising it.
+    /// The sibling batteries in `lattice::anchor_cells` already sweep
+    /// `0u64..64` rather than assert over one fixture; this is that idiom,
+    /// applied to whole worlds.
+    ///
+    /// It panics, naming `what` and the range, when nothing matches. A sweep
+    /// that quietly found nothing and let its caller pass would be strictly
+    /// worse than the hardcoded seed it replaces: the loud preconditions are
+    /// what caught the reseed.
+    fn world_where(what: &str, pred: impl Fn(&mut Session<'_>) -> bool) -> (u64, World) {
+        for seed in SIGHT_SEEDS {
+            let Some(world) = world_at(seed) else {
+                continue;
+            };
+            let hit = {
+                let Ok((mut session, _)) = Session::start(&world, &PossessOpts::default()) else {
+                    continue;
+                };
+                session.handle("wait");
+                session.handle("enter");
+                session.inside.is_some() && pred(&mut session)
+            };
+            if hit {
+                return (seed, world);
+            }
+        }
+        panic!(
+            "no seed in {SIGHT_SEEDS:?} produces a world where {what} — the \
+             search found nothing, so nothing below could be tested. That is a \
+             finding about the sim, not a flaky fixture."
+        );
+    }
+
     /// The regression this pins: `examine` must be able to tell "the lens
     /// itself failed" from "no grain surfaced that noun" — before this fix,
     /// `lens_nouns` swallowed both `focalized()`'s and `purview(0)`'s errors
@@ -4286,7 +4352,7 @@ mod tests {
     // setter for any of those would ship a knob production never turns, which
     // is worse than a unit test.
 
-    /// A session standing in seed 42's opening structure, one tick in — the
+    /// A session standing in `world`'s opening structure, one tick in — the
     /// shared fixture for the three tests below. The tick matters: `Occupancy`
     /// is populated by `DriveMovements::step_with_occupancy`, so before a
     /// `wait` no creature has a within-room anchor at all.
@@ -4296,7 +4362,8 @@ mod tests {
         session.handle("enter");
         assert!(
             session.inside.is_some(),
-            "seed 42's opening locale is built and enterable"
+            "this world's opening locale must be built and enterable, or nothing \
+             below is tested"
         );
         session
     }
@@ -4326,7 +4393,24 @@ mod tests {
         // `lattice::Occupancy` deliberately forbids two creatures in one cell.
         // One anchor resolves to one cell, so the second creature must be
         // refused and must not be drawn.
-        let world = seam_world();
+        //
+        // THE WORLD IS SEARCHED FOR, NOT PINNED (see `world_where`), and the
+        // predicate is both of this test's structural needs at once: one
+        // creature already drawn, and a second derived creature to collide with
+        // it. Asking for both up front is what keeps the assertions below about
+        // the REFUSAL rather than about whether some seed happened to oblige.
+        let (seed, world) = world_where(
+            "exactly one creature is drawn and a second is available to collide with it",
+            |s| {
+                let drawn = marks_of(s).len();
+                let others = s
+                    .colocated_npcs()
+                    .first()
+                    .copied()
+                    .map(|first| s.npcs.iter().any(|n| n.entity != first.entity));
+                drawn == 1 && others == Some(true)
+            },
+        );
         let mut session = possessed_inside(&world);
 
         let room = session.agent.position.clone();
@@ -4334,7 +4418,7 @@ mod tests {
             .colocated_npcs()
             .first()
             .copied()
-            .expect("seed 42 puts a creature here")
+            .expect("the seed was chosen because a creature stands here")
             .entity;
         let anchor = session
             .occupancy
@@ -4343,7 +4427,8 @@ mod tests {
         assert_eq!(
             marks_of(&session).len(),
             1,
-            "precondition: exactly one creature is drawn before the second arrives"
+            "precondition: seed {seed} was chosen because exactly one creature \
+             is drawn before the second arrives"
         );
 
         // A second creature, made co-located the way the world makes one: an
@@ -4353,7 +4438,7 @@ mod tests {
             .iter()
             .map(|n| n.entity)
             .find(|&e| e != first)
-            .expect("a session derives more than one NPC");
+            .expect("the seed was chosen because a second NPC is derived");
         let fact = crate::liveness::place_agent(second, &room, session.day);
         session
             .ledger
@@ -4689,18 +4774,43 @@ mod tests {
         // embedding is load-bearing there, and a control that cannot see its
         // own positive is as empty as one that cannot see its own negative) and
         // `known` must be byte-identical.
-        let world = seam_world();
+        //
+        // THE WORLD IS SEARCHED FOR, NOT PINNED (see `world_where`). The
+        // predicate carries BOTH halves of the control, because both are
+        // properties of the world and not of the code under test: something must
+        // be drawn from the embedding at all, and every creature must stay in
+        // sight under both placements — otherwise the `sensed.present`
+        // assertion below is asserting a coincidence rather than the invariant.
+        let (seed, world) = world_where(
+            "the embedding draws a creature and every creature stays in sight under a perturbed placement",
+            |s| {
+                if marks_of(s).is_empty() {
+                    return false;
+                }
+                let before = s.snapshot().unwrap();
+                let inside = s.inside.as_ref().unwrap();
+                let original = inside.seed;
+                s.inside.as_mut().unwrap().seed = Seed(original.0 ^ PERTURBATION);
+                let after = s.snapshot().unwrap();
+                s.inside.as_mut().unwrap().seed = original;
+                before.spatial != after.spatial && before.sensed.present == after.sensed.present
+            },
+        );
         let mut session = possessed_inside(&world);
         assert!(
             !marks_of(&session).is_empty(),
-            "precondition: something is drawn from the embedding at all"
+            "precondition: seed {seed} was chosen because something is drawn \
+             from the embedding at all"
         );
 
         let before = session.snapshot().unwrap();
-        let seed = session.inside.as_ref().unwrap().seed;
+        let placement = session.inside.as_ref().unwrap().seed;
         // A different DRAW of the same placement, not a different world: only
         // `Inside::seed` moves, and `anchor_cells` is the only reader of it.
-        session.inside.as_mut().unwrap().seed = Seed(seed.0 ^ 0x5169_4741_u64);
+        // The SAME perturbation the search applied, named once so the two
+        // cannot drift apart and leave the search filtering on a different
+        // experiment than the one this test runs.
+        session.inside.as_mut().unwrap().seed = Seed(placement.0 ^ PERTURBATION);
         let after = session.snapshot().unwrap();
 
         assert_ne!(
@@ -4715,8 +4825,8 @@ mod tests {
         );
         assert_eq!(
             before.sensed.present, after.sensed.present,
-            "nor may it move who is REPORTED here in this fixture, where every \
-             creature stays in sight under both placements"
+            "nor may it move who is REPORTED here in seed {seed}, which was \
+             chosen because every creature stays in sight under both placements"
         );
     }
 }
