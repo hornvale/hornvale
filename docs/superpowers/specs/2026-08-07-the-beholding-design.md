@@ -1,6 +1,6 @@
 # The Beholding — design
 
-**Status:** spec, awaiting G3 review.
+**Status:** approved at G3 (Nathan, 2026-08-07). Planning.
 **Date:** 2026-08-07
 **Campaign:** The Beholding — colour reaches the possession panes, through
 the possessed agent's own eyes.
