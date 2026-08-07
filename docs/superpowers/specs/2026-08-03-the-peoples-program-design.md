@@ -189,12 +189,21 @@ conditions and shipped `subterranean_substrate`, but nothing in the placement
 path called it — its only consumer in the workspace was a test, so those two
 kinds were scored against the sunlit surface above them. **Rung 2, expressible
 and unread.** C2w gives a kind an authored `HabitatRealm` and gates a
-subterranean kind on whether the cell holds a cave at all. Measured: rust
-monster's fit underground is 2.557× its surface fit and xorn's is 0.979 (flat,
-as C2a predicted from its sovereignty floor), and non-zero land falls from
-100 % to 12 % — the cave fraction. World identity moved in **zero** of 25 seeds,
-because settlement genesis packs only peopled species. Full spec:
-`2026-08-06-the-warren-design.md`.
+subterranean kind on whether the cell holds a cave at all. Measured: non-zero land
+falls from 100 % to 12 % — the cave fraction — and world identity moved in
+**zero** of 25 seeds, because settlement genesis packs only peopled species.
+
+**Half the mechanism ships live, and C2c must know which half.** The cave
+**gate** works. The **substrate swap does not currently bind**: The Tilth's
+Liebig minimum floors temperature, moisture and insolation by sovereignty and
+leaves elevation bare, so the unfloored elevation axis is the sole determinant,
+and a chamber inherits the elevation of the ground above it. Going underground
+improves moisture (.585→.787) and insolation (.467→.840) and the minimum never
+sees it. Stated generally: **a non-lethal preference cannot matter while an
+unfloored axis is scarcer.** A two-tier gate/modifier tolerance exists in
+shadow mode (The Tense §3.3); when it binds, a tripwire in
+`warren_readout.rs` reddens on purpose. Full spec:
+`2026-08-06-the-warren-design.md` §10.3.
 
 **C2c — The Delvers.** Dwarves ×5: Hill (surface), Mountain and Duergar
 (subterranean, different strata), Gully, Desert. **Mountain and Duergar can now

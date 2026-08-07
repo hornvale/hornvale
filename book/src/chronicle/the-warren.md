@@ -57,33 +57,85 @@ because the fit numbers would have gone up.
 So a subterranean kind is scored against the chamber, and multiplied by whether
 this particular cell has a chamber to be scored in.
 
-## What the measurement said
+## What the measurement said, and then said differently
 
-Twenty-five worlds. The prediction was that the rust monster's fit would
-improve underground and the xorn's would not move, and the second half is the
-one that mattered.
+The prediction was that a rust monster's fit would improve underground and a
+xorn's would not move. Over twenty-five worlds, measured before this branch
+absorbed the two campaigns that landed beside it, both halves held:
 
 ```
   rust monster    2.557x     (measured by hand, one campaign earlier: ~2.5)
   xorn            0.979x     (measured by hand, one campaign earlier:  1.02)
 ```
 
-The xorn does not move because nothing environmental can move it: its potency
-buys a large sovereignty floor and its devotions to every climate axis are
-near-zero, so no curve on any axis changes its fit in either direction. It was
-never faking darkness. It was ignoring climate altogether.
+Reproducing that *asymmetry* through an entirely different code path was the
+result: a wiring change that merely made numbers move would have moved both.
+The xorn does not move because nothing environmental can move it — its potency
+buys a large sovereignty floor and its devotions to every axis are near-zero.
+It was never faking darkness; it was ignoring climate altogether.
 
-Reproducing that **asymmetry** through an entirely different code path is the
-result. A wiring change that merely made numbers move would have moved both.
+Then the branch absorbed main, and the number became **exactly 1.000**.
 
-The range collapsed as predicted, and by almost exactly the right amount:
+## The minimum that cannot see the improvement
+
+A campaign landing alongside this one replaced the product of four condition
+tolerances with **Liebig's law of the minimum**: a creature's fit is set by its
+scarcest requirement, not by the product of all of them. That is the better
+model, and it is not what broke this.
+
+What broke it is that three of the four axes are floored by the creature's
+sovereignty — the buffer that potency and mass buy against environmental
+constraint — and the fourth, elevation, is not. The function's own
+documentation states the consequence before anyone had a reason to care:
+*a floored axis can never bind, so whichever axis is left bare becomes the
+sole determinant wherever it dips below the others' floor.*
+
+Measured on a rust monster, over the cave-bearing cells of seed 42:
+
+```
+                  temperature   moisture   insolation   elevation    min
+  surface            0.7327      0.5850      0.4670       0.2498    0.2498
+  subterranean       0.7327      0.7865      0.8399       0.2498    0.2498
+                                 +0.20       +0.37        unchanged
+
+  the creature's sovereignty floor:  0.4663
+```
+
+Going underground does precisely what it was built to do. Dampness improves by
+a fifth; darkness by more than a third. And the minimum never sees either,
+because elevation sits at a quarter — below the floor, and therefore below
+every other axis — and a chamber is recorded at the elevation of the ground
+above it. The predecessor campaign chose that deliberately: a literal
+metres-below-surface offset needs a depth coordinate the world does not have.
+
+So the campaign ships **half its mechanism live**. The gate works. The
+substrate swap is real on the axes it moves and invisible in the number those
+axes feed.
+
+This is the second prediction this campaign got wrong, and the more useful one.
+The first — that world identity would move — was wrong about a consequence.
+This one is wrong about the mechanism, and being wrong about it has produced
+the most precise statement anyone has of what the tolerance model currently
+cannot express: **a non-lethal preference cannot matter while an unfloored axis
+is scarcer.** A two-tier replacement that separates lethal gates from
+preferences already exists, written by the same campaign that introduced the
+minimum, and is deliberately not yet binding. The day it binds, a test in this
+campaign turns red on purpose and says so.
+
+## The gate, which does work
+
+The half that survives is the half that was harder to argue for and easier to
+overlook:
 
 ```
   land cells with non-zero fit    390,813  ->  46,993      (100.0% -> 12.0%)
 ```
 
-Twelve percent is the cave fraction. The creature gained fitness where it lives
-and lost it everywhere it should never have been scored.
+Twelve percent is the cave fraction. A creature that lives underground is no
+longer drawing habitat from three hundred and forty thousand cells with no void
+in them, and no amount of supply anywhere recovers them — the gate is a hard
+zero rather than a bounded tolerance, which is what makes it the first thing in
+this model that can *select* rather than merely modulate.
 
 ## No world changed, and one creature moved house
 
@@ -146,26 +198,31 @@ The census is a hundred and eighty-odd metrics over a thousand worlds, twice.
 Exactly two of them moved, and they moved in opposite directions.
 
 ```
-  per-cell-diversity      mean 3.6998 -> 3.0603   (-0.6395)
-  composition-variance    mean 0.3807 -> 0.4093   (+0.0286)
+  per-cell-diversity      mean 2.2739 -> 1.9574   (-0.3165)
+  composition-variance    mean 0.4089 -> 0.4336   (+0.0247)
 ```
 
-The first is the obvious one and it is a **fall**: species per cell dropped by
-about seventeen percent, because two creatures stopped being counted in the
-eighty-eight percent of land that has no cave in it. That number was not
-diversity. It was two animals being scored in the wrong frame, and the model
-has been slightly too crowded for as long as they have been in it.
+Both are the **gate's** doing, not the substrate's — which is the useful thing
+about measuring after the mechanism was found to be half-inert. Removing two
+creatures from the eighty-eight percent of land that has no cave in it is
+sufficient, on its own, to produce the entire census effect.
+
+The first is a **fall**: species per cell dropped by about fourteen percent.
+That number was never diversity. It was two animals being counted in places
+that have no room for them, and the model has been slightly too crowded for as
+long as they have been in it.
 
 The second is the one worth keeping. Composition variance — how much the mix of
 species differs from one place to the next — went **up**. A creature that is
 everywhere adds the same thing to every cell and flattens the comparison; a
-creature that is present in one cell in eight makes the two cells different.
-**Confining a species made the world's places less alike.**
+creature present in one cell in eight makes two cells different. **Confining a
+species made the world's places less alike.**
 
-That is a better argument for the change than the fitness ratio is. The fitness
-ratio says the model now scores a cave creature against a cave, which is merely
-correct. The variance says the world got more textured as a result, which is
-the thing the correctness was for.
+That is a better argument for the change than any fitness ratio would have
+been, and it is the argument that survived the mechanism failing. The ratio
+said the model scores a cave creature against a cave, which is merely correct
+and, as it turns out, currently invisible. The variance says the world got more
+textured, and that happened anyway.
 
 ## What this leaves
 

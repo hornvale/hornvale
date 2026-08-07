@@ -131,6 +131,52 @@ that bypasses the product entirely. **A bet can be moved by a campaign that
 shares none of its nouns.** The grep is not a formality to confirm an N/A
 already decided; it is the step that catches exactly this.
 
+## A confirmed prediction became a falsified one at the merge
+
+The sharpest process lesson of the campaign, and it arrived after the work was
+otherwise finished.
+
+P1 — a subterranean kind's fit improves when scored against the chamber — was
+**measured and confirmed** at 2.557×, twenty-five seeds, reproducing a
+hand-measurement from the previous campaign through a different code path.
+Then the branch absorbed 72 commits and the same measurement read **exactly
+1.000**.
+
+Nothing about this campaign's wiring changed. The Tilth replaced the product of
+four condition tolerances with Liebig's minimum, and `tolerance_liebig` floors
+three axes by sovereignty while leaving elevation bare. Its own doc had already
+written down the consequence — *a floored axis can never bind, so whichever
+axis is left bare becomes the sole determinant* — and elevation is the one axis
+a chamber inherits unchanged from the ground above it.
+
+**Three things this says about process.**
+
+**A preregistered result has a shelf life measured in merges.** The campaign
+rule says never absorb *mid-measurement*, and that was honoured: the readout
+finished before the merge. The rule does not cover what happened here — the
+readout finished, was correct, and was then invalidated by physics landing
+underneath it. **Re-run the readout after any absorption that touches the
+model you measured**, not just before. That check cost four minutes and would
+have been the difference between shipping a true chronicle and a false one.
+
+**The right repair was to invert the assertion, not relax it.** The temptation
+was to loosen P1's bound so the suite went green. What shipped instead pins
+`ratio == 1.000` as a **tripwire**: when a tolerance model lands in which a
+non-lethal preference can bind, that test reddens and tells whoever landed it
+that The Warren's other half just came alive. A quieted assertion would have
+deleted the finding; an inverted one hands it to the future.
+
+**Two repairs were available and both were refused.** Flooring the elevation
+axis, or switching on the shadow-mode two-tier tolerance, would each have made
+P1 true again — and each would have relitigated a calibration two campaigns had
+just made, to rescue a prediction *after unblinding*. That is the specific move
+the project forbids, and it is much more tempting when the rescue is one line
+and the prediction is yours.
+
+The compensation is that being wrong bought the most precise statement anyone
+has of the tolerance model's current limit: **a non-lethal preference cannot
+matter while an unfloored axis is scarcer.**
+
 ## A perf detour, and three claims of mine the measurements refuted
 
 Nathan reported `generalist_distinctness` monopolising a core for 10+ minutes.

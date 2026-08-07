@@ -451,3 +451,54 @@ The second is the better argument for the change: correctness was the means,
 and a more textured world is what it bought.
 
 `make census-check` passes; the golden-pins tripwire is clean.
+
+### 10.3 Amendment — P1 was confirmed, then falsified by an absorption
+
+**Recorded 2026-08-06, after absorbing 72 commits of main (The Tense, The
+Tilth) at the close.** P1 held when measured (§10's 2.557× / 0.979). After the
+absorption it reads **exactly 1.000 for both kinds, at every one of 25 seeds**.
+
+**The cause is not this campaign's wiring**, and the resolution kept both
+sides' changes correctly. The Tilth (stage 5) replaced the product of four
+condition tolerances with Liebig's law of the minimum. `tolerance_liebig`
+floors temperature, moisture and insolation by the sovereignty floor and calls
+elevation with floor `0.0`; **its own doc states the consequence** — "a floored
+axis can never bind, so whichever axis is left bare becomes the sole
+determinant wherever it dips below the others' floor."
+
+Measured (`windows/worldgen/tests/warren_liebig_probe.rs`, rust-monster, seed
+42 cave-bearing cells):
+
+```
+                  temperature   moisture   insolation   elevation    min
+  surface            0.7327      0.5850      0.4670       0.2498    0.2498
+  subterranean       0.7327      0.7865      0.8399       0.2498    0.2498
+  sovereignty floor = 0.466288
+```
+
+The subterranean substrate improves exactly the two axes it was designed to
+improve, and the minimum is elevation in both frames — below the floor, and
+passed through unchanged because `subterranean_substrate` inherits
+`height_asl_m` from the surface cell (The Deep Realm's deliberate choice: a
+real depth coordinate was out of its scope).
+
+**What still holds.** P2 is unaffected — the cave gate zeroes 88 % of land
+(390,813 → 46,993 non-zero cells), because a hard mask is not a tolerance and
+does not pass through the minimum. P3 remains falsified in the other direction:
+world identity moved at zero of 25 seeds.
+
+**What was NOT done, deliberately.** Neither flooring the elevation axis nor
+switching on The Tense §3.3's shadow-mode two-tier tolerance. Both would
+relitigate a calibration two campaigns had just made, to rescue a prediction
+after unblinding — precisely what this project forbids doing quietly.
+
+**The assertion is inverted rather than removed.** `warren_readout.rs` now pins
+`ratio == 1.000` as a **tripwire**: when a tolerance model lands in which a
+non-lethal preference can bind, that test reddens and tells whoever landed it
+that The Warren's other half just came alive. Quieting the assertion instead
+would have deleted the finding.
+
+**The generalisable statement**, which is the campaign's most precise result:
+*a non-lethal preference cannot matter while an unfloored axis is scarcer.*
+That is a sharper account of the tolerance model's current limit than anything
+in the tree before, and it was bought by a prediction failing.
