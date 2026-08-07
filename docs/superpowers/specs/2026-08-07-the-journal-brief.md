@@ -97,8 +97,8 @@ wearing — not a layer of software floating above the world.
 It is open to a **two-page spread**:
 
 - **The left page is the plate**: whatever is currently being *drawn*. A sketch
-  map of the country, a floor plan of a building, a study of an object or
-  creature, an index. This is the large pane and it holds the eye.
+  map of the country, a floor plan of a building, a study of a place, a page of
+  a book, an index. This is the large pane and it holds the eye.
 - **The right page is the entry**: the written prose, and beneath it the command
   line, which reads as *the next line being written* rather than as a text
   input.
@@ -339,19 +339,30 @@ what *you* feel. The journal has no page about its own author.
    which is *load-bearing honesty*, not chrome: the client has no true view of
    the world, only named lenses, and the caption says which one you are wearing.
 9. **The Plan Plate** — the indoor floor plan, with creature marks and legend.
-10. **The Study Plate** — a detailed view of one object or creature, drawn with
-   called-out labels. This is where the design gets to be lavish.
-11. **The Leaf** — long scrollable text: a book read inside the world. Running
+10. **The Study Plate** — a detailed study of **a place**, drawn with called-out
+    labels. This is the one subject with enough behind it to be lavish: a place
+    carries its latitude and longitude, its refinement depth, its biome, its
+    annual-mean temperature, moisture, elevation and signed height above sea
+    level, its water kind, a strangeness descriptor and the noun inside it, a
+    strangeness magnitude, its exits, and the **three lattice corner cells with
+    their integer blend weights** — a locale is literally a weighted blend of
+    three points on the globe, and the plate is where that can be shown.
+11. **The Caption** — what an *object* or a *creature* gets instead. All either
+    carries is a name and one sentence (what `examine` prints), plus, for a
+    creature you are standing beside, what it feels. Make the caption small and
+    beautiful. **Do not** build an object plate: a lavish frame around one
+    sentence is exactly the failure this brief exists to prevent.
+12. **The Leaf** — long scrollable text: a book read inside the world. Running
     head, folio, drop cap, and a scroll model that feels like turning pages.
-12. **The Index** — the menu surface: tabbed sections, ribbon markers, keyed
+13. **The Index** — the menu surface: tabbed sections, ribbon markers, keyed
     rows.
-13. **The Entry** — the prose column: the passage, examinable nouns marked so a
+14. **The Entry** — the prose column: the passage, examinable nouns marked so a
     reader can tell what is addressable, the ways-on line, the command line.
-14. **The Endpaper** — the identity strip.
-15. **The Margin** — marginalia: a `why` explanation, an annotation on the plate,
+15. **The Endpaper** — the identity strip.
+16. **The Margin** — marginalia: a `why` explanation, an annotation on the plate,
     a noun the reader has touched answering itself. (Not standing toward a
     creature — see the forbidden list.)
-16. **States** — unmarked paper (empty/unknown), a refusal ("No way n from
+17. **States** — unmarked paper (empty/unknown), a refusal ("No way n from
     here."), and genesis (the world deriving from its seed, which takes a few
     seconds and is worth making beautiful).
 

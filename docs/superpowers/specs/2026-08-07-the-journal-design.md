@@ -203,6 +203,27 @@ Minor, but it would have produced a wrong component: there are **two** lenses on
 this surface (`terrain`, `colour`), not the four `RENDER-9` discusses — that
 registry is the Atlas's.
 
+### One error caught in this spec's own brief
+
+The first draft told the design to be lavish with a Study Plate "of one object
+or creature." Checking what backs it: an object carries a name and **one
+sentence** (`examine`'s output); a creature carries a label and a felt phrase.
+That is a lavish frame around one line — the exact failure the brief was written
+to prevent, committed inside the brief, and invisible until someone read the
+schema rather than the sentence.
+
+The subject with real depth is **a place**: `locale/room/v2` carries latitude,
+longitude, refinement depth, biome, temperature, moisture, elevation, signed
+height above sea level, water kind, a strangeness descriptor plus its inner noun
+plus a magnitude, the exits, and the three lattice corner cells with integer
+blend weights — a locale *is* a weighted blend of three points, which is a fact
+worth drawing. The Study Plate is retargeted at places; objects and creatures get
+a new, deliberately small **Caption** component instead.
+
+Worth stating as a pattern, because it is the third time this shape has appeared
+in this project's plan text: *a component named after a subject is a claim about
+that subject's schema, and it needs the same verification as any other claim.*
+
 ### Two hazards recorded
 
 - **Two opposite salience conventions share one word.** Kernel:
