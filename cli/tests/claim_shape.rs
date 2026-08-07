@@ -225,11 +225,55 @@ fn fn_name(line: &str) -> Option<&str> {
     if end == 0 { None } else { Some(&rest[..end]) }
 }
 
+/// Count `{`/`}` on one line toward `depth`/`started`, skipping characters
+/// inside a `//` line comment or a `"..."` string literal (escape-aware) so
+/// a brace spelled out in a string — `.split("... mod tests {\n")`, which
+/// this very file's `the_readout_law` test contains — cannot desynchronize
+/// the depth count. Does not handle block comments (`/* */`) or raw strings
+/// (`r"..."`/`r#"..."#`); none of this tree's test bodies use either to
+/// hide a brace, and a real one would show up as a wildly wrong body length
+/// under manual review of a lint failure, not a silent miss.
+fn count_braces(line: &str, depth: &mut i32, started: &mut bool) {
+    let mut in_string = false;
+    let mut escaped = false;
+    let chars: Vec<char> = line.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+        if ch == '"' {
+            in_string = true;
+            i += 1;
+            continue;
+        }
+        if ch == '/' && chars.get(i + 1) == Some(&'/') {
+            break; // rest of the line is a line comment
+        }
+        match ch {
+            '{' => {
+                *depth += 1;
+                *started = true;
+            }
+            '}' => *depth -= 1,
+            _ => {}
+        }
+        i += 1;
+    }
+}
+
 /// The text of the function opening at `lines[start]`, from its first `{` to
-/// the matching `}` (brace-depth counting; does not special-case string or
-/// comment literals — acceptable for this scan's purpose, since a false
-/// balance would need an unbalanced literal brace inside the very function
-/// being scanned, which no test file in this tree does).
+/// the matching `}` (brace-depth counting via [`count_braces`], which skips
+/// string and line-comment content).
 fn function_body(lines: &[&str], start: usize) -> String {
     let mut depth: i32 = 0;
     let mut started = false;
@@ -237,16 +281,7 @@ fn function_body(lines: &[&str], start: usize) -> String {
     for line in &lines[start..] {
         body.push_str(line);
         body.push('\n');
-        for ch in line.chars() {
-            match ch {
-                '{' => {
-                    depth += 1;
-                    started = true;
-                }
-                '}' => depth -= 1,
-                _ => {}
-            }
-        }
+        count_braces(line, &mut depth, &mut started);
         if started && depth <= 0 {
             break;
         }

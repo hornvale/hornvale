@@ -3136,6 +3136,7 @@ mod tests {
     /// emic world-statement — `every_people_states_the_world_in_its_tongue`
     /// pins that law directly), so `tongue_lines` now carries TWO lines per
     /// placed people, not one.
+    /// claim: structural(seed: [1,2,3]) — prose rendering
     #[test]
     fn every_placed_people_self_states_in_its_own_tongue() {
         for seed in [1u64, 2, 3] {
@@ -3159,6 +3160,7 @@ mod tests {
     /// Steeped (`packs.rs`, `ladder_rank: 0`), so this never gaps, joining
     /// the self-statement law above. One world-statement tongue line per
     /// placed people, seeds 1..=3, glossed `"⟨planet⟩ is the earth."`.
+    /// claim: structural(seed: [1,2,3]) — prose rendering
     #[test]
     fn every_people_states_the_world_in_its_tongue() {
         for seed in [1u64, 2, 3] {
@@ -3512,6 +3514,8 @@ mod tests {
     /// construction table but never surfaced by any of these three seeds
     /// reddens this assertion, forcing a corpus extension rather than
     /// letting an unexercised construction hide behind a green gate.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip, with a non-vacuity
+    /// guard (predicates_exercised)
     #[test]
     fn every_book_line_round_trips() {
         let vocab = vocab();
@@ -3546,6 +3550,8 @@ mod tests {
     /// actually committed across seeds 1..=3 (the real closed space, not a
     /// hand-picked sample — see the Concordance campaign's generator-
     /// coverage lesson).
+    /// claim: structural(seed: [1,2,3]) — prose round-trip inversion, plus a
+    /// closed-space sweep over moon-count 0..=13 (not a seed)
     #[test]
     fn fact_for_inverts_fragment_for_over_the_closed_space() {
         let vocab = vocab();
@@ -3602,6 +3608,8 @@ mod tests {
     /// the collapsed `min(Decimals, listener_rung) == listener_rung`
     /// claim is what the code actually does, not merely what the spec
     /// claims.
+    /// claim: structural(seed: [1,2,3]) — prose/rendering agreement across
+    /// numeracy rungs
     #[test]
     fn comprehend_quantity_agrees_with_the_direct_render_at_every_rung() {
         let vocab = vocab();
@@ -3874,6 +3882,7 @@ mod tests {
     /// earth"), so the truth text itself (not the substitution target) is
     /// what this test requires to surface, via the margin's "In truth, ⟨
     /// name⟩ is a planet" when the emic line alone lost it.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip against ground truth
     #[test]
     fn emic_union_margin_covers_ground_truth() {
         for seed in [1u64, 2, 3] {
@@ -3998,6 +4007,8 @@ mod tests {
     /// assertion. `explanation_seen` additionally asserts the walk actually
     /// encountered at least one — a future regression that stopped firing
     /// explanations could otherwise hide behind a vacuously-true round-trip.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip, with a non-vacuity
+    /// guard (explanation_seen)
     #[test]
     fn every_chorus_line_round_trips() {
         let vocab = vocab();
@@ -4039,6 +4050,8 @@ mod tests {
     /// then the seed-1 goblin line is ALSO pinned as a literal string
     /// (measured against the real committed world), the C2 exact-string
     /// discipline.
+    /// claim: structural(seed: [1,2,3]) — prose rendering; own name states the
+    /// shape
     #[test]
     fn explanation_lines_render_for_the_measured_seeds() {
         for seed in [1u64, 2, 3] {
@@ -4202,6 +4215,8 @@ mod tests {
     /// The Witness; folk's own day explanation is agentless `PathJourney`,
     /// so this is genuinely a doctrine-only causal story, not an echo of
     /// folk's).
+    /// claim: structural(seed: 1) — false-positive extra flag; `s` binds a
+    /// &ChorusSection, single fixed seed
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
@@ -4267,6 +4282,9 @@ mod tests {
     /// which cultures are organized and capable; it is now falsified by the
     /// live sweep, which is the stronger evidence (the law firing on real
     /// worlds, not just the synthetic pair driven directly below).
+    /// claim: reachability(seed: 1..=5) — own comment: "the sweep finds BOTH a
+    /// real Contested and a real Mystery", with an embedded per-section
+    /// invariant riding on the same builds
     #[test]
     fn the_disclosure_law_both_directions() {
         // The live half: every organized section renders exactly one
@@ -4672,6 +4690,8 @@ mod tests {
     /// `the_disclosure_law_both_directions`). `revealed_claim_seen` guards
     /// against a vacuously-true walk that stopped firing `RevealedClaim`
     /// lines entirely.
+    /// claim: structural(seed: 1..=5) — prose round-trip, with a non-vacuity
+    /// guard (revealed_claim_seen)
     #[test]
     fn every_doctrine_line_round_trips() {
         let vocab = vocab();
@@ -5032,6 +5052,7 @@ mod tests {
     /// LADDER_TABLE`'s per-seed witnessed counts for human. The values below
     /// are the merged live measurement (they match
     /// `book/src/gallery/the-book.md` and `LADDER_TABLE`'s day-numbers).
+    /// claim: structural(seed: [1,2,3]) — prose rendering
     #[test]
     fn the_reckoning_renders_the_epoch_pair() {
         for seed in [1u64, 2, 3] {
@@ -5640,6 +5661,8 @@ mod tests {
     /// always zero at day 0), so it is exercised synthetically here
     /// through the SAME public round-trip pair, rather than left as
     /// vacuous coverage.
+    /// claim: structural(seed: [1,2,3]) — prose round-trip, with a non-vacuity
+    /// guard (reckoning_seen)
     #[test]
     fn every_reckoning_line_round_trips() {
         let vocab = vocab();
