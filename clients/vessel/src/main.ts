@@ -6,8 +6,8 @@
 import { parseSeed, seedFromSearch, type WorkerResponse } from "./protocol.ts";
 import { narrationOf, parseSnapshot } from "./snapshot.ts";
 import { splitResponse } from "./transcript.ts";
-import { planRows } from "./pane_plan.ts";
-import { chartRows } from "./pane_chart.ts";
+import { planCells } from "./pane_plan.ts";
+import { chartCells } from "./pane_chart.ts";
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -81,7 +81,7 @@ function mount(container: HTMLElement): void {
    * A pane with nothing to draw empties rather than keeping a stale picture
    * on screen — a frozen last-seen chart presented as live is a cheat pane.
    *
-   * The whole body is guarded: `planRows`/`chartRows` validate every field
+   * The whole body is guarded: `planCells`/`chartCells` validate every field
    * they read and refuse rather than throw, but that guarantee lives in
    * those modules, not here. A pane throw here runs *before* `append` and
    * `setIdle` in every `onmessage` branch below, so an uncaught exception
@@ -89,15 +89,21 @@ function mount(container: HTMLElement): void {
    * Casement locks with no error shown, which is worse than a stale or
    * blank pane. The try/catch makes that impossible structurally, at the
    * one call site, rather than by ordering calls correctly at every branch
-   * and hoping a future edit does not reorder them back. */
+   * and hoping a future edit does not reorder them back.
+   *
+   * Flattened to glyphs, colour dropped: Task 7 (The Beholding) made both
+   * panes return a `PaneGrid` of `{ glyph, color }` cells instead of plain
+   * strings, but building the coloured DOM from that grid — one `<span>`
+   * per `runsOf` run — is Task 8's job, not this one's. This keeps the
+   * Casement rendering exactly what it rendered before, on the new shape. */
   function drawMap(snap: ReturnType<typeof parseSnapshot>): void {
-    let rows: string[] | null = null;
+    let grid: ReturnType<typeof planCells> = null;
     try {
-      rows = snap ? (planRows(snap) ?? chartRows(snap)) : null;
+      grid = snap ? (planCells(snap) ?? chartCells(snap)) : null;
     } catch (err) {
       console.error("pane render failed; showing no map this turn", err);
     }
-    map.textContent = rows ? rows.join("\n") : "";
+    map.textContent = grid ? grid.map((row) => row.map((c) => c.glyph).join("")).join("\n") : "";
   }
 
   worker.onmessage = (e: MessageEvent<WorkerResponse>) => {

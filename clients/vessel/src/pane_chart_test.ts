@@ -1,6 +1,8 @@
 import { assert, assertEquals } from "@std/assert";
 import { parseSnapshot } from "./snapshot.ts";
-import { chartRows } from "./pane_chart.ts";
+import type { Snapshot } from "./snapshot.ts";
+import { chartCells } from "./pane_chart.ts";
+import type { PaneGrid } from "./pane_cell.ts";
 
 const WALK = Deno.readTextFileSync(
   new URL(
@@ -9,14 +11,41 @@ const WALK = Deno.readTextFileSync(
   ),
 );
 
+/** Flatten a grid to plain glyph rows. Every test below this predates
+ * colour and only ever asserted on shape and glyph — this lets them keep
+ * doing exactly that against the new `PaneGrid` return, without each one
+ * re-deriving `.map((c) => c.glyph).join("")` inline. */
+function glyphRows(grid: PaneGrid | null): string[] | null {
+  return grid ? grid.map((row) => row.map((c) => c.glyph).join("")) : null;
+}
+
+/** A minimal `vessel/session/v1` snapshot with one `scene/surrounds/v2`
+ * chart, built from bare cell payloads — for tests that care about a
+ * specific field (colour, water) rather than a real fixture. The four-entry
+ * `WaterKind::LEGEND` order (`ocean`, `salt-basin`, `river`, `dry-land`) is
+ * fixed so a caller can write `water: 0` / `water: 3` and mean it. */
+function snapshotWithChart(cells: unknown[]): Snapshot {
+  return parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "walk",
+      chart: {
+        schema: "scene/surrounds/v2",
+        water_legend: ["ocean", "salt-basin", "river", "dry-land"],
+        cells,
+      },
+    },
+  }))!;
+}
+
 Deno.test("a real walk snapshot renders a non-empty chart", () => {
-  const rows = chartRows(parseSnapshot(WALK)!)!;
+  const rows = glyphRows(chartCells(parseSnapshot(WALK)!))!;
   assert(rows.length > 0, "the chart drew nothing");
   assert(rows.every((r) => r.length === rows[0].length), "rows are ragged");
 });
 
 Deno.test("the observer is marked, and exactly once", () => {
-  const rows = chartRows(parseSnapshot(WALK)!)!;
+  const rows = glyphRows(chartCells(parseSnapshot(WALK)!))!;
   assertEquals(rows.join("").split("").filter((c) => c === "@").length, 1);
 });
 
@@ -38,7 +67,7 @@ Deno.test("the ball is symmetric about the observer, not sheared", () => {
   // centre row: row i and row (n-1-i) indent equally. A shear breaks that
   // mirror because indentation grows (or shrinks) monotonically down the
   // rows instead of tapering symmetrically toward the ends.
-  const rows = chartRows(parseSnapshot(WALK)!)!;
+  const rows = glyphRows(chartCells(parseSnapshot(WALK)!))!;
   const lead = rows.map((r) => r.length - r.trimStart().length);
   const n = lead.length;
   for (let i = 0; i < n; i++) {
@@ -53,7 +82,7 @@ Deno.test("the ball is symmetric about the observer, not sheared", () => {
 });
 
 Deno.test("a chart with no schema tag draws nothing", () => {
-  // `chartRows` must validate `chart.schema`, not merely read whichever
+  // `chartCells` must validate `chart.schema`, not merely read whichever
   // fields it happens to want — the same discipline `parseSnapshot` applies
   // to the envelope. Before this guard existed, an absent tag degraded to
   // "read what's there," which is luck, not design.
@@ -69,7 +98,7 @@ Deno.test("a chart with no schema tag draws nothing", () => {
       },
     },
   }))!;
-  assertEquals(chartRows(snap), null);
+  assertEquals(chartCells(snap), null);
 });
 
 Deno.test("a chart with an unrecognised schema tag draws nothing", () => {
@@ -89,7 +118,7 @@ Deno.test("a chart with an unrecognised schema tag draws nothing", () => {
       },
     },
   }))!;
-  assertEquals(chartRows(snap), null);
+  assertEquals(chartCells(snap), null);
 });
 
 Deno.test("a chart with the current schema tag renders", () => {
@@ -106,7 +135,7 @@ Deno.test("a chart with the current schema tag renders", () => {
       },
     },
   }))!;
-  assert(chartRows(snap) !== null, "the current tag should render");
+  assert(chartCells(snap) !== null, "the current tag should render");
 });
 
 Deno.test("a chamber-band snapshot draws no chart", () => {
@@ -114,12 +143,12 @@ Deno.test("a chamber-band snapshot draws no chart", () => {
     schema: "vessel/session/v1",
     spatial: { band: "chamber", plan: {} },
   }))!;
-  assertEquals(chartRows(snap), null);
+  assertEquals(chartCells(snap), null);
 });
 
 Deno.test("a snapshot with no spatial channel draws no chart", () => {
   assertEquals(
-    chartRows(parseSnapshot(JSON.stringify({ schema: "vessel/session/v1" }))!),
+    chartCells(parseSnapshot(JSON.stringify({ schema: "vessel/session/v1" }))!),
     null,
   );
 });
@@ -163,7 +192,7 @@ Deno.test("seam cells are skipped, not drawn at a wrong place", () => {
       },
     },
   }))!;
-  const rows = chartRows(snap)!;
+  const rows = glyphRows(chartCells(snap))!;
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
 
@@ -172,7 +201,7 @@ Deno.test("a chart with no cells array draws nothing", () => {
     schema: "vessel/session/v1",
     spatial: { band: "walk", chart: {} },
   }))!;
-  assertEquals(chartRows(snap), null);
+  assertEquals(chartCells(snap), null);
 });
 
 Deno.test("a chart with an empty cells array draws nothing", () => {
@@ -180,7 +209,7 @@ Deno.test("a chart with an empty cells array draws nothing", () => {
     schema: "vessel/session/v1",
     spatial: { band: "walk", chart: { cells: [] } },
   }))!;
-  assertEquals(chartRows(snap), null);
+  assertEquals(chartCells(snap), null);
 });
 
 Deno.test("a spatial channel with a null chart draws nothing", () => {
@@ -188,7 +217,7 @@ Deno.test("a spatial channel with a null chart draws nothing", () => {
     schema: "vessel/session/v1",
     spatial: { band: "walk", chart: null },
   }))!;
-  assertEquals(chartRows(snap), null);
+  assertEquals(chartCells(snap), null);
 });
 
 Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
@@ -208,7 +237,7 @@ Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
       },
     },
   }))!;
-  const rows = chartRows(snap)!;
+  const rows = glyphRows(chartCells(snap))!;
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
 
@@ -227,7 +256,7 @@ Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
       },
     },
   }))!;
-  const rows = chartRows(snap)!;
+  const rows = glyphRows(chartCells(snap))!;
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
 
@@ -251,7 +280,7 @@ Deno.test("a cell past the coordinate ceiling is refused, not drawn", () => {
       },
     },
   }))!;
-  const rows = chartRows(snap)!;
+  const rows = glyphRows(chartCells(snap))!;
   assert(rows.every((r) => r.length < 100), "a past-ceiling cell widened the chart");
   assertEquals(rows.join("").split("").filter((c) => c !== " ").length, 1);
 });
@@ -279,7 +308,7 @@ Deno.test("a non-string water_legend entry does not shift subsequent indices", (
       },
     },
   }))!;
-  const rows = chartRows(snap)!;
+  const rows = glyphRows(chartCells(snap))!;
   assertEquals(
     rows.join("").split("").filter((c) => c === "~").length,
     1,
@@ -306,8 +335,45 @@ Deno.test("a real dry-land cell does not render as water", () => {
       },
     },
   }))!;
-  const rows = chartRows(snap)!;
+  const rows = glyphRows(chartCells(snap))!;
   const glyphs = rows.join("").split("");
   assertEquals(glyphs.filter((c) => c === "~").length, 1, "only the ocean cell should be water");
   assertEquals(glyphs.filter((c) => c === ".").length, 1, "the dry-land cell should be land");
+});
+
+Deno.test("a chart cell carries the sim's colour, and only where it is ground", () => {
+  const snap = snapshotWithChart([
+    { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3, color: [10, 20, 30] },
+    { v: 1, w: 0, up: false, seam: false, state: "sensed", water: 0, color: [40, 50, 60] },
+  ]);
+  const grid = chartCells(snap)!;
+  const flat = grid.flat();
+  const land = flat.find((c) => c.glyph === ".")!;
+  assertEquals(land.color, [10, 20, 30]);
+  const water = flat.find((c) => c.glyph === "~")!;
+  assertEquals(
+    water.color,
+    null,
+    "the tint is BEDROCK; a river must not be drawn the colour of the rock beneath it",
+  );
+});
+
+Deno.test("a cell with no colour key is uncoloured, not crashed", () => {
+  const snap = snapshotWithChart([
+    { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3 },
+  ]);
+  assertEquals(chartCells(snap)!.flat()[0].color, null);
+});
+
+Deno.test("a malformed colour is refused, not passed through", () => {
+  for (const bad of [[1, 2], [1, 2, 3, 4], ["1", 2, 3], "red", 7, [1, 2, 300], [1, 2, -1]]) {
+    const snap = snapshotWithChart([
+      { v: 0, w: 0, up: true, seam: false, state: "sensed", water: 3, color: bad },
+    ]);
+    assertEquals(
+      chartCells(snap)!.flat()[0].color,
+      null,
+      `${JSON.stringify(bad)} must not survive`,
+    );
+  }
 });

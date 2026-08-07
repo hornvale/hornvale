@@ -19,6 +19,13 @@ export interface Exit {
 export interface PaletteEntry {
   kind: string;
   chambers: number[];
+  // `unknown`, not `[number, number, number] | null`: `pane_cell.ts`'s
+  // `parseColor` narrows it, the same refuse-don't-guess treatment every
+  // other field on the wire gets. `windows/vessel/src/plan.rs::PaletteEntry`
+  // skips this key entirely when absent (`Option::None`, no building-fabric
+  // or interior-illuminant model exists yet to fill it), so it may be
+  // missing outright rather than merely `null`.
+  color?: unknown;
 }
 
 /** One individual standing on a cell of the plan — `windows/vessel/src/plan.rs`'s
