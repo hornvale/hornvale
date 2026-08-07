@@ -154,6 +154,8 @@ fn peopled_components() -> WorldComponents {
 /// The preregistered freeze check: at the frozen β, the mean per-claimed-cell
 /// effective diversity across a handful of seeds lands in `[1.5, 3.0]` — see
 /// the module doc for the niche-era re-baseline and the weak-knob caveat.
+/// claim: readout(preregistered) — mean per-claimed-cell diversity across
+/// SEEDS, frozen band [1.5, 3.0]
 #[test]
 fn beta_yields_realistic_coexistence() {
     // This freeze is preregistered against "the shipped 4-goblinoid roster"

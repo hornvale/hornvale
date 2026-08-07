@@ -47,6 +47,8 @@ const SURVIVE_K: f64 = 5.0;
 /// about one world's particular glacial history.
 const OFFSETS_C: [f64; 4] = [0.0, -3.0, -6.0, -9.0];
 
+/// claim: sanctioned-sweep(probe: measurement only, run explicitly) — prints
+/// over [42, 7, 1234]
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn temperature_gate_versus_era_mask() {

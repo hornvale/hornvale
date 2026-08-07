@@ -38,6 +38,7 @@ fn at(day: f64) -> StdDays {
     StdDays::new(day).unwrap()
 }
 
+/// claim: invariant(forall-seed) — day-0 witnessed set is empty
 #[test]
 fn observations_at_day_zero_are_empty() {
     // Every placed culture, seeds 1..=3: nothing has happened by day 0,
@@ -63,6 +64,8 @@ fn observations_at_day_zero_are_empty() {
     }
 }
 
+/// claim: invariant(forall-seed) — observation count monotone in T, prefix
+/// property
 #[test]
 fn the_accumulation_law() {
     // Per culture, seeds 1..=3, over {0, 10_000, 36_525}: |observations|
@@ -491,6 +494,9 @@ const LADDER_TABLE: &[Row] = &[
 /// Every assertion below names its law (`the ladder law:` / `the prophecy
 /// law:`) so a failure in the merged test still says which of the two
 /// properties broke, not just that "the test" failed.
+/// claim: invariant(forall-seed) — two laws merged into one build (Task 11,
+/// process-per-test exception), with an embedded existential check
+/// (any_predictive)
 #[test]
 fn the_ladder_and_prophecy_laws() {
     let t = at(EPOCH_2);

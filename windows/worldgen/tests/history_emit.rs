@@ -471,6 +471,8 @@ fn parent_of(
     }
 }
 
+/// claim: invariant(census: none yet) — tie count over [42, 7, 1000], with
+/// re-measured corroborating counts (see file's own re-pin history)
 #[test]
 fn distinct_layers_tie_only_on_genuine_material_matches() {
     // Before The Salt, this test asserted the comparator was TOTAL: the

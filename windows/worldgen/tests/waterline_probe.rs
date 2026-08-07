@@ -74,6 +74,8 @@ use hornvale_worldgen::{
 /// Lindeman trophic transfer efficiency — the Earth-anchored ~10%.
 const TRANSFER_EFFICIENCY: f64 = 0.10;
 
+/// claim: structural(seed: 42) — off-gate probe: measurement only, run
+/// explicitly
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn waterline_probe() {

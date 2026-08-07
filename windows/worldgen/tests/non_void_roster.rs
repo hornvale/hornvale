@@ -108,6 +108,11 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     viable
 }
 
+/// claim: reachability(seed: [1,7,42,99]) — the fourth hunt Task 1's audit
+/// found (docs/audits/the-assay-build-volume-audit.md §2.4); own doc: "a
+/// 'somewhere, ever' existence check". Same destination as hydro_witness/
+/// exposure — a coverage-table census metric — but not migrated by this
+/// campaign's tranche
 #[test]
 fn every_kind_is_viable_somewhere() {
     // A small seed set: this is a "somewhere, ever" existence check, not a

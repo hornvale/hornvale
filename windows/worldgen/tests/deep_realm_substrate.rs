@@ -184,6 +184,9 @@ fn measure_one(seed: Seed) -> SeedReport {
     }
 }
 
+/// claim: readout(off-gate, heavy:) — prints cave-substrate composition
+/// per seed (audit note: coincidental duplicate name with worldgen's
+/// hollow_readout.rs::report_cave_substrate, a different test)
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_cave_substrate() {
@@ -719,6 +722,9 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
     }
 }
 
+/// claim: readout(off-gate, heavy:) — prints H2 depth-weld measurements,
+/// with harness-sanity guard assertions per the module's own "a harness
+/// that measures nothing" doc
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_h2_depth_weld_and_reachability() {

@@ -134,6 +134,8 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
 /// `1..=30`, before making any claim about whether either "collapsed" —
 /// the module doc comment states why this file's own report is the finding,
 /// whichever way it comes out.
+/// claim: readout(off-gate, heavy:) — prints per-seed mean niche fit,
+/// with a finite/non-negative sanity assertion per seed
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_the_xorn_before_and_after() {
