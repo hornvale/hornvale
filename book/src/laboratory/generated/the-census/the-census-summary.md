@@ -417,6 +417,12 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 | [0.2, 0.3) | 3 | 0.3% |
 | >= 0.3 | 0 | 0.0% |
 
+### hydro-variant-coverage — default
+
+| value | count | share |
+|---|---|---|
+| aquifer+aquitard+spring+runoff+karst | 1000 | 100.0% |
+
 ### aquifer-fraction — default
 
 | value | count | share |
@@ -2102,4 +2108,35 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 | [0, 0.3) | 207 | 20.7% |
 | [0.3, 0.6) | 11 | 1.1% |
 | >= 0.6 | 0 | 0.0% |
+
+### toponymic-core-size — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 4) | 0 | 0.0% |
+| [4, 8) | 1000 | 100.0% |
+| [8, 12) | 0 | 0.0% |
+| [12, 16) | 0 | 0.0% |
+| [16, 24) | 0 | 0.0% |
+| >= 24 | 0 | 0.0% |
+
+### toponymic-roots-won — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 4) | 63 | 6.3% |
+| [4, 8) | 937 | 93.7% |
+| [8, 12) | 0 | 0.0% |
+| [12, 16) | 0 | 0.0% |
+| [16, 24) | 0 | 0.0% |
+| >= 24 | 0 | 0.0% |
+
+### crisis-fires — default
+
+| value | count | share |
+|---|---|---|
+| true | 659 | 65.9% |
+| false | 341 | 34.1% |
 
