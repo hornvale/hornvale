@@ -294,6 +294,10 @@ mod tests {
     }
 
     /// H4 — the light moves the colour.
+    ///
+    /// claim: structural(seed: none — world() fixture) — false-positive
+    /// seed-loop flag; `s` binds a `&Sight` via `.map(|s| s.sun_altitude_deg)`,
+    /// not a seed
     #[test]
     #[allow(clippy::field_reassign_with_default)]
     fn a_low_sun_reddens_the_chart_relative_to_a_high_one() {
@@ -416,6 +420,10 @@ mod tests {
     /// test, and mutating it left all 459 vessel tests green. Zoom 4 is the
     /// review's own measured shape (6.910970° at zoom 0 moved to 6.913082°
     /// under the bug).
+    ///
+    /// claim: structural(seed: none — world() fixture) — false-positive
+    /// seed-loop flag; `s` binds a `&Sight` via `.map(|s| s.sun_altitude_deg)`,
+    /// not a seed
     #[test]
     fn zooming_out_does_not_move_the_agents_declared_sun_altitude() {
         let w = world();

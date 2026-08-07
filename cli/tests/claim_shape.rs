@@ -756,13 +756,17 @@ fn every_seed_looping_test_in_the_repo_declares_its_claim_shape() {
 
 /// The floor below which the repo-wide DETECTED seed-looping population
 /// (tagged or not — see [`seed_looping_tests_in`]) must never drop without a
-/// deliberate, reviewed reason. Recorded at Fix round 2, after the
+/// deliberate, reviewed reason. Set to 284 at Fix round 2, after the
 /// tuple-pattern, `Seed(...)`-correlation, and `Seed(...)`-argument-span
 /// detection fixes (`has_seed_for_loop`/`has_seed_via_construction`/
-/// `seed_construction_args`). Lower this number ONLY in the same commit
-/// that deliberately removes or merges a real seed-looping test — never as
-/// an unexamined side effect of a detection regression elsewhere in this
-/// file.
+/// `seed_construction_args`); re-recorded to 286 at Fix round 3 after
+/// absorbing `main` mid-task added two new seed-looping tests
+/// (`windows/vessel/src/purview.rs`), an ordinary instance of the "campaign
+/// work adds to this continuously" growth this constant's own doc already
+/// names below — re-recording it is the routine case, not an exception.
+/// Lower this number ONLY in the same commit that deliberately removes or
+/// merges a real seed-looping test — never as an unexamined side effect of
+/// a detection regression elsewhere in this file.
 ///
 /// **This is a floor, not the frozen-corpus exact-equality this tree uses
 /// elsewhere (a tropes corpus's situation count, a census's row count) —
@@ -780,7 +784,7 @@ fn every_seed_looping_test_in_the_repo_declares_its_claim_shape() {
 /// (there is no requirement to do it on every PR), and treat a slack that
 /// has grown by dozens as a sign the ratchet has gone quiet rather than as
 /// evidence nothing moved.
-const DETECTED_SEED_LOOPING_FLOOR: usize = 284;
+const DETECTED_SEED_LOOPING_FLOOR: usize = 286;
 
 /// The non-vacuity ratchet `cli/tests/heavy_tier.rs:117-120`'s
 /// `!heavy.is_empty()` models, for this scan. `every_seed_looping_test_in_
