@@ -158,6 +158,21 @@ pair. What finds it is asking **"how many places state this claim?"** before
 changing any of them. The full gate caught it, which is the argument for
 running one before declaring a campaign done rather than trusting scoped runs.
 
+**The merge invalidated three assertions, each differently, and that
+classification is the useful part.** One was a *prediction* that stopped being
+true (the readout's P1). One was the *same claim in different words*
+(`deep_realm_rehome`), which no grep on the message would have paired with the
+first. And one was a *mirror of production code* — `warren_gate`'s bit-identity
+reference inlines the tolerance formula, so when The Tilth changed that formula
+the reference went stale and reddened with 11,010 mismatches. That third one
+was the test **working**: it exists to notice when a surface kind's arithmetic
+moves, and it had. The repair is to track the mirror, not to loosen it.
+
+**A test that mirrors production code is a standing maintenance obligation**,
+and it is worth writing that into the test so the next person does not read a
+red mirror as a regression. `warren_gate`'s reference now says so in its own
+comment, naming what it must and must not absorb.
+
 **Three things this says about process.**
 
 **A preregistered result has a shelf life measured in merges.** The campaign

@@ -159,7 +159,7 @@ fn a_subterranean_kind_scores_zero_where_there_is_no_cave() {
 }
 
 #[test]
-fn a_surface_kind_is_bit_identical_to_the_pre_campaign_arithmetic() {
+fn a_surface_kind_is_bit_identical_to_the_realm_free_arithmetic() {
     // Spec 3.5. Any world movement must be attributable to the two re-homed
     // kinds and nothing else. Score goblin with the realm slice present and
     // compare, by `f64::to_bits`, against a single-substrate reference
@@ -201,10 +201,20 @@ fn a_surface_kind_is_bit_identical_to_the_pre_campaign_arithmetic() {
         "goblin must be absent from the sparse habitat-realm store (Surface by default)"
     );
 
-    // The pre-campaign formula: the SAME public per-axis supply helpers and
-    // the SAME `substrate_field`, with no realm question and no availability
-    // factor — exactly what `per_species_suitability` computed before this
-    // task for every kind, surface or not.
+    // The realm-free formula: the SAME public per-axis supply helpers and the
+    // SAME `substrate_field`, with no realm question and no availability
+    // factor — what `per_species_suitability` computes for a kind that is not
+    // in the habitat-realm store.
+    //
+    // **This reference tracks the tolerance model and must be updated with
+    // it.** It began as the four-tolerance PRODUCT and became Liebig's minimum
+    // when The Tilth (stage 5) landed; absorbing that change reddened this
+    // test with 11,010 mismatches, which is the test working — it exists to
+    // notice when a Surface kind's arithmetic moves, and a Surface kind's
+    // arithmetic had moved. What it must never absorb is a difference caused
+    // by THE WARREN, and the distinction is the point: this mirrors
+    // `tolerance_liebig` (private, so it is inlined here) exactly, minus the
+    // realm selection and the availability factor.
     let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
     let substrate = substrate_field(
@@ -240,11 +250,15 @@ fn a_surface_kind_is_bit_identical_to_the_pre_campaign_arithmetic() {
         ];
         let supply = axis_supply(&goblin.niche, &per_axis);
         let saturated = supply / (1.0 + supply);
-        let k_ref = saturated
-            * cn.temperature.eval(s.temperature_c, floor_buf)
-            * cn.moisture.eval(s.moisture, floor_buf)
-            * cn.insolation.eval(s.insolation, floor_buf)
-            * cn.elevation.eval(s.height_asl_m.get(), 0.0);
+        // Mirrors `tolerance_liebig`: a minimum, not a product, with
+        // elevation the one unfloored axis.
+        let tolerance = cn
+            .temperature
+            .eval(s.temperature_c, floor_buf)
+            .min(cn.moisture.eval(s.moisture, floor_buf))
+            .min(cn.insolation.eval(s.insolation, floor_buf))
+            .min(cn.elevation.eval(s.height_asl_m.get(), 0.0));
+        let k_ref = saturated * tolerance;
 
         let k_live_v = *k_live.get(cell);
         if k_ref.to_bits() != k_live_v.to_bits() {
@@ -253,7 +267,7 @@ fn a_surface_kind_is_bit_identical_to_the_pre_campaign_arithmetic() {
     }
     assert_eq!(
         mismatches, 0,
-        "goblin's live K must be bit-identical to the pre-campaign single-substrate \
+        "goblin's live K must be bit-identical to the realm-free single-substrate \
          formula at every cell ({mismatches} mismatches)"
     );
 }
