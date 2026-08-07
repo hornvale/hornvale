@@ -37,6 +37,7 @@ const GUARDED: &[&str] = &[
     "hydro-variant-coverage",
     "toponymic-core-size",
     "toponymic-roots-won",
+    "crisis-fires",
 ];
 
 /// The canonical census and its committed rows.

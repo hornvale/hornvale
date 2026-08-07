@@ -3547,8 +3547,44 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(toponymic_roots_won(v) as f64)
             }),
         },
+        Metric {
+            name: "crisis-fires",
+            doc: "Whether any placed people holds a live prediction crisis at day \
+                  36,525 (the hundredth year, the diachronic battery's preregistered \
+                  epoch) — The Assay. Replaces \
+                  `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a \
+                  single instance. A crisis needs a Generated sky, an organized \
+                  flagship's doctrine, >= 8 witnessed events of one recurrence class \
+                  and a tail miss-run, so it cannot be synthesised — which is why it \
+                  is a rate here rather than a hand-built behaviour test.",
+            summary: SummaryKind::Flag,
+            extract: Extractor::Full(|v: &FullView| {
+                let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
+                    Ok(days) => days,
+                    Err(_) => return MetricValue::Absent,
+                };
+                let (world, terrain, climate) = (v.world(), v.terrain(), v.climate());
+                for (species, _) in hornvale_worldgen::placed_peoples(world) {
+                    match hornvale_worldgen::crisis_from(world, species, at, terrain, climate) {
+                        Ok(Some(_)) => return MetricValue::Flag(true),
+                        Ok(None) => {}
+                        // A world whose sky cannot answer the question is Absent, not
+                        // false: `false` would claim "measured, no crisis", which is a
+                        // different fact and would understate the rate.
+                        Err(_) => return MetricValue::Absent,
+                    }
+                }
+                MetricValue::Flag(false)
+            }),
+        },
     ]
 }
+
+/// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
+/// `windows/worldgen/tests/diachronic.rs`): day 36,525, the hundredth year.
+/// A crisis is a statement about a culture at a time, so the census must fix
+/// the time or the column means nothing.
+const DIACHRONIC_EPOCH_DAYS: f64 = 36_525.0;
 
 /// This world's toponymic-domain concepts, derived from its own registry
 /// exactly as `windows/worldgen/tests/exposure.rs` did before The Assay
@@ -7081,8 +7117,11 @@ mod tests {
         // sweep with a census column), +2 more for The Assay (Task 5:
         // toponymic-core-size and toponymic-roots-won, replacing
         // `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a
-        // witness with two census columns).
-        assert_eq!(registry().len(), 186);
+        // witness with two census columns), +1 more for The Assay (Task 6:
+        // crisis-fires, replacing
+        // `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a
+        // single prediction crisis with a census column).
+        assert_eq!(registry().len(), 187);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -8379,6 +8418,26 @@ mod tests {
             "no concept reports the toponymic domain — the derivation broke"
         );
         assert!(won >= 0.0 && won <= core, "won {won} outside [0, {core}]");
+    }
+
+    /// `crisis-fires` reads a real Full-rung world and answers Flag, whichever way.
+    /// Deliberately NOT "seed 0 has a crisis" — whether any given seed does is
+    /// exactly the question this metric exists to stop asserting one world at a
+    /// time (The Assay, spec §3.4).
+    #[test]
+    fn crisis_fires_reads_a_real_world_as_a_flag() {
+        let view = FullView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let metric = registry()
+            .into_iter()
+            .find(|m| m.name == "crisis-fires")
+            .expect("the metric is registered");
+        assert!(
+            matches!(
+                metric.extract.apply(&BuiltView::Full(view)),
+                MetricValue::Flag(_)
+            ),
+            "crisis-fires must be a Flag"
+        );
     }
 
     #[test]
