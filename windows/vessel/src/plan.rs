@@ -388,12 +388,18 @@ mod tests {
     }
 
     /// A mark on the floor cell at `(1, 1)` of `tiny()`.
+    ///
+    /// `kind` is [`crate::purview::AGENT_MARK_KIND`], not a literal, even though
+    /// this fixture exercises extent and ordering and never a real creature: it
+    /// is the nearest copy-source a later campaign would crib a `PlanMark` from,
+    /// and a synthetic `"creature"` here is exactly how the value that fix round
+    /// 1 unified would get re-forked.
     fn mark(noun: &str, salience: u32) -> PlanMark {
         PlanMark {
             x: 1,
             y: 1,
             noun: noun.to_string(),
-            kind: "creature".to_string(),
+            kind: crate::purview::AGENT_MARK_KIND.to_string(),
             datum: format!("{noun} stands here."),
             salience,
         }
@@ -445,7 +451,7 @@ mod tests {
             x: 99,
             y: 99,
             noun: "ghost".to_string(),
-            kind: "creature".to_string(),
+            kind: crate::purview::AGENT_MARK_KIND.to_string(),
             datum: "A ghost, somehow off the map.".to_string(),
             salience: 1,
         };

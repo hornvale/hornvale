@@ -34,6 +34,12 @@ rows were stamped `92177164`, Task 4's SHA, and name `21ff57b9` — the Task 5
 tree they actually gated). The correction is to the LABEL, never to a measured
 number: no wall, user, sys or ratio value in this file is ever edited.
 
+**Which means each commit corrects the PREVIOUS round's rows**, and that is the
+convention rather than a shortfall: a commit cannot contain its own hash, so a
+run's row is corrected by the next commit that touches this file. A row still
+carrying its parent's SHA is therefore the most recent run, not an oversight —
+check the `when` column before assuming otherwise.
+
 The first row is backfilled by hand from the fast-gate-tiers investigation
 (2026-07-13): the pre-tiering `cargo test --workspace` on an M1 Max under
 ~8 parallel sessions — the 43.5-min worst case that motivated the tiering.
@@ -423,5 +429,7 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-06T20:02:40Z | rebaseline | 104.930 | 136.389 | 6.706 | 1.36 | 0 | 58230387 | the-benchmark | MacBookPro | 10 |
 | 2026-08-06T23:35:40Z | gate | 363.912 | 2555.297 | 73.436 | 7.22 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
 | 2026-08-06T23:47:00Z | gate | 460.403 | 2579.029 | 101.528 | 5.82 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
-| 2026-08-07T00:18:33Z | gate | 418.504 | 2619.181 | 86.871 | 6.47 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
-| 2026-08-07T00:21:14Z | rebaseline | 150.639 | 141.205 | 5.745 | 0.98 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:18:33Z | gate | 418.504 | 2619.181 | 86.871 | 6.47 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:21:14Z | rebaseline | 150.639 | 141.205 | 5.745 | 0.98 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:57:27Z | gate | 574.322 | 2640.020 | 108.904 | 4.79 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:59:39Z | rebaseline | 120.854 | 137.073 | 7.838 | 1.20 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |

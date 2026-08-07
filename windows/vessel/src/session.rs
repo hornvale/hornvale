@@ -654,11 +654,21 @@ impl<'w> Session<'w> {
         // 1.249 ms, so a second derivation — or one per creature — would be a
         // budget item rather than noise. `None` out of doors.
         let sighting = self.sighting();
+        // SIGHT NARROWS WHAT IS SENT (spec §2.1, `CLIENT-redaction-panes`),
+        // and it narrows it HERE — at the roster, before any affect is read —
+        // so that this channel and the two verbs that answer about creatures
+        // (`needs`, `examine`) share one predicate rather than three
+        // reimplementations of it. See `sensed_npcs` for the rule and for the
+        // unplaced row, which is the one that is easy to get wrong. Nothing on
+        // this path touches `self.knowledge`: that deferral is the whole of
+        // §2.1, held by
+        // `perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`.
+        //
         // The species rides along beside the `PresentEntry` because a creature's
         // MARK datum is an identity line (`purview::creature_datum`), not the
         // felt state `present` carries — and `PresentEntry` has no species field.
         let here: Vec<(EntityId, String, PresentEntry)> = self
-            .colocated_npcs()
+            .sensed_npcs(sighting.as_ref())
             .iter()
             .map(|npc| {
                 let affect = affect_of_memo_occupied(
@@ -684,28 +694,12 @@ impl<'w> Session<'w> {
             })
             .collect();
 
-        // SIGHT NARROWS WHAT IS SENT (spec §2.1, `CLIENT-redaction-panes`): a
-        // creature the embedding placed in a cell the possession cannot see is
-        // withheld sim-side, so the client is never handed something it is
-        // trusted to hide. A creature the embedding could NOT place is passed
-        // through: sight redacts what it can locate, and an embedding that has
-        // nothing to say about a creature must not be read as saying it is
-        // hidden. Nothing here touches `self.knowledge` — that deferral is the
-        // whole of §2.1 and `perturbing_the_embedding_moves_what_is_drawn_and_not_what_is_known`
-        // is what holds it.
-        let hidden = |who: &EntityId| {
-            sighting
-                .as_ref()
-                .is_some_and(|s| s.placed.get(who).is_some_and(|c| !s.lit.contains(c)))
-        };
-        let present: Vec<PresentEntry> = here
-            .iter()
-            .filter(|(who, _, _)| !hidden(who))
-            .map(|(_, _, entry)| entry.clone())
-            .collect();
+        let present: Vec<PresentEntry> = here.iter().map(|(_, _, entry)| entry.clone()).collect();
 
         // The same shadowcast decides the marks, so the pane and the sensed
-        // channel cannot disagree about who is here.
+        // channel cannot disagree about who is here. `marks` is a strict SUBSET
+        // of `present`: a creature is drawn only when it was placed AND lit,
+        // which is one of the three rows `sensed_npcs` keeps.
         //
         // `kind`, `datum` and `salience` are the walk-band chart's own
         // (`crate::purview`), not this module's. Fix round 1's finding: the
@@ -2154,7 +2148,8 @@ impl<'w> Session<'w> {
         if let Some(detail) = crate::chamber_prose::glyph_detail(&wanted) {
             return detail.to_string();
         }
-        // A CREATURE THE PLAN DEPICTS, answered last (The Sighting, fix round 1).
+        // A CREATURE THE POSSESSION SENSES, answered last (The Sighting, fix
+        // rounds 1-2).
         //
         // Three things about this arm, each of which was a decision:
         //
@@ -2165,32 +2160,32 @@ impl<'w> Session<'w> {
         //    every depicted noun to answer, and The Lintel's water jar is what
         //    happens when it does not.
         // 2. **It answers with the SAME sentence the outdoor path does**
-        //    ([`crate::purview::creature_datum`], one definition, two callers),
+        //    ([`crate::purview::creature_datum`], one definition, three callers),
         //    because `a_noun_at_both_grains_resolves_to_one_datum` makes one
         //    noun → one datum a tested contract and a band boundary must not be
         //    the place it quietly stops holding.
-        // 3. **It is gated on SIGHT, not on co-location.** Only a creature this
-        //    turn's `marks` actually draws can be examined. A creature the
-        //    shadowcast withheld must still refuse, or `examine` would be a side
-        //    channel straight around the redaction `snapshot` just performed.
+        // 3. **Its predicate is `sensed_npcs`, not "placed and lit"** (fix round
+        //    2). Those are not complements: an UNPLACED co-located creature — its
+        //    cell taken, or a surplus anchor — is in `sensed.present` and would
+        //    have been refused by a placed-and-lit test, so `present` did not
+        //    imply examinable. Keying on the channel's own roster makes the two
+        //    agree by construction, and keeps the withheld creature refused.
         //
-        // Answered LAST, after the anchors and the glyph legend, for two reasons:
-        // prose is the constitutionally primary surface (§3.5), so an anchor noun
-        // wins any tie; and `sighting()` is the one costly read on this path
-        // (`anchor_cells`, 42 us median / 410 us p99), so it is paid only when
-        // nothing cheaper answered.
-        if let Some(sighting) = self.sighting() {
-            for npc in self.colocated_npcs() {
-                if npc.label.to_lowercase() != wanted {
-                    continue;
-                }
-                let seen = sighting
-                    .placed
-                    .get(&npc.entity)
-                    .is_some_and(|c| sighting.lit.contains(c));
-                if seen {
-                    return crate::purview::creature_datum(&npc.label, &npc.species);
-                }
+        // Answered LAST, after the anchors and the glyph legend, because prose is
+        // the constitutionally primary surface (§3.5) and an anchor noun must win
+        // any tie. **The label match is hoisted ABOVE `sighting()`** so that an
+        // ordinary indoor `examine` MISS — every noun that is not a creature's —
+        // pays nothing: `sighting` is the one costly read on this path
+        // (`anchor_cells`, 42 us median / 410 us p99), and before the hoist even
+        // the parity test's own deliberate miss paid it.
+        if let Some(npc) = self
+            .colocated_npcs()
+            .into_iter()
+            .find(|npc| npc.label.to_lowercase() == wanted)
+        {
+            let sensed = self.sensed_npcs(self.sighting().as_ref());
+            if sensed.iter().any(|n| n.entity == npc.entity) {
+                return crate::purview::creature_datum(&npc.label, &npc.species);
             }
         }
         format!("You see no {noun} here.")
@@ -2603,6 +2598,52 @@ impl<'w> Session<'w> {
             .collect()
     }
 
+    /// Who is here **and sensed** — [`Self::colocated_npcs`] narrowed by sight.
+    ///
+    /// **ONE PREDICATE, THREE READERS** (The Sighting, fix round 2): the
+    /// `sensed.present` channel, `needs`, and `examine_chamber` all key on this
+    /// and nothing else, so a verb and the channel cannot disagree about who the
+    /// possession can perceive. They did: `snapshot` withheld a creature and
+    /// `needs` named it — by label *and* felt state — one verb later, which is
+    /// the side channel around a structural redaction that gating `examine`
+    /// alone was meant to close.
+    ///
+    /// # The rule, and the row worth stating out loud
+    ///
+    /// A creature is withheld only when the embedding **placed** it in a cell
+    /// sight does not reach. An **unplaced** creature stays:
+    ///
+    /// | case | sensed here | examinable | drawn on the plan |
+    /// |---|---|---|---|
+    /// | placed and lit | yes | yes | yes |
+    /// | placed and unlit | no | no | no |
+    /// | **unplaced** | **yes** | **yes** | **no** |
+    ///
+    /// If the embedding could not place a creature we cannot say sight hid it —
+    /// presence is the conservative default, and "present but undrawable" is
+    /// honest where "absent" would be a lie. It is also what keeps spec §2.1
+    /// intact: **presence must never depend on the embedder's free draws; only
+    /// DRAWING may.** An unplaced creature arises for reasons that have nothing
+    /// to do with visibility (its cell was already held; it was a surplus anchor
+    /// — 3 of 256 on the grown corpus; no tick has recorded where it stands), so
+    /// reading absence-from-the-map as hidden would let the placement scan decide
+    /// what the player is told is *there*, not merely where it is drawn.
+    ///
+    /// Out of doors `sighting` is `None`, so this is exactly `colocated_npcs`
+    /// and no band but the chamber narrows anything.
+    fn sensed_npcs(&self, sighting: Option<&Sighting>) -> Vec<&Npc> {
+        self.colocated_npcs()
+            .into_iter()
+            .filter(|npc| {
+                !sighting.is_some_and(|s| {
+                    s.placed
+                        .get(&npc.entity)
+                        .is_some_and(|cell| !s.lit.contains(cell))
+                })
+            })
+            .collect()
+    }
+
     /// Resolve `who` to one co-located NPC (The First Mark): an empty
     /// argument selects the first NPC sharing this room (the common case —
     /// a lone co-located NPC needs no name), otherwise `who` is matched as a
@@ -2681,7 +2722,13 @@ impl<'w> Session<'w> {
     /// real fold over its own committed history, so its felt state is
     /// meaningful the moment the drive model exists.
     fn needs(&self) -> String {
-        let here = self.colocated_npcs();
+        // GATED ON SIGHT, through the same predicate `sensed.present` and
+        // `examine` use (The Sighting, fix round 2). Ungated this verb was a
+        // side channel straight around the structural redaction `snapshot` had
+        // just performed: it named — by label AND by felt state — a creature the
+        // pane had withheld one verb earlier. `sensed_npcs` is `colocated_npcs`
+        // out of doors, so nothing outside the chamber band changes.
+        let here = self.sensed_npcs(self.sighting().as_ref());
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }
@@ -4200,14 +4247,40 @@ mod tests {
             1,
             "one cell may hold one creature: the second must be REFUSED, not stacked — got {marks:?}"
         );
-        // The refused creature is still REPORTED. Sight redacts what it can
-        // locate; a creature the embedding declined to place is not a creature
-        // sight decided was hidden.
+        // THE UNPLACED ROW (fix round 2), and this test is the only place that
+        // constructs it. The refused creature is co-located, is NOT drawn, and
+        // must nonetheless be present, examinable and readable by `needs` —
+        // because the embedding declining to place it says nothing whatever
+        // about whether the possession can perceive it, and presence must never
+        // depend on the embedder's free draws (spec §2.1). "Present but
+        // undrawable" is honest; "absent" would be a lie.
+        let refused = session
+            .npcs
+            .iter()
+            .find(|n| n.entity == second)
+            .expect("the second creature is derived")
+            .label
+            .clone();
         let snap = session.snapshot().unwrap();
         assert_eq!(
             snap.sensed.present.len(),
             2,
             "a creature refused a cell must not vanish from `sensed.present`"
+        );
+        assert!(
+            !marks.iter().any(|m| m.noun == refused),
+            "precondition: the refused creature is genuinely UNDRAWN"
+        );
+        let answered = session.examine_chamber(&refused);
+        assert!(
+            !answered.starts_with("You see no"),
+            "an unplaced but present creature must be examinable — `present` must \
+             imply examinable, or the channel and the verb disagree: {answered}"
+        );
+        assert!(
+            session.needs().contains(&refused),
+            "and `needs` must read it too, for the same reason: {}",
+            session.needs()
         );
     }
 
@@ -4289,6 +4362,11 @@ mod tests {
             !session.examine_chamber(&label).starts_with("You see no"),
             "precondition: and ANSWERS examine while it is depicted"
         );
+        assert!(
+            session.needs().contains(&label),
+            "precondition: and `needs` reads it: {}",
+            session.needs()
+        );
 
         session.occupancy.place(who, &room, far);
         let snap = session.snapshot().unwrap();
@@ -4310,6 +4388,17 @@ mod tests {
             refused.starts_with("You see no"),
             "examine must refuse a creature sight withheld, or it is a side \
              channel around the redaction: {refused}"
+        );
+        // THE SECOND SIDE CHANNEL, closed one round later (fix round 2). `needs`
+        // named the withheld creature by label AND by felt state — a strictly
+        // richer leak than `examine`'s, since it also reports the creature's
+        // interior. It is band-blind (`handle` does not gate it on `inside`), so
+        // the gate lives in the verb rather than in the dispatch.
+        let read = session.needs();
+        assert!(
+            !read.contains(&label),
+            "`needs` must not read a creature sight withheld — it is the same \
+             side channel `examine`'s gate closes, one verb over: {read}"
         );
     }
 
