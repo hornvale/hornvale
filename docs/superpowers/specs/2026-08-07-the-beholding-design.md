@@ -330,11 +330,32 @@ question moves to the composition point where the answer is known.
 ### 4.6 The possession (`windows/vessel`)
 
 ```rust
-pub enum Eyes { Own, Human, Off }
+pub enum Eyes {
+    /// The possessed agent's own species.
+    Own,
+    /// A NAMED observer: any row of `perception_registry()`, or "standard".
+    Named(String),
+    /// Decline the observer step entirely.
+    Off,
+}
 ```
 
 `Session` holds one, defaulting to `Own`; `PossessOpts` gains the same field
 so the CLI and tests can pin it.
+
+**Named, not a three-value toggle.** The obvious design was
+`Eyes { Own, Human, Off }`, and it is wrong on two counts. It **ages badly**:
+the Pigment already designed the accessibility path as *"an `Observer` with
+a shifted or absent channel — the same code path as a goblin"* (§7), so
+every colour-blindness observer would need another variant of a closed enum.
+And it makes the campaign's own claim **hard to see**: which species you
+possess depends on the seed's flagship, so comparing two eyes would mean two
+possessions in two worlds — varying the world in order to demonstrate that
+only the observer varies. With names, `eyes kobold` / `eyes human` /
+`eyes own` change the map in one world, one room, one hour, holding
+everything constant but the eye. That is the campaign's thesis, made
+operable in three keystrokes, for the cost of one registry lookup and an
+unknown-name error arm that lists the roster.
 
 - **Light**: `at_elevation(daylight(star), calendar.solar_altitude_at(day,
   latitude))`. The vessel already holds a `Calendar`, built at `start` for
@@ -345,8 +366,10 @@ so the CLI and tests can pin it.
   mechanism, shared by screen readers and `NO_COLOR`, and the state in which
   output is byte-identical to today's.
 - The `map` verb renders the `colour` lens whenever eyes are not `Off`.
-- **A new verb, `eyes`**: bare reports whose eyes and the projection's
-  caption; `eyes human` / `eyes own` / `eyes off` switch.
+- **A new verb, `eyes`**: bare reports whose eyes, the arity, and the
+  projection's caption; `eyes <species>` / `eyes standard` / `eyes own` /
+  `eyes off` switch. An unknown name fails loudly and lists the roster —
+  generation never guesses.
 
 `PaletteEntry` gains `color: Option<[u8;3]>`, additive and `None` for every
 entry this campaign (§8).
