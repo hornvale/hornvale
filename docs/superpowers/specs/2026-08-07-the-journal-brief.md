@@ -132,7 +132,40 @@ being **gone over in confident ink**. Design that transition; it is the register
 signature gesture, and it is honest, because it is a confirmation rather than a
 correction.
 
-**Reserved, not yet used.** Design a full vocabulary for *correction* as well —
+### What weight means
+
+Weight — `dim`/`normal`/`bold` in a terminal, the full range in a browser — is
+the most important channel in this design, because it is the only one that
+survives monochrome, a sixteen-colour terminal, and colour-blindness intact. It
+therefore carries the most important axis.
+
+**Weight renders attention: how much a thing commands the character's notice
+right now.** One rule, both panes. On the map that is *presence* — the three
+epistemic states above. In the prose it is *salience* and *novelty*. A reader
+learns the rule once.
+
+Two consequences that are not obvious and are both load-bearing:
+
+- **Weight runs opposite to durability.** `here` lasts one turn. `sensed` lasts
+  while you stand there. `remembered` lasts forever — nothing is ever forgotten.
+  So the boldest thing on the page is the thing that will be **gone next turn**,
+  and the faintest is the thing that will outlast everything. Bold does not mean
+  important; it means *perishable*. Design that.
+- **There is no weight below the floor — there is absence.** The simulation culls
+  an observation once its weighted salience drops under a threshold, and its own
+  comment gives the reason: *"a star dimmed to a fiftieth is not a faint star, it
+  is a star you cannot see."* So the bottom of the scale is not a fourth, fainter
+  ink. It is unmarked paper. Same rule as the unknown map cell, arrived at from
+  the other direction.
+
+Colour, correspondingly, carries **substance** — what a thing *is*: its biome,
+its water, its relief. Not certainty, not danger, not threat. Colour is the
+channel that may fail; it must not be the channel that carries whether you can
+trust what you are looking at.
+
+### Reserved, not yet used
+
+Design a full vocabulary for *correction* as well —
 erasure, scraping-out, a struck-through mark, a redrawn tile sitting visibly
 over an abandoned one — and mark it clearly as reserved. The simulation cannot
 yet produce a remembered cell that turns out to be wrong (nothing is ever
@@ -183,25 +216,92 @@ must not be designed for.
   There is no clock finer than the day.
 - **The sky** — as a written sentence, not as numbers. ("Night. The vast moon
   shows its first-quarter face. The sky is fair, with scattered cumulus.")
-- **The place** — its biome, its water, its relief band, a fine-grained
-  descriptor, temperature, moisture, elevation, height above sea level, and the
-  ways on.
+- **The place** — its biome (one of 22), its water kind (one of 4), its relief
+  band (one of 6, ordered), a fine-grained descriptor, temperature, moisture,
+  elevation, height above sea level, and the ways on.
 - **Who is present** — each creature's label, and **what it feels**.
-- **Standing** — per creature, an accumulated grievance and whether it has
-  crossed into hostility. *This channel is world truth and is not filtered by
-  what your character knows.* Any component rendering it must filter it against
-  the knowledge ledger first, or it is a cheat.
 - **The knowledge ledger** — every fact the character has come to know, as
-  key/value pairs.
+  key/value pairs. In practice this holds the places you have stood and the
+  settlements you have learned of; a *creature* enters it only if someone told
+  you about it.
 - **The prose**, and a catalogue of the nouns in it that can be examined, each
   with the text `examine` would print.
-- **The map** — cells, with the epistemic state above, plus a legend.
+- **The map** — cells, with the epistemic state above, plus **marks**: things
+  standing on a cell, each with a noun, a kind (`settlement`, `agent`), a line
+  of detail, and a rank. Both bands carry marks. Plus a legend.
+
+### The noun is the join key — use it
+
+The noun on a map mark and the noun in the prose catalogue are **the same
+namespace, deliberately**. The code says so: the chart's legend entry is "the
+same shape as the focalizer's nouns, because that identity is what makes map and
+prose two grains of one lens."
+
+So a reader who touches a noun in the written entry can have its mark answer on
+the plate, and vice versa, with no new data and no guessing. Design that
+linkage — it is the strongest thing the two-page spread can do that a single
+pane cannot, and it costs nothing.
+
+### What colour has to carry, and why it cannot be a swatch set
+
+The substance channel is bigger than it looks. Every map cell carries a biome
+(**22 of them**), a relief band (**6**, ordered `abyss, shelf, lowland, upland,
+highland, alpine`), and a water kind (**4**: `ocean, salt-basin, river,
+dry-land`). It also carries that cell's temperature and moisture as numbers.
+
+Twenty-two is past what a categorical palette can hold — eight or so hues are
+distinguishable, and a sixteen-colour terminal cannot hold twenty-two at all. So
+do not design twenty-two swatches. The biomes are not arbitrary categories:
+
+- **Twelve are terrestrial** and lie on a temperature × moisture classification —
+  ice, tundra, taiga, temperate grassland, shrubland, temperate forest,
+  temperate rainforest, desert, savanna, tropical seasonal forest, tropical
+  rainforest, alpine. Since temperature and moisture are *emitted per cell*, land
+  colour should be a **two-dimensional surface over those two axes**, so that
+  biomes which are neighbours in the world are neighbours in the palette. That is
+  derived rather than authored, and it degrades gracefully when the palette
+  shrinks.
+- **Ten are marine**, and most are a depth ladder — epipelagic, mesopelagic,
+  bathypelagic, abyssal, hadal trench — which wants a **sequential ramp**, not
+  hues. The rest (coral reef, kelp forest, hydrothermal vent, upwelling, sea ice)
+  are genuine specials and may have their own marks.
+- **Relief is ordinal**, so it reads as elevation shading rather than as hue.
+
+**And here is the forced consequence.** In monochrome — which is the floor this
+design must meet — colour is gone, so **the glyph is the only channel left that
+can carry biome.** Today the client draws two: `~` for water and one for land,
+with the source commenting "coarse on purpose." Two glyphs for twenty-two
+biomes is the largest unused capacity in the whole interface.
+
+So the character vocabulary is a first-class deliverable, not a fallback: design
+a **biome glyph set** that reads at a glance, survives without colour, and has an
+obvious sprite counterpart under the cell law. This is where a roguelike's
+craft actually lives.
+
+One caution about the lens caption: **there are exactly two lenses on this
+surface** (`terrain` and `colour`). Design the caption and a two-position
+control, not a lens gallery.
+
+**Note what the mark's rank is not.** Marks carry a *rank* ("lower is more
+salient"), not a magnitude. Rank three of four and rank three of forty are
+different situations, so **a rank cannot be turned into a weight**. Marks may be
+*ordered* by it — which one is drawn on top, which one the legend names first —
+and must not be dimmed or emboldened by it.
 
 ### What does not exist — do not design it
 
 No hit points. No mana. No stamina, hunger, or fatigue **for the player**. No
 inventory. No armour class, no experience, no level, no gold. No quest log. No
 minimap claiming full truth. No timer finer than a day.
+
+**And no standing, disposition, or attitude surface** — no reputation bar, no
+"they distrust you," no per-creature relationship readout. The simulation does
+track how each creature feels toward you, but that channel is *world truth*: it
+knows about creatures your character has never met. Filtering it down to what
+you actually know would need a join that does not exist yet — creatures are not
+in the knowledge ledger. A pane rendering it today would silently be showing you
+the world's mind rather than your own, which is the exact failure this whole
+brief is built to prevent. Leave it out.
 
 The endpaper is therefore **an identity strip, not a vitals bar**. And note the
 asymmetry, which is real and which I would like the design to feel rather than
@@ -214,36 +314,44 @@ what *you* feel. The journal has no page about its own author.
 1. **Type** — a text face for the written entry, a monospace for the grid and
    the command line. Full scale, with the relationship between the two faces
    worked out (they share a page).
-2. **Palette** — paper and ink, in daylight and lamplight. The organizing
-   principle should be **certainty, not danger**: ink weight and colour encode
-   how sure the character is of a thing, not how dangerous it is. State this
-   explicitly in the palette component.
-3. **Ink weights** — the three epistemic states, plus the reserved correction
-   vocabulary, shown together as a specimen sheet.
+2. **Palette** — paper and ink, in daylight and lamplight. Colour carries
+   **substance**: what a thing is — biome, water, relief. Never danger, never
+   certainty. State the channel assignment explicitly in the component: glyph
+   carries identity, the grid carries position, colour carries substance, weight
+   carries attention.
+3. **Ink weights** — the three epistemic states and the attention scale (see
+   *What weight means*), plus the reserved correction vocabulary, shown together
+   as a specimen sheet. This is the foundation the whole system rests on; give it
+   the most care.
 4. **Grid metrics** — the cell box, and the proof that a sprite and a character
    occupy the same one.
-5. **Rules, margins, the gutter** — the anatomy of the spread.
+5. **The glyph vocabulary** — a character per biome (22), the relief and water
+   treatments layered on it, the wall/floor/threshold set, and the `@`. Must read
+   in monochrome, since without colour this is the only channel carrying what a
+   place *is*. Show the sprite counterpart for at least a representative slice.
+6. **Rules, margins, the gutter** — the anatomy of the spread.
 
 **Components**
-6. **The Spread** — the frame: plate left, entry right, endpaper below.
-7. **The Chart Plate** — the outdoor map. A triangular lattice, biome and relief
+7. **The Spread** — the frame: plate left, entry right, endpaper below.
+8. **The Chart Plate** — the outdoor map. A triangular lattice, biome and relief
    legend, epistemic ink weights, the `@` mark, and the lens caption line
    (`[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]`) —
    which is *load-bearing honesty*, not chrome: the client has no true view of
    the world, only named lenses, and the caption says which one you are wearing.
-8. **The Plan Plate** — the indoor floor plan, with creature marks and legend.
-9. **The Study Plate** — a detailed view of one object or creature, drawn with
+9. **The Plan Plate** — the indoor floor plan, with creature marks and legend.
+10. **The Study Plate** — a detailed view of one object or creature, drawn with
    called-out labels. This is where the design gets to be lavish.
-10. **The Leaf** — long scrollable text: a book read inside the world. Running
+11. **The Leaf** — long scrollable text: a book read inside the world. Running
     head, folio, drop cap, and a scroll model that feels like turning pages.
-11. **The Index** — the menu surface: tabbed sections, ribbon markers, keyed
+12. **The Index** — the menu surface: tabbed sections, ribbon markers, keyed
     rows.
-12. **The Entry** — the prose column: the passage, examinable nouns marked so a
+13. **The Entry** — the prose column: the passage, examinable nouns marked so a
     reader can tell what is addressable, the ways-on line, the command line.
-13. **The Endpaper** — the identity strip.
-14. **The Margin** — marginalia: a `why` explanation, a note of standing toward
-    a creature, an annotation on the plate.
-15. **States** — unmarked paper (empty/unknown), a refusal ("No way n from
+14. **The Endpaper** — the identity strip.
+15. **The Margin** — marginalia: a `why` explanation, an annotation on the plate,
+    a noun the reader has touched answering itself. (Not standing toward a
+    creature — see the forbidden list.)
+16. **States** — unmarked paper (empty/unknown), a refusal ("No way n from
     here."), and genesis (the world deriving from its seed, which takes a few
     seconds and is worth making beautiful).
 
@@ -270,3 +378,8 @@ Show me, explicitly, that the system passes each:
 6. No ornament overlapping any glyph cell — call this out where it was tempting.
 7. The reserved correction marks present in the specimen sheet and absent from
    every composed screen.
+8. **The weight scale legible with colour switched off entirely.** If the three
+   levels are only distinguishable when colour is present, the channel
+   assignment has failed.
+9. The noun-join demonstrated: a noun touched in the entry, and its mark
+   answering on the plate.
