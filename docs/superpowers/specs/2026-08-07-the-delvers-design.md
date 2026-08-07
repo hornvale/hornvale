@@ -615,3 +615,53 @@ section asked for.
 - **Still out of scope, unchanged:** chamber occupancy and traversal (§2),
   `tolerance_tiered`, flooring elevation, cave prevalence/clustering tuning, and
   re-authoring gnoll.
+
+### 10.6 The depth measurement, and what it does to P2′
+
+`delver_depth_probe.rs` measured the cave-depth distribution **before** Task 3b
+was built, applying the autopilot rule's *"this invariant holds → measure it
+against real data"* class to §10.3's own claim. Seeds 42 / 7 / 1234:
+
+```
+  band       share of cave cells        depth p50          depth max
+  Cover    17.5%  43.9%   26.3%             0.0 m          9 - 10 m
+  Basement 54.5%  27.2%   40.4%             0.0 m       645 - 1807 m
+  Roots    28.0%  28.9%   33.4%    13714 - 14774 m     16607 - 21561 m
+  underground height_asl_m p50:  +1045 / +1482 / +368 m
+```
+
+**The read is safe and is built** (Nathan, 2026-08-07). Two thirds of caves sit
+between 0 and 1800 m; `non_void_roster` has ample habitat. The `Roots` third,
+at 14–21 km, becomes uninhabitable — which is correct rather than broken, since
+`BandKind::Roots` is documented as *"deep crust: hot, high-pressure."* That
+exclusion is a genuine selection effect and is worth having on its own.
+
+**But it probably will not separate Mountain from Duergar**, which is why §10.3
+folded it in. Among the habitable shallow caves the median depth is **0.0 m on
+every seed** — the variation is a thin tail. Two kinds differing only in an
+authored elevation optimum will therefore score alike across most of their
+shared habitat.
+
+**P2′ is therefore restated as a genuinely open question, not a confident
+prediction.** The campaign ships whichever answer it gets:
+
+> **P2″ — does depth carry enough variance to separate two kinds?** Mountain
+> and Duergar are authored with different elevation optima. Their capacity
+> fields are measured, and the correlation is **reported, not asserted**. The
+> preregistered *interpretation* is fixed in advance so the result cannot be
+> read after the fact:
+> - `r < 0.95` — depth carries enough spatial variance to separate two
+>   subterranean kinds. The degeneracy is resolved.
+> - `r >= 0.95` — it does not, and the reason is now measured rather than
+>   assumed: **the depth field is nearly constant over habitable caves.** That
+>   is a sharper finding than the original "depth is inexpressible", because it
+>   names the quantity that is missing (variance, not the coordinate) and it
+>   would not have been reachable without building the coordinate first.
+>
+> The mutation stands either way: with the depth reverted, the two must
+> correlate above 0.999. That is what makes the number mean anything.
+
+**This is the campaign's second preregistered null-tolerant result**, and it is
+deliberate. The Long Age shipped its null as the headline; the same discipline
+applies here. Under no circumstance is a threshold moved after unblinding to
+make one branch true.
