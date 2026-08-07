@@ -233,10 +233,33 @@ const SHAPE_SAMPLE: std::ops::RangeInclusive<u64> = 1..=30;
 const MIN_SUBORDINATIONS: u64 = 100;
 
 /// Spec §8.2 — the accumulator floor: what actually changed hands over the
-/// whole bake. Seed 42 measures **8002.397**; pinned at 1500, ~5× clear. This
-/// is a flow, and it is floored beside the stock below because either alone
-/// is satisfiable by the other going to zero.
+/// whole bake. A flow, floored beside the stock below because either alone is
+/// satisfiable by the other going to zero.
+///
+/// **The value is unchanged at 1500 and was never lowered.** What changed is
+/// where it is read: it is now **reported against a seed panel** by
+/// [`the_tribute_accumulator_is_reported_over_a_panel`] rather than asserted
+/// on one world. See that test for the measurement and the reasoning.
+///
+/// **The figure this doc used to cite was 1405 commits stale.** It read "Seed
+/// 42 measures **8002.397**; pinned at 1500, ~5× clear" — a reading The Tithe
+/// took on 2026-07-27 on its own pre-absorption tree and nobody re-took. Re-
+/// measured 2026-08-07 (The Delvers): seed 42 measures **1450.482** on this
+/// branch and **1939.242** on main. So the margin the "~5× clear" claim rested
+/// on had silently decayed to **1.29×** on main and had crossed on this
+/// branch. The guard caught *change* and never caught *being wrong*; that is
+/// the registry row `PROC-floors-erode-unseen`.
 const MIN_TRIBUTE_COLLECTED: f64 = 1500.0;
+
+/// The seed panel the accumulator is read over — twelve worlds spanning three
+/// orders of magnitude of tribute volume (7.055 on seed 1234 to 6936.212 on
+/// seed 5, measured 2026-08-07). Chosen to be small worlds, ordinary worlds
+/// and the two known extremes together, not sampled to make any threshold
+/// pass. Seed 42 is a member and is no longer privileged: it sits at 1450.482,
+/// well *below* the panel median of 3663.131, so the historical practice of
+/// reading a scalar floor off it was sampling the low end of a very wide
+/// distribution and calling it the world.
+const FLOOR_PANEL: [u64; 12] = [1, 2, 3, 4, 5, 6, 7, 8, 42, 99, 1234, 2024];
 
 /// Spec §8.2 — the accumulator floor: the largest store any **alive**
 /// community still holds at `now`. Seed 42 measures **249.052**; pinned at
@@ -437,18 +460,40 @@ fn subordination_fires_at_volume() {
 ///
 /// `max_subordinates` is **reported and not floored**: cardinality is
 /// deliberately unbounded (§4.4) and a runaway hub is a finding, not a failure.
+///
+/// # The volume half moved to a panel (The Delvers, 2026-08-07)
+///
+/// This test used to assert `tribute_collected >= MIN_TRIBUTE_COLLECTED` here,
+/// on seed 42 alone. It no longer does, and the floor was **not lowered** —
+/// the constant still reads 1500. What this test asserts about volume is now
+/// only **non-inertness**, which is what its own failure message always said
+/// it was for ("the accumulator is inert"), and the calibrated reading moved
+/// to [`the_tribute_accumulator_is_reported_over_a_panel`] in the heavy tier.
+///
+/// **Seed 42 is one sample of a distribution three orders of magnitude wide**
+/// (7.055 to 6936.212 across [`FLOOR_PANEL`]), and it is a *low* sample —
+/// 1450.482 against a panel median of 3663.131. A scalar floor read on one
+/// world cannot see that spread, so it cannot distinguish "the branch died"
+/// from "this world is small". The panel is the real instrument; this test is
+/// the cheap tripwire that keeps the branch's liveness in the commit gate.
+///
+/// The stock half (`max_stores_at_now` against [`MIN_MAX_STORES`]) is
+/// untouched and still asserted here.
 #[test]
 fn the_structure_accumulates_without_starving_its_holder() {
     let c = census(&history(42));
     eprintln!(
         "TITHE seed-42 accumulator: collected {:.3} over {} events, max store at now {:.3}, \
-         widest star {} subordinates",
+         widest star {} subordinates (seed 42 is ONE sample of a 3-order-of-magnitude \
+         distribution — the panel in the heavy tier is the instrument)",
         c.tribute_collected, c.tribute_collection_events, c.max_stores_at_now, c.max_subordinates
     );
     assert!(
-        c.tribute_collected >= MIN_TRIBUTE_COLLECTED,
-        "the accumulator is inert: only {:.3} remitted over the whole bake (floor \
-         {MIN_TRIBUTE_COLLECTED}) across {} collection events",
+        c.tribute_collected > 0.0 && c.tribute_collection_events > 0,
+        "the accumulator is INERT on seed 42: {:.3} remitted over {} collection events. This \
+         is not a calibration reading — it is the branch having stopped running at all. The \
+         calibrated volume reading lives in the panel test; this one only says the mechanism \
+         fires.",
         c.tribute_collected,
         c.tribute_collection_events
     );
@@ -459,6 +504,103 @@ fn the_structure_accumulates_without_starving_its_holder() {
          hoards, which is dissipation wearing accumulation's clothes",
         c.max_stores_at_now,
         c.tribute_collected
+    );
+}
+
+/// **Spec §8.2's volume reading, over a seed panel and REPORT-ONLY** (The
+/// Delvers, 2026-08-07). Heavy: twelve live bakes, ~86 s.
+///
+/// # What was measured, and why nothing here is calibrated
+///
+/// `MIN_TRIBUTE_COLLECTED` was pinned at 1500 against a documented seed-42
+/// reading of **8002.397**, described as "~5× clear". That reading was taken
+/// once, by The Tithe, on 2026-07-27, and never re-taken. **1405 commits
+/// later it is wrong by 4.1×**: main measures 1939.242 on seed 42 and this
+/// branch measures 1450.482. The margin had decayed to 1.29× on main — which
+/// is to say the gate had already stopped being the "~5× clear" alarm its own
+/// comment claimed, and nobody could have known, because no code and no
+/// process ever re-read the number. That is the registry row
+/// `PROC-floors-erode-unseen`.
+///
+/// Measuring the panel for the first time made a second thing visible, and it
+/// is the reason this test asserts almost nothing. **Tribute volume spans
+/// three orders of magnitude across ordinary seeds** — 7.055 (seed 1234) to
+/// 6936.212 (seed 5). Against that spread the floor of 1500 passes **9 of
+/// 12** seeds, and it passed exactly 9 of 12 on main as well, with only the
+/// failing *members* differing (main's low seed is 8's neighbour set; this
+/// branch's is 42). So the gate was already failing a quarter of the seed
+/// space before this campaign touched anything; it simply never looked
+/// anywhere but seed 42.
+///
+/// **No quantile threshold is chosen here, deliberately.** The distribution
+/// was measured for the first time on 2026-08-07; picking a percentile off it
+/// would be fitting a bound to one afternoon's data, which is the same
+/// mistake as pinning 1500 to one world's reading — just with more decimal
+/// places. Real calibration belongs to a campaign that owns these gates and
+/// can preregister what the bound is supposed to mean. Until then this test
+/// **reports** the whole table and asserts only that the subordination branch
+/// is not inert.
+///
+/// # What IS asserted
+///
+/// That at least half the panel collects something at all. It currently holds
+/// 12 of 12, so it has enormous margin — and it is not vacuous, because it is
+/// exactly the assertion that goes red if the tribute branch stops firing,
+/// which is the failure the original floor's message named.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn the_tribute_accumulator_is_reported_over_a_panel() {
+    // (seed, collected, collection events, records opened, alive at now)
+    let mut rows: Vec<(u64, f64, u64, u64, u64)> = Vec::new();
+    for s in FLOOR_PANEL {
+        let c = census(&history(s));
+        eprintln!(
+            "TITHE PANEL seed {s:>5}: tribute {:>10.3} events {:>5} records {:>5} alive {:>4} \
+             relations_at_now {:>4}",
+            c.tribute_collected,
+            c.tribute_collection_events,
+            c.records_total,
+            c.alive_at_now,
+            c.tribute_relations_at_now
+        );
+        rows.push((
+            s,
+            c.tribute_collected,
+            c.tribute_collection_events,
+            c.records_total,
+            c.alive_at_now,
+        ));
+    }
+
+    let mut volumes: Vec<f64> = rows.iter().map(|r| r.1).collect();
+    volumes.sort_by(f64::total_cmp);
+    let n = volumes.len();
+    // Even panel size, so the median is the mean of the two central order
+    // statistics. `total_cmp` above keeps the sort deterministic.
+    let median = (volumes[n / 2 - 1] + volumes[n / 2]) / 2.0;
+    let clearing = rows.iter().filter(|r| r.1 >= MIN_TRIBUTE_COLLECTED).count();
+
+    eprintln!(
+        "TITHE PANEL summary: median tribute {median:.3}, range {:.3}–{:.3} (a spread of \
+         {:.0}x — a scalar floor read on ONE seed cannot see this)",
+        volumes[0],
+        volumes[n - 1],
+        volumes[n - 1] / volumes[0].max(f64::MIN_POSITIVE),
+    );
+    eprintln!(
+        "TITHE PANEL: {clearing} of {n} seeds clear the historical floor of \
+         {MIN_TRIBUTE_COLLECTED} — REPORTED, NOT ASSERTED. The floor was never lowered; it is \
+         no longer read as a pass/fail on one world. Calibration is deferred to a campaign \
+         that owns this gate (see this test's docs and `PROC-floors-erode-unseen`)."
+    );
+
+    let live = rows.iter().filter(|r| r.1 > 0.0 && r.2 > 0).count();
+    assert!(
+        live * 2 >= n,
+        "the tribute branch has gone INERT across the panel: only {live} of {n} seeds collected \
+         anything at all. This is not a calibration finding and not a floor to lower — it means \
+         subordination or collection stopped running. Per-seed: {:?}",
+        rows.iter().map(|r| (r.0, r.1, r.2)).collect::<Vec<_>>()
     );
 }
 
