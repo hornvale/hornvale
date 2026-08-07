@@ -891,6 +891,14 @@ impl<'w> Session<'w> {
     /// unresolved (not-here) `who` reads as not-hostile rather than
     /// erroring. This mechanic's whole consequence is Task 3's; this task
     /// stops at the gate.
+    ///
+    /// "Resolves exactly as `provoke`/`soothe` do" is load-bearing rather than
+    /// descriptive, and The Sighting is why: `colocated_npc` is now narrowed by
+    /// sight, so a creature the possession cannot see reads as not-hostile here
+    /// — the same answer an absent one gives. Reporting hostility for a
+    /// withheld creature would leak its disposition state through a `bool`,
+    /// which is the leak this method's shared resolution exists to avoid
+    /// re-inventing.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
     pub fn would_turn_hostile(&self, who: &str) -> bool {
         self.colocated_npc(who)
@@ -2644,13 +2652,32 @@ impl<'w> Session<'w> {
             .collect()
     }
 
-    /// Resolve `who` to one co-located NPC (The First Mark): an empty
-    /// argument selects the first NPC sharing this room (the common case —
-    /// a lone co-located NPC needs no name), otherwise `who` is matched as a
-    /// numeric entity id or a case-insensitive substring of an NPC's label,
-    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    /// Resolve `who` to one **sensed** co-located NPC (The First Mark): an empty
+    /// argument selects the first such NPC (the common case — a lone co-located
+    /// NPC needs no name), otherwise `who` is matched as a numeric entity id or
+    /// a case-insensitive substring of an NPC's label, mirroring `why`'s
+    /// resolution but restricted to NPCs actually here.
+    ///
+    /// **The fourth reader of [`Self::sensed_npcs`]** (The Sighting, fix round
+    /// 3), and the leak it closes is the same one a third time. `provoke`/
+    /// `soothe` resolve through here, and a *successful* act narrates the
+    /// creature by name — `You provoke <label>. They bristles.` — so an
+    /// unfiltered lookup disclosed exactly what the redaction was built to
+    /// withhold: presence, and disposition state, through a verb's success line.
+    /// A bare `provoke` was worse still, since it silently *selected* the hidden
+    /// creature. [`Self::would_turn_hostile`] rides the same resolution and so
+    /// narrows with it, which is what its own doc already promises.
+    ///
+    /// **This answers the game question conservatively: you cannot act on what
+    /// you cannot see.** That is a choice, not a derivation — "strike the thing
+    /// you heard but cannot see" is a perfectly good future mechanic. It would
+    /// be a deliberate feature with its own narration, though, not the residue
+    /// of a lookup nobody filtered.
+    ///
+    /// The unplaced row of `sensed_npcs`' table holds here as everywhere: a
+    /// creature the embedding could not place is sensed, so it stays provokable.
     fn colocated_npc(&self, who: &str) -> Option<&Npc> {
-        let here = self.colocated_npcs();
+        let here = self.sensed_npcs(self.sighting().as_ref());
         let who = who.trim();
         if who.is_empty() {
             return here.into_iter().next();
@@ -4282,6 +4309,18 @@ mod tests {
             "and `needs` must read it too, for the same reason: {}",
             session.needs()
         );
+        // ...and it stays ACTABLE-ON. The sight gate on `colocated_npc` (fix
+        // round 3) must narrow on sight and on nothing else: an undrawable
+        // creature is not an unseen one, so refusing to provoke it would make
+        // the placement scan decide what the player may do.
+        let acted = match session.handle(&format!("provoke {refused}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("provoke must not release"),
+        };
+        assert!(
+            acted.contains(&refused),
+            "an unplaced but present creature must stay provokable: {acted}"
+        );
     }
 
     #[test]
@@ -4399,6 +4438,34 @@ mod tests {
             !read.contains(&label),
             "`needs` must not read a creature sight withheld — it is the same \
              side channel `examine`'s gate closes, one verb over: {read}"
+        );
+
+        // THE THIRD (fix round 3), and the one that survived two rounds of
+        // closing the other two. `provoke`/`soothe` resolve through
+        // `colocated_npc`, and a SUCCESSFUL act narrates its target by name:
+        // `You provoke <label>. They bristles.` The leak is not that the action
+        // is permitted — that is a game question — but that the success line
+        // discloses presence and disposition state, which is the identical shape
+        // to the `needs` leak in a third location.
+        //
+        // Both forms are checked. The BARE form matters at least as much as the
+        // named one: it selects the first sensed NPC, and unfiltered it would
+        // silently pick the hidden creature without the player ever naming it.
+        for arg in ["", &label] {
+            let acted = match session.handle(&format!("provoke {arg}")) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("provoke must not release"),
+            };
+            assert!(
+                !acted.contains(&label),
+                "`provoke {arg:?}` named a creature sight withheld — a verb's \
+                 SUCCESS LINE is a disclosure channel: {acted}"
+            );
+        }
+        assert!(
+            !session.would_turn_hostile(&label),
+            "`would_turn_hostile` rides the same resolution, so it must not \
+             report a withheld creature's disposition either"
         );
     }
 

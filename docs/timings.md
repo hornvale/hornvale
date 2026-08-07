@@ -431,5 +431,7 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-06T23:47:00Z | gate | 460.403 | 2579.029 | 101.528 | 5.82 | 0 | 21ff57b9 | the-sighting | MacBookPro | 10 |
 | 2026-08-07T00:18:33Z | gate | 418.504 | 2619.181 | 86.871 | 6.47 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
 | 2026-08-07T00:21:14Z | rebaseline | 150.639 | 141.205 | 5.745 | 0.98 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
-| 2026-08-07T00:57:27Z | gate | 574.322 | 2640.020 | 108.904 | 4.79 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
-| 2026-08-07T00:59:39Z | rebaseline | 120.854 | 137.073 | 7.838 | 1.20 | 0 | 5cbc909c | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:57:27Z | gate | 574.322 | 2640.020 | 108.904 | 4.79 | 0 | 7eb98c45 | the-sighting | MacBookPro | 10 |
+| 2026-08-07T00:59:39Z | rebaseline | 120.854 | 137.073 | 7.838 | 1.20 | 0 | 7eb98c45 | the-sighting | MacBookPro | 10 |
+| 2026-08-07T01:20:55Z | gate | 373.515 | 2671.551 | 87.646 | 7.39 | 0 | 7eb98c45 | the-sighting | MacBookPro | 10 |
+| 2026-08-07T01:23:05Z | rebaseline | 121.829 | 137.833 | 8.663 | 1.20 | 0 | 7eb98c45 | the-sighting | MacBookPro | 10 |
