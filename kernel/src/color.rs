@@ -355,6 +355,16 @@ impl Projection {
     pub fn preserves(&self) -> &'static str {
         self.preserves
     }
+
+    /// The per-output-slot normalizers, exactly as carried — bit-exact, not
+    /// re-derived. This is what lets a caller (or a test) tell a *carried*
+    /// constant from a *derived* one before either has been rounded through
+    /// `to_srgb`'s `u8` output, which can absorb a difference this
+    /// accessor cannot.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn norms(&self) -> &[f64; 3] {
+        &self.norms
+    }
 }
 
 /// An eye: one sensitivity curve per channel. Humans have three photopic
@@ -1034,16 +1044,34 @@ mod tests {
 
     #[test]
     fn the_standard_observers_bytes_have_not_moved() {
-        // The byte-identity pin for this refactor. `Projection` CARRIES its
-        // normalizers rather than deriving them, because the shipped constants
-        // are the ROUNDED channel sums — deriving live would move every colour
-        // the standard observer has ever emitted. If this test fails, someone
-        // "simplified" `norms` into a computed sum.
+        // Two assertions below guard two DIFFERENT things; neither
+        // subsumes the other.
+        //
+        // The `norms()` assertion is bit-exact and catches CARRIED-vs-
+        // DERIVED: `Projection` carries its normalizers rather than
+        // deriving them, because the shipped constants are the ROUNDED
+        // channel sums — deriving live would move every colour the
+        // standard observer has ever emitted. A live-derived version
+        // differs from the carried constants by about 1 ULP on this
+        // model's curves, and `to_srgb`'s `u8` rounding at this mid-grey
+        // fixture ABSORBS that ULP — so only a comparison taken *before*
+        // quantization to a byte can catch a derive-instead-of-carry
+        // regression. (Confirmed by mutation below.)
+        //
+        // The `to_srgb` byte assertion is a *different* pin: the rgb/norms
+        // crossed-ordering guard (channel index vs. output slot). The
+        // norms assertion alone cannot see that bug, because it never
+        // touches `rgb`.
         let obs = standard_observer();
         let light = Illuminant::new([1.0; BANDS]).unwrap();
         let mid = obs.sense(&Reflectance::new([0.5; BANDS]).unwrap(), &light);
-        assert_eq!(obs.to_srgb(&mid).unwrap(), [188, 188, 188]);
         let p = obs.projection().expect("the standard observer projects");
         assert_eq!(p.name(), "native");
+        assert_eq!(
+            p.norms(),
+            &[LONG_NORM, MEDIUM_NORM, SHORT_NORM],
+            "norms must be the CARRIED constants, not a live-derived channel sum"
+        );
+        assert_eq!(obs.to_srgb(&mid).unwrap(), [188, 188, 188]);
     }
 }
