@@ -270,6 +270,7 @@ mod tests {
             palette: vec![crate::plan::PaletteEntry {
                 kind: "floor".to_string(),
                 chambers: vec![0],
+                color: None,
             }],
             cells: vec![0],
             you: crate::plan::PlanPoint { x: 0, y: 0 },
