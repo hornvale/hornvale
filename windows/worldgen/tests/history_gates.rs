@@ -60,6 +60,14 @@
 //!    displacement only, conflict displacement is the bake's `raided`/`fled`
 //!    and the cascade histogram (`history_tumult.rs`). Neither floor below
 //!    moved; both were set clear of a cross-seed minimum, and both still are.
+//!
+//! 5. **The Tense re-based gate 1 onto a seed SPREAD.** Capacity gained a time
+//!    axis, so displacement now scales with how much a given world's climate
+//!    actually moves rather than firing wholesale on every era flip. The
+//!    per-world spread is consequently enormous (seed 42 measures 4, seed 1234
+//!    measures 311), and a floor read off one world can no longer tell a mild
+//!    deep past from a dead bake. Gate 1 alone is therefore cross-seed; the
+//!    others still read seed 42, and the header above applies to them.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -69,10 +77,15 @@ use hornvale_worldgen::{
     goblinoid_region_overlap, history_for, migration_events, stratigraphy, territories,
 };
 
-// ---- Frozen thresholds (set BELOW the measured seed-42 values) -------------
+// ---- Frozen thresholds (set BELOW the measured values) --------------------
+//
+// Gates 2 and 3a are read off seed 42. Gate 1 is NOT, since The Tense — see
+// its comment for why a single world can no longer distinguish a mild deep
+// past from an inert bake.
 
 /// Gate 1. A run below this floor means climate-driven displacement went inert
-/// (the campaign's STOP condition).
+/// (the campaign's STOP condition). Read across [`MIGRATION_SEEDS`], not off
+/// seed 42.
 // The Sundering (moving sea) re-scope: the static 51 was inflated by
 // unphysical ocean-walking (the raw-mesh BFS strode across open ocean); the
 // moving-sea graph corrects it, and seed 42 measured 12. Displacement still
@@ -88,7 +101,48 @@ use hornvale_worldgen::{
 // on this world is 133, not 58 — 75 of those are conquest-relocations, which
 // `migration_events` now excludes by design (see its doc comment, and the
 // `migration_events_counts_climate_displacement_only` gate below).
-const MIGRATION_FLOOR: u64 = 5;
+// The Tense re-base (2026-08-05, Nathan's call): the floor is now read across a
+// SPREAD, not off seed 42. Two reasons, one old and one new.
+//
+// The old one is written three lines up and was never acted on: "5 was set
+// clear of the CROSS-SEED MINIMUM, not of seed 42". A cross-seed threshold
+// applied to a single world is a category error — it was only ever survivable
+// while seed 42 happened to sit well above it.
+//
+// The new one is that The Tense made displacement genuinely world-dependent.
+// Migration now scales with how much a world's climate actually MOVES, because
+// capacity varies by era instead of a binary mask displacing everyone on every
+// era flip. Seed 42's deep past is mild and it measures 4; seed 1234's is harsh
+// and it measures 311. Neither is a defect, and no single-seed floor can tell
+// the difference between a mild world and an inert bake — which is exactly what
+// a floor of 5 read off seed 42 was about to claim.
+//
+// So the gate asserts the two things that ARE general: the mechanism produces
+// displacement in volume somewhere, and it does so on more than one world.
+//
+// MEASURED at the re-base (`migration_events` per seed, BuildDepth::Settlements):
+//
+//   42:4   7:1   999_999:3   16_244_526_067_196_353_746:7   1234:311
+//   total 326, firing 5 of 5
+//
+// The floor is a STOP condition — "displacement went inert" — not a pin, so it
+// sits an order of magnitude below the measured total rather than just beneath
+// it: 25 is 13x under 326 and still an order of magnitude above the handful of
+// stragglers a genuinely dead bake would leave. The distribution is extremely
+// skewed (one world carries 95% of the total), which is a real property of the
+// new physics and not noise — MIGRATION_MIN_FIRING_SEEDS is what stops that one
+// world from satisfying the gate alone.
+const MIGRATION_FLOOR: u64 = 25;
+
+/// The spread the floor is read across — the same five worlds
+/// `history_shape_probe.rs` profiles, so the two instruments sample the same
+/// sample. Deliberately spans a mild deep past (42) and a harsh one (1234).
+const MIGRATION_SEEDS: [u64; 5] = [42, 7, 999_999, 16_244_526_067_196_353_746, 1234];
+
+/// How many of [`MIGRATION_SEEDS`] must show any displacement at all. Guards
+/// the failure mode a bare total cannot see: one harsh world carrying the whole
+/// sum while the mechanism is dead everywhere else.
+const MIGRATION_MIN_FIRING_SEEDS: usize = 3;
 
 /// Gate 2. Seed-42 measured 0.0466 region overlap under the moving sea (0.055
 /// pre-Sundering; raw cell-set overlap is a structural 0). A world above this
@@ -122,13 +176,41 @@ fn build(seed: Seed, depth: BuildDepth) -> hornvale_kernel::World {
 /// `fled + resettled` floor — see the module docs; raids are deferred to C3.)
 #[test]
 fn migration_fires_at_volume() {
-    let w = build(Seed(42), BuildDepth::Settlements);
-    let migrated = migration_events(&w);
+    let counts: Vec<(u64, u64)> = MIGRATION_SEEDS
+        .iter()
+        .map(|&s| {
+            (
+                s,
+                migration_events(&build(Seed(s), BuildDepth::Settlements)),
+            )
+        })
+        .collect();
+    let table = || {
+        counts
+            .iter()
+            .map(|(s, m)| format!("{s}:{m}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let total: u64 = counts.iter().map(|(_, m)| m).sum();
+    let firing = counts.iter().filter(|(_, m)| *m > 0).count();
+
     assert!(
-        migrated >= MIGRATION_FLOOR,
-        "displacement went inert: only {migrated} migration events on seed 42 \
-         (floor {MIGRATION_FLOOR}). The paleoclimate era swing is not displacing \
-         communities — re-tune the bake before trusting the placement."
+        total >= MIGRATION_FLOOR,
+        "displacement went inert across the spread: {total} migration events \
+         over {} seeds (floor {MIGRATION_FLOOR}) — [{}]. The paleoclimate era \
+         swing is not displacing communities — re-tune the bake before \
+         trusting the placement.",
+        MIGRATION_SEEDS.len(),
+        table()
+    );
+    assert!(
+        firing >= MIGRATION_MIN_FIRING_SEEDS,
+        "displacement fired on only {firing} of {} seeds (need \
+         {MIGRATION_MIN_FIRING_SEEDS}) — [{}]. A single world carrying the \
+         whole total would mean the mechanism is not general.",
+        MIGRATION_SEEDS.len(),
+        table()
     );
 }
 

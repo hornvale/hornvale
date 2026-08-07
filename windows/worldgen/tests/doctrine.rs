@@ -246,8 +246,18 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     // Re-found this merge: The Wearing's lexicon re-draw left seed 56 (the
     // prior constant) with an all-organized roster; a bounded 50..=60 scan
     // found seed 57's bugbear flagship still folk.
+    //
+    // Re-found again under The Tense (2026-08-05): era-varying capacity
+    // re-placed every world, and seed 57's BUGBEAR flagship went folk ->
+    // organized. The prescribed bounded 50..=60 scan (never the deleted
+    // 1..=60 sweep — decision 0093) found seven surviving folk flagships in
+    // the window: (54, hobgoblin), (55, kobold), (57, goblin), (57, human),
+    // (59, kobold), (60, hobgoblin), (60, kobold). Seed 57 still carries one,
+    // so only the KIND constant moves — bugbear -> goblin. Seven candidates in
+    // an eleven-seed window is also the reassuring half of the reading: folk
+    // cult-forms are common, and this smoke test is nowhere near degenerate.
     const FOLK_SMOKE_SEED: u64 = 57;
-    const FOLK_SMOKE_KIND: &str = "bugbear";
+    const FOLK_SMOKE_KIND: &str = "goblin";
     let w = generated(FOLK_SMOKE_SEED);
     let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
     let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");

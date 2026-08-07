@@ -197,6 +197,28 @@ measured, on a people authored for desert that has no desert at all. The
 gradient claim and the conservation guarantee are untouched; what is now known
 to be beyond the prior is *placing a species where its traits say it belongs*.
 
+*Partially re-scored up by [The Warren](./chronicle/the-warren.md), which
+supplies the first counterexample to the "can only modulate, never select"
+half.* The reasoning above is sound about the **condition product** —
+four tolerances multiplied together, each bounded in the unit interval, cannot
+overcome a supply term spanning orders of magnitude. But it silently assumes
+that a species' traits reach capacity *only* through that product. A realm does
+not. A kind that declares itself subterranean is scored against the chamber
+rather than the hillside **and multiplied by whether the cell holds a cave at
+all** — a hard zero, not a bounded tolerance, on eighty-eight percent of land.
+Measured over twenty-five worlds: 390,813 land cells with non-zero fit fall to
+46,993, and no supply magnitude anywhere recovers the excluded ones.
+
+So the sentence needs a qualifier rather than a reversal. *An authored
+tolerance* can only modulate. *An authored realm* selects, absolutely, and is
+the first mechanism in the model that places a species where its traits say it
+belongs by excluding everywhere else. The scope of the win is narrow and worth
+stating: it is one binary axis, carried by two fauna kinds, and it does nothing
+for the desert-authored people that started this paragraph — a surface kind
+still has no gate to be excluded by. Whether that generalises past caves is
+open, and is the first thing a campaign placing a *people* underground will
+find out.
+
 *Re-scored down by [The Keeping](./chronicle/the-keeping.md), which contradicts
 the sentence immediately above.* The gradient claim is **not** untouched — not
 because the gradient is wrong, but because the measurement offered for it could
@@ -233,6 +255,52 @@ the same defect, named a campaign early. The Keeping supplies the cause — the 
 field takes the scarcer of its two limits while the layer above it multiplies four
 tolerances together, so one half of the model obeys the law of the minimum and the
 other half does not — and measures the resulting compression at roughly fourfold.
+
+*Re-scored again by [The Tilth](./chronicle/the-tilth.md) and
+[The Tense](./chronicle/the-tense.md), which move the claim sideways rather than
+up or down.* The prior is now a strictly finer object than the one this section
+was written about, in two independent ways: capacity carries a **species** index
+(a cell is worth an amount *to someone*, so an authored niche can select rather
+than only modulate — the defect The Vacancy named and The Keeping traced) and an
+**era** index (so a glacial maximum makes ground poor instead of switching it
+off). Three mutually inconsistent oracles for the word "habitable" — an era mask,
+a capacity test, and a separate refugia rule, the first two disagreeing over
+roughly half of all land — collapsed to one (decision 0107).
+
+None of that is yet a promotion, and the reason is worth stating precisely. What
+the arc bought is that the model can now *express* the thing it was previously
+unable to say; what it did not buy is evidence that the values are right. The
+gradient claim's evidential standing, which The Keeping demoted, is untouched
+here — the floored-polar-term problem and the tidally-locked worlds inside the
+pinned average are both exactly as they were. And the change has a measured cost
+that no one predicted: replacing a gate with a continuous squeeze **compresses
+the variance between worlds**. A seed that had been permanently dead now carries
+36 communities across 70 sites; the flagship seed fell from 209 settlements to
+122, its chief settlements losing a third to a half of their people. Dead worlds
+live and rich worlds thin.
+
+The thousand-world census puts a number on the lower half at the close, and it
+is larger than the anecdote suggested: **231 of a thousand worlds could not seat
+a goblin flagship before, and one cannot after.** A quarter of the sample
+crossed from nameless to peopled, which is a real gain in how much of the seed
+space is worth visiting, and it is the half of this trade that is unambiguously
+good. The same census found flagships moving decisively inland — 73% coastal to
+22% — which nothing predicted and which no bet in this chapter had claimed
+either way.
+
+Whether the middle those worlds are converging on is
+the right middle is a question about the scale constant and the response curves,
+and it is open — but it is now *separable* from the structure, which it was not
+before, because the gate and the scale used to be the same knob.
+
+Two known defects are named and unstarted rather than fixed. Capacity reads each
+cell's **mean** temperature, and by Jensen's inequality that misestimates any
+nonlinear response — overestimating near the optimum, underestimating in the
+tails, and the tails are where refugia live. And `per_species_capacity` computes
+a **fundamental** niche (could this species live here alone) while the bake reads
+it as a **realized** one (does this species live here); ecology has kept those
+apart since Hutchinson, and competition exists downstream without ever feeding
+back.
 
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography

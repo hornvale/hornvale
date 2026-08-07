@@ -129,29 +129,44 @@ fn the_embedded_room_carries_its_own_pinned_schema_tag() {
 
 #[test]
 fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
-    // Some worlds generate no settlement at all, so there is no flagship to
-    // mint and no snapshot to take; the refusal must be the sim's own
-    // error. SCOUTED, never hardcoded: which seeds are settlement-free is a
-    // worldgen output that moves, and hardcoding one is exactly the bug that
-    // left `make vessel-check` red on main (Task 4 fixes the same mistake in
-    // drive.mjs — do not reintroduce it here).
-    let refused = (43u64..80).find_map(|seed| {
-        let w = hornvale_worldgen::build_world(
-            Seed(seed),
-            &Default::default(),
-            hornvale_worldgen::SkyChoice::Generated,
-            &Default::default(),
-            &Default::default(),
-        )
-        .expect("the world builds even with no settlement");
-        Session::start(&w, &PossessOpts::default())
-            .err()
-            .map(|e| (seed, e))
-    });
-    let (seed, err) = refused.expect("some seed in 43..80 has no settlement");
+    // A world with no settlement has no flagship to mint and no snapshot to
+    // take; the refusal must be the sim's own typed error, not a panic.
+    //
+    // THE FIXTURE IS CONSTRUCTED, NOT HUNTED. This used to scout `43..80` for a
+    // seed that happened to generate no settlement, on the reasoning that
+    // hardcoding one seed is fragile because settlement-freeness is a worldgen
+    // output that moves. That reasoning was right and the remedy was wrong:
+    // scouting is fragile in the same way, just later and more expensively. The
+    // Tense made empty worlds rare -- habitability became a relation between a
+    // species and a cell instead of a global -10 C snowline, so cold ground is
+    // poor rather than forbidden, and seed 1234, which had ZERO survivors for a
+    // whole campaign, now carries 36. The scout found nothing in 43..80,
+    // widening it to 43..400 meant building 357 full worlds, and neither
+    // outcome would have told a reader anything about the refusal path.
+    //
+    // `BuildDepth::Terrain` gives the fixture directly: terrain and climate are
+    // present, so `Session::start`'s derivation succeeds and the error under
+    // test is reachable, while the settlement stage never runs -- so the world
+    // is settlement-free BY CONSTRUCTION rather than by luck, on every seed,
+    // forever, in one build.
+    let wc = hornvale_worldgen::WorldComponents::assemble().expect("components assemble");
+    let w = hornvale_worldgen::build_world_to(
+        Seed(42),
+        &Default::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &Default::default(),
+        &Default::default(),
+        &wc,
+        hornvale_worldgen::BuildDepth::Terrain,
+    )
+    .expect("a terrain-depth world builds");
+
+    let err = Session::start(&w, &PossessOpts::default())
+        .err()
+        .expect("possession must refuse a settlement-free world, not succeed");
     assert!(
         matches!(err, hornvale_vessel::VesselError::NoSettlement),
-        "seed {seed} refused for the wrong reason: {err}"
+        "refused for the wrong reason: {err}"
     );
 }
 

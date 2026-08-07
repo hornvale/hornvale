@@ -133,7 +133,7 @@ mod tests {
         let inputs = CellMap::from_fn(&geo, |c| CarryingInput {
             is_land: true,
             temperature_c: 20.0,
-            moisture: 0.7,
+            precip_mm_yr: 1200.0,
             freshwater: 0.6,
             coastal: c.0 % 2 == 0,
             hostility: 0.0,

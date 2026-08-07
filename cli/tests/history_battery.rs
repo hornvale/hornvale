@@ -124,7 +124,15 @@ const MIN_RESTACKED_SITES: u64 = 1;
 // Tithe's task 3 found it, and it — not restacking — is now the one to watch.
 // **Neither floor is moved**: they are inertness floors, and both are still
 // cleared several times over.
-const SWEEP_MIGRATION_FLOOR: u64 = 5;
+// The Tense re-base (2026-08-06): this is now a SWEEP TOTAL, not a per-seed
+// floor, and the per-seed floor it replaces is gone. Measured 188 across nine
+// seeds with a min of 1 and a max of 124; five seeds fall under the old floor
+// of 5 while the mechanism is plainly alive. 25 is an order of magnitude under
+// the measurement and an order of magnitude above what a dead bake would leave
+// — an inertness floor, as it always was, but read where inertness is legible.
+// The twin in `windows/worldgen/tests/history_gates.rs` was re-based the same
+// way; this file's own header notes it had missed that twin once already.
+const SWEEP_MIGRATION_FLOOR: u64 = 25;
 const SWEEP_MIN_RESTACKED: u64 = 2;
 
 fn build(seed: Seed, depth: BuildDepth) -> World {
@@ -170,9 +178,16 @@ fn history_gates_full_world_and_cross_seed() {
     let region42 = goblinoid_region_overlap(&w);
     let strat42 = stratigraphy(&w);
 
+    // Seed 42 at FULL depth asserts the mechanism RUNS through the whole
+    // cascade, which is what this block is for ("not just Settlements depth").
+    // It does NOT assert volume any more: The Tense made displacement scale
+    // with how much a world's climate actually moves, and seed 42's deep past
+    // is mild — it measures 4. The volume claim belongs to the cross-seed
+    // sweep below, where it can tell a mild world from an inert bake.
     assert!(
-        mig42 >= MIGRATION_FLOOR,
-        "seed-42 displacement inert at Full depth: {mig42} < {MIGRATION_FLOOR}"
+        mig42 > 0,
+        "seed-42 displacement does not fire at all at Full depth: the gates do not \
+         survive the cascade"
     );
     let terr = territories(&w);
     for k in GOBLINOIDS {
@@ -202,9 +217,12 @@ fn history_gates_full_world_and_cross_seed() {
     let mut rows: Vec<Row> = Vec::new();
     for seed in SWEEP {
         let r = measure(seed, BuildDepth::Settlements);
+        // No per-seed floor — see SWEEP_MIGRATION_FLOOR's comment. Displacement
+        // must fire at all on each sampled world; the VOLUME is asserted across
+        // the sweep, after the loop.
         assert!(
-            r.migration >= SWEEP_MIGRATION_FLOOR,
-            "seed {} displacement inert: {} < {SWEEP_MIGRATION_FLOOR}",
+            r.migration > 0,
+            "seed {} displacement does not fire at all: {}",
             r.seed,
             r.migration
         );
@@ -222,6 +240,22 @@ fn history_gates_full_world_and_cross_seed() {
         );
         rows.push(r);
     }
+
+    // THE VOLUME CLAIM, across the sweep rather than per seed. Measured on this
+    // tree: 21, 3, 22, 1, 4, 4, 8, 124, 1 across seeds 1/2/3/7/13/42/100/256/777
+    // — total 188, every world firing. Five of the nine now sit under the old
+    // per-seed floor of 5, which is why that floor had to go: The Tense made
+    // displacement scale with how much a world's climate actually MOVES, so a
+    // per-seed floor cannot tell a mild deep past from an inert bake. Seed 256
+    // carries two thirds of the total on its own, so the firing count above is
+    // what stops that one world from satisfying this alone.
+    let swept: u64 = rows.iter().map(|r| r.migration).sum();
+    assert!(
+        swept >= SWEEP_MIGRATION_FLOOR,
+        "displacement went inert across the sweep: {swept} events over {} seeds \
+         (floor {SWEEP_MIGRATION_FLOOR})",
+        rows.len()
+    );
 
     // The negative depth/capacity correlation is the sweep's robust CENTRAL
     // TENDENCY, not a per-seed universal (re-scoped 2026-07-23, deliberately,

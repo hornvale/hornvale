@@ -134,7 +134,16 @@ fn repl_answers_sky_village_and_belief() {
     let out2 = child2.wait_with_output().unwrap();
     assert!(out2.status.success());
     let stdout2 = String::from_utf8(out2.stdout).unwrap();
-    assert!(stdout2.contains("celestial-body"), "why answered");
+    // The Tense (2026-08-05): re-aimed at structure, exactly as
+    // `repl::tests::why_explains_belief_one` was and for the same reason. The
+    // first belief used to mythologize a celestial body; under seed 42's
+    // re-placement it mythologizes heat. Asserting the phenomenon LINK rather
+    // than one phenomenon's name keeps the exit criterion ("why answers")
+    // honest whichever way the draw falls.
+    assert!(
+        stdout2.contains("phenomenon kind a belief mythologizes:"),
+        "why answered: {stdout2}"
+    );
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

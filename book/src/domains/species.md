@@ -254,7 +254,10 @@ authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
 potency, social organization, life schedule — the row every kind carries and
-the packer and habitat model read)
+the packer and habitat model read), plus a **sparse** habitat-realm component
+carried only by kinds that do not live on the surface: two today, the xorn and
+the rust monster, whose capacity is scored against a chamber's conditions and
+gated on whether the cell holds a cave at all
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,

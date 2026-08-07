@@ -159,8 +159,21 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
     let bios: Vec<&hornvale_species::BiosphereTraits> =
         wc.biosphere.iter().map(|(_, b)| b).collect();
+    // Same `wc.biosphere` order as `bios`, so the realm slice stays
+    // index-aligned — a kind absent from the sparse habitat-realm store
+    // defaults to `Surface`.
+    let realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
     let ks = hornvale_worldgen::per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
     );
 
     let submerged: Vec<hornvale_kernel::CellId> =
@@ -435,11 +448,38 @@ fn settlements_and_dominants_diversify_on_seed_42() {
     // competitor now sweeps every MINERAL stronghold at seed 42 and xorn
     // holds none — a measured consequence of the re-authoring, not a
     // regression in the per-axis supply field this test otherwise pins.
+    // ---- AND FALSIFIED AGAIN AT THE MERGE (The Tense, 2026-08-06). ----
+    //
+    // The Deep Realm's repair above does not survive this campaign's
+    // productivity model, and the margin is exactly one settlement.
+    //
+    // Measured on the merged tree: rust-monster holds **1** dominant cell and
+    // xorn holds none. `MIN_SETTLEMENTS_FOR_DOMINANCE` is 2 — a kind topping
+    // exactly one attractor is the Confluence campaign's denominator artifact,
+    // measurement noise rather than placement — so neither specialist clears
+    // the ruler. On main, where rust-monster's sharpened curves face the old
+    // symmetric-tent productivity field, it clears; here the Lieth Miami model
+    // lifts every BIOMASS-fed kind (giant-squid 1160, twig-blight 577) and the
+    // mineral niche loses the margin it had.
+    //
+    // Neither campaign could have seen this alone. The Deep Realm re-authored
+    // the curves against main's physics; The Tense replaced the physics without
+    // touching the curves. This is precisely the semantic collision under a
+    // clean merge that the preflight says it cannot score, and it is recorded
+    // rather than tuned away — moving either the threshold or a niche constant
+    // to recover one settlement would be a post-unblinding rescue.
+    //
+    // The STRUCTURAL claims are unaffected and still asserted above: the
+    // peopled roster is unchanged, T2's dot product still differentiates more
+    // dominants than the baseline, and the union clears the preregistered
+    // floor. What is withdrawn is the per-kind prediction, for the second time.
     assert!(
-        material_dominants.contains("xorn") || material_dominants.contains("rust-monster"),
-        "the shared pure-MINERAL niche (xorn, rust-monster) should clear the dominance ruler \
-         somewhere once mineral supply is its own spatial field, not a rescale of \
-         base_carrying; dominant counts: {dominant_counts:?}"
+        !material_dominants.contains("xorn") && !material_dominants.contains("rust-monster"),
+        "a pure-MINERAL specialist cleared the dominance ruler again ({dominant_counts:?}) — \
+         both The Demesne's prediction and The Deep Realm's repair of it were falsified \
+         under The Tense's productivity model, and this records that. rust-monster was ONE \
+         settlement short; if it is back, re-read the comment above and establish which \
+         productivity model is in play before flipping this."
     );
 }
 
@@ -509,7 +549,16 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     let trop_mean = trop_sum / f64::from(trop_n);
     let pole_mean = (pole_sum / f64::from(pole_n)).max(POLE_FLOOR);
     let ratio = trop_mean / pole_mean;
-    println!("seed 42 capacity-by-abs-latitude (live, post-the-demesne T1/T2): {ratio:.4}");
+    // The decomposition is PRINTED, not just the ratio. The Keeping found this
+    // metric's degeneracy by reading a doc comment; making it visible in the
+    // run output is cheaper than making the next reader do that again.
+    let raw_pole_mean = pole_sum / f64::from(pole_n);
+    let pole_is_floored = raw_pole_mean < POLE_FLOOR;
+    println!(
+        "seed 42 capacity-by-abs-latitude: ratio={ratio:.4} \
+         (trop_mean={trop_mean:.6} over {trop_n} cells, raw_pole_mean={raw_pole_mean:.6} \
+         over {pole_n} cells, pole floored at {POLE_FLOOR}: {pole_is_floored})"
+    );
     assert!(
         ratio >= 3.0,
         "capacity-by-abs-latitude on seed 42 fell to {ratio:.4} (below the preregistered floor \
@@ -544,11 +593,55 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // (the poles stay closed by `temp_response`, zero below 2 C), so opening it
     // must add more to `trop_sum` than to `pole_sum` and the ratio must RISE.
     // It rose, by 0.18%. The preregistered floor of 3 still clears tenfold.
+    //
+    // ---- The Tense re-pin (2026-08-05): 31.0649 -> 35.4171, and the RATIO IS
+    // ---- NOT A GRADIENT. Read this before touching the number again.
+    //
+    // MECHANISM, named as this comment's convention requires: this branch
+    // replaced the productivity model. `temp_response` — a symmetric tent
+    // peaking at 22 C and reaching exactly zero a little above freezing — is
+    // gone, and `carrying_capacity` now implements the Lieth & Box (1972)
+    // Miami model it had always CITED but never had: a monotone, saturating
+    // temperature term, min'd with a precipitation term on real mm/yr instead
+    // of a normalised moisture in [0,1]. That is The Keeping's headline defect
+    // being repaired, motivated by decision 0106.
+    //
+    // THE DIRECTION CHECK CANNOT BE RUN, and that is the finding. Measured
+    // here: raw_pole_mean = 0.004508, still BELOW `POLE_FLOOR`. The polar term
+    // is therefore pinned at the floor, and
+    //
+    //     ratio == trop_mean / POLE_FLOOR == 100 * trop_mean, exactly
+    //     (0.354171 * 100 = 35.4171, which is the whole of the drift)
+    //
+    // so this quantity carries no polar information at all. It is the tropical
+    // mean in different units. There is no gradient in it whose direction could
+    // confirm or refute a mechanism — which is precisely the degeneracy The
+    // Keeping recorded ("a ratio computed against a floored zero is largely a
+    // statement about the floor") and which the Confidence Gradient already
+    // demotes.
+    //
+    // WHAT THIS ASSERTION IS, THEREFORE. It is a drift TRIPWIRE on scalar-path
+    // productivity — an internal-consistency check on a Hornvale-internal
+    // number, which decision 0106 rules a VALID use of internal measurement.
+    // It is NOT evidence for the biomass-by-latitude gradient; treating it as
+    // evidence would be 0106's CIRCULAR cell, which names
+    // `capacity-by-abs-latitude` explicitly. The preregistered floor of 3
+    // above is the real surviving claim, and it clears tenfold.
+    //
+    // WHY THE POLES ARE STILL ~ZERO, given the tent that zeroed them is gone.
+    // Not the productivity field any more: `npp_temperature` is positive
+    // everywhere. It is `species_carrying_input` — the per-species TOLERANCE in
+    // `ConditionNiche` — and no authored people tolerates polar cold. So the
+    // polar zero has moved from being a property of the ground to being a
+    // property of the ROSTER, which is where the retired tent's own doc comment
+    // says tolerance belongs. Same number, different and better-located cause;
+    // a cold-adapted or subterranean people would now lift it off the floor,
+    // where before nothing could.
     assert!(
-        (ratio - 31.0649).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.0649, the post-Keeping-B \
-         scalar-path reading) — something outside the-demesne's per-axis \
-         supply fields moved this K"
+        (ratio - 35.4171).abs() < 1e-3,
+        "scalar-path productivity drifted: {ratio:.4} (expected ~35.4171). NOTE this is \
+         100 * trop_mean while the polar term sits on its floor — check the printed \
+         decomposition above before assuming anything latitudinal moved."
     );
 }
 

@@ -117,7 +117,7 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{ConditionResponse, KindId, Seed};
-use hornvale_species::{BiosphereTraits, ConditionNiche, biosphere_registry};
+use hornvale_species::{BiosphereTraits, ConditionNiche, HabitatRealm, biosphere_registry};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
@@ -160,16 +160,36 @@ const MIN_SETTLEABLE_CELLS: usize = 100_000;
 ///
 /// | case | cv(human variant) | cv(goblin) | cv_ratio | \|ratio − 1\| | n cells |
 /// |---|---|---|---|---|---|
-/// | real (human's own niche) | 0.4641 | 0.4871 | 0.9528 | **0.0472** | 142,587 |
-/// | mutated (human's `condition_niche` ← goblin's) | 0.4813 | 0.4871 | 0.9882 | **0.0118** | 142,590 |
+/// | real (human's own niche) | 1.0675 | 1.0827 | 0.9859 | **0.0141** | 438,018 |
+/// | mutated (human's `condition_niche` ← goblin's) | 1.0793 | 1.0826 | 0.9969 | **0.0031** | 437,968 |
 ///
-/// `0.02` sits strictly between the two measured gaps, with margin on both
-/// sides (real is 136% above the floor; mutated is 41% below it) - see
+/// **Re-derived by The Tense (2026-08-06), by this floor's own rule rather than
+/// by lowering it to pass.** The rule is that the floor sits strictly between
+/// the two measured gaps; both gaps moved, so the floor moves with them. The
+/// prior numbers were real 0.0472 / mutated 0.0118 against a floor of 0.02.
+///
+/// What actually happened is worth reading before touching this again, because
+/// "the gap shrank 3.3x" invites the wrong conclusion. Era-varying capacity
+/// gives cold ground real capacity, so the scored cell population TRIPLED
+/// (142,587 → 438,018) and both species' fit dispersions MORE THAN DOUBLED
+/// (human 0.4641 → 1.0675, goblin 0.4871 → 1.0827). Against that much larger
+/// and more varied sample the two peoples' dispersions are relatively closer,
+/// which is what the falling gap records.
+///
+/// The DISCRIMINATOR did not weaken — it sharpened. Real-vs-mutated separation
+/// is now 4.55x (0.0141 / 0.0031) against 4.00x before. This test can still
+/// tell human's niche from goblin's, and slightly better than it could; what it
+/// can no longer do is clear an absolute floor calibrated against a
+/// three-times-smaller sample.
+///
+/// `0.007` sits strictly between the two measured gaps, with margin on both
+/// sides (real is 101% above the floor; mutated is 56% below it) — the same
+/// two-sided construction the 0.02 had, re-measured. See
 /// `substituting_goblins_niche_for_humans_is_detected` for the mutation
 /// proof this margin is drawn from, and this file's module doc comment for
 /// why elevation's `devotion` specifically cannot be part of what widened
 /// the real gap, and for the width-only reading's own numbers.
-const CV_RATIO_GAP_FLOOR: f64 = 0.02;
+const CV_RATIO_GAP_FLOOR: f64 = 0.007;
 
 /// Population coefficient of variation (stddev / mean) of `vals`.
 ///
@@ -194,12 +214,21 @@ fn coefficient_of_variation(vals: &[f64]) -> f64 {
 /// narrowed here to the two kinds under comparison. Both vectors are the
 /// same length and indexed cell-for-cell, same as `measure_one`'s
 /// `per_people_fits` there.
-fn measure_fit_pair(
+/// Every variant's `(human_fits, goblin_fits)` pair for one seed, from **one**
+/// world build and **one** `per_species_suitability` call.
+///
+/// Scoring every variant alongside goblin in a single call is exact, not an
+/// approximation: that function hoists its supply fields out of the
+/// per-species loop, so a kind's K does not depend on which other kinds it is
+/// scored beside. Verified by this battery's own numbers, which did not move
+/// when it changed shape.
+fn measure_fits(
     seed: Seed,
-    bio_a: &BiosphereTraits,
-    bio_b: &BiosphereTraits,
-) -> (Vec<f64>, Vec<f64>) {
-    let bios: [&BiosphereTraits; 2] = [bio_a, bio_b];
+    humans: &[BiosphereTraits],
+    goblin: &BiosphereTraits,
+) -> Vec<(Vec<f64>, Vec<f64>)> {
+    let mut bios: Vec<&BiosphereTraits> = humans.iter().collect();
+    bios.push(goblin);
 
     let world = build_world(
         seed,
@@ -226,27 +255,42 @@ fn measure_fit_pair(
         hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
     };
 
+    // Every kind here is peopled and surface-scored — absent from the sparse
+    // habitat-realm store, so all default to `Surface`.
+    let realm = vec![HabitatRealm::SURFACE; bios.len()];
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
     );
     // Build-local dense index -> slot mapping (per_species_suitability's doc
-    // comment): `bios` above has bio_a at index 0, bio_b at index 1, so the
-    // tag IS the position - looked up rather than assumed, matching the
-    // rebuild-per-seed discipline `generalist_baseline.rs` documents.
-    let k_a = &ks.iter().find(|(tag, _)| *tag == 0).unwrap().1;
-    let k_b = &ks.iter().find(|(tag, _)| *tag == 1).unwrap().1;
+    // comment): `bios` above holds the human variants in order and goblin
+    // last, so the tag IS the position - looked up rather than assumed,
+    // matching the rebuild-per-seed discipline `generalist_baseline.rs`
+    // documents.
+    let at = |tag: u32| &ks.iter().find(|(t, _)| *t == tag).unwrap().1;
+    let k_goblin = at(humans.len() as u32);
 
-    let mut fits_a: Vec<f64> = Vec::new();
-    let mut fits_b: Vec<f64> = Vec::new();
-    for cell in geo.cells() {
-        let va = *k_a.get(cell);
-        let vb = *k_b.get(cell);
-        if va >= VIABILITY_FLOOR || vb >= VIABILITY_FLOOR {
-            fits_a.push(va);
-            fits_b.push(vb);
-        }
-    }
-    (fits_a, fits_b)
+    // Each variant keeps its OWN viability filter against goblin: the
+    // surviving cell set differs per variant, which is why goblin's fits are
+    // re-collected per variant rather than shared. Pooling them would quietly
+    // change every reported cv(goblin).
+    humans
+        .iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let k_h = at(i as u32);
+            let mut fits_h: Vec<f64> = Vec::new();
+            let mut fits_g: Vec<f64> = Vec::new();
+            for cell in geo.cells() {
+                let vh = *k_h.get(cell);
+                let vg = *k_goblin.get(cell);
+                if vh >= VIABILITY_FLOOR || vg >= VIABILITY_FLOOR {
+                    fits_h.push(vh);
+                    fits_g.push(vg);
+                }
+            }
+            (fits_h, fits_g)
+        })
+        .collect()
 }
 
 /// `goblin`'s own authored `ConditionNiche`, read from the canonical
@@ -297,9 +341,21 @@ fn human_niche_with_goblins_widths() -> ConditionNiche {
 /// the K build (mass, resource niche, and potency stay human's own).
 /// Asserts [`MIN_SETTLEABLE_CELLS`] before returning - see that constant's
 /// doc for why a shrunk-but-nonempty population is dangerous here.
-fn cv_ratio_human_vs_goblin(override_human_niche: Option<ConditionNiche>) -> f64 {
+/// Every variant's `cv_ratio` against goblin, over **one** pass of the seed
+/// sweep. `None` means human's own authored niche; `Some(n)` substitutes `n`.
+///
+/// **Why this takes a slice rather than being called once per variant.** The
+/// world build does not depend on the niche at all — the niche enters at
+/// `per_species_suitability`, long after genesis — so calling a one-variant
+/// helper N times rebuilt the same thirty worlds N times.
+/// `substituting_goblins_niche_for_humans_is_detected` asks three questions,
+/// and so paid for **ninety world builds to look at thirty worlds**. One
+/// sweep answers all of them, and the reported numbers are unchanged because
+/// nothing about the measurement moved — only how many times the same worlds
+/// were generated.
+fn cv_ratios(variants: &[Option<ConditionNiche>]) -> Vec<f64> {
     let registry = biosphere_registry();
-    let mut human = registry
+    let base_human = registry
         .get(&KindId("human"))
         .expect("human is in the canonical registry")
         .clone();
@@ -307,40 +363,55 @@ fn cv_ratio_human_vs_goblin(override_human_niche: Option<ConditionNiche>) -> f64
         .get(&KindId("goblin"))
         .expect("goblin is in the canonical registry")
         .clone();
-    if let Some(niche) = override_human_niche {
-        human.condition_niche = niche;
-    }
 
-    let mut fits_human: Vec<f64> = Vec::new();
-    let mut fits_goblin: Vec<f64> = Vec::new();
+    let humans: Vec<BiosphereTraits> = variants
+        .iter()
+        .map(|override_niche| {
+            let mut h = base_human.clone();
+            if let Some(niche) = override_niche {
+                h.condition_niche = *niche;
+            }
+            h
+        })
+        .collect();
+
+    let mut fits_human: Vec<Vec<f64>> = vec![Vec::new(); variants.len()];
+    let mut fits_goblin: Vec<Vec<f64>> = vec![Vec::new(); variants.len()];
     for seed in SEEDS {
-        let (h, g) = measure_fit_pair(Seed(seed), &human, &goblin);
-        fits_human.extend(h);
-        fits_goblin.extend(g);
+        for (i, (h, g)) in measure_fits(Seed(seed), &humans, &goblin)
+            .into_iter()
+            .enumerate()
+        {
+            fits_human[i].extend(h);
+            fits_goblin[i].extend(g);
+        }
     }
 
-    assert!(
-        fits_human.len() >= MIN_SETTLEABLE_CELLS,
-        "only {} settleable cells pooled over {} seeds (floor {MIN_SETTLEABLE_CELLS}); \
-         cv_ratio on a population this small cannot be trusted - see MIN_SETTLEABLE_CELLS's doc",
-        fits_human.len(),
-        SEEDS.count()
-    );
-
-    let cv_human = coefficient_of_variation(&fits_human);
-    let cv_goblin = coefficient_of_variation(&fits_goblin);
-    let ratio = cv_human / cv_goblin;
-    println!(
-        "cv(human) = {cv_human:.4}, cv(goblin) = {cv_goblin:.4}, cv_ratio = {ratio:.4}, n = {} cells",
-        fits_human.len()
-    );
-    ratio
+    (0..variants.len())
+        .map(|i| {
+            assert!(
+                fits_human[i].len() >= MIN_SETTLEABLE_CELLS,
+                "only {} settleable cells pooled over {} seeds (floor {MIN_SETTLEABLE_CELLS}); \
+                 cv_ratio on a population this small cannot be trusted - see MIN_SETTLEABLE_CELLS's doc",
+                fits_human[i].len(),
+                SEEDS.count()
+            );
+            let cv_human = coefficient_of_variation(&fits_human[i]);
+            let cv_goblin = coefficient_of_variation(&fits_goblin[i]);
+            let ratio = cv_human / cv_goblin;
+            println!(
+                "cv(human) = {cv_human:.4}, cv(goblin) = {cv_goblin:.4}, cv_ratio = {ratio:.4}, n = {} cells",
+                fits_human[i].len()
+            );
+            ratio
+        })
+        .collect()
 }
 
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn human_is_not_goblin_recentred() {
-    let cv_ratio = cv_ratio_human_vs_goblin(None);
+    let cv_ratio = cv_ratios(&[None])[0];
     let gap = (cv_ratio - 1.0).abs();
     println!("cv_ratio (real) = {cv_ratio:.4}, |cv_ratio - 1| = {gap:.4}");
     assert!(
@@ -354,8 +425,14 @@ fn human_is_not_goblin_recentred() {
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn substituting_goblins_niche_for_humans_is_detected() {
-    let real = cv_ratio_human_vs_goblin(None);
-    let mutated = cv_ratio_human_vs_goblin(Some(goblin_niche_from_registry()));
+    // All three variants in ONE seed sweep — see `cv_ratios`. The width-only
+    // reading below comes out of the same pass rather than a third rebuild.
+    let ratios = cv_ratios(&[
+        None,
+        Some(goblin_niche_from_registry()),
+        Some(human_niche_with_goblins_widths()),
+    ]);
+    let (real, mutated, width_only) = (ratios[0], ratios[1], ratios[2]);
     let real_gap = (real - 1.0).abs();
     let mutated_gap = (mutated - 1.0).abs();
     println!(
@@ -394,7 +471,6 @@ fn substituting_goblins_niche_for_humans_is_detected() {
     // from goblin's, so there is no "correct" direction to gate here.
     // Reported so the campaign knows whether the real gap is carried by
     // devotion (the documented, intended contrast) or by width.
-    let width_only = cv_ratio_human_vs_goblin(Some(human_niche_with_goblins_widths()));
     let width_only_gap = (width_only - 1.0).abs();
     println!(
         "cv_ratio width-only (human devotions+optima, goblin widths) = {width_only:.4} (gap {width_only_gap:.4})"

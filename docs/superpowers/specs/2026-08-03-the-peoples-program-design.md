@@ -122,6 +122,10 @@ descendant of the finding that produced this document.
   Underdark    lifespan       |
       \           /           |
        \         /            |
+        C2w  THE WARREN       |    (inserted 2026-08-06; the realm
+     the placement layer      |     becomes real before anyone is
+     learns to ask which      |     authored into it)
+          realm               |
     +-------+-------+         |
     |               |         |
    C2c             C2d <------+
@@ -178,8 +182,35 @@ was confirmed by a live call on 2026-08-06 and reproduces exactly** — see
 `2026-08-06-the-long-age-design.md` §1, which also records four findings the
 source read did not have.
 
+**C2w — The Warren.** *Inserted 2026-08-06 between C2b and C2c, on C2t's
+argument: every dwarf authored before it would be authored in a frame it
+changes.* C2a re-authored xorn and rust monster for true subterranean
+conditions and shipped `subterranean_substrate`, but nothing in the placement
+path called it — its only consumer in the workspace was a test, so those two
+kinds were scored against the sunlit surface above them. **Rung 2, expressible
+and unread.** C2w gives a kind an authored `HabitatRealm` and gates a
+subterranean kind on whether the cell holds a cave at all. Measured: non-zero land
+falls from 100 % to 12 % — the cave fraction — and world identity moved in
+**zero** of 25 seeds, because settlement genesis packs only peopled species.
+
+**Half the mechanism ships live, and C2c must know which half.** The cave
+**gate** works. The **substrate swap does not currently bind**: The Tilth's
+Liebig minimum floors temperature, moisture and insolation by sovereignty and
+leaves elevation bare, so the unfloored elevation axis is the sole determinant,
+and a chamber inherits the elevation of the ground above it. Going underground
+improves moisture (.585→.787) and insolation (.467→.840) and the minimum never
+sees it. Stated generally: **a non-lethal preference cannot matter while an
+unfloored axis is scarcer.** A two-tier gate/modifier tolerance exists in
+shadow mode (The Tense §3.3); when it binds, a tripwire in
+`warren_readout.rs` reddens on purpose. Full spec:
+`2026-08-06-the-warren-design.md` §10.3.
+
 **C2c — The Delvers.** Dwarves ×5: Hill (surface), Mountain and Duergar
-(subterranean, different strata), Gully, Desert. Their shared `dwarf` family
+(subterranean, different strata), Gully, Desert. **Mountain and Duergar can now
+be authored honestly** — a declared realm rather than a low-insolation surface
+curve standing in for *underground*, which is the fake C2a's F5 removed and
+which C2c would otherwise have recreated. Their realm rows belong in the
+coverage table, not only the biosphere registry. Their shared `dwarf` family
 label crosses two members, which makes a `family_proto` entry in
 `hornvale_language` **mandatory** — today only goblinoid, draconic and plant
 are multi-member families. First people to live in the Deep Realm.

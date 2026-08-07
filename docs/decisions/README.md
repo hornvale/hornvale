@@ -145,3 +145,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0103](0103-suitability-and-headcount-are-distinct-types.md) | Dimensionless suitability and headcount capacity are distinct types | Accepted |
 | [0104](0104-a-threshold-must-know-its-variates-distribution.md) | A threshold must know the distribution of the variate it reads — warp at the call site | Accepted |
 | [0105](0105-water-keeps-bands-rock-becomes-a-graph.md) | Water keeps bands, rock becomes a graph — supersedes The Stratum's D3 for the rock realm only | Accepted |
+| [0106](0106-a-constants-justification-must-match-its-kind.md) | A constant's justification must match its kind | Accepted |
+| [0107](0107-habitability-is-a-relation-not-a-constant.md) | Habitability is a relation, not a constant | Accepted |

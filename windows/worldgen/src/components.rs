@@ -11,7 +11,9 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{ComponentStore, KindId};
-use hornvale_species::{BiosphereTraits, MindVector, PerceptionVector, SocietyVector};
+use hornvale_species::{
+    BiosphereTraits, HabitatRealm, MindVector, PerceptionVector, SocietyVector,
+};
 
 use crate::BuildError;
 
@@ -45,6 +47,9 @@ pub struct WorldComponents {
     pub culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
     /// Material-kind traits (terrain-owned; no biosphere row).
     pub material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
+    /// Which realm a kind's carrying capacity is scored in (The Warren).
+    /// Sparse: absence means [`HabitatRealm::Surface`].
+    pub habitat_realm: ComponentStore<KindId, HabitatRealm>,
 }
 
 impl WorldComponents {
@@ -67,6 +72,7 @@ impl WorldComponents {
         let deity = hornvale_religion::deity_registry();
         let culture = hornvale_culture::culture_registry();
         let material = hornvale_terrain::material_registry();
+        let habitat_realm = hornvale_species::habitat_realm_registry();
 
         check_integrity(
             &biosphere,
@@ -91,6 +97,7 @@ impl WorldComponents {
             deity,
             culture,
             material,
+            habitat_realm,
         })
     }
 
@@ -115,6 +122,7 @@ impl WorldComponents {
         deity: ComponentStore<KindId, hornvale_religion::DeityTraits>,
         culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
         material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
+        habitat_realm: ComponentStore<KindId, HabitatRealm>,
     ) -> Result<Self, BuildError> {
         check_integrity(
             &biosphere,
@@ -139,6 +147,7 @@ impl WorldComponents {
             deity,
             culture,
             material,
+            habitat_realm,
         })
     }
 }
@@ -714,6 +723,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         );
         // Match the message, not just the variant: the perception check
         // follows the psyche check in the same loop, and red-dragon carries a
@@ -757,6 +767,7 @@ mod tests {
             lexicon,
             family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),

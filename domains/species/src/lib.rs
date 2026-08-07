@@ -1799,6 +1799,51 @@ impl LifeSchedule {
     }
 }
 
+/// Which environmental frame a kind's carrying capacity is scored in (The
+/// Warren). `domains/climate` owns the richer `Realm { medium, access }`;
+/// this is deliberately NOT that type — a domain crate may not depend on a
+/// sibling domain, and what the placement layer needs is a two-valued
+/// question, not a realm vocabulary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HabitatRealm {
+    /// Scored against the surface substrate — every kind not in the store.
+    Surface,
+    /// Scored against the subterranean substrate, and gated by whether the
+    /// cell holds a cave at all. A void that does not exist is not habitat.
+    Subterranean,
+}
+
+impl HabitatRealm {
+    /// The realm a kind absent from [`habitat_realm_registry`] carries.
+    pub const SURFACE: HabitatRealm = HabitatRealm::Surface;
+}
+
+impl Component for HabitatRealm {}
+
+/// The sparse habitat-realm component: **only** kinds that are not
+/// `Surface` appear. Two rows today, both re-homed by The Deep Realm, whose
+/// niches have been authored for darkness and near-saturation since that
+/// campaign and scored against sunlit surface cells until this one.
+///
+/// Sparse rather than a `BiosphereTraits` field because this has a single
+/// consumer (`per_species_suitability`) which holds a slice, not a row —
+/// the consumer-count rule The Long Age established, which gave the
+/// opposite answer there because the life schedule had six consumers each
+/// already holding the row.
+pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
+    [
+        // A cave-dark, damp mineral-eater: C2a measured its subterranean fit
+        // at ~2.5x its surface fit once the low-insolation proxy came out.
+        (KindId("rust-monster"), HabitatRealm::Subterranean),
+        // Climate-indifferent by potency rather than by curve — C2a measured
+        // its ratio at 1.02, flat within noise. Listed because it LIVES
+        // underground, not because scoring it there will move it.
+        (KindId("xorn"), HabitatRealm::Subterranean),
+    ]
+    .into_iter()
+    .collect()
+}
+
 /// The biosphere component: every entity has one. The packer and the
 /// habitat/niche-K layer read only these traits.
 /// type-audit: bare-ok(identifier-text)

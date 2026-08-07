@@ -636,14 +636,21 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// restacking site across three worlds of ~19k land cells each, which is
 /// "barely" a fortiori.
 ///
-/// NOTE ON THE WITNESS. At 0/0/1 this test is close to degenerate: a dead
-/// fourth key would read 0/0/0 and only seed 1000 separates the two. It is
+/// The Tense re-pin (2026-08-05): capacity gained an era axis, redeciding
+/// settlement survival once more, and the counts move **0/0/1 -> 0/1/0**. The
+/// TOTAL is unchanged at a single restacking site across three worlds of ~19k
+/// land cells each, so the claim this test exists for -- the material fourth
+/// key barely moves the stratigraphy -- is exactly as true and as "barely".
+/// Only the witness moved, from seed 1000 to seed 7.
+///
+/// NOTE ON THE WITNESS. At 0/1/0 this test is close to degenerate: a dead
+/// fourth key would read 0/0/0 and only seed 7 separates the two. It is
 /// retained as the BLAST-RADIUS measurement it has always been, not as the
 /// mechanism's pin — `same_day_layers_order_by_material_facts_not_mint_order`
 /// asserts the fourth key's behaviour directly and fails if it stops working.
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
-    for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 1)] {
+    for (seed, expected) in [(42u64, 0usize), (7, 1), (1000, 0)] {
         let w = build_world(
             Seed(seed),
             &Default::default(),
