@@ -45,6 +45,9 @@ fn production_names_are_unique() {
     assert_eq!(before, names.len(), "duplicate production name");
 }
 
+/// claim: invariant(forall substrate in the coarse sweep(); false-positive
+/// seed-loop flag — this crate carries no world seed at all, the loop's
+/// `s` binds a Substrate)
 #[test]
 fn qualities_and_signs_stay_in_range_across_the_sweep() {
     for s in sweep() {
@@ -64,6 +67,8 @@ fn qualities_and_signs_stay_in_range_across_the_sweep() {
 /// qualities. The Reagent draws nothing, so this must hold trivially -- and is
 /// asserted anyway, because it is the claim a later change is most likely to
 /// break silently.
+/// claim: invariant(forall substrate; false-positive seed-loop flag — no
+/// world seed in this crate, `s` binds a Substrate)
 #[test]
 fn derivation_is_pure() {
     for s in sweep() {
@@ -107,6 +112,8 @@ fn no_production_admits_everything() {
 /// outside [0,1]. Discharged by actually applying every production's
 /// outputs to every substrate in the sweep -- previously untestable,
 /// because nothing ever called `apply`.
+/// claim: invariant(forall substrate x production x output; false-positive
+/// seed-loop flag — no world seed in this crate, `s` binds a Substrate)
 #[test]
 fn no_production_output_leaves_the_unit_interval() {
     for s in sweep() {

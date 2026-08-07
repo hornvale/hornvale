@@ -416,6 +416,8 @@ mod tests {
         )
     }
 
+    /// claim: rate(forall-seed, none_count > affix_count / 200) — authored
+    /// typology weight, with an embedded single-seed determinism check
     #[test]
     fn depth_draws_are_deterministic_and_weighted() {
         let seed = Seed(42);

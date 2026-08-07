@@ -183,6 +183,8 @@ fn species_envelopes() -> Vec<(&'static str, Envelope)> {
     ]
 }
 
+/// claim: reachability(seed: forall RuleKind, exists seed in 0..32) — coverage
+/// checklist, breaks early once every kind is witnessed
 #[test]
 fn every_rule_kind_is_witnessed_changing_a_word() {
     let mut fired: BTreeSet<RuleKind> = BTreeSet::new();
@@ -278,6 +280,8 @@ fn full_shipped_roster() -> Vec<(&'static str, Envelope)> {
 /// for "reachable in production"; this test exists so that mistake is not
 /// available — the reported line names exactly which kinds a real world can
 /// draw today.
+/// claim: invariant(forall-seed) — Tonogenesis/VowelShift never drawn for
+/// the shipped roster, over 64 seeds
 #[test]
 fn tonogenesis_and_vowel_shift_are_never_drawn_for_the_shipped_roster() {
     let roster = full_shipped_roster();

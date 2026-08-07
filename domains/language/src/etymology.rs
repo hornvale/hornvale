@@ -1103,6 +1103,8 @@ mod tests {
         ]
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a Segment, single fixed hand-built cascade/proto scenario
     #[test]
     fn evolve_is_regular() {
         // Neogrammarian: every segment matching the environment changes; replaying
@@ -1240,6 +1242,8 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 2) — false-positive seed-loop flag; `s` binds a
+    /// &str concept id, single fixed seed
     #[test]
     fn assign_proto_roots_lengthens_to_stay_injective_when_the_base_space_saturates() {
         let ph = minuscule_phonology();
@@ -1277,6 +1281,8 @@ mod tests {
         assert!(!is_minimal_pair(&[t, a], &[n, e]));
     }
 
+    /// claim: structural(seed: 3) — false-positive seed-loop flag; `s` binds a
+    /// &str concept id, single fixed seed
     #[test]
     fn assign_proto_roots_places_core_concepts_first_so_they_win_the_short_forms() {
         // "water" is core (universal stratum) but sorts LAST here; the
@@ -1308,6 +1314,8 @@ mod tests {
         ]
     }
 
+    /// claim: invariant(forall-seed) — no two core roots are a minimal pair,
+    /// over a cramped phonology
     #[test]
     fn assign_proto_roots_holds_core_roots_apart_by_more_than_a_minimal_pair() {
         // Core vocabulary must be audibly distinct, not merely unequal: no two
@@ -1870,6 +1878,8 @@ mod tests {
         assert!(!d.steps[0].changed);
     }
 
+    /// claim: invariant(forall-seed) — a leading Tonogenesis is never drawn
+    /// without a prior merger, under a tone-capable probe envelope
     #[test]
     fn no_drawn_cascade_leads_with_a_tonogenesis() {
         // A leading Tonogenesis is PROVABLY the identity: `evolve` opens with
@@ -1988,6 +1998,8 @@ mod tests {
         assert!(matches!(out[0], Segment::Consonant { .. }));
     }
 
+    /// claim: structural(seed: 2) — false-positive seed-loop flag; `s` binds a
+    /// Segment, single fixed seed
     #[test]
     fn evolve_output_is_subset_of_inventory_even_from_foreign_proto() {
         // proto drawn from a permissive inventory, evolved into a restrictive one
@@ -1999,6 +2011,8 @@ mod tests {
         assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
     }
 
+    /// claim: structural(seed: 5) — false-positive seed-loop flag; `s` binds a
+    /// Segment, single fixed seed, non-vacuity guard for the test above
     #[test]
     fn nativization_is_load_bearing_not_codomain_identity() {
         // NON-VACUITY GUARD. A nasal is untouched by every rule kind (Lenition
@@ -2122,6 +2136,9 @@ mod tests {
         (all, confusable)
     }
 
+    /// claim: readout(hand-run probe, no assertions — prints a measured
+    /// homophony-reduction comparison over 200 seeds; bare #[ignore], never
+    /// gate-resident)
     #[test]
     #[ignore]
     fn measure_merger_aware_core_homophony_reduction() {
