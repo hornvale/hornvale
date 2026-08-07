@@ -1,7 +1,8 @@
 # The Warren — design
 
-**Status:** G3 APPROVED (Nathan, 2026-08-06), **including the census-regen and
-golden re-pin carve-out of §8.1**. Planning.
+**Status:** COMPLETE — merged 2026-08-06. Chronicle:
+`book/src/chronicle/the-warren.md`. **P1 was confirmed, then falsified by the
+close absorption — see §10.3.**
 **Date:** 2026-08-06
 **Campaign:** C2w of the peoples program
 (`2026-08-03-the-peoples-program-design.md`), **inserted 2026-08-06 between

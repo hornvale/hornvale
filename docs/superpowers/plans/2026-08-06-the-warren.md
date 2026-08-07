@@ -491,3 +491,12 @@ sites after Task 2.
 sequenced, not forgotten: Task 4's measurement is destroyed by an earlier
 re-pin, and this ordering is the whole reason the campaign can report a
 magnitude instead of a guess.
+
+---
+
+**Status: COMPLETE.** Merged 2026-08-06. Both mutations reddened as specified.
+P2 and P3 held; **P1 was confirmed at 2.557× and then falsified to exactly
+1.000 by the close absorption** — The Tilth's Liebig minimum makes the
+unfloored elevation axis the sole determinant, so the substrate swap is inert
+while the cave gate is live. The assertions are inverted into tripwires rather
+than relaxed; see the spec's §10.3 and the retrospective.
