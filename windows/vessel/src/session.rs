@@ -236,6 +236,9 @@ pub struct Session<'w> {
     /// A clone of the world's registry, extended with `AGENT_AT` (registered
     /// per-session, never at genesis — spec §3).
     registry: ConceptRegistry,
+    /// Whose eyes the possession's chart is coloured through (The Beholding,
+    /// Task 4), carried from `PossessOpts::eyes`.
+    eyes: crate::eyes::Eyes,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
     /// The world's terrain, sculpted once at `start` (The Shuttle), so every
@@ -563,6 +566,7 @@ impl<'w> Session<'w> {
             projection: IdentityProjection,
             ledger,
             registry,
+            eyes: opts.eyes.clone(),
             npcs,
             terrain,
             climate,
@@ -1049,6 +1053,9 @@ impl<'w> Session<'w> {
             &self.ledger,
             self.day,
             zoom_out,
+            &self.agent,
+            &self.eyes,
+            self.calendar.as_ref(),
         )
     }
 

@@ -22,6 +22,7 @@ fn opts() -> PossessOpts {
         day: WorldTime { day: 0.0 },
         echo: false,
         wild_agents: true,
+        eyes: hornvale_vessel::eyes::Eyes::Own,
     }
 }
 
@@ -278,6 +279,7 @@ fn the_stitch_law_end_to_end() {
             day: WorldTime { day: 0.0 },
             echo: false,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
     )
     .unwrap();
@@ -330,6 +332,7 @@ fn the_stitch_law_end_to_end() {
             day: WorldTime { day: 0.0 },
             echo: false,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
     )
     .unwrap();
@@ -411,6 +414,7 @@ fn run_drives_a_script_deterministically() {
             day: WorldTime { day: 0.0 },
             echo: true,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -422,6 +426,7 @@ fn run_drives_a_script_deterministically() {
             day: WorldTime { day: 0.0 },
             echo: true,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
         std::io::Cursor::new(script),
         &mut out_b,
