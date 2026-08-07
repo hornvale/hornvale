@@ -131,6 +131,53 @@ that bypasses the product entirely. **A bet can be moved by a campaign that
 shares none of its nouns.** The grep is not a formality to confirm an N/A
 already decided; it is the step that catches exactly this.
 
+## A perf detour, and three claims of mine the measurements refuted
+
+Nathan reported `generalist_distinctness` monopolising a core for 10+ minutes.
+The fix was real and is committed: the battery asked three questions and
+answered each with its own full 30-seed sweep, but **a world build does not
+depend on the niche** — it enters at `per_species_suitability`, long after
+genesis. Ninety world builds to look at thirty worlds. One sweep now answers
+all three, and every reported number is unchanged to four decimals and to the
+cell (`170.93s → 69.87s`, 2.45×).
+
+What is worth recording is the three things I asserted around it that turned
+out to be wrong.
+
+**1. "The heavy tier runs in debug, so the penalty is large."** True that it
+runs in debug — `--profile heavy` is a *nextest* profile, not a cargo one, and
+there is no `--release` in that path. But the penalty is **1.80×**, not the
+3–5× I implied, because `TOOL-hot-crate-opt` already sets `opt-level = 2` in
+the **dev** profile for kernel, language, terrain, climate and worldgen. The
+expensive 80 % of that idea was implemented campaigns ago. I read the absence
+of `--release` and inferred a cost without checking whether the dev profile was
+tuned.
+
+**2. "The release switch is a bigger win than this refactor."** Measured, it is
+smaller: 1.80× against the refactor's 2.45×. And it would disable
+`debug_assert!` across every heavy battery, which is a real safety net to trade
+away for less benefit than the change already made.
+
+**3. "Extending the opt list to the remaining hot crates should help."**
+`hornvale-demography` and `hornvale-species` are the two crates the batteries
+call per cell per species and the only hot ones the original five missed.
+Adding them at `opt-level = 2` made the battery **measurably slower** —
+`user` time 94.7 s → 141.4 s, on a matched pair, with `user` chosen precisely
+because the box was contended and wall time was not trustworthy. **I do not
+know why**, and it is recorded here as a measurement with an unknown mechanism
+rather than dressed in a plausible story. Reverted.
+
+That third one has company: `noise-is-at-its-floor` records Vec-indirection,
+fdiv, vectorisation and inlining all tested and refuted on this codebase's hot
+path. **Perf intuitions here have a poor record and the matched pair is
+cheap.**
+
+**One fact worth keeping from the detour**: debug and release produce
+**identical** results on a live-worldgen battery — same coefficients of
+variation to four decimals, same cell counts. Determinism holds across
+optimisation level, which is what the pure-Rust `libm` routing was supposed to
+buy and had not previously been checked at this granularity.
+
 ## Follow-ups
 
 - **`BIO-supply-drowns-niche` is now testable in a second frame.** That row
