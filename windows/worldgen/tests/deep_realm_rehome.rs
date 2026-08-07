@@ -188,11 +188,21 @@ fn report_the_xorn_before_and_after() {
 // `subterranean_substrate` directly, because nothing live used it. Task 2
 // wired `per_species_suitability` to ask `HabitatRealm` and score a
 // `Subterranean` kind against that same function's output. These two tests
-// are the wiring check: they reproduce the hand probe's asymmetry through
-// the LIVE code path instead of a hand-rolled call, on seed 42, restricted
-// to cave-bearing land cells (the population where both readings' cave-
-// availability factor is 1.0, so the ratio isolates the niche-curve
-// difference rather than the gate).
+// are the wiring check, on seed 42, restricted to cave-bearing land cells
+// (where the cave-availability factor is 1.0 for both readings, so the ratio
+// isolates the niche-curve difference rather than the gate).
+//
+// **Both now assert a ratio of exactly 1.000, and that is a falsification
+// pinned rather than a test relaxed.** The Tilth's Liebig minimum floors
+// temperature, moisture and insolation by the sovereignty floor and leaves
+// elevation bare, so the unfloored elevation term is the sole determinant —
+// and `subterranean_substrate` inherits `height_asl_m` from the surface cell
+// unchanged. Going underground improves exactly the axes it was built to
+// improve (moisture .585 -> .787, insolation .467 -> .840) and the minimum
+// never sees it; `warren_liebig_probe.rs` prints all four terms. The Warren's
+// spec §10.3 records the amendment, and `warren_readout.rs` carries the same
+// tripwire: when a tolerance model lands in which a non-lethal preference can
+// bind, these reddens on purpose.
 // ---------------------------------------------------------------------------
 
 /// The `(names, realm slice)` construction `demography_report_with_beta_from`
@@ -291,9 +301,9 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
 #[test]
 fn rust_monster_live_path_reproduces_c2as_subterranean_asymmetry() {
     // C2a measured rust-monster's subterranean fit at ~2.5x its surface fit
-    // by hand. This asserts DIRECTION and ROUGH MAGNITUDE through the live
-    // `per_species_suitability` path — a cross-check between two code paths,
-    // not a golden.
+    // by hand, and this branch reproduced it at 2.557x through the live path
+    // BEFORE absorbing The Tilth. It now reads exactly 1.000 — see this
+    // module's header for why, and do not relax this bound to make it pass.
     let (live, surface_forced, n) = live_vs_surface_forced_on_cave_cells("rust-monster");
     let ratio = live / surface_forced;
     println!(
@@ -301,10 +311,13 @@ fn rust_monster_live_path_reproduces_c2as_subterranean_asymmetry() {
          ratio={ratio:.3} over {n} cave-bearing land cells"
     );
     assert!(
-        ratio > 1.3,
-        "rust-monster's live subterranean-scored suitability must meaningfully exceed its \
-         surface-forced counterpart on cave-bearing cells (C2a measured ~2.5x by hand); got \
-         ratio {ratio:.3} ({live:.6} vs {surface_forced:.6} over {n} cells)"
+        (ratio - 1.0).abs() < 1e-9,
+        "rust-monster's live ratio is expected to be EXACTLY 1.000 while the unfloored \
+         elevation axis is the sole determinant of `tolerance_liebig` (see this module's \
+         header). Got {ratio:.6} ({live:.6} vs {surface_forced:.6} over {n} cells). If this \
+         moved, a tolerance model in which a non-lethal preference can bind has landed — that \
+         is good news, and The Warren's spec §10.3 and chronicle need re-measuring rather \
+         than this assertion needing a nudge."
     );
 }
 

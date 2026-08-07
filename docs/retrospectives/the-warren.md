@@ -149,6 +149,15 @@ written down the consequence — *a floored axis can never bind, so whichever
 axis is left bare becomes the sole determinant* — and elevation is the one axis
 a chamber inherits unchanged from the ground above it.
 
+**And I fixed it in one place and missed the sibling.** `warren_readout.rs`
+and `deep_realm_rehome.rs` both encoded "subterranean fit exceeds surface fit";
+I inverted the first, ran a scoped test, and the full gate found the second.
+That is *sweep on the invariant, not the wording* arriving again — the two
+assertions share no phrasing, so no grep for the message would have found the
+pair. What finds it is asking **"how many places state this claim?"** before
+changing any of them. The full gate caught it, which is the argument for
+running one before declaring a campaign done rather than trusting scoped runs.
+
 **Three things this says about process.**
 
 **A preregistered result has a shelf life measured in merges.** The campaign
