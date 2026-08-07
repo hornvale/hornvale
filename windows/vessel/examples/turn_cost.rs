@@ -419,21 +419,41 @@
 //!
 //! **The real signal is `moving`-class `snapshot()+json`, native: 2.94x.**
 //! `enter` is the turn where the possession first stands inside a chamber,
-//! and `snapshot()` derives `sighting()` fresh and uncached on every call —
-//! `anchor_cells` alone costs 42 us median / 410 us p99 / 437 us max
-//! (Task 5's own bench), and the shadowcast and the marks roster ride
-//! alongside it. That this shows up in the `moving` class rather than
-//! spread evenly is a median-pooling artifact, not a claim that only
-//! `enter`/`out` pay it: of the 10 pooled `moving` samples (2 per run x 5
-//! runs — `enter` then `out`), only `enter`'s snapshot is taken while
-//! already indoors, so 5 of 10 samples sit near the new indoor cost and 5
-//! sit near the old outdoor cost; `xs[len/2]` on that split lands on the
-//! indoor group. `look`/`map` right after `enter` are `Neither`-class and
-//! ALSO indoors, paying the same new cost — but diluted to invisibility by
-//! 33 outdoor `Neither` samples in the pooled median (35 total), which is
-//! why the pooled `neither` `snapshot()+json` figure above reads flat
-//! (+0.033 ms) despite two of its constituent samples costing roughly as
-//! much extra as `moving` does.
+//! and `snapshot()` derives `sighting()` fresh and uncached on every call.
+//! **Correction (fix round 1): `sighting()` itself costs roughly 8.5 ms
+//! dev / 3.7 ms release, not "42 us."** The 42 us figure (Task 5's own
+//! bench) is `anchor_cells` ALONE — one line inside `sighting()`, which
+//! also runs `chamber_interior_here`, `interior_of`, the co-located loop,
+//! and the shadowcast. Measured directly through the one `pub` path that
+//! calls `sighting()` exactly once (`would_turn_hostile`, via
+//! `colocated_npc`), three fresh runs each, this box, quiet, 2026-08-06:
+//! indoor median 8.5430, 8.1746, 8.5509 ms dev (slowest 8.551 ms) / 3.7281,
+//! 3.5070, 3.6093 ms release (slowest 3.728 ms) — outdoor is ~0.002-0.009 ms
+//! either profile (the `self.inside.as_ref()?` guard short-circuits for
+//! free). **One derivation is roughly 91% of the whole indoor
+//! `snapshot()+json` figure** (3.706 ms release measured above is smaller
+//! than the isolated 3.728 ms release reading here because the two used
+//! different sessions/warm state, not because the derivation costs less
+//! inside `snapshot()` — read both as "order of a few ms," not to the
+//! third decimal against each other) and, on its own, more than the whole
+//! `TURN_BUDGET_MS` pooled ceiling (`cli/tests/session_cost.rs`).
+//!
+//! That this shows up in the `moving` class rather than spread evenly is a
+//! median-pooling artifact, not a claim that only `enter`/`out` pay it: of
+//! the 10 pooled `moving` samples (2 per run x 5 runs — `enter` then
+//! `out`), only `enter`'s snapshot is taken while already indoors, so 5 of
+//! 10 samples sit near the new indoor cost and 5 sit near the old outdoor
+//! cost; `xs[len/2]` on that split lands on the indoor group. `look`/`map`
+//! right after `enter` are `Neither`-class and ALSO indoors, paying the
+//! same new cost — but diluted to invisibility by 25 outdoor `Neither`
+//! samples in the pooled median (`Neither` positions in `SEQUENCE` are 0,
+//! 1, 2, 4, 6, 7, 9 — seven per run, five runs = 35 pooled; positions 6 and
+//! 7 are indoors, so 10 pooled samples are indoor and 25 are outdoor),
+//! which is why the pooled `neither` `snapshot()+json` figure above reads
+//! flat (+0.033 ms) despite two of its constituent samples costing roughly
+//! as much extra as `moving` does. **`cli/tests/session_cost.rs`'s new
+//! `INDOOR_SNAPSHOT_BUDGET_MS` (fix round 1) gates the indoor cut directly**
+//! rather than relying on a verb class that straddles it.
 //!
 //! **A surprise worth flagging rather than fully explaining: wasm's
 //! `neither`-class `hv_handle` grew 1.214 ms (1.48x) while native's
@@ -453,28 +473,64 @@
 //! never wasm), and a future task that wants to settle it should dump raw
 //! per-sample timings rather than re-deriving them from medians.
 //!
-//! **`sighting()` call-site count, one indoor turn:** across this bench's
-//! own `SEQUENCE`, an indoor turn that is plain `look` or `map` calls
-//! `sighting()` exactly **once** — from `snapshot()` alone, since neither
-//! `describe_chamber_here` nor `plan_here` touches it (`plan_here` reads
-//! `inside.lattice`, embedded once at `enter`, not re-derived per turn).
+//! **`sighting()` call-site count, one indoor turn — corrected roster (fix
+//! round 1):** across this bench's own `SEQUENCE`, an indoor turn that is
+//! plain `look` or `map` calls `sighting()` exactly **once** — from
+//! `snapshot()` alone, since neither `describe_chamber_here` nor
+//! `plan_here` touches it (`plan_here` reads `inside.lattice`, embedded
+//! once at `enter`, not re-derived per turn).
+//!
 //! But `sighting()` (`windows/vessel/src/session.rs`) is not memoized on
-//! `self` — every caller re-derives it fresh — and Task 5's fix rounds
-//! added three more callers reachable from a single indoor turn: `needs()`
-//! calls it unconditionally on every invocation; `colocated_npc` (and so
-//! `provoke`/`soothe`/the `pub` `would_turn_hostile`) calls it on every
-//! resolution attempt; `examine_chamber` calls it only after a creature
-//! LABEL already matched (hoisted below the anchor/glyph checks so an
-//! ordinary miss pays nothing). A turn that both asks `needs` (or
-//! `examine`s a creature, or `provoke`s/`soothe`s one) AND separately reads
+//! `self` — every caller re-derives it fresh — and it has six call sites,
+//! not the three the first posting of this section named (which also
+//! misattributed two of them). The real enclosing functions, by line:
+//! 656 `snapshot`, 2238 `examine_chamber`, 2276 `wait`, 2456
+//! **`narrate_motion`** (previously uncredited entirely — the first
+//! posting attributed this line to `wait`, which is a different call one
+//! function down), 2784 `colocated_npc`, 2862 `needs`. `examine_chamber`
+//! calls it only after a creature LABEL already matched (hoisted below the
+//! anchor/glyph checks so an ordinary miss pays nothing); `colocated_npc`
+//! is reached by `provoke`, `soothe`, and the `pub` `would_turn_hostile`;
+//! `needs()` calls it unconditionally on every invocation.
+//!
+//! **`wait` is two derivations inside `handle()` alone, not one:** it
+//! calls `sighting()` directly at line 2276 for `sensed_before` (captured
+//! BEFORE the day advances, deliberately — the departure narration this
+//! campaign spent two fix rounds getting right depends on comparing a
+//! before/after roster), then calls `narrate_motion`, which calls
+//! `sighting()` again at line 2456 whenever `moved != 0` (it returns early,
+//! before touching `sighting()`, when nothing moved). An indoor `wait`
+//! where the tick actually moves an NPC therefore performs sighting()
+//! twice inside `handle()`, plus a third time if the same turn also reads
 //! `snapshot()` — which every wasm turn does, bundled, and which a native
-//! CLI turn does only if a caller asks — therefore performs **two**
-//! independent `sighting()` derivations, not one, and a client calling the
-//! `pub` `would_turn_hostile` again after `handle()` (it takes no `&mut
-//! self`, so nothing stops a second call) adds a third. At ~42 us median
-//! each this is not a budget item today, but it is a real duplication
-//! worth naming rather than restructuring here — Task 6's brief asked to
-//! report it, not to fix it.
+//! CLI turn does only if a caller asks.
+//!
+//! A client calling the `pub` `would_turn_hostile` again after `handle()`
+//! (it takes no `&mut self`, so nothing stops a second call) adds yet
+//! another. **At roughly 8.5 ms dev / 3.7 ms release per derivation — see
+//! the correction above, not the 42 us `anchor_cells` figure — two or three
+//! of these on one indoor turn is not free**, though it is still well under
+//! a keypress's perceptible threshold (see the deferred-memoization note
+//! below for the full accounting). This is a real duplication worth naming
+//! rather than restructuring here — Task 6's brief asked to report it, not
+//! to fix it.
+//!
+//! **Deferred, deliberately: memoizing `sighting()`.** The cost case is
+//! real (above), but this is the wrong moment to take it on, for a reason
+//! specific to `wait`: its two calls straddle the day advance ON PURPOSE
+//! (`sensed_before` before the tick, `narrate_motion`'s read after). A memo
+//! keyed wrong would silently collapse those two into one and break the
+//! departure narration this campaign spent two fix rounds getting right,
+//! whose failure mode is *absence* — a missing line, not a wrong one,
+//! which is the hardest kind of regression to notice. The user-facing cost
+//! is also imperceptible: ~8.5 ms dev / ~3.7 ms release per derivation, up
+//! to ~2-3 per indoor turn (so up to roughly 11-26 ms dev / 7-11 ms
+//! release net, and up to ~12.6 ms through the wasm ABI at the measured
+//! ~1.7x), nowhere near a perceptible keypress delay.
+//! `clippy.toml` bans `HashMap`/`HashSet`/`Instant`/`SystemTime` but not
+//! `Cell`/`RefCell`, so interior mutability is available to whoever takes
+//! this on — recorded here as an owed followup, with the measured numbers,
+//! so that work starts from a measurement rather than rediscovering one.
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session};

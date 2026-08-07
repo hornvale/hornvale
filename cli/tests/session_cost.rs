@@ -12,10 +12,16 @@
 //! `windows/vessel/examples/turn_cost.rs`, which holds the full matched-pair
 //! reading (before and after the channel) and the per-verb-class split. That
 //! bench times `handle` and `snapshot()+json` separately so the split is
-//! visible per class; this gate times them together (`TURN_BUDGET_MS`) as
-//! the brief specifies, since a client pays both on every turn regardless of
-//! which verb caused them. Re-run the bench, not this test, when you want to
-//! know what moved or which verb class is responsible.
+//! visible per class; this gate ALSO times them separately now (fix round
+//! 1), but pools by two different cuts across the same ten `SEQUENCE` turns:
+//! `TURN_BUDGET_MS` pools `handle+snapshot+json` together across every verb,
+//! and `INDOOR_SNAPSHOT_BUDGET_MS` pools `snapshot()+json` alone across only
+//! the turns a fresh `snapshot()` itself reports as indoors
+//! (`SessionSnapshot::spatial`). The indoors/outdoors cut, not verb class,
+//! is what tracks the real cost axis — see `INDOOR_SNAPSHOT_BUDGET_MS`'s own
+//! doc for why a verb-class ceiling would have missed the same gap it
+//! closes. Re-run the bench, not this test, when you want the release-
+//! profile per-verb-class split too.
 //!
 //! Read a red run as contention before suspecting the code: every ceiling
 //! here is a wall time, and `scene_cost.rs`'s documented failure mode — all
@@ -23,7 +29,7 @@
 //! not a regression. A real regression is local.
 
 use hornvale_kernel::Seed;
-use hornvale_vessel::{PossessOpts, Session};
+use hornvale_vessel::{PossessOpts, Session, SpatialChannel};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 // The measurement harness times derivation calls for a diagnostic (never sim
@@ -92,9 +98,12 @@ const RUNS: usize = 5;
 /// the observed range rather than just the newest one.
 const START_BUDGET_MS: f64 = 10500.0;
 
-/// Ceiling for one `handle` + `snapshot` + serialize, ms — the combined
-/// per-turn cost a client actually pays, pooled across all ten verbs in
-/// [`SEQUENCE`] (moving, day-advancing, and neither alike).
+/// Ceiling for one `handle` + `snapshot` + serialize, ms — a **pooled
+/// median** across all ten verbs in [`SEQUENCE`] (moving, day-advancing,
+/// and neither alike), not a per-turn ceiling every individual turn stays
+/// under. Fix round 1 review found 20 of the 50 pooled samples this median
+/// is drawn from exceed this very ceiling while the gate still passes — see
+/// [`INDOOR_SNAPSHOT_BUDGET_MS`] for the ceiling that closes that gap.
 ///
 /// **Dev profile is the ceiling basis**, same box/command/date as
 /// [`START_BUDGET_MS`]. Three runs of this test's own combined-timer
@@ -130,10 +139,56 @@ const START_BUDGET_MS: f64 = 10500.0;
 /// `--release` — already over this ceiling's *dev-profile* 8.0 ms figure by
 /// comparison, though that comparison mixes profiles and isn't the number
 /// this test gates on. The pooled dev-profile median stays comfortably
-/// under budget only because 33 of the 35 `Neither` samples never touch a
-/// chamber; a `SEQUENCE` weighted more toward chamber turns would surface
-/// this in the pooled figure too.
+/// under budget only because 25 of the 35 `Neither` samples never touch a
+/// chamber (`Neither` positions in [`SEQUENCE`] are 0, 1, 2, 4, 6, 7, 9 —
+/// seven per run, five runs = 35 pooled; positions 6 and 7 are indoors, so
+/// 10 pooled samples are indoor and 25 are outdoor); a `SEQUENCE` weighted
+/// more toward chamber turns would surface this in the pooled figure too.
+/// **This is exactly the gap fix round 1 review found and
+/// [`INDOOR_SNAPSHOT_BUDGET_MS`] closes** — a position-in-`SEQUENCE` probe
+/// (not verb-class) found 20 of the 50 pooled `turns` samples this median
+/// is drawn from exceed 8.0 ms individually, entirely invisible to a
+/// pooled-median gate.
 const TURN_BUDGET_MS: f64 = 8.0;
+
+/// Ceiling for one **indoor** `snapshot()+json`, ms — the cut fix round 1
+/// review found and `TURN_BUDGET_MS` cannot see.
+///
+/// **Why this exists, not a per-verb-class ceiling.** A position-in-
+/// `SEQUENCE` probe (dev profile, quiet box, 5 reps) found 20 of the 50
+/// pooled `TURN_BUDGET_MS` samples exceed 8.0 ms while the gate still
+/// passes, because verb class straddles the real axis: `out` is `Moving`
+/// and cheap (2.26 ms combined); `enter` is `Moving` and costs 34.20 ms;
+/// `map`/`look` right after `enter` are `Neither` and cost 9.05/16.86 ms
+/// indoors against 1.3-3.9 ms for the same verbs outdoors. A per-class
+/// ceiling on `Moving` would have been blind to the two `Neither` samples
+/// already over budget — the identical failure one layer down — and it
+/// would freeze a point over a bimodal population (`enter`'s own handle
+/// time is ~34 ms on some reps, ~2.3 ms on others, depending on where the
+/// sort lands it against `out`), which is the freeze-a-distribution trap.
+/// **Indoors vs outdoors is the real cut**: it is what `sighting()`'s own
+/// guard clause (`self.inside.as_ref()?`) branches on, and it is directly
+/// readable off `SessionSnapshot::spatial` without inferring it from a verb
+/// string.
+///
+/// **What this gates, and why not the combined figure**: `snapshot()+json`
+/// alone, not `handle+snapshot+json`. The indoor `snapshot()+json`
+/// distribution is tight (three-verb medians 9.153 / 8.996 / 8.617 ms in
+/// the probe above, a ~6% spread) because it is dominated by one fixed
+/// cost — `sighting()`, re-derived fresh on every call regardless of which
+/// verb ran. Indoor *combined* (`handle+snapshot+json`) is not tight: it
+/// spans roughly 9-34 ms because `handle`'s own cost varies hugely by verb
+/// (`enter` additionally embeds the lattice and places anchors; `map`/
+/// `look` do not). A ~2x ceiling over a population that already spans ~4x
+/// on its own would be fitting noise, not gating a regression.
+///
+/// Basis: dev profile, this box (`MacBookPro`), 2026-08-06, quiet
+/// (`uptime` 1-min load 1.4-2.1 throughout). Three fresh runs of this
+/// test's own indoor-`snapshot()+json` median (pooled across all indoor
+/// samples — `enter`, `map`, `look` alike, 15 per run) gave 8.910, 8.503,
+/// 8.530 ms — slowest 8.910 ms. Budgeted at ~2x, rounded up: `2 * 8.910 =
+/// 17.82` -> 18.0.
+const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 18.0;
 
 /// Ceiling for one walk-band snapshot's serialized bytes. The spec measured
 /// `scene/surrounds/v1` at 7,049 bytes at radius 4; this bounds the whole
@@ -177,6 +232,14 @@ fn a_possessed_turn_stays_within_its_ceilings() {
 
     let mut starts = Vec::new();
     let mut turns = Vec::new();
+    // The band split (fix round 1): `snapshot()+json` timed SEPARATELY from
+    // `handle`, then classified by the band the resulting snapshot itself
+    // reports (`snap.spatial`) — not by verb class, which review found
+    // straddles the real axis (`out` is `Moving` and cheap; `map`/`look`
+    // right after `enter` are `Neither` and expensive, because they are
+    // indoors). Only the indoor bucket is gated; the outdoor one is not
+    // collected since nothing here budgets it.
+    let mut indoor_snaps = Vec::new();
 
     for _ in 0..RUNS {
         #[allow(clippy::disallowed_types)] // benchmark harness
@@ -191,6 +254,11 @@ fn a_possessed_turn_stays_within_its_ceilings() {
             #[allow(clippy::disallowed_types)] // benchmark harness
             let t1 = Instant::now();
             let _ = session.handle(line);
+            #[allow(clippy::disallowed_types)] // benchmark harness
+            let handle_ms = t1.elapsed().as_secs_f64() * 1000.0;
+
+            #[allow(clippy::disallowed_types)] // benchmark harness
+            let t2 = Instant::now();
             let snap = session.snapshot().expect("a live session snapshots");
             // Serialize too: the emit is part of the per-turn cost the
             // client actually pays, and measuring construction alone would
@@ -198,13 +266,18 @@ fn a_possessed_turn_stays_within_its_ceilings() {
             let json = hornvale_vessel::snapshot_json(&snap);
             std::hint::black_box(&json);
             #[allow(clippy::disallowed_types)] // benchmark harness
-            let turn_ms = t1.elapsed().as_secs_f64() * 1000.0;
-            turns.push(turn_ms);
+            let snap_ms = t2.elapsed().as_secs_f64() * 1000.0;
+
+            turns.push(handle_ms + snap_ms);
+            if matches!(snap.spatial, SpatialChannel::Chamber { .. }) {
+                indoor_snaps.push(snap_ms);
+            }
         }
     }
 
     let start_median = median(&mut starts);
     let turn_median = median(&mut turns);
+    let indoor_snapshot_median = median(&mut indoor_snaps);
 
     // The byte figure the spec priced by radius, taken on a fresh session
     // outside the possession (the walk band, the larger of the two bands).
@@ -215,6 +288,9 @@ fn a_possessed_turn_stays_within_its_ceilings() {
 
     println!("Session::start        {start_median:9.3} ms (budget {START_BUDGET_MS})");
     println!("handle+snapshot+json  {turn_median:9.3} ms (budget {TURN_BUDGET_MS})");
+    println!(
+        "indoor snapshot+json  {indoor_snapshot_median:9.3} ms (budget {INDOOR_SNAPSHOT_BUDGET_MS})"
+    );
     println!("walk snapshot bytes   {walk_bytes:9} B  (budget {WALK_BYTES_BUDGET})");
 
     assert!(
@@ -225,6 +301,11 @@ fn a_possessed_turn_stays_within_its_ceilings() {
         turn_median < TURN_BUDGET_MS,
         "one handle+snapshot+serialize took {turn_median:.3} ms, over the \
          {TURN_BUDGET_MS} ms ceiling"
+    );
+    assert!(
+        indoor_snapshot_median < INDOOR_SNAPSHOT_BUDGET_MS,
+        "an indoor snapshot()+json took {indoor_snapshot_median:.3} ms, over the \
+         {INDOOR_SNAPSHOT_BUDGET_MS} ms ceiling"
     );
     assert!(
         walk_bytes < WALK_BYTES_BUDGET,
