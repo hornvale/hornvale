@@ -2692,15 +2692,27 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
             BiosphereTraits {
                 mass: Mass::new(66.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
-                // DELIBERATELY LOW-SUM (0.60, against every other kind's
-                // 1.00). Uptake weights are a direction dotted into the
-                // per-cell supply vector, so a sub-unit sum is the one place
-                // in this model that can say "this people takes less from a
-                // cell than a farmer does" — a sparse desert forager working
-                // ground that supports few. Departing from the sum-to-one
-                // convention is stated here rather than left for a reader to
-                // notice; it lowers supply, and therefore K, uniformly.
-                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.35), (ANIMAL_PREY, 0.25)]).unwrap(),
+                // Sums to 1.00, like every other kind in the roster. A
+                // forager leaning on plants over game, in the same
+                // proportion a sparse-ground people would.
+                //
+                // An earlier draft made this sum to 0.60 to express "takes
+                // less from a cell than a farmer does". Reverted, for two
+                // reasons. **Ecologically it puts the scarcity in the wrong
+                // object**: a desert is poor because the *cell* supplies
+                // little, which the supply field already says, not because
+                // the people are worse at extraction — that is a claim about
+                // the creature, and a different one. **And it would confound
+                // this kind's whole purpose.** Desert-dwarf is the campaign's
+                // demonstrator that an authored climate niche can bind
+                // (spec §10.2); supply is the dominant channel, spanning
+                // orders of magnitude against tolerance's bounded [0,1]
+                // (`BIO-supply-drowns-niche`), so a 40% uniform supply cut
+                // would leave its difference from hill-dwarf partly
+                // attributable to supply rather than to climate. Correlation
+                // is scale-invariant so the readout's number would have
+                // survived; the *interpretation* would not.
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.58), (ANIMAL_PREY, 0.42)]).unwrap(),
                 condition_niche: desert_dwarf_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
