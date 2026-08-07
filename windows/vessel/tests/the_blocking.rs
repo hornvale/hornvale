@@ -161,7 +161,8 @@ fn map_outdoors_still_draws_the_chart() {
         "outdoors, `map` must still draw the locale chart: {chart}"
     );
     assert!(
-        chart.contains("[lens: terrain"),
+        // Default eyes are `Own` (The Beholding, Task 5): colour, not terrain.
+        chart.contains("[lens: colour"),
         "outdoors, `map` must still draw the locale chart: {chart}"
     );
 }
@@ -183,7 +184,13 @@ fn map_out_indoors_refuses_and_names_the_verb_that_fixes_it() {
             "{line:?} indoors must not silently draw the bare plan"
         );
         assert!(
-            !refused.contains("[lens: terrain"),
+            // Default eyes are `Own` (The Beholding, Task 5), so a fallthrough
+            // to the locale chart would now leak "[lens: colour", not
+            // "[lens: terrain" — checking only the old string would have gone
+            // vacuous the moment the default lens changed, proving nothing
+            // about a REAL fallthrough. `"[lens: "` is the invariant marker of
+            // any drawn chart, whichever lens rendered it.
+            !refused.contains("[lens: "),
             "{line:?} indoors must not draw the locale chart: {refused}"
         );
         assert!(
