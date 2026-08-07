@@ -1478,6 +1478,9 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a Craton in `for (s, p) in
+    /// scattered.iter().zip(&pinned)`
     #[test]
     fn supercontinent_no_longer_transforms_the_drawn_craton_set() {
         // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer

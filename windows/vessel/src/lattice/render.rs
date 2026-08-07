@@ -270,6 +270,11 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn a_doorway_is_drawn_once_per_declared_link() {
         for (s, l) in corpus() {
@@ -377,6 +382,11 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn the_mark_draws_once_at_the_standing_cell_and_the_legend_names_it() {
         // The mark is a CELL position, so the check is positional: the glyph lands

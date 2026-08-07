@@ -2201,6 +2201,9 @@ fn name_transparency_is_measured_and_pinned() {
     );
 }
 
+/// claim: rate(forall-seed, indistinguishable/pairs > 0.5; twin-pick rate
+/// within 0.2 of chance when decided) — reads &*MEETING census fixture,
+/// tuple pattern `(seed, gs)` (Fix round 1, Class 1)
 #[test]
 fn null_control_blind_attribution_is_at_chance() {
     let result = &*MEETING;

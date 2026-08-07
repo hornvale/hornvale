@@ -8432,6 +8432,9 @@ mod tests {
         assert_eq!(vis, Visibility::CLEAR);
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a WeatherState in `for (s, c) in states`, no
+    /// world seed at all
     #[test]
     fn thicker_cloud_occludes_monotonically() {
         use hornvale_climate::{CloudType, WeatherState};

@@ -807,6 +807,8 @@ mod tests {
     /// ever synthesized a segment instead of filtering the canonical set,
     /// "?" would surface in every later name. Assert the invariant holds
     /// across multiple species/envelopes.
+    /// claim: invariant(forall-seed) — tuple pattern `(seed, species, env)`
+    /// over [1,42,99] (Fix round 1, Class 1)
     #[test]
     fn drawn_inventory_is_always_a_subset_of_canonical_segments() {
         let canonical = canonical_segments();

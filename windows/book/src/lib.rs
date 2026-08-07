@@ -3256,6 +3256,8 @@ mod tests {
     /// the two surfaces are byte-identical (no marking to contrast).
     /// Per-species arms pinned against T2's frozen landscape (both arms are
     /// exercised within seeds 1..=3, per the measured table).
+    /// claim: structural(seed: EVIDENTIAL_DEPTH_LANDSCAPE) — prose rendering,
+    /// tuple pattern `&(seed, kind, evidential_marks)` (Fix round 1, Class 1)
     #[test]
     fn the_taught_contrast_is_visible_where_deep() {
         for &(seed, kind, evidential_marks) in EVIDENTIAL_DEPTH_LANDSCAPE {

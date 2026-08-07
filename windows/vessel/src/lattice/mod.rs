@@ -650,6 +650,10 @@ mod tests {
     /// type-audit: bare-ok(count)
     const ALLOCATE_BUDGET_MICROS: u128 = 1_000;
 
+    /// claim: readout — a benchmark distribution (median/min/p99 ns) over
+    /// 1001 varying seeds, purely to avoid a single-seed allocation-cost
+    /// measurement being unrepresentative (Fix round 1, Class 2: `for i in
+    /// 0..SAMPLES` feeding `Seed(i as u64)`); not a world-property claim
     #[test]
     fn the_embedding_is_cheap_enough_to_re_derive() {
         // Spec §10 risk 1: no budget claim without a measurement. A lattice is

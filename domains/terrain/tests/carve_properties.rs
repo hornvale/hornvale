@@ -479,6 +479,10 @@ fn atolls_only_on_warm_submerged_seamounts() {
 /// the measured shift in its failure messages. Worlds probed: seed 42 L5
 /// (the campaign flagship) and seed 34 L4 (the review's emergent-shelf
 /// counterexample).
+///
+/// claim: invariant(seed: [(5,42),(4,34)]) — tuple pattern `(level, seed)`
+/// (Fix round 1, Class 1: previously invisible to a single-token-after-`for`
+/// check)
 #[test]
 fn trim_recaps_hold_after_the_final_solve() {
     for (level, seed) in [(5u32, 42u64), (4, 34)] {

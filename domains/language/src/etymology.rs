@@ -1150,6 +1150,9 @@ mod tests {
         assert_eq!(replayed.modern, d.modern);
     }
 
+    /// claim: structural(seed: [1,5,9,42]) — wrapper equivalence, tuple
+    /// pattern `(seed, species)` (Fix round 1, Class 1: previously invisible
+    /// to a single-token-after-`for` check)
     #[test]
     fn draw_cascade_default_equals_settled_regime() {
         // draw_cascade must stay a thin wrapper over draw_cascade_with_regime

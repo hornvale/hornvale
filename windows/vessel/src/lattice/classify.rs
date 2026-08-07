@@ -323,6 +323,11 @@ mod tests {
         out
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn rule_1_the_realized_graph_is_exactly_the_specified_one() {
         // BOTH directions, and the second is the half that makes this an embedder
@@ -496,6 +501,11 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn rule_4_two_chambers_cannot_disagree_about_a_doorway() {
         // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
@@ -535,6 +545,11 @@ mod tests {
         assert_eq!(g1, grow(&st, e, Seed(1)));
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn rule_7_the_embedder_spends_only_the_freedom_the_graph_leaves() {
         // Reported per method and chamber count, because Task 4b reworked BOTH
@@ -576,6 +591,11 @@ mod tests {
         eprintln!("rule 7, (method, chambers, dof spent): {spent:?}");
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn rule_8_every_floor_cell_is_reachable_from_the_threshold() {
         // **The rule Task 4b's model earns.** Under the boundary model this was
@@ -643,6 +663,11 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn a_chambers_bounds_are_its_floor_and_nothing_else() {
         // `bounds_of` replaces the deleted `regions` field, so its contract is
@@ -665,6 +690,11 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn the_standing_cell_is_always_the_chambers_own_floor() {
         // Where the possession is put when it walks in. Two claims: it exists for
@@ -685,6 +715,11 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn the_middle_of_a_grown_chamber_is_not_always_its_floor() {
         // The negative control on `standing_cell`'s fallback, and the reason the
@@ -715,6 +750,11 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a hand-built Structure/Lattice fixture in
+    /// `for (s, l, m) in corpus()`, no world seed at all (seedless
+    /// sweep over a fixed fixture corpus, same class as
+    /// domains/terrain/tests/deep_realm_chamber.rs)
     #[test]
     fn a_step_through_a_doorway_lands_beside_it_in_the_chamber_entered() {
         // The cell a threshold crossing ends on, for BOTH chambers it joins: the

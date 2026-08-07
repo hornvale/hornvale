@@ -762,6 +762,9 @@ mod tests {
         assert_eq!(a, b, "same inputs must yield an identical lexicon");
     }
 
+    /// claim: reachability(seed: 0..200) — finds a HeadFirst and a HeadLast
+    /// witness (Fix round 1, Class 2: `for i in 0..200u64` feeding `Seed(i)`,
+    /// invisible until the Seed(...)-correlation fix)
     #[test]
     fn headedness_flips_compound_component_order() {
         let ph = test_phonology();
