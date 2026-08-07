@@ -565,6 +565,35 @@ still total.** The seam held, and it held for a reason no test had stated —
 which is the kind of pass worth recording as a narrower confidence, not a
 wider one.
 
+**Re-scored again by [The Sighting](./chronicle/the-sighting.md) (2026-08-07):
+the redaction boundary stopped being merely structural and started
+withholding.** Both prior tests proved the boundary by building panes that
+*could* have reached outside their channel and did not; nothing had yet
+required the sim to remove something a pane would otherwise have shown. This
+campaign does, and the score improves for a reason that is not the one the bet
+anticipated. The withholding turned out to be far harder to make **total** than
+to make correct: the narrowing predicate was right in its first commit and
+still leaked four times, through `examine`, a needs report, a provoke line, and
+a tick's motion narration. Every leak was a surface that *narrated* a creature
+rather than one that *returned* one, so none of them appeared in any
+enumeration of the channel's readers. The generalisable form is that
+**introducing an invariant silently promotes every existing reader of the
+underlying data into a potential violation of it, and nothing in the repository
+enumerates that set** — the emit seam's own shape does not help, because the
+last mile of every channel is prose, and prose cannot be audited for what it
+happens to mention. The structural claim survives and is now load-bearing; what
+narrows is the confidence that a structurally-correct boundary is
+automatically an *observed* one.
+
+Two smaller corrections the same campaign forces on this chapter's arithmetic.
+The bet's cost premise has been priced through the **actual** wasm boundary for
+the first time — a turn measures 1.57–1.78× native, not the 3.6–3.8× every
+derived browser figure here was multiplied by, so the seam is roughly twice as
+cheap in the browser as this chapter had assumed. And the payload growth this
+campaign added is eleven bytes, against a per-turn derivation cost of about
+3.7 ms in release: the bytes were never the term worth watching, the derivation
+is.
+
 Every test of this bet so far has pushed on the *producer* side — new source
 classes, new layers, new document shapes. [The Vigil](./chronicle/the-vigil.md)
 pushed on the **observer** side instead, and the interface took it without

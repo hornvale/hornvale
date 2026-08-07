@@ -20,7 +20,27 @@ pub const PURVIEW_RADIUS: u32 = 4;
 /// this relationship as a test rather than a coincidence of two constants
 /// living in different crates).
 /// type-audit: bare-ok(index)
-const AGENT_SALIENCE: u32 = 5;
+pub(crate) const AGENT_SALIENCE: u32 = 5;
+
+/// What a creature's mark calls itself, on the walk-band chart and — since The
+/// Sighting — on the chamber-band plan too. **One word for one thing across two
+/// schemas**: a client that learns to draw an `"agent"` on the chart must not
+/// have to learn a second word to draw the same creature one band down.
+pub(crate) const AGENT_MARK_KIND: &str = "agent";
+
+/// What `examine` prints for a creature, at either band.
+///
+/// One definition with two callers ([`purview_scene`]'s chart marks and
+/// `Session::sighting`'s plan marks) rather than the same `format!` written
+/// twice. That is not tidiness: `the_purview.rs::a_noun_at_both_grains_resolves_to_one_datum`
+/// makes "a noun resolves to ONE datum" a tested contract, and The Sighting
+/// extended the same noun across a BAND boundary — so two copies of this string
+/// would be two answers to one question, which is precisely the drift §6 exists
+/// to prevent.
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(prose: return)
+pub(crate) fn creature_datum(label: &str, species: &str) -> String {
+    format!("{label} — a {species} of this world, alive and moving.")
+}
 
 /// The chart's centre address: `position` truncated `zoom_out` rungs
 /// coarser. Zoom in this mesh is path truncation, never an aggregation, so
@@ -91,11 +111,8 @@ pub fn purview_scene(
             id.0,
             Mark {
                 noun: npc.label.clone(),
-                kind: "agent".to_string(),
-                datum: format!(
-                    "{} — a {} of this world, alive and moving.",
-                    npc.label, npc.species
-                ),
+                kind: AGENT_MARK_KIND.to_string(),
+                datum: creature_datum(&npc.label, &npc.species),
                 salience: AGENT_SALIENCE,
             },
         ));

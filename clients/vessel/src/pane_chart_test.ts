@@ -52,6 +52,63 @@ Deno.test("the ball is symmetric about the observer, not sheared", () => {
   }
 });
 
+Deno.test("a chart with no schema tag draws nothing", () => {
+  // `chartRows` must validate `chart.schema`, not merely read whichever
+  // fields it happens to want — the same discipline `parseSnapshot` applies
+  // to the envelope. Before this guard existed, an absent tag degraded to
+  // "read what's there," which is luck, not design.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "walk",
+      chart: {
+        water_legend: ["none"],
+        cells: [
+          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+        ],
+      },
+    },
+  }))!;
+  assertEquals(chartRows(snap), null);
+});
+
+Deno.test("a chart with an unrecognised schema tag draws nothing", () => {
+  // An allowlist, not a denylist: a tag this client has never heard of must
+  // refuse, not render. A denylist would render it and could silently
+  // mis-draw a field a future schema reused with new meaning.
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "walk",
+      chart: {
+        schema: "scene/surrounds/v3",
+        water_legend: ["none"],
+        cells: [
+          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+        ],
+      },
+    },
+  }))!;
+  assertEquals(chartRows(snap), null);
+});
+
+Deno.test("a chart with the current schema tag renders", () => {
+  const snap = parseSnapshot(JSON.stringify({
+    schema: "vessel/session/v1",
+    spatial: {
+      band: "walk",
+      chart: {
+        schema: "scene/surrounds/v2",
+        water_legend: ["none"],
+        cells: [
+          { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
+        ],
+      },
+    },
+  }))!;
+  assert(chartRows(snap) !== null, "the current tag should render");
+});
+
 Deno.test("a chamber-band snapshot draws no chart", () => {
   const snap = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v1",
@@ -75,7 +132,7 @@ Deno.test("seam cells are skipped, not drawn at a wrong place", () => {
     spatial: {
       band: "walk",
       chart: {
-        schema: "scene/surrounds/v1",
+        schema: "scene/surrounds/v2",
         biome_legend: ["forest"],
         water_legend: ["none"],
         relief_legend: ["flat"],
@@ -140,6 +197,7 @@ Deno.test("a malformed cell (not an object) is skipped, not thrown on", () => {
     spatial: {
       band: "walk",
       chart: {
+        schema: "scene/surrounds/v2",
         water_legend: ["none"],
         cells: [
           { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
@@ -160,6 +218,7 @@ Deno.test("a cell missing v/w/up entirely (not even null) is skipped", () => {
     spatial: {
       band: "walk",
       chart: {
+        schema: "scene/surrounds/v2",
         water_legend: ["none"],
         cells: [
           { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
@@ -183,6 +242,7 @@ Deno.test("a cell past the coordinate ceiling is refused, not drawn", () => {
     spatial: {
       band: "walk",
       chart: {
+        schema: "scene/surrounds/v2",
         water_legend: ["none"],
         cells: [
           { v: 0, w: 0, up: true, seam: false, state: "here", water: 0 },
@@ -208,6 +268,7 @@ Deno.test("a non-string water_legend entry does not shift subsequent indices", (
     spatial: {
       band: "walk",
       chart: {
+        schema: "scene/surrounds/v2",
         // Index 0 is malformed (not a string). If it were dropped instead
         // of preserved as "", "river" would shift from index 3 to index 2.
         water_legend: [null, "ocean", "salt-basin", "river"],
@@ -235,6 +296,7 @@ Deno.test("a real dry-land cell does not render as water", () => {
     spatial: {
       band: "walk",
       chart: {
+        schema: "scene/surrounds/v2",
         water_legend: ["ocean", "salt-basin", "river", "dry-land"],
         cells: [
           { v: 0, w: 0, up: true, seam: false, state: "here", water: 3 },
