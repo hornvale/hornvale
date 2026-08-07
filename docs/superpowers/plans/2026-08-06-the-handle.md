@@ -2,6 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **COMPLETE — merged 2026-08-07.** All five tasks landed; `make gate` 3085
+> passing, `make vessel-check` green. Task 1 was corrected in flight (the
+> chart legend is a second matcher). Close artifacts:
+> [chronicle](../../../book/src/chronicle/the-handle.md),
+> [retrospective](../../retrospectives/the-handle.md).
+
 **Goal:** Make every noun the world's prose names resolvable by `examine`, on
 all four surfaces, and add the check that would have caught all four.
 

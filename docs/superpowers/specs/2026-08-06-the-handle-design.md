@@ -1,7 +1,6 @@
 # The Handle — every named thing answerable
 
-**Campaign:** The Handle · **Date:** 2026-08-06 · **Status:** spec, awaiting G3
-review · **Branch:** `the-handle` off main @ a3f61974
+**Campaign:** The Handle · **Date:** 2026-08-06 · **Status:** COMPLETE — merged 2026-08-07 · **Branch:** `the-handle` off main @ a3f61974
 
 A noun is the handle you grab a thing by. The world names things it will not
 then let you touch.
@@ -133,6 +132,13 @@ Two halves, and the second is the one that would have caught all four.
 "Significant" means: longer than two characters, not in a small stopword list.
 Both are a stated judgement rather than a discovered fact, and both live in one
 place so the judgement is visible.
+
+**Corrected after implementation.** The two halves below cover two directions of
+three. Neither sees **over-admission** — a word resolving that was never
+declared. A mutation proved it: reverting a declared noun phrase to its display
+name makes more words resolve, and the gate stayed green; a separate
+regression test caught it. The protection is two tests facing opposite ways,
+not one gate facing both.
 
 **The residual gap, stated.** The mechanical half enforces that *declared* nouns
 are reachable. It cannot enforce that everything the prose mentions is declared
