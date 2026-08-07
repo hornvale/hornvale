@@ -465,3 +465,153 @@ re-authoring, not an allowlist entry.
   without resolving reachability, so "can a creature live there" and "can a
   walker get there" are now genuinely separable questions with a people in
   between.
+
+---
+
+## 10. Amendment — two G3 decisions reversed by Task 1's measurement
+
+Task 1 ran before any trait value was authored, which is what made both of these
+catchable. Both reverse a call Nathan made at G3 on a premise the measurement
+falsified. Recorded as an amendment rather than an edit: the original reasoning
+is part of the record.
+
+### 10.1 What Task 1 actually measured
+
+The closed form in §1.1 is **confirmed exactly**: every kind whose authored
+`devotion_elev` sits below its `sovereignty_floor` is elevation-bound on
+**100.00%** of land, on every seed. But the generalisation this spec drew from
+it — that dwarves inherit the result because they share human's mass class — is
+**refuted**:
+
+```
+  kind        mass    floor  dev_el  below?    s42       s7    s1234
+  kobold      13.6   0.3078    0.95     no   43.72%   41.55%   51.45%
+  goblin      18.1   0.3347    0.35     no  100.00%  100.00%   97.04%
+  hobgoblin   74.8   0.4527    0.70     no   74.77%   77.32%   69.26%
+  bugbear    132.0   0.4933    0.70     no   72.89%   78.12%   71.40%
+  gnoll      136.1   0.4954    0.40    YES  100.00%  100.00%  100.00%
+  human       70.0   0.4477    0.30    YES  100.00%  100.00%  100.00%
+```
+
+Hobgoblin is 74.8 kg — human's mass class — and is elevation-bound on 74.77% of
+seed 42's land, not 100%. **Mass sets the floor; the authored devotion decides
+the bind.** The Tilth measured three kinds and this spec extended the result to a
+roster it never covered.
+
+Goblin is the instructive boundary: devotion 0.35 clears floor 0.3347 by 0.0153
+and still drops to 97.04% on seed 1234. The theorem is exact; the margin is what
+makes it visible.
+
+### 10.2 Desert dwarf is buildable, and will be built (reverses §5 P3)
+
+Aridity is **not** a prepared stop. Authoring `devotion_elev` above the kind's
+sovereignty floor (~0.44 at 66 kg) makes its temperature and moisture curves
+bind, exactly as kobold's and hobgoblin's already do in the shipped roster.
+
+The §3.1 table's *prepared* rows are therefore conditional on an authoring
+choice, not on the model. **Nathan's decision, 2026-08-07: make Desert actually
+work.** It becomes the first people in the roster whose climate niche selects.
+
+**P3 is withdrawn and replaced.** The old P3 predicted Desert would be
+indistinguishable from Hill. The replacement:
+
+> **P3′ — Desert's climate curves bind.** With `devotion_elev` authored above
+> its sovereignty floor, the Liebig-binding axis for desert-dwarf is
+> `temperature` or `moisture` on ≥ 20% of land cells, and its capacity field
+> correlates with Hill's **below 0.95**. *Predicted: confirmed.*
+
+This makes `BIO-gnoll-desert` a sharper row, not a satisfied one: gnoll's
+documented desert stronghold selects zero settleable cells **because gnoll's
+`devotion_elev` of 0.40 sits below its floor of 0.4954**, so its authored
+moisture curve never binds. That is a diagnosis the row did not have. Gnoll is
+**not** re-authored here — moving an existing people's capacity inside a roster
+epoch is the attribution-destroying bundling §6 of the programme spec refuses.
+The diagnosis is recorded on the row for its own campaign.
+
+### 10.3 The depth coordinate is folded in (reverses §8 item 1)
+
+**Nathan's decision, 2026-08-07: build it in C2c.** Without it Mountain and
+Duergar are one kind, and no authoring choice can separate them — depth is
+*absent*, not merely prepared, and that distinction is what §3.1's trichotomy
+was for.
+
+**The coordinate already exists and is not being invented.**
+`domains/terrain/src/strata.rs:107` defines `BandSample.top_depth_m` — *"depth
+to the top of this band, metres below the surface"* — and `Cave.deepest_band`
+(`features.rs:29`) names which band the void reaches. So a chamber's elevation
+is a **read** over two committed derivations:
+
+```
+  height_asl_m(chamber) = height_asl_m(surface) - top_depth_m(cave.deepest_band)
+```
+
+No new field, no new tuning, no change to cave prevalence, clustering or
+`cave_depth` itself — `MAP-cave-depth-weld` and `MAP-underworld-reachability`
+stay untouched. `top_depth_m` varies per cell with column thickness, so the
+underground elevation field has real spatial structure rather than being a
+constant offset.
+
+`subterranean_substrate` (`windows/worldgen/src/lib.rs:2189`) takes
+`fn(Substrate) -> Substrate` and so cannot see the column; it gains a depth
+argument, supplied by its one caller at `lib.rs:1232`, which already holds the
+terrain and the cell.
+
+**Why this is not either of the two refused repairs.** It does not floor an
+axis and it does not change the tolerance operator. It supplies missing
+information to the axis that already binds. It is a fidelity correction: a
+chamber under a 2000 m peak is genuinely not at 2000 m, and the previous
+behaviour was an approximation The Deep Realm recorded as out of its scope.
+
+**P2 is withdrawn and inverted.** The old P2 predicted Mountain ≡ Duergar. The
+replacement:
+
+> **P2′ — Mountain and Duergar are distinguishable, and depth is what
+> distinguishes them.** Authored with different elevation optima — Mountain
+> shallow, Duergar deep — their capacity fields correlate **below 0.95**. And
+> with the depth coordinate reverted, the same two kinds correlate **above
+> 0.999**. *Predicted: confirmed.* The second half is the mutation: it proves
+> the separation comes from depth and not from some other authored difference.
+
+### 10.4 The Warren's tripwires now redden by design, and must be re-measured
+
+This is the part that must not be done casually. `warren_readout.rs:310` and
+`deep_realm_rehome.rs:301` both assert `ratio == 1.000` and both say, in their
+own text, that a change means *"the tolerance model changed and the spec's §10.3
+and the chronicle need re-measuring rather than this assertion needing a nudge."*
+
+**They anticipated a tolerance-model change. This is a substrate change.** The
+instruction still applies and the campaign owes the re-measurement:
+
+1. Re-run The Warren's P1 with the depth coordinate live. Rust monster and xorn
+   are subterranean and will re-score.
+2. Update the assertions to the newly measured ratios, with a comment naming
+   **this** campaign as the cause and stating that the masking they pinned has
+   been lifted by supplying elevation rather than by changing the minimum.
+3. Update `2026-08-06-the-warren-design.md` §10.3 and
+   `book/src/chronicle/the-warren.md`'s "The minimum that cannot see the
+   improvement" section — its central claim (*a non-lethal preference cannot
+   matter while an unfloored axis is scarcer*) remains true as a statement about
+   the tolerance model, but it is no longer what The Warren's own mechanism is
+   limited by.
+4. `warren_gate.rs`'s mirror should **not** move: it exercises a *Surface* kind,
+   and a Surface kind's arithmetic is untouched. If it reddens, the depth change
+   has leaked into the surface path and that is a bug.
+
+The Warren's chronicle keeps its finding. What changes is that the finding
+acquired a remedy one campaign later, which is the outcome its own closing
+section asked for.
+
+### 10.5 Consequences for scope, cost and the other predictions
+
+- **P1 stands but is re-stated.** It is no longer "climate is silent for a
+  dwarf"; it is the theorem: a kind is elevation-bound everywhere iff its
+  authored `devotion_elev` is below its sovereignty floor. Which side each dwarf
+  lands on is now an authoring decision recorded per kind.
+- **P6 (world identity moves) is strengthened.** Peopled dwarves reach the
+  ledger, and the depth coordinate re-scores the two existing subterranean
+  fauna. Magnitude still deliberately unpredicted.
+- **The census will move more than a roster-only campaign would.** Still one
+  regen at the close, per Nathan's authorization.
+- **Still out of scope, unchanged:** chamber occupancy and traversal (§2),
+  `tolerance_tiered`, flooring elevation, cave prevalence/clustering tuning, and
+  re-authoring gnoll.
