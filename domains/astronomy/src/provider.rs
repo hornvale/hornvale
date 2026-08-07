@@ -88,6 +88,25 @@ mod tests {
     }
 
     #[test]
+    fn a_night_sky_reports_each_body_as_its_own_phrase() {
+        // Seed 42 at night names two moons in its description; each must also
+        // be addressable on its own, because the vessel builds one
+        // examinable entry per body and cannot parse them back out of the
+        // sentence.
+        let s = sky(SkyPins::default());
+        let report = s.sky_at_visibility(WorldTime { day: 0.0 }, Visibility::CLEAR);
+        assert!(!report.body_phrases.is_empty(), "a sky names something");
+        for (noun, datum) in &report.body_phrases {
+            assert!(!noun.is_empty() && !datum.is_empty());
+            assert!(
+                report.description.contains(noun.trim_start_matches("the ")),
+                "the description must actually name {noun:?}: {}",
+                report.description
+            );
+        }
+    }
+
+    #[test]
     fn a_spinning_sun_is_periodic_and_top_salience() {
         let s = sky(SkyPins {
             rotation: Some(RotationPin::PeriodHours(24.0)),
@@ -1486,11 +1505,16 @@ impl GeneratedSky {
                     bodies.push(format!("moon {}", i + 1));
                 }
                 let n = self.system.neighbors.len();
+                let description = format!(
+                    "A sun hangs motionless above the day side; the night side lives \
+                     beneath {n} unmoving stars."
+                );
                 SkyReport {
-                    description: format!(
-                        "A sun hangs motionless above the day side; the night side lives \
-                         beneath {n} unmoving stars."
-                    ),
+                    // A locked world's moons and stars are never named
+                    // individually — only the sun's fixed vigil is: that is
+                    // the one body this sentence actually singles out.
+                    body_phrases: vec![("the sun".to_string(), description.clone())],
+                    description,
                     bodies,
                 }
             }
@@ -1527,6 +1551,9 @@ impl GeneratedSky {
                         description.push_str(season_words(phase));
                     }
                     SkyReport {
+                        // Daylight names exactly one body, and its clause is
+                        // the whole description.
+                        body_phrases: vec![("the sun".to_string(), description.clone())],
                         description,
                         bodies,
                     }
@@ -1535,6 +1562,11 @@ impl GeneratedSky {
                         bodies.push(format!("moon {}", i + 1));
                     }
                     let v = vis.get();
+                    // Built alongside `parts` rather than re-derived from the
+                    // finished sentence: each entry's noun and clause come
+                    // from the same `size`/phase values that clause is made
+                    // of, pushed at the point each moon's clause is built.
+                    let mut moon_phrases: Vec<(String, String)> = Vec::new();
                     let mut parts: Vec<String> = if v >= MOON_VISIBILITY {
                         self.system
                             .moons
@@ -1542,7 +1574,7 @@ impl GeneratedSky {
                             .enumerate()
                             .map(|(index, moon)| {
                                 let size = size_word(moon.angular_diameter_rel);
-                                match self.calendar.moon_phase(t, index) {
+                                let clause = match self.calendar.moon_phase(t, index) {
                                     // Dimmed past the phase threshold a moon is
                                     // a presence, not a face: the deck glows
                                     // where it stands.
@@ -1560,7 +1592,9 @@ impl GeneratedSky {
                                     None => capitalize(&format!(
                                         "the {size} moon shows no phase — its orbit outpaces the year."
                                     )),
-                                }
+                                };
+                                moon_phrases.push((format!("the {size} moon"), clause.clone()));
+                                clause
                             })
                             .collect()
                     } else {
@@ -1589,6 +1623,7 @@ impl GeneratedSky {
                     SkyReport {
                         description,
                         bodies,
+                        body_phrases: moon_phrases,
                     }
                 }
             }

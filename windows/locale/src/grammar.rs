@@ -25,23 +25,30 @@ pub(crate) fn derived_regime(
         kingdom: Kingdom::PlantAnimal,
         endemic: false,
     };
-    let descriptor = render(negations, micro, expr, seed, addr);
+    let (descriptor, descriptor_noun) = render(negations, micro, expr, seed, addr);
     Regime {
         negations,
         micro,
         descriptor,
+        descriptor_noun,
         strangeness: negations.strangeness(),
     }
 }
 
 /// Render a descriptor for any negation vector (used by both tiers).
+///
+/// Returns the rendered descriptor, and the noun phrase within it — the part
+/// a player would name. Returned rather than re-derived because only this
+/// function knows which clauses are the noun phrase and which are
+/// qualifiers; recovering it by parsing the rendered string is what The
+/// Handle exists to avoid.
 pub(crate) fn render(
     negations: Negations,
     micro: MicroField,
     expr: BiomeExpr,
     seed: Seed,
     addr: &RoomAddr,
-) -> String {
+) -> (String, String) {
     let room = addr.seed(seed);
     let variety = draw_variety(room, expr.formation, expr.stratum, negations.substrate);
     let substrate_detail = draw(
@@ -60,11 +67,12 @@ pub(crate) fn render(
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join(" ");
-    [noun, habitat, exotic]
+    let text = [noun.clone(), habitat, exotic]
         .into_iter()
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
-        .join(", ")
+        .join(", ");
+    (text, noun)
 }
 
 /// Draw one entry from a pool off a per-slot stream; "" if the pool is empty.
@@ -311,6 +319,38 @@ mod tests {
     }
 
     #[test]
+    fn render_reports_the_noun_phrase_it_composed() {
+        // `render` already builds the descriptor as (variety + substrate_detail)
+        // then qualifiers; the noun phrase is that first part, and a player names
+        // it rather than the qualifiers.
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let (text, noun) = render(
+            Negations {
+                substrate: Substrate::Ordinary,
+                energy: EnergySource::Sunlit,
+                kingdom: Kingdom::PlantAnimal,
+                endemic: false,
+            },
+            micro0(),
+            BiomeExpr::for_legacy(Biome::Desert),
+            Seed(42),
+            &addr,
+        );
+        assert!(!noun.is_empty(), "a descriptor always has a noun phrase");
+        assert!(
+            text.starts_with(&noun),
+            "the noun phrase opens the descriptor: {text:?} / {noun:?}"
+        );
+        assert!(
+            !noun.contains(','),
+            "qualifiers are not part of the noun phrase: {noun:?}"
+        );
+    }
+
+    #[test]
     fn derived_is_deterministic() {
         let addr = RoomAddr {
             face: 3,
@@ -409,7 +449,7 @@ mod tests {
             endemic: false,
         };
         for (biome, expected) in LEGACY_LAND {
-            let got = render(n, micro0(), BiomeExpr::for_legacy(*biome), Seed(42), &addr);
+            let (got, _) = render(n, micro0(), BiomeExpr::for_legacy(*biome), Seed(42), &addr);
             assert_eq!(&got, expected, "{biome:?} moved under the re-key");
         }
     }
@@ -493,6 +533,7 @@ mod tests {
                 Seed(42),
                 &addr_(),
             )
+            .0
         };
         let shallow = at(Stratum::Epipelagic);
         let deep = at(Stratum::Bathypelagic);
@@ -505,7 +546,7 @@ mod tests {
     fn nothing_underwater_is_dry_or_sun_warmed() {
         for stratum in hornvale_climate::Realm::WATERWORLD.strata() {
             for micro in [micro_high(), micro0()] {
-                let d = render(
+                let (d, _) = render(
                     mundane_negations(),
                     micro,
                     BiomeExpr {
@@ -537,6 +578,7 @@ mod tests {
                 Seed(42),
                 &addr_(),
             )
+            .0
         };
         assert!(at(Stratum::Epipelagic).contains("sunlit"));
         assert!(!at(Stratum::Bathypelagic).contains("sunlit"));
@@ -546,7 +588,7 @@ mod tests {
     #[test]
     fn land_micro_clauses_are_unchanged() {
         // The guard on the guard: gating the water path must not disturb land.
-        let d = render(
+        let (d, _) = render(
             mundane_negations(),
             micro_high(),
             BiomeExpr::for_legacy(Biome::Savanna),

@@ -21,6 +21,17 @@ export interface PaletteEntry {
   chambers: number[];
 }
 
+/** One individual standing on a cell of the plan — `windows/vessel/src/plan.rs`'s
+ * `PlanMark`, the `scene/surrounds/v2` `Mark` shape plus a lattice-local cell. */
+export interface PlanMark {
+  x: number;
+  y: number;
+  noun: string;
+  kind: string;
+  datum: string;
+  salience: number;
+}
+
 /** A `vessel/plan/v1` document — the chamber band's cells. */
 export interface PlanPayload {
   schema: string;
@@ -31,6 +42,10 @@ export interface PlanPayload {
   palette: PaletteEntry[];
   cells: number[];
   you: { x: number; y: number };
+  // Optional for the same reason `spatial` on `Snapshot` is: a client
+  // bundle can outlive the sim that produced a payload, and an older sim
+  // emits no `marks` key at all — Task 5's own fixture predates it too.
+  marks?: PlanMark[];
 }
 
 /** The spatial channel, tagged by band. A client switches on `band` before

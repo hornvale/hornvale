@@ -499,13 +499,18 @@ impl hornvale_kernel::Domain for Astronomy {
 pub struct ConstantSun;
 
 /// What the sky looks like at a given moment.
-/// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies)
+/// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies), bare-ok(identifier-text: body_phrases)
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkyReport {
     /// Human-readable description of the sky.
     pub description: String,
     /// Names of the visible bodies.
     pub bodies: Vec<String>,
+    /// One `(noun, datum)` per body the description names, in description
+    /// order — the sun, then each moon. `bodies` above is the machine-side
+    /// list (`"moon 1"`); these are the words the prose actually used ("the
+    /// vast moon"), which is what a reader can name.
+    pub body_phrases: Vec<(String, String)>,
 }
 
 impl ConstantSun {
@@ -515,6 +520,10 @@ impl ConstantSun {
             description: "A golden sun hangs fixed at zenith. It has never been seen to move."
                 .to_string(),
             bodies: vec!["the sun".to_string()],
+            body_phrases: vec![(
+                "the sun".to_string(),
+                "A golden sun hangs fixed at zenith.".to_string(),
+            )],
         }
     }
 

@@ -565,6 +565,35 @@ still total.** The seam held, and it held for a reason no test had stated —
 which is the kind of pass worth recording as a narrower confidence, not a
 wider one.
 
+**Re-scored again by [The Sighting](./chronicle/the-sighting.md) (2026-08-07):
+the redaction boundary stopped being merely structural and started
+withholding.** Both prior tests proved the boundary by building panes that
+*could* have reached outside their channel and did not; nothing had yet
+required the sim to remove something a pane would otherwise have shown. This
+campaign does, and the score improves for a reason that is not the one the bet
+anticipated. The withholding turned out to be far harder to make **total** than
+to make correct: the narrowing predicate was right in its first commit and
+still leaked four times, through `examine`, a needs report, a provoke line, and
+a tick's motion narration. Every leak was a surface that *narrated* a creature
+rather than one that *returned* one, so none of them appeared in any
+enumeration of the channel's readers. The generalisable form is that
+**introducing an invariant silently promotes every existing reader of the
+underlying data into a potential violation of it, and nothing in the repository
+enumerates that set** — the emit seam's own shape does not help, because the
+last mile of every channel is prose, and prose cannot be audited for what it
+happens to mention. The structural claim survives and is now load-bearing; what
+narrows is the confidence that a structurally-correct boundary is
+automatically an *observed* one.
+
+Two smaller corrections the same campaign forces on this chapter's arithmetic.
+The bet's cost premise has been priced through the **actual** wasm boundary for
+the first time — a turn measures 1.57–1.78× native, not the 3.6–3.8× every
+derived browser figure here was multiplied by, so the seam is roughly twice as
+cheap in the browser as this chapter had assumed. And the payload growth this
+campaign added is eleven bytes, against a per-turn derivation cost of about
+3.7 ms in release: the bytes were never the term worth watching, the derivation
+is.
+
 Every test of this bet so far has pushed on the *producer* side — new source
 classes, new layers, new document shapes. [The Vigil](./chronicle/the-vigil.md)
 pushed on the **observer** side instead, and the interface took it without
@@ -755,6 +784,28 @@ that was faithful drew no walls at all, which no assertion caught and a human
 reading the picture did. What changed is that "the render depicts something the
 command language denies" has stopped being a thing a human must remember to look
 for.
+
+**Re-scored again by [The Handle](./chronicle/the-handle.md) (2026-08-06), which
+refutes that last sentence and narrows the row.** The parity contract was real
+and it held — for the floor plan it was written against. It said nothing about
+the other four surfaces that name things: the room's own prose, the sky, the
+chart legend, and the underworld. All four were denying nouns they had just
+printed, and the way it came to light was a human reading a transcript and
+saying so, which is exactly what the sentence claimed had stopped being
+necessary. Six of the seven significant words in the starting room's catalog did
+not resolve.
+
+The correction is about the *scope of a mechanization*, not its value. A check
+converts the row it covers and leaves the rest of the ledger reading as though
+it were covered too — which is the more dangerous state, because the lament that
+"only a human noticed" gets quietly retired while remaining true everywhere the
+check does not reach. The Handle widens the check from one render to every
+catalog surface, and it also finds the limit of the wider version: the check
+asserts that *declared* nouns resolve, and is structurally blind to
+over-admission, which a mutation demonstrated and only a separate,
+opposite-facing test caught. So the row now reads: parity is mechanized in both
+the plan and the prose, in one direction, and the second direction is held by
+regression tests rather than by a rule.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than

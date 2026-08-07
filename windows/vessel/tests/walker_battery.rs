@@ -45,7 +45,8 @@ fn the_walker_battery_holds_the_four_invariants() {
         let f = session.focalized().unwrap();
         assert!(!f.prose.is_empty(), "step {step}: prose renders");
         let prose = f.prose.to_lowercase();
-        for (noun, _) in &f.nouns {
+        for n in &f.nouns {
+            let noun = &n.display;
             assert!(
                 prose.contains(&noun.to_lowercase()),
                 "step {step}: look mentions '{noun}'"

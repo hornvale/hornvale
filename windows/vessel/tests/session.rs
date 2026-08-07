@@ -124,9 +124,9 @@ fn examine_honors_the_contract_and_release_ends() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let f = s.focalized().unwrap();
-    for (noun, detail) in &f.nouns {
-        match s.handle(&format!("examine {noun}")) {
-            Turn::Out(t) => assert_eq!(&t, detail, "examine renders the datum"),
+    for n in &f.nouns {
+        match s.handle(&format!("examine {}", n.display)) {
+            Turn::Out(t) => assert_eq!(&t, &n.datum, "examine renders the datum"),
             _ => panic!("examine must not release"),
         }
     }
