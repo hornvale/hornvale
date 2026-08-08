@@ -51,6 +51,7 @@ fn opts() -> PossessOpts {
         echo: false,
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
+        lens: hornvale_vessel::lens::Lens::Off,
     }
 }
 

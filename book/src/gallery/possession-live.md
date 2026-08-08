@@ -40,6 +40,18 @@ the picture. Type `eyes kobold`, `eyes human`, `eyes own` or `eyes off` to
 change the eye without changing anything else. The tint is bedrock, so it is
 withheld wherever the glyph is drawing water, a mark, or you.
 
+Since [The Lantern](../chronicle/the-lantern.md) the **floor plan** is
+coloured too, and by a different light. Indoors there is no sun: a cell's
+colour is the fabric its walls are built from — stone, timber, cob or thatch,
+derived from the bedrock, the biome and the depth of soil under the
+building — lit by whatever sources actually reach it. Those are a hearth at
+its wall, an open doorway onto the daylight outside, and the 1900 K flame the
+possession is taken to be carrying, which is why a room reads amber rather
+than white. Light travels by the same symmetric field-of-view calculation that
+decides what you can see, so a wall blocks light exactly as it blocks sight,
+and a cell nothing reaches carries no colour at all rather than a black one.
+A threshold is uncoloured on purpose: an opening is not a material.
+
 ## The Demo
 
 <div id="casement"></div>

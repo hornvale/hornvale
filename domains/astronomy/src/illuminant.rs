@@ -7,58 +7,24 @@
 //! radiometric accuracy.
 
 use crate::star::Star;
-use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant};
+use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant, blackbody};
 use hornvale_kernel::math;
-
-/// Planck's second radiation constant, `hc/k`, in nanometre-kelvin. Used in
-/// the exponential term of the spectral radiance law.
-/// type-audit: bare-ok(ratio)
-const C2_NM_K: f64 = 1.438_776_877e7;
-
-/// Spectral radiance of a blackbody at `t_kelvin`, at `wavelength_nm`, up to
-/// a constant factor. The leading `c1` is omitted because every consumer
-/// works in ratios or renormalizes — carrying it would only scale all ten
-/// bands together.
-fn planck_relative(wavelength_nm: f64, t_kelvin: f64) -> f64 {
-    let l5 = wavelength_nm.powi(5);
-    let x = C2_NM_K / (wavelength_nm * t_kelvin);
-    1.0 / (l5 * (math::exp(x) - 1.0))
-}
 
 /// The star's light at the top of the atmosphere, sampled into the band
 /// grid and normalized so the brightest band is 1.0.
 ///
-/// **A midpoint sample, not an integral.** Each band is 40 nm wide (edges
-/// 340–740; see [`BAND_CENTERS_NM`]), and this evaluates Planck's law once
-/// at the band *centre* rather than integrating the curve across the band.
-/// That is the deliberate choice, not an oversight: the Planck curve is
-/// smooth and monotone within 40 nm everywhere on this grid at
-/// main-sequence temperatures, so the midpoint rule preserves the ordering
-/// between bands and between stars, which is all the campaign's claims
-/// rest on. A band integral would change the numbers slightly and change
-/// none of the directions.
+/// **A band integral, not a midpoint sample.** The sampling rule lives in
+/// [`blackbody`], which integrates Planck's law across each band's 40 nm
+/// span rather than evaluating it once at the centre; see that function for
+/// why the midpoint rule was retired. A star is just one temperature this
+/// law is asked about, so it holds no opinion of its own about how the law
+/// is sampled.
 ///
 /// Normalizing here means downstream code compares *colour*, not distance
 /// from the star — insolation is climate's business, and this function is
 /// forbidden from influencing it (the containment rule on [`Star::t_eff`]).
 pub fn daylight(star: &Star) -> Illuminant {
-    let mut bands = [0.0f64; BANDS];
-    let mut peak = 0.0f64;
-    for (band, center) in bands.iter_mut().zip(BAND_CENTERS_NM.iter()) {
-        let value = planck_relative(*center, star.t_eff.get());
-        *band = value;
-        if value > peak {
-            peak = value;
-        }
-    }
-    // `peak` is strictly positive for any finite positive temperature, so
-    // this division is total; the guard is defensive, not a live path.
-    if peak > 0.0 {
-        for value in bands.iter_mut() {
-            *value /= peak;
-        }
-    }
-    Illuminant::new(bands).expect("a normalized Planck curve is finite and non-negative")
+    blackbody(star.t_eff.get())
 }
 
 /// Redden and dim `base` for a sun at `sun_elevation_deg` above the horizon.
@@ -166,4 +132,41 @@ mod tests {
         let b = daylight(&star_at(5772.0));
         assert_eq!(a.get(), b.get());
     }
+
+    /// The pin now guards the **band integral**. It began life in Task 1 as
+    /// proof that relocating `planck_relative` into the kernel changed no
+    /// number; Task 2 deliberately changed the sampling rule from a midpoint
+    /// evaluation to a 13-node Simpson integral over each 40 nm band, so the
+    /// bits below were re-captured in that commit. What it guards from here
+    /// on is the integral itself: the node count, the weights, the band
+    /// edges, and the normalization are all a permanent contract, and any
+    /// one of them moving is a world-wide colour change.
+    ///
+    /// FIRES WHEN: any band of `daylight(5772 K)` differs in a single bit.
+    /// It is deliberately bit-exact, not epsilon-based: an approximate
+    /// assertion here would pass through exactly the drift it exists to
+    /// catch — the shift from midpoint to integral is itself only `1.6e-3`
+    /// relative at this temperature, which is below a `u8` step and
+    /// therefore invisible to any test that compares rendered colour.
+    #[test]
+    fn daylight_is_bit_pinned_under_the_band_integral() {
+        let light = daylight(&star_at(5772.0));
+        let bits: Vec<u64> = light.get().iter().map(|v| v.to_bits()).collect();
+        assert_eq!(bits, EXPECTED_5772_BITS, "daylight(5772 K) moved");
+    }
+
+    /// Captured from `daylight(&star_at(5772.0))` under the band integral.
+    /// Regenerate ONLY in a commit that deliberately changes the sampling.
+    const EXPECTED_5772_BITS: [u64; 10] = [
+        4604843133675319623,
+        4606053166318454611,
+        4606811611087767384,
+        4607160627626836414,
+        4607182418800017408,
+        4606965519231890559,
+        4606588357244349250,
+        4606113612124414270,
+        4605588132185475270,
+        4605045177730704710,
+    ];
 }

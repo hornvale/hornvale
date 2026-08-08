@@ -207,6 +207,35 @@ instrument, which is a stronger result than another confirmation would have
 been, and it lowers rather than raises the confidence owed to any
 observer-varying claim whose metric has not itself been probed.
 
+*[The Lantern](./chronicle/the-lantern.md) (2026-08-08) paid that debt on the
+very next claim, and the payment is the reason the tier holds.* It set out to
+show that a rod-dominant eye sees where a human does not, and the claim held at
+the model level — at an illuminance of `1.6e-6` a human's emitted colour is
+`[0, 0, 0]` and a kobold's is not, with the kobold's three slots **equal**,
+which is what proves the pixel came from the achromatic path rather than from a
+cone channel that happened to survive. But two constants in that term turned out
+to be load-bearing, and both are the metric-not-model failure this bet was just
+warned about. Normalizing each observer's rod by *its own* curve would have
+divided a species' night vision straight back out and rendered a kobold
+pixel-for-pixel identical to a human — the divergence computed correctly and
+attributed to nothing. And at unit gain the rod's image falls below one screen
+count *everywhere in its own regime*, so the term would have shipped green and
+changed no pixel anywhere. Both were caught by probing the instrument rather
+than by reading the result, which is the practice the previous paragraph asked
+for; neither was visible in a passing test. The bet stays where it is, and what
+this adds is a second worked instance of the same discipline rather than a
+second confirmation.
+
+The same campaign supplies the sharper caution about *populations*. Its material
+claim — that two settlements on different bedrock produce visibly different
+walls — held across 1505 settlements over eight seeds, at a median of 41 `u8`
+steps out of 255. The tenth percentile is 1, and every sampled flagship
+settlement stands on the same rock class, plausibly because the biggest
+settlements go where the rivers are ([The Confluence](./chronicle/the-confluence.md)).
+So the population varies and the head of it does not, and a possession always
+starts at the head. A divergence claim measured over a population is not
+automatically a claim about what anyone will see.
+
 **Population has a physically-grounded, self-checking prior.** Every
 settlement used to carry a population number a formula handed it, with no
 account of what the land could support and nothing to catch an absurd

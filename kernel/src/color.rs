@@ -11,10 +11,12 @@
 //!
 //! **Determinism.** The hot path is `Σ r[b] · i[b] · s[b]` — multiplication
 //! and addition over fixed-size arrays, which IEEE 754 requires to be
-//! exact (decision 0041). No `math.rs` call appears here. Use `a * b + c`
+//! exact (decision 0041). No `math.rs` call appears in it. Use `a * b + c`
 //! and never `mul_add`: both are exact but they round differently from
-//! each other.
+//! each other. The one transcendental in this module is [`planck_relative`]'s
+//! exponential, which routes through `math.rs` like every other.
 
+use crate::math;
 use crate::units::UnitError;
 
 /// Number of sampled wavelength bands. **This is a contract**: widening it
@@ -38,6 +40,106 @@ pub const BANDS: usize = 10;
 pub const BAND_CENTERS_NM: [f64; BANDS] = [
     360.0, 400.0, 440.0, 480.0, 520.0, 560.0, 600.0, 640.0, 680.0, 720.0,
 ];
+
+/// The width of one band, nanometres. The grid is ten uniform bands whose
+/// edges span 340–740, so band `i` covers
+/// `BAND_CENTERS_NM[i] ± BAND_WIDTH_NM / 2`.
+/// type-audit: bare-ok(ratio)
+pub const BAND_WIDTH_NM: f64 = 40.0;
+
+/// Planck's second radiation constant, `hc/k`, in nanometre-kelvin. Used in
+/// the exponential term of the spectral radiance law.
+/// type-audit: bare-ok(ratio)
+const C2_NM_K: f64 = 1.438_776_877e7;
+
+/// Spectral radiance of a blackbody at `t_kelvin`, at `wavelength_nm`, up to
+/// a constant factor. The leading `c1` is omitted because every consumer
+/// works in ratios or renormalizes — carrying it would only scale all ten
+/// bands together.
+///
+/// **This lives in the kernel, not in astronomy, because it takes no
+/// world-state.** A star, a hearth and a forge are the same law at three
+/// temperatures; the temperature is the datum and belongs to whoever owns
+/// the thing, but the law is substrate. (Astronomy's `at_elevation` stays in
+/// astronomy for the mirror-image reason: it is parameterized by a sun's
+/// elevation.)
+/// type-audit: bare-ok(ratio: wavelength_nm), bare-ok(ratio: t_kelvin), bare-ok(ratio: return)
+pub fn planck_relative(wavelength_nm: f64, t_kelvin: f64) -> f64 {
+    let l5 = wavelength_nm.powi(5);
+    let x = C2_NM_K / (wavelength_nm * t_kelvin);
+    1.0 / (l5 * (math::exp(x) - 1.0))
+}
+
+/// Simpson nodes per band. **A permanent contract**: changing it moves every
+/// colour in the world. Chosen by measurement, not taste (spec §5.2) — 13
+/// nodes hold at least 20x below a `u8` quantization step down to 700 K, a
+/// dull red glow colder than anything the project names, so a later ember or
+/// forge cannot force it to change. Five nodes already fails by 900 K.
+/// Must be odd.
+/// type-audit: bare-ok(count)
+const BAND_NODES: usize = 13;
+
+/// The mean of `f` across the band centred at `center_nm`, by Simpson's rule.
+fn band_mean(center_nm: f64, f: &dyn Fn(f64) -> f64) -> f64 {
+    band_mean_with_nodes(center_nm, BAND_NODES, f)
+}
+
+/// [`band_mean`] at an explicit node count, so a test can compare the shipped
+/// count against a converged reference. Not public: the node count is a
+/// contract, not a caller's choice.
+fn band_mean_with_nodes(center_nm: f64, nodes: usize, f: &dyn Fn(f64) -> f64) -> f64 {
+    debug_assert!(
+        nodes >= 3 && nodes % 2 == 1,
+        "Simpson needs an odd node count >= 3"
+    );
+    let a = center_nm - BAND_WIDTH_NM / 2.0;
+    let h = BAND_WIDTH_NM / (nodes - 1) as f64;
+    let mut sum = 0.0;
+    for i in 0..nodes {
+        let weight = if i == 0 || i == nodes - 1 {
+            1.0
+        } else if i % 2 == 1 {
+            4.0
+        } else {
+            2.0
+        };
+        sum += weight * f(a + i as f64 * h);
+    }
+    sum * h / 3.0 / BAND_WIDTH_NM
+}
+
+/// A blackbody at `t_kelvin` on the band grid, normalized so the brightest
+/// band is 1.0.
+///
+/// **A band integral, not a midpoint sample.** [`BAND_CENTERS_NM`]'s own doc
+/// says anything integrating over a band wants the *edges*. The midpoint
+/// rule's error is 0.26 % at 5800 K but 34 % at 1100 K, because below the
+/// grid the visible range is the steep, strongly convex Wien tail and a
+/// midpoint sample underestimates a convex mean. A star could afford that; a
+/// hearth cannot.
+///
+/// Normalizing here means downstream code compares *colour*, not distance
+/// from the source.
+/// type-audit: bare-ok(ratio: t_kelvin)
+pub fn blackbody(t_kelvin: f64) -> Illuminant {
+    let mut bands = [0.0f64; BANDS];
+    let mut peak = 0.0f64;
+    for (band, center) in bands.iter_mut().zip(BAND_CENTERS_NM.iter()) {
+        let value = band_mean(*center, &|nm| planck_relative(nm, t_kelvin));
+        *band = value;
+        if value > peak {
+            peak = value;
+        }
+    }
+    // `peak` is strictly positive for any finite positive temperature, so
+    // this division is total; the guard is defensive, not a live path.
+    if peak > 0.0 {
+        for value in bands.iter_mut() {
+            *value /= peak;
+        }
+    }
+    Illuminant::new(bands).expect("a normalized Planck curve is finite and non-negative")
+}
 
 /// A quantity sampled on the band grid. Unconstrained in magnitude — a
 /// radiance may exceed 1 where a reflectance may not.
@@ -559,17 +661,73 @@ impl Observer {
     /// `None` on purpose: the caller must choose and *caption* a
     /// false-colour mapping rather than have one invented here, because the
     /// caption — not the picture — carries the honesty (RENDER-9).
+    /// # The scotopic term
+    ///
+    /// Below [`PHOTOPIC_THRESHOLD`] the cones cannot round a single count
+    /// onto the screen, and the image becomes the achromatic channels' —
+    /// contributed **equally to all three slots**, which is grey sight, which
+    /// is what night vision is. A rod carries no hue and so can never shift
+    /// one; that is the same fact [`ChannelRole::Achromatic`] states, now
+    /// cashed rather than merely respected. Before this, no projection read
+    /// the rod at all and night vision could not reach the screen: a human
+    /// and a kobold went black together while their rod responses genuinely
+    /// differed.
+    ///
+    /// The rod fades in as the cone image fades out (`fade` runs 0 at the
+    /// threshold to 1 in true darkness), so the handover is continuous rather
+    /// than a pop, and rod saturation as light rises is modelled by the same
+    /// factor running the other way.
+    ///
+    /// **The term is exactly zero at and above the threshold** — the branch
+    /// returns the photopic bytes untouched, not the photopic bytes plus a
+    /// small number — so every colour already committed is bit-identical
+    /// (spec §6 H3).
     /// type-audit: bare-ok(artifact: return)
     pub fn to_srgb(&self, signal: &Signal) -> Option<[u8; 3]> {
+        let photopic = self.photopic_slots(signal)?;
+        let level = photopic.iter().copied().fold(0.0f64, f64::max);
+        if level >= PHOTOPIC_THRESHOLD {
+            return Some([
+                encode_srgb_byte(photopic[0]),
+                encode_srgb_byte(photopic[1]),
+                encode_srgb_byte(photopic[2]),
+            ]);
+        }
+        let fade = (PHOTOPIC_THRESHOLD - level) / PHOTOPIC_THRESHOLD;
+        let mut rod = 0.0;
+        for (value, role) in signal.get().iter().zip(&self.roles) {
+            if *role == ChannelRole::Achromatic {
+                rod += *value;
+            }
+        }
+        let scotopic = (SCOTOPIC_GAIN * rod / SCOTOPIC_NORM).clamp(0.0, 1.0);
+        let grey = encode_srgb_byte(fade * scotopic);
+        Some([grey; 3])
+    }
+
+    /// The linear intensity each output slot's **cone** channel carries,
+    /// clamped to the displayable range — the photopic image, before
+    /// quantization to bytes and before any scotopic term.
+    ///
+    /// Extracted so the projection is written down once: the scotopic term
+    /// needs to know how bright the cone image is in order to decide whether
+    /// it applies at all, and a second copy of `s[idx] / norm` would be a
+    /// second opinion about the rgb/norms crossed ordering
+    /// (`standard_observer`'s own comment names that as the most likely bug
+    /// in this area).
+    ///
+    /// `None` for an observer with no [`Projection`], or a signal from a
+    /// different channel set — the same two refusals [`Observer::to_srgb`]
+    /// makes, for the same reasons.
+    fn photopic_slots(&self, signal: &Signal) -> Option<[f64; 3]> {
         let p = self.projection.as_ref()?;
         if signal.get().len() != self.channels.len() {
             return None;
         }
         let s = signal.get();
-        let mut out = [0u8; 3];
+        let mut out = [0.0f64; 3];
         for (slot, (idx, norm)) in out.iter_mut().zip(p.rgb.iter().zip(p.norms.iter())) {
-            let linear = (s[*idx] / norm).clamp(0.0, 1.0);
-            *slot = encode_srgb_byte(linear);
+            *slot = (s[*idx] / norm).clamp(0.0, 1.0);
         }
         Some(out)
     }
@@ -587,6 +745,64 @@ const MEDIUM_NORM: f64 = 3.51;
 /// See [`SHORT_NORM`].
 /// type-audit: bare-ok(ratio)
 const LONG_NORM: f64 = 3.95;
+
+/// The rod's normalizer: the response the standard observer's scotopic
+/// channel gives to a unit-reflectance surface under a unit illuminant.
+///
+/// **Carried, and deliberately the STANDARD rod's — not the observer's own.**
+/// Every derived eye's rod is the standard scotopic curve times that species'
+/// `scotopic_gain` (`hornvale_worldgen::observer`), so normalizing each
+/// observer by *its own* rod sum would divide that gain straight back out and
+/// a kobold's night vision would render pixel-for-pixel identical to a
+/// human's. The gain is the whole point of the channel; a shared normalizer
+/// is what lets it reach the screen.
+///
+/// `standard_observer_channels_sum_to_the_declared_norms` pins it against the
+/// curve, exactly as it pins the three photopic norms.
+/// type-audit: bare-ok(ratio)
+const SCOTOPIC_NORM: f64 = 3.63;
+
+/// The photopic level — the brightest value the cone channels can put in any
+/// output slot — at or above which sight is entirely cone-driven and
+/// [`Observer::to_srgb`]'s scotopic term is **exactly zero**.
+///
+/// **Read off the display, not chosen to make anything come out.**
+/// [`encode_srgb_byte`] scales its lower segment by 12.92 and rounds to a
+/// byte, so a linear intensity below `0.5 / 255 / 12.92` rounds to byte 0 in
+/// every slot: below this level the cones put *nothing at all* on the screen.
+/// That is what makes the term safe by construction rather than by luck: any
+/// pixel bright enough to show a byte is, by this definition, above the
+/// threshold, so the term can only ever fill in a pixel photopic sight had
+/// already left black. H3 (spec §6) is therefore a property of where the
+/// threshold is *read from*, not a coincidence of the value it happens to
+/// take.
+///
+/// For scale, and measured rather than assumed
+/// (`windows/vessel/tests/lantern_night.rs`, the H4a reading): the dimmest
+/// cell the shipped game renders across seeds 1, 42, 99 and 256 is
+/// `[2, 2, 0]`, a linear `6.07e-4` — four times this threshold, and two
+/// bytes clear of the floor. The term is unreachable on the chamber band.
+/// type-audit: bare-ok(ratio)
+const PHOTOPIC_THRESHOLD: f64 = 0.5 / 255.0 / 12.92;
+
+/// How far the fully dark-adapted rod system is amplified onto the screen.
+///
+/// **A gain is not optional, and this is why.** The measurement that motivated
+/// the whole term (spec §4.4) was a human and a kobold going black *together*
+/// in near-darkness while their rod responses genuinely differed — 0.0003
+/// against 0.0004. Divided by [`SCOTOPIC_NORM`] those are `8e-5` and `1e-4`,
+/// both below [`PHOTOPIC_THRESHOLD`]: at unit gain the rod's image is below
+/// one screen count everywhere in its own regime, and the term would ship
+/// green and do nothing.
+///
+/// The magnitude is the physiological one: the dark-adapted rod system is
+/// about three log units — a factor of 1000 — more sensitive than the cone
+/// system, which is the depth of the dark-adaptation curve. Measured
+/// consequence on this model's curves: a limestone wall under a dimmed torch
+/// peaks at byte 29 for a human and byte 38 for a kobold, so the rod's image
+/// clears quantization by an order of magnitude rather than sitting on it.
+/// type-audit: bare-ok(ratio)
+const SCOTOPIC_GAIN: f64 = 1000.0;
 
 /// Encode a linear `[0, 1]` intensity as an sRGB byte.
 ///
@@ -960,6 +1176,10 @@ mod tests {
         assert_eq!((sums[0] * 100.0).round() / 100.0, p.norms[2]);
         assert_eq!((sums[1] * 100.0).round() / 100.0, p.norms[1]);
         assert_eq!((sums[2] * 100.0).round() / 100.0, p.norms[0]);
+        // The rod's normalizer is carried the same way and for the same
+        // reason, but it is NOT on the projection: no projection may name an
+        // achromatic channel. It is the fourth channel's sum.
+        assert_eq!((sums[3] * 100.0).round() / 100.0, SCOTOPIC_NORM);
     }
 
     #[test]
@@ -1042,6 +1262,59 @@ mod tests {
         assert_eq!(ca, cb, "a louder rod must not move the chromaticity");
     }
 
+    /// Simpson's rule is exact for cubics, so integrating a cubic over one band
+    /// must return its analytic mean. This checks the QUADRATURE, independent of
+    /// Planck — a Planck-only test cannot tell a broken rule from a broken law.
+    ///
+    /// FIRES WHEN: the weights, the node spacing, or the final division is wrong.
+    #[test]
+    fn the_band_quadrature_is_exact_for_a_cubic() {
+        // mean of x^3 over [c - w/2, c + w/2] = c^3 + c * w^2 / 4
+        let c = 500.0;
+        let w = BAND_WIDTH_NM;
+        let got = band_mean(c, &|x: f64| x * x * x);
+        let want = c * c * c + c * w * w / 4.0;
+        assert!(
+            (got - want).abs() / want < 1e-12,
+            "cubic band mean: got {got}, want {want}"
+        );
+    }
+
+    /// The node count is a PERMANENT CONTRACT: change it and every colour in the
+    /// world moves. It was chosen by measurement (spec §5.2) to hold at least
+    /// 20x below a u8 quantization step (3.9e-3) down to 700 K, so that a later
+    /// ember or forge cannot force it to change.
+    ///
+    /// FIRES WHEN: someone lowers BAND_NODES. Five nodes fails by 900 K.
+    #[test]
+    fn the_node_count_is_converged_down_to_a_dull_red_glow() {
+        for t in [700.0, 1100.0, 1900.0, 5800.0] {
+            for center in BAND_CENTERS_NM {
+                let coarse = band_mean(center, &|nm| planck_relative(nm, t));
+                let fine = band_mean_with_nodes(center, 4097, &|nm| planck_relative(nm, t));
+                let rel = (coarse - fine).abs() / fine;
+                assert!(
+                    rel < 3.9e-4,
+                    "T={t} band {center}: relative error {rel} exceeds 20x below a u8 step"
+                );
+            }
+        }
+    }
+
+    /// A blackbody is peak-normalized, finite and positive — the contract every
+    /// consumer relies on to compare COLOUR rather than distance from a source.
+    ///
+    /// FIRES WHEN: normalization is dropped or a band goes non-positive.
+    #[test]
+    fn a_blackbody_is_peak_normalized_and_positive() {
+        let light = blackbody(1900.0);
+        let peak = light.get().iter().copied().fold(0.0f64, f64::max);
+        assert_eq!(peak, 1.0, "peak band should be exactly 1.0");
+        for (b, v) in light.get().iter().enumerate() {
+            assert!(v.is_finite() && *v > 0.0, "band {b} is {v}");
+        }
+    }
+
     #[test]
     fn the_standard_observers_bytes_have_not_moved() {
         // Two assertions below guard two DIFFERENT things; neither
@@ -1073,5 +1346,289 @@ mod tests {
             "norms must be the CARRIED constants, not a live-derived channel sum"
         );
         assert_eq!(obs.to_srgb(&mid).unwrap(), [188, 188, 188]);
+    }
+
+    // ---------------------------------------------------------------------
+    // The scotopic term (The Lantern, spec §4.4; §6 H3 and H4).
+    // ---------------------------------------------------------------------
+
+    /// A pale limestone wall — the canonical cave surface, and the same
+    /// authored reflectance the spec's own probe used
+    /// (`windows/worldgen/tests/lantern_probe.rs`).
+    ///
+    /// **Deliberately not spectrally flat.** A flat reflectance under a flat
+    /// illuminant drives all three output slots to the same value on its own,
+    /// so it would satisfy [`the_rod_can_never_shift_a_hue`] without the rod
+    /// doing anything at all — the "spectrally flat probe cancels the effect
+    /// it measures" failure The Beholding shipped. Under [`torchlight`] this
+    /// surface's blue slot is about a tenth of its red one, so a grey result
+    /// can only have come from the rod.
+    const LIMESTONE: [f64; BANDS] = [0.55, 0.68, 0.76, 0.80, 0.82, 0.83, 0.84, 0.84, 0.85, 0.85];
+
+    /// The wall.
+    fn limestone() -> Reflectance {
+        Reflectance::new(LIMESTONE).expect("an authored reflectance is within [0, 1]")
+    }
+
+    /// A torch's own 1900 K light, scaled to `level` of its peak-normalized
+    /// brightness. `level` is the *illuminance*, stated out loud by every
+    /// caller, because every claim below is a claim about a light level.
+    fn torchlight(level: f64) -> Illuminant {
+        let base = blackbody(1900.0);
+        let mut bands = [0.0f64; BANDS];
+        for (out, value) in bands.iter_mut().zip(base.get()) {
+            *out = value * level;
+        }
+        Illuminant::new(bands).expect("scaling a valid illuminant by a positive factor is valid")
+    }
+
+    /// The human-calibrated eye.
+    fn human() -> Observer {
+        standard_observer()
+    }
+
+    /// A rod-dominant eye, built here to the exact recipe
+    /// `hornvale_worldgen::observer::observer_for` gives **kobold**
+    /// (`night_vision` 0.9): hue depth 2, so medium and long merge
+    /// `t = (0.9 - 0.5) / 0.5 = 0.8` of the way, and the rod carries the
+    /// luminance-3 scotopic gain of 1.5.
+    ///
+    /// The kernel knows no species, so this cannot be imported — it is a
+    /// transcription, and `windows/worldgen`'s own tests pin the recipe. What
+    /// matters here is only the shape: a dichromat whose rod is 1.5x a
+    /// human's.
+    fn kobold() -> Observer {
+        let merge = 0.8;
+        let short = [0.00, 0.25, 1.00, 0.62, 0.10, 0.01, 0.00, 0.00, 0.00, 0.00];
+        let medium = [0.00, 0.01, 0.10, 0.45, 0.90, 1.00, 0.72, 0.28, 0.05, 0.00];
+        let long = [0.00, 0.01, 0.06, 0.25, 0.60, 0.92, 1.00, 0.75, 0.30, 0.06];
+        let scotopic = [0.00, 0.15, 0.55, 0.95, 1.00, 0.68, 0.25, 0.05, 0.00, 0.00];
+        let mut merged = [0.0; BANDS];
+        let mut rod = [0.0; BANDS];
+        for b in 0..BANDS {
+            let mean = (medium[b] + long[b]) / 2.0;
+            merged[b] = (1.0 - merge) * long[b] + merge * mean;
+            rod[b] = scotopic[b] * 1.5;
+        }
+        let channels = vec![
+            Spectrum::new(short).unwrap(),
+            Spectrum::new(merged).unwrap(),
+            Spectrum::new(rod).unwrap(),
+        ];
+        let roles = vec![
+            ChannelRole::Chromatic,
+            ChannelRole::Chromatic,
+            ChannelRole::Achromatic,
+        ];
+        // Norms derived live from these exact curves, which is what
+        // `observer_for` does for every non-human row.
+        let unprojected = Observer::with_roles(channels.clone(), roles.clone(), None).unwrap();
+        let white = unprojected.sense(
+            &Reflectance::new([1.0; BANDS]).unwrap(),
+            &Illuminant::new([1.0; BANDS]).unwrap(),
+        );
+        let rgb = [1usize, 1, 0];
+        let norms = [white.get()[1], white.get()[1], white.get()[0]];
+        let projection = Projection::new(
+            "yellow-blue",
+            "the short-to-long opposition; the red-green axis is not carried",
+            rgb,
+            norms,
+        )
+        .unwrap();
+        Observer::with_roles(channels, roles, Some(projection)).unwrap()
+    }
+
+    /// The screen triple `observer` makes of a limestone wall under a torch
+    /// dimmed to `level` — the last value in the chain, never an
+    /// intermediate.
+    fn swatch(observer: &Observer, level: f64) -> [u8; 3] {
+        observer
+            .to_srgb(&observer.sense(&limestone(), &torchlight(level)))
+            .expect("both fixture eyes declare a projection")
+    }
+
+    /// The screen triple the CONES alone make — the projection exactly as it
+    /// behaved before the scotopic term existed. The reference every H3
+    /// assertion below compares against.
+    fn photopic_only(observer: &Observer, level: f64) -> [u8; 3] {
+        let signal = observer.sense(&limestone(), &torchlight(level));
+        let slots = observer
+            .photopic_slots(&signal)
+            .expect("both fixture eyes declare a projection");
+        [
+            encode_srgb_byte(slots[0]),
+            encode_srgb_byte(slots[1]),
+            encode_srgb_byte(slots[2]),
+        ]
+    }
+
+    /// Every triple below was captured from this file at `a5503433`, BEFORE
+    /// the scotopic term existed: `(illuminance, human, kobold)`.
+    ///
+    /// The ladder runs from full torchlight down to `1e-3`, which is the
+    /// dimmest light either eye can still put a byte on the screen under —
+    /// one rung lower and the term takes over. Two rungs are there for
+    /// reasons rather than for spacing: `5.88e-2` is `1 / (1 + 4²)`, the
+    /// attenuation a chamber wall sees at the far edge of the sight radius,
+    /// and `3e-3` renders `[2, 2, 0]`, which is exactly the dimmest cell the
+    /// shipped game was measured to emit (the H4a reading in
+    /// `windows/vessel/tests/lantern_night.rs`). The pin therefore brackets
+    /// the whole range the chamber band actually occupies.
+    const PRE_SCOTOPIC_LADDER: [(f64, [u8; 3], [u8; 3]); 7] = [
+        (1e0, [137, 111, 40], [128, 128, 40]),
+        (5e-1, [99, 80, 26], [92, 92, 26]),
+        (1e-1, [44, 34, 7], [40, 40, 7]),
+        (5.882_35e-2, [32, 24, 4], [30, 30, 4]),
+        (1e-2, [8, 5, 1], [7, 7, 1]),
+        (3e-3, [2, 2, 0], [2, 2, 0]),
+        (1e-3, [1, 1, 0], [1, 1, 0]),
+    ];
+
+    /// H3 — the scotopic term is EXACTLY zero in daylight, so every colour
+    /// The Beholding emits is unchanged. A REQUIREMENT with a test, not a
+    /// prediction. Byte equality is exact equality: an epsilon assertion
+    /// would pass through the drift it exists to catch, and a `u8` compare
+    /// cannot be given one.
+    ///
+    /// FIRES WHEN: the blend leaks above the photopic threshold — which is
+    /// what raising `PHOTOPIC_THRESHOLD` does, and is Task 7's step-5
+    /// mutation.
+    #[test]
+    fn h3_the_scotopic_term_is_exactly_zero_in_daylight() {
+        for (level, human_rgb, kobold_rgb) in PRE_SCOTOPIC_LADDER {
+            assert_eq!(
+                swatch(&human(), level),
+                human_rgb,
+                "the human's colour moved at illuminance {level:e}"
+            );
+            assert_eq!(
+                swatch(&kobold(), level),
+                kobold_rgb,
+                "the kobold's colour moved at illuminance {level:e}"
+            );
+        }
+    }
+
+    /// H3 as a PROPERTY rather than a table: the term may only fill in a
+    /// pixel the cones had already left black. Wherever the photopic image
+    /// carries a single count in any slot, the emitted triple must be that
+    /// image, unchanged.
+    ///
+    /// The table above pins seven levels; this sweeps sixty, three decades
+    /// either side of the threshold, on both eyes — so a threshold moved by a
+    /// factor of two cannot slip between two rungs of the ladder.
+    ///
+    /// FIRES WHEN: `PHOTOPIC_THRESHOLD` rises far enough that a visible pixel
+    /// enters the blend.
+    #[test]
+    fn the_scotopic_term_never_touches_a_pixel_the_cones_could_reach() {
+        let mut checked = 0;
+        let mut level = 1.0;
+        for _ in 0..60 {
+            for eye in [human(), kobold()] {
+                let cones = photopic_only(&eye, level);
+                if cones != [0, 0, 0] {
+                    assert_eq!(
+                        swatch(&eye, level),
+                        cones,
+                        "illuminance {level:e}: the scotopic term altered a pixel the \
+                         cones could already reach"
+                    );
+                    checked += 1;
+                }
+            }
+            level *= 0.7;
+        }
+        assert!(
+            checked > 20,
+            "only {checked} of the sweep's levels produced a visible photopic pixel, \
+             so this test barely measured H3 at all"
+        );
+    }
+
+    /// The rod carries NO hue. Contributing equally to R, G and B, it can
+    /// never shift one — so where the photopic signal is gone the three slots
+    /// must be equal.
+    ///
+    /// **Stated at an illuminance whose result clears quantization by an
+    /// order of magnitude** (byte 29 and byte 38, not byte 1): a scotopic
+    /// contribution smaller than one `u8` step is invisible, and this test
+    /// would then pass because *nothing at all* reached the screen rather
+    /// than because the rod reached it evenly. The `>= 20` floor is what
+    /// makes the equality mean something.
+    ///
+    /// The fixture is limestone under a 1900 K torch, which is emphatically
+    /// **not** spectrally flat — the cones alone would put the blue slot at a
+    /// tenth of the red one. A flat probe would make the three slots equal on
+    /// its own and cancel the very effect this checks.
+    ///
+    /// FIRES WHEN: the rod is wired into one slot, or weighted per channel,
+    /// or the photopic image is passed through underneath it.
+    #[test]
+    fn the_rod_can_never_shift_a_hue() {
+        // Deep enough that the cones show nothing, bright enough that the rod
+        // shows a great deal.
+        let level = 2.5e-4;
+        for (name, eye) in [("human", human()), ("kobold", kobold())] {
+            assert_eq!(
+                photopic_only(&eye, level),
+                [0, 0, 0],
+                "{name}: the cones still reach the screen at {level:e}, so this \
+                 fixture is not in the scotopic regime at all"
+            );
+            let [r, g, b] = swatch(&eye, level);
+            assert_eq!(
+                (r, g),
+                (g, b),
+                "{name}: a rod-only signal produced a hue: [{r}, {g}, {b}]"
+            );
+            assert!(
+                r >= 20,
+                "{name}: the rod put only byte {r} on the screen — at that size the \
+                 equality above holds because nothing arrived, not because the rod \
+                 arrived evenly"
+            );
+        }
+    }
+
+    /// H4 — stated at the MODEL level deliberately (spec §6). Below the
+    /// threshold a human emits `[0, 0, 0]` where a kobold does not.
+    ///
+    /// FIRES WHEN: night vision still cannot reach the screen — the measured
+    /// pre-campaign state, where both eyes went black together while their
+    /// rod signals differed (0.0003 vs 0.0004).
+    ///
+    /// **The gap is exactly one byte, and that is structural, not a weak
+    /// fixture.** Both eyes carry the same scotopic curve; the kobold's is
+    /// scaled by its 1.5 gain and nothing else, so in the fully dark-adapted
+    /// regime the kobold's linear output is exactly 1.5x the human's at every
+    /// illuminance. At the illuminance where the human's rounds below half a
+    /// count, the kobold's is therefore at most three quarters of one — there
+    /// is no illuminance at which the human is black and the kobold is bright.
+    /// The claim here is the existence of the cliff. Its *height* is
+    /// [`the_rod_can_never_shift_a_hue`]'s job, where both eyes are well up
+    /// the scale and the kobold leads 38 to 29.
+    #[test]
+    fn h4_a_rod_dominant_eye_sees_where_a_human_does_not() {
+        let level = 1.6e-6;
+        let human_rgb = swatch(&human(), level);
+        let kobold_rgb = swatch(&kobold(), level);
+        assert_eq!(
+            human_rgb,
+            [0, 0, 0],
+            "the human is not actually in the dark at {level:e}"
+        );
+        assert_ne!(
+            kobold_rgb,
+            [0, 0, 0],
+            "H4 FALSIFIED: the kobold is blind too at {level:e}"
+        );
+        // Grey, not a hue: proof the kobold's pixel came from the rod path
+        // rather than from a cone channel that happened to survive.
+        assert_eq!(
+            [kobold_rgb[0]; 3], kobold_rgb,
+            "the kobold's pixel is not grey, so it did not come from the rod"
+        );
     }
 }

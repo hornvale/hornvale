@@ -13,8 +13,10 @@ records why not.
 
 ## 1. The state of play, verified rather than assumed
 
-Every claim in this section was checked against the tree at `d9c734e0`, not
-inferred.
+Every claim in this section was checked against the tree at `d9c734e0`, and
+**re-checked at `bb16001b`** after The Reassay landed ~40 commits and decisions
+0101–0112 on top of it. All counts and shapes below are unchanged across that
+absorption; the one thing that did change is recorded in §6.1.
 
 **The read channel exists and is pure.** `PhenomenaSource::phenomena(&self,
 ctx) -> Vec<Phenomenon>` (`kernel/src/phenomena.rs:233`), documented as
@@ -239,6 +241,36 @@ monument, not a spoor.
 **H3 (the origin handle is adjudicable).** A test must demonstrate an observer
 achieving a *wrong* identification that the adjudicator can detect as wrong.
 Without that, 4.1 has shipped a field nobody can use.
+
+### 6.1 How these are tested — decision 0112 forecloses the cheap route
+
+Added on re-verification at `bb16001b`. **Decision 0112** (2026-08-07, one day
+after this spec's other sources) rules that "the synthetic route is available
+only when the behaviour under test reads committed facts; a behaviour that
+re-derives from a generated sky, a sculpted globe, or any other live
+computation cannot be synthesized."
+
+A trace is *definitionally* a re-derivation — `salience = f(ctx.time −
+fact.day)` computed at observation, from a source that reads live history
+(§4.4). So **the hand-built synthetic world is not available to H1 or H3**, and
+the plan may not budget for one.
+
+Consequences, stated now rather than discovered in execution:
+
+- **H1** already says "measured on the real census population, not on
+  fixtures," which is the right route by accident. It is now the right route
+  by rule, and it means H1's measurement is census-adjacent work with the cost
+  that implies — not a unit test.
+- **H3** did not name a route and now must: it needs a real generated world
+  with a committed cause, an observer, and an adjudicator. That is the most
+  expensive test in this campaign and the plan must size it explicitly.
+- **The `#[ignore]` reason token** for anything that lands in the heavy tier is
+  verbatim-matched; the plan states it rather than paraphrasing it.
+
+0112's own retrospective note is the reason this subsection exists: it records
+that the infeasibility "was found *after* the spec had passed G2 self-review,
+the G3 package, and Nathan's approval." This spec is at exactly that point, so
+the check is run here instead.
 
 ## 7. Risks
 
