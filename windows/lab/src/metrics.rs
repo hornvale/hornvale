@@ -657,6 +657,95 @@ pub enum SummaryKind {
     },
 }
 
+/// The subject a metric belongs to — the Domesday's chapter axis, and the
+/// taxonomy the Book's Science part will inherit. Deliberately a subject, not
+/// a build depth: `rung` puts 105 of 194 metrics in one bucket.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Domain {
+    /// Stars, orbits, moons, the sky.
+    Astronomy,
+    /// Plates, elevation, landforms.
+    Terrain,
+    /// Temperature, precipitation, biomes.
+    Climate,
+    /// Rivers, lakes, aquifers, coasts.
+    Hydrology,
+    /// Species, ecology, life history.
+    Biology,
+    /// Villages, placement, population.
+    Settlement,
+    /// Social structure, disposition, conflict.
+    Society,
+    /// Pantheons, cults, belief.
+    Religion,
+    /// Phonology, lexicon, grammar.
+    Language,
+    /// Naming schemes and their products.
+    Naming,
+    /// Deep history, vestiges, what is forgotten.
+    History,
+}
+
+impl Domain {
+    /// The lowercase token used in `schema.json` and in page filenames.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Domain::Astronomy => "astronomy",
+            Domain::Terrain => "terrain",
+            Domain::Climate => "climate",
+            Domain::Hydrology => "hydrology",
+            Domain::Biology => "biology",
+            Domain::Settlement => "settlement",
+            Domain::Society => "society",
+            Domain::Religion => "religion",
+            Domain::Language => "language",
+            Domain::Naming => "naming",
+            Domain::History => "history",
+        }
+    }
+
+    /// Every domain, in rendering order.
+    pub fn all() -> &'static [Domain] {
+        &[
+            Domain::Astronomy,
+            Domain::Terrain,
+            Domain::Climate,
+            Domain::Hydrology,
+            Domain::Biology,
+            Domain::Settlement,
+            Domain::Society,
+            Domain::Religion,
+            Domain::Language,
+            Domain::Naming,
+            Domain::History,
+        ]
+    }
+}
+
+/// Whether a metric is expected to vary. Detectors D1/D2 fire only on
+/// `Descriptor`; D7 fires on an `Invariant` that does NOT hold. Without this
+/// split D1 fires on 40 of 57 categorical metrics, because 33 of them are
+/// deliberate invariants (spec §4.1a).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Role {
+    /// A measured property expected to vary across worlds.
+    Descriptor,
+    /// A property asserted to hold on every world.
+    Invariant,
+}
+
+impl Role {
+    /// The lowercase token used in `schema.json`.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Role::Descriptor => "descriptor",
+            Role::Invariant => "invariant",
+        }
+    }
+}
+
 /// An analyzable property of a world, with extraction logic.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(prose: doc)
 pub struct Metric {
@@ -666,6 +755,10 @@ pub struct Metric {
     pub doc: &'static str,
     /// The kind of analysis this metric supports.
     pub summary: SummaryKind,
+    /// The subject this metric belongs to (the Domesday's chapter axis).
+    pub domain: Domain,
+    /// Whether this metric is expected to vary across worlds.
+    pub role: Role,
     /// Extract this metric from the narrowest view it reads, tagged by rung.
     pub extract: Extractor,
 }
@@ -743,6 +836,8 @@ pub fn registry() -> Vec<Metric> {
             // truth" register `windows/book` renders for the ground-truth
             // line. This is why the census rows didn't move when the ledger
             // switched from prose to a concept id.
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.star.class_name.clone())
             }),
@@ -751,6 +846,8 @@ pub fn registry() -> Vec<Metric> {
             name: "tidally-locked",
             doc: "Whether the world is tidally locked to its star",
             summary: SummaryKind::Flag,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Flag(matches!(v.system.anchor.rotation, Rotation::Locked))
             }),
@@ -761,6 +858,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[16.0, 20.0, 24.0, 28.0, 32.0, 36.0, 40.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
                 Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
@@ -772,6 +871,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(v.system.anchor.year.get())
             }),
@@ -782,6 +883,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(day_len) = v.calendar.day_length() {
                     MetricValue::Number(v.system.anchor.year.get() / day_len.get())
@@ -796,6 +899,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(v.system.anchor.obliquity.get())
             }),
@@ -808,6 +913,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(2.0 * v.system.forcing.obliquity_amp)
             }),
@@ -816,6 +923,8 @@ pub fn registry() -> Vec<Metric> {
             name: "moons-admitted",
             doc: "Number of moons in orbit",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.moons.len().to_string())
             }),
@@ -824,6 +933,8 @@ pub fn registry() -> Vec<Metric> {
             name: "refused-a-moon",
             doc: "Whether moon genesis recorded refusals",
             summary: SummaryKind::Flag,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Flag(!v.notes.is_empty())
             }),
@@ -834,6 +945,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let total: f64 = v.system.moons.iter().map(|m| m.tide_rel).sum();
                 MetricValue::Number(total)
@@ -845,6 +958,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 700.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(months) = v.calendar.months_per_year(0) {
                     MetricValue::Number(months)
@@ -857,6 +972,8 @@ pub fn registry() -> Vec<Metric> {
             name: "neighbor-count",
             doc: "Number of notable neighbor stars",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.system.neighbors.len().to_string())
             }),
@@ -865,6 +982,8 @@ pub fn registry() -> Vec<Metric> {
             name: "brightest-neighbor-class",
             doc: "Spectral class of the brightest neighbor, in kebab-case",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(neighbor) = v.system.neighbors.first() {
                     // These are the census's OWN author-frame labels, not the
@@ -895,6 +1014,8 @@ pub fn registry() -> Vec<Metric> {
             name: "figure-count",
             doc: "Number of star figures the reference observer's sky holds",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 MetricValue::Text(
@@ -908,6 +1029,8 @@ pub fn registry() -> Vec<Metric> {
             name: "largest-figure-members",
             doc: "Member count of the largest star figure (0 if none)",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 let largest = hornvale_astronomy::figures(astronomy_seed, &v.system)
@@ -922,6 +1045,8 @@ pub fn registry() -> Vec<Metric> {
             name: "ecliptic-figure-count",
             doc: "Number of star figures standing on the ecliptic (the sun's road)",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 let count = hornvale_astronomy::figures(astronomy_seed, &v.system)
@@ -935,6 +1060,8 @@ pub fn registry() -> Vec<Metric> {
             name: "genesis-note-count",
             doc: "Number of genesis notes recorded",
             summary: SummaryKind::Categorical,
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Text(v.notes.len().to_string())
             }),
@@ -945,6 +1072,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 600.0, 1000.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| match v.system.moons.first() {
                 None => MetricValue::Absent,
                 Some(m) => {
@@ -965,6 +1094,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(hornvale_astronomy::brightening_per_gyr(&v.system.star))
             }),
@@ -976,6 +1107,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v| {
                 let a: &AstronomyView = v.as_ref();
                 let Some(lat) = flagship_latitude(v) else {
@@ -995,6 +1128,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 century_cadence(v, hornvale_astronomy::EclipseBody::Solar)
             }),
@@ -1005,6 +1140,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 century_cadence(v, hornvale_astronomy::EclipseBody::Lunar)
             }),
@@ -1015,6 +1152,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 5.0, 10.0, 25.0, 50.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
                 MetricValue::Number(hornvale_astronomy::coincidence_days(&scan_century(v)) as f64)
             }),
@@ -1023,6 +1162,8 @@ pub fn registry() -> Vec<Metric> {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Text(v.globe.plate_count.to_string())
             }),
@@ -1033,6 +1174,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.globe.ocean_fraction)
             }),
@@ -1043,6 +1186,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
@@ -1067,6 +1212,8 @@ pub fn registry() -> Vec<Metric> {
             name: "band-count",
             doc: "Circulation bands per hemisphere; 'locked' if tidally locked",
             summary: SummaryKind::Categorical,
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| match v.climate.band_count() {
                 Some(n) => MetricValue::Text(n.to_string()),
                 None => MetricValue::Text("locked".to_string()),
@@ -1078,6 +1225,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
             },
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 MetricValue::Number(v.climate.habitable_fraction())
             }),
@@ -1088,6 +1237,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let total = geo.cell_count();
@@ -1109,6 +1260,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The most common land rock class by cell count, spec §4's fine \
                   taxonomy (The Ground); Absent on a landless world",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<RockClass, usize> =
@@ -1131,6 +1284,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut karst) = (0usize, 0usize);
@@ -1157,6 +1312,8 @@ pub fn registry() -> Vec<Metric> {
                   sweep: a variant no world in the census shows is structurally dead, \
                   and 1,000 worlds say so with a rate where 8 said so with a flag.",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let mut seen: std::collections::BTreeSet<hornvale_terrain::Hydro> =
@@ -1182,6 +1339,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut aquifer) = (0usize, 0usize);
@@ -1206,6 +1365,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 300.0, 600.0, 1000.0, 2000.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
@@ -1224,6 +1385,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut gaps) = (0usize, 0usize);
@@ -1248,6 +1411,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[15.0, 18.0, 21.0, 24.0, 27.0, 30.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut sum) = (0usize, 0.0f64);
@@ -1270,6 +1435,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut caves) = (0usize, 0usize);
@@ -1294,6 +1461,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut deposits) = (0usize, 0usize);
@@ -1317,6 +1486,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The most common land ore commodity by cell count (The \
                   Lode, spec §5); Absent where no land cell has a deposit",
             summary: SummaryKind::Categorical,
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let mut counts: std::collections::BTreeMap<Commodity, usize> =
@@ -1343,6 +1514,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.4, 0.6, 0.8],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut deposits, mut sum) = (0usize, 0.0f64);
@@ -1377,6 +1550,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1405,6 +1580,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
             },
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1433,6 +1610,8 @@ pub fn registry() -> Vec<Metric> {
                   layer count (The Vestige, spec §9.2); Absent where no land \
                   cell bears a vestige",
             summary: SummaryKind::Categorical,
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1477,6 +1656,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
             },
+            domain: Domain::History,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let terrain = v.terrain();
                 let geo = terrain.geosphere();
@@ -1497,6 +1678,8 @@ pub fn registry() -> Vec<Metric> {
             name: "dominant-land-biome",
             doc: "The most common land biome by cell count, kebab-case",
             summary: SummaryKind::Categorical,
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let biomes = v.climate.biome_map();
                 // Count land biomes in ascending name order for determinism.
@@ -1523,6 +1706,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],
             },
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
@@ -1544,6 +1729,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The most common land soil order by cell count, spec §4's soil \
                   taxonomy (The Ground); Absent on a landless world",
             summary: SummaryKind::Categorical,
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let soils = soil_of(v.terrain(), &v.climate, geo);
@@ -1567,6 +1754,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8],
             },
+            domain: Domain::Climate,
+            role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| {
                 let geo = v.terrain().geosphere();
                 let soils = soil_of(v.terrain(), &v.climate, geo);
@@ -1594,6 +1783,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 10.0, 20.0, 40.0, 60.0, 80.0, 120.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 MetricValue::Number(hornvale_terrain::places(v.world()).len() as f64)
             }),
@@ -1605,6 +1796,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
                 let pops: Vec<f64> = places
@@ -1633,6 +1826,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
                 let pops: Vec<f64> = places
@@ -1672,6 +1867,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 3.0, 5.0, 10.0, 20.0, 40.0, 60.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let geo = v.terrain().geosphere();
                 let base_inputs =
@@ -1740,6 +1937,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 // Named construction site (decision 0092): a metric extractor
                 // deliberately recomputes the fit per read against already-derived
@@ -1783,6 +1982,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 // Named construction site (decision 0092): a metric extractor
                 // deliberately recomputes the fit per read against already-derived
@@ -1828,6 +2029,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
                 let (mut weighted_sum, mut pop_sum) = (0.0_f64, 0.0_f64);
@@ -1870,6 +2073,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let mut pops: Vec<f64> = hornvale_terrain::places(v.world())
                     .iter()
@@ -1917,6 +2122,8 @@ pub fn registry() -> Vec<Metric> {
                    community, spec §6); Absent if there is no goblin flagship or no committed \
                    subsistence",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => match hornvale_culture::subsistence_of(v.world(), info.id) {
@@ -1932,6 +2139,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The goblin flagship settlement's committed biome; Absent if there is no \
                    goblin flagship",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => {
@@ -1953,6 +2162,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "Whether the goblin flagship settlement's cell borders an ocean cell, \
                    recomputed from the terrain provider; Absent if there is no goblin flagship",
             summary: SummaryKind::Flag,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -1983,6 +2194,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => MetricValue::Number(
@@ -1998,6 +2211,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut endorheic) = (0usize, 0usize);
@@ -2022,6 +2237,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2039,6 +2256,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); \
                    Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2054,6 +2273,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "Whether the goblin flagship's pantheon is ranked (a high god presides) or \
                    flat; Absent if there is no goblin flagship pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2073,6 +2294,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The sentiment tag of the goblin flagship's head deity (the most salient \
                    belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
@@ -2089,6 +2312,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The goblin flagship's committed role ladder, comma-joined, \
                    lowest to highest; Absent if goblins placed no settlement",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => {
@@ -2108,6 +2333,8 @@ pub fn registry() -> Vec<Metric> {
             doc: "The kobold flagship's committed role ladder, comma-joined, \
                    lowest to highest; Absent if kobolds placed no settlement",
             summary: SummaryKind::Categorical,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "kobold") {
                     Some(info) => {
@@ -2129,6 +2356,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
                     Some(info) => MetricValue::Number(f64::from(info.population)),
@@ -2143,6 +2372,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "kobold") {
                     Some(info) => MetricValue::Number(f64::from(info.population)),
@@ -2159,6 +2390,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_surplus(v, "goblin")),
         },
         Metric {
@@ -2170,6 +2403,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_surplus(v, "kobold")),
         },
         Metric {
@@ -2178,6 +2413,8 @@ pub fn registry() -> Vec<Metric> {
                    ocean cell, recomputed from the terrain provider; Absent \
                    if goblins placed no settlement",
             summary: SummaryKind::Flag,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_coastal(v, "goblin")),
         },
         Metric {
@@ -2186,6 +2423,8 @@ pub fn registry() -> Vec<Metric> {
                    ocean cell, recomputed from the terrain provider; Absent \
                    if kobolds placed no settlement",
             summary: SummaryKind::Flag,
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| flagship_coastal(v, "kobold")),
         },
         Metric {
@@ -2194,6 +2433,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 MetricValue::Number(species_settlement_count(v, "goblin"))
             }),
@@ -2204,6 +2445,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 MetricValue::Number(species_settlement_count(v, "kobold"))
             }),
@@ -2212,6 +2455,8 @@ pub fn registry() -> Vec<Metric> {
             name: "head-deity-domain-goblin",
             doc: "Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
@@ -2221,6 +2466,8 @@ pub fn registry() -> Vec<Metric> {
             name: "head-deity-domain-kobold",
             doc: "Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
@@ -2232,6 +2479,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
@@ -2243,6 +2492,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
@@ -2252,6 +2503,8 @@ pub fn registry() -> Vec<Metric> {
             name: "cult-form-goblin",
             doc: "Cult form of the goblin flagship's pantheon (organized/folk); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
@@ -2261,6 +2514,8 @@ pub fn registry() -> Vec<Metric> {
             name: "cult-form-kobold",
             doc: "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
@@ -2270,6 +2525,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-bugbear",
             doc: "Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "bugbear") {
                 Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
@@ -2279,6 +2536,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-goblin",
             doc: "Sentiment of the goblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "goblin") {
                 Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
@@ -2288,6 +2547,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-hobgoblin",
             doc: "Sentiment of the hobgoblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(
                 |v: &FullView| match species_head_sentiment(v, "hobgoblin") {
                     Some(s) => MetricValue::Text(s),
@@ -2299,6 +2560,8 @@ pub fn registry() -> Vec<Metric> {
             name: "belief-kind-kobold",
             doc: "Sentiment of the kobold flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "kobold") {
                 Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
@@ -2308,6 +2571,8 @@ pub fn registry() -> Vec<Metric> {
             name: "blind-attribution-correct",
             doc: "Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons",
             summary: SummaryKind::Flag,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let (Some(g), Some(k)) = (pantheon_sig(v, "goblin"), pantheon_sig(v, "kobold"))
                 else {
@@ -2326,6 +2591,8 @@ pub fn registry() -> Vec<Metric> {
                    independently re-derived and re-parsed from the surface string; \
                    Absent if goblins produced no names",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| phonotactic_validity(v, "goblin")),
         },
         Metric {
@@ -2335,6 +2602,8 @@ pub fn registry() -> Vec<Metric> {
                    independently re-derived and re-parsed from the surface string; \
                    Absent if kobolds produced no names",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| phonotactic_validity(v, "kobold")),
         },
         Metric {
@@ -2345,6 +2614,8 @@ pub fn registry() -> Vec<Metric> {
                    and be strictly longer (Rank status basis → honorifics on, spec §7); Absent \
                    if goblins hold no pantheon",
             summary: SummaryKind::Flag,
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| epithet_honorific(v, "goblin")),
         },
         Metric {
@@ -2355,6 +2626,8 @@ pub fn registry() -> Vec<Metric> {
                    off, so the committed epithet equals the plain stem and this reads false; \
                    Absent if kobolds hold no pantheon",
             summary: SummaryKind::Flag,
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| epithet_honorific(v, "kobold")),
         },
         Metric {
@@ -2364,6 +2637,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "goblin")),
         },
         Metric {
@@ -2373,6 +2648,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "kobold")),
         },
         // --- The Wearing (Task 11): the two readings the campaign's own
@@ -2388,6 +2665,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_syllables(v, "goblin")),
         },
         Metric {
@@ -2397,6 +2676,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_syllables(v, "kobold")),
         },
         Metric {
@@ -2412,6 +2693,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_transparency),
         },
         Metric {
@@ -2426,12 +2709,16 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.4],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_collision_rate),
         },
         Metric {
             name: "head-deity-domain-goblin-twin",
             doc: "Venue domain of the goblin-twin flagship's head deity (null control, spec §4); Absent without a goblin-twin pantheon",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
@@ -2443,6 +2730,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
@@ -2452,6 +2741,8 @@ pub fn registry() -> Vec<Metric> {
             name: "cult-form-goblin-twin",
             doc: "Cult form of the goblin-twin flagship's pantheon (null control); Absent without one",
             summary: SummaryKind::Categorical,
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
@@ -2463,6 +2754,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| mean_name_length(v, "goblin-twin")),
         },
         Metric {
@@ -2471,6 +2764,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Number(s.cyclic_share),
                 None => MetricValue::Absent,
@@ -2482,6 +2777,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Religion,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Number(s.cyclic_share),
                 None => MetricValue::Absent,
@@ -2505,6 +2802,8 @@ pub fn registry() -> Vec<Metric> {
                    this sentence, which has now gone stale twice; Absent if no settlement \
                    in this world carries a gloss",
             summary: SummaryKind::Flag,
+            domain: Domain::Naming,
+            role: Role::Invariant,
             extract: Extractor::Full(name_gloss_true),
         },
         Metric {
@@ -2513,6 +2812,8 @@ pub fn registry() -> Vec<Metric> {
                    derivation replays byte-identically through evolve (Neogrammarian \
                    regularity, spec §9.1); Absent if the goblin lexicon minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "goblin")),
         },
         Metric {
@@ -2524,6 +2825,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "goblin")),
         },
         Metric {
@@ -2535,6 +2838,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| cascade_rules_fired(v, "bugbear")),
         },
         Metric {
@@ -2546,6 +2851,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_pattern_signatures),
         },
         Metric {
@@ -2557,6 +2864,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
             },
+            domain: Domain::Society,
+            role: Role::Descriptor,
             extract: Extractor::Full(peoples_placed),
         },
         Metric {
@@ -2569,6 +2878,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_people_recoverability),
         },
         Metric {
@@ -2580,6 +2891,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_prefix_settlement_scope),
         },
         Metric {
@@ -2590,6 +2903,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_prefix_region_scope),
         },
         Metric {
@@ -2601,6 +2916,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(name_prefix_region_full_stack),
         },
         Metric {
@@ -2609,6 +2926,8 @@ pub fn registry() -> Vec<Metric> {
                    derivation replays byte-identically through evolve (Neogrammarian \
                    regularity, spec §9.1); Absent if the kobold lexicon minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "kobold")),
         },
         Metric {
@@ -2618,6 +2937,8 @@ pub fn registry() -> Vec<Metric> {
                    every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
                    goblin lexicon has no entries",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| exposure_sound(v, "goblin")),
         },
         Metric {
@@ -2627,6 +2948,8 @@ pub fn registry() -> Vec<Metric> {
                    every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
                    kobold lexicon has no entries",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| exposure_sound(v, "kobold")),
         },
         Metric {
@@ -2637,6 +2960,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "goblin")),
         },
         Metric {
@@ -2647,6 +2972,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Astronomy,
+            role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "kobold")),
         },
         Metric {
@@ -2657,6 +2984,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 match hornvale_terrain::shape::shoreline_development(
@@ -2685,6 +3014,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.5, 0.0, 0.25, 0.5, 1.0, 1.5],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(coast_roughness_slope),
         },
         Metric {
@@ -2695,6 +3026,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 match hornvale_terrain::shape::hypsometric_bimodality(
@@ -2713,6 +3046,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(hornvale_terrain::shape::shelf_fraction(
@@ -2732,6 +3067,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let sizes = hornvale_terrain::shape::land_component_sizes(
@@ -2751,6 +3088,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let sizes = hornvale_terrain::shape::land_component_sizes(
@@ -2772,6 +3111,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let mut counts = vec![0usize; globe.plates.len()];
@@ -2792,6 +3133,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(
@@ -2820,6 +3163,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, false)),
         },
         Metric {
@@ -2834,6 +3179,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, true)),
         },
         Metric {
@@ -2847,6 +3194,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1e5, 2e5, 4e5, 8e5, 1.6e6, 3.2e6],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(globe.sediment_thickness.iter().map(|(_, s)| *s).sum())
@@ -2861,6 +3210,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.waterfalls().len() as f64)
             }),
@@ -2875,6 +3226,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.deltas().len() as f64)
             }),
@@ -2891,6 +3244,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.globe().carve_reroute_fraction)
             }),
@@ -2908,6 +3263,8 @@ pub fn registry() -> Vec<Metric> {
                    world's roster (spec §9.1, generalized family-wide); Absent if no \
                    daughter minted a Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(lexicon_regular_family),
         },
         Metric {
@@ -2919,6 +3276,8 @@ pub fn registry() -> Vec<Metric> {
                    sibling's own recorded derivation; Absent if no goblinoid daughter \
                    minted a Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| monophyly(v, "goblinoid")),
         },
         Metric {
@@ -2934,6 +3293,8 @@ pub fn registry() -> Vec<Metric> {
                    sibling's own recorded derivation; Absent if no dwarf daughter \
                    minted a Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| monophyly(v, "dwarf")),
         },
         Metric {
@@ -2944,6 +3305,8 @@ pub fn registry() -> Vec<Metric> {
                    \"goblinoid\" family proto-root for that same concept (spec §3's clean \
                    outgroup); Absent if kobold minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(clean_outgroup_kobold),
         },
         Metric {
@@ -2952,6 +3315,8 @@ pub fn registry() -> Vec<Metric> {
                    goblin's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if goblin minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "goblin")),
         },
         Metric {
@@ -2960,6 +3325,8 @@ pub fn registry() -> Vec<Metric> {
                    in hobgoblin's own drawn inventory (spec §2.2's nativization \
                    contract); Absent if hobgoblin minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "hobgoblin")),
         },
         Metric {
@@ -2968,6 +3335,8 @@ pub fn registry() -> Vec<Metric> {
                    bugbear's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if bugbear minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "bugbear")),
         },
         Metric {
@@ -2976,6 +3345,8 @@ pub fn registry() -> Vec<Metric> {
                    kobold's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if kobold minted no Root",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Invariant,
             extract: Extractor::Full(|v: &FullView| inventory_closure(v, "kobold")),
         },
         Metric {
@@ -2989,6 +3360,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "goblin")),
         },
         Metric {
@@ -3002,6 +3375,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "hobgoblin")),
         },
         Metric {
@@ -3015,6 +3390,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "bugbear")),
         },
         Metric {
@@ -3026,6 +3403,8 @@ pub fn registry() -> Vec<Metric> {
                    daughters are silent aliases of one another must read false; Absent if \
                    no concept is rooted in all three",
             summary: SummaryKind::Flag,
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(divergence_real),
         },
         Metric {
@@ -3038,6 +3417,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "goblin")),
         },
         Metric {
@@ -3049,6 +3430,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "hobgoblin")),
         },
         Metric {
@@ -3061,6 +3444,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "bugbear")),
         },
         Metric {
@@ -3072,6 +3457,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_count(v, "kobold")),
         },
         // --- Lexicon homophony, functional-load restricted + attributed
@@ -3088,6 +3475,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "goblin")),
         },
         Metric {
@@ -3098,6 +3487,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "hobgoblin")),
         },
         Metric {
@@ -3108,6 +3499,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "bugbear")),
         },
         Metric {
@@ -3118,6 +3511,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| core_homophony(v, "kobold")),
         },
         Metric {
@@ -3129,6 +3524,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "goblin")),
         },
         Metric {
@@ -3138,6 +3535,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "hobgoblin")),
         },
         Metric {
@@ -3147,6 +3546,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "bugbear")),
         },
         Metric {
@@ -3156,6 +3557,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "kobold")),
         },
         // --- Confusable-vs-free core homophony (spec §10 Q3): the
@@ -3173,6 +3576,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "goblin")),
         },
         Metric {
@@ -3183,6 +3588,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "hobgoblin")),
         },
         Metric {
@@ -3193,6 +3600,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "bugbear")),
         },
         Metric {
@@ -3203,6 +3612,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "kobold")),
         },
         // --- The tone tier (spec §11): the realized tone-inventory size (1 for
@@ -3216,6 +3627,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| tone_count_metric(v, "goblin")),
         },
         Metric {
@@ -3225,6 +3638,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| tone_count_metric(v, "kobold")),
         },
         Metric {
@@ -3235,6 +3650,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "goblin")),
         },
         Metric {
@@ -3245,6 +3662,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "bugbear")),
         },
         Metric {
@@ -3254,6 +3673,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
         // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
@@ -3270,6 +3691,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "goblin")),
         },
         Metric {
@@ -3279,6 +3702,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "kobold")),
         },
         Metric {
@@ -3288,6 +3713,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "goblin")),
         },
         Metric {
@@ -3297,6 +3724,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "kobold")),
         },
         Metric {
@@ -3306,6 +3735,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 species_basal_metabolic_rate_metric(v, "goblin")
             }),
@@ -3317,6 +3748,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 species_basal_metabolic_rate_metric(v, "kobold")
             }),
@@ -3329,6 +3762,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "goblin")),
         },
         Metric {
@@ -3339,6 +3774,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "kobold")),
         },
         Metric {
@@ -3348,6 +3785,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "goblin")),
         },
         Metric {
@@ -3357,6 +3796,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "kobold")),
         },
         Metric {
@@ -3367,6 +3808,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "goblin")),
         },
         Metric {
@@ -3377,6 +3820,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
+            domain: Domain::Biology,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "kobold")),
         },
         // --- The Chorus (C4, LANG-41): the six census-visible dial metrics
@@ -3393,6 +3838,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_distortion_metric),
         },
         Metric {
@@ -3402,6 +3849,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_distinctiveness_metric),
         },
         Metric {
@@ -3411,6 +3860,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_recoverability_metric),
         },
         Metric {
@@ -3422,6 +3873,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.001, 0.01, 0.05, 0.1],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_variance_metric),
         },
         Metric {
@@ -3432,6 +3885,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.4],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_param_spread_metric),
         },
         Metric {
@@ -3445,6 +3900,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.5, 0.0, 0.5],
             },
+            domain: Domain::Language,
+            role: Role::Descriptor,
             extract: Extractor::Full(chorus_sky_calibration_metric),
         },
         // --- The Contour (Task 4): the measurement instrument, built ahead
@@ -3485,6 +3942,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
+            domain: Domain::Society,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let mut peoples = std::collections::BTreeSet::new();
                 for occ in occupation_records(v.world())
@@ -3507,6 +3966,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.3, 0.5, 0.7],
             },
+            domain: Domain::Society,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let pops: Vec<f64> = occupation_records(v.world())
                     .into_iter()
@@ -3534,6 +3995,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.6, -0.3, 0.0, 0.3, 0.6],
             },
+            domain: Domain::Society,
+            role: Role::Descriptor,
             extract: Extractor::Full(spearman_defensibility_capacity),
         },
         Metric {
@@ -3545,6 +4008,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 MetricValue::Number(toponymic_core(v).len() as f64)
             }),
@@ -3559,6 +4024,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
             },
+            domain: Domain::Naming,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 MetricValue::Number(toponymic_roots_won(v) as f64)
             }),
@@ -3574,6 +4041,8 @@ pub fn registry() -> Vec<Metric> {
                   and a tail miss-run, so it cannot be synthesised — which is why it \
                   is a rate here rather than a hand-built behaviour test.",
             summary: SummaryKind::Flag,
+            domain: Domain::Society,
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
                     Ok(days) => days,
@@ -3640,6 +4109,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let a = raid_attribution(&occupation_records(v.world()));
                 if a.records == 0 {
@@ -3665,6 +4136,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let a = raid_attribution(&occupation_records(v.world()));
                 if a.records == 0 {
@@ -3686,6 +4159,8 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
+            domain: Domain::Settlement,
+            role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let a = raid_attribution(&occupation_records(v.world()));
                 if a.records == 0 {
