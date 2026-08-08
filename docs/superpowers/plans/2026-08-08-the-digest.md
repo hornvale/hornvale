@@ -1583,7 +1583,7 @@ Set UNI-29 / UNI-21 / UNI-28 / PROC-11 statuses to reflect what shipped, and add
 
 ## Self-Review
 
-**Spec coverage.** §4.1 collection → Task 1. §4.2 no time → Task 1 (`TimeIsGits`). §4.3 compaction → Task 1. §4.4 stored vs scanned → Tasks 4/6. §4.5 serialization → Task 2. §4.6 placement → Task 1. §4.7 regeneration → Task 7. §4.8 MCP → Task 9. §4.9 delta → Task 8. §5 v1 scope → Tasks 5–7. §6 S1→Task 6, S2→Task 7, S3→Task 2, S4→Task 5, S5→Task 8, S6→Task 6. §11 rename rule → Task 3 module doc. **§7 migration is NOT a task** — asserting the initial fact set is authoring, not implementation; it happens as Task 7 Step 2 and grows organically. Flagged rather than hidden.
+**Spec coverage.** §4.1 collection → Task 1. §4.2 no time → Task 1 (`TimeIsGits`). §4.3 compaction → Task 1. §4.4 stored vs scanned → Tasks 4/6. §4.5 serialization → Task 2. §4.6 placement → Task 1. §4.7 regeneration → Task 7. §4.8 MCP → Task 9. §4.9 delta → Task 8. §5 v1 scope → Tasks 5–7. §6 S1→Task 6, S2→Task 7, S3→Task 2, S4→Task 5, S5→Task 8, S6→Tasks 6+7 (moved after Task 6's review; see Task 7). §11 rename rule → Task 3 module doc. **§7 migration is NOT a task** — asserting the initial fact set is authoring, not implementation; it happens as Task 7 Step 2 and grows organically. Flagged rather than hidden.
 
 **Placeholder scan.** No TBD/TODO. Every code step carries real code.
 
