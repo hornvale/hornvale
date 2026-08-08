@@ -199,9 +199,21 @@ rm -f "$possess_ot_tmp"
 # holds no column at all, while 3293 carries sixteen layers. Repointing is
 # legitimate HERE and was not when this page last went empty -- the earlier
 # emptiness meant the world had no deep history to show, and moving the camera
-# would have hidden a null result. Seed 42 now has 16-layer columns; the
-# showcase was simply aimed at a cell that is no longer one of them.
-history_site=3293
+# would have hidden a null result.
+# Repointed AGAIN from 3293 by The Delvers (C2c): three new settling peoples
+# re-decide settlement placement on every seed, and 3293 went empty. Same test
+# as before -- is the WORLD empty, or only this cell? -- and the world is not:
+# scanning occ-site over the seed-42 sky world, cell 5508 carries ELEVEN
+# layers. So the camera moved and the null result is intact.
+# Two honest notes, since a repointing is exactly where a quiet claim can slip
+# in. (1) The deepest column on this seed is now 11 where it was 16; that is a
+# reported number and this script asserts NO mechanism for the drop, because a
+# roster change moves several things at once. (2) 5508 is all-kobold and stays
+# a genuine fit for the page's title -- six of its layers end in flight from
+# other kobolds and four more end because the occupants won ground elsewhere
+# and carried the settlement onto it. All counts below are re-read off the live
+# block, per the rule above.
+history_site=5508
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
     printf '# The Contested Clearing of Seed 42\n\n'
@@ -212,17 +224,23 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
-    printf 'This is a real clearing on the world of seed 42 — cell %s — and sixteen\n' "$history_site"
-    printf 'hobgoblin steadings have risen on it, one settling atop the ruins of\n'
-    printf 'the last, from the year 450 down to the present. Not one of them was\n'
-    printf 'ended by the cold. All fifteen completed layers fell to other\n'
-    printf 'hobgoblins — a people with only itself to fight, contesting the one\n'
-    printf 'defensible rise in a neighbourhood it had already filled. Six of those\n'
-    printf 'endings were not evictions at all: the occupants had just taken better\n'
-    printf 'ground from a neighbour and carried the settlement there, so the layer\n'
-    printf 'closes on a departure rather than a defeat. The sixteenth was founded\n'
-    printf 'in the year 1800 and stands yet, two hundred years on: some thirty\n'
-    printf 'souls, two huts and a granary, and no ruin yet to read.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and eleven\n' "$history_site"
+    printf 'kobold steadings have risen on it, one settling atop the ruins of the\n'
+    printf 'last, from the year 950 down to the present. Every one of the ten\n'
+    printf 'completed layers ended at the hands of other kobolds: six fell to a\n'
+    printf 'rival band, and four were not evictions at all — the occupants had\n'
+    printf 'just taken better ground from a neighbour and carried the settlement\n'
+    printf 'there, so the layer closes on a departure rather than a defeat. This\n'
+    printf 'is a people with only itself to fight, contesting one rise in a\n'
+    printf 'neighbourhood it had already filled.\n\n'
+    printf 'The cold is in this column, but never as an ending. Not one layer\n'
+    printf 'here fell to ice; every founding party instead *arrived* fleeing it,\n'
+    printf 'driven off one of three neighbouring clearings. Five of the eleven\n'
+    printf 'layers did not last a single year — founded and put to flight in the\n'
+    printf 'same year they began, which is what the record looks like when refuge\n'
+    printf 'and contest are the same ground. The eleventh was founded in 1925 and\n'
+    printf 'stands yet, seventy-five years on: some fifteen souls, two huts and a\n'
+    printf 'granary, and no ruin yet to read.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'

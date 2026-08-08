@@ -941,7 +941,24 @@ fn the_history_page_prose_names_the_cell_it_renders() {
     // follow-up grep rather than a live failure — the guard below only
     // checks names the prose actually contains, so this was dormant, not
     // red).
-    for people in ["bugbear", "hobgoblin", "kobold", "goblin", "gnoll", "human"] {
+    //
+    // The Delvers (C2c) appends the dwarf family's three, taking the settling
+    // roster to nine. **This list is authored and the roster is not**, so it
+    // goes stale silently and in the safe-looking direction: a missing people
+    // makes the guard check LESS, never fail, which is why the note above
+    // records the last omission as "dormant, not red". Anyone adding a
+    // settling kind must append it here.
+    for people in [
+        "bugbear",
+        "hobgoblin",
+        "kobold",
+        "goblin",
+        "gnoll",
+        "human",
+        "desert-dwarf",
+        "gully-dwarf",
+        "hill-dwarf",
+    ] {
         if prose.to_lowercase().contains(people) {
             assert!(
                 block.to_lowercase().contains(people),
