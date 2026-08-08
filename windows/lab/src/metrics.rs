@@ -674,6 +674,8 @@ pub enum Domain {
     Biology,
     /// Villages, placement, population.
     Settlement,
+    /// Population counts, survival, and the demographic fate of peoples.
+    Demography,
     /// Social structure, disposition, conflict.
     Society,
     /// Pantheons, cults, belief.
@@ -697,6 +699,7 @@ impl Domain {
             Domain::Hydrology => "hydrology",
             Domain::Biology => "biology",
             Domain::Settlement => "settlement",
+            Domain::Demography => "demography",
             Domain::Society => "society",
             Domain::Religion => "religion",
             Domain::Language => "language",
@@ -714,6 +717,7 @@ impl Domain {
             Domain::Hydrology,
             Domain::Biology,
             Domain::Settlement,
+            Domain::Demography,
             Domain::Society,
             Domain::Religion,
             Domain::Language,
@@ -2864,7 +2868,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0],
             },
-            domain: Domain::Society,
+            domain: Domain::Demography,
             role: Role::Descriptor,
             extract: Extractor::Full(peoples_placed),
         },
@@ -3942,7 +3946,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            domain: Domain::Society,
+            domain: Domain::Demography,
             role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let mut peoples = std::collections::BTreeSet::new();
