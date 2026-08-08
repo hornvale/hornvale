@@ -84,6 +84,31 @@ pub fn parse(id: &str, text: &str) -> DecisionRecord {
     }
 }
 
+/// Every committed decision, parsed. Test support for the delta view.
+pub fn all_for_test() -> Vec<DecisionRecord> {
+    let dir = repo_root().join("docs/decisions");
+    let mut out = Vec::new();
+    let mut paths: Vec<_> = std::fs::read_dir(&dir)
+        .expect("decisions dir")
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .collect();
+    paths.sort();
+    for path in paths {
+        let name = path
+            .file_name()
+            .expect("name")
+            .to_string_lossy()
+            .to_string();
+        if !name.ends_with(".md") || name == "README.md" {
+            continue;
+        }
+        let id = name.split('-').next().expect("id prefix").to_string();
+        out.push(parse(&id, &std::fs::read_to_string(&path).expect("read")));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -26,15 +26,17 @@ fn main() {
                 "{}",
                 render::decisions::index(&all_decisions(), &decision_scopes())
             ),
-            // NOTE: the `delta` arm is added by Task 8, which creates that
-            // module. Referencing it here would not compile.
+            Some("delta") => print!(
+                "{}",
+                render::delta::report(&all_decisions(), &decision_scopes())
+            ),
             _ => {
-                eprintln!("usage: digest render <doctor|decisions>");
+                eprintln!("usage: digest render <doctor|decisions|delta>");
                 std::process::exit(2);
             }
         },
         _ => {
-            eprintln!("usage: digest render <view>");
+            eprintln!("usage: digest render <doctor|decisions|delta>");
             std::process::exit(2);
         }
     }

@@ -3,6 +3,5 @@
 //! drift-checked with `git diff --exit-code`.
 
 pub mod decisions;
+pub mod delta;
 pub mod doctor;
-// NOTE: `pub mod delta;` is added by Task 8, alongside the file it creates.
-// Declaring a module before its file exists does not compile.
