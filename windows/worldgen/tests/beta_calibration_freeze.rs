@@ -55,24 +55,41 @@
 //! and oatmeal is the size of the peopled roster. That dependency was invisible
 //! because it was compiled into a number.
 //!
-//! The Delvers authored five dwarves, taking the peopled set from six to
-//! eleven. Measured at the frozen β=2.0:
+//! The Delvers shipped **three** dwarves, taking the peopled set — `psyche`,
+//! which counts the three dragons alongside the settling peoples — from **9 to
+//! 12**. Measured at the frozen β=2.0 on the roster that actually shipped:
 //!
 //! | seed | claimed diversity |
 //! |------|--------------------|
-//! | 1    | 3.482679506037277  |
-//! | 2    | 3.838770075608982  |
-//! | 3    | 3.337629505782417  |
-//! | 4    | 3.198540797722292  |
-//! | 42   | 3.261262287035959  |
+//! | 1    | 3.082600209114541  |
+//! | 2    | 3.3263969671285327 |
+//! | 3    | 2.88374745112571   |
+//! | 4    | 2.918818431327006  |
+//! | 42   | 2.8391207889036836 |
 //!
-//! mean ≈ 3.4238. Against the stale literal that is a breach. Against the
-//! quantity the bound actually meant it is a **large improvement**: 3.42 of a
-//! possible 11 is **31% of oatmeal**, where the original band permitted 75%.
-//! Absolute diversity rose because there are more peoples to share a cell;
-//! diversity *relative to undifferentiated sharing* fell by more than half. The
-//! five new kinds are partitioning space rather than piling onto it, which is
-//! precisely what the bound exists to check.
+//! mean ≈ **3.0101**, against a derived ceiling of `0.75 × 12 = 9.0`.
+//!
+//! Two things are worth reading off that number rather than one. First, the
+//! bound's own quantity: 3.01 of a possible 12 is **25% of oatmeal**, where the
+//! original band permitted 75%. Absolute diversity rose, because there are more
+//! peoples available to share a cell; diversity *relative to undifferentiated
+//! sharing* fell to a third of what the band allows. The new kinds are
+//! partitioning space rather than piling onto it, which is precisely what this
+//! bound exists to check.
+//!
+//! Second, and this is the sharper half: **the stale literal would have failed
+//! by 0.0101.** A mean of 3.0101 breaches a ceiling of 3.0 — barely, and for a
+//! reason that has nothing to do with the world going undifferentiated. That is
+//! what a compiled-in dependency looks like when it finally rots: not a dramatic
+//! failure that announces its cause, but a hair over the line, exactly the shape
+//! most likely to be waved through as noise and re-pinned.
+//!
+//! **An earlier revision of this doc recorded a five-dwarf roster** (peopled set
+//! "six to eleven", mean 3.4238). Those two kinds were cut before merge, so that
+//! evidence describes a roster that never shipped; it is replaced rather than
+//! kept, because a calibration table is only worth what its population is. It
+//! also conflated the settling count with `psyche.len()`, which is the count the
+//! assertion below actually derives its ceiling from.
 //!
 //! So the ceiling is now **derived** — `0.75 × peopled_count` — which preserves
 //! the original preregistration exactly at a roster of four and cannot rot

@@ -318,6 +318,60 @@ it as a **realized** one (does this species live here); ecology has kept those
 apart since Hutchinson, and competition exists downstream without ever feeding
 back.
 
+*Re-scored sideways again by [The Delvers](./chronicle/the-delvers.md)
+(2026-08-07), which measured which layer of the prior actually does the
+selecting — and then found that selecting is not the same as separating.* Three
+results, in the order they arrive. First, **which axis binds is an authoring
+choice, not a model constraint**, and it has a closed form. The condition
+response floors its buffer-able axes at the sovereignty floor and passes
+elevation a literal zero, so elevation is the limiting axis on every cell of
+every world exactly when a kind's authored elevation devotion falls below that
+floor — no terrain enters the derivation. Confirmed in both directions over
+three seeds: the two dwarves authored below their floors are elevation-bound on
+100.00% of land, and the one authored above binds there on 8.64–31.59%. That
+reproduces from arithmetic alone the earlier measurement that elevation binds
+everywhere for goblin, gnoll and human, and reclassifies it: the climate axes
+were silent because of how the roster had been written, not because the model
+cannot hear them. Second, the same kind authored above its floor has its
+temperature or moisture curve binding on **67–91% of land** while both
+below-floor dwarves read exactly 0.00% on every climate axis — so an authored
+climate niche demonstrably can select, which the paragraphs above had left as an
+open question for a surface kind. Third, and the reason this is a sideways move
+rather than a promotion: decomposing capacity into its two factors and
+correlating the supply factor alone across kind pairs returns
+**0.99935–0.99996 on all nine measurements** — over this family the supply term
+is very nearly kind-independent, so *every scrap* of per-kind spatial structure
+comes from the tolerance layer. That is a sharper statement than "an authored
+tolerance can only modulate," and it is deliberately narrower than it sounds:
+the correlation is scale-invariant, so it measures how supply **sorts** cells,
+not how large it is, and the standing claim that supply's magnitude drowns the
+niche is neither confirmed nor discharged by it.
+
+**What that bought, and what it did not, is the finding.** The kind whose
+climate niche actually binds is the one *least* separated from its neighbour —
+capacity correlation 0.86–0.98 against the hill dwarf, above the frozen
+threshold on two seeds of three, a refuted prediction pinned as a witness so a
+later separation reddens rather than passing silently. Meanwhile the pair
+differing in nothing but an elevation optimum, 150 m against 900 m, separates to
+0.69–0.76. **Binding and differentiating are not the same property**, and
+nothing in this chapter had distinguished them before; a niche can be read, be
+correctly coupled, dominate the limiting product, and still leave two peoples
+ecological synonyms. The prior's honest position is therefore that it can now
+place a species where its traits say it belongs, and still cannot be relied on
+to place two species *differently* on that basis.
+
+One thing this campaign was expected to settle and did not: the question left
+above — whether a realm's hard gate generalises past caves, "the first thing a
+campaign placing a *people* underground will find out" — is **still open**. Two
+subterranean dwarves were authored and then cut mid-campaign, because they had
+been given a *low elevation above sea level* to mean *deep*, and depth below the
+surface and height above the sea are different quantities: a chamber under a
+mountain sits high, and the curve as written selected lowland marshes. The
+roster that shipped is entirely of the surface. Placing a people underground now
+waits on the underworld being declared as **places** — biomes, the way the sea's
+depth layers already are — rather than as a coordinate pushed through a
+tolerance curve.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held

@@ -105,7 +105,8 @@ mechanism kept, just read off the flow instead of a suitability score.
 
 **Joint condensation, the settling peoples (Campaign Y2-1; The Branches;
 recut by *The Menagerie*).** Every world places for the settling peoples —
-goblin, hobgoblin, bugbear, and kobold — filtered from a registry that now
+goblin, hobgoblin, bugbear and kobold when this was written; today also the
+gnoll, the human and the three dwarves — filtered from a registry that now
 also holds a biosphere-only menagerie (fauna do not settle). Originally each
 people condensed its own carrying field independently; since *The Menagerie*
 cut genesis over onto the competitive niche-K coexistence stack, the peoples
@@ -388,23 +389,27 @@ Tithe](../chronicle/the-tithe.md).
   (`pays-tribute-to`) over the ledger's existing entity-to-entity fact
   envelope, and no new fact shape, cause of ending, or stream label.
 
-Seed 42 under a spinning sky now grows **232 settlements** as the present
+Seed 42 under a spinning sky now grows **145 settlements** as the present
 frame of its derived history (the field-condensation model above supplies the
 substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
-competitive niche-K stack, six peoples share the landscape — the four
+competitive niche-K stack, nine peoples share the landscape — the four
 goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The
 Branches](../chronicle/the-branches.md) gave them two new members), the
 gnoll, whose desert niche [The Vacancy](../chronicle/the-vacancy.md) added,
-and the human, the no-refuge generalist [The
-Generalist](../chronicle/the-generalist.md) added — but history now separates
+the human, the no-refuge generalist [The
+Generalist](../chronicle/the-generalist.md) added, and the three dwarves —
+desert, gully and hill — that [The Delvers](../chronicle/the-delvers.md)
+added as one family — but history now separates
 them into distinct territories and each holds its own
-chief settlement: the hobgoblin **Geoboegetoanaoka** (127 souls,
-tropical-rainforest) is the world flagship, with the gnoll
-**Pzopdzhaxgzavshmo** (119, tropical-rainforest), the human **Kezngomo**
-(119, temperate-forest), the bugbear **Goodogododaga** (118,
-tropical-seasonal-forest), the goblin **Nakano** (118, tropical-rainforest),
-and the kobold **Roo** (90, temperate-forest) each holding their own — real,
+chief settlement: the hobgoblin **Toa** (84 souls,
+tropical-seasonal-forest) is the world flagship, with the bugbear **Googo**
+(68, tropical-rainforest), the desert-dwarf **Daddadpadgad** (51,
+shrubland), the kobold **Xoraxa** (46, temperate-forest), the gnoll
+**Psoaxsmaapgzhopgshoop** (41, temperate-forest), the gully-dwarf **Tabtat**
+(37, tropical-seasonal-forest), the hill-dwarf **Bagsmogbatgat** (35,
+temperate-forest), the human **Moengato** (35, temperate-forest), and the
+goblin **Toabebe** (34, taiga) each holding their own — real,
 phonology-drawn names
 (Campaign Y2-3, The Tongues; Campaign 27, The Words). One selection rule is
 worth stating because it is easy to misread: a *people's* chief settlement is

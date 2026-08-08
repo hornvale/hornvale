@@ -35,14 +35,14 @@ six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
 deliberation latency, time horizon) — is carried by every minded kind: the
-six settling peoples and, since *The Eremite*, the three solitary dragons
+nine settling peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
 knowledge, or generosity) — is carried by a minded kind that lives
 *socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
 creature (a dragon) carries none. The gate is sociality, not settlement — a
 nomadic band would carry a society without ever settling — though today that
-set is exactly the six settling peoples, since no `Gregarious` kind is yet
+set is exactly the nine settling peoples, since no `Gregarious` kind is yet
 minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
 left open and recorded rather than filled, because a settlement-free people
 is unaudited everywhere downstream of a settlement.
@@ -263,11 +263,11 @@ one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
 the **perception** (3) component is carried by every kind that *speaks* — a
 chain, not a settlement gate: speech presupposes perception presupposes a
-mind — so the three chromatic dragons carry it alongside the six settling
+mind — so the three chromatic dragons carry it alongside the nine settling
 peoples, though nothing settles a dragon does. The **society** vector (3 —
 sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
-`Gregarious` or `Settled` kind) carries it, which today is exactly the six
+`Gregarious` or `Settled` kind) carries it, which today is exactly the nine
 settling peoples — a `Solitary` dragon carries none.
 `domains/language` authors the **articulation** (6) and the social
 **lexicon** — the speech a kind that speaks carries. Since *The Vigil*, a
@@ -409,7 +409,9 @@ human — both authored at 0.5 — never raided while the other four might. That
 sentence was only ever sayable because a people was a point. Once a people
 became a distribution, the gate's input became a *draw*: each settlement takes
 its own threat response from its people's authored mean and dispersion, keyed
-on where and when it was founded. Every one of the six settling peoples now has
+on where and when it was founded. Every one of the six settling peoples the
+campaign measured — the roster has since grown to nine, which that
+measurement does not cover — now has
 settlements on both sides of the threshold — the assertive ones mostly above it
 and the neutral ones mostly below, but none wholly either. Warlikeness became a
 property of a place rather than of a kind, which is what makes an aversion
@@ -426,12 +428,14 @@ at 0.7 least. The patron's **`MindVector.time_horizon`** is read as a
 community grows logistically, maximum sustainable yield sits at half of
 capacity, so a generational patron holds its vassal near that peak while an
 immediate one strips it. On the shipped roster the patrons order gnoll (0.2),
-bugbear (0.3), goblin (0.5), hobgoblin (0.5), human (0.75), kobold (0.8). Until
+bugbear (0.3), goblin (0.5), hobgoblin (0.5), human (0.75), gully-dwarf (0.8),
+kobold (0.8), hill-dwarf (0.85), desert-dwarf (0.9) — the dwarf family, whose
+long life *The Delvers* authored, sitting at the generational end of it. Until
 *The Tolerance* that list stopped at four: the goblin's and the human's threat
 responses were both authored at 0.5, below the raid threshold, so as *kinds*
 neither could ever take the initiative and neither could ever become a patron.
 Now that threat response is drawn per settlement, a particular goblin or human
-town can clear the gate, and the full six-value ordering above is reachable —
+town can clear the gate, and the full ordering above is reachable —
 and extraction rate and relation lifetime are both monotone in that order. It
 is also the mechanism by which a subjugated people can be extinguished at all,
 since extermination is optimal exactly when the discount rate exceeds intrinsic
@@ -464,10 +468,13 @@ than lost. The correction is one subtraction at the substrate boundary
 an authored number can mean something in. The optima are now stated against
 the measured distribution of settleable land — median 1561 m above sea level,
 quartiles 621 m and 2651 m, the 95th percentile at 4148 m — and the four
-peoples tile it: bugbear's lowland at the 15th percentile, hobgoblin's plains
-at the 24th, goblin's wide generalist curve centred on the median, and
-kobold's stronghold at the 79th, with the giant goat's alpine ceiling above it
-at the 91st. Measured over the same seeds, the kobold is now the best-fit
+peoples of that roster tile it: bugbear's lowland at the 15th percentile,
+hobgoblin's plains at the 24th, goblin's wide generalist curve centred on the
+median, and kobold's stronghold at the 79th, with the giant goat's alpine
+ceiling above it at the 91st. The three dwarves *The Delvers* added are
+authored against the same distribution and fill in below the median —
+gully-dwarf at 150 m, desert-dwarf at 700 m, hill-dwarf at 900 m — which is
+the crowded end of it. Measured over the same seeds, the kobold is now the best-fit
 people on every settleable cell above 3000 m and the worst below 500 m, which
 is what "highlander" was always supposed to mean. The lesson generalizes past
 this one axis: **a unit is not a frame.** Both quantities were honest metres;
