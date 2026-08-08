@@ -199,7 +199,45 @@ const TURN_BUDGET_MS: f64 = 8.0;
 /// samples — `enter`, `map`, `look` alike, 15 per run) gave 8.910, 8.503,
 /// 8.530 ms — slowest 8.910 ms. Budgeted at ~2x, rounded up: `2 * 8.910 =
 /// 17.82` -> 18.0.
-const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 18.0;
+///
+/// # **RAISED by The Tare: 18.0 -> 40.0 ms**, and the basis with it
+///
+/// An explicit, reviewed act (Nathan, 2026-08-08), recorded here because the
+/// ratchet rule requires a raise to be exactly that. **Ceilings still ratchet
+/// DOWN freely; this is the deliberate exception, not a precedent for
+/// re-baselining a red.**
+///
+/// **CAUSE, BISECTED RATHER THAN ASSUMED.** The metric read 18.720 ms at main
+/// against the 18.0 ceiling — and it is *not* contention: reproduced three
+/// times at 1-min loadavg 5.0-5.4 while both control metrics sat at 1.08x and
+/// 0.92x of their own bases. A commit-by-commit bisect over the whole range
+/// since this ceiling was set puts the entire step on **one** commit:
+///
+/// ```text
+///   109f8422  the commit that SET this ceiling      indoor  8.85 / 8.80 ms
+///   211e99ca  a built cell has a fabric                     8.92
+///   bcf4a596  light is a derived view over shadowcaster     8.61
+///   7f198ea5  a hearth is at a wall                         8.57 / 8.67
+///   c25bb1d2  PaletteEntry.color fills                     17.71 / 17.30  <--
+///   f962ee95  the lens                                     17.17
+///   155b0901  main                                         18.72
+/// ```
+///
+/// `c25bb1d2` widened palette interning from `CellKind` to
+/// `(CellKind, Option<[u8; 3]>)`, replacing one shared entry per wall material
+/// with a per-cell `Observer::sense` + `to_srgb` summed over `light_field`'s
+/// illuminants — a per-chamber lookup became per-cell work on every indoor
+/// snapshot. **The four sibling Lantern commits moved it by ZERO**, and both
+/// controls stayed flat across every point, so this is localised code cost.
+///
+/// **This is the price of per-cell colour, not a defect.** The feature does
+/// exactly what it says. Budgeted at ~2x the new measurement in the same
+/// method as every other ceiling here: `2 * 18.720 = 37.44` -> 40.0.
+///
+/// The 8.85 -> 17.71 step is left legible above rather than smoothed away: a
+/// future reader must be able to see that this ceiling doubled and why, which
+/// is the entire reason the ratchet rule exists.
+const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 40.0;
 
 /// Ceiling for one walk-band snapshot's serialized bytes. The spec measured
 /// `scene/surrounds/v1` at 7,049 bytes at radius 4; this bounds the whole
@@ -242,10 +280,20 @@ const START_BASIS_MS: f64 = 3442.192;
 /// re-measure (3.939 ms) was read as "essentially flat" and left the ceiling
 /// unchanged — see `TURN_BUDGET_MS`'s own doc.
 const TURN_BASIS_MS: f64 = 3.906;
-/// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`: 8.910 ms, slowest of
-/// three runs, same box/profile, 2026-08-06 (The Sighting, Task 6 — the
-/// figure this ceiling was ITSELF set from; see that constant's own doc).
-const INDOOR_SNAPSHOT_BASIS_MS: f64 = 8.910;
+/// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`.
+///
+/// **Moved by The Tare, 8.910 -> 18.720**, in the same reviewed act that
+/// raised the ceiling above it. The old figure was 8.910 ms (The Sighting,
+/// 2026-08-06, slowest of three runs); it is superseded because `c25bb1d2`
+/// made per-cell colour a real cost, bisected and evidenced at
+/// `INDOOR_SNAPSHOT_BUDGET_MS`'s own doc.
+///
+/// **The basis MUST move with the ceiling.** Leaving it at 8.910 while the
+/// ceiling went to 40.0 would make this metric read 2.09x on every future
+/// green run, and the verdict logic below would then report a control as
+/// having "moved" forever — an alarm that fires always is an alarm nobody
+/// reads.
+const INDOOR_SNAPSHOT_BASIS_MS: f64 = 18.720;
 
 /// How far a CONTROL metric may drift from its basis before the run stops
 /// counting as "the controls held". Same value and reasoning as

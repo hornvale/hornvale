@@ -344,6 +344,44 @@ it.
   matching split (`Session::start` versus the per-turn metrics).
 - **No ceiling is raised.** The ratchet rule stands; this campaign changes the
   diagnosis, not the budgets.
+
+### §5.4 What the corrected discriminator found, on its first use
+
+**Amendment, 2026-08-08.** §5.3's last bullet did not survive contact with the
+instrument it specifies, and the way it failed is the strongest evidence the
+change was worth making.
+
+Run against `session_cost`, the new verdict reported
+`1 control(s) moved: ["indoor snapshot+json"]` — 18.662 ms against an 8.910 ms
+basis, **2.09x**, reproduced three times at loadavg 5.0-5.4 while the two
+controls sat at 1.08x and 0.92x. Not contention.
+
+A commit-by-commit bisect over the full range since the ceiling was set
+attributes the entire step to **one** commit:
+
+```
+109f8422  the commit that SET the ceiling         indoor  8.85 / 8.80 ms
+211e99ca  a built cell has a fabric                       8.92
+bcf4a596  light is a derived view over shadowcaster       8.61
+7f198ea5  a hearth is at a wall                           8.57 / 8.67
+c25bb1d2  PaletteEntry.color fills                       17.71 / 17.30   <--
+f962ee95  the lens                                       17.17
+155b0901  main                                           18.72
+```
+
+**The hypothesis this spec's author offered was wrong.** Five candidate commits
+were named, with the light and fabric work reasoned as the likely causes; four
+of the five moved the metric by exactly zero. The cause is the palette-key
+widening from `CellKind` to `(CellKind, Option<[u8;3]>)`, which replaced one
+shared entry per wall material with per-cell `Observer::sense` + `to_srgb`
+work on every indoor snapshot.
+
+**It is a feature's price, not a defect.** Nathan's call: raise the ceiling to
+40.0 (~2x the new measurement, the same method every other ceiling here uses)
+and move the basis with it, both recorded at the constant. Moving the basis is
+not bookkeeping — leaving it at 8.910 would make this metric report a moved
+control on every future green run, and an alarm that always fires is an alarm
+nobody reads.
 - `docs/retrospectives/the-confusion.md`'s follow-up is **corrected in place**
   with the log evidence. An incorrect follow-up in a retrospective about
   inherited diagnoses is precisely the failure that retrospective names.
@@ -515,7 +553,16 @@ Authorized by Nathan at G3, 2026-08-08.
 ## §9 Non-goals
 
 - No change to any product behaviour: no domain, no kernel, no provider.
-- No ceiling recalibration on the cost gates.
+- ~~No ceiling recalibration on the cost gates.~~ **AMENDED 2026-08-08, by
+  Nathan, after measurement.** `scene_cost`'s ceilings are untouched as
+  planned. `session_cost`'s `INDOOR_SNAPSHOT_BUDGET_MS` **was raised, 18.0 ->
+  40.0**, with its basis 8.910 -> 18.720. The corrected discriminator found a
+  genuine localised cost increase on its first real use, a bisect put the whole
+  step on one commit (`c25bb1d2`, per-cell colour replacing per-material
+  palette sharing — the four sibling Lantern commits moved it by zero and both
+  controls stayed flat), and the ratchet rule provides for exactly this as an
+  explicit reviewed act. The original non-goal assumed any red here would be
+  contention; it was not.
 - No `BakeCensus` commit / save-format change. The tribute FLOW stays
   unreachable from the census by design; §3 measures the stock instead and says
   so.
