@@ -471,6 +471,8 @@ fn parent_of(
     }
 }
 
+/// claim: invariant(census: none yet) — tie count over [42, 7, 1000], with
+/// re-measured corroborating counts (see file's own re-pin history)
 #[test]
 fn distinct_layers_tie_only_on_genuine_material_matches() {
     // Before The Salt, this test asserted the comparator was TOTAL: the
@@ -648,6 +650,9 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// retained as the BLAST-RADIUS measurement it has always been, not as the
 /// mechanism's pin — `same_day_layers_order_by_material_facts_not_mint_order`
 /// asserts the fourth key's behaviour directly and fails if it stops working.
+/// claim: invariant(seed: [42,7,1000]) — per-seed exact pinned
+/// order-change count, tuple pattern `(seed, expected)` (Fix round 1,
+/// Class 1)
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     for (seed, expected) in [(42u64, 0usize), (7, 1), (1000, 0)] {

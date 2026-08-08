@@ -56,6 +56,7 @@ fn parts(
     (terrain, climate, obliquity_deg, insolation_scalar, regime)
 }
 
+/// claim: structural(seed: [42, 7, 1234]) — byte-identity
 #[test]
 fn present_era_substrate_is_bit_identical_to_the_unparameterised_field() {
     for seed in [42, 7, 1234] {
@@ -159,6 +160,7 @@ fn a_glacial_era_moves_temperature_and_the_shoreline() {
 /// This is the layer that matters for worlds — capacity is what settlement
 /// placement and the whole deep-history bake read — so "close enough" is not a
 /// category that exists here.
+/// claim: structural(seed: [42, 1234]) — byte-identity
 #[test]
 fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
     let wc = hornvale_worldgen::components::WorldComponents::assemble().expect("components");
@@ -237,6 +239,8 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
 /// If the ice model ever admits a high-stand, half 1 fails and drowned
 /// present-land keeps non-zero mineral/detritus supply. This test is what turns
 /// that from a silent world-corrupting leak into a red build.
+/// claim: invariant(census: none yet — migration candidate) — over
+/// [42, 7, 1234]
 #[test]
 fn ocean_is_never_settleable_at_any_era() {
     let wc = hornvale_worldgen::components::WorldComponents::assemble().expect("components");

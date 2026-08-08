@@ -450,6 +450,8 @@ fn h3_violations_for(sample: &WorldSample) -> (usize, Vec<(CellId, f64, f64)>) {
     (checked, violations)
 }
 
+/// claim: readout(preregistered) — off-gate (heavy:); own name states the
+/// shape
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_mires_preregistered_readout() {

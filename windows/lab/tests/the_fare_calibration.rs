@@ -1190,6 +1190,7 @@ mod weathering {
         );
     }
 
+    /// claim: readout(pilot) — off-gate (heavy:); own name states the shape
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn the_fares_pilot() {
@@ -1652,6 +1653,8 @@ mod weathering {
         }
     }
 
+    /// claim: readout(preregistered) — off-gate (heavy:); own name states the
+    /// shape
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn the_fares_preregistered_readout() {
@@ -2054,6 +2057,8 @@ mod weathering {
         }
     }
 
+    /// claim: readout(exploratory, post-hoc, NOT preregistered) — off-gate
+    /// (heavy:); own comment states the shape
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn the_fares_exploratory_readout() {

@@ -317,6 +317,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds a
+    /// Settlement, single fixed hand-built scenario, no world seed at all
     #[test]
     fn every_species_retains_a_founder_settlement() {
         let geo = Geosphere::new(3);

@@ -222,6 +222,7 @@ fn variance(vals: &[f64]) -> f64 {
     vals.iter().map(|v| (v - m) * (v - m)).sum::<f64>() / vals.len() as f64
 }
 
+/// claim: readout(off-gate, heavy:) — pre-dispersion raid rates by people
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_pre_dispersion_raid_rates() {
@@ -580,6 +581,8 @@ fn discordant_pairs(stats: &[(&'static str, f64, f64)]) -> usize {
 /// exact population above rather than inherited from `tolerance_draw.rs`'s
 /// two-seed figure, so the effective *n* behind every "that is noise" claim
 /// below is a stated number rather than an assumption.
+/// claim: readout(off-gate, heavy:, preregistered) — own name states the
+/// shape; guards only, nothing below asserts a hypothesis
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_the_preregistered_readout() {

@@ -67,6 +67,8 @@ mod tests {
         assert!(a.is_some());
     }
 
+    /// claim: reachability(seed: 0..8) — non-degeneracy: choose_consistent is
+    /// not a constant function
     #[test]
     fn choice_varies_with_seed() {
         let (r, l, e) = setup();
@@ -81,6 +83,8 @@ mod tests {
         assert!(picks.windows(2).any(|w| w[0] != w[1]));
     }
 
+    /// claim: invariant(forall-seed) — the only non-contradicting candidate is
+    /// always picked
     #[test]
     fn contradicting_candidates_are_skipped() {
         let (r, mut l, e) = setup();

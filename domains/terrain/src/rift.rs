@@ -660,6 +660,9 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; the inner
+    /// loop's `s` binds a seam, not a seed. Single fixed seed, byte-identity
+    /// re-derivation check
     #[test]
     fn rift_draws_one_scalar_and_derives_seams_per_pair() {
         let seed = Seed(42).derive(crate::streams::ROOT);
@@ -675,6 +678,7 @@ mod tests {
         assert_eq!(draw_rift(seed, &cratons), rift);
     }
 
+    /// claim: structural(seed: [1,7,42,99]) — byte-identity, build twice, compare
     #[test]
     fn seam_count_and_spreading_rate_are_stable_across_seeds() {
         for seed_val in [1u64, 7, 42, 99] {

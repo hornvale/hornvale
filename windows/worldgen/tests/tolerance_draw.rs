@@ -511,6 +511,9 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 /// guard that would catch the one failure this task cannot recover from — a
 /// draw key that is not actually reachable, or whose uniqueness has quietly
 /// changed shape. That is worth five seconds every commit.
+/// claim: reachability(seed: [1, 42, 777]) — dual-purpose with an embedded
+/// invariant (uniqueness shape); own doc comment: "the guard that would
+/// catch... a draw key that is not actually reachable"
 #[test]
 fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
     use hornvale_astronomy::SkyPins;

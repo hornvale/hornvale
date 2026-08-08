@@ -644,6 +644,8 @@ fn no_emitted_tribute_fact_predates_either_party() {
 /// are floors saying the phenomena EXIST — cascades, flights, revolts — never
 /// a ceiling on the shape. A ceiling would freeze the falsification that the
 /// deferred depth/release levers are meant to break.
+/// claim: readout(off-gate, heavy:) — cascade-size distribution over
+/// SHAPE_SAMPLE, adjudicated
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_cascade_distribution_is_adjudicated() {
@@ -744,6 +746,8 @@ fn the_cascade_distribution_is_adjudicated() {
 ///
 /// The horizons are read from the psyche registry rather than written down, so
 /// re-authoring a people cannot leave this test asserting a stale ordering.
+/// claim: readout(off-gate, heavy:) — standing-relation-age readout by
+/// patron people over SHAPE_SAMPLE
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_strategy_family_is_various() {

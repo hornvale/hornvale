@@ -493,6 +493,7 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-07T12:18:36Z | rebaseline | 127.277 | 179.163 | 8.232 | 1.47 | 0 | 91d979dd | the-sighting | MacBookPro | 10 |
 | 2026-08-07T13:16:07Z | rebaseline | 134.623 | 179.342 | 7.217 | 1.39 | 0 | 4564a3c0 | the-handle | MacBookPro | 10 |
 | 2026-08-07T13:24:57Z | gate | 529.350 | 4175.021 | 105.854 | 8.09 | 0 | 4564a3c0 | the-handle | MacBookPro | 10 |
+| 2026-08-07T17:47:25Z | census | 767.820 | 19731.888 | 302.834 | 26.09 | 0 | 82a7aa5e | campaign/the-assay | lefford | 40 |
 | 2026-08-07T19:46:31Z | rebaseline | 146.495 | 182.682 | 7.706 | 1.30 | 0 | f5e1638c | the-beholding | MacBookPro | 10 |
 | 2026-08-07T20:10:49Z | gate | 680.938 | 4388.532 | 141.952 | 6.65 | 0 | b5e2b316 | the-beholding | MacBookPro | 10 |
 | 2026-08-07T20:15:38Z | rebaseline | 140.400 | 181.091 | 8.276 | 1.35 | 0 | 8a62bad1 | the-beholding | MacBookPro | 10 |
@@ -505,3 +506,8 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T03:43:54Z | gate | 1045.020 | 4457.466 | 195.217 | 4.45 | 0 | a5503433 | the-lantern | MacBookPro | 10 |
 | 2026-08-08T04:52:07Z | gate | 660.707 | 4466.117 | 117.796 | 6.94 | 0 | a67f6627 | the-lantern | MacBookPro | 10 |
 | 2026-08-08T05:01:41Z | rebaseline | 203.265 | 183.944 | 7.357 | 0.94 | 0 | a67f6627 | the-lantern | MacBookPro | 10 |
+| 2026-08-08T00:23:07Z | rebaseline | 169.240 | 177.922 | 9.206 | 1.11 | 0 | 490757f9 | campaign/the-assay | ambrose | 12 |
+| 2026-08-08T00:44:28Z | gate | 1032.408 | 5219.448 | 296.296 | 5.34 | 0 | 8ab36d1e | campaign/the-assay | ambrose | 12 |
+| 2026-08-08T02:13:54Z | gate | 923.743 | 4955.322 | 244.078 | 5.63 | 0 | 1aa73b90 | campaign/the-assay | ambrose | 12 |
+| 2026-08-08T12:08:17Z | gate | 525.463 | 4316.741 | 99.502 | 8.40 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |
+| 2026-08-08T12:10:50Z | rebaseline | 132.231 | 179.320 | 9.711 | 1.43 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |

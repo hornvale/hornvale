@@ -2706,6 +2706,8 @@ mod tests {
     /// ```text
     /// cargo test -p hornvale-language sweep_wear_fixture_seed -- --ignored --nocapture
     /// ```
+    /// claim: reachability(seed: 0..600) — finds fixture seeds satisfying the
+    /// test's preconditions
     #[test]
     #[ignore = "search: re-derives the wear fixture's seed; run explicitly with --ignored"]
     fn sweep_wear_fixture_seed() {
@@ -2966,6 +2968,8 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-seed) — repaired compounds parse against drawn
+    /// templates, over 12 seeds
     #[test]
     fn repair_makes_real_evolved_compounds_conform() {
         // The structural invariant repair exists to uphold (spec §8), probed
@@ -3167,6 +3171,8 @@ mod tests {
     /// of *one of* several admissible lengths. A namer that drew simple
     /// nuclei the parser then rejected would send every name through
     /// [`repair_phonotactics`] and pad the vowel straight back in.
+    /// claim: reachability(seed: 0..64, seed-searched precondition witness) —
+    /// own doc comment: "Seed-searched runtime precondition"
     #[test]
     fn a_diphthong_admitting_language_still_speaks_simple_syllables() {
         // Seed-searched runtime precondition: the claim is only in play for a
@@ -3221,6 +3227,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — repair-to-identity over 64 seeds
     #[test]
     fn attested_compounds_repair_to_identity_across_the_seed_sweep() {
         // Spec §6: for 64 seeds, with the lexicon descending from a DIFFERENT
@@ -3335,6 +3342,8 @@ mod tests {
     /// Reds if [`reduce_nuclei`] ignores its [`Prominence`] argument in
     /// either direction — protecting nothing (the stressed nucleus is lost)
     /// or protecting everything (nothing reduces at all).
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a Segment, single hand-built word, no world seed
     #[test]
     fn a_words_first_nucleus_is_spared_and_the_rest_reduce() {
         let ph = wordy_ph();
@@ -3411,6 +3420,8 @@ mod tests {
     /// language must admit one, and some sampled name must actually carry a
     /// long FIRST nucleus — i.e. the sparing clause has to be in play, not
     /// just the reducing one.
+    /// claim: invariant(forall-seed) — nucleus-length ordering, with embedded
+    /// non-vacuity guards (admitting > 0, polysyllabic > 0, long_first > 0)
     #[test]
     fn a_drawn_stems_non_initial_nuclei_are_no_longer_than_its_first() {
         let morph = MorphOptions {
@@ -3477,6 +3488,8 @@ mod tests {
     /// Seed-searched: the claim is empty unless the word-initial morpheme
     /// actually carries a nucleus longer than the floor, so the test finds a
     /// lexicon where it does and names the seed it found.
+    /// claim: reachability(seed: 0..64, seed-searched precondition witness) —
+    /// own doc comment: "Seed-searched"
     #[test]
     fn a_compounds_stressed_morpheme_keeps_its_nucleus() {
         let ph = wordy_ph();
@@ -3581,6 +3594,8 @@ mod tests {
     /// share their chosen concepts (the affix is drawn after the concepts
     /// are picked), so the only difference is the prefix and the prominence
     /// that goes with it.
+    /// claim: reachability(seed: 0..64) — own doc comment: "An EXISTENTIAL
+    /// claim, deliberately" (witnesses > 0)
     #[test]
     fn an_honorific_prefix_takes_the_stress_from_the_compound() {
         let ph = wordy_ph();
@@ -3676,6 +3691,8 @@ mod tests {
     /// Both calls below use a saturated corpus, so the frequency gate is
     /// open for both and the ONLY difference is the morpheme count. Reds if
     /// the override drops its `chosen.len() > 1` clause.
+    /// claim: invariant(forall-seed, precondition-gated) — with an embedded
+    /// non-vacuity guard (checked > 0)
     #[test]
     fn a_frequent_morpheme_standing_alone_keeps_its_stressed_nucleus() {
         let ph = wordy_ph();

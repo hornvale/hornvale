@@ -393,6 +393,7 @@ fn world_42() -> World {
 /// weighted onto `MINERAL`) — out of T2's scope per the 0021 constraint
 /// (never author a placement to force a specific test to pass). The fauna
 /// half of the brief's ask (`xorn`) IS measured below.
+/// claim: structural(seed: 42)
 #[test]
 fn settlements_and_dominants_diversify_on_seed_42() {
     let world = world_42();

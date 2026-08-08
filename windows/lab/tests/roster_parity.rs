@@ -85,10 +85,13 @@ fn worldgen_can_steep() -> std::collections::BTreeSet<String> {
     }
 
     // Rule 8 (the seven toponymic gates): derived from the registry's own
-    // `concept_domain`, exactly as `every_core_toponymic_concept_wins_a_root_
-    // somewhere_in_a_seed_sweep` in `windows/worldgen/tests/exposure.rs`
-    // already does — never a hardcoded seven-item literal, so adding an
-    // eighth toponymic concept enrolls here automatically.
+    // `concept_domain`, exactly as `some_census_world_steeps_every_
+    // toponymic_concept` in `windows/lab/tests/calibration.rs` does
+    // (originally `every_core_toponymic_concept_wins_a_root_somewhere_in_a_
+    // seed_sweep` in `windows/worldgen/tests/exposure.rs`, The Assay Task 9,
+    // retired once the census carried the same coverage over 1,000 worlds)
+    // — never a hardcoded seven-item literal, so adding an eighth toponymic
+    // concept enrolls here automatically.
     let w = hornvale_worldgen::build_world(
         Seed(42),
         &SkyPins::default(),

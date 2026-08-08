@@ -212,6 +212,8 @@ fn measure_seed(
     }
 }
 
+/// claim: readout(off-gate, heavy:) — blast-radius before/after readout over
+/// SEEDS
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_blast_radius_readout() {

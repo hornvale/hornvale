@@ -174,6 +174,8 @@ fn build(seed: Seed, depth: BuildDepth) -> hornvale_kernel::World {
 /// genuinely fire on the real world, or the whole deep-history bake is inert.
 /// (Post-data amendment: MIGRATION replaces the preregistered raid-based
 /// `fled + resettled` floor — see the module docs; raids are deferred to C3.)
+/// claim: rate(forall-seed, total >= MIGRATION_FLOOR AND firing >=
+/// MIGRATION_MIN_FIRING_SEEDS) — over MIGRATION_SEEDS
 #[test]
 fn migration_fires_at_volume() {
     let counts: Vec<(u64, u64)> = MIGRATION_SEEDS
@@ -264,6 +266,7 @@ fn migration_events_counts_climate_displacement_only() {
 /// regions of influence (occupied cells dilated by one neighbour ring), since
 /// the raw alive-cell sets are structurally disjoint and their Jaccard is a
 /// vacuous 0.
+/// claim: structural(seed: 42)
 #[test]
 fn territories_are_separated() {
     let w = build(Seed(42), BuildDepth::Settlements);

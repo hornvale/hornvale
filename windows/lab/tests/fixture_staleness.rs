@@ -115,6 +115,9 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
     }
 }
 
+/// claim: invariant(forall-seed) — off-gate (heavy:); the staleness
+/// tripwire's own live-vs-fixture freshness check over PROBE_SEEDS and a
+/// rotating WINDOW_SEEDS, across every study in CENSUSES
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn census_fixtures_match_a_probe_of_live_seeds() {

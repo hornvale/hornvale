@@ -4,12 +4,20 @@
 //! indistinguishable from a rule that works — `AppliedRule.changed` records
 //! it, and nothing read that record. `Tonogenesis` was in that state for
 //! every cascade that drew it before a merger (F7). This is the rule-shaped
-//! twin of `domains/terrain/tests/hydro_witness.rs` (The Witness, Task 6):
+//! twin of the census's
+//! `every_hydro_variant_is_reachable_somewhere_in_the_census` assertion
+//! (`windows/lab/tests/calibration.rs`, The Assay Task 8 — originally
+//! `domains/terrain/tests/hydro_witness.rs`, The Witness, Task 6, retired
+//! once the census carried the same coverage over 1,000 worlds):
 //! it derives its checklist from [`RuleKind::ALL`] (the type itself), then
 //! sweeps a small fixed seed set looking for a real derivation that changes
-//! a word with each kind — the same property `windows/worldgen/tests/
-//! exposure.rs`'s concept sweep already has, generalised from a
-//! hand-written concept list to an enum's own variants (spec §4, guard 2).
+//! a word with each kind — the same property
+//! `some_census_world_steeps_every_toponymic_concept`
+//! (`windows/lab/tests/calibration.rs`, The Assay Task 9 — originally
+//! `windows/worldgen/tests/exposure.rs`'s concept sweep, retired once the
+//! census carried the same coverage over 1,000 worlds) already has,
+//! generalised from a hand-written concept list to an enum's own variants
+//! (spec §4, guard 2).
 //!
 //! # Two different properties, and this guard is the second one
 //!
@@ -175,6 +183,8 @@ fn species_envelopes() -> Vec<(&'static str, Envelope)> {
     ]
 }
 
+/// claim: reachability(seed: forall RuleKind, exists seed in 0..32) — coverage
+/// checklist, breaks early once every kind is witnessed
 #[test]
 fn every_rule_kind_is_witnessed_changing_a_word() {
     let mut fired: BTreeSet<RuleKind> = BTreeSet::new();
@@ -270,6 +280,8 @@ fn full_shipped_roster() -> Vec<(&'static str, Envelope)> {
 /// for "reachable in production"; this test exists so that mistake is not
 /// available — the reported line names exactly which kinds a real world can
 /// draw today.
+/// claim: invariant(forall-seed) — Tonogenesis/VowelShift never drawn for
+/// the shipped roster, over 64 seeds
 #[test]
 fn tonogenesis_and_vowel_shift_are_never_drawn_for_the_shipped_roster() {
     let roster = full_shipped_roster();

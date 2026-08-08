@@ -104,6 +104,8 @@ fn the_day_binds_by_period_match_never_identity() {
     assert_eq!(matched.0.deity, deity_name_fact);
 }
 
+/// claim: invariant(census: none yet — migration candidate) — over seeds
+/// 1..=3
 #[test]
 fn schema_competition_is_real_across_the_roster() {
     // Across seeds 1..=3, every placed culture's day-schema: MEASURED
@@ -149,6 +151,8 @@ fn explanations_are_deterministic() {
     );
 }
 
+/// claim: invariant(census: none yet — migration candidate) — over seeds
+/// 1..=10
 #[test]
 fn no_deity_bearing_schema_ever_fires_agentless() {
     // Review carry-over (C5 T4): explain_day/explain_moons used to bind

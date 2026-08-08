@@ -38,6 +38,7 @@ fn at(day: f64) -> StdDays {
     StdDays::new(day).unwrap()
 }
 
+/// claim: invariant(forall-seed) — day-0 witnessed set is empty
 #[test]
 fn observations_at_day_zero_are_empty() {
     // Every placed culture, seeds 1..=3: nothing has happened by day 0,
@@ -63,6 +64,8 @@ fn observations_at_day_zero_are_empty() {
     }
 }
 
+/// claim: invariant(forall-seed) — observation count monotone in T, prefix
+/// property
 #[test]
 fn the_accumulation_law() {
     // Per culture, seeds 1..=3, over {0, 10_000, 36_525}: |observations|
@@ -467,23 +470,54 @@ const LADDER_TABLE: &[Row] = &[
     ),
 ];
 
+/// Two laws over the same five worlds, in one test because they share a build.
+///
+/// `nextest` is process-per-test, so splitting these costs five full world
+/// builds for no isolation gain — the two laws read the same `ladder_from`
+/// output and cannot interfere. This is a deliberate exception to
+/// one-assertion-per-test, taken because the build is the expensive thing
+/// (The Assay, spec Stage 5).
+///
+/// Law 1 (the ladder): the full measured (seed 1..=5 × culture × epoch) rung
+/// table, pinned exact, plus the structural law: no rung above Counted
+/// without doctrine_from (the SOC-1 gate's diachronic consequence).
+///
+/// Law 2 (the prophecy): C9 (The Corrigendum): the taught prediction is no
+/// longer omniscient, so it is no longer necessarily the TRUE future event
+/// (see `a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine`
+/// for a seed where it's demonstrably wrong). What still holds, and is the real
+/// law now: a Predictive culture's taught day, when `Some`, is EXACTLY what
+/// the naive model computes from that culture's OWN witnessed days for its
+/// own top recurrence class -- self-consistency between `ladder_from` and
+/// the model it's built from, not a truth guarantee.
+///
+/// Every assertion below names its law (`the ladder law:` / `the prophecy
+/// law:`) so a failure in the merged test still says which of the two
+/// properties broke, not just that "the test" failed.
+/// claim: invariant(forall-seed) — two laws merged into one test (Task 11,
+/// process-per-test exception): six builds total (`generated(seed)` for
+/// `1..=5` plus `generated(3)` below), with an embedded existential check
+/// (any_predictive)
 #[test]
-fn the_ladder_law() {
-    // The full measured (seed 1..=5 × culture × epoch) rung table, pinned
-    // exact, plus the structural law: no rung above Counted without
-    // doctrine_from (the SOC-1 gate's diachronic consequence).
+fn the_ladder_and_prophecy_laws() {
+    let t = at(EPOCH_2);
+    let mut any_predictive = false;
+
     for seed in 1..=5u64 {
         let w = generated(seed);
         let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
         let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
         let placed = placed_peoples(&w);
+
+        // Law 1 (the ladder).
         let expected_rows: Vec<&Row> = LADDER_TABLE.iter().filter(|r| r.0 == seed).collect();
         assert_eq!(
             placed.len(),
             expected_rows.len(),
-            "seed {seed}: the pinned table must cover every placed culture"
+            "the ladder law: seed {seed}: the pinned table must cover every placed culture"
         );
-        for (kind, _) in placed {
+        for (kind, _) in &placed {
+            let kind = *kind;
             let row = LADDER_TABLE
                 .iter()
                 .find(|r| r.0 == seed && r.1 == kind)
@@ -494,11 +528,26 @@ fn the_ladder_law() {
                 .unwrap()
                 .events
                 .len();
-            assert_eq!(rung_1, row.2, "seed {seed} {kind} epoch 1 rung");
-            assert_eq!(pred_1, None, "seed {seed} {kind}: no epoch-1 prediction");
-            assert_eq!(rung_2, row.3, "seed {seed} {kind} epoch 2 rung");
-            assert_eq!(n_2, row.4, "seed {seed} {kind} epoch 2 witnessed count");
-            assert_eq!(pred_2, row.5, "seed {seed} {kind} epoch 2 prediction");
+            assert_eq!(
+                rung_1, row.2,
+                "the ladder law: seed {seed} {kind} epoch 1 rung"
+            );
+            assert_eq!(
+                pred_1, None,
+                "the ladder law: seed {seed} {kind}: no epoch-1 prediction"
+            );
+            assert_eq!(
+                rung_2, row.3,
+                "the ladder law: seed {seed} {kind} epoch 2 rung"
+            );
+            assert_eq!(
+                n_2, row.4,
+                "the ladder law: seed {seed} {kind} epoch 2 witnessed count"
+            );
+            assert_eq!(
+                pred_2, row.5,
+                "the ladder law: seed {seed} {kind} epoch 2 prediction"
+            );
 
             // Structural: no Numbered (or higher) without doctrine.
             let organized = doctrine_from(&w, kind, &terrain, &climate).is_some();
@@ -506,57 +555,21 @@ fn the_ladder_law() {
                 if matches!(rung, LadderRung::Numbered | LadderRung::Predictive) {
                     assert!(
                         organized,
-                        "seed {seed} {kind}: rung {rung:?} without an organized cult"
+                        "the ladder law: seed {seed} {kind}: rung {rung:?} without an organized cult"
                     );
                 }
             }
             if !organized {
                 assert!(
                     matches!(rung_2, LadderRung::Unknown | LadderRung::Counted),
-                    "seed {seed} {kind}: folk-only cultures never exceed Counted, got {rung_2:?}"
+                    "the ladder law: seed {seed} {kind}: folk-only cultures never exceed Counted, got {rung_2:?}"
                 );
             }
         }
-    }
 
-    // The full four-rung climb on one culture (measured: seed 3 goblin,
-    // the sparsest organized culture — 32 events/century), so the
-    // Numbered rung — which both committed epochs skip over — is
-    // exercised live, never vacuously.
-    let w = generated(3);
-    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-    let climb = [
-        (1_000.0, LadderRung::Unknown, None),
-        (2_000.0, LadderRung::Counted, None),
-        (4_000.0, LadderRung::Numbered, None),
-        (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
-    ];
-    for (day, expected_rung, expected_pred) in climb {
-        let (rung, pred) = ladder_from(&w, "goblin", at(day), &terrain, &climate).unwrap();
-        assert_eq!(rung, expected_rung, "seed 3 goblin at day {day}");
-        assert_eq!(pred, expected_pred, "seed 3 goblin at day {day}");
-    }
-}
-
-#[test]
-fn the_prophecy_law() {
-    // C9 (The Corrigendum): the taught prediction is no longer
-    // omniscient, so it is no longer necessarily the TRUE future event
-    // (see `a_crisis_fires_on_a_real_generated_sky` for a seed where
-    // it's demonstrably wrong). What still holds, and is the real law
-    // now: a Predictive culture's taught day, when `Some`, is EXACTLY
-    // what the naive model computes from that culture's OWN witnessed
-    // days for its own top recurrence class -- self-consistency between
-    // `ladder_from` and the model it's built from, not a truth guarantee.
-    let t = at(EPOCH_2);
-    let mut any_predictive = false;
-
-    for seed in 1..=5u64 {
-        let w = generated(seed);
-        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-        for (kind, _) in placed_peoples(&w) {
+        // Law 2 (the prophecy).
+        for (kind, _) in &placed {
+            let kind = *kind;
             let (rung, prediction) = ladder_from(&w, kind, t, &terrain, &climate).unwrap();
             if rung != LadderRung::Predictive {
                 continue;
@@ -599,15 +612,41 @@ fn the_prophecy_law() {
             assert_eq!(
                 day,
                 last + mean,
-                "seed {seed} {kind}: the taught day must equal the naive model's own \
+                "the prophecy law: seed {seed} {kind}: the taught day must equal the naive model's own \
                  extrapolation from this culture's own witnessed days"
             );
         }
     }
 
+    // Law 1 continued: the full four-rung climb on one culture (measured:
+    // seed 3 goblin, the sparsest organized culture — 32 events/century),
+    // so the Numbered rung — which both committed epochs skip over — is
+    // exercised live, never vacuously.
+    let w = generated(3);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let climb = [
+        (1_000.0, LadderRung::Unknown, None),
+        (2_000.0, LadderRung::Counted, None),
+        (4_000.0, LadderRung::Numbered, None),
+        (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
+    ];
+    for (day, expected_rung, expected_pred) in climb {
+        let (rung, pred) = ladder_from(&w, "goblin", at(day), &terrain, &climate).unwrap();
+        assert_eq!(
+            rung, expected_rung,
+            "the ladder law: seed 3 goblin at day {day}"
+        );
+        assert_eq!(
+            pred, expected_pred,
+            "the ladder law: seed 3 goblin at day {day}"
+        );
+    }
+
+    // Law 2 continued.
     assert!(
         any_predictive,
-        "NO culture in seeds 1..=5 reaches Predictive at epoch 2 -- the ladder's top must be \
+        "the prophecy law: NO culture in seeds 1..=5 reaches Predictive at epoch 2 -- the ladder's top must be \
          visible somewhere (the preregistered demand); widen the epoch or seed sweep"
     );
 }
@@ -642,45 +681,54 @@ fn diachronic_is_deterministic() {
     }
 }
 
+/// The seed whose crisis this test exercises, READ OUT OF THE CENSUS rather
+/// than hunted at test time (The Assay). At the 2026-08-07 regen (`d36be41b`,
+/// n = 1000), the census's `crisis-fires` column reports `true 659 · false
+/// 341 · Absent 0` -- two worlds in three hold a live prediction crisis -- and
+/// seed 0 is the first seed in that column with `true`. Replace this value
+/// only from a regenerated census's `crisis-fires` column, never by widening a
+/// search.
+const CRISIS_SEED: u64 = 0;
+
+/// A live crisis's own structure, on one world. What the census cannot say:
+/// that a crisis's predicted and actual days differ, and that a culture
+/// holding one also holds a doctrine.
+///
+/// This is a `claim: structural(seed: CRISIS_SEED)` — one build, no search.
+/// The frequency question it used to answer badly (by sweeping up to 200
+/// worlds for a single instance, and reporting only that the search
+/// terminated -- never whether it stopped at seed 1 or seed 187) is now
+/// `hornvale-lab::calibration::a_prediction_crisis_occurs_and_the_census_reports_its_rate`,
+/// over 1,000 worlds. If this seed ever stops holding a crisis, that is a
+/// census question first: regenerate, read the column, re-pin.
 #[test]
-fn a_crisis_fires_on_a_real_generated_sky() {
-    // C9 (The Corrigendum) T1/T3: prove the naive model's crisis
-    // detection fires on at least one live seed, not only on synthetic
-    // data. If none of 1..=200 shows one, WIDEN the search range and
-    // document the range that was needed -- never weaken
-    // PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN just to force a
-    // hit; those are the spec's own considered values (decision ledger
-    // #2).
+fn a_crisis_has_a_predicted_and_an_actual_day_and_its_culture_holds_a_doctrine() {
+    let w = generated(CRISIS_SEED);
+    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
+    let at = at(EPOCH_2);
+
     let mut found = None;
-    for seed in 1..=200u64 {
-        let w = generated(seed);
-        let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-        let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
-        for (kind, _) in placed_peoples(&w) {
-            if let Some(crisis) = crisis_from(&w, kind, at(EPOCH_2), &terrain, &climate).unwrap() {
-                found = Some((seed, kind.to_string(), crisis));
-                break;
-            }
-        }
-        if found.is_some() {
+    for (kind, _) in placed_peoples(&w) {
+        if let Some(crisis) = crisis_from(&w, kind, at, &terrain, &climate).unwrap() {
+            found = Some((kind.to_string(), crisis));
             break;
         }
     }
-    let (seed, kind, crisis) = found.unwrap_or_else(|| {
+    let (kind, crisis) = found.unwrap_or_else(|| {
         panic!(
-            "no seed in 1..=200 exhibited a live prediction crisis by day {EPOCH_2} -- widen \
-            the search range rather than shipping this mechanism unexercised"
+            "seed {CRISIS_SEED} no longer exhibits a crisis at day {EPOCH_2}. This seed \
+             was read out of the census's `crisis-fires` column; regenerate the census \
+             and re-pin CRISIS_SEED from it. Do NOT reintroduce a seed sweep here \
+             (decision 0093), and do NOT weaken the tolerance constants."
         )
     });
     assert!(
         crisis.last_predicted != crisis.last_actual,
-        "seed {seed} {kind}: a crisis's own last predicted/actual days must differ"
+        "seed {CRISIS_SEED} {kind}: a crisis's predicted and actual days must differ"
     );
-    let w = generated(seed);
-    let terrain = hornvale_worldgen::terrain_of(&w).expect("terrain reconstructs");
-    let climate = hornvale_worldgen::climate_from(&w, &terrain).expect("climate derives");
     assert!(
         doctrine_from(&w, &kind, &terrain, &climate).is_some(),
-        "seed {seed} {kind}: a Predictive-rung culture with a crisis must hold a doctrine"
+        "seed {CRISIS_SEED} {kind}: a culture holding a crisis must hold a doctrine"
     );
 }

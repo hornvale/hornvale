@@ -440,6 +440,8 @@ mod tests {
     /// separates — deliberately NOT at the shortest one. Here the people rung
     /// separates and is much longer than the biome rung that also would; the
     /// people rung still wins. Reversing `RUNGS` reds this.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds a
+    /// &String, single hand-built fixture, no world seed
     #[test]
     fn the_ladder_stops_at_the_first_separating_rung_not_the_shortest() {
         let both_separate = BTreeMap::from([

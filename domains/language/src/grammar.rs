@@ -487,6 +487,9 @@ mod tests {
         draw_phonology(&Seed(1), "test-tongue", &test_envelope())
     }
 
+    /// claim: structural(seed: 42) — determinism/species-keying at one fixed
+    /// seed, with an embedded reachability check (any(1..=20)) confirming the
+    /// draw is not a constant function
     #[test]
     fn tongue_grammar_is_deterministic_and_species_keyed() {
         let ph = test_phonology();
@@ -510,6 +513,7 @@ mod tests {
         let _ = (kobold, hobgoblin);
     }
 
+    /// claim: rate(forall-seed, sov_svo > 120 / 200) — typology-weight check
     #[test]
     fn constituent_order_weights_favor_sov_and_svo() {
         // Authored typology (approximate WALS frequencies): SOV+SVO must
@@ -528,6 +532,8 @@ mod tests {
         );
     }
 
+    /// claim: rate(forall-seed, [100, 140] / 200) — authored copula-presence
+    /// weight, wide smoke-test band
     #[test]
     fn copula_presence_rate_matches_authored_weight() {
         // Authored: 60% of tongues bear an overt copula. Measure over 200
@@ -546,6 +552,8 @@ mod tests {
         );
     }
 
+    /// claim: rate(forall-seed, [40, 80] / 200) — authored article-presence
+    /// weight
     #[test]
     fn articles_presence_rate_matches_authored_weight() {
         // Authored: 30% of tongues have articles.
@@ -562,6 +570,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: 1..=50, find_map for a copula-bearing draw) —
+    /// then checks non-emptiness and determinism at the found seed
     #[test]
     fn copula_form_is_nonempty_and_deterministic() {
         // The copula's form (when present) is a real drawn word: never

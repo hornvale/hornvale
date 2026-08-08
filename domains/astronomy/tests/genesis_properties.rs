@@ -7,6 +7,7 @@ use hornvale_astronomy::{
 };
 use hornvale_kernel::Seed;
 
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn every_default_system_satisfies_every_invariant() {
     for seed in 0..128 {
@@ -104,6 +105,10 @@ fn unsatisfiable_pins_fail_loudly_with_the_physical_reason() {
 /// The count draw still happens (then is overridden); per-wanderer draws
 /// live on their own stream, so star/anchor/moons/neighbors/forcing bytes
 /// are identical pinned vs unpinned.
+///
+/// claim: invariant(forall-seed) — pin-isolation / save-format contract
+/// (CLAUDE.md: "stream consumption order is a contract"); stays live
+/// regardless of any census migration.
 #[test]
 fn wanderers_pin_leaves_the_rest_of_the_sky_untouched() {
     for seed in [1u64, 7, 42, 99] {
@@ -179,6 +184,7 @@ fn pin_isolation_holds_at_the_system_level() {
     );
 }
 
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn obliquity_at_zero_matches_the_anchor_drift_anchor_identity() {
     // The forcing's obliquity element is anchored so that day 0 exactly
@@ -197,6 +203,8 @@ fn obliquity_at_zero_matches_the_anchor_drift_anchor_identity() {
     }
 }
 
+/// claim: invariant(forall-seed) — pin-isolation / save-format contract;
+/// stays live regardless of any census migration.
 #[test]
 fn forcing_is_pin_isolated() {
     // A world built with forcing=zero must consume the SAME draws as the
@@ -271,6 +279,8 @@ fn forcing_is_pin_isolated() {
     }
 }
 
+/// claim: sanctioned-sweep(pinned regime, ForcingPin::Zero — no census home;
+/// the-census.study.json carries exactly one pin_set)
 #[test]
 fn forcing_zero_pin_yields_zeroed_amplitudes() {
     for seed in 0..64u64 {
@@ -291,6 +301,8 @@ fn forcing_zero_pin_yields_zeroed_amplitudes() {
     }
 }
 
+/// claim: sanctioned-sweep(pinned regime, RotationPin::PeriodHours(24.0) —
+/// no census home)
 #[test]
 fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
     use hornvale_astronomy::{StdDays, calendar_of};
@@ -324,6 +336,7 @@ fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
     }
 }
 
+/// claim: sanctioned-sweep(pinned regime, RotationPin::Locked — no census home)
 #[test]
 fn a_locked_worlds_hemispheres_cull_the_sky() {
     use hornvale_astronomy::{GeneratedSky, NIGHT_STAR};
@@ -375,6 +388,8 @@ fn a_locked_worlds_hemispheres_cull_the_sky() {
     }
 }
 
+/// claim: sanctioned-sweep(pinned regime, 24h rotation + 2 moons — no census
+/// home)
 #[test]
 fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
     use hornvale_astronomy::{CELESTIAL_BODY, GeneratedSky, NIGHT_STAR};
@@ -461,6 +476,8 @@ fn neighbor_pin_does_not_move_any_star() {
 /// Eclipse Seasons pin isolation: pinning the moon count consumes node
 /// draws identically to the unpinned path — a pinned world with the same
 /// admitted moons carries byte-identical node longitudes.
+///
+/// claim: sanctioned-sweep(pinned regime, moon count — no census home)
 #[test]
 fn pinned_moon_counts_draw_identical_node_longitudes() {
     for seed in 0..32u64 {
@@ -487,6 +504,8 @@ fn pinned_moon_counts_draw_identical_node_longitudes() {
 /// SKY-23 close-out, star battery: over 256 seeds, the drawn mass stays
 /// in range and every derivation is monotone in it (luminosity, HZ,
 /// brightening).
+///
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn star_battery_mass_bounds_and_monotone_derivations() {
     use hornvale_astronomy::{brightening_per_gyr, generate_star};
@@ -518,6 +537,8 @@ fn star_battery_mass_bounds_and_monotone_derivations() {
 /// The Reckoning's containment rule (spec §3): drawing an age must not move
 /// luminosity or the habitable zone. If this ever fails, the epoch has
 /// leaked out of the moons and into climate.
+///
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn stellar_age_does_not_touch_luminosity_or_the_habitable_zone() {
     use hornvale_astronomy::generate_star;
@@ -546,6 +567,8 @@ fn stellar_age_does_not_touch_luminosity_or_the_habitable_zone() {
 /// SKY-23 close-out, anchor battery: over 256 seeds the orbit sits inside
 /// the habitable zone, the Kepler relation holds, and locked worlds never
 /// have a solar hour.
+///
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn anchor_battery_orbit_kepler_and_rotation_invariants() {
     use hornvale_astronomy::{Rotation, SkyPins, calendar_of, generate};
@@ -591,6 +614,9 @@ fn anchor_battery_orbit_kepler_and_rotation_invariants() {
 /// SKY-23 close-out, neighbors battery: over 256 seeds the count stays in
 /// 2–5, every position is a legal sky coordinate, distances are positive,
 /// and regeneration is byte-identical.
+///
+/// claim: invariant(census: none yet — migration candidate, default/unpinned;
+/// includes an embedded byte-identity regen check per seed)
 #[test]
 fn neighbor_battery_counts_coordinates_and_determinism() {
     use hornvale_astronomy::{SkyPins, generate};
@@ -614,6 +640,8 @@ fn neighbor_battery_counts_coordinates_and_determinism() {
 
 /// The Long Count, alignment battery: the dating inverse round-trips
 /// across seeds and latitudes.
+///
+/// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
 fn alignment_battery_dating_round_trip() {
     use hornvale_astronomy::{Rotation, SkyPins, StdDays, calendar_of, generate};

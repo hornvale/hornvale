@@ -743,6 +743,8 @@ mod tests {
         assert!(permits(&manikin_env(), &bilabial));
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// Segment, two fixed hand-built scenarios (quiet vs loud)
     #[test]
     fn a_quiet_species_admits_its_trill_rarely_or_not_at_all() {
         // Kobold is Trill-capable but low-loudness: the drawn inventory should
@@ -791,6 +793,8 @@ mod tests {
         assert_eq!(a.onsets, b.onsets);
     }
 
+    /// claim: structural(seed: 3) — false-positive seed-loop flag; `s` binds a
+    /// Segment, single fixed seed
     #[test]
     fn inventory_respects_the_envelope() {
         let ph = draw_phonology(&Seed(3), "kobold", &kobold_env());
@@ -803,6 +807,8 @@ mod tests {
     /// ever synthesized a segment instead of filtering the canonical set,
     /// "?" would surface in every later name. Assert the invariant holds
     /// across multiple species/envelopes.
+    /// claim: invariant(forall-seed) — tuple pattern `(seed, species, env)`
+    /// over [1,42,99] (Fix round 1, Class 1)
     #[test]
     fn drawn_inventory_is_always_a_subset_of_canonical_segments() {
         let canonical = canonical_segments();
@@ -837,6 +843,7 @@ mod tests {
         matches!(s, Segment::Vowel { tone, .. } if *tone != Tone::Neutral)
     }
 
+    /// claim: invariant(forall-seed) — atonal species admits no toned vowel
     #[test]
     fn an_atonal_species_admits_only_neutral_vowels() {
         // tonality 0.0 ⇒ tone inventory {Neutral} ⇒ no toned vowel is admitted,
@@ -931,6 +938,8 @@ mod tests {
     /// Two envelopes, because the pre-change draw was envelope-independent
     /// (`range_u32(1, 2)` reads nothing about the species) and so is this
     /// one; a single envelope would leave that unstated.
+    /// claim: invariant(forall-seed) — nuclei-set shape over 200 seeds x 2
+    /// species, with an embedded non-vacuity guard (complex_seen)
     #[test]
     fn no_language_requires_a_diphthong_in_every_syllable() {
         let mut complex_seen = 0usize;
@@ -964,6 +973,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds a
+    /// Segment, single hand-built cramped_phonology() scenario
     #[test]
     fn the_capacity_floor_widens_a_tone_capable_species_by_pitch() {
         let env = tonal_env();
@@ -1007,6 +1018,8 @@ mod tests {
         assert_eq!(ph, before, "an atonal species must not be widened");
     }
 
+    /// claim: structural(seed: 5) — false-positive seed-loop flag; `s` binds a
+    /// Segment, single fixed seed, two scenarios (atonal vs tonal)
     #[test]
     fn the_tone_leg_is_isolated_the_consonant_draw_is_tonality_independent() {
         // The tone draw lives on its own `phonology/tones` leg, so raising

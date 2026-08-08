@@ -803,6 +803,9 @@ fn tribute_flows_along_a_standing_relation() {
     );
 }
 
+/// claim: rate(forall-seed, pooled sign + strict majority over 1..=BAND) —
+/// existence-near-threshold, rate-shaped per decision 0097; structural
+/// invariance is reported, not asserted (0097 clause 3)
 #[test]
 fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_down() {
     // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair —

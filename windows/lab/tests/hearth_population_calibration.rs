@@ -191,6 +191,10 @@ fn cold_built_count(seed: u64) -> (usize, usize) {
     (cold, built.len())
 }
 
+/// claim: rate(forall-seed, [lo, hi]) — decision 0097's own worked example
+/// of an existence-near-threshold row; 0097 prescribes converting this to
+/// rate(census: ..., [lo, hi]) at n=1000 (not yet done by this campaign's
+/// tranche)
 #[test]
 fn cold_built_settlements_are_common_not_rare() {
     // The claim this test exists to make is a RATE, not a table: the

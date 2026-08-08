@@ -316,6 +316,7 @@
 - [The Sighting](./chronicle/the-sighting.md)
 - [The Beholding](./chronicle/the-beholding.md)
 - [The Lantern](./chronicle/the-lantern.md)
+- [The Reassay](./chronicle/the-reassay.md)
 
 # Appendix: The Frontier
 

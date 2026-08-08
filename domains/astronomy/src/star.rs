@@ -296,6 +296,7 @@ pub(crate) mod tests {
         assert!((insolation_rel(&star, &anchor) - expected).abs() < 1e-12);
     }
 
+    /// claim: invariant(forall-seed) — class_name tracks mass thresholds
     #[test]
     fn class_names_track_mass() {
         for seed in 0..32 {
@@ -382,6 +383,7 @@ pub(crate) mod tests {
         assert!(light > 30.0, "0.6 Msun t_MS = {light}");
     }
 
+    /// claim: invariant(forall-seed) — drawn age stays within the guard-rail band
     #[test]
     fn age_stays_inside_the_guard_rails_and_the_bound() {
         for seed in 0..200u64 {

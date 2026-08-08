@@ -258,6 +258,8 @@ fn the_audibility_property_still_reds_under_erasure() {
 /// widening this test to guess more candidate shapes — see that method's
 /// doc for why. `stressed_form` reconstructs the sixth admissible form from
 /// it.
+/// claim: invariant(forall-seed) — glossed names contain their words,
+/// saturated-corpus variant
 #[test]
 fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut worn_names = 0usize;
@@ -392,6 +394,7 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     );
 }
 
+/// claim: invariant(forall-seed) — glossed names contain their words
 #[test]
 fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
     for seed in 0..64u64 {

@@ -298,18 +298,22 @@ pub enum Hydro {
 }
 
 impl Hydro {
-    /// Every variant, so a witness test (`domains/terrain/tests/
-    /// hydro_witness.rs`, The Witness Task 6) derives its checklist from the
-    /// type rather than from an author re-typing the enum's members by hand.
+    /// Every variant, so the reachability assertion
+    /// (`windows/lab/tests/calibration.rs`'s
+    /// `every_hydro_variant_is_reachable_somewhere_in_the_census`, The Assay
+    /// Task 8 — formerly `domains/terrain/tests/hydro_witness.rs`'s 8-seed
+    /// sweep, The Witness Task 6, retired once the census carried the same
+    /// coverage over 1,000 worlds) derives its checklist from the type
+    /// rather than from an author re-typing the enum's members by hand.
     /// `Hydro::Spring`/`Hydro::Aquifer` were unreachable from the real
     /// derivation on every seed for this model's entire life (F5) and no
     /// hand-built checklist would have caught that on its own — adding a
     /// variant here enrolls it in the guard automatically, which is the
     /// property a hand-maintained list cannot offer. `PartialOrd`/`Ord`
     /// (declaration order, derived above) exist only so the guard can
-    /// collect witnessed variants into a `BTreeSet` (the project bans
-    /// `HashSet`) — as with `RockClass`, there is no meaningful ranking
-    /// between hydrogeologic classes.
+    /// collect witnessed variants into a `BTreeSet`/`BTreeMap` (the project
+    /// bans `HashSet`/`HashMap`) — as with `RockClass`, there is no
+    /// meaningful ranking between hydrogeologic classes.
     pub const ALL: [Hydro; 5] = [
         Hydro::Aquifer,
         Hydro::Aquitard,
@@ -317,6 +321,29 @@ impl Hydro {
         Hydro::Runoff,
         Hydro::Karst,
     ];
+
+    /// This variant's stable name, used by the census's
+    /// `hydro-variant-coverage` column and by the reachability assertion in
+    /// `windows/lab/tests/calibration.rs`.
+    ///
+    /// These strings are COLUMN CONTENT in a committed artifact, which makes
+    /// them a save-format-adjacent contract: never rename one. If a VARIANT is
+    /// ever renamed, keep the name it already emitted here — the enum's
+    /// identifier and its census name are allowed to diverge, and the census's
+    /// history is worth more than their agreeing.
+    ///
+    /// It lives on the type rather than in `windows/lab` so there is one
+    /// definition and a new variant cannot be added without naming it.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn name(&self) -> &'static str {
+        match self {
+            Hydro::Aquifer => "aquifer",
+            Hydro::Aquitard => "aquitard",
+            Hydro::Spring => "spring",
+            Hydro::Runoff => "runoff",
+            Hydro::Karst => "karst",
+        }
+    }
 }
 
 /// Classify hydrogeology from porosity/carbonate (spec §3). Pointwise matrix
@@ -992,6 +1019,7 @@ mod tests {
         assert!(classes.len() >= 3, "world felt monolithic: {classes:?}");
     }
 
+    /// claim: reachability(seed: union over [1,7,42,99], not census-eligible)
     #[test]
     fn alluvium_and_coal_are_reachable_across_seeds() {
         use std::collections::BTreeSet;
@@ -1027,6 +1055,7 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: union over [1,7,42,99], not census-eligible)
     #[test]
     fn andesite_is_reachable_across_seeds() {
         use std::collections::BTreeSet;
@@ -1061,6 +1090,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: union over [1,7,42,99], not census-eligible —
+    /// domain-crate unit test, not a Settlements/Full census row)
     #[test]
     fn active_and_passive_margins_both_appear_across_seeds() {
         let mut saw_active = false;
@@ -1150,8 +1181,12 @@ mod tests {
         // `assemble_material` for a thousand census seeds even though these
         // pure-function tests were green). See
         // `a_real_world_produces_a_porous_non_carbonate_cell` for the
-        // world-derived check, and `hydro_witness.rs` (Task 6) for the
-        // cross-seed reachability guard. `hydrogeology` is pointwise matrix
+        // world-derived check, and the census's
+        // `every_hydro_variant_is_reachable_somewhere_in_the_census`
+        // (`windows/lab/tests/calibration.rs`, The Assay Task 8) for the
+        // cross-seed reachability guard — formerly `hydro_witness.rs`'s
+        // 8-seed sweep (Task 6), retired once the census carried the same
+        // coverage over 1,000 worlds. `hydrogeology` is pointwise matrix
         // petrophysics only (The Witness, Task 5b) — it never returns
         // `Spring`; that promotion is a geometric contact tested in
         // `provider.rs`'s `promote_to_spring_only_touches_aquifer_with_a_lower_non_aquifer_neighbor`.
@@ -1171,6 +1206,21 @@ mod tests {
         b.porosity = 0.05;
         assert_eq!(hydrogeology(&b, false), Hydro::Aquitard);
         assert!(cave_proneness(&b, 10.0) < 0.1);
+    }
+
+    /// Every `Hydro::name` is distinct and non-empty — the property the census's
+    /// joined coverage string depends on, since two variants sharing a name would
+    /// make one of them permanently invisible to the coverage assertion in
+    /// `windows/lab/tests/calibration.rs`.
+    #[test]
+    fn hydro_names_are_distinct_and_nonempty() {
+        let mut seen: std::collections::BTreeSet<&'static str> = std::collections::BTreeSet::new();
+        for variant in Hydro::ALL {
+            let name = variant.name();
+            assert!(!name.is_empty(), "{variant:?} has an empty name");
+            assert!(seen.insert(name), "{variant:?} reuses the name {name:?}");
+        }
+        assert_eq!(seen.len(), Hydro::ALL.len());
     }
 
     #[test]

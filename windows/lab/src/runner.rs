@@ -59,6 +59,19 @@ pub struct RunResult {
     pub rows: Vec<Row>,
 }
 
+/// Canonicalize one freshly-extracted metric value the way [`render_csv`]
+/// would: quantize a `Number` to the platform-stable form (decision 0033);
+/// every other variant passes through unchanged. The tripwire
+/// (`windows/lab/tests/tripwire.rs`) needs exactly this and nothing else — it
+/// compares a live extractor's output against a committed, already-quantized
+/// fixture value, and this is what makes the two comparable.
+pub fn canonical_value(value: MetricValue) -> MetricValue {
+    match value {
+        MetricValue::Number(n) => MetricValue::Number(hornvale_kernel::quantize(n)),
+        other => other,
+    }
+}
+
 /// Canonicalize a row for comparison with fixture-loaded rows: quantize
 /// `Number` values exactly as [`render_csv`] does at the serialization
 /// boundary, so a full-precision live row compares equal to its committed,
@@ -68,14 +81,7 @@ pub fn canonical_row(row: &Row) -> Row {
     Row {
         seed: row.seed,
         pin_set: row.pin_set.clone(),
-        values: row
-            .values
-            .iter()
-            .map(|v| match v {
-                MetricValue::Number(n) => MetricValue::Number(hornvale_kernel::quantize(*n)),
-                other => other.clone(),
-            })
-            .collect(),
+        values: row.values.iter().cloned().map(canonical_value).collect(),
         refusal: row.refusal.clone(),
     }
 }

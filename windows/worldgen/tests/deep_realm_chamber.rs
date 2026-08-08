@@ -77,6 +77,9 @@ fn an_addresss_meaning_does_not_depend_on_which_other_chambers_exist() {
 /// `SLOTS_PER_BAND * 4` (bands `0..=3`, `Regolith..=Roots`) — constant
 /// across every seed — while the number of addresses that EXIST is
 /// strictly less than that, and differs seed to seed.
+/// claim: invariant(forall-seed) — lattice size is fixed, existence is
+/// sparse and seed-varying (seedless sweep, audit §5: builds no world;
+/// named explicitly in the task brief)
 #[test]
 fn the_lattice_is_fixed_and_existence_is_sparse() {
     let cell = CellId(42);
@@ -133,6 +136,8 @@ fn the_lattice_is_fixed_and_existence_is_sparse() {
 /// holds in the shipped code, not merely believed to — it walks every
 /// address in the probed region of the lattice, for several seeds and
 /// cells, and checks both directions of every passage it finds.
+/// claim: invariant(forall-seed) — passage bidirectionality over a
+/// hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
 fn every_passage_is_traversable_in_both_directions() {
     let cave = Cave {
@@ -191,6 +196,8 @@ fn every_passage_is_traversable_in_both_directions() {
 /// that never exist, or `passages_from` returning empty unconditionally),
 /// but not invented past what the density model and the measurement both
 /// predict.
+/// claim: rate(forall-seed, conditional > 0.5) — cave-mouth connectivity
+/// over a hand-built lattice (seedless sweep, audit §5: builds no world)
 #[test]
 fn a_cave_mouth_reaches_at_least_one_chamber() {
     let cave = Cave {
