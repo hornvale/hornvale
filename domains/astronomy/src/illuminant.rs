@@ -7,23 +7,8 @@
 //! radiometric accuracy.
 
 use crate::star::Star;
-use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant};
+use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant, planck_relative};
 use hornvale_kernel::math;
-
-/// Planck's second radiation constant, `hc/k`, in nanometre-kelvin. Used in
-/// the exponential term of the spectral radiance law.
-/// type-audit: bare-ok(ratio)
-const C2_NM_K: f64 = 1.438_776_877e7;
-
-/// Spectral radiance of a blackbody at `t_kelvin`, at `wavelength_nm`, up to
-/// a constant factor. The leading `c1` is omitted because every consumer
-/// works in ratios or renormalizes — carrying it would only scale all ten
-/// bands together.
-fn planck_relative(wavelength_nm: f64, t_kelvin: f64) -> f64 {
-    let l5 = wavelength_nm.powi(5);
-    let x = C2_NM_K / (wavelength_nm * t_kelvin);
-    1.0 / (l5 * (math::exp(x) - 1.0))
-}
 
 /// The star's light at the top of the atmosphere, sampled into the band
 /// grid and normalized so the brightest band is 1.0.
@@ -166,4 +151,35 @@ mod tests {
         let b = daylight(&star_at(5772.0));
         assert_eq!(a.get(), b.get());
     }
+
+    /// The move in Task 1 relocates `planck_relative` into the kernel and must
+    /// change NO number. These are the exact `f64` bit patterns `daylight`
+    /// produced before the move — a relocation that perturbs one of them is
+    /// not a relocation.
+    ///
+    /// FIRES WHEN: any band of `daylight(5772 K)` differs in a single bit.
+    /// It is deliberately bit-exact, not epsilon-based: an approximate
+    /// assertion here would pass through exactly the drift it exists to catch.
+    #[test]
+    fn the_move_into_the_kernel_changes_no_bit_of_daylight() {
+        let light = daylight(&star_at(5772.0));
+        let bits: Vec<u64> = light.get().iter().map(|v| v.to_bits()).collect();
+        assert_eq!(bits, EXPECTED_5772_BITS, "daylight(5772 K) moved");
+    }
+
+    /// Captured from `daylight(&star_at(5772.0))` before the blackbody moved
+    /// into the kernel. Regenerate ONLY in a commit that deliberately changes
+    /// the sampling (Task 2).
+    const EXPECTED_5772_BITS: [u64; 10] = [
+        4604853207739107171,
+        4606063751336957804,
+        4606819350398609570,
+        4607164408419029421,
+        4607182418800017408,
+        4606962470143188797,
+        4606583114884357377,
+        4606106952255873598,
+        4605580678255074586,
+        4605037394441490948,
+    ];
 }

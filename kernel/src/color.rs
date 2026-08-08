@@ -11,10 +11,12 @@
 //!
 //! **Determinism.** The hot path is `Σ r[b] · i[b] · s[b]` — multiplication
 //! and addition over fixed-size arrays, which IEEE 754 requires to be
-//! exact (decision 0041). No `math.rs` call appears here. Use `a * b + c`
+//! exact (decision 0041). No `math.rs` call appears in it. Use `a * b + c`
 //! and never `mul_add`: both are exact but they round differently from
-//! each other.
+//! each other. The one transcendental in this module is [`planck_relative`]'s
+//! exponential, which routes through `math.rs` like every other.
 
+use crate::math;
 use crate::units::UnitError;
 
 /// Number of sampled wavelength bands. **This is a contract**: widening it
@@ -38,6 +40,35 @@ pub const BANDS: usize = 10;
 pub const BAND_CENTERS_NM: [f64; BANDS] = [
     360.0, 400.0, 440.0, 480.0, 520.0, 560.0, 600.0, 640.0, 680.0, 720.0,
 ];
+
+/// The width of one band, nanometres. The grid is ten uniform bands whose
+/// edges span 340–740, so band `i` covers
+/// `BAND_CENTERS_NM[i] ± BAND_WIDTH_NM / 2`.
+/// type-audit: bare-ok(ratio)
+pub const BAND_WIDTH_NM: f64 = 40.0;
+
+/// Planck's second radiation constant, `hc/k`, in nanometre-kelvin. Used in
+/// the exponential term of the spectral radiance law.
+/// type-audit: bare-ok(ratio)
+const C2_NM_K: f64 = 1.438_776_877e7;
+
+/// Spectral radiance of a blackbody at `t_kelvin`, at `wavelength_nm`, up to
+/// a constant factor. The leading `c1` is omitted because every consumer
+/// works in ratios or renormalizes — carrying it would only scale all ten
+/// bands together.
+///
+/// **This lives in the kernel, not in astronomy, because it takes no
+/// world-state.** A star, a hearth and a forge are the same law at three
+/// temperatures; the temperature is the datum and belongs to whoever owns
+/// the thing, but the law is substrate. (Astronomy's `at_elevation` stays in
+/// astronomy for the mirror-image reason: it is parameterized by a sun's
+/// elevation.)
+/// type-audit: bare-ok(ratio: wavelength_nm), bare-ok(ratio: t_kelvin), bare-ok(ratio: return)
+pub fn planck_relative(wavelength_nm: f64, t_kelvin: f64) -> f64 {
+    let l5 = wavelength_nm.powi(5);
+    let x = C2_NM_K / (wavelength_nm * t_kelvin);
+    1.0 / (l5 * (math::exp(x) - 1.0))
+}
 
 /// A quantity sampled on the band grid. Unconstrained in magnitude — a
 /// radiance may exceed 1 where a reflectance may not.
