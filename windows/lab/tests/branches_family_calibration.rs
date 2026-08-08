@@ -596,10 +596,39 @@ fn homophony_count_is_measured_and_pinned() {
     // 3.25x/3.83x before. The goblin margin — the binding one — widened. So
     // this re-pins the witnesses, not the observation, and the row's warning
     // stands unspent for the next regen.
-    assert!((mg - 4.319).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 4.310).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 14.508).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 4.791).abs() < 1e-9, "kobold mean drifted: {mk}");
+    //
+    // The Delvers (C2c) (2026-08-08, canonical census on the canonical box at
+    // the merged branch SHA, commit 867622f8, 0063/0079): goblin 4.319 ->
+    // 4.888, hobgoblin 4.310 -> 4.822, bugbear 14.508 -> 16.349, kobold 4.791
+    // -> 5.072. All four rise together again, the roster-competition signature
+    // rather than one daughter moving: three new settling peoples —
+    // desert-dwarf, gully-dwarf, hill-dwarf — take the settling roster from
+    // six to nine, so every world's settlement contest, each daughter's
+    // surviving periphery, and the naming draws over it are decided among nine
+    // competitors instead of six. No narrower cause is asserted, because none
+    // was measured. The campaign's other candidate mover IS ruled out rather
+    // than assumed away: `b0f32252`'s cross-roster lexicon repair measured
+    // ZERO moved cells on `the-census`, the fixture this file reads; its five
+    // repaired cells are all on `census-of-the-meeting`'s `goblin-solo`
+    // roster, and `homophony-count-goblin` there is one of them.
+    //
+    // The claim was re-checked rather than assumed, and it HOLDS — but the
+    // binding margin NARROWED, which the note above asks a reader to check
+    // for. Bugbear leads by 3.345x over goblin and 3.390x over hobgoblin,
+    // against 3.359x/3.366x before: goblin is still the binding daughter and
+    // its margin fell by 0.014x, while hobgoblin's widened. The narrowing is
+    // small and the margin is NOT the narrowest this row has recorded — The
+    // Tolerance's 3.25x over goblin still is — so the warning above stands
+    // where it stood, neither spent nor escalated. A regen that takes the
+    // goblin ratio below 3x falsifies the claim outright, and that is a
+    // finding to report, not a bound to widen. These re-pin the witnesses, not
+    // the observation. Each mean is again an exact integer count over the
+    // 1000-seed census divided by 1000 (4888, 4822, 16349, 5072), which is why
+    // all four land on a clean three decimal digits.
+    assert!((mg - 4.888).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 4.822).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 16.349).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 5.072).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -1,6 +1,41 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 //!
+//! ## Census regen — The Delvers (C2c) (2026-08-08, canonical box, 0063/0079)
+//!
+//! **One cause under all of it: the settling roster went from six peoples to
+//! nine.** C2c adds `desert-dwarf`, `gully-dwarf` and `hill-dwarf`, all of them
+//! settlers, so every seed's settlement contest is decided among nine
+//! competitors instead of six and placement is re-decided wholesale (the regen
+//! commit, `867622f8`, rewrites 1000 of 1000 rows). That is the cause written
+//! at every pin site below, and deliberately no narrower one: nothing in this
+//! campaign measured *where* the three new peoples settle, so no story about
+//! dwarves crowding uplands or coasts is asserted anywhere in this file.
+//!
+//! The campaign's other candidate mover is ruled out rather than assumed away.
+//! `b0f32252` repaired a cross-roster lexicon read, and its measured blast
+//! radius on `the-census` — the fixture every test in this file loads — is
+//! **ZERO cells**: on the canonical roster the view's own component set IS the
+//! assembled canonical set, so the change is a no-op there. Its five repaired
+//! cells all land on `census-of-the-meeting`'s `goblin-solo` roster, which the
+//! rows re-pinned here do not read.
+//!
+//! ```text
+//!                                       before        after
+//!   goblin present rows (name-length)      999         1000
+//!   kobold present rows (name-length)      972          968
+//!   flagship coastal / inland        217 / 782    208 / 792
+//! ```
+//!
+//! Every CLAIM in this file was re-checked rather than assumed, and all hold:
+//! blind attribution still beats chance decisively (883/968 = 91.2%, against
+//! 881/972 = 90.6%), the epithet-honorific detector still reads true on every
+//! goblin world holding a pantheon and false on every kobold one, mean name
+//! length is still under the campaign's 10-character claim at both species
+//! (8.563 / 6.870), mean syllable count is still inside the 2-3 range at both
+//! (2.723 / 2.184), and name transparency is still emphatically not 1.0 (0.743
+//! over a 0.258-to-1.0 span). These re-pin the witnesses, not the observations.
+//!
 //! ## Census regen — The Tense (2026-08-06, lefford, decision 0063)
 //!
 //! **One cause under all of it: 230 worlds gained a flagship they did not
@@ -576,8 +611,20 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // `Absent` rows introduced). Still a recorded witness, not a guarded
     // directional claim; the sibling test that DID carry a direction on this
     // axis was retired at The Tumult (see this file's header).
-    assert_eq!(coastal, 217, "coastal flagship count drifted");
-    assert_eq!(inland, 782, "inland flagship count drifted");
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079):
+    // three new settling peoples — desert-dwarf, gully-dwarf, hill-dwarf —
+    // take the settling roster from six to nine, so every seed's settlement
+    // placement is re-decided and flagships reseat again: 217 -> 208 coastal,
+    // 782 -> 792 inland. The two now sum to 1000 rather than 999 — the one
+    // world that reported neither flag now reports one, matching goblin's
+    // present-row count elsewhere in this file (999 -> 1000). Still a recorded
+    // witness, not a guarded directional claim. The cause is stated no more
+    // narrowly than the roster change: nothing this campaign measured says
+    // anything about where the three new peoples sit relative to a coast.
+    assert_eq!(coastal, 208, "coastal flagship count drifted");
+    assert_eq!(inland, 792, "inland flagship count drifted");
 }
 
 #[test]
@@ -779,12 +826,22 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // is always solar) are re-checked rather than assumed: each is an
     // `assert!`/`panic!` earlier in this test, and the run reached these
     // recorded rows, so none of them fired.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, re-deciding which worlds
+    // field a kobold head at all — the moonless-spinning pool moves 85 -> 83
+    // lunar; solar is unmoved at 55. All three structural invariants above
+    // this pool (a mooned kobold head is always lunar; goblin's head is always
+    // solar; a locked-world kobold head is always solar) are re-checked rather
+    // than assumed: each is an `assert_eq!` earlier in this test, the run
+    // reaches these recorded rows, so none of them fired.
     assert_eq!(
         moonless_solar, 55,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 85,
+        moonless_lunar, 83,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -931,8 +988,21 @@ fn blind_attribution_beats_chance_decisively() {
     // re-checked rather than assumed. The mooned-pair invariant below
     // (perfect attribution among spinning, mooned pairs) never fired either;
     // the run reaches it, and it is an `assert_eq!` that would have.
-    assert_eq!(correct, 881, "blind-attribution count drifted");
-    assert_eq!(total, 972, "attributable-pair count drifted");
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, shifting which worlds
+    // field an attributable goblin/kobold pair (972 -> 968 total) and which
+    // side several land on (881 -> 883 correct); accuracy
+    // 0.9063786008230452 -> 0.9121900826446281 — the directional claim this
+    // test guards (blind attribution beats chance decisively) HOLDS,
+    // re-checked rather than assumed: 0.912 against the 0.75 floor asserted
+    // above is 0.162 of margin, and against the ~0.5 binary chance the claim
+    // is really about, nearly double. The mooned-pair invariant below (perfect
+    // attribution among spinning, mooned pairs) never fired either; the run
+    // reaches it, and it is an `assert_eq!` that would have.
+    assert_eq!(correct, 883, "blind-attribution count drifted");
+    assert_eq!(total, 968, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1151,14 +1221,26 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // every goblin world that holds a pantheon, and the inner `assert!` in
     // the loop confirms it still reads false on every one of the 769 kobold
     // worlds that do.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, moving which worlds hold
+    // a flagship pantheon at all: goblin 999/1 -> 1000/0 true/absent, kobold
+    // 972/28 -> 968/32 false/absent. The claim this row guards is re-checked,
+    // not assumed — the `g_false_seeds` assertion above did not fire, so the
+    // goblin-false population is still exactly empty, and it is now empty over
+    // the WHOLE census: the detector reads true on all 1000 goblin worlds,
+    // there being no goblin-absent world left. The inner `assert!` in the loop
+    // confirms it still reads false on every one of the 968 kobold worlds that
+    // hold a pantheon.
     assert_eq!(
         (g_true, g_absent),
-        (999, 1),
+        (1000, 0),
         "goblin epithet-honorific true/absent split drifted"
     );
     assert_eq!(
         (k_false, k_absent),
-        (972, 28),
+        (968, 32),
         "kobold epithet-honorific false/absent split drifted"
     );
 }
@@ -1533,8 +1615,21 @@ fn name_collision_rate_is_measured_and_pinned() {
     // carries no directional claim (H4 already failed and is recorded as
     // such above), so nothing to re-verify beyond the three-way partition
     // still summing to 1000 — which it does.
-    assert_eq!(zero, 1, "zero-collision world count drifted");
-    assert_eq!(nonzero, 999, "nonzero-collision world count drifted");
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079): the
+    // settling roster goes from six peoples to nine, so a different set of
+    // settlements survives to be named on every world: 1 -> 0 zero-collision,
+    // 999 -> 1000 nonzero; absent unmoved at 0 (0 + 1000 + 0 = 1000). The
+    // zero-collision column is now EMPTY — every censused world draws at least
+    // one duplicate name. That is a recorded movement, not a defect, and above
+    // all not a reason to widen a draw: read the decision-0024 note above
+    // before touching a single template weight. This row still carries no
+    // directional claim (H4 already failed and is recorded as such above), so
+    // nothing to re-verify beyond the three-way partition still summing to
+    // 1000 — which it does.
+    assert_eq!(zero, 0, "zero-collision world count drifted");
+    assert_eq!(nonzero, 1000, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1622,7 +1717,16 @@ fn name_collision_rate_is_measured_and_pinned() {
         // per-settlement-draw cause as the zero/nonzero re-pin above; this
         // row still carries no directional claim, and the rate stays inside
         // the range decision 0024 sanctions (see the note above).
-        (mean - 0.520350036836000).abs() < 1e-6,
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): the settling roster goes from six peoples to nine, so a
+        // different set of settlements is named on every world:
+        // 0.520_350_036_836_000 -> 0.506_829_661_678_999_5. Same roster cause
+        // as the zero/nonzero re-pin above; this row still carries no
+        // directional claim, and the rate stays inside the range decision
+        // 0024 sanctions (see the note above).
+        (mean - 0.506_829_661_678_999_5).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1809,7 +1913,17 @@ fn name_length_distributions_are_measured_and_pinned() {
         // 766 -> 769 present, mean 8.657_123_104_960_824 ->
         // 8.787_985_079_973_994. Still comfortably below the campaign's own
         // <10-character claim (spec §7), re-checked rather than assumed.
-        ("goblin", 999u32, 8.541_942_812_712_72),
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine, so which worlds seat a goblin flagship — and which
+        // sites its names compound over — moves again: 999 -> 1000 present
+        // (every world in the census now seats one), mean
+        // 8.541_942_812_712_72 -> 8.562_788_425_799_996. Still comfortably
+        // below the campaign's own <10-character claim (spec §7) — 1.44
+        // characters of margin — re-checked rather than assumed.
+        ("goblin", 1000u32, 8.562_788_425_799_996),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1881,7 +1995,19 @@ fn name_length_distributions_are_measured_and_pinned() {
         // name-length columns (see the syllable row below). Still
         // comfortably below the campaign's own <10-character claim
         // (spec §7), re-checked rather than assumed.
-        ("kobold", 972u32, 6.885_304_561_419_753),
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine: 972 -> 968 present, mean 6.885_304_561_419_753 ->
+        // 6.869_846_921_177_682_5. The two species part company again after
+        // The Tolerance's incidental 769/769 tie — goblin rises to every world
+        // while kobold loses four — which is exactly the independence the tie
+        // note above said it was, not a structural relation coming apart.
+        // Still comfortably below the campaign's own <10-character claim
+        // (spec §7) — 3.13 characters of margin — re-checked rather than
+        // assumed.
+        ("kobold", 968u32, 6.869_846_921_177_682_5),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -2012,8 +2138,21 @@ fn name_syllable_distributions_are_measured_and_pinned() {
         // per-row structural relation this test also asserts requires. The
         // claim still HOLDS at both species — 2.814 and 2.320, both inside
         // 2-3 — re-checked, not assumed.
-        ("goblin", 999u32, 2.720_839_553_653_654),
-        ("kobold", 972u32, 2.192_605_995_679_012),
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine, reseating flagships again: goblin 999 -> 1000 present,
+        // mean 2.720_839_553_653_654 -> 2.723_388_327_800_003; kobold 972 ->
+        // 968 present, mean 2.192_605_995_679_012 ->
+        // 2.184_114_303_822_312_3. Present counts agree with the name-length
+        // row's re-pin above (1000 / 968), as the per-row structural relation
+        // this test also asserts requires. The claim still HOLDS at both
+        // species — 2.723 and 2.184, both inside 2-3 — re-checked, not
+        // assumed; goblin sits 0.28 below the ceiling and kobold 0.18 above
+        // the floor, the narrower of the two margins.
+        ("goblin", 1000u32, 2.723_388_327_800_003),
+        ("kobold", 968u32, 2.184_114_303_822_312_3),
     ] {
         let syl_i = idx(&format!("name-syllables-{species}"));
         let len_i = idx(&format!("name-length-{species}"));
@@ -2159,7 +2298,18 @@ fn name_transparency_is_measured_and_pinned() {
         // the one a rise must be checked against — re-checked rather than
         // assumed: a 0.786 mean over a 0.15-to-1.0 span is wear still
         // happening, not wear stopping.
-        (mean - 0.797838618610000).abs() < 1e-9,
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): three new settling peoples take the settling roster from
+        // six to nine, so a different set of settlements is named on every
+        // world; present/absent are unmoved at 1000/0, and the mean falls:
+        // 0.797_838_618_610_000 -> 0.743_291_175_730_000_9. Still emphatically
+        // NOT 1.0 — the claim this row exists to guard — re-checked rather
+        // than assumed, and note this is the SAFE direction: only a rise back
+        // toward 1.0 would mean wear had stopped. A 0.743 mean over a
+        // 0.258-to-1.0 span is wear still happening.
+        (mean - 0.743_291_175_730_000_9).abs() < 1e-9,
         "mean name-transparency drifted: {mean:.15}"
     );
     // The SPREAD is the point of the row, not just the mean: a mean of 0.827
@@ -2186,7 +2336,20 @@ fn name_transparency_is_measured_and_pinned() {
         // (asserted below, unmoved). A 0.15-to-1.0 span around a 0.786 mean
         // is still a real distribution over worlds, not the uniformity
         // defect the row exists to catch — re-checked rather than assumed.
-        (min - 0.072538860000000).abs() < 1e-8,
+        //
+        // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+        // canonical box at the merged branch SHA, commit 867622f8,
+        // 0063/0079): the floor rises sharply, 0.072_538_86 -> 0.257_575_76,
+        // while the ceiling stays pegged at 1.0 (asserted below, unmoved) and
+        // the mean falls to 0.743. So the span narrows from below — this is
+        // the highest floor this row has ever recorded — and the check that
+        // matters is whether it is still a DISTRIBUTION rather than the
+        // uniformity defect in a new costume. It is: 0.258 to 1.0 around a
+        // 0.743 mean spans three quarters of the available range. Re-checked
+        // rather than assumed, and flagged for the next regen: a floor that
+        // kept climbing toward the mean is exactly how this defect would come
+        // back, and it would be a finding to report, not a bound to widen.
+        (min - 0.257_575_76).abs() < 1e-8,
         "name-transparency minimum drifted: {min:.15}"
     );
     assert!(

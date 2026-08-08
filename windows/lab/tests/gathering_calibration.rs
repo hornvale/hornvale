@@ -153,9 +153,25 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // way, but decision 0106's circularity rule still applies to both — an
     // internally-measured value is a drift tripwire, never evidence for the
     // Earth-contingent gradient claim.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079):
+    // three new settling peoples — desert-dwarf, gully-dwarf, hill-dwarf —
+    // take the settling roster from six to nine, so every seed's settlement
+    // placement is re-decided and this capacity-by-latitude reading with it:
+    // 18.7988 -> 18.9423, a 0.8% rise. The cause is stated no more narrowly
+    // than the roster change on purpose: nothing this campaign measured says
+    // where the three new peoples sit by latitude, and an authored elevation
+    // curve has already been mistaken for an emergent finding once in this
+    // campaign. Decision 0106's circularity rule still applies on top of that
+    // — this is a drift tripwire, never evidence for the Earth-contingent
+    // gradient claim.
+    //
+    // The preregistered floor of 3 still clears decisively (6.3x), the claim
+    // this row exists to guard, re-checked rather than assumed.
     assert!(
-        (mean - 18.7988).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.7988)"
+        (mean - 18.9423).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.9423)"
     );
 }
 
@@ -255,9 +271,23 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // preregistered directional claim asserted above — below the
     // uniform-sphere baseline of 32.7 — is untouched and still clears the
     // baseline by better than 2x, re-checked rather than assumed.
+    //
+    // The Delvers' (C2c) close regen (2026-08-08, canonical census on the
+    // canonical box at the merged branch SHA, commit 867622f8, 0063/0079):
+    // three new settling peoples — desert-dwarf, gully-dwarf, hill-dwarf —
+    // take the settling roster from six to nine, so every seed's settlement
+    // placement is re-decided (14.9484 -> 15.0340). The cause is stated no
+    // more narrowly than the roster change: this campaign measured nothing
+    // about where the three new peoples settle by latitude, so a story like
+    // "dwarves crowd the uplands and pull population poleward" is a guess an
+    // authored elevation curve could equally have produced, and it is not
+    // asserted here. The preregistered directional claim asserted above —
+    // below the uniform-sphere baseline of 32.7 — is untouched and still
+    // clears the baseline by better than 2x (17.67 degrees of margin),
+    // re-checked rather than assumed.
     assert!(
-        (mean - 14.9484).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~14.9484)"
+        (mean - 15.0340).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.0340)"
     );
 }
 
