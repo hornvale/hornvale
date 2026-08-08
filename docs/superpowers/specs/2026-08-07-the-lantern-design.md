@@ -49,22 +49,32 @@ hearth, visibly different from each other.
   `MAP-building-fabric`.
 - **No interior illuminant.** This is `MAP-interior-light`.
 
-**Measured before this spec was written** (`lantern_probe.rs`, no world
-build) — one limestone wall, five lights, human eye:
+**Measured** (`lantern_probe.rs`, no world build) — one limestone wall, five
+lights, human eye. **Re-run under §5.2's band integral**, which the probe now
+calls directly rather than reimplementing:
 
 | light | | sRGB |
 |---|---|---|
 | daylight 5800 K | near-white | `[228, 230, 223]` |
-| torch 1900 K | warm amber | `[136, 111, 39]` |
-| hearth 1200 K | deep ember | `[92, 60, 3]` |
+| torch 1900 K | warm amber | `[137, 111, 40]` |
+| hearth 1200 K | deep ember | `[92, 61, 4]` |
 | lava 1100 K | darker red | `[85, 53, 2]` |
 | fungi ~490 nm | cool blue-green | `[111, 142, 179]` |
 
 The same stone. Nothing about the wall changed.
 
-**These were computed under the midpoint sample and the flame rows will
-shift** once §5.2's band integral lands — see §11, risk 5. The directions
-survive; the digits do not.
+**The move to the band integral cost these rows at most one `u8` step**, and
+three of the five did not move at all: torch `[136, 111, 39] → [137, 111, 40]`
+and hearth `[92, 60, 3] → [92, 61, 4]`; daylight, lava and fungi are
+unchanged (fungi is not a blackbody and could not move). This is much smaller
+than the ~34 % worst-band error the midpoint rule carries at 1100 K, and the
+reason is **peak normalization**: the midpoint rule underestimates a convex
+mean in *every* band, so dividing by the peak band cancels most of the common
+bias and leaves only the differential. The accuracy argument for the integral
+stands — it is about the law being right, not about this table — but the
+prediction that the flame rows would "shift by up to ~34 %" was wrong about
+the magnitude at the rendered surface, and is recorded here rather than
+quietly dropped.
 
 ## 3. Materials
 
@@ -384,8 +394,3 @@ claim. §6's claims all name their substrate for this reason.
 4. `the-delvers` is active and touches the underworld. Read its chronicle.
    Checked at G3: **no file overlap** with vessel, colour, illuminant,
    lithology or interior.
-5. **§2's five-light table was computed under the midpoint sample.** Once
-   §5.2 lands, the flame rows shift — by up to ~34 % per band at 1100 K,
-   though band ordering is preserved, so the *directions* the table
-   illustrates survive. The probe and the table refresh together with §5.2;
-   neither may be quoted afterwards without re-running it.

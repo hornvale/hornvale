@@ -70,6 +70,77 @@ pub fn planck_relative(wavelength_nm: f64, t_kelvin: f64) -> f64 {
     1.0 / (l5 * (math::exp(x) - 1.0))
 }
 
+/// Simpson nodes per band. **A permanent contract**: changing it moves every
+/// colour in the world. Chosen by measurement, not taste (spec §5.2) — 13
+/// nodes hold at least 20x below a `u8` quantization step down to 700 K, a
+/// dull red glow colder than anything the project names, so a later ember or
+/// forge cannot force it to change. Five nodes already fails by 900 K.
+/// Must be odd.
+/// type-audit: bare-ok(count)
+const BAND_NODES: usize = 13;
+
+/// The mean of `f` across the band centred at `center_nm`, by Simpson's rule.
+fn band_mean(center_nm: f64, f: &dyn Fn(f64) -> f64) -> f64 {
+    band_mean_with_nodes(center_nm, BAND_NODES, f)
+}
+
+/// [`band_mean`] at an explicit node count, so a test can compare the shipped
+/// count against a converged reference. Not public: the node count is a
+/// contract, not a caller's choice.
+fn band_mean_with_nodes(center_nm: f64, nodes: usize, f: &dyn Fn(f64) -> f64) -> f64 {
+    debug_assert!(
+        nodes >= 3 && nodes % 2 == 1,
+        "Simpson needs an odd node count >= 3"
+    );
+    let a = center_nm - BAND_WIDTH_NM / 2.0;
+    let h = BAND_WIDTH_NM / (nodes - 1) as f64;
+    let mut sum = 0.0;
+    for i in 0..nodes {
+        let weight = if i == 0 || i == nodes - 1 {
+            1.0
+        } else if i % 2 == 1 {
+            4.0
+        } else {
+            2.0
+        };
+        sum += weight * f(a + i as f64 * h);
+    }
+    sum * h / 3.0 / BAND_WIDTH_NM
+}
+
+/// A blackbody at `t_kelvin` on the band grid, normalized so the brightest
+/// band is 1.0.
+///
+/// **A band integral, not a midpoint sample.** [`BAND_CENTERS_NM`]'s own doc
+/// says anything integrating over a band wants the *edges*. The midpoint
+/// rule's error is 0.26 % at 5800 K but 34 % at 1100 K, because below the
+/// grid the visible range is the steep, strongly convex Wien tail and a
+/// midpoint sample underestimates a convex mean. A star could afford that; a
+/// hearth cannot.
+///
+/// Normalizing here means downstream code compares *colour*, not distance
+/// from the source.
+/// type-audit: bare-ok(ratio: t_kelvin)
+pub fn blackbody(t_kelvin: f64) -> Illuminant {
+    let mut bands = [0.0f64; BANDS];
+    let mut peak = 0.0f64;
+    for (band, center) in bands.iter_mut().zip(BAND_CENTERS_NM.iter()) {
+        let value = band_mean(*center, &|nm| planck_relative(nm, t_kelvin));
+        *band = value;
+        if value > peak {
+            peak = value;
+        }
+    }
+    // `peak` is strictly positive for any finite positive temperature, so
+    // this division is total; the guard is defensive, not a live path.
+    if peak > 0.0 {
+        for value in bands.iter_mut() {
+            *value /= peak;
+        }
+    }
+    Illuminant::new(bands).expect("a normalized Planck curve is finite and non-negative")
+}
+
 /// A quantity sampled on the band grid. Unconstrained in magnitude — a
 /// radiance may exceed 1 where a reflectance may not.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1071,6 +1142,59 @@ mod tests {
             "chromaticity has one entry per CHROMATIC channel"
         );
         assert_eq!(ca, cb, "a louder rod must not move the chromaticity");
+    }
+
+    /// Simpson's rule is exact for cubics, so integrating a cubic over one band
+    /// must return its analytic mean. This checks the QUADRATURE, independent of
+    /// Planck — a Planck-only test cannot tell a broken rule from a broken law.
+    ///
+    /// FIRES WHEN: the weights, the node spacing, or the final division is wrong.
+    #[test]
+    fn the_band_quadrature_is_exact_for_a_cubic() {
+        // mean of x^3 over [c - w/2, c + w/2] = c^3 + c * w^2 / 4
+        let c = 500.0;
+        let w = BAND_WIDTH_NM;
+        let got = band_mean(c, &|x: f64| x * x * x);
+        let want = c * c * c + c * w * w / 4.0;
+        assert!(
+            (got - want).abs() / want < 1e-12,
+            "cubic band mean: got {got}, want {want}"
+        );
+    }
+
+    /// The node count is a PERMANENT CONTRACT: change it and every colour in the
+    /// world moves. It was chosen by measurement (spec §5.2) to hold at least
+    /// 20x below a u8 quantization step (3.9e-3) down to 700 K, so that a later
+    /// ember or forge cannot force it to change.
+    ///
+    /// FIRES WHEN: someone lowers BAND_NODES. Five nodes fails by 900 K.
+    #[test]
+    fn the_node_count_is_converged_down_to_a_dull_red_glow() {
+        for t in [700.0, 1100.0, 1900.0, 5800.0] {
+            for center in BAND_CENTERS_NM {
+                let coarse = band_mean(center, &|nm| planck_relative(nm, t));
+                let fine = band_mean_with_nodes(center, 4097, &|nm| planck_relative(nm, t));
+                let rel = (coarse - fine).abs() / fine;
+                assert!(
+                    rel < 3.9e-4,
+                    "T={t} band {center}: relative error {rel} exceeds 20x below a u8 step"
+                );
+            }
+        }
+    }
+
+    /// A blackbody is peak-normalized, finite and positive — the contract every
+    /// consumer relies on to compare COLOUR rather than distance from a source.
+    ///
+    /// FIRES WHEN: normalization is dropped or a band goes non-positive.
+    #[test]
+    fn a_blackbody_is_peak_normalized_and_positive() {
+        let light = blackbody(1900.0);
+        let peak = light.get().iter().copied().fold(0.0f64, f64::max);
+        assert_eq!(peak, 1.0, "peak band should be exactly 1.0");
+        for (b, v) in light.get().iter().enumerate() {
+            assert!(v.is_finite() && *v > 0.0, "band {b} is {v}");
+        }
     }
 
     #[test]

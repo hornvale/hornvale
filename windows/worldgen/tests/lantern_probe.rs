@@ -8,32 +8,25 @@
 //!
 //! Run: cargo test -p hornvale-worldgen --test lantern_probe -- --nocapture
 
-use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant, Observer, Reflectance};
+use hornvale_kernel::color::{BANDS, Illuminant, Observer, Reflectance, blackbody};
 use hornvale_species::perception_registry;
 use hornvale_worldgen::observer::observer_for;
 
-/// Planck's law up to a constant — reimplemented here because
-/// `astronomy::illuminant::planck_relative` is PRIVATE. Exposing it is one
-/// of the campaign's cheapest steps; this probe stands in for it.
-fn planck_relative(wavelength_nm: f64, t_kelvin: f64) -> f64 {
-    const C2_NM_K: f64 = 1.438_776_877e7;
-    let l5 = wavelength_nm.powi(5);
-    let x = C2_NM_K / (wavelength_nm * t_kelvin);
-    1.0 / (l5 * (hornvale_kernel::math::exp(x) - 1.0))
-}
-
-/// A blackbody emitter normalized so its brightest band is `peak`.
-fn blackbody(t_kelvin: f64, peak: f64) -> Illuminant {
+/// A blackbody emitter whose brightest band is `peak`.
+///
+/// The spectral law itself is the shipped one — `hornvale_kernel::color::
+/// blackbody`, a 13-node Simpson integral over each band. The probe used to
+/// carry a private midpoint reimplementation of Planck's law, from the days
+/// when `planck_relative` was private to astronomy; keeping it would have
+/// let the probe and the shipped path drift apart silently, which is exactly
+/// the failure a probe cannot afford. All this adds is the peak scale, which
+/// the kernel deliberately does not carry (it normalizes to 1.0 so consumers
+/// compare colour, not distance from the source).
+fn emitter(t_kelvin: f64, peak: f64) -> Illuminant {
+    let base = blackbody(t_kelvin);
     let mut b = [0.0f64; BANDS];
-    let mut max = 0.0f64;
-    for (i, c) in BAND_CENTERS_NM.iter().enumerate() {
-        b[i] = planck_relative(*c, t_kelvin);
-        if b[i] > max {
-            max = b[i];
-        }
-    }
-    for v in b.iter_mut() {
-        *v = *v / max * peak;
+    for (out, value) in b.iter_mut().zip(base.get().iter()) {
+        *out = value * peak;
     }
     Illuminant::new(b).unwrap()
 }
@@ -69,10 +62,10 @@ fn probe_do_the_lights_differ() {
 
     println!("\n=== a limestone wall under five lights, human eye (peak 1.0)");
     for (name, light) in [
-        ("daylight  5800K", blackbody(5800.0, 1.0)),
-        ("torch     1900K", blackbody(1900.0, 1.0)),
-        ("hearth    1200K", blackbody(1200.0, 1.0)),
-        ("lava      1100K", blackbody(1100.0, 1.0)),
+        ("daylight  5800K", emitter(5800.0, 1.0)),
+        ("torch     1900K", emitter(1900.0, 1.0)),
+        ("hearth    1200K", emitter(1200.0, 1.0)),
+        ("lava      1100K", emitter(1100.0, 1.0)),
         ("fungi   ~490nm ", fungal(1.0)),
     ] {
         let px = swatch(&human, &wall, &light);
@@ -102,7 +95,7 @@ fn probe_does_night_vision_cash_out_in_the_dark() {
     );
     println!("\n  light      human sRGB        kobold sRGB      human rod   kobold rod");
     for level in [1.0, 0.1, 0.01, 0.003, 0.001] {
-        let l = blackbody(1900.0, level);
+        let l = emitter(1900.0, level);
         let (ph, pk) = (swatch(&human, &wall, &l), swatch(&kobold, &wall, &l));
         // The rod is the LAST channel in both eyes, by construction.
         let sh = human.sense(&wall, &l);

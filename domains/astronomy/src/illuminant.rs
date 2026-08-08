@@ -7,43 +7,24 @@
 //! radiometric accuracy.
 
 use crate::star::Star;
-use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant, planck_relative};
+use hornvale_kernel::color::{BAND_CENTERS_NM, BANDS, Illuminant, blackbody};
 use hornvale_kernel::math;
 
 /// The star's light at the top of the atmosphere, sampled into the band
 /// grid and normalized so the brightest band is 1.0.
 ///
-/// **A midpoint sample, not an integral.** Each band is 40 nm wide (edges
-/// 340–740; see [`BAND_CENTERS_NM`]), and this evaluates Planck's law once
-/// at the band *centre* rather than integrating the curve across the band.
-/// That is the deliberate choice, not an oversight: the Planck curve is
-/// smooth and monotone within 40 nm everywhere on this grid at
-/// main-sequence temperatures, so the midpoint rule preserves the ordering
-/// between bands and between stars, which is all the campaign's claims
-/// rest on. A band integral would change the numbers slightly and change
-/// none of the directions.
+/// **A band integral, not a midpoint sample.** The sampling rule lives in
+/// [`blackbody`], which integrates Planck's law across each band's 40 nm
+/// span rather than evaluating it once at the centre; see that function for
+/// why the midpoint rule was retired. A star is just one temperature this
+/// law is asked about, so it holds no opinion of its own about how the law
+/// is sampled.
 ///
 /// Normalizing here means downstream code compares *colour*, not distance
 /// from the star — insolation is climate's business, and this function is
 /// forbidden from influencing it (the containment rule on [`Star::t_eff`]).
 pub fn daylight(star: &Star) -> Illuminant {
-    let mut bands = [0.0f64; BANDS];
-    let mut peak = 0.0f64;
-    for (band, center) in bands.iter_mut().zip(BAND_CENTERS_NM.iter()) {
-        let value = planck_relative(*center, star.t_eff.get());
-        *band = value;
-        if value > peak {
-            peak = value;
-        }
-    }
-    // `peak` is strictly positive for any finite positive temperature, so
-    // this division is total; the guard is defensive, not a live path.
-    if peak > 0.0 {
-        for value in bands.iter_mut() {
-            *value /= peak;
-        }
-    }
-    Illuminant::new(bands).expect("a normalized Planck curve is finite and non-negative")
+    blackbody(star.t_eff.get())
 }
 
 /// Redden and dim `base` for a sun at `sun_elevation_deg` above the horizon.
@@ -152,34 +133,40 @@ mod tests {
         assert_eq!(a.get(), b.get());
     }
 
-    /// The move in Task 1 relocates `planck_relative` into the kernel and must
-    /// change NO number. These are the exact `f64` bit patterns `daylight`
-    /// produced before the move — a relocation that perturbs one of them is
-    /// not a relocation.
+    /// The pin now guards the **band integral**. It began life in Task 1 as
+    /// proof that relocating `planck_relative` into the kernel changed no
+    /// number; Task 2 deliberately changed the sampling rule from a midpoint
+    /// evaluation to a 13-node Simpson integral over each 40 nm band, so the
+    /// bits below were re-captured in that commit. What it guards from here
+    /// on is the integral itself: the node count, the weights, the band
+    /// edges, and the normalization are all a permanent contract, and any
+    /// one of them moving is a world-wide colour change.
     ///
     /// FIRES WHEN: any band of `daylight(5772 K)` differs in a single bit.
     /// It is deliberately bit-exact, not epsilon-based: an approximate
-    /// assertion here would pass through exactly the drift it exists to catch.
+    /// assertion here would pass through exactly the drift it exists to
+    /// catch — the shift from midpoint to integral is itself only `1.6e-3`
+    /// relative at this temperature, which is below a `u8` step and
+    /// therefore invisible to any test that compares rendered colour.
     #[test]
-    fn the_move_into_the_kernel_changes_no_bit_of_daylight() {
+    fn daylight_is_bit_pinned_under_the_band_integral() {
         let light = daylight(&star_at(5772.0));
         let bits: Vec<u64> = light.get().iter().map(|v| v.to_bits()).collect();
         assert_eq!(bits, EXPECTED_5772_BITS, "daylight(5772 K) moved");
     }
 
-    /// Captured from `daylight(&star_at(5772.0))` before the blackbody moved
-    /// into the kernel. Regenerate ONLY in a commit that deliberately changes
-    /// the sampling (Task 2).
+    /// Captured from `daylight(&star_at(5772.0))` under the band integral.
+    /// Regenerate ONLY in a commit that deliberately changes the sampling.
     const EXPECTED_5772_BITS: [u64; 10] = [
-        4604853207739107171,
-        4606063751336957804,
-        4606819350398609570,
-        4607164408419029421,
+        4604843133675319623,
+        4606053166318454611,
+        4606811611087767384,
+        4607160627626836414,
         4607182418800017408,
-        4606962470143188797,
-        4606583114884357377,
-        4606106952255873598,
-        4605580678255074586,
-        4605037394441490948,
+        4606965519231890559,
+        4606588357244349250,
+        4606113612124414270,
+        4605588132185475270,
+        4605045177730704710,
     ];
 }
