@@ -18,26 +18,6 @@ cargo run --quiet --manifest-path tools/digest/Cargo.toml -- render doctor
 section "The gate (cost-ordered; Makefile / CLAUDE.md Commands)"
 make -s help
 
-section "Determinism contracts (CLAUDE.md Determinism section is authoritative)"
-echo "  - same seed + pins => byte-identical worlds and artifacts; the seed is a world's identity"
-echo "  - floats quantized to 8 significant digits at serialization boundaries ONLY (kernel/src/quantize.rs)"
-echo "  - no wall-clock time; no HashMap/HashSet (clippy.toml disallowed-types)"
-echo "  - stream labels and consumption order are save-format contracts (docs/decisions/0006-*)"
-
-section "Committed generated artifacts"
-echo "  - regenerate all: make rebaseline (censuses skip by default)"
-echo "  - census regen is LOCAL (decisions 0063/0081): bash scripts/census-run.sh, once per campaign pre-merge"
-echo "  - byte-golden test fixtures: make rebaseline-goldens (REBASELINE=1 accept path; kernel/src/golden.rs)"
-echo "  - census review surface: make lab-diff STUDY=<name>"
-echo "  - historical pre-<campaign> pins are frozen history: scripts/freeze-fixture.sh, never rebaselined"
-
-section "Documentation map"
-decision_count=$(find docs/decisions -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
-echo "  - docs/README.md — what knowledge lives where and how ideas flow"
-echo "  - docs/decisions/ — ${decision_count} ratified records (append-only; grep before relitigating)"
-echo "  - book/src/frontier/idea-registry.md — the idea registry (check before proposing anything)"
-echo "      TOOL-*/PROC-* rows ARE the workflow/tooling backlog; a shipped row's Where cell records any deferred half"
-
 section "Live state"
 echo "  branch: $(git branch --show-current)   dirty files: $(git status --porcelain | wc -l | tr -d ' ')"
 git worktree list | sed 's/^/  /'

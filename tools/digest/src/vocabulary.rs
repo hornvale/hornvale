@@ -32,6 +32,11 @@ pub fn project_registry() -> ConceptRegistry {
             true,
             "this document is history, never governing",
         ),
+        (
+            "self-map-line",
+            true,
+            "one authored line of the repo self-map",
+        ),
     ] {
         r.register_predicate(name, functional, doc)
             .expect("v1 vocabulary registers cleanly");
@@ -54,6 +59,7 @@ mod tests {
             ("intends", false),
             ("provides", false),
             ("archival", true),
+            ("self-map-line", true),
         ] {
             let def = r
                 .predicate(name)

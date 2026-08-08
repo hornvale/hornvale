@@ -421,4 +421,8 @@ run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report \
   > docs/audits/trope-coverage-tvtropes-2012.md
 run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 
+echo "regenerate-artifacts: the digest's in-force decision index" >&2
+run --manifest-path tools/digest/Cargo.toml -- render decisions \
+  > docs/digest/decisions-in-force.md
+
 echo "regenerate-artifacts: done." >&2
