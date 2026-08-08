@@ -1,4 +1,4 @@
-# The Assay (test-suite census)
+# The Reassay
 
 An assay does not ask whether an ore sample contains gold. It reports how
 much gold per tonne. This campaign moved a slice of the test suite's

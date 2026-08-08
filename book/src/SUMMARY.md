@@ -315,7 +315,7 @@
 - [The Handle](./chronicle/the-handle.md)
 - [The Sighting](./chronicle/the-sighting.md)
 - [The Beholding](./chronicle/the-beholding.md)
-- [The Assay (test-suite census)](./chronicle/the-reassay.md)
+- [The Reassay](./chronicle/the-reassay.md)
 
 # Appendix: The Frontier
 
