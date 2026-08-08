@@ -8850,7 +8850,8 @@ mod tests {
 
         // The `Settled` set is exactly the settling peoples (The Vacancy T9
         // added the gnoll; The Generalist added the human; The Delvers added
-        // the five dwarves, taking the roster from six to eleven). Named, not
+        // the three dwarves, taking the roster from six to nine -- it carried
+        // five until spec §11 withdrew mountain-dwarf and duergar). Named, not
         // counted — the constant it is compared against carries no arity in
         // its name, so widening the roster again cannot leave a stale count
         // behind.

@@ -328,21 +328,27 @@ fn a_long_lived_people_founds_by_siblings_where_a_short_lived_one_founds_by_desc
         "a short-lived people's founders are separated by generations (gl = {short})"
     );
 
-    // The long-lived case CANNOT be driven through `generation_length_of`:
-    // that function resolves its row exclusively from
-    // `WorldComponents::assemble()` (the canonical, world-independent
-    // registry -- see its own doc comment), and every one of the registry's
-    // 30 rows is `LifeSchedule::Allometric` today (Task 2's own null). A
-    // paced schedule is therefore reachable only by cloning a row and
-    // calling the shared allometry directly, exactly as `generation_length_of`
-    // does internally with whatever row it is given. This also means: a
-    // mutation that reverts `generation_length_of` to hardcode
+    // The long-lived case is driven through a CLONED row rather than through
+    // `generation_length_of`, because this test's fixture wants a factor of
+    // 11.0 -- far past anything the roster carries -- so that the founding gap
+    // is cleared with room to spare. `generation_length_of` resolves its row
+    // exclusively from `WorldComponents::assemble()` (the canonical,
+    // world-independent registry -- see its own doc comment), and a clone is
+    // how an arbitrary schedule is reached; the arithmetic is the same one
+    // `generation_length_of` performs internally on whatever row it is given.
+    //
+    // STALE-COMMENT REPAIR (The Delvers, C2c, 2026-08-07). This comment used
+    // to end: a mutation reverting `generation_length_of` to hardcode
     // `LifeSchedule::ALLOMETRIC` instead of forwarding `bio.schedule` is
-    // UNOBSERVABLE by any test today, for any real species, since
-    // `bio.schedule == LifeSchedule::Allometric == LifeSchedule::ALLOMETRIC`
-    // bit-for-bit until a future campaign (C2c) authors a `Paced` kind. That
-    // is by design -- "the channel ships with zero occupants" -- not a gap
-    // this test can or should paper over.
+    // "UNOBSERVABLE by any test today, for any real species ... until a future
+    // campaign (C2c) authors a `Paced` kind". C2c has. All three dwarves are
+    // `LifeSchedule::Paced { factor: 4.0 }`, so that mutation is now
+    // observable on a REAL registry row, and it is observed: see
+    // `windows/worldgen/tests/delver_readout.rs`'s
+    // `p5_generation_length_reads_the_paced_schedule`, which reddens when a
+    // dwarf's schedule is reverted (hill-dwarf 121.46 y -> 30.36 y). The
+    // Long Age's "the channel ships with zero occupants" is no longer true of
+    // this registry.
     let reg = hornvale_species::biosphere_registry();
     let goblin = reg
         .get_by_label("goblin")
