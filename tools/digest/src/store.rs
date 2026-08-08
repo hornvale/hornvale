@@ -12,6 +12,15 @@ pub enum StoreError {
     TimeIsGits,
     /// A JSONL line did not parse as a `Fact`.
     Malformed,
+    /// The store file exists but could not be read (permissions, I/O fault,
+    /// a partially-written file, …). Distinct from "the file does not
+    /// exist", which is a legitimate empty store — conflating the two would
+    /// let a transient read failure be silently treated as an empty ledger
+    /// and then overwritten with a truncated file.
+    Unreadable(String),
+    /// The subject id `0` was requested. Entity ids are `NonZeroU64`; `0` is
+    /// permanently reserved as "never valid".
+    ZeroSubject,
 }
 
 /// Build a project fact. `place` and `day` are always `None` by construction.
