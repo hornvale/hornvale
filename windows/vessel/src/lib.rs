@@ -9,6 +9,7 @@ pub mod brief;
 pub mod chamber_prose;
 pub mod clock;
 pub mod eyes;
+pub mod fabric;
 mod focalize;
 pub mod interior;
 mod knowledge;
