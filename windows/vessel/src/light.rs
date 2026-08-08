@@ -41,7 +41,7 @@
 //! become a domain (`windows/CLAUDE.md`), and the lattice it reads is
 //! `FRAME`-tier besides (decision 0069).
 
-use crate::lattice::{Cell, Lattice, shadowcast};
+use crate::lattice::{Cell, CellKind, Lattice, neighbours, shadowcast};
 use hornvale_kernel::color::{BANDS, Illuminant};
 use std::collections::BTreeMap;
 
@@ -167,10 +167,86 @@ pub fn light_field(lattice: &Lattice, sources: &[Source]) -> BTreeMap<Cell, Illu
         .collect()
 }
 
+/// The wall cell a chamber's hearth burns at, if the chamber has a wall of
+/// its own.
+///
+/// # The join the interior model never had
+///
+/// `Cell` appears nowhere in `windows/vessel/src/interior/`: the interior
+/// model is **topological** (anchors and the relations between them) and the
+/// lattice is **spatial** (cells), and until now nothing joined the two. So
+/// of spec §4.2's three light sources the torch (the observer's own cell) and
+/// the doorway (`Lattice::doorways`) could be placed and `AnchorKind::Hearth`
+/// could not — the spec said the hearth was "already in built interiors",
+/// which is true of the interior and false of the lattice.
+///
+/// [`CellKind::Wall`]'s own doc already states where a hearth goes — *"a
+/// place in its own right — an alcove, a screen or a fireplace is an anchor
+/// AT one of these"* — so this builds the join that doc described rather than
+/// inventing a placement. Not the chamber's centroid: a fire in the middle of
+/// the floor is a campfire, and this is a built interior.
+///
+/// # Derived, never drawn
+///
+/// A pure function of the lattice: no `Seed`, no `Stream`, no draw, and this
+/// campaign declares no `streams.rs` label at all (spec §5). A window that
+/// draws has quietly become a domain with no registry entry and no
+/// pin-isolation test (`windows/CLAUDE.md`). The candidates are collected in
+/// [`Cell`]'s own total order and the first is taken, so the answer depends
+/// on nothing but the cells.
+///
+/// # Which wall — DETERMINISTIC, NOT MEANINGFUL
+///
+/// Recorded plainly so the next campaign need not guess: **the rule is the
+/// least wall cell orthogonally adjacent to this chamber's floor, by `Cell`'s
+/// derived `Ord`** — lowest `x`, then lowest `y`, which on a rectangular
+/// chamber is the top of its western wall. That is defensible (a hearth is
+/// against a wall of the room it heats) but it is *not* a claim that a
+/// builder would have chosen this wall over the opposite one. It is the
+/// cheapest total order over a set that has to be broken by something.
+///
+/// Two richer rules were considered and declined here:
+///
+/// - **Avoid a threshold-adjacent wall** — a fire beside a doorjamb is
+///   draughty and stands in the traffic. Genuinely better modelling, and
+///   deliberately not taken in this campaign: it needs a fallback for the
+///   chamber whose every wall touches a door, and it would move the hearth
+///   *towards* the reading H2 wants to make (a hearth-lit cell and a
+///   doorway-lit cell differing), which is the wrong order to do things in.
+///   Take it in a campaign that is not also measuring it.
+/// - **The longest unbroken wall run** — how a builder actually picks. It
+///   needs a tie-break of its own on a square room, so it does not remove the
+///   arbitrariness, only moves it.
+///
+/// If either lands later, re-pin
+/// `the_hearth_cell_is_pinned_for_the_two_chamber_house` in the same commit
+/// and say there why the hearth moved.
+///
+/// Returns `None` for a chamber that owns no wall — a chamber with no floor,
+/// or one whose floor is entirely enclosed by another chamber's. Never
+/// somebody else's wall: fail loudly, never guess.
+/// type-audit: bare-ok(index: chamber)
+pub fn hearth_cell(lattice: &Lattice, chamber: usize) -> Option<Cell> {
+    lattice
+        .cells
+        .iter()
+        .filter(|(_, kind)| **kind == CellKind::Wall)
+        .map(|(cell, _)| *cell)
+        .filter(|cell| {
+            neighbours(*cell)
+                .iter()
+                .any(|n| lattice.cells.get(n) == Some(&CellKind::Floor(chamber)))
+        })
+        // `min`, not `next`: the total order is the RULE, and taking it from
+        // the map's iteration order would leave the rule implicit in
+        // `BTreeMap`'s contract instead of stated here.
+        .min()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lattice::{CellKind, Rect};
+    use crate::lattice::Rect;
     use hornvale_kernel::color::blackbody;
 
     /// A rectangular room: a solid wall ring around one chamber's floor.
@@ -210,6 +286,112 @@ mod tests {
         let mut lattice = open_room(12, 9);
         lattice.cells.insert(Cell(4, 4), CellKind::Wall);
         lattice
+    }
+
+    /// Chamber 0's floor rect in [`two_chamber_house`], as authored.
+    const HOUSE_CHAMBER_0: Rect = Rect {
+        x: 1,
+        y: 1,
+        w: 5,
+        h: 7,
+    };
+    /// Chamber 1's floor rect in [`two_chamber_house`], as authored.
+    const HOUSE_CHAMBER_1: Rect = Rect {
+        x: 7,
+        y: 1,
+        w: 5,
+        h: 7,
+    };
+    /// The one doorway between them in [`two_chamber_house`], as authored.
+    const HOUSE_DOORWAY: Cell = Cell(6, 4);
+
+    /// Two chambers side by side inside one exterior shell, sharing a wall
+    /// column with a single threshold in it — the shape `allocate` produces
+    /// for a two-chamber structure, drawn by hand.
+    ///
+    /// Authored rather than embedded, for the same reason [`open_room`] is:
+    /// these are unit claims about *which* cell gets chosen, and a fixture
+    /// whose geometry is only knowable by running the embedder cannot state
+    /// the answer out loud.
+    fn two_chamber_house() -> Lattice {
+        let (w, h) = (13, 9);
+        let mut cells = BTreeMap::new();
+        for y in 0..h {
+            for x in 0..w {
+                let cell = Cell(x, y);
+                let kind = if HOUSE_CHAMBER_0.contains(cell) {
+                    CellKind::Floor(0)
+                } else if HOUSE_CHAMBER_1.contains(cell) {
+                    CellKind::Floor(1)
+                } else if cell == HOUSE_DOORWAY {
+                    CellKind::Threshold(0, 1)
+                } else {
+                    CellKind::Wall
+                };
+                cells.insert(cell, kind);
+            }
+        }
+        Lattice {
+            extent: Rect { x: 0, y: 0, w, h },
+            cells,
+            doorways: vec![(0, 1, HOUSE_DOORWAY)],
+            dof: 0,
+        }
+    }
+
+    /// The wall cells belonging to chamber 0 of [`two_chamber_house`],
+    /// enumerated from the AUTHORED rects above rather than by re-running the
+    /// adjacency scan [`hearth_cell`] uses.
+    ///
+    /// A helper that recomputed the implementation's own set would make the
+    /// containment assertion tautological — it would agree with a broken
+    /// `hearth_cell` exactly as readily as with a correct one.
+    fn authored_walls_of_chamber_zero() -> Vec<Cell> {
+        let r = HOUSE_CHAMBER_0;
+        let mut walls = Vec::new();
+        for y in r.y..r.y + r.h {
+            walls.push(Cell(r.x - 1, y));
+            walls.push(Cell(r.x + r.w, y));
+        }
+        for x in r.x..r.x + r.w {
+            walls.push(Cell(x, r.y - 1));
+            walls.push(Cell(x, r.y + r.h));
+        }
+        walls.retain(|c| *c != HOUSE_DOORWAY);
+        walls
+    }
+
+    /// A lattice in which chamber 0 has walls all around it that are somebody
+    /// ELSE's: its single floor cell sits at the centre of chamber 1's floor,
+    /// so every wall in the lattice is adjacent to chamber 1 and none is
+    /// adjacent to chamber 0.
+    ///
+    /// Deliberately not "a lattice with no walls at all" — that would let a
+    /// `hearth_cell` which happily returns another chamber's wall pass, since
+    /// there would be no other chamber's wall to return.
+    fn wall_less_lattice() -> Lattice {
+        let (w, h) = (7, 7);
+        let mut cells = BTreeMap::new();
+        for y in 0..h {
+            for x in 0..w {
+                let shell = x == 0 || y == 0 || x == w - 1 || y == h - 1;
+                cells.insert(
+                    Cell(x, y),
+                    if shell {
+                        CellKind::Wall
+                    } else {
+                        CellKind::Floor(1)
+                    },
+                );
+            }
+        }
+        cells.insert(Cell(3, 3), CellKind::Floor(0));
+        Lattice {
+            extent: Rect { x: 0, y: 0, w, h },
+            cells,
+            doorways: Vec::new(),
+            dof: 0,
+        }
     }
 
     /// The additive law, which the kernel declared and deferred to this
@@ -378,5 +560,89 @@ mod tests {
             light_field(&lattice, &sources),
             light_field(&lattice, &sources)
         );
+    }
+
+    /// A hearth sits at a WALL cell of its own chamber — the placement
+    /// `CellKind::Wall`'s doc already describes ("a fireplace is an anchor AT
+    /// one of these"). Not the centroid: a fire in the middle of the floor is
+    /// a campfire, and this is a built interior.
+    ///
+    /// FIRES WHEN: the chosen cell is passable, or belongs to another
+    /// chamber. It CANNOT see *which* of the chamber's own walls was chosen —
+    /// measured, not assumed: swapping `min` for `max` leaves this green,
+    /// which is what `the_hearth_cell_is_pinned_for_the_two_chamber_house`
+    /// exists to cover.
+    #[test]
+    fn a_hearth_sits_at_a_wall_of_its_own_chamber() {
+        let lattice = two_chamber_house();
+        let cell = hearth_cell(&lattice, 0).expect("chamber 0 has walls");
+        assert_eq!(lattice.cells.get(&cell), Some(&CellKind::Wall));
+        assert!(
+            authored_walls_of_chamber_zero().contains(&cell),
+            "{cell:?} is a wall, but not one of chamber 0's own"
+        );
+    }
+
+    /// DERIVED, never drawn. A window that draws has quietly become a domain
+    /// with no registry entry and no pin-isolation test
+    /// (`windows/CLAUDE.md`) — and this campaign declares no stream label at
+    /// all (spec §5).
+    ///
+    /// FIRES WHEN: the choice becomes seed-dependent, or dependent on
+    /// anything outside the lattice. It checks REPEATABILITY only — same
+    /// input, same output — and is therefore blind to a change of *rule*,
+    /// which is a different claim and has its own test below.
+    #[test]
+    fn the_hearth_cell_is_a_pure_function_of_the_lattice() {
+        let lattice = two_chamber_house();
+        let a = hearth_cell(&lattice, 0);
+        let b = hearth_cell(&lattice.clone(), 0);
+        assert_eq!(a, b);
+    }
+
+    /// The chosen cell itself, pinned.
+    ///
+    /// **Added because the two tests above were measured to be blind to the
+    /// rule.** Changing `min` to `max` in [`hearth_cell`] moves the hearth
+    /// from chamber 0's north-west wall to its south-east one and leaves
+    /// `a_hearth_sits_at_a_wall_of_its_own_chamber` green (both are walls of
+    /// chamber 0) and `the_hearth_cell_is_a_pure_function_of_the_lattice`
+    /// green (both are repeatable). A guard that cannot distinguish two
+    /// implementations of the thing it names is not guarding it.
+    ///
+    /// FIRES WHEN: the selection rule changes at all — the total order, the
+    /// element taken from it, or the adjacency that builds the candidate set.
+    /// Re-pin it deliberately, in the commit that moves the rule, and say in
+    /// that commit why the hearth moved.
+    #[test]
+    fn the_hearth_cell_is_pinned_for_the_two_chamber_house() {
+        assert_eq!(
+            hearth_cell(&two_chamber_house(), 0),
+            Some(Cell(0, 1)),
+            "chamber 0's hearth moved off the first cell of its own wall set"
+        );
+        assert_eq!(
+            hearth_cell(&two_chamber_house(), 1),
+            Some(Cell(6, 1)),
+            "chamber 1's hearth moved off the first cell of its own wall set"
+        );
+    }
+
+    /// A chamber with no wall of its own yields None rather than a wall
+    /// belonging to somebody else. Fail loudly, never guess.
+    ///
+    /// FIRES WHEN: the candidate scan stops asking whose floor a wall
+    /// touches. The fixture is full of walls — chamber 1's — so a
+    /// `hearth_cell` that returned the lattice's first wall regardless of
+    /// chamber would have something to return here and would fail.
+    #[test]
+    fn a_chamber_with_no_wall_of_its_own_has_no_hearth_cell() {
+        let lattice = wall_less_lattice();
+        assert!(
+            hearth_cell(&lattice, 1).is_some(),
+            "chamber 1 owns every wall in this fixture; if it has none either, \
+             the fixture proves nothing about ownership"
+        );
+        assert_eq!(hearth_cell(&lattice, 0), None);
     }
 }
