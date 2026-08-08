@@ -90,7 +90,9 @@ usage:
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
-  hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
+  hornvale proto [FAMILY]                  dump a language family's proto inventory/phonotactics/proto-root table
+                                            as markdown (default: goblinoid; known multi-member families today:
+                                            goblinoid, dwarf — an unknown one is refused with the admissible set)
   hornvale book [--initiate] [--at <DAY>]  render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
                                             (--initiate: the omniscient-reader edition — every organized culture's
                                             RevealedClaim entries disclosed too; compare-only, never committed)
@@ -150,7 +152,7 @@ fn main() -> ExitCode {
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
-        Some("proto") => cmd_proto(),
+        Some("proto") => cmd_proto(&args),
         Some("book") => cmd_book(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
@@ -978,11 +980,15 @@ fn cmd_dictionary(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// Dump proto-goblinoid's reference page (inventory, phonotactics, and
-/// proto-root table) — a pure function of the reference seed, so unlike
-/// `dictionary` this takes no `--world`.
-fn cmd_proto() -> Result<(), String> {
-    print!("{}", proto::render_proto()?);
+/// Dump a language family's proto reference page (inventory, phonotactics,
+/// and proto-root table) — a pure function of the family and the reference
+/// seed, so unlike `dictionary` this takes no `--world`. The family is the
+/// first positional argument, defaulting to `goblinoid` (the roster's first
+/// multi-member family, and the only page this command emitted before The
+/// Delvers). An unregistered family is refused with the admissible set.
+fn cmd_proto(args: &[String]) -> Result<(), String> {
+    let family = positional_target(args).unwrap_or(proto::DEFAULT_FAMILY);
+    print!("{}", proto::render_proto(family)?);
     Ok(())
 }
 

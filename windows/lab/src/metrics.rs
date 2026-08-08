@@ -2892,7 +2892,22 @@ pub fn registry() -> Vec<Metric> {
                    sibling's own recorded derivation; Absent if no goblinoid daughter \
                    minted a Root",
             summary: SummaryKind::Flag,
-            extract: Extractor::Full(monophyly_goblinoid),
+            extract: Extractor::Full(|v: &FullView| monophyly(v, "goblinoid")),
+        },
+        Metric {
+            // THE DELVERS (C2c): the roster's second multi-member family gets
+            // the same check, not a second implementation — monophyly is a
+            // property of a family, and `monophyly-goblinoid` was named after
+            // what used to be its only possible subject.
+            name: "monophyly-dwarf",
+            doc: "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) \
+                   Root derivation.proto matches an INDEPENDENT re-draw of the shared \
+                   \"dwarf\" family proto-root for that concept (spec §3: cognates \
+                   share a proto ancestor) — never reading the family proto back from a \
+                   sibling's own recorded derivation; Absent if no dwarf daughter \
+                   minted a Root",
+            summary: SummaryKind::Flag,
+            extract: Extractor::Full(|v: &FullView| monophyly(v, "dwarf")),
         },
         Metric {
             name: "clean-outgroup-kobold",
@@ -4990,14 +5005,22 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.components(), species);
-    // NOT routed through hornvale_worldgen::cascade_of (The Solitary Tongue,
-    // Task 4): every call site passes a fixed people, never a dragon-
-    // reachable roster scan — the two direct registrations below pass the
-    // literal "goblin"/"kobold", and lexicon_regular_family's only other
-    // caller iterates the fixed ALL_DAUGHTERS = ["goblin", "hobgoblin",
-    // "bugbear", "kobold"] constant. The default SETTLED regime is
-    // therefore always the correct one here.
-    let cascade = hornvale_language::draw_cascade(&v.world().seed, species, &ph);
+    // ROUTED through the composition root's regime seam (The Delvers, C2c
+    // Task 6). This used to call `hornvale_language::draw_cascade`, which
+    // hardcodes `CascadeRegime::SETTLED`, and justified it by the population
+    // never containing a kind that draws at another regime: the two direct
+    // registrations pass the literal "goblin"/"kobold", and
+    // `lexicon_regular_family` iterated a fixed four-species constant. Making
+    // that population DERIVED (`all_daughters`) retires the justification —
+    // the roster's lexicon-carrying kinds include the three dragons, which
+    // freeze to the isolate regime, and the dwarves, which may draw at the
+    // long-lived Settled rate. Replaying a Root through the wrong regime's
+    // cascade reports a regular lexicon as irregular. `cascade_of_in` (not
+    // `cascade_of`) because a Lab study may build with a SYNTHETIC roster
+    // whose re-keyed kinds the canonical registry cannot resolve.
+    let Ok(cascade) = hornvale_worldgen::cascade_of_in(v.world(), v.components(), species) else {
+        return MetricValue::Absent;
+    };
     let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
@@ -5917,12 +5940,56 @@ fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
 
 /// The daughters whose lexicons draw from a shared goblinoid family proto
 /// phonology (spec §3): goblin, hobgoblin, bugbear.
+///
+/// A **membership claim about a family**, deliberately not derived from
+/// [`hornvale_worldgen::family_daughter_kinds`] even though it reproduces it
+/// exactly on the canonical roster (`authored_daughter_lists_match_the_default
+/// _rosters_family_membership` asserts that, so it cannot go stale in
+/// silence). The two disagree on the Lab's SYNTHETIC rosters:
+/// `census-of-the-meeting`'s `goblin-twin` carries `family_of == "goblinoid"`,
+/// so a derived list makes the twin roster a goblinoid family of one and turns
+/// `monophyly-goblinoid` from `Absent` into a trivially-true `Flag` on every
+/// row of that study's null control (`a_derived_goblinoid_daughter_list_would_
+/// not_be_equivalent_on_labs_twin_roster` pins the mechanism). Moving a null
+/// control's value is a deliberate act, not a refactor, so the constant stays.
 const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 
-/// Every daughter this world's roster carries a lexicon for, goblinoid
-/// family and the kobold outgroup alike — the population `lexicon-regular-
-/// family` and `inventory-closure-*`/`homophony-count-*` range over.
-const ALL_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
+/// THE DELVERS (C2c): the dwarf family's three daughters — the roster's second
+/// multi-member family, and `monophyly-dwarf`'s subject. Same shape, same
+/// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
+const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
+
+/// The authored daughter list for a family the family-level metrics below are
+/// registered over. Panics on any other family: a `monophyly-<family>` metric
+/// must never be registered without the membership claim it measures against.
+fn family_daughters_of(family: &str) -> &'static [&'static str] {
+    match family {
+        "goblinoid" => &GOBLINOID_DAUGHTERS,
+        "dwarf" => &DWARF_DAUGHTERS,
+        other => panic!("no authored daughter list for family '{other}'"),
+    }
+}
+
+/// Every kind THIS world's roster carries a lexicon for, in ascending
+/// [`hornvale_kernel::KindId`] order — the population `lexicon-regular-family`
+/// ranges over.
+///
+/// **Derived, not authored.** It was a hardcoded four-element constant
+/// (`goblin`, `hobgoblin`, `bugbear`, `kobold`) whose doc already claimed to
+/// be "every daughter this world's roster carries a lexicon for", and that
+/// claim had been false since The Generalist added human and The Vacancy added
+/// gnoll: neither was ever added to the list, so `lexicon-regular-family`
+/// silently did not measure them. The roster's `lexicon` store *is* the
+/// population, so read it rather than restate it. `articulation` and `lexicon`
+/// share one key-set by `WorldComponents::check_integrity`, so every kind here
+/// is a speaker and `lexicon_regular`'s `language_of_in` call is safe.
+///
+/// The honest cost of a derived frame: `lexicon-regular-family`'s value now
+/// moves whenever a campaign adds a speaking kind to the roster — that is a
+/// census-metric change with no code edit behind it, and it is meant to be.
+fn all_daughters(v: &FullView) -> Vec<&'static str> {
+    v.components().lexicon.ids().map(|k| k.0).collect()
+}
 
 /// Whether `species` is a member of THIS view's own roster (not the global
 /// species registry) — every family-battery function below must check this
@@ -5937,7 +6004,7 @@ fn in_roster(v: &FullView, species: &str) -> bool {
     v.components().biosphere.ids().any(|k| k.0 == species)
 }
 
-/// Whether every daughter in [`ALL_DAUGHTERS`] is lexicon-regular
+/// Whether every daughter in [`all_daughters`] is lexicon-regular
 /// ([`lexicon_regular`]), ANDed together — the family-wide generalization
 /// of the single-species `lexicon-regular-{goblin,kobold}` metrics (spec
 /// §9.1). `Absent` if no daughter in this world's roster minted a Root
@@ -5945,7 +6012,7 @@ fn in_roster(v: &FullView, species: &str) -> bool {
 fn lexicon_regular_family(v: &FullView) -> MetricValue {
     let mut any = false;
     let mut regular = true;
-    for species in ALL_DAUGHTERS {
+    for species in all_daughters(v) {
         match lexicon_regular(v, species) {
             MetricValue::Flag(f) => {
                 any = true;
@@ -5974,14 +6041,20 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
         .collect()
 }
 
-/// Re-derive the "goblinoid" family's injective proto-root assignment (epoch
+/// Re-derive `family`'s injective proto-root assignment (epoch
 /// `root/v2`) INDEPENDENTLY of any daughter's recorded derivation — over the
 /// world's full registered concept universe (`exposure_from` classifies every
 /// registered concept, so its key set is exactly the registry), exactly as
 /// `build_lexicon` does. The shared basis for the monophyly and clean-outgroup
 /// checks: it proves shared ancestry, never mere self-consistency.
-fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String, Vec<Segment>> {
-    let proto_ph = hornvale_worldgen::proto_phonology_of(v.world(), "goblinoid");
+///
+/// Parameterised by The Delvers: monophyly is a property of a *family*, and
+/// this was named after what used to be the roster's only possible subject.
+fn family_proto_assignment(
+    v: &FullView,
+    family: &'static str,
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    let proto_ph = hornvale_worldgen::proto_phonology_of(v.world(), family);
     // The universe comes from `build_lexicon`'s OWN rule, not from a second
     // copy of it. This function used to build it from every registered
     // concept, which silently disagreed with `proto_root_universe`'s
@@ -5994,12 +6067,12 @@ fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String
     // monophyletic. Re-deriving the DRAW independently is the point of this
     // check; re-deriving the universe RULE was the bug.
     //
-    // Any goblinoid daughter's exposures serve: the map's keys are always
+    // Any daughter of the family's exposures serve: the map's keys are always
     // exactly `world.registry.concepts()`'s names, and `Unnameable` is a
     // property of the concept rather than of the species, so the filtered
     // universe is species-invariant — as it must be, since a family-level
     // assignment that differed per daughter could not produce cognates.
-    let exposures = GOBLINOID_DAUGHTERS
+    let exposures = family_daughters_of(family)
         .iter()
         .filter(|s| in_roster(v, s))
         .find_map(|s| {
@@ -6009,26 +6082,20 @@ fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String
         return std::collections::BTreeMap::new();
     };
     let universe = hornvale_language::proto_root_universe(&exposures);
-    let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), "goblinoid");
-    hornvale_language::assign_proto_roots(
-        &v.world().seed,
-        "goblinoid",
-        &proto_ph,
-        &universe,
-        &daughters,
-    )
+    let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), family);
+    hornvale_language::assign_proto_roots(&v.world().seed, family, &proto_ph, &universe, &daughters)
 }
 
-/// Whether every goblinoid daughter's Root `derivation.proto` matches its
-/// concept's slot in an INDEPENDENT re-derivation of the "goblinoid" family
+/// Whether every daughter of `family` has a Root `derivation.proto` matching
+/// its concept's slot in an INDEPENDENT re-derivation of that family's
 /// proto-root assignment (spec §3 monophyly: every daughter's rooted
-/// vocabulary traces to the one family ancestor). `Absent` if no goblinoid
-/// daughter in this world's roster minted a Root.
-fn monophyly_goblinoid(v: &FullView) -> MetricValue {
-    let assignment = goblinoid_proto_assignment(v);
+/// vocabulary traces to the one family ancestor). `Absent` if no daughter of
+/// `family` in this world's roster minted a Root.
+fn monophyly(v: &FullView, family: &'static str) -> MetricValue {
+    let assignment = family_proto_assignment(v, family);
     let mut any = false;
     let mut monophyletic = true;
-    for species in GOBLINOID_DAUGHTERS {
+    for species in family_daughters_of(family).iter().copied() {
         if !in_roster(v, species) {
             continue;
         }
@@ -6062,7 +6129,7 @@ fn clean_outgroup_kobold(v: &FullView) -> MetricValue {
     let Ok(kobold_lex) = lex(v, "kobold") else {
         return MetricValue::Absent;
     };
-    let assignment = goblinoid_proto_assignment(v);
+    let assignment = family_proto_assignment(v, "goblinoid");
     let mut any = false;
     let mut clean = true;
     for (concept, entry) in kobold_lex.entries() {
@@ -6681,6 +6748,17 @@ mod tests {
     #![allow(clippy::disallowed_methods)]
     use super::*;
 
+    /// The four species The Branches minted PER-SPECIES family metrics for
+    /// (`inventory-closure-*`, `homophony-count-*`, `core-homophony-*`,
+    /// `homophony-merger-share-*`). Distinct from the roster's speaking
+    /// population — the tests below index metric NAMES by species, so this
+    /// list is a claim about which metrics exist, not about who speaks.
+    /// Deliberately unchanged by The Delvers: The Generalist (human) and The
+    /// Vacancy (gnoll) each added a settling people without minting per-
+    /// species instruments, and a new metric costs 34 fixture refreshes and a
+    /// permanent census-cost increase.
+    const PER_SPECIES_METRIC_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
+
     #[test]
     fn narrowed_views_build_and_coerce() {
         let pins = SkyPins::default();
@@ -6984,7 +7062,15 @@ mod tests {
         // place the two campaigns' metric sets could have been silently
         // reconciled to a wrong number, which is why both provenance comments
         // are kept rather than one replacing the other.
-        assert_eq!(registry().len(), 183);
+        // +1 for THE DELVERS (C2c Task 6: monophyly-dwarf — the roster's
+        // second multi-member family measured by the SAME generalized check
+        // `monophyly-goblinoid` uses, not a second implementation). The
+        // campaign deliberately minted NO per-species dwarf instruments
+        // (inventory-closure-*, homophony-count-*): The Generalist (human) and
+        // The Vacancy (gnoll) each added a settling people without them, a new
+        // metric reddens 34 census-fixture tests, and its cost is paid on every
+        // census forever.
+        assert_eq!(registry().len(), 184);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -8775,6 +8861,98 @@ mod tests {
         );
     }
 
+    /// THE DELVERS (C2c): the same property for the roster's second
+    /// multi-member family. The check is the one generalized function, so
+    /// this is a claim about the dwarf family's draw, not about the code.
+    #[test]
+    fn monophyly_dwarf_holds_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "monophyly-dwarf"),
+            MetricValue::Flag(true),
+            "every dwarf daughter's Root proto must match the family proto-root"
+        );
+    }
+
+    /// The drift guard the authored daughter constants trade against being
+    /// derived: on the CANONICAL roster each list must be exactly the set
+    /// `family_daughter_kinds` computes from `family_of`. A future campaign
+    /// that adds a fourth dwarf and forgets the constant reddens here.
+    #[test]
+    fn authored_daughter_lists_match_the_default_rosters_family_membership() {
+        let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
+        for family in ["goblinoid", "dwarf"] {
+            let mut derived: Vec<&str> = hornvale_worldgen::family_daughter_kinds(&wc, family)
+                .iter()
+                .map(|k| k.0)
+                .collect();
+            derived.sort_unstable();
+            let mut authored: Vec<&str> = family_daughters_of(family).to_vec();
+            authored.sort_unstable();
+            assert_eq!(
+                authored, derived,
+                "{family}: the authored daughter list has drifted from family_of"
+            );
+        }
+    }
+
+    /// Why [`GOBLINOID_DAUGHTERS`] stays authored rather than being replaced
+    /// by the derivation the guard above compares it to: the two are NOT
+    /// equivalent on the Lab's synthetic rosters. `goblin-twin` carries
+    /// `family_of == "goblinoid"`, so the derived list makes
+    /// `census-of-the-meeting`'s twin roster a goblinoid family of one, while
+    /// the constant filtered to that roster is empty — the difference between
+    /// `monophyly-goblinoid` reading `Absent` and reading a trivially-true
+    /// `Flag` on every row of that study's null control.
+    #[test]
+    fn a_derived_goblinoid_daughter_list_would_not_be_equivalent_on_labs_twin_roster() {
+        let wc = crate::goblin_twin_solo_components();
+        let derived: Vec<&str> = hornvale_worldgen::family_daughter_kinds(&wc, "goblinoid")
+            .iter()
+            .map(|k| k.0)
+            .collect();
+        assert_eq!(derived, ["goblin-twin"]);
+        let from_constant: Vec<&str> = GOBLINOID_DAUGHTERS
+            .iter()
+            .copied()
+            .filter(|s| wc.biosphere.ids().any(|k| k.0 == *s))
+            .collect();
+        assert!(
+            from_constant.is_empty(),
+            "the twin roster holds no canonical goblinoid daughter; got {from_constant:?}"
+        );
+    }
+
+    /// [`all_daughters`] is the roster's own lexicon-carrying population, not
+    /// a list someone has to remember to extend. Pinned against the two kinds
+    /// the retired constant had silently omitted since The Generalist and The
+    /// Vacancy, and against the three The Delvers adds.
+    #[test]
+    fn all_daughters_is_the_rosters_own_lexicon_population() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let daughters = all_daughters(&view);
+        for expected in [
+            "goblin",
+            "hobgoblin",
+            "bugbear",
+            "kobold",
+            "human",
+            "gnoll",
+            "desert-dwarf",
+            "gully-dwarf",
+            "hill-dwarf",
+        ] {
+            assert!(
+                daughters.contains(&expected),
+                "{expected} carries a lexicon but is not in the measured population: {daughters:?}"
+            );
+        }
+        // Ascending KindId order, so the metric is deterministic.
+        let mut sorted = daughters.clone();
+        sorted.sort_unstable();
+        assert_eq!(daughters, sorted);
+    }
+
     /// Regression: three seeds where this metric reported a monophyly break
     /// in a world that was monophyletic.
     ///
@@ -8811,7 +8989,7 @@ mod tests {
     #[test]
     fn inventory_closure_holds_for_every_daughter_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             assert_eq!(
                 extract(&view, &format!("inventory-closure-{species}")),
                 MetricValue::Flag(true),
@@ -8985,7 +9163,7 @@ mod tests {
         );
         // Functional-load restriction can only ever be a subset of the raw
         // count, for every daughter.
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             let (MetricValue::Number(c), MetricValue::Number(total)) = (
                 extract(&view, &format!("core-homophony-{species}")),
                 extract(&view, &format!("homophony-count-{species}")),
@@ -9002,7 +9180,7 @@ mod tests {
     #[test]
     fn homophony_merger_share_is_a_unit_fraction_or_absent_for_every_daughter() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             match extract(&view, &format!("homophony-merger-share-{species}")) {
                 MetricValue::Number(f) => {
                     assert!((0.0..=1.0).contains(&f), "{species}: {f} out of [0,1]")
@@ -9016,7 +9194,7 @@ mod tests {
     #[test]
     fn homophony_count_is_a_nonnegative_number_for_every_daughter_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ALL_DAUGHTERS {
+        for species in PER_SPECIES_METRIC_DAUGHTERS {
             match extract(&view, &format!("homophony-count-{species}")) {
                 MetricValue::Number(n) => assert!(n >= 0.0, "{species}: {n} must be >= 0"),
                 other => panic!("{species}: homophony-count not a number: {other:?}"),

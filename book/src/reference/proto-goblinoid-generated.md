@@ -1,8 +1,8 @@
-<!-- GENERATED FILE — do not edit. Regenerate with `hornvale proto`. -->
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale proto goblinoid`. -->
 
 # Proto-goblinoid
 
-The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
+The shared ancestral language bugbear, goblin, and hobgoblin all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_language::family_proto`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. **Excepted:** a concept the registry itself records as objectively unnameable (`Correspondent::Absent(Void::Unnamed(..))`, spec: The Correspondence) reserves no proto-root at all and is omitted from this table entirely — the ancestor cannot have spoken of a referent no culture here has ever had the concept to name (see `hornvale_language::GapReason::Unnameable`). The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
 
 ## Inventory
 
@@ -62,6 +62,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `dark` | the color term for black/dark hues | *Tano | /tano/ |
 | `day` | the light half of the day-night cycle | *Gaage | /gaage/ |
 | `desert` | a biome class | *Nadoa | /nadoa/ |
+| `desert-dwarf-kind` | a desert dwarf | *Neoga | /neoga/ |
 | `die` | to cease living | *Toono | /toono/ |
 | `dire-wolf-kind` | a dire wolf | *Penae | /penae/ |
 | `drink` | to swallow liquid | *Ganae | /ganae/ |
@@ -96,6 +97,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `grass-sward` | Open grassland, unbroken by trees. | *Neonao | /neonao/ |
 | `great` | large in size or extent | *Goedono | /goedono/ |
 | `green` | the color term for green | *Koetoe | /koetoe/ |
+| `gully-dwarf-kind` | a gully dwarf | *Paono | /paono/ |
 | `hadal-trench` | a biome class | *Pea | /pea/ |
 | `hamada` | A stony desert pavement of bare rock. | *Daade | /daade/ |
 | `hand` | the manipulating limb-end | *Qaagaa | /qaagaa/ |
@@ -103,6 +105,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `heat` | felt, oppressive warmth | *Keqoo | /keqoo/ |
 | `high` | far above the ground | *Geanea | /geanea/ |
 | `hill` | ground that rises above what surrounds it | *Nootea | /nootea/ |
+| `hill-dwarf-kind` | a hill dwarf | *Dapae | /dapae/ |
 | `hobgoblin-kind` | a hobgoblin | *Qage | /qage/ |
 | `holdfast-tangle` | The anchored base of a kelp forest. | *Qa | /qa/ |
 | `home` | one's dwelling | *Doe | /doe/ |

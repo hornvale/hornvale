@@ -25,6 +25,7 @@ damp-hollow: Teanee /teanee/
 dark: Tano /tano/
 day: Gaage /gaage/
 desert: Nadoa /nadoa/
+desert-dwarf-kind: Neoga /neoga/
 die: Toono /toono/
 dire-wolf-kind: Penae /penae/
 drink: Ganae /ganae/
@@ -59,6 +60,7 @@ god: Neta /neta/
 grass-sward: Neonao /neonao/
 great: Goedono /goedono/
 green: Koetoe /koetoe/
+gully-dwarf-kind: Paono /paono/
 hadal-trench: Pea /pea/
 hamada: Daade /daade/
 hand: Qaagaa /qaagaa/
@@ -66,6 +68,7 @@ hearth: Nope /nope/
 heat: Keqoo /keqoo/
 high: Geanea /geanea/
 hill: Nootea /nootea/
+hill-dwarf-kind: Dapae /dapae/
 hobgoblin-kind: Qage /qage/
 holdfast-tangle: Qa /qa/
 home: Doe /doe/

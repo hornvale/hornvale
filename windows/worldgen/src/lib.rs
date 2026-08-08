@@ -5052,6 +5052,30 @@ fn exposure_of_impl(
     Ok(classes)
 }
 
+/// The family's speaking members in `wc`, as kind ids in ascending [`KindId`]
+/// order — the membership half of [`family_daughters`], split out because a
+/// [`hornvale_language::Daughter`] carries a cascade and a phonology but no
+/// name, so a caller that needs to *name* the family's daughters (the book's
+/// proto reference page, the Lab's daughter-constant drift guard) could
+/// otherwise only re-implement this filter and hope it stayed in step.
+/// [`family_daughters`] is defined in terms of this function, so the two can
+/// never disagree about who is in the family.
+/// type-audit: bare-ok(identifier-text: family)
+pub fn family_daughter_kinds(wc: &WorldComponents, family: &str) -> Vec<KindId> {
+    // Iterate the family-taxonomy store in ascending `KindId` — the same order
+    // (and same members) the default roster's `registry()`-key traversal gave.
+    wc.family_of
+        .iter()
+        .filter(|(_, fam)| **fam == family)
+        // Speakers only: since The Eremite a family may hold a non-speaking
+        // minded kind (a dragon carries a family label but no articulation);
+        // language divergence is a speaker concern. Byte-identical for the
+        // peoples' families, whose members all speak.
+        .filter(|(kind, _)| wc.articulation.contains(kind))
+        .map(|(kind, _)| *kind)
+        .collect()
+}
+
 /// The family's members (all kinds in `wc` sharing `family`), each as a
 /// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
 /// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
@@ -5067,17 +5091,10 @@ pub fn family_daughters(
     wc: &WorldComponents,
     family: &str,
 ) -> Vec<hornvale_language::Daughter> {
-    // Iterate the family-taxonomy store in ascending `KindId` — the same order
-    // (and same members) the default roster's `registry()`-key traversal gave.
-    wc.family_of
-        .iter()
-        .filter(|(_, fam)| **fam == family)
-        // Speakers only: since The Eremite a family may hold a non-speaking
-        // minded kind (a dragon carries a family label but no articulation);
-        // language divergence is a speaker concern. Byte-identical for the
-        // peoples' families, whose members all speak.
-        .filter(|(kind, _)| wc.articulation.contains(kind))
-        .map(|(kind, _)| {
+    family_daughter_kinds(wc, family)
+        .into_iter()
+        .map(|kind| {
+            let kind = &kind;
             // Draw at kind's OWN regime (cascade_regime_of), not the
             // language crate's default-regime draw_cascade: a family can
             // hold a dragon (the "draconic" family), so the daughter's
@@ -5180,12 +5197,26 @@ fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_langua
 /// type-audit: bare-ok(identifier-text: species)
 pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cascade, BuildError> {
     let wc = WorldComponents::assemble()?;
-    let name = resolve_kind(&wc, species)?;
+    cascade_of_in(world, &wc, species)
+}
+
+/// [`cascade_of`]'s draw against an ALREADY-built component set — the
+/// wc-threaded twin, in `language_of_in`'s shape. The entry a caller must use
+/// when the roster may be SYNTHETIC (the Lab's solo/twin components, whose
+/// re-keyed kinds do not exist in the canonical registry `cascade_of`
+/// re-assembles and would fail to resolve against).
+/// type-audit: bare-ok(identifier-text: species)
+pub fn cascade_of_in(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+) -> Result<hornvale_language::Cascade, BuildError> {
+    let name = resolve_kind(wc, species)?;
     let bio = wc
         .biosphere
         .get(&KindId(name))
         .expect("resolve_kind only returns kinds with a biosphere row (integrity-checked)");
-    let ph = language_of_wc(world, &wc, name);
+    let ph = language_of_wc(world, wc, name);
     Ok(hornvale_language::draw_cascade_with_regime(
         &world.seed,
         name,
