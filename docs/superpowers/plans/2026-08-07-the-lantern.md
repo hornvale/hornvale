@@ -17,6 +17,10 @@
 - **No seeded draw and no `streams.rs` label** anywhere in this campaign. Fabric is derived; light is derived. A window that draws has become a domain (`windows/CLAUDE.md`).
 - **Every crate sets `#![warn(missing_docs)]`** — every `pub` item, field and variant gets a one-line doc comment.
 - **Every primitive at a `pub` boundary carries a `type-audit:` tag** (`bare-ok(<class>)` / `waiver(<reason>)`). Tag `return` on tuple/`Option` returns too.
+- **Any new `pub` boundary drifts `docs/audits/type-audit-report.md`, and the pre-commit hook runs `make quick` workspace-wide regardless of what you staged** — so the regenerated report must land **in the same commit**, not at the close. Found the hard way in Task 1 (kernel `bare-ok(ratio)` 556 → 560). Tasks 2 (`blackbody`), 3 (`fabric.rs`), 4 (`light.rs`) and 8 (`lens.rs`) each add one. Regenerate with:
+  ```bash
+  cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+  ```
 - **`cargo fmt` is the final step before every commit.** Fmt skips are the most common review finding.
 - **Layering:** `kernel/ → domains/* → windows/* → cli/`. A domain depends on the kernel and nothing else.
 - **Every guard must state what would make it fire, and be mutation-proven.** A mutation must redden **at the assertion it targets** — "it went red" is not the observation, and a mutation test must first prove it mutated.
