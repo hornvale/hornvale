@@ -280,13 +280,32 @@ after this program's first campaign.
   (extant)  goblin, kobold, hobgoblin, bugbear, gnoll      overworld
 ```
 
-Every kind means rows in six registries and a validation in a seventh
-(`BIO-kind-authoring-seam`): biosphere, family, and the kind concept in
-`domains/species`; psyche, society, perception; articulation and lexicon in
-`domains/language`; `family_proto` once a family label is carried twice; and the
-invariants (`speech ⊆ perception ⊆ mind`, society ⟺ minded ∧ social) enforced in
-`windows/worldgen`. Both census fixtures refresh each time — 31 rows in
-`the-census` and 3 in `census-of-the-meeting`.
+Every kind means rows in **eight** registries plus an appended accession cohort,
+and a validation in a ninth (`BIO-kind-authoring-seam`): biosphere, `family_of`
+and the kind concept in `domains/species`; psyche, **dispersion**, society,
+perception; articulation and lexicon in `domains/language`; `family_proto` once a
+family label is carried twice; a **sparse habitat realm** if the kind is not of
+the surface; the concept-epoch cohort in `domains/language/src/accession.rs`; and
+the invariants (`speech ⊆ perception ⊆ mind`, society ⟺ minded ∧ social) enforced
+in `windows/worldgen`. Dispersion (The Tolerance), `LifeSchedule` inside the
+biosphere row (The Long Age) and the habitat realm (The Warren) all postdate the
+original count of six. The accession cohort is the one most easily missed and the
+one with teeth: omitting it changes which proto-root a concept draws, so it is a
+save-format event, not a documentation slip. Corrected by The Delvers (its spec
+§3.5) after measuring the `human` and `gnoll` commits.
+
+**The census cost stated below was wrong by a factor of thirty, and The Delvers
+corrected it** (its spec §1.4). Measured against the actual regen commits, a new
+settling people refreshes `the-census` **wholesale — 1000 of 1000 rows** — because
+it re-decides settlement placement on every seed. `census-of-the-meeting` is
+near-immune *structurally* rather than incidentally: its rosters are
+`goblin-solo` and `goblin-twin-solo`, so a new kind never competes in it, and its
+handful of moved rows are collateral from shared concept-registry movement. But
+that immunity is about *competition*, not about the file: a campaign that adds a
+metric **column** rewrites every row of both fixtures textually, which is what
+The Delvers' own `monophyly-dwarf` did — 1000 of 1000 rows in each. Budget a
+roster campaign at two wholesale fixture rewrites, and expect the second to be a
+column change rather than a content one.
 
 ### Elves are the roster's instrument for measuring realms
 
@@ -338,7 +357,7 @@ a model that does not yet exist, and would then be *read* as authoritative after
 it stopped being true. That is the stale-claim failure the project already names.
 
 What does not rot, and so is stated here in full: the dependency graph, the
-sequencing rule, the ladder, the roster's final shape, and the six-registry
+sequencing rule, the ladder, the roster's final shape, and the eight-registry
 authoring cost. Each campaign writes its own spec when its inputs exist.
 
 ## 8. Per-campaign spine
@@ -352,7 +371,7 @@ Each of the five follows the same shape:
   MUTATION STEP: show the readout would differ if the axis moved   <- §3
   declare the epoch only if a derivation actually moved (0084)
   census regen on lefford (0079 / 0086 / 0081) -- AUTHORIZATION REQUIRED
-  refresh BOTH census fixtures (31 + 3)
+  refresh BOTH census fixtures (1000 + 1000 rows -- see §5)
   book chapter + chronicle + freshness sweep + retrospective
 ```
 

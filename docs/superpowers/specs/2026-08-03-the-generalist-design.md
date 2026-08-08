@@ -336,9 +336,15 @@ grew to `0.0472`. Full reasoning and the measured table live in
 - [ ] `windows/worldgen/tests/non_void_roster.rs` passes with no allowlist —
       human must actually be placed on every seed it is tested against, or it is
       a ghost.
-- [ ] **Both census fixtures refreshed** — 31 rows in `the-census`, 3 in
-      `census-of-the-meeting`. A new kind reddens both, and refreshing only one
-      leaves a suite that looks green for the wrong reason.
+- [ ] **Both census fixtures refreshed.** A new kind reddens both, and
+      refreshing only one leaves a suite that looks green for the wrong reason.
+      *[Figure corrected by The Delvers, 2026-08-07: this read "31 rows in
+      `the-census`, 3 in `census-of-the-meeting`" and was wrong by a factor of
+      thirty. A new settling people re-decides placement on every seed, so
+      `the-census` refreshes wholesale — 1000 of 1000 rows.
+      `census-of-the-meeting` is near-immune structurally (its rosters are
+      goblin-solo), but a new metric COLUMN still rewrites all 1000 of its rows
+      textually. See the peoples-program metaplan §5.]*
 - [ ] Epoch declared **only if a derivation actually moved** (0084), and stamped
       per 0089. Adding a settling people changes the settlement-genesis roster,
       so it almost certainly did — but the check is the point, not the

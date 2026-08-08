@@ -5411,11 +5411,11 @@ mod tests {
     /// test guards is unchanged; only the ground truth grew by one more
     /// peoples-line, same as every prior re-pin in this file's history.
     ///
-    /// The Delvers re-pin (C2c, 2026-08-07): the five dwarves join as peoples
-    /// seven through eleven, so `vol.lines`, `vol.tongue_lines`,
-    /// `vol.tongue_gaps` and `goblin.emic` each gain five entries. **Every
+    /// The Delvers re-pin (C2c, 2026-08-07): the three dwarves join as peoples
+    /// seven through nine, so `vol.lines`, `vol.tongue_lines`,
+    /// `vol.tongue_gaps` and `goblin.emic` each gain three entries. **Every
     /// pre-existing line is BYTE-IDENTICAL** — all twelve prior
-    /// `tongue_lines` included, which is the stronger reading: five new
+    /// `tongue_lines` included, which is the stronger reading: three new
     /// tongues entered the cascade roster and perturbed no existing tongue's
     /// drawn word forms at all, unlike The Wearing / The Witness / The
     /// Watershed re-pins recorded below, which each moved some. The

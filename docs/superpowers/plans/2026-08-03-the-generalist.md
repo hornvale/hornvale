@@ -722,8 +722,11 @@ they did not, say so in the chronicle and declare nothing.
 
 - [ ] **Step 3: Refresh BOTH census fixtures**
 
-31 rows in `the-census`, 3 in `census-of-the-meeting`. Refreshing one leaves a
-suite that looks green for the wrong reason.
+Refreshing one leaves a suite that looks green for the wrong reason.
+*[Figure corrected by The Delvers, 2026-08-07: this read "31 rows in
+`the-census`, 3 in `census-of-the-meeting`". A new settling people refreshes
+`the-census` wholesale — 1000 of 1000 rows — and a new metric column rewrites
+every row of both fixtures. See the peoples-program metaplan §5.]*
 
 **Census regen is a carve-out.** Ask Nathan for explicit authorization, then
 run `bash scripts/census-run.sh` on lefford — never

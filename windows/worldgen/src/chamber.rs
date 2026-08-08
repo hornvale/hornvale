@@ -301,11 +301,15 @@ pub type ChamberOverrides = BTreeMap<ChamberAddr, ChamberOrigin>;
 /// The Hollow's dominant lesson is that a field nothing reads cannot be
 /// observed to be wrong, and its remedy is to name a derived thing's first
 /// consumer in the same campaign *or say plainly that it has none*. This has
-/// none. Its first real consumer is the digging campaign (C2c) — the moment a
-/// dig fact can make a chamber `Made`, a second dig over the same address must
-/// not be able to un-make it, and §4.1's persistence asymmetry (an excavated
-/// extent survives its maker; only the *claim* lapses) is what that campaign
-/// will be reading. Until then this is a stated deferral, not an oversight.
+/// none. **C2c (The Delvers) was named here as that first consumer and is not
+/// one: it shipped a roster of three SURFACE dwarves, dug nothing, and cut both
+/// subterranean kinds before merge** — so this branch is one campaign older than
+/// the comment used to claim, and the deferral is longer, not shorter. Its first
+/// real consumer is still whichever campaign makes a dig fact — the moment one
+/// can make a chamber `Made`, a second dig over the same address must not be
+/// able to un-make it, and the persistence asymmetry (an excavated extent
+/// survives its maker; only the *claim* lapses) is what that campaign will be
+/// reading. Until then this is a stated deferral, not an oversight.
 pub fn resolve_origin(default: ChamberOrigin, over: Option<ChamberOrigin>) -> ChamberOrigin {
     if default == ChamberOrigin::Made {
         return ChamberOrigin::Made;

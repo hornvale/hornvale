@@ -1845,7 +1845,7 @@ fn desert_dwarf_condition_niche() -> ConditionNiche {
 ///
 /// **Elevation is the sole binding axis, by construction.** `devotion_elev`
 /// is `0.30` against a sovereignty floor of `0.438477` at 62.0 kg — the
-/// lowest floor of the five, and still comfortably above 0.30 — so this kind
+/// lowest floor of the three, and still comfortably above 0.30 — so this kind
 /// is elevation-bound on 100% of land. The three climate curves below are
 /// honest but PREPARED: floored at `0.438477`, they can never fall under
 /// `0.30 * bump`, so nothing consumes them. Stated rather than implied.
@@ -2129,7 +2129,7 @@ impl Component for Dispersion {}
 /// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
 /// supernatural set (dragons, treant, xorn); mundane beasts and the six
 /// peoples carry 0. `social_form` is the universal social-organization axis
-/// (spec §3.1, The Eremite): `Settled` for the six peoples, `Sessile` for
+/// (spec §3.1, The Eremite): `Settled` for the nine peoples, `Sessile` for
 /// the rooted autotrophs, `Gregarious` for the herding beasts, `Solitary`
 /// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
@@ -2655,7 +2655,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 }
 
 /// The individual-mind component — authored directly, present for every
-/// minded kind (the six settling peoples and the three solitary dragons).
+/// minded kind (the nine settling peoples and the three solitary dragons).
 /// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about
 /// goblin's authorship, not about what the manikin is.
 /// type-audit: bare-ok(identifier-text)
@@ -2750,11 +2750,11 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.75,
             },
         ),
-        // THE DELVERS (C2c): the five dwarves. The family's shared reading is
+        // THE DELVERS (C2c): the three dwarves. The family's shared reading is
         // a LONG `time_horizon` — every one of them sits above human's 0.75 —
-        // and that is not decoration: `paced(4.0)` gives them 268-278 years
-        // and a 118-122 year generation length, so a dwarf genuinely plans
-        // past the span a human can. The differences among the five are the
+        // and that is not decoration: `paced(4.0)` gives them 268-276 years
+        // and a 118-121 year generation length, so a dwarf genuinely plans
+        // past the span a human can. The differences among the three are the
         // ecology each lives in, not the family they belong to.
         (
             KindId("desert-dwarf"),
@@ -2766,7 +2766,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 // slow and considered — the family reading, and the correct
                 // one for a people whose next water is a day's march away.
                 deliberation_latency: 0.7,
-                // the longest of the five: route, well and season knowledge
+                // the longest of the three: route, well and season knowledge
                 // is the capital a desert people actually holds.
                 time_horizon: 0.9,
             },
@@ -2777,7 +2777,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 // flees: a scavenger that stands its ground against anything
                 // larger stops being a scavenger.
                 threat_response: 0.2,
-                // the fastest of the five, and the only one below the
+                // the fastest of the three, and the only one below the
                 // manikin's midpoint — opportunism is a decision made before
                 // the opportunity leaves.
                 deliberation_latency: 0.4,
@@ -2902,12 +2902,12 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
                 perception: 0.20,
             },
         ),
-        // THE DELVERS (C2c): the five dwarves, spread across nearly the whole
+        // THE DELVERS (C2c): the three dwarves, spread across much of the
         // range the roster uses. The ordering principle is the one the
         // goblinoid rows already established — an institution that drills is
-        // an institution that narrows — so the coercive deep hold is the
-        // narrowest kind in the roster and the institution-free scavenger
-        // band is the widest of the five. Human stays the widest overall on
+        // an institution that narrows — so the settled farmer with its halls
+        // and terraces is the narrowest of the three and the institution-free
+        // scavenger band the widest. Human stays the widest overall on
         // every axis, which is its own campaign's claim and is not disturbed.
         (
             KindId("desert-dwarf"),
@@ -2941,7 +2941,7 @@ pub fn dispersion_registry() -> ComponentStore<KindId, Dispersion> {
 }
 
 /// The community-mind component — authored directly, present only for the
-/// six settling peoples. A Solitary minded kind (a dragon) carries a
+/// nine settling peoples. A Solitary minded kind (a dragon) carries a
 /// MindVector but no SocietyVector; a mixed consumer resolves
 /// [`SocietyVector::MANIKIN`] for one. Goblin's row happens to sit at those
 /// same values — again authorship, not definition.
@@ -3027,10 +3027,10 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 in_group_radius: 0.8,
             },
         ),
-        // THE DELVERS (C2c): the five dwarves. Each row is argued from the
+        // THE DELVERS (C2c): the three dwarves. Each row is argued from the
         // kind's ECOLOGY, per decision 0021 — 5E supplies mass and CR and
         // nothing else, so no moral canon rides along with the names. The
-        // five deliberately do not share a social reading: a family is a
+        // three deliberately do not share a social reading: a family is a
         // shared descent and a shared tongue, not a shared constitution.
         (
             KindId("desert-dwarf"),
@@ -3079,7 +3079,7 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
 }
 
 /// The perception component — authored directly, present for every minded
-/// SPEAKING kind: the six peoples and the three chromatic dragons (The
+/// SPEAKING kind: the nine peoples and the three chromatic dragons (The
 /// Vigil). Goblin's row happens to sit at [`PerceptionVector::MANIKIN`]
 /// (`Diurnal`, 0.5/0.5) — authorship, not definition. Since The Vigil the
 /// enforced lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added
@@ -3199,10 +3199,12 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 sky_attention: 0.65,
             },
         ),
-        // THE DELVERS (C2c): the five dwarves. `sky_attention` is CELESTIAL
+        // THE DELVERS (C2c): the three dwarves. `sky_attention` is CELESTIAL
         // vs terrestrial attention, not aerialness (`perception_lens.ambient
-        // = 1.5 - sky_attention`), so the two Subterranean kinds are authored
-        // near zero on it and high on `night_vision`. That authoring is
+        // = 1.5 - sky_attention`), so the scavenger who reads the ground is
+        // authored low on it (0.2) and the desert navigator who reads the
+        // stars high (0.75), while all three carry a raised `night_vision`.
+        // That authoring is
         // HONEST rather than mechanical: it reaches the perception consumers —
         // the hue ladder in `pack_depths`, the exposure lens — even though it
         // reaches nothing in the capacity model, which reads only mass,

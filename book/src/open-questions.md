@@ -1594,3 +1594,52 @@ the post-epoch reading finds two seeds moving in opposite directions that
 cancel exactly — the mechanism is visibly live at the individual-world
 level, it simply does not net into more diversity. Full numbers:
 `docs/superpowers/plans/the-contour-baseline-v2.md`.
+
+**The saturation half of that decomposition has now been tested, by a campaign
+that shares none of its nouns, and it survives.** The argument above turns on a
+number that was never a property of the world: the diversity count is bounded by
+*the roster's own size*, so with five peoples in play "M3 rises" was close to
+unfalsifiable upward. The obvious reading of that is that the ceiling was too
+low — that a larger roster would hand the instrument the headroom it lacked.
+[The Delvers](./chronicle/the-delvers.md) (2026-08-07) raised the ceiling by half
+again, from six settling peoples to nine, and **the saturation did not move**.
+Across the same thousand-world census: before, 971 of 1000 worlds ended the bake
+holding every one of the six, mean 5.961; after, 967 of 1000 hold every one of
+the nine, mean 8.956. Three more peoples, three more survivors, and the share of
+worlds pinned against the ceiling fell by four tenths of a percent.
+
+That is a finding about the **instrument**, not about the mechanism — no second
+contest axis was added and nothing here retests decision 0096. But it closes off
+the cheapest hope this chapter had for the untested half of the null. The count
+was not saturated because the roster was small; it is saturated because
+extinction is rare in this world at any roster size, and a metric bounded by the
+roster will therefore sit on its bound however far the bound is moved. The
+effective-diversity reading the spec asked for and never wired up is now the
+*only* way to test "does not improve diversity in surviving worlds," rather than
+one of two, and enlarging the roster is struck off as an alternative. Its
+headroom must still be declared in a preregistration before any code exists.
+
+A related bound was found to have the same defect and was repaired in passing.
+The coexistence calibration's ceiling on per-cell claimed diversity had been
+frozen as a bare `3.0`, justified in its own text as comfortably below
+undifferentiated sharing — where the diversity reading approaches *the species
+count*. So `3.0` was never an absolute quantity either; it was three quarters of
+a four-species roster, with the dependency compiled into a literal and invisible
+until a second roster size existed. It is now derived from the live count and
+reproduces `3.0` exactly at a roster of four, which is the strongest form this
+repair can take — a no-op at the roster the bound was written for. The floor
+stays absolute, because monoculture drives the reading to one however many
+peoples exist; only the ceiling ever scaled. This is a post-unblinding change to
+a preregistered bound, made deliberately, and it re-derives the bound's *rule*
+rather than fitting its *value*.
+
+The margin is the part worth keeping. Re-measured on the roster that actually
+shipped, the mean per-cell claimed diversity is **3.0101** — so the retired
+literal would have failed by one hundredth, which is what a compiled-in
+dependency looks like when it rots: not a loud failure that names its cause, but
+a hair over a line, in exactly the shape most likely to be read as noise and
+quietly re-pinned. Against the derived ceiling the same reading is 25% of
+undifferentiated sharing where the original band permitted 75%, so the world is
+if anything more differentiated than the bound was written to allow. Both halves
+of that sentence are only sayable because the bound was re-derived rather than
+re-fitted.

@@ -349,9 +349,11 @@ Frozen 2026-08-06, before any implementation code. Decision 0016.
 
 **P1 — no world changes.** The committed seed-42 world JSON is byte-identical.
 Every gallery almanac is byte-identical, including all six life-history lines.
-Both census fixtures are byte-identical (31 rows `the-census`, 3 rows
-`census-of-the-meeting`) — **so no census regen is required, and none is
-requested.** The stream manifest is byte-identical: no label is added, renamed
+Both census fixtures are byte-identical — **so no census regen is required, and
+none is requested.** *[The parenthetical here read "31 rows `the-census`, 3 rows
+`census-of-the-meeting`", the metaplan's figure, corrected by The Delvers on
+2026-08-07: a roster change refreshes `the-census` wholesale, 1000 of 1000 rows.
+P1's byte-identity claim is unaffected — it asserts that ZERO rows move.]* The stream manifest is byte-identical: no label is added, renamed
 or reused.
 
 **P2 — the six peoples' derived life-history is bit-identical**, all six
@@ -599,6 +601,8 @@ this campaign's result. The rung-2 trap is answered by §6's two mutations
 instead.
 
 **D7 — No new lab metric.** One metric reddens 34 tests until both census
-fixtures refresh (31 `the-census` + 3 `census-of-the-meeting`), and with zero
-occupants it would read a constant. Deferred to C2c, which will have something
+fixtures refresh, and with zero occupants it would read a constant. *[The
+figure "31 `the-census` + 3 `census-of-the-meeting`" was corrected by The
+Delvers, 2026-08-07: a new metric column rewrites all 1000 rows of BOTH
+fixtures, which is what its own `monophyly-dwarf` did.]* Deferred to C2c, which will have something
 worth measuring.
