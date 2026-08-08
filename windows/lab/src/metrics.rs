@@ -3729,6 +3729,56 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(migration_events(v.world()) as f64)
             }),
         },
+        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Tare).
+        // `windows/worldgen/tests/history_tithe.rs` asserted on
+        // `BakeCensus::tribute_collected` — a FLOW integrated inside
+        // `History::tally`, which `build_world_to` DISCARDS before any census
+        // view exists. The world is designed to remember who owes whom, not
+        // how much has been paid, so this measures the stock the world keeps
+        // rather than proxying the flow it throws away.
+        //
+        // CHOSEN BY MEASUREMENT over three alternatives, all scored against
+        // the bake's own `tribute_collected` over 36 worlds:
+        //     stock (this column)          spearman +0.9344
+        //     SUM(now - since)                      +0.8909
+        //     distinct patrons                      +0.8419
+        //     largest patron's share                -0.7692  (partly arithmetic:
+        //                                    top >= 1/stock, decaying to -0.539
+        //                                    once small worlds are excluded)
+        // A normalized share was also tried and is markedly WORSE:
+        // `stock / occupations` scores +0.623 against this column's +0.934.
+        // The flow tracks the absolute number of relations, not a rate.
+        //
+        // An invariant sibling ("does every patron reference resolve", the
+        // shape of `raid-attribution-unresolved`) was DECLINED as structurally
+        // vacuous: `history_emit.rs` already `.expect`s that a tribute patron
+        // names a minted community, so such a column could only ever fire on
+        // hand-built input.
+        Metric {
+            name: "tribute-relations-standing",
+            doc: "How many standing tribute relations (`pays-tribute-to`) this world holds \
+                  at `now` — the subordination stock (The Tare). Replaces \
+                  `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume \
+                  panel, whose quantity lives on the bake's discarded tally and is \
+                  unreachable from any census metric. Agrees with that flow at spearman \
+                  0.934 over 36 worlds — a measured witness, NOT an equivalence: this is \
+                  a stock and that was a flow. Absent on a world with no occupation \
+                  records.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0, 25.0, 60.0, 100.0, 150.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                let standing = v
+                    .world()
+                    .ledger
+                    .find(hornvale_history::PAYS_TRIBUTE_TO)
+                    .count();
+                MetricValue::Number(standing as f64)
+            }),
+        },
     ]
 }
 
@@ -7570,10 +7620,13 @@ mod tests {
         // victim, so the count column would have been a second copy of the
         // first rate. Each column here is paid for on every census forever.
         //
-        // +1 for THE TARE (climate-displacement-events, retiring
+        // +2 for THE TARE (climate-displacement-events, retiring
         // `history_battery`'s seed-42 gate and `history_sundering`'s
-        // twelve-seed panel). A second Tare column follows immediately below.
-        assert_eq!(registry().len(), 192);
+        // twelve-seed panel; tribute-relations-standing, retiring
+        // `history_tithe`'s twelve-world tribute-volume panel because the
+        // census can only reach the ledger's tribute STOCK, never the bake's
+        // discarded FLOW).
+        assert_eq!(registry().len(), 193);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
