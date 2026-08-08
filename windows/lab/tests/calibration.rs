@@ -1111,9 +1111,9 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     }
     assert_eq!(
         g_false_seeds, HONORIFIC_DETECTOR_BLIND_SEEDS,
-        "the goblin epithet-honorific falses are no longer exactly the two diagnosed \
-         detector-blind worlds — a new false is an UNDIAGNOSED world and must be chased, \
-         not added to the list"
+        "the goblin epithet-honorific falses are no longer exactly the (now empty) \
+         diagnosed detector-blind roster — any false here is an UNDIAGNOSED world and \
+         must be chased, not added to the list"
     );
     // F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`):
     // goblin 764/2/234 -> 766/1/233, kobold 762/238 -> 760/240. The claim is

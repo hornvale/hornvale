@@ -20,13 +20,14 @@
 //! of 190,000 cells (3 seeds × 4 columns, against 1,000 rows × 190 columns) —
 //! about 0.006%. A drift that moves any of the other 186 columns, even on
 //! seed 0 itself, is invisible to this test, and the 24 pre-existing
-//! calibration checks in this file that read the census are exactly as
-//! unguarded on that axis as they were before this campaign. The nearer
-//! complement along the seed axis (not the column axis) is
-//! `fixture_staleness.rs`, which regenerates every metric — all 190 columns —
-//! for 6 seeds (3 fixed + a 3-seed rotating window) rather than 3 fixed seeds
-//! at 4 columns; it sits in the heavy tier rather than the gate, for the cost
-//! reasons in its own module doc. It also does not guard a row's *refusal status*:
+//! calibration checks in `windows/lab/tests/calibration.rs` that read the
+//! committed census (`&*DRIFT`) are exactly as unguarded on that axis as
+//! they were before this campaign. `fixture_staleness.rs` IS the column-axis
+//! complement here — it regenerates every metric, all 190 columns, for 6
+//! seeds (3 fixed + a 3-seed rotating window) rather than this test's 3 fixed
+//! seeds at 4 columns; it sits in the heavy tier rather than the gate, for
+//! the cost reasons in its own module doc. It also does not guard a row's
+//! *refusal status*:
 //! when `row.refusal.is_some()` the loop `continue`s before building or
 //! comparing anything, so a tripwire seed whose refusal goes stale — a world
 //! that used to refuse now builds, or the reverse — is silently skipped

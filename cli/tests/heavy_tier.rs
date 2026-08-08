@@ -163,7 +163,7 @@ fn heavy_tier_reason_strings_are_canonical() {
 /// comment above. Pinned as-is rather than special-cased: teaching the scanner
 /// to skip doc comments would make it disagree with what `git grep` sees,
 /// which is the one property the whole convention rests on.
-const EXPECTED_UNTOKENISED: [&str; 19] = [
+const EXPECTED_UNTOKENISED: [&str; 20] = [
     "...",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "TODO: re-enable once the number settles",
@@ -173,6 +173,7 @@ const EXPECTED_UNTOKENISED: [&str; 19] = [
     "flaky after the refactor",
     "measurement: builds eight full worlds; run explicitly with --ignored",
     "measurement: builds one full world; run explicitly with --ignored",
+    "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",
     "probe: Stage-0 rift instrument, run by hand (spec §6)",
     "probe: measurement only, run explicitly",
     "readout: chronicle evidence, run manually with --nocapture",

@@ -145,7 +145,7 @@ round.
 
 - The remaining ~224-test migration this tranche's three retirements sampled
   from (spec §7's explicit out-of-scope register).
-- 30 live `reachability(seed: …)`-shaped hunts the claim-shape tagging pass
+- 31 live `reachability(seed: …)`-shaped hunts the claim-shape tagging pass
   surfaced, roughly seven times the original audit's count; the expensive
   concentration sits in `domains/astronomy/src/facts.rs` (four hunts, up to
   200 `generate()` calls each — two sweep `0..64`, two sweep `1..=200`),

@@ -135,7 +135,7 @@ tests declared across the tree (109 invariant, 74 structural, 32
 reachability, 26 readout, 24 sanctioned-sweep, 21 rate, 0 behavior), the
 floor exact to the test — 287 fails, 286 passes.
 
-The tagging pass itself surfaced thirty live reachability-shaped
+The tagging pass itself surfaced thirty-one live reachability-shaped
 hunts beyond the three this campaign retired — roughly seven times the
 original audit's count of three-plus-a-fourth — with the most expensive
 concentrated in `domains/astronomy/src/facts.rs` (four separate hunts, up to
@@ -189,7 +189,7 @@ roughly 224-test migration this tranche's three retirements sampled from;
 own world-building tests, untouched; a second census `pin_set` for
 pinned-regime claims, which the current single-`pin_set` fixture cannot
 serve; per-test durations for the heavy tier, invisible to the suite's
-existing duration alarm; and the thirty further reachability hunts the
+existing duration alarm; and the thirty-one further reachability hunts the
 tagging pass found. The retrospective carries the process lessons — several
 of them about the same mistake, made six times, by five different agents and
 the controller once.

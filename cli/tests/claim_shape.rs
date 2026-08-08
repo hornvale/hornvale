@@ -504,8 +504,8 @@ struct BraceState {
 /// with an ODD embedded-quote count AND at least one brace inside it (case
 /// (b), over-extension past ITS OWN end) found none at this commit — 146
 /// `r#"..."#` raw string LITERALS in the tree (re-measured for this fix
-/// round: `grep -ro 'r#"'` finds 152 occurrences of the substring workspace-
-/// wide, of which 6 are this file's own doc-prose mentions of the pattern,
+/// round: `grep -ro 'r#"'` finds 153 occurrences of the substring workspace-
+/// wide, of which 7 are this file's own doc-prose mentions of the pattern,
 /// not real code; no `r"..."`/multi-`#` form exists here), 0 matching that
 /// shape. That is a fact about this commit's raw strings, not a proof the
 /// mechanism above is unreachable — an odd count only needs one write to
