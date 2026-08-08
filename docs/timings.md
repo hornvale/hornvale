@@ -534,3 +534,4 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T16:19:17Z | census | 826.858 | 22249.330 | 310.619 | 27.28 | 0 | 5ec42fee |  | lefford | 40 |
 | 2026-08-08T16:45:45Z | gate | 650.518 | 5333.971 | 115.743 | 8.38 | 0 | 9c96e45f | the-confusion | MacBookPro | 10 |
 | 2026-08-08T19:44:29Z | gate | 720.883 | 5367.866 | 139.872 | 7.64 | 0 | ee007ceb | the-digest | Greyjoy | 10 |
+| 2026-08-08T22:22:53Z | rebaseline | 221.906 | 214.565 | 7.569 | 1.00 | 0 | e9cb4a09 | the-tare | Greyjoy | 10 |
