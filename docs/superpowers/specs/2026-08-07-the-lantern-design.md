@@ -106,7 +106,7 @@ already exists:
 fabric(cell_kind, settlement) ->
     Stone      <- local lithology is competent and near      reflectance DERIVED from bedrock
     Timber     <- forested biome, temperate                  authored
-    Cob/Brick  <- deep soil, dry climate                     authored, tinted by the soil's iron
+    Cob/Brick  <- deep soil, dry climate                     authored (see below)
     Thatch     <- roof/floor only; grassland, wet            authored
 ```
 
@@ -118,6 +118,23 @@ Overburden reached for soil, and it costs no new authored data.
 Floors take a parallel, shorter list (packed earth, timber, flagstone) and
 `Threshold` stays `None` — an opening is not a fabric, which The Beholding
 already established.
+
+**Cob is NOT "tinted by the soil's iron", and this spec said so in error.**
+Task 3 went looking for the axis and it does not exist: the material buffer
+carries iron only *categorically*, as `is_iron_rich(rock)` — a boolean over
+rock class — with no continuous iron content to tint anything by. Minting one
+would have been an unrequested second fabric axis, so cob ships authored and
+flat. Corrected here rather than quietly implemented as something else.
+
+**MEASURED — H1 held, decisively.** Across 8 seeds and **1505 generated
+settlements** on real terrain, derived stone spans **102 `u8` steps** in the
+widest channel, and the *median* pair of settlements differs by **41**. Risk 1
+— stone walls that all look alike — did not occur.
+
+One number is worth carrying forward: **p10 = 1**. A tenth of settlement pairs
+differ by a single `u8` step, because settlements cluster on shared rock
+classes. The median carries H1; the tail is a constraint on §7's lens, which
+must not compress dynamic range.
 
 **`PaletteEntry.color` finally fills**, which is the slot The Beholding
 shipped empty and named this campaign as the filler for.

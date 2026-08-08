@@ -363,7 +363,7 @@ Spec §3 and H1. **This is the task that can falsify the campaign** (§11 risk 1
 **Files:**
 - Create: `windows/vessel/src/fabric.rs`
 - Modify: `windows/vessel/src/lib.rs` (add `pub mod fabric;`)
-- Test: `windows/worldgen/tests/lantern_fabric.rs`
+- Test: `windows/vessel/tests/lantern_fabric.rs`
 
 **Interfaces:**
 - Consumes: `hornvale_terrain::{GeneratedTerrain, lithology}`, `hornvale_kernel::color::{Mixture, Reflectance}`, `hornvale_kernel::CellId`.
@@ -375,7 +375,7 @@ Spec §3 and H1. **This is the task that can falsify the campaign** (§11 risk 1
 
 - [ ] **Step 1: Write the failing H1 test — on REAL terrain, swept across seeds**
 
-Create `windows/worldgen/tests/lantern_fabric.rs`:
+Create `windows/vessel/tests/lantern_fabric.rs`:
 
 ```rust
 //! H1: stone fabrics derived from real bedrock are distinguishable.
@@ -438,7 +438,7 @@ fn h1_reports_the_whole_distribution_not_just_the_extremes() {
 
 - [ ] **Step 2: Run to verify they fail**
 
-Run: `cargo test -p hornvale-worldgen --test lantern_fabric`
+Run: `cargo test -p hornvale-vessel --test lantern_fabric`
 Expected: FAIL — `hornvale_vessel::fabric` does not exist.
 
 - [ ] **Step 3: Implement `fabric.rs`**
@@ -464,7 +464,7 @@ pub enum Fabric {
 
 - [ ] **Step 4: Run the tests**
 
-Run: `cargo test -p hornvale-worldgen --test lantern_fabric -- --nocapture`
+Run: `cargo test -p hornvale-vessel --test lantern_fabric -- --nocapture`
 Expected: PASS, **or a reported H1 falsification.** If H1 fails, STOP and report — do not widen the threshold, do not add an axis without saying so. A falsified prediction is the headline of several merged campaigns.
 
 - [ ] **Step 5: Mutation-prove H1**
@@ -477,7 +477,7 @@ Temporarily make `reflectance_of(Fabric::Stone, ..)` ignore `ctx` and return a c
 ```bash
 cargo fmt
 git add windows/vessel/src/fabric.rs windows/vessel/src/lib.rs \
-        windows/worldgen/tests/lantern_fabric.rs
+        windows/vessel/tests/lantern_fabric.rs
 git commit -m "feat(vessel): a built cell has a fabric, derived from its ground
 
 H1 measured on real terrain across 8 seeds, not on authored buffers.
@@ -493,7 +493,7 @@ Spec §4.1, §4.2, §4.3. Reach is the shipped symmetric `shadowcast`; the sum i
 **Files:**
 - Create: `windows/vessel/src/light.rs`
 - Modify: `windows/vessel/src/lib.rs`
-- Test: `windows/vessel/src/light.rs` (`mod tests`) + `windows/worldgen/tests/lantern_light.rs`
+- Test: `windows/vessel/src/light.rs` (`mod tests`) + `windows/vessel/tests/lantern_light.rs`
 
 **Interfaces:**
 - Consumes: `crate::lattice::{Cell, CellKind, Lattice, sight::shadowcast}`, `hornvale_kernel::color::{BANDS, Illuminant, blackbody}`.
@@ -721,7 +721,7 @@ Spec §3, §6 H2. **This is where the campaign becomes visible**, and the test d
 - Modify: `windows/vessel/src/plan.rs:188-275`
 - Modify: `windows/vessel/src/session.rs:770-780`
 - Modify: `windows/vessel/tests/fixtures/snapshot-seed-42-chamber.json`, `snapshot-seed-1-chamber-occupied.json`, `session-seed-42.json`
-- Test: `windows/worldgen/tests/lantern_seam.rs`
+- Test: `windows/vessel/tests/lantern_seam.rs`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -785,7 +785,7 @@ fn the_palette_stays_bounded_after_interning_on_colour() {
 
 - [ ] **Step 2: Run to verify they fail**
 
-Run: `cargo test -p hornvale-worldgen --test lantern_seam`
+Run: `cargo test -p hornvale-vessel --test lantern_seam`
 Expected: FAIL — palette colours are all `None`.
 
 - [ ] **Step 3: Implement**
@@ -796,7 +796,7 @@ Thread a `FabricContext` and the light field into `plan_of`; widen the intern ke
 
 Run:
 ```bash
-cargo test -p hornvale-worldgen --test lantern_seam -- --nocapture
+cargo test -p hornvale-vessel --test lantern_seam -- --nocapture
 REBASELINE=1 HV_TEST_OK=1 cargo nextest run -p hornvale-vessel -E 'test(the_client_fixtures_are_current)'
 git diff --stat windows/vessel/tests/fixtures/
 ```
@@ -812,7 +812,7 @@ Make `light_field` return an empty map. Run the seam tests.
 ```bash
 cargo fmt
 git add windows/vessel/src/plan.rs windows/vessel/src/session.rs \
-        windows/vessel/tests/fixtures/ windows/worldgen/tests/lantern_seam.rs
+        windows/vessel/tests/fixtures/ windows/vessel/tests/lantern_seam.rs
 git commit -m "feat(vessel): PaletteEntry.color fills
 
 The slot The Beholding shipped deliberately empty, filled by the campaign it
@@ -833,7 +833,7 @@ Spec §4.4, §6 H3/H4/H4a. Below an authored photopic threshold the achromatic c
 
 **Files:**
 - Modify: `kernel/src/color.rs` (`to_srgb`)
-- Test: `kernel/src/color.rs` (`mod tests`) + `windows/worldgen/tests/lantern_night.rs`
+- Test: `kernel/src/color.rs` (`mod tests`) + `windows/vessel/tests/lantern_night.rs`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -882,7 +882,7 @@ fn h4_a_rod_dominant_eye_sees_where_a_human_does_not() {
 }
 ```
 
-And in `windows/worldgen/tests/lantern_night.rs`, **H4a — a reading, not a claim**:
+And in `windows/vessel/tests/lantern_night.rs`, **H4a — a reading, not a claim**:
 
 ```rust
 /// H4a — REPORTED, NOT PREDICTED (spec §6). How dark does a chamber cell
@@ -921,7 +921,7 @@ Set the photopic threshold high enough that daylight enters the blend. **Expecte
 
 ```bash
 cargo fmt
-git add kernel/src/color.rs windows/worldgen/tests/lantern_night.rs
+git add kernel/src/color.rs windows/vessel/tests/lantern_night.rs
 git commit -m "feat(kernel): night vision reaches the screen
 
 The rod was ChannelRole::Achromatic, so no projection read it and night
@@ -939,6 +939,8 @@ threshold until the fixtures redden."
 ### Task 8: The lens
 
 Spec §7. **Built last, deliberately.** §6's claims read unlensed colour; a saturation boost would hide exactly the H1 failure the campaign must be able to detect.
+
+**A constraint H1's measurement handed this task.** Stone's median pair differs by 41 `u8` steps, but **p10 = 1** — a tenth of settlement pairs differ by a single step, because settlements cluster on shared rock classes. **A lens that compresses dynamic range erases that decile outright.** Whatever transform you pick, check it against the p10 pair, not the median one: the tail is where the lens can destroy a real distinction, and the median will look fine either way.
 
 **Files:**
 - Create: `windows/vessel/src/lens.rs`
