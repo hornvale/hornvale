@@ -78,7 +78,9 @@ fn non_degeneracy_some_worlds_match_some_dont() {
 /// `moon_period_ratio_is_explained_with_an_admitted_schema` test in
 /// `windows/worldgen/src/chorus.rs`, which asserts the identical
 /// four-member set).
-/// claim: invariant(census: none yet — migration candidate, default/unpinned)
+/// claim: reachability(seed: local witness search, 1..=50) — finds a seed
+/// with a clean moon-period ratio, builds the full world, then asserts Law
+/// 3+4 over every placed culture found there
 #[test]
 fn witnessed_access_and_explanation_hold_over_a_real_world() {
     let mut checked_at_least_one_culture = false;

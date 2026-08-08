@@ -66,7 +66,11 @@ forward note for whoever generalizes this mechanism next.
   `census_fixture_matches_live_run`. This decision accepts a bounded gap in
   exchange for gate residency at ≤ 15 s; the alternative (probing all ~200
   metrics) is exactly what exiled `fixture_staleness.rs` to the heavy tier
-  in the first place.
+  in the first place. **The bound is narrower along the column axis than
+  this record states elsewhere**: `GUARDED` names 4 of the census's 190
+  columns, so the mechanism compares 12 of 190,000 cells (~0.006%) — a
+  drift on any of the other 186 columns, even on a tripwire seed, is as
+  invisible to this guard as one on an unswept seed.
 - **The refusal-skip gap is a named follow-up, not a fixed defect.** A
   generalizing campaign should decide whether a stale refusal status needs
   its own comparison arm before extending `GUARDED` much further.

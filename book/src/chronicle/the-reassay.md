@@ -32,7 +32,7 @@ placement consuming 81.1% of the total (3.16 s of 3.90 s); terrain sculpting
 takes 12.6%; astronomy, alignments, culture, and deep-time together account
 for the remaining 6%. A test that needs only astronomy is already nearly
 free — the ladder's shallow rungs cost almost nothing, which is exactly why
-the campaign's four retired seed-hunts were expensive: three of the four
+the campaign's three retired seed-hunts were expensive: two of the three
 build at `Settlements` or `Full`, paying the 81%-expensive tier repeatedly to
 answer a question about one property. The census itself runs in release
 rather than debug, at roughly 0.7 s per world — 5.6 times cheaper per world
@@ -129,16 +129,18 @@ properties broke, so a merged failure still says which law failed.
 The campaign closed by tagging every seed-looping test in the tree with a
 `claim:` token naming its shape — `invariant`, `structural`, `reachability`,
 `rate`, `readout`, or a sanctioned sweep — and shipping a default-deny lint
-that requires the tag. The final count: 286 seed-looping tests declared
-across the tree (97 invariant, 62 structural, 28 reachability, 25 readout,
-24 sanctioned-sweep, 20 rate, 0 behavior), the floor exact to the test —
-287 fails, 286 passes.
+that requires the tag. The final count, re-measured directly against the
+shipped scanner rather than copied from an earlier draft: 286 seed-looping
+tests declared across the tree (109 invariant, 74 structural, 32
+reachability, 26 readout, 24 sanctioned-sweep, 21 rate, 0 behavior), the
+floor exact to the test — 287 fails, 286 passes.
 
-The tagging pass itself surfaced twenty-eight live reachability-shaped
+The tagging pass itself surfaced thirty live reachability-shaped
 hunts beyond the three this campaign retired — roughly seven times the
 original audit's count of three-plus-a-fourth — with the most expensive
-concentrated in `domains/astronomy/src/facts.rs` (four separate hunts, each
-generating up to 64 worlds), `domains/terrain/src/carve.rs`, and
+concentrated in `domains/astronomy/src/facts.rs` (four separate hunts, up to
+200 `generate()` calls each — two sweep `0..64`, two sweep `1..=200`),
+`domains/terrain/src/carve.rs`, and
 `domains/language/src/naming.rs`. None of those are this campaign's to fix;
 they are the follow-on's worked target list, found rather than guessed.
 
@@ -187,7 +189,7 @@ roughly 224-test migration this tranche's three retirements sampled from;
 own world-building tests, untouched; a second census `pin_set` for
 pinned-regime claims, which the current single-`pin_set` fixture cannot
 serve; per-test durations for the heavy tier, invisible to the suite's
-existing duration alarm; and the twenty-eight further reachability hunts the
+existing duration alarm; and the thirty further reachability hunts the
 tagging pass found. The retrospective carries the process lessons — several
 of them about the same mistake, made six times, by five different agents and
 the controller once.

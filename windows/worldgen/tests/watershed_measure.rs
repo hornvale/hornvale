@@ -160,9 +160,10 @@ fn rivers(
 /// [`LANDMASS_MIN_CELLS`]; 115 rivers at catchment >= 24). If these disagree,
 /// every downstream number here is suspect — so this prints them rather than
 /// leaving the flow-forest walk unchecked.
-/// claim: structural(seed: 42) — off-gate measurement: builds one full world
+/// claim: structural(seed: 42) — off-gate measurement: builds one world to
+/// `BuildDepth::Terrain`
 #[test]
-#[ignore = "measurement: builds one full world; run explicitly with --ignored"]
+#[ignore = "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored"]
 fn watershed_individuation_matches_the_spec_counts() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let built = build_world_to_with_artifacts(

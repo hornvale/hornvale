@@ -145,18 +145,23 @@ round.
 
 - The remaining ~224-test migration this tranche's three retirements sampled
   from (spec §7's explicit out-of-scope register).
-- 28 live `reachability(seed: …)`-shaped hunts the claim-shape tagging pass
+- 30 live `reachability(seed: …)`-shaped hunts the claim-shape tagging pass
   surfaced, roughly seven times the original audit's count; the expensive
   concentration sits in `domains/astronomy/src/facts.rs` (four hunts, up to
-  64 `generate()` calls each), `domains/terrain/src/carve.rs:2503` (seeds
-  1..=20 at `GLOBE_LEVEL`), and `domains/language/src/naming.rs:2709`
-  (0..600).
-- The claim-shape lint's five residual detection gaps: ≥9-identifier
-  `Seed(<expr>)` patterns, nested block comments, a floor whose slack grows
-  with the tree rather than staying pinned, a subprocess world build
-  invisible to any source-level scan (`cli/tests/sky_exit_criterion.rs`),
-  and nine further tests sweeping the same seeded corpus under a `_`
-  binding in the two files the tagging pass already corrected once.
+  200 `generate()` calls each — two sweep `0..64`, two sweep `1..=200`),
+  `domains/terrain/src/carve.rs:2503` (seeds 1..=8 at `GLOBE_LEVEL`), and
+  `domains/language/src/naming.rs:2709` (0..600).
+- The claim-shape lint's five residual detection gaps, matching the module
+  doc's own list: a ≥9-identifier `for`-pattern is invisible
+  (`MAX_PATTERN_TOKENS = 8`; fixed for `Seed(<expr>)` patterns in round 2, so
+  this gap is the `for`-pattern binding, not `Seed(<expr>)` itself); a nested
+  block comment miscounts brace depth; a raw string with an odd
+  embedded-quote count and a brace inside it leaks past its own end; nine
+  further tests sweeping the same seeded corpus under a `_` binding in the
+  two files the tagging pass already corrected once; and the detected-count
+  floor's slack, which grows with the tree rather than staying pinned. (The
+  subprocess-built world in `cli/tests/sky_exit_criterion.rs` is a separate,
+  named blind spot in the module doc — not one of these five.)
 - The mechanical `seed:`-argument verification idea above — cross-checking
   a tag's own claimed argument against the test body, closing the gap the
   twelve false tags all fell through.

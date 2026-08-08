@@ -2503,7 +2503,7 @@ mod tests {
         );
     }
 
-    /// claim: reachability(seed: union across seeds 1..=20 at GLOBE_LEVEL) —
+    /// claim: reachability(seed: union across seeds 1..=8 at GLOBE_LEVEL) —
     /// off-gate (heavy:); an existence probe, not a per-world assertion
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]

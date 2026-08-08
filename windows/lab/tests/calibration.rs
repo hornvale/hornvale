@@ -1031,7 +1031,8 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 0] = [];
 
 /// claim: readout(preregistered, 0016) — reads the committed DRIFT census
-/// fixture; pinned counts with two named detector-limit exceptions
+/// fixture; pinned counts, with `HONORIFIC_DETECTOR_BLIND_SEEDS` now empty
+/// (zero detector-limit exceptions, down from two)
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
@@ -2930,6 +2931,11 @@ fn a_prediction_crisis_occurs_and_the_census_reports_its_rate() {
          year — the mechanism ships unexercised. Do NOT weaken \
          PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN to force a hit; those are \
          the spec's own considered values."
+    );
+    assert_eq!(
+        absent, 0,
+        "crisis-fires was Absent on {absent} census world(s) — the census reads 0 \
+         Absent for this metric; a nonzero count here is a real change worth naming"
     );
     println!("crisis-fires: {fired}/{measured} worlds ({absent} absent)");
 }

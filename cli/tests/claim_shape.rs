@@ -75,7 +75,8 @@
 //!    correctly by the literal's true end regardless of any internal
 //!    miscount; an ODD count does not, and over-extends past it — but only
 //!    if a brace also falls inside the mis-toggled window. A workspace-wide
-//!    scan (149 `r#"..."#` literals at this commit) found none matching
+//!    scan (146 real `r#"..."#` literals at this commit, excluding this
+//!    file's own doc-prose mentions of the pattern) found none matching
 //!    that shape.
 //! 4. **A test that iterates a SEEDED HELPER's return value, without itself
 //!    writing a seed-shaped binding or a local `Seed(...)` call, is
@@ -501,12 +502,14 @@ struct BraceState {
 /// this mechanism opens happens to contain nothing that would be
 /// miscounted, in both fixtures. A workspace-wide scan for a raw string
 /// with an ODD embedded-quote count AND at least one brace inside it (case
-/// (b), over-extension past ITS OWN end) found none at this commit — 149
-/// `r#"..."#` raw strings in the tree (re-counted for this fix round; no
-/// `r"..."`/multi-`#` form exists here), 0 matching that shape. That is a
-/// fact about this commit's raw strings, not a proof the mechanism above
-/// is unreachable — an odd count only needs one write to exist, and this
-/// scan does not run itself as a pre-commit check.
+/// (b), over-extension past ITS OWN end) found none at this commit — 146
+/// `r#"..."#` raw string LITERALS in the tree (re-measured for this fix
+/// round: `grep -ro 'r#"'` finds 152 occurrences of the substring workspace-
+/// wide, of which 6 are this file's own doc-prose mentions of the pattern,
+/// not real code; no `r"..."`/multi-`#` form exists here), 0 matching that
+/// shape. That is a fact about this commit's raw strings, not a proof the
+/// mechanism above is unreachable — an odd count only needs one write to
+/// exist, and this scan does not run itself as a pre-commit check.
 fn count_braces(line: &str, depth: &mut i32, started: &mut bool, state: &mut BraceState) {
     let chars: Vec<char> = line.chars().collect();
     let mut i = 0;
@@ -749,7 +752,9 @@ fn every_seed_looping_test_in_the_repo_declares_its_claim_shape() {
         "these tests iterate seeds without declaring a claim shape. A seed loop is a \
          quantified claim, and the quantifier decides the instrument (decision 0093). \
          Add a doc-comment line `/// claim: <shape>(...)` with one of {SHAPES:?} — see \
-         docs/audits/the-assay-build-volume-audit.md for each test's assigned shape.\n{}",
+         docs/audits/the-assay-build-volume-audit.md, which classifies the ~56 seed-loop \
+         world-building tests it audited (not all 286 this lint detects), for a worked \
+         example of how to assign one.\n{}",
         listed.join("\n")
     );
 }

@@ -1283,8 +1283,9 @@ mod tests {
         }
     }
 
-    /// claim: invariant(forall-seed) — repulsion increases min pairwise angle,
-    /// same draw count before/after
+    /// claim: invariant(forall-seed) — repulsion never reduces the minimum
+    /// pairwise angle (non-decreasing, per `post >= pre - 1e-12`, not a
+    /// strict increase), same draw count before/after
     #[test]
     fn repulsion_reduces_crowding_without_new_draws() {
         // Minimum pairwise angular separation over a craton set.

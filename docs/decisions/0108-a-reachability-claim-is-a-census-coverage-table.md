@@ -69,6 +69,16 @@ variant self-enrolls without a corresponding code change to the test.
   claim that cannot be read off committed facts, or whose predicate needs a
   build the census does not already perform, still needs its own
   instrument.
+- **The toponymic retirement does not follow this record's own prescription,
+  and that is a known exception, not an oversight.** `toponymic-roots-won`
+  registers as `Numeric`, not `Categorical`, so
+  `some_census_world_steeps_every_toponymic_concept`'s failure names a count
+  and a seed rather than the absent concept directly — the human reading it
+  must hand-derive which of the seven toponymic concepts is dead against the
+  registry, unlike `hydro-variant-coverage`'s `dead` list. The assertion
+  fires and is mutation-tested, so this is not a merge blocker; converting
+  the column to a coverage table is tracked as `TOOL-toponymic-coverage-table`
+  in the idea registry.
 
 ## See also
 

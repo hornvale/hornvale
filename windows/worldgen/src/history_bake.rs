@@ -7821,7 +7821,8 @@ mod tests {
     }
 
     /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
-    /// a SubordinateId, single hand-built cascade_world() scenario
+    /// a `usize` community index (into `bake.communities`/`bake.tribute`),
+    /// single hand-built cascade_world() scenario
     #[test]
     fn a_tribute_relation_dies_with_either_party() {
         // Spec §4.4's coherence floor. `tribute` holds community INDICES, so

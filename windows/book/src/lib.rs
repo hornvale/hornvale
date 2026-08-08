@@ -2936,7 +2936,8 @@ mod tests {
     //! What did NOT move with the rename, and is a separate matter entirely:
     //! seed 2's hobgoblin and seed 4's kobold changed ORGANIZATION state under
     //! this campaign. Those are content, not naming, and are adjudicated with
-    //! `the_ladder_law` rather than folded in here.
+    //! `the_ladder_and_prophecy_laws` (`windows/worldgen/tests/diachronic.rs`)
+    //! rather than folded in here.
     //!
     //! Test fixture (decision 0092): calls the sculpt/fit derivation entry
     //! points directly to build its own world state, once per test — the

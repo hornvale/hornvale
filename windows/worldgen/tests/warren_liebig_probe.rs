@@ -30,7 +30,7 @@ use hornvale_worldgen::{
 };
 
 /// claim: structural(seed: 42) — off-gate (heavy:); false-positive
-/// seed-loop flag (Fix round 1); `s` binds a niche-fit f64 in
+/// seed-loop flag (Fix round 1); `s` binds a `Substrate` in
 /// `for (label, s) in [("surface", surf), ("subterranean", sub)]`
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]

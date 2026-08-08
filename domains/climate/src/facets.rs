@@ -422,7 +422,9 @@ mod tests {
     }
 
     /// claim: invariant(forall stratum; false-positive seed-loop flag — `s`
-    /// binds a Stratum, not a seed; no world seed in this crate)
+    /// binds a Stratum, not a seed; no world seed in this test — `Seed` is
+    /// used elsewhere in this crate (`weather.rs`, `variants.rs`,
+    /// `provider.rs`))
     #[test]
     fn a_vent_keeps_its_identity_at_every_depth() {
         // The point of the split: a vent IS abyssal, rather than a community

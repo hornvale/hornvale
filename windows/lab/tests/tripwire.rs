@@ -4,7 +4,7 @@
 //! campaign at the close. Decision 0097 §4 records the cost of leaving that
 //! unguarded: The Siding found the census stale for 139 commits while every
 //! gate ran green. This test bounds that window to a single commit, for the
-//! seeds it covers.
+//! seeds it covers and the columns named in `GUARDED`.
 //!
 //! It calls the metrics' OWN extractors, reached through
 //! `hornvale_lab::registry()`, rather than reimplementing their logic — a
@@ -15,7 +15,18 @@
 //! A drift that moves only seeds outside `TRIPWIRE_SEEDS` still waits for the
 //! regen; the full proof remains `calibration.rs`'s ignored
 //! `census_fixture_matches_live_run`. This bounds staleness, it does not
-//! eliminate it (spec §10). It also does not guard a row's *refusal status*:
+//! eliminate it (spec §10). **Nor does it reach along the column axis**:
+//! `GUARDED` names 4 of the census's 190 columns, so this guard compares 12
+//! of 190,000 cells (3 seeds × 4 columns, against 1,000 rows × 190 columns) —
+//! about 0.006%. A drift that moves any of the other 186 columns, even on
+//! seed 0 itself, is invisible to this test, and the 24 pre-existing
+//! calibration checks in this file that read the census are exactly as
+//! unguarded on that axis as they were before this campaign. The nearer
+//! complement along the seed axis (not the column axis) is
+//! `fixture_staleness.rs`, which regenerates every metric — all 190 columns —
+//! for 6 seeds (3 fixed + a 3-seed rotating window) rather than 3 fixed seeds
+//! at 4 columns; it sits in the heavy tier rather than the gate, for the cost
+//! reasons in its own module doc. It also does not guard a row's *refusal status*:
 //! when `row.refusal.is_some()` the loop `continue`s before building or
 //! comparing anything, so a tripwire seed whose refusal goes stale — a world
 //! that used to refuse now builds, or the reverse — is silently skipped
@@ -71,8 +82,10 @@ use std::path::Path;
 const TRIPWIRE_SEEDS: [u64; 3] = [0, 1, 2];
 
 /// The metric columns this tripwire guards: every metric The Assay moved a
-/// check onto. Empty until Task 4 adds the first — an empty guard list is a
-/// green test, deliberately, so this task lands before the metrics exist.
+/// check onto. Four now (`hydro-variant-coverage`, `toponymic-core-size`,
+/// `toponymic-roots-won`, `crisis-fires`) — Tasks 4-6 registered them; the
+/// list started empty (a green test, deliberately, so this task could land
+/// before the metrics existed) and grows as a later campaign moves more.
 const GUARDED: &[&str] = &[
     "hydro-variant-coverage",
     "toponymic-core-size",
@@ -130,13 +143,15 @@ fn deepest_guarded_rung() -> BuildDepth {
 /// test — not a human noticing months later — is what turns red. Green by
 /// construction while `GUARDED` is empty; gains teeth as Tasks 4-6 register
 /// metrics.
-/// claim: invariant(forall-seed) — the tripwire mechanism itself (Task 2/3):
-/// green by construction while GUARDED is empty
+/// claim: invariant(forall-seed) — the tripwire mechanism itself (Task 2/3);
+/// GUARDED now holds four names (Tasks 4-6), so the early-return below is
+/// dead in practice but kept as a defensive no-op for an empty roster
 #[test]
 fn the_committed_census_agrees_with_a_live_rebuild_of_the_tripwire_seeds() {
     if GUARDED.is_empty() {
-        // No check has moved onto the census yet. Green by construction, and
-        // it stays that way until Task 4 adds the first guarded name.
+        // Defensive no-op: GUARDED holds four names today (Tasks 4-6), so
+        // this branch is not live, but it keeps the test green by
+        // construction if a future edit ever empties the roster again.
         return;
     }
     let census = committed();

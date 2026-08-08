@@ -494,8 +494,9 @@ const LADDER_TABLE: &[Row] = &[
 /// Every assertion below names its law (`the ladder law:` / `the prophecy
 /// law:`) so a failure in the merged test still says which of the two
 /// properties broke, not just that "the test" failed.
-/// claim: invariant(forall-seed) — two laws merged into one build (Task 11,
-/// process-per-test exception), with an embedded existential check
+/// claim: invariant(forall-seed) — two laws merged into one test (Task 11,
+/// process-per-test exception): six builds total (`generated(seed)` for
+/// `1..=5` plus `generated(3)` below), with an embedded existential check
 /// (any_predictive)
 #[test]
 fn the_ladder_and_prophecy_laws() {
