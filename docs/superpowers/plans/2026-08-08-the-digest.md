@@ -1247,7 +1247,20 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 Proves **spec §6 S5**. This is the view that keeps the campaign from becoming what it exists to prevent (spec §4.9): generated docs cannot disagree with the code, so the disagreement must be *computed and reported*.
 
-The known instance: **0026's surviving registry-row provision says slugs, and the registry carries 1,402 numeric ids.**
+**AMENDED 2026-08-08 (Nathan's ruling, after the falsification was retracted).** The known instance is NOT "the registry carries numeric ids" — every one of the 403 is on the frozen list and `docs_consistency` is green. The real instance is a **difference across time**:
+
+| point | numbered IDs |
+|---|---|
+| `docs/vision/idea-registry.md`, immediately before 0026 (`dc4a406e^`) | **171** |
+| `book/src/frontier/idea-registry.md` at the freeze (`b2189004`, 2026-07-27) | **403** |
+
+**232 numbered IDs were minted after 0026 ratified "slugs, not numbers, forward-only" on 2026-07-10**, and the remedy seventeen days later was to freeze all 403 as grandfathered rather than convert them. The guard pins the registry against *new* violations while enshrining 232 existing ones.
+
+**This gap is invisible from current state.** The working tree says nothing is wrong. The delta view can only see it by reading **git** — which is the campaign's own architecture applied to itself: spec §4.2 removes time from the ledger precisely because project time lives in git, and this is the first consumer that needs it.
+
+So `report()` must shell out to git. That is acceptable here: `tools/digest` is a repo tool outside the workspace, not sim code, and the dependency allowlist does not bind it.
+
+**Deferred, explicitly (Nathan, 2026-08-08):** importing the idea registry itself into The Digest. Not v1. The 232 stay a standing reported gap; whether they get converted to slugs, or 0026's registry provision gets superseded to match what actually happened, is a decision for Nathan, not a tool output.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1276,7 +1289,25 @@ mod tests {
         }];
         let out = report(&recs, &scopes_with_0026());
         assert!(out.contains("0026"), "the partially-surviving decision must be named");
-        assert!(out.contains("numeric"), "the measured reality must be reported");
+        assert!(
+            out.contains("minted after the rule forbade them"),
+            "the across-time gap must be reported, not a working-tree count"
+        );
+        // The measured truth at 07d0afe1: 171 before, 403 now, 232 minted after.
+        assert!(out.contains("232"), "the count of post-rule mintings must appear");
+    }
+
+    #[test]
+    fn numbered_ids_are_counted_row_leading_not_in_prose() {
+        // A mention in prose is a REFERENCE, not a minting. Only a row-leading
+        // id counts — this is what separates 403 real ids from 1,402 mentions,
+        // and getting it wrong is what produced this campaign's retracted
+        // falsification.
+        let text = "| MAP-9 | an idea that mentions SKY-15 and BIO-2 in prose | raw | high | x |\n\
+                    | SKY-eclipse-seasons | a slug row | raw | high | y |\n";
+        let ids = numbered_ids_in(text);
+        assert_eq!(ids.len(), 1, "only the row-leading numbered id counts");
+        assert!(ids.contains("MAP-9"));
     }
 
     #[test]
@@ -1305,25 +1336,81 @@ Expected: FAIL — `report` not defined.
 
 use crate::scan::decisions::{DecisionRecord, Status};
 use crate::scan::repo_root;
+use std::collections::{BTreeMap, BTreeSet};
 
-/// Count identifiers of the form `PREFIX-123` in the idea registry.
-fn numeric_registry_ids() -> usize {
-    let text = std::fs::read_to_string(repo_root().join("book/src/frontier/idea-registry.md"))
-        .unwrap_or_default();
-    text.split_whitespace()
-        .filter(|w| {
-            let w = w.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '-');
-            match w.split_once('-') {
-                Some((p, s)) => {
-                    !p.is_empty()
-                        && p.chars().all(|c| c.is_ascii_uppercase())
-                        && !s.is_empty()
-                        && s.chars().all(|c| c.is_ascii_digit())
-                }
-                None => false,
+/// The two paths the idea registry has lived at. It moved on 2026-07-10.
+const REGISTRY_PATHS: &[&str] = &[
+    "book/src/frontier/idea-registry.md",
+    "docs/vision/idea-registry.md",
+];
+
+/// Run a git command in the repo and return stdout, or `None` on failure.
+fn git(args: &[&str]) -> Option<String> {
+    let out = std::process::Command::new("git")
+        .current_dir(repo_root())
+        .args(args)
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    String::from_utf8(out.stdout).ok()
+}
+
+/// Distinct row-leading numbered ids (`MAP-9`, `MAP-9a`) in registry text.
+/// Row-leading only — a mention in prose is a reference, not a minting.
+fn numbered_ids_in(text: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for line in text.lines() {
+        let Some(rest) = line.strip_prefix('|') else {
+            continue;
+        };
+        let cell = rest.trim().trim_start_matches('`');
+        let id: String = cell
+            .chars()
+            .take_while(|c| c.is_ascii_uppercase() || *c == '-' || c.is_ascii_digit() || c.is_ascii_lowercase())
+            .collect();
+        let Some((prefix, suffix)) = id.split_once('-') else {
+            continue;
+        };
+        let digits = suffix.trim_end_matches(|c: char| c.is_ascii_lowercase());
+        if !prefix.is_empty()
+            && prefix.chars().all(|c| c.is_ascii_uppercase())
+            && !digits.is_empty()
+            && digits.chars().all(|c| c.is_ascii_digit())
+        {
+            out.insert(id);
+        }
+    }
+    out
+}
+
+/// How many numbered ids the registry held at `rev`, trying both paths.
+fn numbered_ids_at(rev: &str) -> usize {
+    for path in REGISTRY_PATHS {
+        if let Some(text) = git(&["show", &format!("{rev}:{path}")]) {
+            let n = numbered_ids_in(&text).len();
+            if n > 0 {
+                return n;
             }
-        })
-        .count()
+        }
+    }
+    0
+}
+
+/// The commit that first added a decision file — when the rule took effect.
+fn decision_effective_commit(id: &str) -> Option<String> {
+    let listing = git(&["log", "--diff-filter=A", "--format=%H", "--", "docs/decisions/"])?;
+    for line in listing.lines() {
+        let files = git(&["show", "--name-only", "--format=", line])?;
+        if files
+            .lines()
+            .any(|f| f.starts_with(&format!("docs/decisions/{id}-")))
+        {
+            return Some(line.to_string());
+        }
+    }
+    None
 }
 
 /// Report every place authored intent and scanned reality disagree.
@@ -1346,16 +1433,33 @@ pub fn report(records: &[DecisionRecord], scopes: &BTreeMap<String, String>) -> 
         if r.status != Status::Superseded {
             continue;
         }
-        if r.title.to_lowercase().contains("slug") {
-            let n = numeric_registry_ids();
-            if n > 0 {
-                gaps += 1;
-                out.push_str(&format!(
-                    "- **{} {}** still governs registry rows ({}), but the registry \
-                     carries {} numeric identifiers.\n",
-                    r.id, r.title, scope, n
-                ));
-            }
+        if !r.title.to_lowercase().contains("slug") {
+            continue;
+        }
+        // The gap is a difference across TIME, not a property of the working
+        // tree: every id today is on the frozen list and the guard is green.
+        // Compare the registry at the commit BEFORE the rule took effect
+        // against the registry now.
+        let Some(effective) = decision_effective_commit(&r.id) else {
+            continue;
+        };
+        let before = numbered_ids_at(&format!("{effective}^"));
+        let now = numbered_ids_at("HEAD");
+        if now > before {
+            gaps += 1;
+            out.push_str(&format!(
+                "- **{} {}** still governs registry rows ({}). It took effect at \
+                 `{}`, when the registry held {} numbered identifiers. It now holds \
+                 {} — **{} were minted after the rule forbade them**, and the frozen \
+                 fixture grandfathers all of them.\n",
+                r.id,
+                r.title,
+                scope,
+                &effective[..7.min(effective.len())],
+                before,
+                now,
+                now - before
+            ));
         }
     }
 
