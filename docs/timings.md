@@ -513,3 +513,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T12:10:50Z | rebaseline | 132.231 | 179.320 | 9.711 | 1.43 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |
 | 2026-08-08T12:35:32Z | rebaseline | 172.902 | 181.686 | 9.892 | 1.11 | 0 | 475d271c | the-lantern | MacBookPro | 10 |
 | 2026-08-08T12:54:45Z | gate | 1143.876 | 4681.693 | 280.780 | 4.34 | 0 | 475d271c | the-lantern | MacBookPro | 10 |
+| 2026-08-08T13:24:09Z | gate | 1051.374 | 4361.224 | 94.984 | 4.24 | 0 | c7e6e649 | the-lantern | MacBookPro | 10 |
+| 2026-08-08T13:27:30Z | rebaseline | 200.844 | 179.857 | 7.158 | 0.93 | 0 | c7e6e649 | the-lantern | MacBookPro | 10 |
