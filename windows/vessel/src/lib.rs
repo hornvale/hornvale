@@ -14,6 +14,7 @@ mod focalize;
 pub mod interior;
 mod knowledge;
 pub mod lattice;
+pub mod light;
 pub mod liveness;
 pub mod plan;
 mod purview;
