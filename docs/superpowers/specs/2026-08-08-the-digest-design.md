@@ -1,7 +1,21 @@
 # The Digest — codifying the project's knowledge of itself
 
-**Status:** spec, awaiting G3 · **Date:** 2026-08-08 · **Branch:** `the-digest`
-· **Base:** `64e8c667`
+**Status:** SHIPPED (2026-08-08, G6) · **Date:** 2026-08-08 · **Branch:**
+`the-digest` (merged) · **Base:** `64e8c667`
+
+All six preregistered criteria (§6) proven, each independently re-verified by
+a task reviewer. The falsification clause was evaluated against the generated
+`make doctor` output and **not met** — a fresh session orients at least as
+well, and strictly better on the `libm` line the hand-written map had been
+wrong about since decision 0041. Plan:
+[`2026-08-08-the-digest.md`](../plans/2026-08-08-the-digest.md). Chronicle:
+[`the-digest`](../../../book/src/chronicle/the-digest.md). Retrospective:
+[`the-digest`](../../retrospectives/the-digest.md).
+
+**Shipped short of this spec in one respect, deliberately** (Nathan's ruling,
+recorded in §8's risk table as OPEN): the MCP surface exists as tested library
+functions with no callable transport, so the "authoring friction" mitigation
+is not reachable by a user.
 
 Registry rows this campaign advances: UNI-29 (the self-describing program),
 UNI-21 (the self-reflective ledger), UNI-28 (the View discipline), PROC-11

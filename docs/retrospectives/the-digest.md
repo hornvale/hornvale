@@ -334,3 +334,34 @@ Each was reviewed, judged non-blocking, and left in place with its reason.
   revision.
 - The destructive MCP test's permission restore is not panic-safe (no RAII
   guard). Inert against the committed code, which returns early via `?`.
+
+## Residuals carried past the close (recorded, not fixed)
+
+Nathan ruled "close 'er up" with these known and open. They are here because
+the campaign's scratch ledger dies with its worktree.
+
+- **`render::delta`'s "No gaps found" reassurance is still reachable when
+  `decision_effective_commit()` returns `None`** — a bare `continue` that does
+  not increment the emitted-rows counter. Reproduced by moving `.git` aside:
+  the report prints "No gaps found. Verify the view still works before
+  believing this." That is the same could-not-look-reported-as-looked-and-
+  found-nothing collapse the pre-merge Critical fixed, one call site over.
+  Pre-existing, off CI's path (a checkout always has git), one line to fix.
+- **The `--depth 50` justification in `delta.rs`'s source comment is stronger
+  than what reproduces on this history.** `Option<usize>` alone would have
+  caught every shallow depth tested; `repo_is_shallow()` remains correct and
+  cheap but is not demonstrably load-bearing here.
+- **The MCP surface ships unreachable** — no CLI subcommand, no transport.
+  Asserting a fact today means hand-editing `docs/digest/facts.jsonl`. The
+  spec's risk row is marked OPEN rather than mitigated.
+- **`hostname -s` on the Mac now returns `Greyjoy`.** Every timings row from
+  earlier the same day says `MacBookPro`, so the per-host baseline has FORKED —
+  CLAUDE.md's documented `make ci` blind spot #2 landing on top of #1. The
+  stale baseline that opened this session is keyed to a name the machine no
+  longer uses. Not this campaign's to fix; recorded so the next reader of a
+  timings row knows to check which host it claims.
+- **Root `CLAUDE.md` and one asserted self-map fact still cite decision 0006
+  as live authority** after 0099 wholly superseded it. The generated in-force
+  index correctly omits 0006 — this was the tool's first harvest, minutes after
+  it first rendered. Left deliberately: retiring the epoch-suffix rule from the
+  determinism doctrine is a substantive call, not a docs sweep.
