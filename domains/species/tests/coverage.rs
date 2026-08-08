@@ -84,12 +84,18 @@ fn metabolic_class_coverage_matches_the_table() {
                 "black-dragon",
                 "bugbear",
                 "carrion-crawler",
+                // C2c (The Delvers): three dwarves, all endotherms of human
+                // mass class. The metabolic cell they actually move is
+                // `LifeSchedule`, not this one — see the life-schedule table.
+                "desert-dwarf",
                 "dire-wolf",
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
                 "gnoll",
                 "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
                 "hobgoblin",
                 "human",
                 "killer-whale",
@@ -150,16 +156,32 @@ fn status_basis_coverage_matches_the_table() {
         // standing rests on craft and lore rather than dominance, which is
         // also what distinguishes the sixth people from the Rank-heavy
         // goblinoids.
+        //
+        // C2c (The Delvers) adds the desert dwarf: the one dwarf authored to
+        // survive on a climate niche rather than an elevation one, whose
+        // standing rests on knowing where the water is.
         (
             StatusBasis::Knowledge,
             Rung::Witnessed,
-            &["human", "kobold"],
+            &["desert-dwarf", "human", "kobold"],
         ),
         // WITNESSED as of The Vacancy T9: the gnoll, the campaign's headline
         // promotion. Justified from the ecology (a scarce, high-variance
         // desert forage base rewards windfall-sharing), not from lore — see
         // `society_registry`'s doc comment on the gnoll's `SocietyVector`.
-        (StatusBasis::Generosity, Rung::Witnessed, &["gnoll"]),
+        //
+        // C2c (The Delvers) gives the cell two more witnesses that reach it
+        // from two further directions, which is what a three-witness cell is
+        // worth. Read `society_registry`'s own rows rather than inferring a
+        // shared story from the shared variant: gnoll shares a windfall too
+        // large to keep, gully-dwarf a find too small to fight over, and
+        // hill-dwarf a settled surplus the hall sets out. One authored basis,
+        // three unrelated ecologies.
+        (
+            StatusBasis::Generosity,
+            Rung::Witnessed,
+            &["gnoll", "gully-dwarf", "hill-dwarf"],
+        ),
     ];
     for (basis, rung, witnesses) in expected {
         let actual = status_basis_witnesses(*basis);
@@ -179,7 +201,10 @@ fn activity_cycle_coverage_matches_the_table() {
         (
             ActivityCycle::Diurnal,
             Rung::Witnessed,
-            &["goblin", "hobgoblin", "human", "red-dragon"],
+            // C2c (The Delvers): hill-dwarf, a surface farmer keeping the
+            // sun's hours. The family does NOT share a cycle — see
+            // Crepuscular below.
+            &["goblin", "hill-dwarf", "hobgoblin", "human", "red-dragon"],
         ),
         (
             ActivityCycle::Nocturnal,
@@ -193,10 +218,16 @@ fn activity_cycle_coverage_matches_the_table() {
         // authored low insolation optimum (a desert forager sheltering
         // through the day's peak heat), giving this cell its second witness
         // and its first non-dragon one.
+        //
+        // C2c (The Delvers) takes the cell from two witnesses to four, and
+        // the two it adds arrive for unrelated reasons: desert-dwarf shelters
+        // through the peak heat (gnoll's own argument, on the same climate
+        // tile), gully-dwarf works the margins of the day because that is
+        // when what it scavenges is least contested.
         (
             ActivityCycle::Crepuscular,
             Rung::Witnessed,
-            &["gnoll", "white-dragon"],
+            &["desert-dwarf", "gnoll", "gully-dwarf", "white-dragon"],
         ),
     ];
     for (cycle, rung, witnesses) in expected {
@@ -252,10 +283,23 @@ fn social_form_coverage_matches_the_table() {
                 "woolly-mammoth",
             ],
         ),
+        // C2c (The Delvers): the settling roster goes six to NINE. This list
+        // is the one the census population is drawn from, so its length is
+        // the quantity the campaign's regen moves.
         (
             SocialForm::Settled,
             Rung::Witnessed,
-            &["bugbear", "gnoll", "goblin", "hobgoblin", "human", "kobold"],
+            &[
+                "bugbear",
+                "desert-dwarf",
+                "gnoll",
+                "goblin",
+                "gully-dwarf",
+                "hill-dwarf",
+                "hobgoblin",
+                "human",
+                "kobold",
+            ],
         ),
     ];
     for (form, rung, witnesses) in expected {
@@ -283,16 +327,68 @@ fn life_schedule_witnesses(paced: bool) -> Vec<&'static str> {
 
 #[test]
 fn life_schedule_coverage_matches_the_table() {
-    // THE LONG AGE: lifespan's authoring channel ships with NO occupant, so
-    // `Paced` sits at `Declared` and nothing witnesses it. That empty cell is
-    // the campaign's stated result rather than an oversight — the channel is
-    // inert until a kind is authored into it, which is what made the epoch
-    // cheap. This row is where the first campaign to author a long-lived kind
-    // (C2c, dwarves) must make a deliberate edit.
-    let every_kind: Vec<&'static str> = biosphere_registry().iter().map(|(k, _)| k.0).collect();
+    // THE LONG AGE shipped lifespan's authoring channel with NO occupant, so
+    // `Paced` sat at `Declared` and nothing witnessed it. That empty cell was
+    // that campaign's stated result rather than an oversight, and it named the
+    // first campaign to author a long-lived kind as the one that would have to
+    // make a deliberate edit here.
+    //
+    // C2c (THE DELVERS) IS THAT CAMPAIGN. `Paced` moves `Declared` ->
+    // `Witnessed` with three witnesses, all at factor 4.0: long life is a
+    // dwarf FAMILY trait, not a trait of any one dwarf's habitat.
+    //
+    // THE NON-OBVIOUS HALF, and why the `Allometric` row is spelled out. It
+    // previously read `&every_kind` — the whole registry, computed from
+    // `biosphere_registry()`. Once any kind is `Paced` that is simply wrong,
+    // but the tempting repair (filter `every_kind` by "not paced") is WORSE
+    // than wrong: it is the same computation `life_schedule_witnesses(false)`
+    // already performs, so the assertion would compare a value to itself and
+    // pass for any roster whatsoever. An explicit list is the only form of
+    // this row that can fail. It costs one line per kind added and that cost
+    // is the point — a kind silently acquiring a non-default schedule is
+    // exactly what this table exists to catch.
     let expected: &[(&str, Rung, &[&str])] = &[
-        ("Allometric", Rung::Witnessed, &every_kind),
-        ("Paced", Rung::Declared, &[]),
+        (
+            "Allometric",
+            Rung::Witnessed,
+            &[
+                "black-dragon",
+                "bugbear",
+                "carrion-crawler",
+                "dire-wolf",
+                "giant-constrictor-snake",
+                "giant-crocodile",
+                "giant-elk",
+                "giant-goat",
+                "giant-hyena",
+                "giant-octopus",
+                "giant-scorpion",
+                "giant-squid",
+                "gnoll",
+                "goblin",
+                "hobgoblin",
+                "human",
+                "killer-whale",
+                "kobold",
+                "otyugh",
+                "owlbear",
+                "red-dragon",
+                "reef-shark",
+                "rhinoceros",
+                "rust-monster",
+                "shrieker",
+                "treant",
+                "twig-blight",
+                "white-dragon",
+                "woolly-mammoth",
+                "xorn",
+            ],
+        ),
+        (
+            "Paced",
+            Rung::Witnessed,
+            &["desert-dwarf", "gully-dwarf", "hill-dwarf"],
+        ),
     ];
     for (variant, rung, witnesses) in expected {
         let actual = life_schedule_witnesses(*variant == "Paced");
@@ -417,30 +513,76 @@ fn dispersion_is_a_ratio_on_every_axis() {
 }
 
 #[test]
-fn every_authored_kind_is_allometric_today() {
-    // THE LONG AGE: the channel ships with zero occupants, and this is the
-    // auditable evidence. C2c (dwarves) is its first intended consumer; when
-    // that campaign authors one, this assertion is the thing it must
-    // deliberately widen -- which is the point.
+fn only_the_dwarves_depart_from_pure_allometry() {
+    // THE LONG AGE shipped this as `every_authored_kind_is_allometric_today`,
+    // the auditable evidence that its channel had zero occupants, and named
+    // C2c as the campaign that would have to widen it.
+    //
+    // RENAMED RATHER THAN DELETED, because the old name states a claim that
+    // is now FALSE — three kinds do depart — while the check it performs is
+    // still worth making. What it guards is not "nothing is paced" but
+    // "nothing is paced BY ACCIDENT": the departure set is enumerated, so a
+    // kind acquiring a non-default schedule without a coverage-table edit
+    // fails here as well as there.
+    //
+    // Direction this enforces, stated because a set equality reads as total
+    // and is not: it catches a kind added to the exception set and a kind
+    // removed from it, in both directions.
+    //
+    // It also pins the FACTOR, which nothing else in the workspace did. The
+    // schedule's *variant* was audited in three places and its *value* in
+    // none, so the 4.0 that produces every dwarf lifespan could have been
+    // retyped to any other number with a green suite. That is the shape The
+    // Vigil named — a verified claim left unpinned by any failing test — and
+    // it is cheapest to close here, where the departure set is already
+    // enumerated.
+    use hornvale_species::LifeSchedule;
+
     let reg = hornvale_species::biosphere_registry();
-    let paced: Vec<&str> = reg
+    let departures: Vec<(&str, LifeSchedule)> = reg
         .iter()
-        .filter(|(_, b)| b.schedule != hornvale_species::LifeSchedule::Allometric)
-        .map(|(k, _)| k.0)
+        .filter(|(_, b)| b.schedule != LifeSchedule::Allometric)
+        .map(|(k, b)| (k.0, b.schedule))
         .collect();
-    assert!(
-        paced.is_empty(),
-        "no kind is authored with a non-default life schedule yet, but found: {paced:?}"
+    assert_eq!(
+        departures,
+        vec![
+            ("desert-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("gully-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+            ("hill-dwarf", LifeSchedule::Paced { factor: 4.0 }),
+        ],
+        "the dwarf family is the ONLY departure from pure allometry, and \
+         shares ONE factor: long life is a family trait, not a habitat one"
     );
-    assert_eq!(reg.len(), 30, "the roster is unchanged by this campaign");
+    assert_eq!(
+        reg.len(),
+        33,
+        "30 before C2c, plus the dwarf family's three"
+    );
 }
 
 #[test]
 fn the_subterranean_roster_is_exactly_the_two_rehomed_kinds() {
     // THE WARREN: C2a re-authored these two for true darkness and
     // SUBTERRANEAN_MOISTURE and nothing scored them there. This store is the
-    // consumer half. It ships with exactly these two; C2c's Mountain and
-    // Duergar dwarves are the next rows, and adding one is a deliberate edit.
+    // consumer half. It ships with exactly these two, and adding a row is a
+    // deliberate edit.
+    //
+    // C2c (THE DELVERS) WAS EXPECTED TO ADD TWO ROWS AND ADDED NONE. Its
+    // mountain and duergar dwarves were cut mid-campaign (spec §11): both
+    // were authored "deep" as a LOW elevation above sea level, and
+    // depth-below-surface and height-above-sea-level are different
+    // quantities — a deep chamber under a mountain is at high ASL, a shallow
+    // cave in a marsh is at low ASL. The curve selected lowland marshes and
+    // the toponymy reported lowland marshes, which was read as an emergent
+    // finding until it was read as the authored value it was.
+    //
+    // So this store stays at two, and the reason it does is worth more than
+    // the rows would have been: the realm gate places a kind at a cave MOUTH,
+    // because settlements are cell-keyed and a Subterranean kind lives on the
+    // surface of a cell that has a cave in it. The model has no vocabulary for
+    // the inside of the world — the sea got depth-named biomes and the rock
+    // got a graph. `BIO-kinds-declare-biomes` is the successor.
     let reg = habitat_realm_registry();
     let sub: Vec<&str> = reg
         .iter()
