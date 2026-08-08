@@ -185,6 +185,20 @@ indistinguishable from a green drift check that passed.
 - **The delta view's two tests are live-git integration tests.** They read
   real history through `git`. A shallow checkout breaks them — loudly, which
   is the safe failure mode, but any CI that runs them needs full history.
+  **The RENDERER was the opposite, and that is the half that mattered**: the
+  tests are not what `regenerate-artifacts.sh` runs. Under `git clone
+  --depth 1` — `actions/checkout@v4`'s default — the graft boundary makes
+  every file look newly added, so the archaeology named the graft root as the
+  commit a rule took effect at, and `numbered_ids_at` returned `0` for the
+  unresolvable `<effective>^` exactly as it would for a genuine zero. The
+  renderer emitted a confident, plausible, wholly wrong sentence — wrong
+  commit, wrong baseline, wrong count — in the one artifact whose entire
+  purpose is to not say false things about the project. Fixed in the review's
+  fix wave: the counter returns `Option`, a shallow checkout is detected up
+  front, and the row says it cannot determine the gap. The general lesson is
+  the campaign's own thesis turned inward — **a failure mode is only "loud"
+  in the code paths you actually checked**, and a tool that reasons about
+  history must distinguish "I looked and found none" from "I could not look."
 - **The root `CLAUDE.md` drift-check command omitted `docs/digest/`**, so the
   documented verification would have missed digest drift entirely. Fixed in
   this campaign's closing commit; recorded here because the omission is the

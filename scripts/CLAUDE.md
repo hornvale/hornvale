@@ -9,7 +9,8 @@ them.
 
 `regenerate-artifacts.sh` regenerates **every** committed generated artifact
 (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
-studies, the type-audit report) — and CI + `make rebaseline` both call it, so
+studies, the type-audit report, and the digest's decision index + delta
+report under `docs/digest/`) — and CI + `make rebaseline` both call it, so
 local and CI regeneration cannot silently diverge (that's the point). Key
 knobs:
 
@@ -32,10 +33,25 @@ knobs:
   `scripts/census-run.sh` regenerates the canonical goldens; `HV_CENSUS_REF=<ref>
   scripts/census-run.sh` runs a pushed branch in a scratch worktree. Only this
   box authors goldens (the canonical-machine constraint, decision 0063).
+- **The script needs FULL git history.** The digest's delta report walks
+  `docs/decisions/` back to the commit that put a rule in force, so a shallow
+  checkout (`git clone --depth 1` — `actions/checkout@v4`'s *default*) cannot
+  answer. The renderer now says so instead of guessing; CI's checkout sets
+  `fetch-depth: 0` for exactly this reason.
 - After regen, the drift check is `git diff` over
-  `book/src/gallery book/src/reference book/src/laboratory docs/audits` — note
-  **`docs/audits/`** is in the list (the type-audit report drifts on
-  pub-boundary changes; a common miss).
+  `book/src/gallery book/src/reference book/src/laboratory docs/audits
+  docs/digest` — note **`docs/audits/`** is in the list (the type-audit report
+  drifts on pub-boundary changes; a common miss), and so is **`docs/digest/`**
+  (the in-force decision index drifts when a decision is added or superseded,
+  the delta report when the idea registry moves).
+- **THE HAZARD ADDING A NEW GENERATED DIRECTORY EXPOSES**, and the near-miss
+  this campaign actually hit: `git diff --exit-code <path>` is silently
+  **VACUOUS** against a path git does not track. Regenerate into a brand-new
+  directory, add it to the check, and the check passes — not because the
+  artifact matched, but because git had nothing to compare. The first commit
+  introducing a generated directory MUST `git add` it before the check can
+  ever fail. Nothing in `regenerate-artifacts.sh` guards this; verify a new
+  path fails by mutating the generated file and confirming the diff goes red.
 
 ## The gate ladder
 
