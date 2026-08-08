@@ -53,6 +53,24 @@
 //! [`p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half`], which
 //! measured and refuted the obvious candidate.
 //!
+//! ## The follow-up diagnosis: capacity decomposed into its two factors
+//!
+//! `per_species_suitability` is `saturated * tolerance_liebig(..)` for a
+//! Surface kind, so the two factors can be separated and correlated
+//! independently. Doing that
+//! ([`the_supply_term_is_near_kind_independent_across_the_dwarf_family`])
+//! returned something neither preregistered branch anticipated: **all nine
+//! supply-only correlations sit in `[0.99935, 0.99996]`**. The supply term is
+//! very nearly kind-independent across this family, so it cannot be what makes
+//! one pair read 0.96 while another reads 0.59 — and every scrap of per-kind
+//! spatial differentiation in dwarf capacity comes from the **tolerance
+//! layer**, which moves these pairs by 0.24–0.46 in both directions.
+//!
+//! The decomposition is proven rather than assumed: the reconstruction
+//! `saturated * tolerance_liebig_value(..)` is asserted **bit-identical** to
+//! `per_species_suitability` on every land cell of every kind measured, which
+//! is what validates both of this file's mirrors of private production code.
+//!
 //! ## The mutations — applied as temporary local edits, observed RED, reverted
 //!
 //! A green test proves the code ran; only a mutation proves the axis is
@@ -104,6 +122,25 @@
 //! the correlations could have been decorrelation reported by a probe that
 //! computes nothing.
 //!
+//! **M4 — the supply-only probe must be able to report a LOW number.** Added
+//! with the decomposition below, because "all nine correlations are ~0.9995"
+//! is worthless from an instrument that cannot return anything else — the
+//! vacuous-guard failure The Benchmark recorded. desert-dwarf's authored
+//! `ResourceVector` was replaced with a pure `MINERAL` one (the xorn /
+//! rust-monster niche, a genuinely different supply axis) and the supply-only
+//! correlations moved to:
+//!
+//! ```text
+//!   desert vs gully   0.999684 -> -0.153152
+//!   desert vs hill    0.999963 -> -0.152512
+//!   gully  vs hill    0.999429 ->  0.999429   (untouched, bit-identical)
+//! ```
+//!
+//! The probe spans the whole range from near-unity to anticorrelation, and the
+//! pair not involving the perturbed kind did not move at all. The bit-identity
+//! reconstruction below also held throughout the mutation, on a niche the
+//! roster does not otherwise give a Surface kind.
+//!
 //! ## The attribution rule this file is written under
 //!
 //! Every mechanism this campaign proposed WITHOUT measuring it has failed —
@@ -122,8 +159,9 @@ use hornvale_kernel::{CellId, ConditionResponse, Mass, Seed, Value, World, sover
 use hornvale_species::ConditionNiche;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, Substrate, build_world, cascade_of, climate_of,
-    generation_length_of, per_species_suitability, sky_of, substrate_field, terrain_of,
+    EraInvariantSupply, SettlementPins, SkyChoice, Substrate, axis_supply, build_world,
+    carrying_inputs_of, cascade_of, climate_of, forage_supply_field, generation_length_of,
+    per_species_suitability, prey_supply_field, sky_of, substrate_field, terrain_of,
 };
 
 // The heavy-tier `#[ignore]` reason is repeated literally at every site below:
@@ -446,6 +484,10 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     out
 }
 
+/// Pearson correlations keyed by an ascending-ordered pair of kind names — the
+/// shape both correlation probes in this file return.
+type PairCorrelations = Vec<((String, String), f64)>;
+
 /// Look a pair's correlation up by its two names in either order.
 fn r_of(pairs: &[((String, String), f64)], a: &str, b: &str) -> f64 {
     pairs
@@ -453,6 +495,219 @@ fn r_of(pairs: &[((String, String), f64)], a: &str, b: &str) -> f64 {
         .find(|((x, y), _)| (x == a && y == b) || (x == b && y == a))
         .map(|(_, r)| *r)
         .unwrap_or_else(|| panic!("no correlation reported for {a} vs {b}"))
+}
+
+// ---------------------------------------------------------------------------
+// Instrument 3 — the supply-only probe, which holds the tolerance layer out.
+// ---------------------------------------------------------------------------
+
+/// The VALUE `tolerance_liebig` returns — the Liebig minimum over the four
+/// condition responses — as opposed to [`binding_axis`], which returns which
+/// axis won. Same mirror of the same private function
+/// (`windows/worldgen/src/lib.rs`), same standing maintenance obligation.
+///
+/// Unlike `binding_axis`, this mirror is **proven** rather than trusted:
+/// [`supply_only_correlations`] reconstructs the real capacity field from
+/// `saturated * tolerance_liebig_value(..)` and asserts it is bit-identical to
+/// what `per_species_suitability` returned. If either mirror drifted from
+/// production, that reconstruction fails.
+fn tolerance_liebig_value(cn: &ConditionNiche, s: &Substrate, floor_buf: f64) -> f64 {
+    let t = cn.temperature.eval(s.temperature_c, floor_buf);
+    let m = cn.moisture.eval(s.moisture, floor_buf);
+    let i = cn.insolation.eval(s.insolation, floor_buf);
+    let e = cn.elevation.eval(s.height_asl_m.get(), 0.0);
+    let mut best = t;
+    for cand in [m, i, e] {
+        if cand < best {
+            best = cand;
+        }
+    }
+    best
+}
+
+/// Pairwise correlation of the **supply term alone**, with the tolerance layer
+/// held out entirely.
+///
+/// `per_species_suitability`'s per-cell product is
+/// `saturated * tolerance_liebig(..) * availability`, where
+/// `saturated = supply / (1 + supply)` and `supply = axis_supply(niche,
+/// per_axis)`. `availability` is exactly `1.0` for every `Surface` kind, and
+/// all three dwarves are Surface. So the honest supply-only column is
+/// `saturated` — the very factor the production line multiplies, not a
+/// re-derived proxy for it, and not raw `supply` (Michaelis-Menten saturation
+/// is monotone but NOT affine, so the two do not have the same Pearson `r`).
+///
+/// **No private constant is mirrored.** The three fields that need
+/// `MINERAL_SUPPLY_SCALE` / `MARINE_SUPPLY_SCALE` come from the public
+/// `EraInvariantSupply::build`, which applies them itself; the other three
+/// come from public builders that take no such constant.
+///
+/// Returns the pair correlations ascending by pair, and the land-cell count.
+fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usize) {
+    use hornvale_kernel::{
+        ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+    };
+
+    let wc = WorldComponents::assemble().expect("components assemble");
+    let world = build_world(
+        Seed(seed),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .expect("probe seed builds");
+    let terrain = terrain_of(&world).expect("terrain");
+    let climate = climate_of(&world).expect("climate");
+    let geo = terrain.geosphere();
+    let sky = sky_of(&world).expect("sky");
+    let generated = match &sky {
+        hornvale_worldgen::Sky::Generated(g) => g,
+        _ => panic!("probe expects a generated sky"),
+    };
+    let system = generated.system();
+    let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
+    let obliquity_deg = system.anchor.obliquity.get();
+    let regime = match system.anchor.rotation {
+        hornvale_astronomy::Rotation::Spinning { day, .. } => {
+            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+        }
+        hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
+    };
+
+    // The six supply axes, assembled exactly as `per_species_suitability`
+    // assembles them.
+    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
+    let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
+    let forage = forage_supply_field(geo, base_carrying.as_cell_map());
+    let prey = prey_supply_field(geo, &forage);
+    let era = EraInvariantSupply::build(
+        geo,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+    );
+    let substrate = substrate_field(
+        geo,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+    );
+
+    // The real capacity fields, for the mirror proof below.
+    let roster: Vec<&'static str> = wc.biosphere.iter().map(|(kind, _)| kind.0).collect();
+    let species_biosphere: Vec<&hornvale_species::BiosphereTraits> =
+        wc.biosphere.iter().map(|(_, bio)| bio).collect();
+    let species_realm: Vec<hornvale_species::HabitatRealm> = wc
+        .biosphere
+        .iter()
+        .map(|(kind, _)| {
+            wc.habitat_realm
+                .get(kind)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
+    let per_species = per_species_suitability(
+        geo,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+        &species_biosphere,
+        &species_realm,
+    );
+
+    let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+
+    // Per kind: the supply-only column, and the mirror proof that
+    // `saturated * tolerance` reproduces production bit-for-bit.
+    let supply_column = |name: &str| -> Vec<f64> {
+        // `get_by_label` rather than `KindId(name)`: `KindId` wraps a
+        // `&'static str` and `name` is borrowed from the caller's slice.
+        let bio = wc
+            .biosphere
+            .get_by_label(name)
+            .unwrap_or_else(|| panic!("{name} has a biosphere row"));
+        assert_eq!(
+            wc.habitat_realm
+                .get_by_label(name)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE),
+            hornvale_species::HabitatRealm::SURFACE,
+            "{name} is not Surface, so `availability` is not the 1.0 no-op this \
+             probe's reconstruction assumes"
+        );
+        let floor_buf = sovereignty_floor(bio.mass, bio.potency);
+
+        // The production capacity column, looked up by tag exactly as
+        // `pairwise_correlations` does.
+        let idx = roster
+            .iter()
+            .position(|k| *k == name)
+            .unwrap_or_else(|| panic!("{name:?} has no biosphere row"));
+        let (_, real) = per_species
+            .iter()
+            .find(|(tag, _)| *tag as usize == idx)
+            .unwrap_or_else(|| panic!("no suitability field returned for {name:?}"));
+
+        let mut out = Vec::with_capacity(land.len());
+        for &c in &land {
+            let per_axis = [
+                (PHOTOSYNTHATE, base_carrying.at(c)),
+                (PLANT_FORAGE, *forage.get(c)),
+                (MINERAL, *era.mineral.get(c)),
+                (DETRITUS, *era.detritus.get(c)),
+                (ANIMAL_PREY, *prey.get(c)),
+                (MARINE_FORAGE, *era.marine.get(c)),
+            ];
+            let supply = axis_supply(&bio.niche, &per_axis);
+            let saturated = supply / (1.0 + supply);
+            // THE MIRROR PROOF. If this holds on every land cell for every
+            // kind, then `saturated` really is production's supply factor and
+            // `tolerance_liebig_value` really is production's tolerance — the
+            // decomposition is not a re-derivation that happens to look right.
+            let reconstructed = saturated
+                * tolerance_liebig_value(&bio.condition_niche, substrate.get(c), floor_buf);
+            assert_eq!(
+                reconstructed,
+                *real.get(c),
+                "the supply×tolerance decomposition must reproduce \
+                 per_species_suitability BIT-FOR-BIT for {name} at cell {c:?}; \
+                 got {reconstructed} against {}. A mismatch means one of the \
+                 two mirrors has drifted from the production capacity path and \
+                 every number this probe reports is measuring something else.",
+                real.get(c)
+            );
+            out.push(saturated);
+        }
+        out
+    };
+
+    println!(
+        "== seed {seed} (SUPPLY ONLY) ==  land cells: {}",
+        land.len()
+    );
+    let mut out: Vec<((String, String), f64)> = Vec::new();
+    for (i, first) in kinds.iter().enumerate() {
+        for second in &kinds[i + 1..] {
+            let (a, b) = if first <= second {
+                (*first, *second)
+            } else {
+                (*second, *first)
+            };
+            let r = pearson(&supply_column(a), &supply_column(b));
+            println!("{a:<16} vs {b:<16} supply-only r = {r:.6}");
+            out.push(((a.to_string(), b.to_string()), r));
+        }
+    }
+    out.sort_by(|x, y| x.0.cmp(&y.0));
+    (out, land.len())
 }
 
 // ---------------------------------------------------------------------------
@@ -800,12 +1055,23 @@ fn p3_desert_dwarfs_climate_curves_bind() {
 /// 0.16–0.19, an order more than the diet does.
 ///
 /// So **both channels are live and neither accounts for the pair sitting at
-/// 0.96 as authored.** What carries the rest is **not determined by this
-/// readout**, and no cause is named for it. Recording the number and declining
-/// to name a mechanism is the finding: every mechanism this campaign proposed
-/// without measuring has failed, and the supply story above would have been
-/// the sixth had it not been tested. `BIO-supply-drowns-niche` remains the open
-/// row it was, neither confirmed nor discharged here.
+/// 0.96 as authored.** Perturbing an authored input measures that input's
+/// leverage, though, not which FACTOR of capacity carries the spatial pattern —
+/// so the decomposition itself was run afterwards, holding the tolerance layer
+/// out entirely: see
+/// [`the_supply_term_is_near_kind_independent_across_the_dwarf_family`]. Its
+/// result: on supply alone all three pairs read `0.9994–1.0000`, so the supply
+/// term is very nearly kind-independent here and every scrap of per-kind
+/// spatial differentiation in capacity comes from the tolerance layer.
+///
+/// That sharpens the question rather than answering it. **Which part of the
+/// tolerance layer produces this pair's 0.96 is still not determined**, and no
+/// cause is named for it. Recording the number and declining to name a
+/// mechanism is the finding: every mechanism this campaign proposed without
+/// measuring has failed, and the diet story above would have been the sixth
+/// had it not been tested. `BIO-supply-drowns-niche` is a claim about supply's
+/// MAGNITUDE and remains the open row it was — Pearson `r` is scale-invariant
+/// and measures sorting, not size, so nothing here confirms or discharges it.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
@@ -853,6 +1119,145 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
          a finding: re-measure it and rewrite the chronicle. Do NOT relax this \
          number to make the test pass."
     );
+}
+
+// ---------------------------------------------------------------------------
+// The diagnosis: is the supply term what carries the refuted correlation?
+// ---------------------------------------------------------------------------
+
+/// **The decomposition — pairwise correlation over the SUPPLY term alone,
+/// tolerance held out entirely. NEITHER FROZEN BRANCH; the probe returned
+/// something the two-branch reading did not anticipate.**
+///
+/// The committed readout left desert↔hill's mechanism unestablished, having
+/// ruled out the obvious candidate by perturbing the authored
+/// `ResourceVector`. That is the wrong instrument for the question: perturbing
+/// an authored input measures the input's leverage, not which of capacity's
+/// two factors carries the spatial pattern. `per_species_suitability`'s
+/// per-cell value is `saturated * tolerance_liebig(..)` for a Surface kind, so
+/// the factors can be separated and the supply one correlated on its own.
+///
+/// **The reading was frozen before the run**, in two branches:
+///
+/// - supply-only desert↔hill ≈ 0.96, matching the full-capacity number →
+///   supply explains the correlation, the tolerance layer contributes
+///   essentially nothing, and `BIO-supply-drowns-niche` is promoted from a
+///   registered claim to this campaign's measured cause.
+/// - supply-only materially LOWER than 0.96 → supply does not explain it, the
+///   tolerance layer is doing real work, and the mechanism stays open — but
+///   open with a number ruling the obvious candidate out.
+///
+/// Measured 2026-08-07 — full capacity above, supply-only below:
+///
+/// ```text
+///   pair                                    s42        s7     s1234
+///   desert vs gully   full capacity      0.5922    0.5353    0.6313
+///                     supply only        0.9997    0.9997    0.9996
+///   desert vs hill    full capacity      0.9629    0.8625    0.9796
+///                     supply only        1.0000    1.0000    1.0000
+///   gully  vs hill    full capacity      0.6925    0.7551    0.6928
+///                     supply only        0.9994    0.9994    0.9994
+///   land cells:                          11,066    19,046    11,571
+/// ```
+///
+/// (Supply-only to six digits: 0.999684 / 0.999660 / 0.999643 ·
+/// 0.999963 / 0.999960 / 0.999957 · 0.999429 / 0.999385 / 0.999354.)
+///
+/// **The two-branch reading does not discriminate, and saying so is the
+/// result.** Branch 1's antecedent is nearly met on the desert↔hill row —
+/// supply-only 0.99996 against a full 0.9629 — but its *consequent* is
+/// decisively false, because the identical probe returns 0.9997 for
+/// desert↔gully, a pair the full capacity separates to 0.5922. A supply term
+/// that reads ~1.0 for **every** pair cannot be what explains one pair reading
+/// 0.96 while another reads 0.59. The branches were framed on desert↔hill
+/// alone; running all three pairs is what showed the framing could not carry
+/// the question. No third mechanism is proposed to fill the gap.
+///
+/// **What IS established, and it is stronger than either branch.** Over this
+/// family the supply term is very nearly **kind-independent**: all nine
+/// supply-only correlations sit in `[0.99935, 0.99996]`, so before tolerance
+/// is applied the three dwarves are all but the same field. Every scrap of
+/// per-kind spatial differentiation in their capacity therefore comes from the
+/// **tolerance layer** — which moves these pairs by 0.24 to 0.46, in both
+/// directions: it pulls desert and gully apart (1.00 → 0.59) and it is also
+/// what leaves desert and hill together (1.00 → 0.96, the least separated).
+///
+/// **The scope limit, stated because it is easy to overrun.** Pearson `r` is
+/// invariant under a positive affine rescale, so this measures how supply
+/// *sorts* cells, not how large it is. `BIO-supply-drowns-niche` is a claim
+/// about **magnitude** — that supply spans orders of magnitude while tolerance
+/// is bounded in `[0,1]` — and nothing here measures magnitude. So that row is
+/// neither confirmed nor discharged by this test; what is added to it is that
+/// on the *spatial-sorting* question supply carries essentially no per-kind
+/// signal in this family.
+///
+/// Which part of the tolerance layer produces desert↔hill's 0.96, and why
+/// applying tolerance to two kinds with different binding axes should raise
+/// their correlation, remains **unestablished**.
+///
+/// The decomposition is proven, not assumed: [`supply_only_correlations`]
+/// reconstructs `saturated * tolerance_liebig_value(..)` and asserts
+/// bit-for-bit equality with `per_species_suitability` on every land cell of
+/// every kind measured — so both of this file's mirrors of private production
+/// code are checked against production on every run of this test.
+///
+/// **And the probe was shown able to report a LOW number** (mutation M4, in
+/// the module doc): with desert-dwarf's diet replaced by a pure `MINERAL`
+/// niche its supply-only correlations fall to `-0.153`, while the untouched
+/// gully↔hill pair stays bit-identical. So the near-unity readings are a
+/// measurement of this roster, not a ceiling of the instrument.
+///
+/// This test asserts nothing about the frozen 0.95 threshold and does not
+/// touch P4's refutation, which stands exactly as committed.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn the_supply_term_is_near_kind_independent_across_the_dwarf_family() {
+    // The measured supply-only floor, to be read as "near-unity", not as a
+    // tuned bound: the smallest of the nine measured values is 0.999354.
+    const SUPPLY_NEAR_UNITY: f64 = 0.999;
+    for seed in SEEDS {
+        let (supply, land) = supply_only_correlations(seed, &DWARVES);
+        let full = pairwise_correlations(seed, &DWARVES);
+
+        let pairs = [
+            ("desert-dwarf", "gully-dwarf"),
+            ("desert-dwarf", "hill-dwarf"),
+            ("gully-dwarf", "hill-dwarf"),
+        ];
+        let mut min_full = f64::INFINITY;
+        for (a, b) in pairs {
+            let f = r_of(&full, a, b);
+            let sp = r_of(&supply, a, b);
+            println!(
+                "seed {seed} ({land} land cells): {a} vs {b} — full {f:.6}, \
+                 supply-only {sp:.6}, tolerance moves it {:.6}",
+                f - sp
+            );
+            if f < min_full {
+                min_full = f;
+            }
+            // Supply sorts every pair of this family almost identically.
+            assert!(
+                sp > SUPPLY_NEAR_UNITY,
+                "seed {seed}: the supply term must read near-unity for {a} vs \
+                 {b} — it measured {sp:.6}, and all nine measured values sat \
+                 in [0.999354, 0.999963]. If a pair has dropped below \
+                 {SUPPLY_NEAR_UNITY}, the supply term has acquired per-kind \
+                 spatial structure it did not have, and the diagnosis in this \
+                 test's doc comment must be re-measured rather than relaxed."
+            );
+        }
+        // And the capacity field DOES separate. Without this the near-unity
+        // supply numbers would be unreadable: a probe reporting "everything
+        // correlates" proves nothing unless something else is known to.
+        assert!(
+            min_full < 0.80,
+            "seed {seed}: the full capacity field must separate some pair of \
+             the family (measured minima 0.5922 / 0.5353 / 0.6313), or the \
+             near-unity supply numbers above carry no information; got \
+             {min_full:.6}"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
