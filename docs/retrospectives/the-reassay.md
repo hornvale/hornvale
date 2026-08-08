@@ -202,3 +202,79 @@ slug `the-reassay` to avoid overwriting the original. The branch name, the
 spec's filename, and the decision records already minted under "the-assay"
 are left as they are — renaming any of that is a judgment call for the
 close, not something a doc-only closing task should decide unilaterally.
+
+## Addendum — findings that post-date the body of this document
+
+Everything above was written at Task 13, before the close walk ran. The close
+produced four more findings, and the git-ignored campaign ledger they were
+recorded in dies with the worktree, so they are promoted here verbatim in
+substance.
+
+### The heavy tier confirmed by measurement what the branch had only inferred
+
+The ledger's "the census is not stale after absorbing main" conclusion was
+reached by *reading* that `pack_depths` and the perception vectors were
+untouched and that main's colour work added new types rather than altering the
+hue path. That is inference. `hornvale-lab::fixture_staleness::census_fixtures_match_a_probe_of_live_seeds`
+probes all ~190 metrics across six seeds and is the only mechanical check of it;
+it **passed in 98.575 s** on lefford at `1e3a0b84`. For a campaign whose whole
+thesis is replacing inference with measurement, closing on the inferred version
+would have been the wrong note.
+
+The heavy run exited 100 with three failures, all attributed as **not this
+campaign's**, and the attribution method is the point:
+
+- `hornvale-lab::disposition_calibration` — already failing in the previous heavy
+  run (2026-08-06, ref `0bfc3704`). Pre-existing.
+- `hornvale-worldgen::occupancy_readout::occupancy_readout_is_current` — the
+  first hypothesis (main changed placement without regenerating the fixture) was
+  **wrong on the ordering**; the regen `979508f8` is not an ancestor of the
+  placement change `d59e92f2`. Rather than build a second theory, the test was
+  run on lefford against `origin/main` at the merge base `64c0daac`, where **it
+  also fails**. Inherited.
+- `hornvale::session_cost` — a wall-clock ceiling whose own module doc says
+  *"Read a red run as contention before suspecting the code."* It ran **faster**
+  than the passing run (50.100 s against 52.348 s), which is not a regression
+  shape.
+
+This campaign's only non-comment change anywhere in `worldgen`/`domains`/`kernel`
+is `Hydro::name()`, a pure `&'static str` lookup called by nothing in the
+derivation path. It cannot move an occupancy readout or a turn budget.
+
+### The final review falsified this document's own tag count
+
+The section above reports twelve false claim-tags, "all caught by review." The
+whole-branch review found **eight more that shipped uncaught**, including a tag
+asserting that a binding held a `SubordinateId` — a type that does not exist
+anywhere in the tree. The true figure is roughly twenty, of which eight reached
+the branch tip before anyone noticed.
+
+That materially strengthens the case for the mechanical follow-up
+(`TOOL-claim-tag-seed-verification`): the author-side check does not work for
+this artifact, and three successive review rounds each found more. It should
+outrank the migration work.
+
+### A seventh instance of the dominant error, in the fix wave correcting it
+
+The fix wave that corrected the false figures **introduced three more** (a count
+measured on the pre-edit tree rather than the committed one; stale raw-string
+inputs; a wrong exit code) **and broke the commit gate** — it reworded an
+`#[ignore]` reason without updating `cli/tests/heavy_tier.rs`'s exact-equality
+roster. All were caught by the scoped re-review and fixed in `42e37e44`.
+
+### An eighth, and the sharpest, in how the gate's state was read
+
+The completion pass reported that `make gate` "was already run and finished
+green (rc=0)" at `1aa73b90`, citing the row appended to `docs/timings.md`. **That
+row is not evidence of a green gate.** `scripts/timed.sh` appends its row
+regardless of the wrapped command's exit status — it passes the status through
+rather than recording it — and the `0` column a reader might take for a return
+code is `waited_s`. The gate at `1aa73b90` was in fact red: `git show
+1aa73b90:cli/tests/heavy_tier.rs` contains no `BuildDepth::Terrain` entry while
+the tree at that commit already emitted that reason string, so the roster
+assertion could not have passed.
+
+The lesson generalises past this campaign and is worth stating as a rule:
+**an artifact is evidence only of what it actually encodes.** A timings ledger
+records that a run happened and how long it took. It does not record whether it
+passed, and no amount of confidence substitutes for reading the assertion.
