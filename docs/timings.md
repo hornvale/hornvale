@@ -498,3 +498,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-07T20:15:38Z | rebaseline | 140.400 | 181.091 | 8.276 | 1.35 | 0 | 8a62bad1 | the-beholding | MacBookPro | 10 |
 | 2026-08-07T20:25:22Z | gate | 577.329 | 4368.126 | 92.153 | 7.73 | 0 | 8a62bad1 | the-beholding | MacBookPro | 10 |
 | 2026-08-07T22:18:52Z | gate | 683.708 | 4317.449 | 93.630 | 6.45 | 0 | c8d8ab14 | the-beholding | MacBookPro | 10 |
+| 2026-08-08T00:12:04Z | rebaseline | 164.135 | 178.418 | 7.747 | 1.13 | 0 | 3f37bc41 | the-lantern | MacBookPro | 10 |
+| 2026-08-08T00:14:49Z | rebaseline | 150.686 | 179.456 | 8.125 | 1.24 | 0 | 3f37bc41 | the-lantern | MacBookPro | 10 |

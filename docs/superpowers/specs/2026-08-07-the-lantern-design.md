@@ -1,7 +1,8 @@
 # The Lantern — design
 
-**Status:** spec, awaiting G3 review. **Rewritten** after a structural finding
-re-cut the campaign (§9).
+**Status:** **G3 approved** (owner, 2026-08-07) — amended at approval; see
+§5.1, §5.2, §6 and §7. **Rewritten** before that after a structural finding
+re-cut the campaign (§10).
 **Date:** 2026-08-07
 **Campaign:** The Lantern — what a built place is made of, and the light that
 falls on it.
@@ -61,6 +62,10 @@ build) — one limestone wall, five lights, human eye:
 
 The same stone. Nothing about the wall changed.
 
+**These were computed under the midpoint sample and the flame rows will
+shift** once §5.2's band integral lands — see §11, risk 5. The directions
+survive; the digits do not.
+
 ## 3. Materials
 
 A cell type's **fabric** is derived, never drawn — from world-state that
@@ -115,15 +120,39 @@ and it means a possession is never stranded in the dark with no inventory to
 fix it. It also gives the roguelike look directly — 1900 K renders limestone
 `[136,111,39]`, warm amber.
 
-Attenuation with distance is `1/(1+d²)`-shaped and authored; it is a free
-parameter and the spec says so.
+Attenuation with distance is `1/(1+d²)`-shaped and authored. **It is not a
+free parameter, and an earlier draft of this spec was wrong to call it one.**
+`shadowcast` is symmetric and the implicit torch rides on the observer, so
+every cell you can see is lit by your own torch *by construction*: attenuation
+is the only thing producing a light gradient in a possessed chamber, and
+chambers are a few cells across. Two consequences follow, and §6 depends on
+both:
+
+- **A placed light is what makes darkness legible**, not the carried one. The
+  hearth earns its place on this argument rather than on flavour.
+- The value may not be tuned to rescue a claim (§11, risk 2), which matters
+  more now that it is load-bearing rather than cosmetic.
 
 ### 4.3 Emitters are illuminants at their own cell
 
 A glowing thing lights its own cell and its neighbours through the same
 shadowcast. This conflates emission with self-illumination — stated plainly —
 but needs **no new term in `sense()`** and gets the visible result right.
-Fungi and lava arrive with the cave campaign (§8); the mechanism lands here.
+Fungi and lava arrive with the cave campaign (§9); the mechanism lands here.
+
+**The error is not uniform, and that changes why lava is deferred.** Because
+the emitting cell's own reflectance still filters light the cell is supposedly
+*producing*, the error scales with how dark the emitter is:
+
+| emitter | own reflectance | renders as |
+|---|---|---|
+| fungus | pale, greenish | green — benign |
+| **lava** | basalt/obsidian, near zero in every band | **near-black, while its neighbours render red** |
+
+So the model is right for fungi and visibly wrong for lava — the one emitter
+whose own reflectance is near zero. §9 defers lava for want of *data*; it now
+also has a **correctness** reason, and the cave campaign must not pull lava
+back in without `RENDER-emission-term`.
 
 ### 4.4 The scotopic term
 
@@ -149,16 +178,77 @@ derived view computed per turn and never stored.
 
 | change | verdict |
 |---|---|
-| `planck_relative` made `pub` + emitter constructors | additive |
+| `planck_relative` **moves down into the kernel** | see below |
+| the blackbody becomes a **band integral** | **measured: no committed byte moves** |
 | `PaletteEntry.color` populated | **the chamber fixtures move** |
 | light field from `shadowcast` | new derived view, nothing stored |
 | the scotopic term | **zero in daylight**, pinned by byte-identity |
+| the lens (§7) | screen only; never reaches an artifact |
 | the walk band | untouched |
 
-`planck_relative`'s doc defends its midpoint sampling *"at main-sequence
-temperatures"*. A torch at 1900 K is far outside that range; the
-justification must be **re-stated for the new range**, not silently
-inherited. This is the same shape as the three framing errors in §9.
+### 5.1 The blackbody moves down into the kernel
+
+A hearth is not astronomy, and making `planck_relative` `pub` where it sits
+would have `windows/vessel` import `hornvale_astronomy` to light a fire. The
+rule, which classifies the three existing functions with no residue:
+
+> **A spectral law that takes no world-state belongs to the kernel; a law
+> parameterized by domain state stays in its domain.**
+
+| function | world-state argument | home |
+|---|---|---|
+| `planck_relative(nm, kelvin)` | none | **`kernel::color`** |
+| `at_elevation(base, elev_deg)` | a sun's elevation | astronomy (stays) |
+| `daylight(&Star)` | a `Star` | astronomy (stays) |
+
+Precedent is decision 0044 and `domains/CLAUDE.md`: *"If two domains need to
+share code, it goes down into the kernel, not sideways."* `Illuminant`,
+`BANDS`, `BAND_CENTERS_NM` and `math::exp` are already there, so the function
+moves with no new dependency. The body is unchanged and pure, so `daylight`
+is bit-identical across the move — **which the plan must check rather than
+assert**.
+
+### 5.2 Sampling: the band integral, and its node count
+
+`daylight`'s doc defends a **midpoint sample** *"at main-sequence
+temperatures"* — a justification that lives on the *consumer*, so a new
+consumer inherits nothing by default. Re-stating it for 1100–1900 K was
+required, and the re-statement failed: measured against a converged
+reference, the worst-band error is **0.26 % at 5800 K but 34 % at 1100 K**,
+because below the grid the visible range is the steep, strongly convex Wien
+tail and a midpoint sample underestimates a convex mean.
+
+**So the blackbody becomes a band integral** (Simpson's rule over each band's
+40 nm span). The kernel's own doc already pointed here — `BAND_CENTERS_NM`:
+*"Anything integrating over a band (**Planck sampling**, a sensitivity curve)
+wants the **edges**."* This is the accuracy choice, taken deliberately
+(owner's call, 2026-08-07), with the aesthetic half moved to the lens in §7.
+
+**Measured cost: none.** A spike (13 nodes, reverted) left the full suite at
+3135/3135 and moved no committed colour byte, because at 5800 K the midpoint
+error is `1.56e-3` relative and a `u8` step is `3.9e-3` — the change lands
+below quantization. That result is **mutation-proven in both directions**: a
+gross perturbation (band 9 halved) reddens
+`hornvale-vessel::session_snapshot::the_client_fixtures_are_current`, and the
+band integral does not. **`make rebaseline` + `git diff` is NOT the guard
+here** — it regenerates nothing carrying a daylight-derived colour and
+returned an empty diff under the gross mutation too. The live guard is the
+fixture test above.
+
+**The node count is a permanent contract** — change it later and every colour
+moves — so it was chosen by measurement. Worst-band error against a
+4097-node reference, relative to the `3.9e-3` `u8` step:
+
+| nodes | 1900 K | 1100 K | 900 K | 800 K | 700 K |
+|---|---|---|---|---|---|
+| 5 | 5.9e-05 | 1.6e-03 | **4.1e-03** | **6.9e-03** | **1.2e-02** |
+| 9 | 3.7e-06 | 1.0e-04 | 2.7e-04 | 4.6e-04 | 8.5e-04 |
+| **13** | 7.3e-07 | 2.0e-05 | 5.3e-05 | 9.3e-05 | **1.7e-04** |
+
+**13 nodes**, which stays ≥20× below quantization down to 700 K — a dull red
+glow, colder than anything this spec names — so a later ember or forge cannot
+force the constant to change. Five nodes already fails by 900 K. Cost is 130
+`exp` calls per illuminant, derive-once.
 
 ## 6. Preregistered claims
 
@@ -173,13 +263,64 @@ a doorway-lit cell in the same room differ. Strongly indicated by the probe
 on authored limestone; the claim is that it survives derived fabric.
 
 **H3 — daylight is byte-identical.** Every colour The Beholding emits at the
-surface is unchanged after the scotopic term. A requirement, with a test.
+surface is unchanged **after the scotopic term and after the §5.2 sampling
+change**. A requirement, with a test — and the test is
+`the_client_fixtures_are_current`, which §5.2 mutation-proved is the live
+guard. Note the direction: H3 constrains what the *new terms* may do to the
+old colours. It is not a claim that no colour may ever change.
 
-**H4 — night vision reaches the screen.** At an illuminance where a human's
-emitted colour is `[0,0,0]`, a kobold's is not. *Falsified if the threshold
-that achieves this perturbs daylight* — in which case the term is wrong.
+**H4 — a cell's light field can reach zero, and the rod still carries a
+signal there.** Stated at the **model** level, deliberately: below an
+authored photopic threshold a human's emitted colour is `[0,0,0]` where a
+kobold's is not, probed on `to_srgb` at a stated illuminance. *Falsified if
+the threshold that achieves this perturbs daylight* — in which case the term
+is wrong.
 
-## 7. Testing
+**H4a — reachability, reported not predicted.** How dark does a chamber cell
+actually get under the implicit torch? §4.2 makes this genuinely uncertain:
+the lit set equals the FOV set, so only attenuation darkens anything, and
+chambers are small. **This is a reading, not a claim** — it may report that
+H4's regime is unreachable on the chamber band, which is a finding about
+where the campaign's drama lives, not a failure. **The attenuation constant
+may not be tuned to make it come out otherwise** (§11, risk 2).
+
+*Why H4 is split.* An earlier draft asserted H4 at the emitted-colour level
+on the chamber band, where it may be unreachable in practice — a true
+measurement attached to the wrong subject, which is the §10 shape exactly.
+Splitting it keeps the falsifiable half falsifiable and reports the rest
+honestly.
+
+**Every claim above is measured on UNLENSED colour** (§7).
+
+## 7. The lens
+
+§5.2 chose accuracy in the model. The look is then recovered where it belongs:
+a **lens** — a presentation-layer filter over the emitted colour that
+optimizes for legibility and mood (owner's call, 2026-08-07).
+
+This is the project's own spine rather than an invention: decision 0022 (the
+sim emits data, clients render), The Beholding's shipped CLI colour lens, and
+The Idioms' Orrery render-style layer. Four constraints:
+
+1. **One-way and downstream of `sense()`.** The lens never feeds back into the
+   model, the ledger, or a fact. Aesthetics must not contaminate physics —
+   that separation is the whole reason the split is worth having.
+2. **It transforms the emitted triple**, never the illuminant or the
+   reflectance. Brightening an illuminant changes the world; brightening an
+   output changes the picture.
+3. **Disclosable and defeatable**, per `RENDER-9`. An unlensed mode is what
+   makes this a lens rather than a lie.
+4. **Built LAST, and never on during measurement.** §6's claims read unlensed
+   colour. H1 is the claim that can genuinely fail — if bedrock varies too
+   little, stone walls all look alike — and a saturation-boosting lens would
+   hide exactly that. Honest path first, measured, then made pretty. It is
+   also the only way to tell whether the room looks right because the model
+   works or because the filter is doing the work.
+
+**Lensed colour must never land in a committed artifact.** If it did, the lens
+parameters would become a save-format-class contract. Screen only.
+
+## 8. Testing
 
 - Every guard states what would make it fire and is mutation-proven. The last
   campaign shipped seven green-and-vacuous guards, **all from plan text**.
@@ -190,9 +331,9 @@ that achieves this perturbs daylight* — in which case the term is wrong.
   brighter cell than either alone.
 - Sweep seeds; never pin one.
 
-## 8. Out of scope
+## 9. Out of scope
 
-- **The underworld.** It has no chart of its own (§9); fungi and lava wait for
+- **The underworld.** It has no chart of its own (§10); fungi and lava wait for
   one. The emitter mechanism lands here so that campaign is a data change.
 - **Dirt vs paved roads.** Nathan asked for these; they are *outdoor*
   surfaces on the walk band, which belongs to the surface/cover campaign
@@ -200,7 +341,7 @@ that achieves this perturbs daylight* — in which case the term is wrong.
 - **A carried light made explicit**, temporal decay (a hearth burning down),
   and a true emission term in `sense()`. Registry rows.
 
-## 9. The finding that re-cut this campaign
+## 10. The finding that re-cut this campaign
 
 The first draft of this spec scoped The Lantern to *"interiors and the
 underworld"*. **The underworld has no view to light.**
@@ -224,13 +365,27 @@ Every *measurement* was right; every *attribution* was wrong. The countermeasure
 that worked all three times was the same: run the probe before writing the
 claim. §6's claims all name their substrate for this reason.
 
-## 10. Risks
+## 11. Risks
 
 1. **Fabric derivation may be too coarse to vary.** If most settlements sit on
    similar rock, H1 fails and the campaign ships stone walls that all look
-   alike. Measure before claiming.
-2. The attenuation constant and the scotopic threshold are the two free
-   parameters. Neither may be tuned after unblinding.
+   alike. Measure before claiming — **in the first task, not at the readout**,
+   since H1 needs only lithology and no light at all. §7's lens would hide
+   this failure, which is why the lens is built last.
+2. The attenuation constant and the scotopic threshold are the two authored
+   parameters, and **neither may be tuned after unblinding**. Attenuation is
+   no longer merely cosmetic: per §4.2 it is the sole source of light gradient
+   under the implicit torch, so H4a rides on it directly.
 3. **The chamber fixtures move** when the palette fills. Re-pin in the
-   drifting commit, never at the close.
+   drifting commit, never at the close. The guard is
+   `hornvale-vessel::session_snapshot::the_client_fixtures_are_current`;
+   **`make rebaseline` + `git diff` does not see colour** (§5.2 proved this
+   with a gross mutation that left the artifact diff empty).
 4. `the-delvers` is active and touches the underworld. Read its chronicle.
+   Checked at G3: **no file overlap** with vessel, colour, illuminant,
+   lithology or interior.
+5. **§2's five-light table was computed under the midpoint sample.** Once
+   §5.2 lands, the flame rows shift — by up to ~34 % per band at 1100 K,
+   though band ordering is preserved, so the *directions* the table
+   illustrates survive. The probe and the table refresh together with §5.2;
+   neither may be quoted afterwards without re-running it.
