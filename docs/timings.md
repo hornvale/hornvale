@@ -503,3 +503,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T02:01:27Z | gate | 173.638 | 108.947 | 86.440 | 1.13 | 0 | 09e65f20 | the-delvers | MacBookPro | 10 |
 | 2026-08-08T02:19:12Z | rebaseline | 166.891 | 217.276 | 11.459 | 1.37 | 0 | 85730c75 | the-delvers | MacBookPro | 10 |
 | 2026-08-08T02:22:40Z | rebaseline | 159.313 | 214.665 | 10.386 | 1.41 | 0 | 85730c75 | the-delvers | MacBookPro | 10 |
+| 2026-08-08T03:19:32Z | gate | 472.789 | 1333.093 | 164.533 | 3.17 | 0 | 386c3b80 | the-delvers | MacBookPro | 10 |
+| 2026-08-08T03:42:54Z | rebaseline | 252.660 | 220.484 | 8.423 | 0.91 | 0 | 386c3b80 | the-delvers | MacBookPro | 10 |

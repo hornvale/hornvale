@@ -4601,7 +4601,16 @@ fn referent_is_nameable(
 /// Single Sculpt, applied to the lexicon path; byte-identical to
 /// `lex(v, species)`.
 fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
-    hornvale_worldgen::lexicon_from(v.world(), species, v.terrain(), v.climate())
+    // `lexicon_from_in` against THIS VIEW's own component set, not
+    // `lexicon_from`'s freshly-assembled canonical one (The Delvers, F1).
+    // A lexicon is a function of the roster: its family's daughter list and
+    // proto phonology both come out of `wc`. Reading it from the canonical
+    // set while the world was built from a synthetic one is wrong twice over
+    // — it silently answers a different roster's question on `goblin-solo`,
+    // and it PANICS on `goblin-twin-solo`, whose re-keyed kind the canonical
+    // registry cannot resolve at all. Identical on the default roster, where
+    // `v.components()` IS the assembled canonical set.
+    hornvale_worldgen::lexicon_from_in(v.world(), v.components(), species, v.terrain(), v.climate())
 }
 
 /// A settlement's own re-derived site concepts: calls worldgen's own
@@ -6076,7 +6085,17 @@ fn family_proto_assignment(
         .iter()
         .filter(|s| in_roster(v, s))
         .find_map(|s| {
-            hornvale_worldgen::exposure_from(v.world(), s, v.terrain(), v.climate()).ok()
+            // `_in`, against this view's own roster: the universe must be the
+            // one `build_lexicon` classified against, and `lex` now threads
+            // the same component set (The Delvers, F1).
+            hornvale_worldgen::exposure_from_in(
+                v.world(),
+                v.components(),
+                s,
+                v.terrain(),
+                v.climate(),
+            )
+            .ok()
         });
     let Some(exposures) = exposures else {
         return std::collections::BTreeMap::new();

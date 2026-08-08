@@ -967,6 +967,58 @@ fn a_kind_without_perception_fails_loudly_instead_of_borrowing_goblin_eyes() {
     );
 }
 
+/// THE DELVERS (F1): `lexicon_of_in_from` resolved the kind AFTER calling the
+/// panicking `language_of_in`, so a species outside the component set killed
+/// the calling thread instead of returning the `BuildError` this function's
+/// own signature promises. That is how the campaign's census died: a Lab
+/// worker asked for a synthetic roster's kind and got a panic, not an `Err`
+/// its caller was already written to handle.
+///
+/// The resolution now happens first. `goblin-twin` is the exact species that
+/// crashed — it is the Lab's null-control twin, deliberately absent from every
+/// canonical registry.
+#[test]
+fn a_species_outside_the_component_set_is_an_error_not_a_panic() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let err = lexicon_from(&w, "goblin-twin", &terrain, &climate)
+        .expect_err("the canonical roster has no goblin-twin");
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("goblin-twin") && msg.contains("unknown species"),
+        "the error must name the unresolvable kind, got {msg}"
+    );
+}
+
+/// The wc-threaded twin measures the roster it is handed. Threading the
+/// CANONICAL set through `lexicon_from_in` must reproduce `lexicon_from`
+/// byte-for-byte — the property that lets the Lab switch every lexicon read
+/// onto `_in` without moving a single value on `the-census`' default roster.
+#[test]
+fn lexicon_from_in_over_the_canonical_set_equals_lexicon_from() {
+    let w = world();
+    let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+    let climate = hornvale_worldgen::climate_from(&w, &terrain).unwrap();
+    let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
+    for species in ["goblin", "kobold", "hill-dwarf"] {
+        let threaded = hornvale_worldgen::lexicon_from_in(&w, &wc, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from_in({species}): {e:?}"));
+        let assembled = lexicon_from(&w, species, &terrain, &climate)
+            .unwrap_or_else(|e| panic!("lexicon_from({species}): {e:?}"));
+        let rendered = |lex: &hornvale_language::Lexicon| -> Vec<String> {
+            lex.entries()
+                .map(|(c, e)| format!("{c}={e:?}"))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            rendered(&threaded),
+            rendered(&assembled),
+            "{species}: threading the canonical set must be a no-op"
+        );
+    }
+}
+
 #[test]
 fn a_dragon_perceives_with_its_own_eyes_not_the_goblins() {
     // The load-bearing consequence: a dragon's exposure is now classified from

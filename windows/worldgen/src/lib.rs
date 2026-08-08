@@ -4691,13 +4691,35 @@ pub fn exposure_from(
     climate: &GeneratedClimate,
 ) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
     let wc = WorldComponents::assemble()?;
-    let name = resolve_kind(&wc, species)?;
+    exposure_from_in(world, &wc, species, terrain, climate)
+}
+
+/// [`exposure_from`]'s classification against an ALREADY-BUILT component set
+/// — the wc-threaded twin, in `language_of_in`/`cascade_of_in`'s shape. The
+/// entry a caller must use when the roster may be SYNTHETIC (the Lab's
+/// solo/twin component sets, whose re-keyed kinds do not exist in the
+/// canonical registry `exposure_from` re-assembles); `exposure_of_impl`'s
+/// `{species}-kind` rule also reads the coexisting roster out of `wc`, so a
+/// synthetic set genuinely classifies differently and must not be silently
+/// replaced by the canonical one.
+///
+/// Byte-identical to [`exposure_from`] whenever `wc` is the canonical
+/// assembled set.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: return)
+pub fn exposure_from_in(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    let name = resolve_kind(wc, species)?;
     let settled = settled_cells(world, species);
     // `exposure_of_impl` alone owns the "coexisting counts only once the
     // querying species has settled" rule; the outer gate this replaced was
     // vestigial belt-and-suspenders from the merge reconciliation.
     let coexisting = placed_species(world);
-    exposure_of_impl(world, &wc, name, &settled, &coexisting, terrain, climate)
+    exposure_of_impl(world, wc, name, &settled, &coexisting, terrain, climate)
 }
 
 /// [`exposure_from`]'s classification rules (spec §7), factored out so
@@ -5245,9 +5267,17 @@ fn lexicon_of_in_from(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> Result<hornvale_language::Lexicon, BuildError> {
-    let ph = language_of_in(world, wc, species);
-    let exposures = exposure_from(world, species, terrain, climate)?;
+    // `resolve_kind` FIRST, before the panicking `language_of_in`: this
+    // function's signature already promises a `BuildError`, and a caller
+    // holding a synthetic component set deserves that error rather than a
+    // worker-thread panic. (The Delvers, F1 — the census died here.)
     let name = resolve_kind(wc, species)?;
+    let ph = language_of_in(world, wc, species);
+    // `exposure_from_in`, NOT `exposure_from`: re-assembling the canonical
+    // set here would resolve `species` against a roster this world was not
+    // built from, and classify `{species}-kind` exposure against the wrong
+    // coexisting roster.
+    let exposures = exposure_from_in(world, wc, species, terrain, climate)?;
     let family = *wc
         .family_of
         .get(&KindId(name))
@@ -5296,7 +5326,29 @@ pub fn lexicon_from(
     climate: &GeneratedClimate,
 ) -> Result<hornvale_language::Lexicon, BuildError> {
     let wc = WorldComponents::assemble()?;
-    lexicon_of_in_from(world, &wc, species, terrain, climate)
+    lexicon_from_in(world, &wc, species, terrain, climate)
+}
+
+/// [`lexicon_from`]'s build against an ALREADY-BUILT component set — the
+/// wc-threaded twin, in `language_of_in`/`cascade_of_in`'s shape. The entry a
+/// caller must use when the roster may be SYNTHETIC (the Lab's solo/twin
+/// component sets, whose re-keyed kinds do not exist in the canonical
+/// registry `lexicon_from` re-assembles), and equally the entry to use when
+/// the caller *holds* a component set at all: a lexicon built against a
+/// different set than the world was built from is a different lexicon, since
+/// the family's daughter list and proto phonology both come from `wc`.
+///
+/// Byte-identical to [`lexicon_from`] whenever `wc` is the canonical
+/// assembled set.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn lexicon_from_in(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    lexicon_of_in_from(world, wc, species, terrain, climate)
 }
 
 /// A status basis' contribution to the `formality`/`epithet_density` voice
