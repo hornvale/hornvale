@@ -1109,6 +1109,18 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 Proves **spec §6 S2**: mutating one fact makes the drift check exit non-zero. **The check must be demonstrated RED on command.** A green drift-check that cannot fail is this repo's documented recurring failure mode; per the campaign-autopilot rule, a mutation test must also prove it actually mutated.
 
+**ALSO PROVES S6 — moved here 2026-08-08 (controller, after Task 6's review).** The plan's coverage table promised S6 from Task 6, but Task 6's text only removed the layering/allowlist block. **13 fact-asserting `echo` lines remain in `scripts/doctor.sh`** — lines 22-25 (determinism contracts), 28-32 (committed generated artifacts), 36-39 (documentation map). They are the same drift shape as the `libm` bug this campaign exists to fix, and no other task touched them. Task 7 owns `docs/digest/` and the CLI, so it finishes the job.
+
+**How.** Spec §6 S6 requires that any remaining prose be "an assembled text object stored in the ledger." So:
+
+- Register one new predicate in `tools/digest/src/vocabulary.rs`: `("self-map-line", true, "one authored line of the repo self-map")`. Functional, because each line's subject holds exactly one line.
+- Assert one fact **per line**, each with its own subject id, so JSONL's `(subject, predicate)` sort reproduces line order. Use `EntityId(100..103)` for the determinism lines, `EntityId(200..204)` for the artifact lines, `EntityId(300..303)` for the doc-map lines. **Do not put multiple lines under one subject** — tie order between facts sharing a `(subject, predicate)` key is unspecified (a Task 2 review finding), so it would scramble.
+- Extend `render::doctor::self_map` to emit those sections from the ledger, and delete the corresponding `echo` lines from `scripts/doctor.sh`.
+- Line 37's `${decision_count}` is already derived from source — keep it derived, do not freeze the count into a stored fact. It is a fast-drifting fact and PROC-11's rule forbids storing it.
+- Leave lines 14, 42, 74, 78 alone: 14 is a heading, 42 and 74/78 are derived from git and the filesystem.
+
+**Verification:** after the edit, `grep -c '^echo "  - ' scripts/doctor.sh` must return `0`, and `make doctor` must still print all three sections with the same content.
+
 - [ ] **Step 1: Write `main.rs`**
 
 ```rust
