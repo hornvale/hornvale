@@ -77,6 +77,26 @@ closed vocabulary: `astronomy`, `terrain`, `climate`, `hydrology`, `biology`,
 - This axis is **reused by Part II** (Nathan's sketch: *A. Astronomy,
   B. Geology, …*), which is half its justification.
 
+### 4.1a `role` — the field that keeps D1 and D2 from drowning
+
+**Added at G3, from a pre-implementation diagnostic (§4.4a).** Metric
+registration also takes a required `role`:
+
+- `descriptor` — a measured property of a world that is *expected to vary*.
+- `invariant` — a property asserted to hold on every world. Decision 0110
+  explicitly encourages this shape (`Flag(bool)` for invariants), and 33 of the
+  57 categorical/flag metrics are currently ≥95 % single-valued because of it:
+  `phonotactic-validity-goblin`, `monophyly-dwarf`, `lexicon-regular-family`,
+  and so on are `true` on all 1,000 worlds *by design*.
+
+**D1 and D2 fire only on `descriptor` metrics.** Without this split, D1 fires
+on 40 of 57 metrics and the survey's weakness section is unreadable — the
+falsification clause's predicted failure, arriving before any code was written.
+
+An `invariant` that *does* vary is its own finding and gets its own detector
+(**D7**, §4.4): an invariant is a claim, and a claim the data contradicts is
+worth more than a degeneracy.
+
 ### 4.2 Statistics, by metric kind
 
 Computed from the committed `rows.csv`, never by re-running the census.
@@ -125,8 +145,9 @@ authored expectation, and that is the whole judgment surface of this campaign.
 
 | id | fires when | authored input |
 |---|---|---|
-| **D1 Degenerate** | a `categorical`/`flag` metric where one value holds ≥ 80 % of worlds | none |
-| **D2 Invariant** | a `numeric` metric with zero variance across 1,000 worlds | none |
+| **D1 Degenerate** | a **`descriptor`** `categorical`/`flag` metric where one value holds ≥ 80 % of worlds | none |
+| **D2 Frozen** | a **`descriptor`** `numeric` metric with zero variance across 1,000 worlds | none |
+| **D7 Broken invariant** | a metric declared `invariant` that is *not* constant | none |
 | **D3 Narrow** | a `numeric` metric whose p25..p75 spans < 5 % of its min..max range | none |
 | **D4 At-rail** | median equals min or max (e.g. "median waterfall count is 0") | none |
 | **D5 Decoupled** | a metric an expectation says should track a driver, but \|r\| < 0.10 | `studies/expectations.json` |
@@ -141,6 +162,29 @@ authored expectation, and that is the whole judgment surface of this campaign.
     "min_abs_r": 0.10 }
 ]}
 ```
+
+### 4.4a What I looked at before freezing, and what it changed
+
+Preregistration means freezing before the code that would move the numbers, not
+refusing to look at data that already exists. I ran one diagnostic over the
+**committed** census before writing any code, and I am recording exactly what
+it was so the freeze is auditable:
+
+- **Top-share distribution across the 57 categorical/flag metrics.** 40 sit at
+  ≥ 80 %, 33 at ≥ 95 %. Inspecting the top of that list showed the cause is
+  *intentional invariants*, not degeneracy — which produced §4.1a's `role`
+  field and detector **D7**.
+- **The three metrics behind SKY-19.** `dominant-land-biome` = ice 651 /
+  alpine 295 (65.1 % top share); `mean-land-temperature-c` min −47.15,
+  **median −11.90**, max 23.14; and — unlooked-for — `reproductive-tempo-goblin`
+  with **min = median = max = 0.42**.
+
+**What did NOT change: D1's 80 % threshold.** It was tempting to lower it to
+60 % so that ice-dominance would fire and the campaign would have a tidy demo.
+That would have been metric-chasing. 65.1 % is not a degenerate distribution;
+the ice finding is an *off-comparator* finding — the median land temperature is
+25.9 °C below Earth's — and **D6 owns it**. The threshold stayed; the
+acceptance criterion was corrected because it named the wrong detector.
 
 **Thresholds are preregistered here and are not to be tuned after seeing the
 output** (decision 0016). If a threshold turns out to fire on everything or
@@ -191,10 +235,23 @@ finding, not a failure.
 - **S1.** Every one of the 194 metrics carries a `domain`; a metric without one
   fails a test (default-deny, demonstrated red on a deliberately unclassified
   metric).
-- **S2.** **The detectors find SKY-19's climate defect.** Specifically: D1 fires
-  on the ice-dominant share, D4 fires on median waterfall count = 0, and D5
-  fires on mean-land-temp vs insolation. If they do not, either the detectors or
-  the thresholds are wrong and that is the campaign's headline.
+- **S2.** **The detectors find SKY-19's climate defect**, by these exact routes
+  (corrected at G3 — the first draft named the wrong detector):
+  - **D6 fires** on `mean-land-temperature-c`: median **−11.90 °C** against
+    Earth's 14.0, a 25.9 °C gap. This is the primary catch.
+  - **D5 fires** on mean-land-temperature vs insolation (SKY-19 measured
+    ocean-fraction r = −0.000, obliquity r = +0.041 — far under `min_abs_r`).
+  - **D1 does NOT fire** on `dominant-land-biome` (ice = 651/1000 = 65.1 %,
+    under the 80 % bar). That is correct behaviour, asserted as such so a later
+    reader does not "fix" it.
+- **S2b.** **D2 fires on `reproductive-tempo-goblin`** (min = median = max =
+  0.42) and its kobold twin (0.57) — unless those are declared `invariant`, in
+  which case D2 must stay silent and the declaration is itself the answer.
+  Found while testing the detectors, not sought; it is the first evidence the
+  survey catches things nobody was looking for.
+- **S2c.** **D1 fires on at most 10 `descriptor` metrics.** Without §4.1a's
+  `role` split it would fire on 40 of 57 and the section would be unreadable.
+  This is the falsification clause made into a number.
 - **S3.** Regenerating the survey twice produces byte-identical output; mutating
   one value in `rows.csv` makes the drift check exit non-zero (**demonstrated
   RED on command**, with the target asserted present before mutation).
