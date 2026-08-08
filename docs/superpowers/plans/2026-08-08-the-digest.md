@@ -1006,7 +1006,15 @@ pub fn allowed_external() -> Vec<String> {
         .lines()
         .find(|l| l.contains("ALLOWED_EXTERNAL"))
         .expect("ALLOWED_EXTERNAL is declared");
-    let inner = line
+    // Split on `=` FIRST. The declaration is
+    //   const ALLOWED_EXTERNAL: &[&str] = &["libm", "serde", "serde_json"];
+    // so bracket-matching the whole line lands on the `&[&str]` type
+    // annotation's `[`, not the value literal's, and corrupts the first entry.
+    let initializer = line
+        .split_once('=')
+        .map(|(_, r)| r)
+        .expect("ALLOWED_EXTERNAL has an initializer");
+    let inner = initializer
         .split_once('[')
         .and_then(|(_, r)| r.rsplit_once(']'))
         .map(|(i, _)| i)
