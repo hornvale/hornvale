@@ -844,7 +844,18 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
         for d in ["astronomy", "terrain", "climate", "hydrology", "biology",
                   "settlement", "society", "religion", "language", "naming", "history"] {
             let page = render_domain(&c, d, &[]);
-            assert!(page.len() > 200, "{d} rendered an empty page — is any metric assigned to it?");
+            assert!(page.len() > 200, "{d} rendered nothing at all");
+            // A domain with NO metrics must still render, announcing the gap.
+            // Hydrology is exactly this today: rivers, lakes, aquifers and
+            // coasts are unmeasured. An absence that announces itself is a
+            // finding; a missing chapter is silence. Do not "fix" the gap by
+            // assigning it metrics — render it (campaign principle, Nathan).
+            if c.columns.iter().all(|col| col.domain != d) {
+                assert!(
+                    page.contains("no metrics"),
+                    "{d} has no metrics and must SAY SO on its page"
+                );
+            }
         }
     }
 ```
