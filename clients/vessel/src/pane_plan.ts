@@ -96,12 +96,15 @@ export function planCells(snap: Snapshot): PaneGrid | null {
       // over this cell, because a creature or the possession standing on a
       // floor is not the floor.
       //
-      // Every palette entry's `color` is absent this campaign — Task 6
-      // shipped the slot deliberately empty, with no building-fabric or
-      // interior-illuminant model yet to read a reflectance from — so
-      // `parseColor` returns `null` for every cell today. The plumbing
-      // stays anyway: the chamber-band campaign that fills the slot needs
-      // no client change, only a colour on the wire.
+      // The slot shipped deliberately EMPTY for one campaign — no
+      // building-fabric or interior-illuminant model existed to read a
+      // reflectance from — and The Lantern filled it: a cell's fabric under
+      // the light actually reaching it. The prediction that the filling
+      // campaign would need "no client change, only a colour on the wire"
+      // held exactly, and this comment is the only line here that moved.
+      // `parseColor` still returns `null` wherever the sim withholds a
+      // colour, which it does for a threshold (an opening is not a
+      // material) and for any cell no light reaches.
       row.push({ glyph, color: parseColor(entry.color) });
     }
     grid.push(row);

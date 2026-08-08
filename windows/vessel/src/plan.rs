@@ -7,11 +7,28 @@
 //! array to keep length-synced with the grid — and the attributes actually
 //! coming are not one character wide (a colour triple, an occupant's
 //! `EntityId`, a temperature). A palette absorbs them as FIELDS ON AN ENTRY,
-//! costing nothing per cell. The colour triple has since landed as
-//! [`PaletteEntry::color`] — but as an empty `Option` slot, not a value: the
-//! building-fabric and interior-illuminant models it would need are
-//! unshipped, and inventing either from the bedrock's daylight reflectance is
-//! exactly what `RENDER-sourced-effects` forbids.
+//! costing nothing per cell. The colour triple landed as
+//! [`PaletteEntry::color`] and shipped **empty** for one campaign, because the
+//! building-fabric and interior-illuminant models it needed were unshipped and
+//! inventing either from the bedrock's daylight reflectance is what
+//! `RENDER-sourced-effects` forbids. The Lantern built both, so the slot now
+//! carries a value: see [`Shading`].
+//!
+//! # Interning is on the TYPE AND ITS COLOUR
+//!
+//! One consequence is worth stating where a reader meets the palette rather
+//! than leaving it to be discovered. Light falls off with distance, so two
+//! walls of one chamber are genuinely different colours — and while the intern
+//! key was `CellKind` alone, *every wall shared one entry* and a per-cell
+//! gradient could not be expressed at all. The key is therefore `(CellKind,
+//! Option<[u8; 3]>)`.
+//!
+//! That is not a schema change: the palette was already an intern table and
+//! the client already keys on the index. It costs entries rather than bytes
+//! per cell, and it is bounded because the `u8` triple **is** the
+//! quantization — cells whose light differs below a screen step collapse onto
+//! one entry. `the_palette_stays_bounded_after_interning_on_colour` measures
+//! the result rather than assuming it.
 //!
 //! # Types here, instances elsewhere
 //!
@@ -52,7 +69,9 @@
 //! `windows/vessel/tests/fixtures/snapshot-seed-42-{walk,chamber}.json`
 //! commit plan cells to disk and are exactly that second kind.
 
+use crate::fabric::{FabricContext, fabric_of, reflectance_of};
 use crate::lattice::{Cell, CellKind, Lattice};
+use hornvale_kernel::color::{Illuminant, Observer};
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -72,14 +91,69 @@ pub struct PaletteEntry {
     /// because that question has two right answers, and this must not pick
     /// one of them.
     pub chambers: Vec<usize>,
-    /// The cell type's display colour, absent until a building has a fabric to
-    /// read a reflectance from. `CellKind::Wall` is "the building's fabric" and
-    /// carries no material, and indoors the illuminant is not the sun — so this
-    /// stays `None` rather than borrowing the bedrock's colour under daylight,
-    /// which would assert two things the world does not model.
+    /// The cell type's display colour: its fabric's reflectance under the
+    /// light reaching it, sensed through the possession's own eyes.
+    ///
+    /// **This slot shipped deliberately empty for a campaign, and the history
+    /// is the point.** The Beholding added it and left it `None`, because
+    /// `CellKind::Wall` is "the building's fabric" and carried no material,
+    /// and indoors the illuminant is not the sun — filling it from the
+    /// bedrock's daylight reflectance would have asserted two things the world
+    /// did not model. The Lantern built both models, so what fills it now is
+    /// not an invention: `fabric_of` derives the material from the lithology
+    /// and biome the building stands on, `light_field` sums the illuminants
+    /// actually reaching the cell, and `Observer::sense` + `to_srgb` make the
+    /// triple. [`Shading`] is the whole of it.
+    ///
+    /// **Still `None` for three distinct reasons, all legitimate**, and a
+    /// consumer may not tell them apart from the wire — absence means "no
+    /// colour is claimed here", never "black":
+    ///
+    /// - the cell type has no fabric (a `Threshold`: an opening is not a
+    ///   material);
+    /// - no light reaches the cell (unlit is ABSENT from the light field, not
+    ///   present at zero — `light_field`'s own doc explains why that
+    ///   distinction is load-bearing);
+    /// - the observer step was declined (`Eyes::Off`) or the observer declares
+    ///   no projection, so no honest triple exists to emit.
+    ///
     /// type-audit: bare-ok(artifact: color)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<[u8; 3]>,
+}
+
+/// Everything a cell's colour is derived from, borrowed for one projection.
+///
+/// Three references and nothing owned: [`plan_of`] reads them, emits `u8`
+/// triples, and keeps none of it. Passing `None` instead is the **withholding**
+/// case — no observer, or a world whose terrain never fit — and it leaves every
+/// [`PaletteEntry::color`] absent, which is a different claim from black and is
+/// the same posture The Beholding's `Eyes::Off` already takes one band up.
+pub struct Shading<'a> {
+    /// Whose eyes the plan is coloured through — the possessed species' own,
+    /// unless the session was asked for another.
+    pub observer: &'a Observer,
+    /// The ground the building stands on, which is what its fabric is derived
+    /// from. One context for the whole structure: a building is on one cell of
+    /// the geosphere.
+    pub fabric: &'a FabricContext,
+    /// What light reaches each cell. **Absent means unlit**, and a cell absent
+    /// here gets no colour at all rather than a black one.
+    pub light: &'a BTreeMap<Cell, Illuminant>,
+}
+
+/// The screen triple one cell wears, or `None` where no colour can honestly be
+/// claimed — see [`PaletteEntry::color`] for the three ways that happens.
+///
+/// The last three steps of the seam in one place: reflectance, then the
+/// three-way product against the light actually arriving, then the projection
+/// to bytes.
+fn colour_of(kind: CellKind, cell: Cell, shading: &Shading<'_>) -> Option<[u8; 3]> {
+    let fabric = fabric_of(kind, shading.fabric)?;
+    let light = shading.light.get(&cell)?;
+    let reflectance = reflectance_of(fabric, shading.fabric);
+    let signal = shading.observer.sense(&reflectance, light);
+    shading.observer.to_srgb(&signal)
 }
 
 /// The plan's bounds, in lattice-local cells.
@@ -167,9 +241,15 @@ pub struct SessionPlan {
 
 /// Project `lattice` into `vessel/plan/v1`.
 ///
-/// One row-major pass, interning each `CellKind` through a `BTreeMap`
-/// (`CellKind` derives `Ord`, so this needs no new derives — and a
-/// `HashMap` is banned workspace-wide anyway, decision 0005).
+/// One row-major pass, interning each `(CellKind, colour)` pair through a
+/// `BTreeMap` (both halves derive `Ord`, so this needs no new derives — and a
+/// `HashMap` is banned workspace-wide anyway, decision 0005). The colour is
+/// part of the key rather than of the kind because a lit room has a *gradient*:
+/// see this module's own doc for why the narrower key could not express one.
+///
+/// `shading` is `None` wherever no colour can be claimed — the withholding
+/// case, described on [`Shading`] — and the whole palette then comes back
+/// exactly as it did before The Lantern.
 ///
 /// `at`/`of`/`chamber`/`you` come from the session, which owns them;
 /// this function knows nothing about sessions. `marks` comes from the
@@ -192,6 +272,7 @@ pub fn plan_of(
     chamber: u64,
     you: Cell,
     mut marks: Vec<PlanMark>,
+    shading: Option<&Shading<'_>>,
 ) -> SessionPlan {
     let e = lattice.extent;
     for m in &marks {
@@ -211,12 +292,13 @@ pub fn plan_of(
             .cmp(&b.salience)
             .then_with(|| a.noun.cmp(&b.noun))
     });
-    let mut interned: BTreeMap<CellKind, u32> = BTreeMap::new();
+    let mut interned: BTreeMap<(CellKind, Option<[u8; 3]>), u32> = BTreeMap::new();
     let mut palette: Vec<PaletteEntry> = Vec::new();
     let mut cells: Vec<u32> = Vec::with_capacity((e.w * e.h) as usize);
 
     for y in e.y..e.y + e.h {
         for x in e.x..e.x + e.w {
+            let cell = Cell(x, y);
             // `Lattice::cells` is documented TOTAL over the extent, and §7
             // rule 3 checks it rather than trusting the sentence. A miss is
             // a broken invariant upstream, not a cell to paper over — an
@@ -224,12 +306,13 @@ pub fn plan_of(
             // hide the bug.
             let kind = *lattice
                 .cells
-                .get(&Cell(x, y))
+                .get(&cell)
                 .expect("Lattice::cells is total over its extent");
+            let color = shading.and_then(|s| colour_of(kind, cell, s));
             let next = interned.len() as u32;
-            let ix = *interned.entry(kind).or_insert(next);
+            let ix = *interned.entry((kind, color)).or_insert(next);
             if ix == next {
-                palette.push(entry_for(kind));
+                palette.push(entry_for(kind, color));
             }
             cells.push(ix);
         }
@@ -253,23 +336,26 @@ pub fn plan_of(
     }
 }
 
-/// The palette entry one `CellKind` becomes.
-fn entry_for(kind: CellKind) -> PaletteEntry {
+/// The palette entry one `(CellKind, colour)` pair becomes.
+///
+/// The colour is handed in rather than computed here: it is a property of a
+/// *cell* (what light reached it), and this function only knows the type.
+fn entry_for(kind: CellKind, color: Option<[u8; 3]>) -> PaletteEntry {
     match kind {
         CellKind::Wall => PaletteEntry {
             kind: "wall".to_string(),
             chambers: Vec::new(),
-            color: None,
+            color,
         },
         CellKind::Floor(i) => PaletteEntry {
             kind: "floor".to_string(),
             chambers: vec![i],
-            color: None,
+            color,
         },
         CellKind::Threshold(a, b) => PaletteEntry {
             kind: "threshold".to_string(),
             chambers: vec![a, b],
-            color: None,
+            color,
         },
     }
 }
@@ -308,7 +394,7 @@ mod tests {
 
     #[test]
     fn the_index_grid_is_total_over_the_extent() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         assert_eq!(
             p.cells.len(),
             (p.extent.w * p.extent.h) as usize,
@@ -319,7 +405,7 @@ mod tests {
 
     #[test]
     fn every_index_names_a_real_palette_entry() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         for (i, &ix) in p.cells.iter().enumerate() {
             assert!(
                 (ix as usize) < p.palette.len(),
@@ -331,7 +417,7 @@ mod tests {
 
     #[test]
     fn the_palette_holds_no_entry_the_building_does_not_use() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         for (ix, entry) in p.palette.iter().enumerate() {
             assert!(
                 p.cells.contains(&(ix as u32)),
@@ -343,7 +429,7 @@ mod tests {
 
     #[test]
     fn a_wall_owns_no_chamber_and_a_floor_owns_exactly_one() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         for entry in &p.palette {
             let expected = match entry.kind.as_str() {
                 "wall" => 0,
@@ -367,7 +453,7 @@ mod tests {
         // doorway" has two right answers. The palette must not pick one.
         let mut lat = tiny();
         lat.cells.insert(Cell(1, 0), CellKind::Threshold(0, 1));
-        let p = plan_of(&lat, 0, 2, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&lat, 0, 2, 7, Cell(1, 1), Vec::new(), None);
         let door = p
             .palette
             .iter()
@@ -379,7 +465,7 @@ mod tests {
     #[test]
     fn identical_cell_kinds_share_one_palette_entry() {
         // The whole economy of the palette: 8 wall cells, 1 palette entry.
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         assert_eq!(
             p.palette.len(),
             2,
@@ -391,14 +477,16 @@ mod tests {
     #[test]
     fn the_projection_is_deterministic() {
         let lat = tiny();
-        let a = serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1), Vec::new())).unwrap();
-        let b = serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1), Vec::new())).unwrap();
+        let a =
+            serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1), Vec::new(), None)).unwrap();
+        let b =
+            serde_json::to_string(&plan_of(&lat, 0, 1, 7, Cell(1, 1), Vec::new(), None)).unwrap();
         assert_eq!(a, b, "same lattice, same bytes");
     }
 
     #[test]
     fn the_standing_cell_is_carried_verbatim() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         assert_eq!((p.you.x, p.you.y), (1, 1));
     }
 
@@ -423,7 +511,7 @@ mod tests {
     #[test]
     fn marks_round_trip_into_the_plan() {
         let goblin = mark("goblin", 5);
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![goblin.clone()]);
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![goblin.clone()], None);
         assert_eq!(p.marks, vec![goblin]);
     }
 
@@ -432,7 +520,7 @@ mod tests {
         // Submitted out of order on purpose: the projection, not the caller,
         // must be what makes the bytes deterministic.
         let submitted = vec![mark("zeta", 5), mark("alpha", 5), mark("beta", 1)];
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), submitted);
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), submitted, None);
         let order: Vec<(u32, &str)> = p
             .marks
             .iter()
@@ -448,7 +536,7 @@ mod tests {
 
     #[test]
     fn an_empty_marks_list_serializes_as_an_empty_array_not_an_omitted_key() {
-        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+        let p = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         assert!(p.marks.is_empty());
         let json = serde_json::to_string(&p).unwrap();
         assert!(
@@ -470,21 +558,157 @@ mod tests {
             datum: "A ghost, somehow off the map.".to_string(),
             salience: 1,
         };
-        let _ = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![outside]);
+        let _ = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), vec![outside], None);
     }
 
+    /// WITHHOLDING, not black. With no [`Shading`] — the possession declined
+    /// the observer step (`Eyes::Off`), or the world's terrain never fit —
+    /// every entry's colour is absent and the key is not emitted at all. A
+    /// consumer therefore cannot mistake "no colour is claimed" for "this cell
+    /// is black", which is the same distinction `light_field` draws between an
+    /// absent cell and a zero illuminant.
+    ///
+    /// FIRES WHEN: a default colour is invented for the unshaded path, or the
+    /// serializer starts emitting `"color":null`.
     #[test]
-    fn a_palette_entry_carries_a_colour_slot_that_is_empty_this_campaign() {
-        // The slot is additive and unpopulated ON PURPOSE. A building's fabric
-        // has no material model (CellKind::Wall is "the building's fabric" and
-        // carries nothing), and indoors the light is not the noon sun. Filling
-        // this from bedrock under daylight would assert two things the world
-        // does not model. See MAP-building-fabric and MAP-interior-light.
-        let plan = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new());
+    fn an_unshaded_plan_claims_no_colour_at_all() {
+        let plan = plan_of(&tiny(), 0, 1, 7, Cell(1, 1), Vec::new(), None);
         for e in &plan.palette {
-            assert!(e.color.is_none(), "{} must not claim a colour yet", e.kind);
+            assert!(
+                e.color.is_none(),
+                "{} claimed a colour with no light",
+                e.kind
+            );
         }
         let json = serde_json::to_string(&plan).unwrap();
         assert!(!json.contains("\"color\""), "an absent slot emits no key");
+    }
+
+    /// A synthetic ground for the interning tests below. **Authored, and it
+    /// says so**: nothing here is a claim about what a building looks like —
+    /// H1 and H2 measure that on real terrain in
+    /// `windows/vessel/tests/lantern_{fabric,seam}.rs`. What these tests need
+    /// is a fabric that exists, so that the *interning* can be exercised.
+    fn synthetic_ground() -> FabricContext {
+        FabricContext {
+            rock: hornvale_terrain::lithology::RockClass::Granite,
+            material: hornvale_terrain::lithology::MaterialBuffer {
+                silica: 0.6,
+                grain: 0.5,
+                induration: 0.7,
+                carbonate: 0.1,
+                metamorphic_grade: 0.0,
+                porosity: 0.2,
+                margin: hornvale_terrain::lithology::MarginPolarity::Interior,
+                soil_depth: hornvale_terrain::lithology::SoilDepth::new(0.5),
+                basement: hornvale_terrain::lithology::Basement::Continental,
+                thaumic: 0.0,
+            },
+            forested: false,
+            temperate: false,
+            deep_soil: false,
+            dry: false,
+        }
+    }
+
+    /// **The reason the intern key widened.** Two walls of one chamber under
+    /// different light are different colours, and while the key was `CellKind`
+    /// alone the palette could not say so — every wall shared one entry, so a
+    /// per-cell gradient was inexpressible however correct the light field was.
+    ///
+    /// The two walls here are lit at strictly different levels, so a palette
+    /// that still interned on the kind alone would return ONE wall entry and
+    /// this fails.
+    ///
+    /// FIRES WHEN: the intern key narrows back to the kind, or the colour stops
+    /// reaching `entry_for`.
+    #[test]
+    fn two_walls_at_different_light_levels_get_different_palette_entries() {
+        let ground = synthetic_ground();
+        let observer = hornvale_kernel::color::standard_observer();
+        let bright = hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN);
+        let dim = crate::light::attenuate(&bright, 3.0);
+        let mut light = BTreeMap::new();
+        light.insert(Cell(0, 0), bright);
+        light.insert(Cell(2, 2), dim);
+        let plan = plan_of(
+            &tiny(),
+            0,
+            1,
+            7,
+            Cell(1, 1),
+            Vec::new(),
+            Some(&Shading {
+                observer: &observer,
+                fabric: &ground,
+                light: &light,
+            }),
+        );
+        let wall_colours: std::collections::BTreeSet<Option<[u8; 3]>> = plan
+            .palette
+            .iter()
+            .filter(|e| e.kind == "wall")
+            .map(|e| e.color)
+            .collect();
+        assert_eq!(
+            wall_colours.len(),
+            3,
+            "the eight wall cells hold three distinct lightings (bright, dim, \
+             unlit) and must intern to three entries, not {:?}",
+            plan.palette
+        );
+        assert!(
+            wall_colours.contains(&None),
+            "the six unlit wall cells must stay colourless: {wall_colours:?}"
+        );
+    }
+
+    /// An unlit cell gets NO colour, not a black one — the palette's half of
+    /// the distinction `light_field` draws by leaving unreached cells out of
+    /// its map entirely. `[0, 0, 0]` and absence render alike and are different
+    /// models, and only absence lets a client decide for itself what unseen
+    /// looks like.
+    ///
+    /// FIRES WHEN: a missing light is defaulted to a zero illuminant somewhere
+    /// on the path, which would give every dark cell a black triple.
+    #[test]
+    fn a_cell_no_light_reaches_gets_no_colour_rather_than_black() {
+        let ground = synthetic_ground();
+        let observer = hornvale_kernel::color::standard_observer();
+        // The floor cell is lit; every wall cell is outside the field.
+        let mut light = BTreeMap::new();
+        light.insert(
+            Cell(1, 1),
+            hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+        );
+        let plan = plan_of(
+            &tiny(),
+            0,
+            1,
+            7,
+            Cell(1, 1),
+            Vec::new(),
+            Some(&Shading {
+                observer: &observer,
+                fabric: &ground,
+                light: &light,
+            }),
+        );
+        let floor = plan
+            .palette
+            .iter()
+            .find(|e| e.kind == "floor")
+            .expect("the floor reached the palette");
+        assert!(
+            floor.color.is_some(),
+            "the lit floor cell carries no colour, so absence below proves \
+             nothing about darkness"
+        );
+        for wall in plan.palette.iter().filter(|e| e.kind == "wall") {
+            assert_eq!(
+                wall.color, None,
+                "an unlit wall was given a colour: unlit must be ABSENT, not black"
+            );
+        }
     }
 }

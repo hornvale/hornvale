@@ -770,6 +770,23 @@ impl<'w> Session<'w> {
         let spatial = match self.inside.as_ref() {
             Some(inside) => {
                 let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
+                // The Lantern's seam, in the order it runs: what the building is
+                // made of, what light reaches each cell, and whose eyes are
+                // looking. Any one of the three missing is a WITHHOLDING (see
+                // `plan::Shading`) — the plan comes back exactly as it did
+                // before this campaign rather than carrying an invented colour.
+                let fabric = self.fabric_here();
+                let light =
+                    crate::light::light_field(&inside.lattice, &self.chamber_sources(inside));
+                let observer = crate::eyes::resolve(&self.eyes, &self.agent).map(|(o, _)| o);
+                let shading = match (observer.as_ref(), fabric.as_ref()) {
+                    (Some(observer), Some(fabric)) => Some(crate::plan::Shading {
+                        observer,
+                        fabric,
+                        light: &light,
+                    }),
+                    _ => None,
+                };
                 SpatialChannel::Chamber {
                     plan: crate::plan::plan_of(
                         &inside.lattice,
@@ -778,6 +795,7 @@ impl<'w> Session<'w> {
                         chamber,
                         inside.cell,
                         marks,
+                        shading.as_ref(),
                     ),
                 }
             }
@@ -2000,6 +2018,110 @@ impl<'w> Session<'w> {
     /// be a silent second world.
     fn frame_seed(&self, structure: &crate::structure::Structure) -> Seed {
         crate::band::truncate_to_walk(&structure.threshold, self.walk_depth()).seed(self.world.seed)
+    }
+
+    /// The ground the building the possession stands in is built from (The
+    /// Lantern, spec §3), or `None` above the canonical grid.
+    ///
+    /// **One context for the whole structure**: a building sits on one cell of
+    /// the geosphere, so its stone comes from one bedrock however many chambers
+    /// it has.
+    ///
+    /// The cell is `brief::containing_cell`'s — greatest blend weight, tie-broken
+    /// to the lowest `CellId` — which is the SAME rule `brief_of` selects the
+    /// building's own brief with and the same one `hornvale_locale`'s
+    /// `dominant_corner` takes a room's biome, water and substrate from. Shared,
+    /// never re-derived: a caption that says granite over a picture drawn in
+    /// basalt grey is the failure `fabric.rs`'s module doc exists to prevent.
+    ///
+    /// Read through `self.ctx` rather than `self.terrain`/`self.climate` for the
+    /// same reason — the locale context is what described this room, so the
+    /// fabric and the prose read one world.
+    fn fabric_here(&self) -> Option<crate::fabric::FabricContext> {
+        // The possession's own position is already walk-band (`Inside` records
+        // descent, `Agent::position` does not move), so this truncation is a
+        // no-op today. Stated anyway, because `brief_of` truncates identically
+        // before its own `containing_cell` call and two readings of one cell
+        // that agree only by accident are what this method exists not to be.
+        let locale = crate::band::truncate_to_walk(&self.agent.position, self.walk_depth());
+        let cell = crate::brief::containing_cell(
+            &locale,
+            self.ctx.climate().geosphere(),
+            self.ctx.nearest_index(),
+        )?;
+        Some(crate::fabric::FabricContext::at(
+            self.ctx.terrain(),
+            self.ctx.climate(),
+            cell,
+        ))
+    }
+
+    /// Every light burning where the possession stands (spec §4.2).
+    ///
+    /// Three kinds, and **one radius for all of them**: [`SIGHT_RADIUS`], whose
+    /// own doc was written anticipating this campaign — *"so that the day a
+    /// light model arrives there is exactly one place to replace, and so no
+    /// second caller can quietly disagree with the first."* A torch reaching
+    /// less far than sight would produce cells you can see with nothing
+    /// illuminating them, which is not dim but incoherent.
+    ///
+    /// - **The implicit torch**, at the possession's own cell. Nathan's call at
+    ///   G3: a possession is assumed to be carrying a light, which makes an
+    ///   explicit carried torch a refinement rather than a new mechanism and
+    ///   means nobody is ever stranded in the dark with no inventory to fix it.
+    /// - **The hearth**, only where this chamber actually composes an
+    ///   `AnchorKind::Hearth` — the interior graph decides whether there is a
+    ///   fire, and [`crate::light::hearth_cell`] decides only where it sits.
+    /// - **The doorways.** A declared approximation, and worth stating plainly:
+    ///   the lattice records **no exterior door**, because a structure's way out
+    ///   is a band transition (`out`), not a cell. The only aperture it models is
+    ///   a `Threshold` between chambers, so that is where the day is admitted.
+    ///   The light is `eyes::daylight_at`'s — the world's own star at the real
+    ///   solar altitude for this day and latitude, which is the same call the
+    ///   walk-band chart colours by — so a chamber genuinely darkens at night
+    ///   rather than holding a permanent noon.
+    fn chamber_sources(&self, inside: &Inside) -> Vec<crate::light::Source> {
+        let mut sources = vec![crate::light::Source {
+            at: inside.cell,
+            illuminant: hornvale_kernel::color::blackbody(crate::light::TORCH_KELVIN),
+            radius: SIGHT_RADIUS,
+        }];
+
+        let has_hearth = self.chamber_interior_here().is_some_and(|interior| {
+            interior
+                .ids()
+                .iter()
+                .any(|&a| interior.anchor(a).kind == crate::interior::AnchorKind::Hearth)
+        });
+        // Both halves are needed and neither implies the other: the interior
+        // graph decides whether there IS a fire, and `hearth_cell` decides only
+        // where it would sit — a chamber that owns no wall of its own has
+        // nowhere to put one.
+        if let (true, Some(at)) = (
+            has_hearth,
+            crate::light::hearth_cell(&inside.lattice, inside.at),
+        ) {
+            sources.push(crate::light::Source {
+                at,
+                illuminant: hornvale_kernel::color::blackbody(crate::light::HEARTH_KELVIN),
+                radius: SIGHT_RADIUS,
+            });
+        }
+
+        let (day, _altitude) = crate::eyes::daylight_at(
+            self.world,
+            self.calendar.as_ref(),
+            self.day,
+            self.agent.position.coord().latitude,
+        );
+        for &(_, _, at) in &inside.lattice.doorways {
+            sources.push(crate::light::Source {
+                at,
+                illuminant: day,
+                radius: SIGHT_RADIUS,
+            });
+        }
+        sources
     }
 
     /// The drawn floor plan, in the chamber block's own shape: a bracketed
