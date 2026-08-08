@@ -1,6 +1,9 @@
 # The Lantern — design
 
-**Status:** **G3 approved** (owner, 2026-08-07) — amended at approval; see
+**Status:** **IMPLEMENTED** (2026-08-08) — see the
+[chronicle](../../../book/src/chronicle/the-lantern.md) for what shipped and the
+[retrospective](../../retrospectives/the-lantern.md) for the process lessons.
+Previously **G3 approved** (owner, 2026-08-07) — amended at approval; see
 §5.1, §5.2, §6 and §7. **Rewritten** before that after a structural finding
 re-cut the campaign (§10).
 **Date:** 2026-08-07

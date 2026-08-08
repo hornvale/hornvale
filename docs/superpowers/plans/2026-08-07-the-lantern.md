@@ -1,5 +1,12 @@
 # The Lantern Implementation Plan
 
+**Status: COMPLETE** (2026-08-08). All nine tasks implemented and gated on
+`the-lantern`. The readouts are in the
+[chronicle](../../../book/src/chronicle/the-lantern.md); the process lessons are
+in the [retrospective](../../retrospectives/the-lantern.md). The checkboxes below
+were never ticked — the campaign ran under subagent-driven development, where the
+task's commit is the record of its completion, not the box.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A stone-walled chamber and a timber one, visibly different from each other, both warm under a hearth — by giving `CellKind::Wall` a fabric, giving interiors a light, and filling `PaletteEntry.color`.
