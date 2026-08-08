@@ -1511,6 +1511,12 @@
       "rung": "full"
     },
     {
+      "doc": "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"dwarf\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no dwarf daughter minted a Root",
+      "kind": "flag",
+      "name": "monophyly-dwarf",
+      "rung": "full"
+    },
+    {
       "doc": "Whether kobold — the family with no siblings — never coincides with the goblinoid family: for every concept kobold holds as a Root, its recorded proto-root differs from an INDEPENDENT re-draw of the \"goblinoid\" family proto-root for that same concept (spec §3's clean outgroup); Absent if kobold minted no Root",
       "kind": "flag",
       "name": "clean-outgroup-kobold",
@@ -2175,7 +2181,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xe3ef7f3eab255173"
+    "fnv1a64": "0x9dc9b14d1399ef92"
   },
   "schema_version": 1,
   "study": {

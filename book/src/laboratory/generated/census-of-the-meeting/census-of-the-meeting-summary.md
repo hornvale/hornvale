@@ -990,8 +990,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 295 | 59.0% |
-| false | 204 | 40.8% |
+| true | 499 | 99.8% |
+| false | 0 | 0.0% |
 | absent | 1 | 0.2% |
 
 ### phonotactic-validity-kobold — goblin-solo
@@ -1006,8 +1006,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 398 | 79.6% |
-| false | 101 | 20.2% |
+| true | 499 | 99.8% |
+| false | 0 | 0.0% |
 | absent | 1 | 0.2% |
 
 ### epithet-honorific-kobold — goblin-solo
@@ -1085,12 +1085,12 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | value | count | share |
 |---|---|---|
 | < 0 | 0 | 0.0% |
-| [0, 0.2) | 16 | 3.2% |
-| [0.2, 0.4) | 28 | 5.6% |
-| [0.4, 0.6) | 70 | 14.0% |
-| [0.6, 0.8) | 99 | 19.8% |
-| [0.8, 1) | 117 | 23.4% |
-| >= 1 | 169 | 33.8% |
+| [0, 0.2) | 7 | 1.4% |
+| [0.2, 0.4) | 8 | 1.6% |
+| [0.4, 0.6) | 28 | 5.6% |
+| [0.6, 0.8) | 55 | 11.0% |
+| [0.8, 1) | 81 | 16.2% |
+| >= 1 | 320 | 64.0% |
 | absent | 1 | 0.2% |
 
 ### name-collision-rate — goblin-solo
@@ -1523,8 +1523,16 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 60 | 12.0% |
-| false | 440 | 88.0% |
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### monophyly-dwarf — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
 
 ### clean-outgroup-kobold — goblin-solo
 
@@ -1572,8 +1580,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | < 0 | 0 | 0.0% |
 | [0, 1) | 18 | 3.6% |
 | [1, 2) | 73 | 14.6% |
-| [2, 3) | 122 | 24.4% |
-| [3, 4) | 116 | 23.2% |
+| [2, 3) | 121 | 24.2% |
+| [3, 4) | 117 | 23.4% |
 | [4, 6) | 141 | 28.2% |
 | [6, 8) | 26 | 5.2% |
 | >= 8 | 4 | 0.8% |
@@ -1619,13 +1627,13 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | value | count | share |
 |---|---|---|
 | < 0 | 0 | 0.0% |
-| [0, 1) | 154 | 30.8% |
-| [1, 2) | 60 | 12.0% |
-| [2, 3) | 64 | 12.8% |
-| [3, 5) | 83 | 16.6% |
-| [5, 8) | 76 | 15.2% |
-| [8, 12) | 38 | 7.6% |
-| >= 12 | 25 | 5.0% |
+| [0, 1) | 143 | 28.6% |
+| [1, 2) | 59 | 11.8% |
+| [2, 3) | 51 | 10.2% |
+| [3, 5) | 100 | 20.0% |
+| [5, 8) | 67 | 13.4% |
+| [8, 12) | 47 | 9.4% |
+| >= 12 | 33 | 6.6% |
 
 ### homophony-count-hobgoblin — goblin-solo
 
@@ -1734,8 +1742,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.4, 0.6) | 0 | 0.0% |
 | [0.6, 0.8) | 0 | 0.0% |
 | [0.8, 1) | 0 | 0.0% |
-| >= 1 | 346 | 69.2% |
-| absent | 154 | 30.8% |
+| >= 1 | 357 | 71.4% |
+| absent | 143 | 28.6% |
 
 ### homophony-merger-share-hobgoblin — goblin-solo
 
@@ -3614,11 +3622,18 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### monophyly-goblinoid — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
 | true | 0 | 0.0% |
 | false | 0 | 0.0% |
 | absent | 500 | 100.0% |
 
-### monophyly-goblinoid — goblin-twin-solo
+### monophyly-dwarf — goblin-twin-solo
 
 | value | count | share |
 |---|---|---|
