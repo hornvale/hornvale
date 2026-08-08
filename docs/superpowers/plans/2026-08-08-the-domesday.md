@@ -857,9 +857,11 @@ Per domain: the `<!-- GENERATED FILE — do not edit. Regenerate with `make reba
 
 - [ ] **Step 3: Generate the pages and wire SUMMARY.md**
 
+**The subcommand does not exist yet — add it.** `hornvale lab` currently dispatches `run`, `list-metrics`, `diff`, and `backfill-schema`. Add a `domesday` arm in `cli/src/main.rs` alongside `backfill-schema`, following that arm's exact shape (argument parsing is std-only; there is no clap). It takes no arguments: it reads the committed census from its fixed path and writes `book/src/domesday/`.
+
 ```bash
 mkdir -p book/src/domesday
-cargo run -p hornvale -- lab domesday    # or the equivalent entry the runner exposes
+cargo run -p hornvale -- lab domesday
 ```
 
 Add a `# The Domesday` part to `book/src/SUMMARY.md` with the index and eleven domain pages.
@@ -928,7 +930,7 @@ The mutation above changed one world's temperature. Confirm the rendered climate
 - [ ] **Step 2:** `make rebaseline && git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/` → 0.
 - [ ] **Step 3:** Evaluate the falsification clause. Read the rendered survey end to end. Is the weakness section readable, or drowned? Record the verdict and the D1 count either way.
 - [ ] **Step 4:** Chronicle (`book/src/chronicle/the-domesday.md` + SUMMARY), retrospective (`docs/retrospectives/the-domesday.md`), registry flips.
-- [ ] **Step 5:** Record every weakness the survey found as follow-on candidates — **including the ones nobody was looking for.** That list is the campaign's product, not a byproduct.
+- [ ] **Step 5:** Record every weakness the survey found as follow-on candidates, **RANKED, not merely listed** — by whether the metric is load-bearing downstream, then by severity. A flat list of 60 findings is the falsification clause arriving by the back door. Include the missing-insolation gap (spec §4.4a note) and every unlooked-for hit — **including the ones nobody was looking for.** That list is the campaign's product, not a byproduct.
 
 ---
 
