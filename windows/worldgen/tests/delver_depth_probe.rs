@@ -111,6 +111,12 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
     sorted[i]
 }
 
+/// claim: readout(off-gate, heavy:, prints only, no assertion) — the
+/// `deepest_band` distribution and the depths it implies, over the
+/// cave-bearing land cells of seeds 42 / 7 / 1234. This test asserts nothing
+/// at all: every check in it is a build/lookup `expect`, and the result is
+/// the printed table (see the module doc, which records it). It is the
+/// measurement that withdrew Task 3b, not a gate on any value.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn how_deep_is_a_cave() {

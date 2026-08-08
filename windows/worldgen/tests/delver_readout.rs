@@ -853,6 +853,12 @@ fn the_dwarf_floors_are_what_the_roster_was_authored_against() {
 ///
 /// The two below-floor rows are 100.00% exactly, on every seed — every one of
 /// the other three axes takes 0.00% of land, not a rounded zero.
+///
+/// claim: invariant(forall-seed) — over SEEDS [42, 7, 1234] x each dwarf whose
+/// `devotion_elev < sovereignty_floor` (gully-dwarf and hill-dwarf on the
+/// shipped roster of three), elevation is the Liebig minimum on EVERY land
+/// cell (`share == 1.0` exactly), plus a `checked == 2 * SEEDS.len()`
+/// non-vacuity guard. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land() {
@@ -899,6 +905,12 @@ fn p1_every_dwarf_below_its_floor_is_elevation_bound_on_all_land() {
 /// Measured 2026-08-07: desert-dwarf's elevation share is 13.34% / 31.59% /
 /// 8.64% on seeds 42 / 7 / 1234 — far from the 100% the two below-floor
 /// dwarves show.
+///
+/// claim: rate(forall-seed, desert-dwarf's elevation share of land < 0.99) —
+/// over SEEDS [42, 7, 1234], one kind. A bound on a per-world cell share,
+/// asserted on every seed; it is the theorem's second direction and the
+/// probe's discrimination control, not a calibrated threshold. Off-gate
+/// (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn p1_desert_dwarf_is_not_elevation_bound() {
@@ -966,6 +978,11 @@ fn p1_desert_dwarf_is_not_elevation_bound() {
 /// consequences of the authored temperature and moisture optima and the
 /// world's own climate; nothing here separates those and no claim is made
 /// about them.
+///
+/// claim: rate(forall-seed, desert-dwarf's temperature+moisture share of
+/// land at or above 0.20) — over SEEDS [42, 7, 1234], one kind. The 20% floor is
+/// preregistered (spec §10.2 P3′, first half) and is asserted on every seed,
+/// not as a fraction of seeds clearing it. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn p3_desert_dwarfs_climate_curves_bind() {
@@ -1072,6 +1089,17 @@ fn p3_desert_dwarfs_climate_curves_bind() {
 /// had it not been tested. `BIO-supply-drowns-niche` is a claim about supply's
 /// MAGNITUDE and remains the open row it was — Pearson `r` is scale-invariant
 /// and measures sorting, not size, so nothing here confirms or discharges it.
+///
+/// claim: rate(#{seed in SEEDS : r(desert-dwarf, hill-dwarf) >= 0.95} >= 2 of
+/// 3) — the load-bearing assertion COUNTS SEEDS, and it pins a REFUTED
+/// prediction as a witness, not a holding invariant: spec §5 P4 / §10.2 P3′
+/// froze `r < 0.95`, desert↔hill measured 0.9629 / 0.8625 / 0.9796, and this
+/// goes RED if the model later gains that separation, which is a finding to
+/// re-measure and never a number to relax. The same run also carries a
+/// forall-seed half over the two pairs the prediction survived on
+/// (desert↔gully, gully↔hill, both asserted `r < 0.95` on every seed), which
+/// is what keeps the refutation distinguishable from a probe that computes
+/// nothing. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
@@ -1209,6 +1237,15 @@ fn p4_the_dwarves_pairwise_correlations_and_p3s_refuted_second_half() {
 ///
 /// This test asserts nothing about the frozen 0.95 threshold and does not
 /// touch P4's refutation, which stands exactly as committed.
+///
+/// claim: invariant(forall-seed) — over SEEDS [42, 7, 1234] x all three
+/// unordered dwarf pairs: supply-only `r > 0.999`, plus a `min_full < 0.80`
+/// discrimination control per seed. It is a diagnostic decomposition, but it
+/// is not assertion-free: the bound is a POST-HOC witness of the measured
+/// `[0.999354, 0.999963]` band (the two preregistered branches both failed to
+/// describe the result), so a drop below it means the supply term acquired
+/// per-kind spatial structure and the diagnosis must be re-measured, not
+/// relaxed. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_supply_term_is_near_kind_independent_across_the_dwarf_family() {

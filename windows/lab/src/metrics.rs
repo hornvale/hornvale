@@ -9152,6 +9152,11 @@ mod tests {
     /// the constant filtered to that roster is empty — the difference between
     /// `monophyly-goblinoid` reading `Absent` and reading a trivially-true
     /// `Flag` on every row of that study's null control.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; the
+    /// scanner's `s` signal binds a kind-name `&str` in
+    /// `.filter(|s| … k.0 == *s)` over `GOBLINOID_DAUGHTERS`, not a world
+    /// seed. No world is built: this compares two roster reads on the Lab's
+    /// synthetic `goblin-twin` components.
     #[test]
     fn a_derived_goblinoid_daughter_list_would_not_be_equivalent_on_labs_twin_roster() {
         let wc = crate::goblin_twin_solo_components();

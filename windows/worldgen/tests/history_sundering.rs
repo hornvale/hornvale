@@ -167,6 +167,14 @@ fn the_map_is_not_depopulated() {
 /// That at least half the panel migrates at all. It currently holds 11 of 12,
 /// so it carries real margin, and it is not vacuous: if climate displacement
 /// stops firing it goes red, which is the failure the old message named.
+///
+/// claim: readout(off-gate, heavy:, report-only) — the migration-event
+/// distribution over the twelve-seed [`FLOOR_PANEL`] (median and range,
+/// plus the per-seed table). `MIN_MIGRATION_EVENTS` is REPORTED, NOT
+/// ASSERTED: the single assertion is non-inertness (`firing * 2 >= n`, i.e.
+/// at least half the panel migrates at all), which is not a calibrated bound
+/// and must not be tightened from panel data. No floor was lowered to reach
+/// this shape — see the module doc's stopgap note.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_migration_distribution_is_reported_over_a_panel() {

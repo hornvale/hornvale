@@ -568,6 +568,14 @@ fn the_structure_accumulates_without_starving_its_holder() {
 /// 12 of 12, so it has enormous margin — and it is not vacuous, because it is
 /// exactly the assertion that goes red if the tribute branch stops firing,
 /// which is the failure the original floor's message named.
+///
+/// claim: readout(off-gate, heavy:, report-only) — the tribute-volume
+/// distribution over the twelve-seed [`FLOOR_PANEL`] (median, range, and the
+/// per-seed table). `MIN_TRIBUTE_COLLECTED` is REPORTED, NOT ASSERTED: the
+/// single assertion is non-inertness (`live * 2 >= n`, i.e. at least half the
+/// panel collected anything at all), which is not a calibrated bound and no
+/// quantile threshold is chosen here. The 1500 floor was never lowered — only
+/// moved off a single world.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn the_tribute_accumulator_is_reported_over_a_panel() {

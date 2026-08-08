@@ -242,6 +242,12 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
 /// three whose `devotion_elev` sits ABOVE their floor, so the closed form was
 /// never violated — the plan's empirical generalisation was simply wider than
 /// the theorem that justified it. See the module doc for the recorded table.
+///
+/// claim: invariant(forall-seed) — over seeds [42, 7, 1234] x every settling
+/// kind whose `devotion_elev < sovereignty_floor` (gnoll and human on the
+/// shipped roster), elevation is the Liebig minimum on EVERY land cell
+/// (`share == 1.0` exactly, ~11k-19k cells per seed), plus a `checked >= 3`
+/// non-vacuity guard. Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn every_kind_below_its_floor_is_elevation_bound_on_all_land() {
@@ -282,6 +288,12 @@ fn every_kind_below_its_floor_is_elevation_bound_on_all_land() {
 /// vacuous and green because it sampled the one cell where the bug was
 /// invisible. Kobold's elevation devotion (0.95) sits far above its floor
 /// (0.3078), so the closed form says a climate axis MUST bind somewhere.
+///
+/// claim: rate(forall-seed, kobold's elevation share of land < 0.99) — over
+/// seeds [42, 7, 1234], one kind (kobold, the roster's clearest above-floor
+/// settler). A bound on a per-world cell share, asserted on every seed; it is
+/// the instrument's discrimination control, not a calibrated threshold.
+/// Off-gate (heavy:).
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn a_kind_above_its_floor_lets_a_climate_axis_bind() {
