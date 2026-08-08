@@ -40,6 +40,18 @@
 //! median depth/capacity correlation is **-0.2815** (seed 3), and seed 42's
 //! own Full-depth correlation is **-0.1092**. Every gate still passes; **no
 //! floor has moved** since the re-sync below, here or anywhere in this file.
+//!
+//! **The Tare (2026-08-08) retired the seed-42 and per-seed displacement
+//! FIRING assertions.** Both were `migration > 0` checks — one on seed 42 at
+//! `BuildDepth::Full`, one inside the cross-seed sweep loop — and both are
+//! now the census column `climate-displacement-events`. Measured over 48
+//! worlds the distribution is bimodal and **exactly zero on 6 of 48**, so a
+//! single-seed or per-seed firing gate has a ~12.5% failure rate by
+//! construction; the nine-seed sweep here was asserting the per-seed floor
+//! and passing on luck. `mig42` itself is unchanged — it still prints in the
+//! report artifact — and every other gate in this file (the pooled
+//! `SWEEP_MIGRATION_FLOOR`, territory separation, stratigraphy, and the
+//! median depth/capacity correlation) is untouched.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -167,9 +179,11 @@ fn measure(seed: u64, depth: BuildDepth) -> Row {
     }
 }
 
-/// claim: rate(forall-seed, per-seed firing floors + a pooled volume floor
-/// SWEEP_MIGRATION_FLOOR) — off-gate (heavy:); also exercises seed 42 at
-/// BuildDepth::Full for cascade-depth coverage
+/// claim: rate(forall-seed, a pooled volume floor SWEEP_MIGRATION_FLOOR) —
+/// off-gate (heavy:); also exercises seed 42 at BuildDepth::Full for
+/// cascade-depth coverage. The seed-42 and per-seed displacement FIRING
+/// floors this claim used to include moved to the census column
+/// `climate-displacement-events` (The Tare) — see this file's module doc.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn history_gates_full_world_and_cross_seed() {
@@ -187,11 +201,13 @@ fn history_gates_full_world_and_cross_seed() {
     // with how much a world's climate actually moves, and seed 42's deep past
     // is mild — it measures 4. The volume claim belongs to the cross-seed
     // sweep below, where it can tell a mild world from an inert bake.
-    assert!(
-        mig42 > 0,
-        "seed-42 displacement does not fire at all at Full depth: the gates do not \
-         survive the cascade"
-    );
+    //
+    // The FIRING check (`mig42 > 0`) that used to sit here retired to the
+    // census column `climate-displacement-events` (The Tare, 2026-08-08):
+    // measured over 48 worlds displacement is exactly zero on 6 of 48, so a
+    // single-seed firing gate was passing on a ~87.5% chance rather than
+    // measuring the mechanism. `mig42` itself stays — the report artifact
+    // below still prints it.
     let terr = territories(&w);
     for k in GOBLINOIDS {
         assert!(
@@ -220,15 +236,11 @@ fn history_gates_full_world_and_cross_seed() {
     let mut rows: Vec<Row> = Vec::new();
     for seed in SWEEP {
         let r = measure(seed, BuildDepth::Settlements);
-        // No per-seed floor — see SWEEP_MIGRATION_FLOOR's comment. Displacement
-        // must fire at all on each sampled world; the VOLUME is asserted across
-        // the sweep, after the loop.
-        assert!(
-            r.migration > 0,
-            "seed {} displacement does not fire at all: {}",
-            r.seed,
-            r.migration
-        );
+        // No per-seed floor — see SWEEP_MIGRATION_FLOOR's comment. The
+        // per-seed firing check that used to live here (`r.migration > 0`)
+        // retired to the census column `climate-displacement-events` (The
+        // Tare, 2026-08-08) — see this file's module doc. The VOLUME is
+        // still asserted across the sweep, after the loop.
         assert!(
             r.region_overlap < MAX_REGION_OVERLAP,
             "seed {} peoples interleaved: {:.4} >= {MAX_REGION_OVERLAP}",
