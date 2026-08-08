@@ -319,6 +319,7 @@
 - [The Delvers](./chronicle/the-delvers.md)
 - [The Lantern](./chronicle/the-lantern.md)
 - [The Reassay](./chronicle/the-reassay.md)
+- [The Digest](./chronicle/the-digest.md)
 
 # Appendix: The Frontier
 

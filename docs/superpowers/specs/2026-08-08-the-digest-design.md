@@ -257,11 +257,23 @@ campaign finite: days of authoring rather than a 975-document migration.
 
 | risk | mitigation |
 |---|---|
-| Authoring friction kills adoption | MCP tool in v1 scope (§4.8) |
+| Authoring friction kills adoption | **OPEN — the mitigation did not ship reachable.** See below. |
 | Noisy diffs destroy the archaeology that justifies compaction | Stable ordering, one fact per line, S3 measures it |
 | The generated map is worse than the hand-written one | §6 falsification clause; stop at v1 |
 | A second parallel artifact that also rots | v1 *replaces* `doctor`; it does not sit beside it |
 | Layer/architecture surprise | Probed and green (§4.6) before the spec was written |
+
+**Post-ship amendment to row 1 (2026-08-08, Nathan's ruling at Task 9: "we can
+ship as-is and record the gap").** v1 ships `handle_assert` / `handle_query` as
+tested library functions with **no callable surface** — no `digest assert` /
+`digest query` subcommand, no server, no transport. They are reachable only
+from the crate's own tests. §4.8 therefore lands **partially met**: the write
+path is proven to work, but a person wanting to assert a fact still edits
+`docs/digest/facts.jsonl` by hand. The risk this row exists to retire is
+consequently **not retired**, and calling it mitigated would be exactly the
+intent-vs-reality collapse §4.9 forbids. Follow-on candidate, not v1: a thin
+`digest assert` / `digest query` CLI, or the real MCP transport once the
+vocabulary settles.
 
 ## 9. Decisions promoted from the ledger
 

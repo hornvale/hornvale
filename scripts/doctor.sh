@@ -13,6 +13,10 @@ section() { printf '\n== %s\n' "$1"; }
 
 echo "hornvale doctor — the repo self-map"
 
+# The generated block opens with its own `== ` heading and no leading blank
+# line, so supply the separator `section()` would have printed. Without this
+# the first heading collides with the banner above.
+echo
 cargo run --quiet --manifest-path tools/digest/Cargo.toml -- render doctor
 
 section "The gate (cost-ordered; Makefile / CLAUDE.md Commands)"
