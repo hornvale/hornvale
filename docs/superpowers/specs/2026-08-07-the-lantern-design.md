@@ -67,14 +67,35 @@ The same stone. Nothing about the wall changed.
 three of the five did not move at all: torch `[136, 111, 39] → [137, 111, 40]`
 and hearth `[92, 60, 3] → [92, 61, 4]`; daylight, lava and fungi are
 unchanged (fungi is not a blackbody and could not move). This is much smaller
-than the ~34 % worst-band error the midpoint rule carries at 1100 K, and the
-reason is **peak normalization**: the midpoint rule underestimates a convex
-mean in *every* band, so dividing by the peak band cancels most of the common
-bias and leaves only the differential. The accuracy argument for the integral
-stands — it is about the law being right, not about this table — but the
-prediction that the flame rows would "shift by up to ~34 %" was wrong about
-the magnitude at the rendered surface, and is recorded here rather than
-quietly dropped.
+than the ~34 % worst-band error the midpoint rule carries at 1100 K.
+
+**Why — and it is not peak normalization.** These figures are already
+post-normalization, so dividing by the peak band cannot be the cancelling
+step. The real reason is that **the large relative errors live entirely in the
+dimmest bands**, where they have almost nothing to be a fraction of:
+
+| T | worst relative error | at band | that band's normalized value | worst **absolute** change |
+|---|---|---|---|---|
+| 5800 K | 0.16 % | 360 nm | 0.75 | 0.0012 |
+| 1900 K | 10.1 % | 360 nm | 9.6e-04 | 0.0016 |
+| 1200 K | 28.2 % | 360 nm | 2.6e-06 | 0.0026 |
+| 1100 K | 33.0 % | 360 nm | 6.2e-07 | **0.0028** |
+
+A `u8` step is 0.0039 of full scale. The absolute change never reaches one,
+so the rendered triple can move at most a single step — which is what the
+table above shows.
+
+**But read the last column downward.** The absolute change *grows* as the
+source cools — 0.0012, 0.0016, 0.0026, 0.0028 — and at 1100 K it is already
+**71 % of a `u8` step**. Flames are not comfortably below the quantization
+floor; they are approaching it, and a colder emitter would cross it. That is
+an independent argument for §5.2's node count, and a reason the cave campaign
+should not assume its emitters inherit this result.
+
+*The prediction that the flame rows would "shift by up to ~34 %" was wrong
+about the rendered surface. The per-band number was right; the inference to
+what a screen shows was not — the §10 shape once more, this time in this
+spec's own risk register. Recorded rather than quietly dropped.*
 
 ## 3. Materials
 
