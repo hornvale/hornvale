@@ -3103,6 +3103,171 @@ fn a_prediction_crisis_occurs_and_the_census_reports_its_rate() {
     println!("crisis-fires: {fired}/{measured} worlds ({absent} absent)");
 }
 
+// --- THE CONFUSION (C2c follow-on): the raid readouts, over the census. ---
+//
+// `windows/worldgen/tests/tolerance_baseline.rs` reported these quantities
+// over 30 live worlds for The Tolerance's preregistered H1/H2/H3. Those
+// verdicts are adjudicated (`book/src/chronicle/the-tolerance.md`), so the
+// battery was re-answering a settled question on every heavy-tier run, and its
+// own guards had gone red at the nine-people roster. The two tests below hold
+// what survives the discharge: the self-consistency invariant, and the fact
+// that raiding happens at all.
+//
+// **THE POPULATION CHANGED.** The retired readout filtered to the six settling
+// peoples frozen at The Generalist; these columns filter nothing. Every rate
+// below is over every occupation record on the world, whatever people holds it
+// — nine settling peoples at this commit. The two are therefore NOT comparable
+// numbers, and no assertion here treats them as one.
+//
+// **The census values are not in here yet.** The columns ship in this commit
+// and the fixture is regenerated on the canonical box afterwards, so the
+// bracketing prose every other test in this file carries ("values at the
+// <date> regen, n = 1000") is owed at that regen and is deliberately not
+// guessed here. What IS measured, on a 12-world scratch probe (seeds 1-12, run
+// live, NOT the census and never to be read as one): the victim rate spans
+// 0.014 to 0.373, the invariant column reads 0 on all twelve, and the two rates
+// stand in a ratio of 1.00-1.03 — a raider almost never raids twice. The
+// assertions below are written to hold over any population, precisely because
+// the census population has not been read yet.
+
+/// Present numeric values of a named column over every non-refused census row,
+/// paired with the seed that produced them — the raid tests below all want to
+/// name the worst world in their failure message, not only the count.
+fn seeded_nums(r: &RunResult, name: &str) -> Vec<(u64, f64)> {
+    let column = r
+        .metric_names
+        .iter()
+        .position(|n| *n == name)
+        .unwrap_or_else(|| panic!("the census carries {name}"));
+    r.rows
+        .iter()
+        .filter(|row| row.refusal.is_none())
+        .filter_map(|row| match row.values[column] {
+            MetricValue::Number(n) => Some((row.seed, n)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// **The self-consistency guard, promoted from 30 worlds to the census.**
+///
+/// `tolerance_baseline.rs` held this as a pooled count comparison on 30 worlds:
+/// the reconstructed per-record attribution had to sum to the bake's own
+/// `census().raided`. Two things changed in the migration, one stronger and one
+/// weaker, and both are stated rather than papered over.
+///
+/// **Stronger**: this is PER-REFERENCE over ~1,000 worlds, not a pooled sum
+/// over 30. A pooled sum is satisfied by any two compensating errors — one raid
+/// attributed twice and another lost still totals correctly — and cannot see a
+/// raider that names two records at all. This asks of each individual
+/// `Ended::By(raider)` whether it names exactly one occupation record.
+///
+/// **Weaker**: it cannot compare against the bake's own counter.
+/// `BakeCensus` lives on `History::tally`, which `build_world_to` discards
+/// after `emit_history`; a census view holds only a `World`, so the bake's
+/// tally is unreachable from any metric. That comparison therefore survives in
+/// exactly one place — `windows/worldgen/tests/raid_attribution_probe.rs`,
+/// which builds live worlds and holds the `History` — and that is why the probe
+/// is kept rather than retired alongside the readouts.
+///
+/// The column behind this is expected to read 0 on every world forever, which
+/// makes it indistinguishable from a column that cannot read anything unless
+/// the fold behind it is shown to answer differently. It is:
+/// `windows/lab/src/metrics.rs`'s `raid_attribution_reports_a_dangling_reference`
+/// and `raid_attribution_reports_an_ambiguous_reference` exercise both failure
+/// modes on hand-built records.
+/// claim: invariant(census: raid-attribution-unresolved, all ~1000 rows) — every
+/// `Ended::By` reference names exactly one occupation record
+#[test]
+fn every_raid_on_every_census_world_names_exactly_one_raider() {
+    let unresolved = seeded_nums(&DRIFT, "raid-attribution-unresolved");
+    assert!(
+        !unresolved.is_empty(),
+        "raid-attribution-unresolved was Absent on every census world — the invariant \
+         is being asserted over an empty population"
+    );
+    let broken: Vec<(u64, f64)> = unresolved
+        .iter()
+        .copied()
+        .filter(|(_, n)| *n > 0.0)
+        .collect();
+    assert!(
+        broken.is_empty(),
+        "{} of {} census worlds carry an `Ended::By(raider)` that does not name exactly \
+         one occupation record: {:?} (seed, count). Every raid rate on those worlds is \
+         attributed to the wrong settlements.",
+        broken.len(),
+        unresolved.len(),
+        &broken[..broken.len().min(10)]
+    );
+}
+
+/// Raiding happens, and the census reports its rate — the live question the
+/// retired readout's discharged preregistration was standing in front of.
+///
+/// Both a floor and a ceiling, because a floor alone cannot see the absurd
+/// case: a fold that counted every record as a victim would clear any
+/// "raiding occurs" check while reporting a rate of 1.0.
+///
+/// The initiator column is checked against the victim column rather than in
+/// isolation, because their RELATION is the reason it is worth its own census
+/// cost: every raid closes exactly one victim, so pooled victims are the number
+/// of raids and pooled initiators are the number of distinct raiders. Initiators
+/// can therefore never exceed victims on a world, and the ratio is the mean
+/// raids per raider — the one number that separates "many settlements each
+/// raiding once" from "a few serial raiders".
+/// claim: invariant(census: raid-victim-rate vs raid-initiator-rate, all rows) —
+/// both rates lie in [0, 1] and distinct raiders never exceed raids on any
+/// world. The `raiding > 0` floor and the mean-below-1.0 ceiling ride along as
+/// non-vacuity guards; they are not the quantified claim, which is per-row.
+#[test]
+fn raiding_occurs_across_the_census_and_both_sides_agree() {
+    let victims = seeded_nums(&DRIFT, "raid-victim-rate");
+    let initiators = seeded_nums(&DRIFT, "raid-initiator-rate");
+    assert!(
+        !victims.is_empty(),
+        "raid-victim-rate was Absent on every census world"
+    );
+    assert_eq!(
+        victims.len(),
+        initiators.len(),
+        "the two raid rates are measured on different world populations — they share a \
+         denominator and an Absent branch, so they cannot"
+    );
+
+    for ((seed, v), (_, i)) in victims.iter().zip(initiators.iter()) {
+        assert!(
+            (0.0..=1.0).contains(v) && (0.0..=1.0).contains(i),
+            "seed {seed}: a raid rate outside [0, 1] (victim {v}, initiator {i})"
+        );
+        assert!(
+            i <= v,
+            "seed {seed}: more distinct raiders ({i}) than raids ({v}) — every raid \
+             closes exactly one victim, so this is impossible unless the two columns \
+             stopped reading the same population"
+        );
+    }
+
+    let raiding = victims.iter().filter(|(_, v)| *v > 0.0).count();
+    assert!(
+        raiding > 0,
+        "no world in {} raids at all — the mechanic ships unexercised",
+        victims.len()
+    );
+    let mean = |xs: &[(u64, f64)]| xs.iter().map(|(_, x)| x).sum::<f64>() / xs.len() as f64;
+    let (mv, mi) = (mean(&victims), mean(&initiators));
+    assert!(
+        mv < 1.0,
+        "every occupation record on the mean census world was raided (victim rate {mv}) \
+         — a rate that high is a broken fold, not a violent world"
+    );
+    println!(
+        "raid rates over {} census worlds: victim mean {mv:.6}, initiator mean {mi:.6}, \
+         {raiding} worlds with at least one raid",
+        victims.len()
+    );
+}
+
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).
 fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;

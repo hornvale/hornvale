@@ -4,6 +4,7 @@ use hornvale_astronomy::{
     Calendar, NeighborClass, Rotation, StarSystem, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::GeneratedClimate;
+use hornvale_history::record::{Ended, OccupationRecord};
 use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
 use hornvale_language::{
     GapReason, LexEntry, Manner, NameKind, Namer, Phonology, Segment, concept_domain,
@@ -3592,7 +3593,162 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Flag(false)
             }),
         },
+        // --- THE CONFUSION (C2c follow-on): the raid readouts, migrated off
+        // the 30-world battery. ---
+        //
+        // `windows/worldgen/tests/tolerance_baseline.rs` reported these
+        // quantities over seeds `1..=30` for The Tolerance's preregistered
+        // H1/H2/H3. Those verdicts are adjudicated and recorded in
+        // `book/src/chronicle/the-tolerance.md`, so the battery was
+        // re-answering a settled question on every heavy-tier run — and its
+        // own guards had gone red at the nine-people roster. The three columns
+        // below ask the live question instead ("what IS the raid rate") over
+        // ~1,000 worlds, and the battery is retired.
+        //
+        // **THE POPULATION CHANGED, DELIBERATELY, AND THAT IS THE POINT.** The
+        // retired readout filtered every numerator to
+        // `PEOPLES_AS_OF_THE_GENERALIST` — the six settling peoples frozen at
+        // The Generalist — while its denominator (`census().raided`) counted
+        // the whole world; that mismatch, not any ambiguity in attribution, is
+        // what failed (measured in
+        // `windows/worldgen/tests/raid_attribution_probe.rs`: attribution is
+        // exact on all 30 seeds, and the gap is exactly the 381 out-of-
+        // population victims). These columns filter NOTHING: every occupation
+        // record counts, whatever people holds it — nine settling peoples at
+        // this commit, and whatever the roster holds next. A frozen population
+        // exists to keep a preregistered verdict readable; this is no longer a
+        // preregistered verdict, so it is stated here rather than frozen.
+        //
+        // All three key on `Ended::By(_)`, the HANDLE, rather than on
+        // `CauseOfEnd::Fled`. Today the two coincide exactly — all three
+        // `Ended::By` sites in `history_bake.rs` close with `Fled` — so this
+        // is the raid rate; keying on the handle means a future ending dealt
+        // by another hand is counted rather than silently dropped.
+        //
+        // Settlement rung, not Full: `emit_history` commits every occupation
+        // fact before `build_world_to` returns at `BuildDepth::Settlements`,
+        // and nothing deeper touches them.
+        Metric {
+            name: "raid-victim-rate",
+            doc: "Share of this world's occupation records that ended at another \
+                  community's hand (`Ended::By`) — the DEFENCE side of the raid \
+                  mechanic (The Confusion). Over EVERY people with a record, not the \
+                  six The Tolerance froze: this is the raid rate, not that campaign's \
+                  readout. Absent on a world with no occupation records. Replaces \
+                  `windows/worldgen/tests/tolerance_baseline.rs`'s 30-world \
+                  victim-side proxy.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let a = raid_attribution(&occupation_records(v.world()));
+                if a.records == 0 {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(a.victims as f64 / a.records as f64)
+            }),
+        },
+        Metric {
+            name: "raid-initiator-rate",
+            doc: "Share of this world's occupation records that ended at least one \
+                  OTHER record — the OFFENCE side, the side the raid gate actually \
+                  decides (The Confusion). Its own column rather than a derivative of \
+                  `raid-victim-rate`, because the ratio of the two is the mean raids \
+                  per raider: the two rates separate 'many settlements each raiding \
+                  once' from 'a few serial raiders', which one rate alone cannot. \
+                  Same unfiltered population as `raid-victim-rate`; Absent on a world \
+                  with no occupation records. Measured on a 12-world scratch probe \
+                  (seeds 1-12, NOT the census) the ratio of the two rates sits at \
+                  1.00-1.03, i.e. a raider almost never raids twice — that near-identity \
+                  is the column's current reading, not a reason to drop it: nothing else \
+                  would detect a shift toward serial raiders.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let a = raid_attribution(&occupation_records(v.world()));
+                if a.records == 0 {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(a.initiators as f64 / a.records as f64)
+            }),
+        },
+        Metric {
+            name: "raid-attribution-unresolved",
+            doc: "How many `Ended::By(raider)` references on this world fail to name \
+                  EXACTLY ONE occupation record — the self-consistency guard the \
+                  retired 30-world battery held, as a census-wide invariant (The \
+                  Confusion). Expected 0 on every world; a nonzero count means the \
+                  victim- and initiator-side rates beside it are attributing raids to \
+                  the wrong settlements. Per-REFERENCE, so compensating errors cannot \
+                  cancel the way they can in a pooled count comparison. Absent on a \
+                  world with no occupation records.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let a = raid_attribution(&occupation_records(v.world()));
+                if a.records == 0 {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(a.unresolved as f64)
+            }),
+        },
     ]
+}
+
+/// One world's raid bookkeeping, read off its reconstructed occupation
+/// records. Every field is a count over the whole world — no people filter —
+/// which is the deliberate difference from the readout this replaces (see the
+/// registry comment above `raid-victim-rate`).
+struct RaidAttribution {
+    /// Occupation records in the world, the denominator of both rates.
+    records: u64,
+    /// Records that ended at another community's hand (`Ended::By(_)`).
+    victims: u64,
+    /// Distinct records named as the hand behind at least one such ending.
+    initiators: u64,
+    /// `Ended::By(raider)` references that do not name exactly one record in
+    /// this world — zero-resolution (a dangling handle) or many.
+    unresolved: u64,
+}
+
+/// Fold [`RaidAttribution`] out of a record list.
+///
+/// A pure function over the records rather than a closure inside the three
+/// metrics, so the counts can be exercised on hand-built inputs that a live
+/// world does not produce — a census column whose value is always the same
+/// number proves nothing about the check behind it unless the check has been
+/// shown to answer differently on a different world. See
+/// `raid_attribution_*` in this module's tests.
+///
+/// A reference that resolves to no record still counts its bearer as a victim:
+/// the record did end at a hand, and only the *name* of that hand is in doubt.
+fn raid_attribution(records: &[OccupationRecord]) -> RaidAttribution {
+    let mut multiplicity: std::collections::BTreeMap<EntityId, u64> =
+        std::collections::BTreeMap::new();
+    for r in records {
+        *multiplicity.entry(r.id).or_insert(0) += 1;
+    }
+    let mut victims = 0u64;
+    let mut unresolved = 0u64;
+    let mut initiators: std::collections::BTreeSet<EntityId> = std::collections::BTreeSet::new();
+    for r in records {
+        if let Ended::By(raider) = r.ended_by {
+            victims += 1;
+            if multiplicity.get(&raider) == Some(&1) {
+                initiators.insert(raider);
+            } else {
+                unresolved += 1;
+            }
+        }
+    }
+    RaidAttribution {
+        records: records.len() as u64,
+        victims,
+        initiators: initiators.len() as u64,
+        unresolved,
+    }
 }
 
 /// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
@@ -7029,6 +7185,137 @@ mod tests {
         );
     }
 
+    // --- THE CONFUSION: the raid-attribution fold, exercised on hand-built
+    // record lists. ---
+    //
+    // A census column that reads the same number on all 1,000 worlds is
+    // indistinguishable from a column that cannot read anything at all, and
+    // `raid-attribution-unresolved` is expected to read 0 on every world
+    // forever. So the fold behind it is shown here to answer DIFFERENTLY on a
+    // world whose attribution is broken — three ways of breaking it, each
+    // against the same well-formed control.
+
+    /// A test entity id. `EntityId` wraps a `NonZeroU64`, so every id here is
+    /// >= 1; the fold only ever compares ids for equality.
+    fn eid(raw: u64) -> EntityId {
+        EntityId::new(raw).expect("a test entity id is nonzero")
+    }
+
+    /// A minimal occupation record with the given id and ending. Every other
+    /// field is inert: the fold reads `id` and `ended_by` and nothing else, so
+    /// stating anything more here would suggest it mattered.
+    fn attribution_record(id: u64, ended_by: Ended<EntityId>) -> OccupationRecord {
+        use hornvale_history::record::{Founding, Function, Notability, Occupation, TechHorizon};
+        OccupationRecord {
+            core: Occupation {
+                people: hornvale_kernel::KindId("goblin"),
+                site: CellId(0),
+                founded: 0.0,
+                ended: match ended_by {
+                    Ended::By(_) => Some(1.0),
+                    Ended::Nature => None,
+                },
+                peak_population: 1,
+                tech: TechHorizon::Neolithic,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: match ended_by {
+                    Ended::By(_) => Some(hornvale_history::record::CauseOfEnd::Fled),
+                    Ended::Nature => None,
+                },
+                notability: Notability::Common,
+            },
+            id: eid(id),
+            founded_from: Founding::Genesis(CellId(0)),
+            ended_by,
+        }
+    }
+
+    /// The control: two survivors and two victims, both raids dealt by the
+    /// same live hand. Every reference resolves, so the invariant column reads
+    /// 0 — and the two rates read the values a broken world must differ from.
+    #[test]
+    fn raid_attribution_counts_a_well_formed_world() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(2, Ended::Nature),
+            attribution_record(3, Ended::By(eid(1))),
+            attribution_record(4, Ended::By(eid(1))),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(a.records, 4);
+        assert_eq!(a.victims, 2);
+        // ONE initiator, not two: entity 1 dealt both endings. This is the
+        // whole reason `raid-initiator-rate` is not derivable from
+        // `raid-victim-rate` — here the two rates are 0.25 and 0.50.
+        assert_eq!(a.initiators, 1);
+        assert_eq!(a.unresolved, 0);
+    }
+
+    /// A DANGLING reference — the raider names no record in this world. The
+    /// invariant column moves off 0, and the initiator count falls, which is
+    /// exactly the silent misattribution the column exists to catch.
+    #[test]
+    fn raid_attribution_reports_a_dangling_reference() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(2, Ended::Nature),
+            attribution_record(3, Ended::By(eid(1))),
+            attribution_record(4, Ended::By(eid(99))),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(a.unresolved, 1, "the dangling raider must be reported");
+        // The bearer is still a victim: it did end at a hand, and only the
+        // NAME of that hand is in doubt.
+        assert_eq!(a.victims, 2);
+        assert_eq!(a.initiators, 1);
+    }
+
+    /// An AMBIGUOUS reference — the raider names two records. This is the
+    /// failure the retired battery's panic message asserted (and which
+    /// `raid_attribution_probe.rs` measured to be false); a pooled count
+    /// comparison cannot see it at all, because the two records still sum to
+    /// the right total.
+    #[test]
+    fn raid_attribution_reports_an_ambiguous_reference() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(1, Ended::Nature),
+            attribution_record(3, Ended::By(eid(1))),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(a.unresolved, 1, "a raider naming two records is unresolved");
+        assert_eq!(a.initiators, 0);
+    }
+
+    /// A world where nobody raids: both rates are 0 and the invariant holds.
+    /// Without this the two rate columns would be pinned only by worlds that
+    /// DO raid, and a fold that counted every record as a victim would still
+    /// satisfy the tests above.
+    #[test]
+    fn raid_attribution_reads_zero_on_a_peaceful_world() {
+        let records = vec![
+            attribution_record(1, Ended::Nature),
+            attribution_record(2, Ended::Nature),
+        ];
+        let a = raid_attribution(&records);
+        assert_eq!(
+            (a.records, a.victims, a.initiators, a.unresolved),
+            (2, 0, 0, 0)
+        );
+    }
+
+    /// The three metrics read `Absent`, not `0.0`, on a world with no
+    /// occupation records — `census-of-the-meeting`'s solo rosters are built
+    /// from the whole registry, and a `0.0` there would claim "measured, no
+    /// raiding" about a world that has no settlements to raid.
+    #[test]
+    fn the_raid_columns_are_absent_without_occupation_records() {
+        let a = raid_attribution(&[]);
+        assert_eq!(a.records, 0, "the Absent branch is keyed on this count");
+    }
+
     #[test]
     fn locked_world_is_tidally_locked() {
         let pins = SkyPins {
@@ -7234,7 +7521,20 @@ mod tests {
         // provenance blocks are kept rather than one replacing the other,
         // because this line is again the one place two campaigns' metric sets
         // could have been silently reconciled to a wrong number.
-        assert_eq!(registry().len(), 188);
+        //
+        // +3 for THE CONFUSION (C2c follow-on: raid-victim-rate,
+        // raid-initiator-rate, raid-attribution-unresolved), replacing
+        // `windows/worldgen/tests/tolerance_baseline.rs`'s two 30-world
+        // readouts. Three and not six: the retired `ReadoutRow` also carried
+        // the per-settlement DRAWN disposition and the GATE-OPEN share, which
+        // are re-derivations of a private draw belonging to a discharged
+        // preregistration (and are already committed as a table in
+        // `windows/worldgen/tests/tolerance_mutation.rs`), plus a
+        // raids-initiated COUNT whose world-level mean is arithmetically
+        // identical to `raid-victim-rate` — every raid closes exactly one
+        // victim, so the count column would have been a second copy of the
+        // first rate. Each column here is paid for on every census forever.
+        assert_eq!(registry().len(), 191);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
