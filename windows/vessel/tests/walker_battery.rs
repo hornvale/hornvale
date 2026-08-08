@@ -34,6 +34,7 @@ fn the_walker_battery_holds_the_four_invariants() {
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
     )
     .unwrap();

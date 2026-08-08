@@ -38,8 +38,16 @@ usage:
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
+                                            [--lens off|lantern]
                                             walk a frozen world as its flagship settler;
                                             --out saves the played world (the world remembers)
+                                            (--lens filters the DRAWN chamber plan's colour for
+                                            legibility: 'lantern' expands the crushed dark end of a
+                                            torchlit room, 'off' shows the model's own bytes. Screen
+                                            only — a presentation filter, never part of a saved
+                                            world or a committed artifact. Interactive defaults to
+                                            lantern; --script is always unlensed, because a
+                                            transcript is a recording.)
   hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column|features]
                                             render the elevation, lithology, or sediment/carve-delta map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
@@ -495,6 +503,24 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     {
         println!("{notice}\n");
     }
+    // The Lantern, Task 8 (spec §7): a presentation filter over the emitted
+    // colour, and the one thing that must never reach an artifact. The two arms
+    // below therefore default OPPOSITE ways, which is the whole point.
+    //
+    // `--script` output is a RECORDING — `scripts/regenerate-artifacts.sh` pipes
+    // it into `book/src/gallery/possession-seed-42.md` — so it is unlensed
+    // unless the caller says otherwise, and the regeneration script says
+    // nothing. The interactive arm is a screen and defaults to the lantern,
+    // because the look is what the campaign was for.
+    let lens = |default: hornvale_vessel::lens::Lens| match flag_value(args, "--lens") {
+        None => Ok(default),
+        Some(name) => hornvale_vessel::lens::Lens::parse(name).ok_or_else(|| {
+            format!(
+                "--lens: unknown lens '{name}'; known lenses: {}",
+                hornvale_vessel::lens::Lens::roster().join(", ")
+            )
+        }),
+    };
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -510,6 +536,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 echo: true,
                 wild_agents: true,
                 eyes: hornvale_vessel::eyes::Eyes::Own,
+                lens: lens(hornvale_vessel::lens::Lens::Off)?,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -526,6 +553,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 echo: false,
                 wild_agents: true,
                 eyes: hornvale_vessel::eyes::Eyes::Own,
+                lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
             },
             stdin.lock(),
             stdout.lock(),

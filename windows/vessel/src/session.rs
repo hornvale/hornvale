@@ -241,6 +241,14 @@ pub struct Session<'w> {
     /// Whose eyes the possession's chart is coloured through (The Beholding,
     /// Task 4), carried from `PossessOpts::eyes`.
     eyes: crate::eyes::Eyes,
+    /// The presentation lens the DRAWN chamber plan is filtered through (The
+    /// Lantern, Task 8, spec §7), carried from `PossessOpts::lens`.
+    ///
+    /// Read in exactly one place — [`Session::plan_here`], the terminal draw.
+    /// It must never reach [`crate::plan::plan_of`] or [`Session::snapshot`]:
+    /// those produce committed artifacts, and lensed colour in one would make
+    /// these constants a save-format-class contract for the sake of a look.
+    lens: crate::lens::Lens,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
     /// The world's terrain, sculpted once at `start` (The Shuttle), so every
@@ -569,6 +577,7 @@ impl<'w> Session<'w> {
             ledger,
             registry,
             eyes: opts.eyes.clone(),
+            lens: opts.lens,
             npcs,
             terrain,
             climate,
@@ -768,37 +777,9 @@ impl<'w> Session<'w> {
         // deciding what the pane shows there is the failure this comment
         // exists to catch: see `SpatialChannel`'s doc.
         let spatial = match self.inside.as_ref() {
-            Some(inside) => {
-                let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
-                // The Lantern's seam, in the order it runs: what the building is
-                // made of, what light reaches each cell, and whose eyes are
-                // looking. Any one of the three missing is a WITHHOLDING (see
-                // `plan::Shading`) — the plan comes back exactly as it did
-                // before this campaign rather than carrying an invented colour.
-                let fabric = self.fabric_here();
-                let light =
-                    crate::light::light_field(&inside.lattice, &self.chamber_sources(inside));
-                let observer = crate::eyes::resolve(&self.eyes, &self.agent).map(|(o, _)| o);
-                let shading = match (observer.as_ref(), fabric.as_ref()) {
-                    (Some(observer), Some(fabric)) => Some(crate::plan::Shading {
-                        observer,
-                        fabric,
-                        light: &light,
-                    }),
-                    _ => None,
-                };
-                SpatialChannel::Chamber {
-                    plan: crate::plan::plan_of(
-                        &inside.lattice,
-                        inside.at,
-                        inside.structure.chambers.len(),
-                        chamber,
-                        inside.cell,
-                        marks,
-                        shading.as_ref(),
-                    ),
-                }
-            }
+            Some(inside) => SpatialChannel::Chamber {
+                plan: self.chamber_plan(inside, marks)?,
+            },
             // `purview(0)` is the same call `map` makes out of doors, at the
             // same zoom, so the pane shows what the verb would have shown.
             None => SpatialChannel::Walk {
@@ -2124,6 +2105,50 @@ impl<'w> Session<'w> {
         sources
     }
 
+    /// The chamber plan for the room stood in — **the one derivation of the
+    /// colour seam**, shared by the wire snapshot and the terminal draw.
+    ///
+    /// The Lantern's seam, in the order it runs: what the building is made of,
+    /// what light reaches each cell, and whose eyes are looking. Any one of the
+    /// three missing is a WITHHOLDING (see [`crate::plan::Shading`]) — the plan
+    /// comes back exactly as it did before this campaign rather than carrying an
+    /// invented colour.
+    ///
+    /// **It is one method rather than two on purpose.** `snapshot` and
+    /// `plan_here` are the same room seen through two grains, and a second copy
+    /// of this derivation is exactly how a pane and a picture end up disagreeing
+    /// about what colour a wall is — the failure `chart_centre` and
+    /// `eyes::daylight_at` each already carry a comment about. Note what is
+    /// *not* here: the lens. This function produces the model's own bytes, and
+    /// only [`Session::plan_here`] filters them.
+    fn chamber_plan(
+        &self,
+        inside: &Inside,
+        marks: Vec<crate::plan::PlanMark>,
+    ) -> Result<crate::plan::SessionPlan, VesselError> {
+        let chamber = chamber_id(&inside.structure.chambers[inside.at])?;
+        let fabric = self.fabric_here();
+        let light = crate::light::light_field(&inside.lattice, &self.chamber_sources(inside));
+        let observer = crate::eyes::resolve(&self.eyes, &self.agent).map(|(o, _)| o);
+        let shading = match (observer.as_ref(), fabric.as_ref()) {
+            (Some(observer), Some(fabric)) => Some(crate::plan::Shading {
+                observer,
+                fabric,
+                light: &light,
+            }),
+            _ => None,
+        };
+        Ok(crate::plan::plan_of(
+            &inside.lattice,
+            inside.at,
+            inside.structure.chambers.len(),
+            chamber,
+            inside.cell,
+            marks,
+            shading.as_ref(),
+        ))
+    }
+
     /// The drawn floor plan, in the chamber block's own shape: a bracketed
     /// header, the picture, an indented legend — the same three-part shape the
     /// locale chart uses, because they are one verb's two bands.
@@ -2133,6 +2158,22 @@ impl<'w> Session<'w> {
     /// because a "you are here" mark is a CELL position and the possession had
     /// none — marking a whole region would have claimed a precision the session
     /// did not have. Task 5 gives it the position, so the mark arrives with it.
+    ///
+    /// # Where the lens lands, and why here
+    ///
+    /// This is the **only** place `Session` filters colour (The Lantern, Task 8,
+    /// spec §7). It is the one seam in this repository where an emitted triple
+    /// becomes something a person looks at directly and the result is *not*
+    /// committed: the wire snapshot is a client fixture, the gallery transcript
+    /// is a book page, and both must carry the model's own bytes. A drawn plan
+    /// in somebody's terminal is neither.
+    ///
+    /// Under [`crate::lens::Lens::Off`] — which is what `PossessOpts::default`
+    /// and the CLI's `--script` path both select — this function returns exactly
+    /// what it returned before the lens existed, byte for byte: no tint, no
+    /// escape sequence, no caption. That is not a convenience, it is how the
+    /// committed transcripts stay unlensed by construction rather than by
+    /// remembering a flag.
     fn plan_here(&self) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (the arm checks first), the same guard
@@ -2149,12 +2190,23 @@ impl<'w> Session<'w> {
             .iter()
             .map(|(glyph, noun)| format!("{glyph} {noun}"))
             .collect();
+        let (picture, disclosure) = match self.lens {
+            crate::lens::Lens::Off => (plan.picture, String::new()),
+            lens => {
+                let coloured = self.chamber_plan(inside, Vec::new())?;
+                (
+                    tint(&plan.picture, &coloured, &lens),
+                    format!(" — lens: {}", lens.label()),
+                )
+            }
+        };
         Ok(format!(
-            "[plan: chamber {}, {} of {}]\n{}  legend: {}",
+            "[plan: chamber {}, {} of {}{}]\n{}  legend: {}",
             id,
             inside.at + 1,
             inside.structure.chambers.len(),
-            plan.picture,
+            disclosure,
+            picture,
             legend.join(", ")
         ))
     }
@@ -3354,6 +3406,56 @@ fn chamber_id(chamber: &RoomAddr) -> Result<u64, VesselError> {
         .pack()
         .map_err(|e| VesselError::Build(format!("{e:?}")))?
         .0)
+}
+
+/// One glyph wrapped in a 24-bit foreground colour and a reset.
+///
+/// Truecolor rather than the 256-colour cube, for the reason
+/// `hornvale_scene::surrounds_ascii` already gives at its own escape: a terminal
+/// that does not understand truecolor degrades to an uncoloured glyph rather
+/// than to a *wrong* one.
+fn ansi(glyph: char, rgb: [u8; 3]) -> String {
+    format!(
+        "\u{1b}[38;2;{};{};{}m{glyph}\u{1b}[0m",
+        rgb[0], rgb[1], rgb[2]
+    )
+}
+
+/// The drawn plan's picture with each glyph tinted by its own cell's colour,
+/// seen through `lens`.
+///
+/// `plan.cells` is row-major over exactly the extent `picture`'s rows were drawn
+/// from, so the two are indexed by the same arithmetic rather than by re-reading
+/// the lattice — a second traversal is how a picture and a palette start
+/// disagreeing about which cell is which.
+///
+/// **Two glyphs keep no tint**, and both absences are deliberate:
+///
+/// - the `@` mark, because it draws *you*, not the ground under you — the same
+///   withholding `hornvale_scene`'s colour lens makes for marks and for the
+///   standing cell;
+/// - any cell whose palette entry carries no colour, because absence there means
+///   "no colour is claimed here", never black (a threshold has no fabric, an
+///   unlit cell is absent from the light field, and a declined observer emits
+///   nothing) — see [`crate::plan::PaletteEntry::color`].
+fn tint(picture: &str, plan: &crate::plan::SessionPlan, lens: &crate::lens::Lens) -> String {
+    let stride = plan.extent.w.max(0) as usize;
+    let mut out = String::with_capacity(picture.len() * 4);
+    for (row, line) in picture.lines().enumerate() {
+        for (col, glyph) in line.chars().enumerate() {
+            let colour = (glyph != crate::lattice::render::YOU)
+                .then(|| plan.cells.get(row * stride + col))
+                .flatten()
+                .and_then(|&ix| plan.palette.get(ix as usize))
+                .and_then(|entry| entry.color);
+            match colour {
+                Some(rgb) => out.push_str(&ansi(glyph, crate::lens::apply(lens, rgb))),
+                None => out.push(glyph),
+            }
+        }
+        out.push('\n');
+    }
+    out
 }
 
 /// The reader-facing word for a stratum.

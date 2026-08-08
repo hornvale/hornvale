@@ -40,6 +40,7 @@ use hornvale_kernel::color::{Illuminant, Observer, Reflectance, blackbody, stand
 use hornvale_kernel::{CellId, Seed, Value};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{self, Fabric, FabricContext};
+use hornvale_vessel::lens::{self, Lens};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
 };
@@ -261,5 +262,72 @@ fn h1_reports_the_whole_distribution_not_just_the_extremes() {
         median > 0.0,
         "H1 median pairwise difference is zero: the typical pair of \
          settlements is IDENTICAL even if the extremes differ"
+    );
+}
+
+/// One pair of settlements the model kept a single `u8` step apart, before and
+/// after the lens: `(a, b, lensed_a, lensed_b)`. Reported so a reader sees the
+/// actual arithmetic rather than only the verdict.
+type WorkedPair = ([u8; 3], [u8; 3], [u8; 3], [u8; 3]);
+
+/// **The lens must not undo what H1 measured** (The Lantern, Task 8, spec §7).
+///
+/// H1's own distribution is what makes this dangerous: the median pair differs
+/// by 41 `u8` steps, but **p10 = 1** — a tenth of settlement pairs differ by a
+/// single step, because settlements cluster on shared rock classes. A lens that
+/// compresses dynamic range erases that whole decile, and the median goes on
+/// looking fine while it happens. So the tail is checked, not the middle:
+/// **every** pair the model can only just tell apart must still be told apart
+/// after the lens.
+///
+/// Measured on the same real sweep as the two H1 assertions above — the same
+/// 1505 settlements, the same eight seeds, the same derived bedrock — because a
+/// synthetic pair one step apart would answer a different question. The
+/// sibling `lantern_lens.rs` proves the same property exhaustively over the
+/// input range; this one proves it on the population that actually exists.
+///
+/// FIRES WHEN: the lens compresses anywhere H1's real stone lives.
+#[test]
+fn the_lens_preserves_every_pair_h1_can_barely_tell_apart() {
+    let triples = all_settlement_stone_triples();
+    let mut barely_apart = 0usize;
+    let mut worked_example: Option<WorkedPair> = None;
+    for (i, a) in triples.iter().enumerate() {
+        for b in &triples[i + 1..] {
+            let before = (0..3)
+                .map(|s| u16::from(a[s]).abs_diff(u16::from(b[s])))
+                .max()
+                .expect("three slots");
+            if before != 1 {
+                continue;
+            }
+            barely_apart += 1;
+            let la = lens::apply(&Lens::default(), *a);
+            let lb = lens::apply(&Lens::default(), *b);
+            let after = (0..3)
+                .map(|s| u16::from(la[s]).abs_diff(u16::from(lb[s])))
+                .max()
+                .expect("three slots");
+            worked_example.get_or_insert((*a, *b, la, lb));
+            assert!(
+                after >= 1,
+                "the lens collapsed {a:?} and {b:?} — two settlements the model \
+                 kept one u8 step apart — onto {la:?} and {lb:?}. That is a real \
+                 distinction destroyed, not a rounding artifact; report it rather \
+                 than shipping it."
+            );
+        }
+    }
+    assert!(
+        barely_apart > 0,
+        "no pair of the {} sampled settlements is exactly one u8 step apart, so \
+         this guard checked nothing — H1's p10 decile has moved and the claim \
+         needs re-measuring, not this assertion relaxing",
+        triples.len()
+    );
+    let (a, b, la, lb) = worked_example.expect("a worked example exists once a pair does");
+    eprintln!(
+        "lens vs H1's p10: {barely_apart} pairs sit one u8 step apart; \
+         e.g. {a:?} vs {b:?} -> {la:?} vs {lb:?}"
     );
 }

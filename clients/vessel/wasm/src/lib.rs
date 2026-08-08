@@ -100,6 +100,14 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
         echo: false,
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
+        // Unlensed at the ABI, and this is the boundary that makes it matter
+        // (decision 0055: the determinism guarantee runs up to and including
+        // the wasm ABI). The presentation lens is a *renderer's* filter over
+        // the emitted triple (The Lantern, spec §7); the sim hands the client
+        // the model's own bytes, and what the page does with them is the
+        // client's business. Applying it here would put a look inside the
+        // byte-identity smoke.
+        lens: hornvale_vessel::lens::Lens::Off,
     };
     match Session::start(world_ref, &opts) {
         Ok((session, opening)) => {

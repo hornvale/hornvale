@@ -23,6 +23,7 @@ fn opts() -> PossessOpts {
         echo: false,
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
+        lens: hornvale_vessel::lens::Lens::Off,
     }
 }
 
@@ -280,6 +281,7 @@ fn the_stitch_law_end_to_end() {
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
     )
     .unwrap();
@@ -333,6 +335,7 @@ fn the_stitch_law_end_to_end() {
             echo: false,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
     )
     .unwrap();
@@ -415,6 +418,7 @@ fn run_drives_a_script_deterministically() {
             echo: true,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -427,6 +431,7 @@ fn run_drives_a_script_deterministically() {
             echo: true,
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: hornvale_vessel::lens::Lens::Off,
         },
         std::io::Cursor::new(script),
         &mut out_b,
