@@ -10,6 +10,8 @@ pub enum StoreError {
     UnknownPredicate(String),
     /// The fact carried a `place` or `day`. Project time is git's (spec §4.2).
     TimeIsGits,
+    /// A JSONL line did not parse as a `Fact`.
+    Malformed,
 }
 
 /// Build a project fact. `place` and `day` are always `None` by construction.
@@ -61,6 +63,35 @@ impl ProjectLedger {
     /// Every fact currently in force.
     pub fn facts(&self) -> &[Fact] {
         &self.facts
+    }
+
+    /// Serialize as JSONL, one fact per line, stable-ordered by
+    /// `(subject, predicate)`. `Fact` has no `Ord` (it holds an `f64`), so the
+    /// comparator is explicit. Stable order is what keeps a single assertion a
+    /// one-line diff, which is what keeps `git log -p` readable (decision 0088).
+    pub fn to_jsonl(&self) -> String {
+        let mut sorted: Vec<&Fact> = self.facts.iter().collect();
+        sorted.sort_by(|a, b| {
+            a.subject
+                .cmp(&b.subject)
+                .then_with(|| a.predicate.cmp(&b.predicate))
+        });
+        let mut out = String::new();
+        for f in sorted {
+            out.push_str(&serde_json::to_string(f).expect("Fact serializes"));
+            out.push('\n');
+        }
+        out
+    }
+
+    /// Parse JSONL produced by [`ProjectLedger::to_jsonl`].
+    pub fn from_jsonl(text: &str, registry: ConceptRegistry) -> Result<Self, StoreError> {
+        let mut led = Self::new(registry);
+        for line in text.lines().filter(|l| !l.trim().is_empty()) {
+            let f: Fact = serde_json::from_str(line).map_err(|_| StoreError::Malformed)?;
+            led.assert(f)?;
+        }
+        Ok(led)
     }
 }
 
@@ -124,5 +155,57 @@ mod tests {
         f.day = Some(1.0);
         let err = led.assert(f).expect_err("time must be rejected");
         assert!(matches!(err, StoreError::TimeIsGits));
+    }
+
+    #[test]
+    fn jsonl_is_stable_ordered_by_subject_then_predicate() {
+        let mut led = ProjectLedger::new(registry());
+        led.assert(fact(eid(2), "status", Value::Text("b".into())))
+            .unwrap();
+        led.assert(fact(eid(1), "supersedes", Value::Text("x".into())))
+            .unwrap();
+        led.assert(fact(eid(1), "status", Value::Text("a".into())))
+            .unwrap();
+        let text = led.to_jsonl();
+        let lines: Vec<&str> = text.lines().collect();
+        assert_eq!(lines.len(), 3);
+        assert!(lines[0].contains("\"subject\":1") && lines[0].contains("\"status\""));
+        assert!(lines[1].contains("\"subject\":1") && lines[1].contains("\"supersedes\""));
+        assert!(lines[2].contains("\"subject\":2"));
+    }
+
+    #[test]
+    fn replacing_one_fact_changes_exactly_one_line() {
+        let mut led = ProjectLedger::new(registry());
+        for n in 1..=20u64 {
+            led.assert(fact(eid(n), "status", Value::Text("accepted".into())))
+                .unwrap();
+        }
+        let before: Vec<String> = led.to_jsonl().lines().map(str::to_string).collect();
+
+        led.assert(fact(eid(7), "status", Value::Text("superseded".into())))
+            .unwrap();
+        let after: Vec<String> = led.to_jsonl().lines().map(str::to_string).collect();
+
+        assert_eq!(
+            before.len(),
+            after.len(),
+            "compaction must not grow the file"
+        );
+        let changed = before.iter().zip(&after).filter(|(a, b)| a != b).count();
+        assert_eq!(
+            changed, 1,
+            "a single assertion must be a one-line diff (S3)"
+        );
+    }
+
+    #[test]
+    fn jsonl_round_trips() {
+        let mut led = ProjectLedger::new(registry());
+        led.assert(fact(eid(1), "status", Value::Text("accepted".into())))
+            .unwrap();
+        let text = led.to_jsonl();
+        let back = ProjectLedger::from_jsonl(&text, registry()).expect("round trip");
+        assert_eq!(back.facts(), led.facts());
     }
 }
