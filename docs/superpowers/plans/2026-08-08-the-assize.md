@@ -1,4 +1,4 @@
-# The Tare Implementation Plan
+# The Assize Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust 2024, `cargo nextest`, the `windows/lab` metric registry, `scripts/census-run.sh`.
 
-**Spec:** `docs/superpowers/specs/2026-08-08-the-tare-design.md`
+**Spec:** `docs/superpowers/specs/2026-08-08-the-assize-design.md`
 
 ## Global Constraints
 
@@ -25,7 +25,7 @@
 - **Every mutation test must prove it mutated:** assert the target text exists before substituting. A no-op mutation produces false green.
 - **Working directory discipline:** every mutating command carries its path explicitly (`git -C <worktree>`, absolute paths in redirects). Stage explicit paths — **never `git add -A`**; a parallel subagent's in-flight edits get swept in.
 
-**Worktree:** `/Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-tare`, branch `the-tare`.
+**Worktree:** `/Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-assize`, branch `the-assize`.
 
 ---
 
@@ -44,7 +44,7 @@
 - [ ] **Step 1: Confirm the fixture is regenerated and the drift check passes**
 
 ```bash
-cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-tare
+cd /Users/nathan/Projects/hornvale/hornvale/.claude/worktrees/the-assize
 git diff --stat -- windows/worldgen/tests/fixtures/occupancy.csv
 # expect: 60 insertions(+), 24 deletions(-)
 cargo test -p hornvale-worldgen --test occupancy_readout occupancy_readout_is_current -- --ignored --nocapture
@@ -122,7 +122,7 @@ and must say, in prose:
 cargo fmt
 cargo clippy -p hornvale-worldgen --all-targets -- -D warnings
 git add windows/worldgen/tests/fixtures/occupancy.csv windows/worldgen/tests/occupancy_readout.rs
-git commit -m "test(the-tare): regenerate the occupancy readout; EC6 was never met
+git commit -m "test(the-assize): regenerate the occupancy readout; EC6 was never met
 
 Two disjoint causes, measured rather than inherited: +36 rows are C2c's three
 dwarves, and the 24 CHANGED rows are only rust-monster and xorn — the realm
@@ -299,7 +299,7 @@ Frame it as a correction, not a quiet edit. That retrospective's own subject is 
 cargo fmt
 cargo clippy -p hornvale --all-targets -- -D warnings
 git add cli/tests/scene_cost.rs cli/tests/session_cost.rs docs/retrospectives/the-confusion.md
-git commit -m "test(the-tare): the cost gates' contention discriminator was wrong, not just unmechanized
+git commit -m "test(the-assize): the cost gates' contention discriminator was wrong, not just unmechanized
 
 The Confusion's follow-up said scene_cost asserts before printing, so a
 contended run never measures the four control metrics. It prints all five at
@@ -570,7 +570,7 @@ cargo fmt
 cargo clippy -p hornvale-lab --all-targets -- -D warnings
 cargo test -p hornvale-lab --test disposition_calibration -- --ignored --nocapture 2>&1 | tail -20
 git add windows/lab/tests/disposition_calibration.rs
-git commit -m "test(the-tare): adjudicate the disposition calibration — the partition died, the ordering held
+git commit -m "test(the-assize): adjudicate the disposition calibration — the partition died, the ordering held
 
 The battery predicted this red and forbade retuning. Adjudicated rather than
 adjusted:
@@ -619,7 +619,7 @@ Place it beside the raid metrics (the history family, near `raid-victim-rate` at
 
 ```rust
         // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
-        // (The Tare). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
+        // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
         // seed 42 alone, and `history_sundering.rs` reported the same quantity
         // over twelve worlds. Measured over 48 worlds the distribution is
         // bimodal with deciles [0, 0, 3, 5, 111, 291, 578] and is **exactly
@@ -634,7 +634,7 @@ Place it beside the raid metrics (the history family, near `raid-victim-rate` at
             name: "climate-displacement-events",
             doc: "How many occupations on this world ended in climate-driven migration \
                   (`occ-cause` = `migrated`), excluding conquest-relocations — the \
-                  displacement mechanic's volume (The Tare). Replaces the seed-42 gate in \
+                  displacement mechanic's volume (The Assize). Replaces the seed-42 gate in \
                   `cli/tests/history_battery.rs` and the twelve-seed panel in \
                   `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit \
                   in single digits and a minority run to the hundreds, and a real minority \
@@ -715,7 +715,7 @@ Registry 191 -> 192."
 - [ ] **Step 1: Add the metric**
 
 ```rust
-        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Tare).
+        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Assize).
         // `windows/worldgen/tests/history_tithe.rs` asserted on
         // `BakeCensus::tribute_collected` — a FLOW integrated inside
         // `History::tally`, which `build_world_to` DISCARDS before any census
@@ -743,7 +743,7 @@ Registry 191 -> 192."
         Metric {
             name: "tribute-relations-standing",
             doc: "How many standing tribute relations (`pays-tribute-to`) this world holds \
-                  at `now` — the subordination stock (The Tare). Replaces \
+                  at `now` — the subordination stock (The Assize). Replaces \
                   `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume \
                   panel, whose quantity lives on the bake's discarded tally and is \
                   unreachable from any census metric. Agrees with that flow at spearman \
@@ -863,7 +863,7 @@ Expected: all PASS. `heavy_tier` and `claim_shape` are the two lints most likely
 cargo fmt
 cargo clippy --workspace --all-targets -- -D warnings
 git add cli/tests/history_battery.rs windows/worldgen/tests/history_sundering.rs windows/worldgen/tests/history_tithe.rs
-git commit -m "test(the-tare): retire the seed-42 displacement gate and both twelve-seed panels
+git commit -m "test(the-assize): retire the seed-42 displacement gate and both twelve-seed panels
 
 Each retirement leaves a pointer at the census column that took its question.
 
@@ -1088,7 +1088,7 @@ git diff --stat
 
 ```bash
 git add book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
-git commit -m "chore(the-tare): rebaseline the non-census artifacts"
+git commit -m "chore(the-assize): rebaseline the non-census artifacts"
 ```
 
 ---
@@ -1100,7 +1100,7 @@ git commit -m "chore(the-tare): rebaseline the non-census artifacts"
 - [ ] **Step 1: Push the branch and confirm the box is free**
 
 ```bash
-git -C <worktree> push -u origin the-tare
+git -C <worktree> push -u origin the-assize
 bash scripts/census-run.sh status
 ```
 
@@ -1180,7 +1180,7 @@ Then amend `TOOL-heavy-tier-red-allowlist` in `book/src/frontier/idea-registry.m
 
 - [ ] **Step 3: Chronicle, gradient, retrospective**
 
-`book/src/chronicle/the-tare.md`; re-score any Confidence Gradient bet this moved; `docs/retrospectives/the-tare.md`. Promote the decision ledger's findings into the retrospective **before** the worktree is torn down — it is git-ignored and dies with the checkout.
+`book/src/chronicle/the-assize.md`; re-score any Confidence Gradient bet this moved; `docs/retrospectives/the-assize.md`. Promote the decision ledger's findings into the retrospective **before** the worktree is torn down — it is git-ignored and dies with the checkout.
 
 The retrospective must carry, at minimum: the five-not-three count; that a failure message's self-explanation was wrong for the second and third times; that the author's own predictions were refuted **six** times across this campaign (three mechanisms in the tribute probe, plus relation-years, plus the ρ-only bound, plus the "both panels are equivalent" split) while every measurement held; and that "move it to the census" was the wrong universal cure.
 

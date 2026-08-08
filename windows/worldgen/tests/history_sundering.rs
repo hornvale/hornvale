@@ -7,7 +7,7 @@
 //!
 //! **The depopulation gate's migration half is no longer read on seed 42**
 //! (The Delvers, 2026-08-07). It was reported over a twelve-seed panel in the
-//! heavy tier; that panel has since retired (The Tare, 2026-08-08) — see
+//! heavy tier; that panel has since retired (The Assize, 2026-08-08) — see
 //! below. No floor was lowered; the citation the old reading rested on was
 //! ~1405 commits stale (58 claimed, 4 measured on main, 0 here), and
 //! migration across ordinary seeds spans 0–534 events, which no single-world
@@ -19,7 +19,7 @@
 //! so this sidesteps needing a `WorldComponents`-based interner the readback
 //! helper has no access to.
 //!
-//! ## THIS PANEL BECAME A CENSUS COLUMN (The Tare, 2026-08-08)
+//! ## THIS PANEL BECAME A CENSUS COLUMN (The Assize, 2026-08-08)
 //!
 //! The twelve-seed panel this section used to hold
 //! (`the_migration_distribution_is_reported_over_a_panel`, `FLOOR_PANEL`,
@@ -62,14 +62,14 @@ const MAX_COLLAPSE_SHARE: f64 = 0.05;
 
 /// The cheap seed-42 half, kept in the commit gate.
 ///
-/// # The migration half moved to a census column (The Delvers, then The Tare)
+/// # The migration half moved to a census column (The Delvers, then The Assize)
 ///
 /// This test used to assert `migration_events(&w) > 0` on seed 42 with the
 /// message "no migration — dynamics inert". On this branch seed 42 measures
 /// **0** migration events, and on main it measures **4** — against a cited
 /// figure of 58. The floor was **not lowered** (there is nothing below `> 0`
 /// to lower it to); the reading moved (The Delvers, 2026-08-07) to a
-/// twelve-seed panel, and then (The Tare, 2026-08-08) to the census column
+/// twelve-seed panel, and then (The Assize, 2026-08-08) to the census column
 /// `climate-displacement-events`, because seed 42's zero is a statement about
 /// seed 42's deep past being mild, not about the displacement branch being
 /// dead.

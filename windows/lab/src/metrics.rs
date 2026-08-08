@@ -3695,7 +3695,7 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
-        // (The Tare). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
+        // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
         // seed 42 alone, and `history_sundering.rs` reported the same quantity
         // over twelve worlds. Measured over 48 worlds the distribution is
         // bimodal with deciles [0, 0, 3, 5, 111, 291, 578] and is **exactly
@@ -3710,7 +3710,7 @@ pub fn registry() -> Vec<Metric> {
             name: "climate-displacement-events",
             doc: "How many occupations on this world ended in climate-driven migration \
                   (`occ-cause` = `migrated`), excluding conquest-relocations — the \
-                  displacement mechanic's volume (The Tare). Replaces the seed-42 gate in \
+                  displacement mechanic's volume (The Assize). Replaces the seed-42 gate in \
                   `cli/tests/history_battery.rs` and the twelve-seed panel in \
                   `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit \
                   in single digits and a minority run to the hundreds, and a real minority \
@@ -3729,7 +3729,7 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(migration_events(v.world()) as f64)
             }),
         },
-        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Tare).
+        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Assize).
         // `windows/worldgen/tests/history_tithe.rs` asserted on
         // `BakeCensus::tribute_collected` — a FLOW integrated inside
         // `History::tally`, which `build_world_to` DISCARDS before any census
@@ -3757,7 +3757,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "tribute-relations-standing",
             doc: "How many standing tribute relations (`pays-tribute-to`) this world holds \
-                  at `now` — the subordination stock (The Tare). Replaces \
+                  at `now` — the subordination stock (The Assize). Replaces \
                   `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume \
                   panel, whose quantity lives on the bake's discarded tally and is \
                   unreachable from any census metric. Agrees with that flow at spearman \

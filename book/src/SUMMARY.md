@@ -321,6 +321,7 @@
 - [The Lantern](./chronicle/the-lantern.md)
 - [The Reassay](./chronicle/the-reassay.md)
 - [The Digest](./chronicle/the-digest.md)
+- [The Assize](./chronicle/the-assize.md)
 
 # Appendix: The Frontier
 

@@ -79,7 +79,7 @@
 //! changed is exactly what this repo forbids; if this battery reddens on the
 //! next heavy-tier run, that is a finding for The Tolerance's readout to
 //! report, not a number to adjust. What is corrected here is only the prose
-//! that claimed a people never raids. **See "The Tare's adjudication" below
+//! that claimed a people never raids. **See "The Assize's adjudication" below
 //! for that finding** — this battery reddened on the 2026-08-08 heavy-tier
 //! run, exactly as anticipated.
 //!
@@ -97,7 +97,7 @@
 //! for the headroom each threshold leaves. This was the roster and the
 //! reading the original bounds were fitted to.
 //!
-//! ## The Tare's adjudication (2026-08-08)
+//! ## The Assize's adjudication (2026-08-08)
 //!
 //! Reproduced on this tree over seeds 1..=60, nine settling peoples (The
 //! Tolerance and The Warren both added peoples since the roster above):
@@ -150,7 +150,7 @@
 //!    threshold.
 //! 3. STRUCTURAL GUARD — a span guard ([`MIN_RATE_SPAN`]) that must pass
 //!    before the correlation is read at all. **Dormant against both of this
-//!    file's shipped mutation controls** (see "The Tare's rho-falsifiability
+//!    file's shipped mutation controls** (see "The Assize's rho-falsifiability
 //!    follow-up" below) — it guards a genuinely degenerate roster, which
 //!    neither mutation produces.
 //!
@@ -199,7 +199,7 @@
 //! floor and the separation claim did, which is itself evidence the
 //! instrument is not vacuous.
 //!
-//! ## The Tare's rho-falsifiability follow-up (2026-08-08)
+//! ## The Assize's rho-falsifiability follow-up (2026-08-08)
 //!
 //! The two mutation controls above never actually reach the SECONDARY
 //! `rho > 0` assertion: the `RAIDER_MIN` floor and the PRIMARY `separation >
@@ -264,12 +264,12 @@ const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// Floor on every RAIDING people's flagship-re-selection rate. Measured
 /// 2026-07-26 over seeds 1..=60: hobgoblin 20/47 = **0.426**, kobold
 /// 22/48 = 0.458, bugbear 24/48 = 0.500. The bound sits 42 % below the
-/// weakest raider. Re-checked in The Tare's adjudication (2026-08-08) against
+/// weakest raider. Re-checked in The Assize's adjudication (2026-08-08) against
 /// the nine-people roster: still holds, weakest raider now hill-dwarf 0.433.
 const RAIDER_MIN: f64 = 0.30;
 
 /// The pre-Tolerance directional claim: the weakest raider's rate over the
-/// strongest non-raider's. **Retired from assertion by The Tare (2026-08-08)**
+/// strongest non-raider's. **Retired from assertion by The Assize (2026-08-08)**
 /// — no longer checked against `RAIDER_MIN`-style headroom, only reported.
 /// Measured **2.55** (0.426 / 0.167) at the pre-Tolerance one-abstainer
 /// roster; measured **1.30** (0.433 / 0.333) at the nine-people roster the
@@ -438,7 +438,7 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
     // authored with the same disposition, or a bake in which
     // `threat_response` stopped reaching `takes_the_initiative` at all —
     // scenarios neither mutation control produces). See this module's doc,
-    // "The Tare's rho-falsifiability follow-up", for the measured table.
+    // "The Assize's rho-falsifiability follow-up", for the measured table.
     let mut all: Vec<f64> = raider_rates
         .iter()
         .chain(abstainer_rates.iter())

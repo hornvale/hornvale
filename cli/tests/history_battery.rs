@@ -41,7 +41,7 @@
 //! own Full-depth correlation is **-0.1092**. Every gate still passes; **no
 //! floor has moved** since the re-sync below, here or anywhere in this file.
 //!
-//! **The Tare (2026-08-08) retired the seed-42 and per-seed displacement
+//! **The Assize (2026-08-08) retired the seed-42 and per-seed displacement
 //! FIRING assertions.** Both were `migration > 0` checks — one on seed 42 at
 //! `BuildDepth::Full`, one inside the cross-seed sweep loop — and both are
 //! now the census column `climate-displacement-events`. Measured over 48
@@ -53,7 +53,7 @@
 //! `SWEEP_MIGRATION_FLOOR`, territory separation, stratigraphy, and the
 //! median depth/capacity correlation) is untouched.
 //!
-//! **The Tare, task 6b (2026-08-08), pays the attribution debt task 6 left
+//! **The Assize, task 6b (2026-08-08), pays the attribution debt task 6 left
 //! open.** Task 6 removed the assertion above but deliberately deferred
 //! regenerating the artifact ("that deserves its own attribution rather than
 //! riding along here" — its own commit message, `b013b97d`). Between the
@@ -97,7 +97,7 @@
 //! evidence for it anymore. `mig42`'s render line also carried a
 //! long-standing bug independent of this drift: it printed an unconditional
 //! "PASS" against `MIGRATION_FLOOR` even though the actual assertion this
-//! file ran (before The Tare) was `mig42 > 0`, not `mig42 >= MIGRATION_FLOOR`
+//! file ran (before The Assize) was `mig42 > 0`, not `mig42 >= MIGRATION_FLOOR`
 //! — the two were never the same check, and the mismatch was invisible while
 //! `mig42` stayed comfortably above both. At `mig42 = 0` it stopped being
 //! invisible (`0 events (floor 5). PASS` reads as self-contradicting), so
@@ -237,7 +237,7 @@ fn measure(seed: u64, depth: BuildDepth) -> Row {
 /// off-gate (heavy:); also exercises seed 42 at BuildDepth::Full for
 /// cascade-depth coverage. The seed-42 and per-seed displacement FIRING
 /// floors this claim used to include moved to the census column
-/// `climate-displacement-events` (The Tare) — see this file's module doc.
+/// `climate-displacement-events` (The Assize) — see this file's module doc.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn history_gates_full_world_and_cross_seed() {
@@ -257,7 +257,7 @@ fn history_gates_full_world_and_cross_seed() {
     // sweep below, where it can tell a mild world from an inert bake.
     //
     // The FIRING check (`mig42 > 0`) that used to sit here retired to the
-    // census column `climate-displacement-events` (The Tare, 2026-08-08):
+    // census column `climate-displacement-events` (The Assize, 2026-08-08):
     // measured over 48 worlds displacement is exactly zero on 6 of 48, so a
     // single-seed firing gate was passing on a ~87.5% chance rather than
     // measuring the mechanism. `mig42` itself stays — the report artifact
@@ -438,7 +438,7 @@ fn render_report(
          than by crowding. This gate still measures climate displacement only; \
          `migration_events` excludes conquest-relocations by design, and conflict \
          displacement is measured separately in \
-         `windows/worldgen/tests/history_tumult.rs`.)* *(The Tare, 2026-08-08: \
+         `windows/worldgen/tests/history_tumult.rs`.)* *(The Assize, 2026-08-08: \
          seed 42 itself now measures ZERO climate-migration events at both Full and \
          Settlements depth — the roster and realm-gate campaigns landed since have \
          moved this specific world past the regime this amendment illustrates. The \
@@ -464,7 +464,7 @@ fn render_report(
         "- **migration events**: {mig42} at Full depth. Informational only — the \
          per-seed firing/volume claim this line used to gate (against a floor of \
          {MIGRATION_FLOOR}) retired to the census column `climate-displacement-events` \
-         (The Tare, 2026-08-08), because a single-seed firing gate has a ~12.5% \
+         (The Assize, 2026-08-08), because a single-seed firing gate has a ~12.5% \
          failure rate by construction (zero on 6 of 48 worlds). This regen measures \
          seed 42 itself as one of the zero-migration worlds, which is exactly the case \
          the retired gate could not have survived.",

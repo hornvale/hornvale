@@ -208,7 +208,7 @@
 //! tribute_collected 8002.397, tribute_collection_events 4555,
 //! max_stores_at_now 249.052, vassal_flights 8, vassal_revolts 5`.
 //!
-//! ## THIS PANEL BECAME A CENSUS COLUMN (The Tare, 2026-08-08)
+//! ## THIS PANEL BECAME A CENSUS COLUMN (The Assize, 2026-08-08)
 //!
 //! The twelve-seed panel this section used to hold
 //! (`the_tribute_accumulator_is_reported_over_a_panel`, `FLOOR_PANEL`,
@@ -454,7 +454,7 @@ fn subordination_fires_at_volume() {
 /// `max_subordinates` is **reported and not floored**: cardinality is
 /// deliberately unbounded (§4.4) and a runaway hub is a finding, not a failure.
 ///
-/// # The volume half moved to a census column (The Delvers, then The Tare)
+/// # The volume half moved to a census column (The Delvers, then The Assize)
 ///
 /// This test used to assert `tribute_collected >= MIN_TRIBUTE_COLLECTED` here,
 /// on seed 42 alone. It no longer does, and the floor was **not lowered** —
@@ -462,7 +462,7 @@ fn subordination_fires_at_volume() {
 /// volume is now only **non-inertness**, which is what its own failure
 /// message always said it was for ("the accumulator is inert"). The
 /// calibrated reading moved (The Delvers, 2026-08-07) to a twelve-seed panel,
-/// and then (The Tare, 2026-08-08) to the census column
+/// and then (The Assize, 2026-08-08) to the census column
 /// `tribute-relations-standing` — see this file's module doc for why that
 /// column measures a stock rather than this flow.
 ///

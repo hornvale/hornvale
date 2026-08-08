@@ -3292,7 +3292,7 @@ fn raiding_occurs_across_the_census_and_both_sides_agree() {
 // --- THE TARE: calibration for the two census columns that retire the
 // seed-42 displacement gate and both twelve-seed panels. Both tests are RED
 // against the pre-regen fixture, because it predated these columns. The
-// census has since regenerated (the-tare, 2026-08-08, canonical box) and both
+// census has since regenerated (the-assize, 2026-08-08, canonical box) and both
 // are green. **Both were mutation-proved after the regen**, and each produced
 // a real assertion failure naming its own guard rather than a compile error:
 // `pooled >= 1000.0` -> `1e12` reddens with "displacement has gone inert
@@ -3307,7 +3307,7 @@ fn raiding_occurs_across_the_census_and_both_sides_agree() {
 /// the migration — a bound on it would re-create, one level up, exactly the
 /// defect of pinning a wide distribution to a value someone happened to see.
 ///
-/// **Measured over the census (the-tare, 2026-08-08): zero on 137 of 1000
+/// **Measured over the census (the-assize, 2026-08-08): zero on 137 of 1000
 /// worlds (13.7%), median 10, max 1924, pooled 113 526 events.** The design
 /// probe that argued for this migration read 48 worlds and put the same
 /// figures at 12.5% zeros, median 6, **max 578**. The zero rate survived; the

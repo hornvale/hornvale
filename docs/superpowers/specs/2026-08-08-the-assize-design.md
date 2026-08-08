@@ -1,8 +1,8 @@
-# The Tare — design
+# The Assize — design
 
 *The tare is the weight you subtract to make a scale read true.*
 
-Campaign: **The Tare**. Clears the five red heavy-tier tests standing at main
+Campaign: **The Assize**. Clears the five red heavy-tier tests standing at main
 before C2d (The Radiation) begins. Not a feature campaign: every item is a
 **measurement instrument**, and no product behaviour changes anywhere in it.
 

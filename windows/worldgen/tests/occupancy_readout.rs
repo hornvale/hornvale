@@ -223,7 +223,7 @@ fn regenerate_occupancy_readout() {
 ///
 /// The Vacancy's exit criterion 6 asked that hot-arid, savanna and boreal each
 /// gain at least one kind *centred* there. Measured against the committed
-/// readout, regenerated 2026-08-08 (The Tare):
+/// readout, regenerated 2026-08-08 (The Assize):
 ///
 /// | region | new kinds present | top occupant |
 /// |---|---|---|
@@ -254,7 +254,7 @@ fn regenerate_occupancy_readout() {
 /// verdict was already NOT MET at the values it was quoting. This is the
 /// **third** under-checked attribution recorded against this one file.
 ///
-/// **This regeneration (2026-08-08, The Tare) has two disjoint causes of its
+/// **This regeneration (2026-08-08, The Assize) has two disjoint causes of its
 /// own**, measured rather than inherited from the campaign brief that
 /// commissioned it. The row count went 350 → 386:
 ///

@@ -200,7 +200,7 @@ const TURN_BUDGET_MS: f64 = 8.0;
 /// 8.530 ms — slowest 8.910 ms. Budgeted at ~2x, rounded up: `2 * 8.910 =
 /// 17.82` -> 18.0.
 ///
-/// # **RAISED by The Tare: 18.0 -> 40.0 ms**, and the basis with it
+/// # **RAISED by The Assize: 18.0 -> 40.0 ms**, and the basis with it
 ///
 /// An explicit, reviewed act (Nathan, 2026-08-08), recorded here because the
 /// ratchet rule requires a raise to be exactly that. **Ceilings still ratchet
@@ -282,7 +282,7 @@ const START_BASIS_MS: f64 = 3442.192;
 const TURN_BASIS_MS: f64 = 3.906;
 /// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`.
 ///
-/// **Moved by The Tare, 8.910 -> 18.720**, in the same reviewed act that
+/// **Moved by The Assize, 8.910 -> 18.720**, in the same reviewed act that
 /// raised the ceiling above it. The old figure was 8.910 ms (The Sighting,
 /// 2026-08-06, slowest of three runs); it is superseded because `c25bb1d2`
 /// made per-cell colour a real cost, bisected and evidenced at

@@ -131,11 +131,11 @@ is a question of whether the instrument can see the thing at all.
   regression. A real regression is local."* That is a real discriminator and it
   was written down before this campaign existed.
 
-  **CORRECTION (The Tare, 2026-08-08): the claim above — that `scene_cost`
+  **CORRECTION (The Assize, 2026-08-08): the claim above — that `scene_cost`
   asserts on the first budget it checks and so never measures the four metrics
   that would settle it — was wrong, and had never been checked against the log
   it was written about.** `cli/tests/scene_cost.rs` takes all five measurements,
-  prints all five (`:319-325` before The Tare's edits below moved the lines),
+  prints all five (`:319-325` before The Assize's edits below moved the lines),
   and asserts only afterwards (`:327-349`). The very heavy-run log this bullet
   describes has all five, printed before any assertion ran
   (`heavy-20260808T163452Z-442429.log`, lefford):
@@ -154,7 +154,7 @@ is a question of whether the instrument can see the thing at all.
   subject names — an inherited diagnosis, read as a finding without being
   tested — recurring a second and third time inside the document that first
   named it: this bullet's own "first draft… does have an answer" correction
-  was itself untested, and stayed uncorrected until The Tare re-read the file.
+  was itself untested, and stayed uncorrected until The Assize re-read the file.
 
   **The sharper finding is not that the evidence was reachable — it always
   was — but that the documented discriminator gives the WRONG answer when
