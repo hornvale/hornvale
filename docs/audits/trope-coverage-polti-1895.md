@@ -111,7 +111,7 @@ that is the difference.
 
 ## Supply
 
-293 registered tokens no situation in this corpus requires.
+296 registered tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -148,6 +148,7 @@ missing half before this list can serve it.
 - `concept:dark` (language)
 - `concept:day` (language)
 - `concept:desert` (climate)
+- `concept:desert-dwarf-kind` (species)
 - `concept:dire-wolf-kind` (species)
 - `concept:drink` (language)
 - `concept:earth` (language)
@@ -180,6 +181,7 @@ missing half before this list can serve it.
 - `concept:grass-sward` (climate)
 - `concept:great` (language)
 - `concept:green` (language)
+- `concept:gully-dwarf-kind` (species)
 - `concept:hadal-trench` (climate)
 - `concept:hamada` (climate)
 - `concept:hand` (language)
@@ -187,6 +189,7 @@ missing half before this list can serve it.
 - `concept:heat` (climate)
 - `concept:high` (language)
 - `concept:hill` (terrain)
+- `concept:hill-dwarf-kind` (species)
 - `concept:hobgoblin-kind` (species)
 - `concept:holdfast-tangle` (climate)
 - `concept:home` (settlement)

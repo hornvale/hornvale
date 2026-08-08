@@ -22,13 +22,13 @@ Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands 
 Ways on: NE, NW, S.
 > npcs
 7 NPC(s) derived this session:
-  [532] bugbear of Googo
-  [533] hobgoblin of Geogebege
-  [534] hobgoblin of Neneonetea
-  [535] a wild rust-monster
-  [536] a wild otyugh
-  [537] a wild xorn
-  [538] a wild giant-goat
+  [557] bugbear of Googo
+  [558] hobgoblin of Toa
+  [559] hobgoblin of Naanoageogee
+  [560] a wild rust-monster
+  [561] a wild otyugh
+  [562] a wild xorn
+  [563] a wild giant-goat
 > needs
 The bugbear of Googo seems content.
 > wait 5
@@ -56,13 +56,13 @@ Ways on: NE, NW, S.
 > needs
 The bugbear of Googo grows restless.
 > why hobgoblin
-hobgoblin of Geogebege:
-- canonical name of an entity: hobgoblin of Geogebege (asserted by the-quickening)
+hobgoblin of Toa:
+- canonical name of an entity: hobgoblin of Toa (asserted by the-quickening)
 - an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.00153)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.00306)
 
 > wait 90
-Time passes. You sense movement nearby (366 stirred).
+Time passes. You sense movement nearby (389 stirred).
 > look
 [room 750518284, day 97]
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The sky is a low grey rain-deck.

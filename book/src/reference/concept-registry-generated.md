@@ -179,6 +179,7 @@
 | `dark` | language | quality | the color term for black/dark hues |
 | `day` | language | celestial | the light half of the day-night cycle |
 | `desert` | climate | terrain | a biome class |
+| `desert-dwarf-kind` | species | living | a desert dwarf |
 | `die` | language | act | to cease living |
 | `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
@@ -213,6 +214,7 @@
 | `grass-sward` | climate | substance | Open grassland, unbroken by trees. |
 | `great` | language | quality | large in size or extent |
 | `green` | language | quality | the color term for green |
+| `gully-dwarf-kind` | species | living | a gully dwarf |
 | `hadal-trench` | climate | terrain | a biome class |
 | `hamada` | climate | substance | A stony desert pavement of bare rock. |
 | `hand` | language | body | the manipulating limb-end |
@@ -220,6 +222,7 @@
 | `heat` | climate | quality | felt, oppressive warmth |
 | `high` | language | quality | far above the ground |
 | `hill` | terrain | terrain | ground that rises above what surrounds it |
+| `hill-dwarf-kind` | species | living | a hill dwarf |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `holdfast-tangle` | climate | substance | The anchored base of a kelp forest. |
 | `home` | settlement | social | one's dwelling |
