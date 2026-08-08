@@ -3289,6 +3289,104 @@ fn raiding_occurs_across_the_census_and_both_sides_agree() {
     );
 }
 
+// --- THE TARE: calibration for the two census columns that retire the
+// seed-42 displacement gate and both twelve-seed panels. Both tests are RED
+// until Task 9's census regen — the committed fixture predates these columns
+// and `seeded_nums` panics with "the census carries {name}". That window is
+// structural, not a mistake; see the plan's sequencing section. Step 3b's
+// mutation proof cannot run against the fixture until after the regen, and
+// is deferred to whoever runs that regen.
+
+/// Displacement fires across the census, and its distribution is the reason
+/// the single-seed gates were retired rather than re-pinned.
+///
+/// The ZERO SHARE is printed, never asserted. It is the number that justified
+/// the migration — a bound on it would re-create, one level up, exactly the
+/// defect of pinning a wide distribution to a value someone happened to see.
+/// claim: rate(census: climate-displacement-events, all rows) — the pooled
+/// count clears an inertness floor and no world reports a negative or
+/// non-finite count
+#[test]
+fn climate_displacement_fires_across_the_census() {
+    let events = seeded_nums(&DRIFT, "climate-displacement-events");
+    assert!(
+        !events.is_empty(),
+        "climate-displacement-events was Absent on every census world — the \
+         distribution is being read over an empty population"
+    );
+    for (seed, n) in &events {
+        assert!(
+            n.is_finite() && *n >= 0.0,
+            "seed {seed}: displacement count {n} is not a non-negative finite number"
+        );
+    }
+    let pooled: f64 = events.iter().map(|(_, n)| n).sum();
+    // An inertness floor, not a target: set orders of magnitude under the
+    // measurement and orders of magnitude above what a dead bake would leave.
+    // Read pooled rather than per-seed precisely because 12.5% of worlds
+    // legitimately measure zero.
+    assert!(
+        pooled >= 1000.0,
+        "displacement has gone inert across the whole census: {pooled} events over {} \
+         worlds. This is not a floor to lower — it means the migration branch stopped \
+         running.",
+        events.len()
+    );
+    let zeros = events.iter().filter(|(_, n)| *n == 0.0).count();
+    let mut sorted: Vec<f64> = events.iter().map(|(_, n)| *n).collect();
+    sorted.sort_by(f64::total_cmp);
+    println!(
+        "climate displacement over {} census worlds: zero on {zeros} ({:.1}%), median {}, \
+         max {} — REPORTED, not asserted",
+        events.len(),
+        100.0 * zeros as f64 / events.len() as f64,
+        sorted[sorted.len() / 2],
+        sorted[sorted.len() - 1]
+    );
+}
+
+/// The tribute stock is alive and VARIES across the census.
+///
+/// The span is the assertion with teeth, and deliberately so. The panel this
+/// replaces asserted only non-inertness, and every candidate observable —
+/// including the bake's own flow — measured 0 zeros over 36 worlds, so that
+/// guard could essentially never fire. A constant column is a broken fold,
+/// and it is the failure this can actually see.
+/// claim: rate(census: tribute-relations-standing, all rows) — the column
+/// spans a real range and no world reports a negative or non-finite count
+#[test]
+fn the_tribute_stock_varies_across_the_census() {
+    let stock = seeded_nums(&DRIFT, "tribute-relations-standing");
+    assert!(
+        !stock.is_empty(),
+        "tribute-relations-standing was Absent on every census world"
+    );
+    for (seed, n) in &stock {
+        assert!(
+            n.is_finite() && *n >= 0.0,
+            "seed {seed}: tribute stock {n} is not a non-negative finite number"
+        );
+    }
+    let mut sorted: Vec<f64> = stock.iter().map(|(_, n)| *n).collect();
+    sorted.sort_by(f64::total_cmp);
+    let (lo, hi) = (sorted[0], sorted[sorted.len() - 1]);
+    assert!(
+        hi - lo >= 10.0,
+        "the tribute stock is effectively constant across {} census worlds ({lo}..{hi}) \
+         — a column that reads the same number everywhere is a broken fold, not a \
+         finding about worlds",
+        stock.len()
+    );
+    let zeros = stock.iter().filter(|(_, n)| *n == 0.0).count();
+    println!(
+        "tribute stock over {} census worlds: {lo}..{hi}, median {}, zero on {zeros} \
+         — the zero count is REPORTED; a 36-world probe saw none, and the census is \
+         the first instrument that could",
+        stock.len(),
+        sorted[sorted.len() / 2]
+    );
+}
+
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).
 fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
