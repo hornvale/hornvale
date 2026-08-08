@@ -65,7 +65,26 @@ acceptance test, not an illustration.
 
 Add a **required** `domain` to metric registration. `MetricKind`-adjacent, a
 closed vocabulary: `astronomy`, `terrain`, `climate`, `hydrology`, `biology`,
-`settlement`, `society`, `religion`, `language`, `naming`, `history`.
+`settlement`, **`demography`**, `society`, `religion`, `language`, `naming`,
+`history`.
+
+**`demography` was added by an ideonomy pass (2026-08-08)**, which caught that
+the first eleven values invented four subjects with no crate (`biology`,
+`hydrology`, `naming`, `society`) while omitting six crates that exist
+(`alchemy`, `culture`, `demography`, `paleoclimate`, `species`, `topology`).
+That is a guess, not a taxonomy. `peoples-placed` and `peoples-alive-at-bake-end`
+had no home for exactly that reason.
+
+**The axis stays subject-based, not crate-based**, because a crate is *who
+computes a metric*, not *what it is about* — filing `aquifer-fraction` under
+Terrain because terrain code produces it leaks implementation into the book's
+table of contents, and the reader is the customer here.
+
+**But crate coverage gets its own mechanical check** (§4.4, **D8**): every crate
+under `domains/` should have at least one metric somewhere. A crate with none
+means the census does not measure that part of the world at all — a *world* gap,
+which by §4.6a gets rendered rather than fixed. On present evidence this will
+fire immediately on `alchemy` and `paleoclimate`.
 
 - **Default-deny**, in the repo's idiom (`type-audit`, `claim_shape`): a metric
   without a domain fails a test. There is no "unclassified" bucket, because a
@@ -150,18 +169,38 @@ authored expectation, and that is the whole judgment surface of this campaign.
 | **D7 Broken invariant** | a metric declared `invariant` that is *not* constant | none |
 | **D3 Narrow** | a `numeric` metric whose p25..p75 spans < 5 % of its min..max range | none |
 | **D4 At-rail** | median equals min or max (e.g. "median waterfall count is 0") | none |
-| **D5 Decoupled** | a metric an expectation says should track a driver, but \|r\| < 0.10 | `studies/expectations.json` |
+| **D5 Mis-declared strength** | an expectation declares a relationship *class* and the observed class differs | `studies/expectations.json` |
 | **D6 Off-comparator** | median differs from a comparator by more than a declared band | `studies/comparators.json` |
+| **D8 Unmeasured domain** | a crate under `domains/` has no metric in any domain | none |
 
 `studies/expectations.json` holds pairs the physics implies:
 
 ```json
 { "expect": [
-  { "metric": "mean-land-temp-c", "tracks": "insolation-rel",
-    "why": "insolation is the dominant term in a radiative balance",
-    "min_abs_r": 0.10 }
+  { "metric": "mean-land-temperature-c", "tracks": "year-std-days",
+    "why": "orbital period proxies orbital distance and thus insolation, the dominant term in a radiative balance",
+    "declared": "dominant" }
 ]}
 ```
+
+**D5 carries no threshold of mine.** An expectation declares a *strength class*;
+the detector reports declared-vs-observed against conventional effect-size bands:
+
+    |r| >= 0.7   dominant
+    0.5 - 0.7    strong
+    0.3 - 0.5    moderate
+    0.1 - 0.3    weak
+    < 0.1        none
+
+This is an ideonomy result (2026-08-08) and it **supersedes the `min_abs_r`
+formulation entirely**. The earlier draft froze `min_abs_r = 0.50` while already
+knowing the measured r = -0.245 — a phase-order violation: the value was
+measured before the judgement was frozen, so no amount of justification could
+make the number credibly independent of the data. The fix is not a better number
+but a different *source*: the bands are external convention, the claim is
+physical, and nothing known about the data could shape either. It also dissolves
+the tension with D1, which is a global definition of "degenerate" rather than a
+per-claim parameter.
 
 ### 4.4a What I looked at before freezing, and what it changed
 
@@ -217,6 +256,25 @@ assembled — the `self-map-line` pattern The Digest proved. Everything else is
 computed. No sentence in this part may state a number that is not read from
 `rows.csv` at render time.
 
+### 4.6a A gap in the world is rendered; an error in the instrument is fixed
+
+**Nathan's principle, sharpened during Task 1 (2026-08-08).** The survey exists
+to make absences visible, so an absence quietly repaired while building the
+instrument is one the instrument never learns to see. But the two kinds of
+absence are not alike:
+
+- **A gap in the WORLD** — no insolation metric, `reproductive-tempo` frozen at
+  0.42, a domain crate with nothing measured — is rendered. That is the finding.
+- **An error in the INSTRUMENT** — a metric filed under the wrong domain — is
+  fixed. Rendering it faithfully publishes a mistake in the one artifact whose
+  purpose is being trustworthy.
+
+Collapsing the two nearly shipped an empty `Hydrology` page asserting that water
+is unmeasured, when in fact twelve hydrology metrics were misfiled under
+`Terrain` by mechanical rung-inheritance. The finding worth keeping was never
+the empty chapter — it was that **rung-inheritance misfiled sixteen metrics**,
+which is a lesson about the annotation method.
+
 ## 5. Non-goals
 
 - **Not re-running the census.** Reads the committed artifact only.
@@ -239,8 +297,9 @@ finding, not a failure.
   (corrected at G3 — the first draft named the wrong detector):
   - **D6 fires** on `mean-land-temperature-c`: median **−11.90 °C** against
     Earth's 14.0, a 25.9 °C gap. This is the primary catch.
-  - **D5 fires** on mean-land-temperature vs insolation (SKY-19 measured
-    ocean-fraction r = −0.000, obliquity r = +0.041 — far under `min_abs_r`).
+  - **D5 fires** on `mean-land-temperature-c`: the expectation declares
+    **dominant**, the observed |r| = 0.245 against `year-std-days` is **weak**.
+    The finding is the *class mismatch*, not a threshold crossing.
   - **D1 does NOT fire** on `dominant-land-biome` (ice = 651/1000 = 65.1 %,
     under the 80 % bar). That is correct behaviour, asserted as such so a later
     reader does not "fix" it.

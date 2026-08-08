@@ -1107,7 +1107,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Astronomy,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v| {
                 let a: &AstronomyView = v.as_ref();
@@ -1284,7 +1284,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
@@ -1312,7 +1312,7 @@ pub fn registry() -> Vec<Metric> {
                   sweep: a variant no world in the census shows is structurally dead, \
                   and 1,000 worlds say so with a rate where 8 said so with a flag.",
             summary: SummaryKind::Categorical,
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
@@ -1339,7 +1339,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
@@ -2211,7 +2211,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
@@ -2960,7 +2960,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            domain: Domain::Astronomy,
+            domain: Domain::Biology,
             role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "goblin")),
         },
@@ -2972,7 +2972,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            domain: Domain::Astronomy,
+            domain: Domain::Biology,
             role: Role::Descriptor,
             extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "kobold")),
         },
@@ -2984,7 +2984,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
@@ -3014,7 +3014,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.5, 0.0, 0.25, 0.5, 1.0, 1.5],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(coast_roughness_slope),
         },
@@ -3046,7 +3046,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
@@ -3163,7 +3163,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, false)),
         },
@@ -3179,7 +3179,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, true)),
         },
@@ -3210,7 +3210,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.waterfalls().len() as f64)
@@ -3226,7 +3226,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.deltas().len() as f64)
@@ -3244,7 +3244,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
-            domain: Domain::Terrain,
+            domain: Domain::Hydrology,
             role: Role::Descriptor,
             extract: Extractor::Terrain(|v: &TerrainView| {
                 MetricValue::Number(v.terrain.globe().carve_reroute_fraction)
@@ -3966,7 +3966,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.3, 0.5, 0.7],
             },
-            domain: Domain::Society,
+            domain: Domain::Settlement,
             role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let pops: Vec<f64> = occupation_records(v.world())
@@ -4041,7 +4041,7 @@ pub fn registry() -> Vec<Metric> {
                   and a tail miss-run, so it cannot be synthesised — which is why it \
                   is a rate here rather than a hand-built behaviour test.",
             summary: SummaryKind::Flag,
-            domain: Domain::Society,
+            domain: Domain::Religion,
             role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
@@ -4109,7 +4109,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Society,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let a = raid_attribution(&occupation_records(v.world()));
@@ -4136,7 +4136,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Society,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let a = raid_attribution(&occupation_records(v.world()));
@@ -4159,7 +4159,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Society,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let a = raid_attribution(&occupation_records(v.world()));
