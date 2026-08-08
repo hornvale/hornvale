@@ -286,8 +286,24 @@ worktree).
   decision. It is the ideonomy pass's dark-polarity finding and deserves
   explicit ratification, because it is what stops this campaign from becoming
   the thing it exists to prevent.
-- **Does a project predicate registry want its own epoch discipline?** World
-  stream labels are save-format contracts with `/v2` epochs. Project
-  predicates are not save-format — but renaming one silently rewrites every
-  generated view. Unresolved; proposed answer is "yes, same discipline, no
-  epoch needed since there is no save to corrupt."
+*(Both items above were ratified by Nathan at G3, 2026-08-08. The third,
+below, was open at G3 and is now decided — ledger #10.)*
+
+## 11. Predicate renames: isolation, not versioning
+
+**Decided (ledger #10).** Project predicates carry **no epoch suffix**, but a
+rename **must be its own commit, touching nothing else**.
+
+The reasoning matters more than the rule, because it corrects the answer this
+spec originally proposed. Stream labels carry `/v2` epochs because a rename
+**corrupts every world** (decision 0006). A project predicate rename corrupts
+nothing — there is no save. But it rewrites every fact carrying that
+predicate, producing a whole-file diff that destroys `git log -p` for that
+compaction. That is 0088's churn corollary a third time, and archaeology is
+the entire justification for compaction (§4.3, §4.5).
+
+So the hazard is real but it is a **diff-noise** hazard, not a corruption
+hazard, and the mitigation is isolation-in-history rather than
+versioning-in-name. Epoch suffixes are additionally wrong here: they would
+leave dead `predicate/v1` rows in a store whose defining property is that
+superseded things *leave*.
