@@ -332,6 +332,36 @@ H4's regime is unreachable on the chamber band, which is a finding about
 where the campaign's drama lives, not a failure. **The attenuation constant
 may not be tuned to make it come out otherwise** (§11, risk 2).
 
+**MEASURED — H4 held, H4a read negative, and both deserve their qualifiers.**
+
+*H4 held, by exactly one byte.* At an illuminance of `1.6e-6` a human emits
+`[0,0,0]` and a kobold does not, and the kobold's three slots are **equal** —
+which is the assertion that matters, because it proves the pixel came from the
+rod path rather than from a cone channel that happened to survive. But the two
+eyes share one rod curve scaled by 1.5, so **there is no illuminance at which
+the human is black and the kobold is bright**. H4 establishes that the cliff
+*exists*; its *height* is carried by the hue test, where the rod puts 29 (human)
+and 38 (kobold) on the screen against a required floor of 20.
+
+*Two constants turned out to be load-bearing rather than decorative*, and both
+are the wrong-attribution shape:
+
+- `SCOTOPIC_NORM` is the **standard** rod's, shared across observers. Deriving
+  it per-observer would divide a species' `scotopic_gain` straight back out, and
+  a kobold would render pixel-for-pixel identical to a human — night vision
+  measured correctly and attributed to nothing.
+- `SCOTOPIC_GAIN = 1000` is required. Measured: at unit gain the rod's image
+  falls below one screen count *everywhere in its own regime*, so the term would
+  have shipped green and done nothing — precisely the defect it exists to
+  remove.
+
+**H4a: `[2, 2, 0]` is the dimmest visible chamber cell across the sweep**, four
+times the photopic threshold and two bytes clear of the floor. So **H4's regime
+is unreachable on the chamber band**, as §4.2's geometry predicts. Pinned as an
+inverted tripwire — the test asserts *zero* achromatic cells, since three equal
+slots are the signature of the scotopic path having run — so a future red there
+is a finding to read, never a constant to move.
+
 *Why H4 is split.* An earlier draft asserted H4 at the emitted-colour level
 on the chamber band, where it may be unreachable in practice — a true
 measurement attached to the wrong subject, which is the §10 shape exactly.
