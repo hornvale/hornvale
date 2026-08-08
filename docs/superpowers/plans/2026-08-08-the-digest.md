@@ -523,7 +523,9 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 **Interfaces:**
 - Consumes: `store::fact`, `vocabulary::project_registry`
-- Produces: `scan::decisions::parse(id: &str, text: &str) -> DecisionRecord` where `pub struct DecisionRecord { pub id: String, pub title: String, pub status: Status, pub superseded_by: Option<String>, pub scope: Option<String> }` and `pub enum Status { Accepted, Proposed, Superseded }`
+- Produces: `scan::decisions::parse(id: &str, text: &str) -> DecisionRecord` where `pub struct DecisionRecord { pub id: String, pub title: String, pub status: Status, pub superseded_by: Option<String> }` and `pub enum Status { Accepted, Proposed, Superseded }`
+
+**AMENDED 2026-08-08 (Nathan's ruling, ledger Task 4).** `scope` is NOT scanned. The trailing parenthetical after "Superseded by" carries three different meanings in the live corpus — a rationale (0063), a genuine scope (0043), and a date (0099) — and they are not syntactically distinguishable. Spec §4.4 already places supersession in the **asserted** column; the scanner extracts `superseded-by` only, and `supersession-scope` is an authored fact. **Decision entities are keyed `EntityId(n)` where `n` is the decision's number** (0026 → `EntityId(26)`), which is deterministic and needs no id table.
 
 **All four real status formats present in the corpus must parse.** Measured at `64e8c667`: 107 `Accepted`, 2 `Proposed`, and 4 superseded across the forms `Superseded by 0063`, `Superseded by 0043 (…)`, `Superseded by [0099]`, and a bare `Superseded by` continuing on the next line.
 
@@ -551,7 +553,6 @@ mod tests {
         let d = parse("0029", text);
         assert_eq!(d.status, Status::Superseded);
         assert_eq!(d.superseded_by.as_deref(), Some("0063"));
-        assert_eq!(d.scope, None, "an unqualified supersession has no scope");
     }
 
     #[test]
@@ -563,20 +564,36 @@ mod tests {
     }
 
     #[test]
-    fn a_partial_supersession_keeps_its_surviving_scope() {
+    fn a_trailing_parenthetical_is_never_read_as_scope() {
         // THE case this campaign exists for: 0026 reads as superseded to any
         // grepping reader, but its registry-row provision still stands, and
-        // the registry violates it 1,402 times.
+        // the registry violates it 1,402 times. The SCANNER must not try to
+        // infer that — the same slot holds a rationale in 0063 and a date in
+        // 0099. Scope is asserted, not scanned (spec §4.4).
         let text = "# 0026. Slugs, not numbers\n\n\
                     **Status:** Superseded by 0043 (for decision records; the \
                     study/chronicle/registry-row provisions stand) · **Decider:** Nathan\n";
         let d = parse("0026", text);
         assert_eq!(d.superseded_by.as_deref(), Some("0043"));
-        assert_eq!(
-            d.scope.as_deref(),
-            Some("for decision records; the study/chronicle/registry-row provisions stand"),
-            "a partial supersession must retain what survives"
-        );
+    }
+
+    #[test]
+    fn a_date_parenthetical_does_not_corrupt_the_superseder_id() {
+        // 0099's form: a bracket link followed by a DATE parenthetical.
+        let text = "# 0082. A thing\n\n\
+                    **Status:** Superseded by [0099](0099-worlds-are-version-locked.md) (2026-08-04) ·\n";
+        let d = parse("0082", text);
+        assert_eq!(d.superseded_by.as_deref(), Some("0099"));
+    }
+
+    #[test]
+    fn a_rationale_parenthetical_does_not_corrupt_the_superseder_id() {
+        // 0063's form: a prose rationale, not a scope.
+        let text = "# 0029. CI checks 500-seed censuses\n\n\
+                    **Status:** Superseded by 0063 (The Local Census made the full census a ~7-min\n\
+                    local run) · **Decider:** Nathan\n";
+        let d = parse("0029", text);
+        assert_eq!(d.superseded_by.as_deref(), Some("0063"));
     }
 
     #[test]
@@ -660,9 +677,6 @@ pub struct DecisionRecord {
     pub status: Status,
     /// The superseding decision's id, if any.
     pub superseded_by: Option<String>,
-    /// Which provisions the supersession covers. `None` means all of them —
-    /// so `Some(..)` is a PARTIAL supersession and the rest still governs.
-    pub scope: Option<String>,
 }
 
 /// Parse one decision file.
@@ -685,26 +699,34 @@ pub fn parse(id: &str, text: &str) -> DecisionRecord {
         .unwrap_or_default();
     let status_field = raw.split('·').next().unwrap_or("").trim().to_string();
 
-    let (status, superseded_by, scope) = if status_field.starts_with("Superseded") {
+    let (status, superseded_by) = if status_field.starts_with("Superseded") {
+        // Take the FIRST run of ascii digits after "by", wherever it sits:
+        // bare (`by 0063`), bracketed (`by [0099](0099-...md)`), or on the
+        // next line (0006). Everything after it — rationale, scope, or date —
+        // is deliberately ignored: those three are not distinguishable
+        // syntactically, and scope is asserted rather than scanned (spec §4.4).
         let after = status_field
             .split_once("by")
             .map(|(_, a)| a.trim())
             .unwrap_or("");
-        let scope = after
-            .split_once('(')
-            .and_then(|(_, s)| s.rsplit_once(')'))
-            .map(|(s, _)| s.trim().to_string());
-        let id_part = after.split('(').next().unwrap_or("").trim();
-        let sup = id_part
-            .trim_start_matches('[')
-            .split(|c: char| c == ']' || c.is_whitespace())
-            .find(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
-            .map(str::to_string);
-        (Status::Superseded, sup, scope)
+        let mut sup = None;
+        let mut run = String::new();
+        for c in after.chars() {
+            if c.is_ascii_digit() {
+                run.push(c);
+            } else if !run.is_empty() {
+                sup = Some(run.clone());
+                break;
+            }
+        }
+        if sup.is_none() && !run.is_empty() {
+            sup = Some(run);
+        }
+        (Status::Superseded, sup)
     } else if status_field.starts_with("Proposed") {
-        (Status::Proposed, None, None)
+        (Status::Proposed, None)
     } else {
-        (Status::Accepted, None, None)
+        (Status::Accepted, None)
     };
 
     DecisionRecord {
@@ -712,7 +734,6 @@ pub fn parse(id: &str, text: &str) -> DecisionRecord {
         title,
         status,
         superseded_by,
-        scope,
     }
 }
 ```
@@ -747,9 +768,11 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 **Interfaces:**
 - Consumes: `scan::decisions::{DecisionRecord, Status, parse}`
-- Produces: `render::decisions::index(&[DecisionRecord]) -> String`
+- Produces: `render::decisions::index(records: &[DecisionRecord], scopes: &BTreeMap<String, String>) -> String`
 
 Proves **spec §6 S4**: superseding removes a decision from the in-force index.
+
+**AMENDED 2026-08-08 (Nathan's ruling).** `scope` is no longer on `DecisionRecord`. It arrives as `scopes`, a map from decision id to the surviving-provisions text, sourced from **asserted** facts (`supersession-scope`, subject `EntityId(n)` where `n` is the decision number). For v1 exactly one entry exists: `"0026"`. A decision superseded with no scope entry is wholly superseded and must not appear.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -759,43 +782,62 @@ mod tests {
     use super::*;
     use crate::scan::decisions::{DecisionRecord, Status};
 
-    fn rec(id: &str, title: &str, status: Status, by: Option<&str>, scope: Option<&str>) -> DecisionRecord {
+    fn rec(id: &str, title: &str, status: Status, by: Option<&str>) -> DecisionRecord {
         DecisionRecord {
             id: id.into(),
             title: title.into(),
             status,
             superseded_by: by.map(str::to_string),
-            scope: scope.map(str::to_string),
         }
+    }
+
+    fn no_scopes() -> BTreeMap<String, String> {
+        BTreeMap::new()
     }
 
     #[test]
     fn a_superseded_decision_falls_out_of_the_index() {
-        let out = index(&[
-            rec("0029", "CI checks 500-seed censuses", Status::Superseded, Some("0063"), None),
-            rec("0063", "Census regen is local again", Status::Accepted, None, None),
-        ]);
+        let out = index(
+            &[
+                rec("0029", "CI checks 500-seed censuses", Status::Superseded, Some("0063")),
+                rec("0063", "Census regen is local again", Status::Accepted, None),
+            ],
+            &no_scopes(),
+        );
         assert!(!out.contains("0029"), "wholly superseded decisions must not appear");
         assert!(out.contains("0063"));
     }
 
     #[test]
-    fn a_partially_superseded_decision_stays_with_its_surviving_scope() {
-        let out = index(&[rec(
-            "0026",
-            "Slugs, not numbers",
-            Status::Superseded,
-            Some("0043"),
-            Some("for decision records; the study/chronicle/registry-row provisions stand"),
-        )]);
+    fn a_partially_superseded_decision_stays_with_its_asserted_scope() {
+        let mut scopes = BTreeMap::new();
+        scopes.insert(
+            "0026".to_string(),
+            "for decision records; the study/chronicle/registry-row provisions stand".to_string(),
+        );
+        let out = index(
+            &[rec("0026", "Slugs, not numbers", Status::Superseded, Some("0043"))],
+            &scopes,
+        );
         assert!(out.contains("0026"), "a partial supersession still governs in part");
         assert!(out.contains("registry-row provisions stand"), "the surviving scope must be shown");
         assert!(out.contains("0043"), "the superseder must be named");
     }
 
     #[test]
+    fn a_superseded_decision_with_no_asserted_scope_is_dropped_even_if_its_file_had_a_parenthetical() {
+        // 0029's status line carries a RATIONALE parenthetical and 0082's a
+        // DATE. Neither is a scope, neither is asserted, so both must drop.
+        let out = index(
+            &[rec("0082", "A thing", Status::Superseded, Some("0099"))],
+            &no_scopes(),
+        );
+        assert!(!out.contains("0082"), "absent scope means wholly superseded");
+    }
+
+    #[test]
     fn proposed_decisions_are_marked_not_dropped() {
-        let out = index(&[rec("0061", "A proposed thing", Status::Proposed, None, None)]);
+        let out = index(&[rec("0061", "A proposed thing", Status::Proposed, None)], &no_scopes());
         assert!(out.contains("0061"));
         assert!(out.to_lowercase().contains("proposed"));
     }
@@ -828,6 +870,7 @@ pub mod decisions;
 //! The in-force decision index.
 
 use crate::scan::decisions::{DecisionRecord, Status};
+use std::collections::BTreeMap;
 
 /// Render the decisions currently in force.
 ///
@@ -835,7 +878,12 @@ use crate::scan::decisions::{DecisionRecord, Status};
 /// (spec §4.3): a stale record left in the file WILL be found by a grepping
 /// reader. A PARTIALLY superseded decision does appear, with the provisions
 /// that survive, because it still governs them.
-pub fn index(records: &[DecisionRecord]) -> String {
+///
+/// `scopes` maps a decision id to its surviving-provisions text and comes from
+/// ASSERTED facts, never from parsing (spec §4.4): the trailing parenthetical
+/// in a status line holds a rationale, a scope, or a date depending on the
+/// decision, and those are not distinguishable syntactically.
+pub fn index(records: &[DecisionRecord], scopes: &BTreeMap<String, String>) -> String {
     let mut sorted: Vec<&DecisionRecord> = records.iter().collect();
     sorted.sort_by(|a, b| a.id.cmp(&b.id));
 
@@ -845,7 +893,7 @@ pub fn index(records: &[DecisionRecord]) -> String {
          superseded decisions are absent by design; git holds them.\n\n",
     );
     for r in sorted {
-        match (r.status, r.scope.as_deref()) {
+        match (r.status, scopes.get(&r.id).map(String::as_str)) {
             (Status::Superseded, None) => continue,
             (Status::Superseded, Some(scope)) => {
                 let by = r.superseded_by.as_deref().unwrap_or("?");
@@ -1189,6 +1237,15 @@ mod tests {
     use super::*;
     use crate::scan::decisions::{DecisionRecord, Status};
 
+    fn scopes_with_0026() -> BTreeMap<String, String> {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "0026".to_string(),
+            "for decision records; the study/chronicle/registry-row provisions stand".to_string(),
+        );
+        m
+    }
+
     #[test]
     fn reports_the_registry_id_gap() {
         let recs = vec![DecisionRecord {
@@ -1196,9 +1253,8 @@ mod tests {
             title: "Slugs, not numbers".into(),
             status: Status::Superseded,
             superseded_by: Some("0043".into()),
-            scope: Some("for decision records; the study/chronicle/registry-row provisions stand".into()),
         }];
-        let out = report(&recs);
+        let out = report(&recs, &scopes_with_0026());
         assert!(out.contains("0026"), "the partially-surviving decision must be named");
         assert!(out.contains("numeric"), "the measured reality must be reported");
     }
@@ -1207,7 +1263,7 @@ mod tests {
     fn the_report_is_not_vacuous_on_real_repo_state() {
         // S5: if this ever returns 'no gaps' on the live repo, either the
         // repo became perfect or the view stopped working. Assume the latter.
-        let out = report(&crate::scan::decisions::all_for_test());
+        let out = report(&crate::scan::decisions::all_for_test(), &scopes_with_0026());
         assert!(out.contains("0026"), "S5: the known live gap must be found");
     }
 }
@@ -1251,7 +1307,11 @@ fn numeric_registry_ids() -> usize {
 }
 
 /// Report every place authored intent and scanned reality disagree.
-pub fn report(records: &[DecisionRecord]) -> String {
+///
+/// `scopes` is the same asserted map [`crate::render::decisions::index`] takes:
+/// decision id to surviving-provisions text. A decision only counts as
+/// partially superseded if a scope was ASSERTED for it.
+pub fn report(records: &[DecisionRecord], scopes: &BTreeMap<String, String>) -> String {
     let mut out = String::from(
         "# Intent vs reality\n\n\
          GENERATED by `digest render delta` — do not edit. Each row is a rule \
@@ -1260,18 +1320,20 @@ pub fn report(records: &[DecisionRecord]) -> String {
     let mut gaps = 0usize;
 
     for r in records {
-        let partial = r.status == Status::Superseded && r.scope.is_some();
-        if partial && r.title.to_lowercase().contains("slug") {
+        let Some(scope) = scopes.get(&r.id) else {
+            continue;
+        };
+        if r.status != Status::Superseded {
+            continue;
+        }
+        if r.title.to_lowercase().contains("slug") {
             let n = numeric_registry_ids();
             if n > 0 {
                 gaps += 1;
                 out.push_str(&format!(
                     "- **{} {}** still governs registry rows ({}), but the registry \
                      carries {} numeric identifiers.\n",
-                    r.id,
-                    r.title,
-                    r.scope.as_deref().unwrap_or(""),
-                    n
+                    r.id, r.title, scope, n
                 ));
             }
         }
