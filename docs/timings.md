@@ -502,3 +502,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T00:23:07Z | rebaseline | 169.240 | 177.922 | 9.206 | 1.11 | 0 | 490757f9 | campaign/the-assay | ambrose | 12 |
 | 2026-08-08T00:44:28Z | gate | 1032.408 | 5219.448 | 296.296 | 5.34 | 0 | 8ab36d1e | campaign/the-assay | ambrose | 12 |
 | 2026-08-08T02:13:54Z | gate | 923.743 | 4955.322 | 244.078 | 5.63 | 0 | 1aa73b90 | campaign/the-assay | ambrose | 12 |
+| 2026-08-08T12:08:17Z | gate | 525.463 | 4316.741 | 99.502 | 8.40 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |
+| 2026-08-08T12:10:50Z | rebaseline | 132.231 | 179.320 | 9.711 | 1.43 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |
