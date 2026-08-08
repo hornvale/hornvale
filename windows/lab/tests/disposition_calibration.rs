@@ -148,8 +148,11 @@
 //!    roster, catching a global loss of ordering that a min-vs-max comparison
 //!    can miss. The measured 0.831 is recorded as a witness, not used as the
 //!    threshold.
-//! 3. LOAD-BEARING — a span guard ([`MIN_RATE_SPAN`]) that must pass before
-//!    the correlation is read at all; see its own doc for why.
+//! 3. STRUCTURAL GUARD — a span guard ([`MIN_RATE_SPAN`]) that must pass
+//!    before the correlation is read at all. **Dormant against both of this
+//!    file's shipped mutation controls** (see "The Tare's rho-falsifiability
+//!    follow-up" below) — it guards a genuinely degenerate roster, which
+//!    neither mutation produces.
 //!
 //! This is a **post-hoc re-derivation**, stated plainly as one: every bound
 //! above is set from the mechanism, not fitted to this table, and no
@@ -195,6 +198,51 @@
 //! instrument that happened to fire against *these* two mutations; the
 //! floor and the separation claim did, which is itself evidence the
 //! instrument is not vacuous.
+//!
+//! ## The Tare's rho-falsifiability follow-up (2026-08-08)
+//!
+//! The two mutation controls above never actually reach the SECONDARY
+//! `rho > 0` assertion: the `RAIDER_MIN` floor and the PRIMARY `separation >
+//! 1.0` claim both fire first. That left `rho > 0` untested by this file's
+//! own anti-vacuity proof — an assertion nobody has ever observed to fail is
+//! indistinguishable from a decorative one, which is exactly the defect this
+//! campaign exists to remove, so it was measured directly rather than left
+//! standing on the strength of the other two.
+//!
+//! Method: the `RAIDER_MIN` floor assertion and the PRIMARY `separation >
+//! 1.0` assertion were temporarily disabled (their `println!`s kept, so
+//! every run still reaches and prints the correlation regardless of
+//! mutation state), each of the three states below was run to completion,
+//! and both assertions were restored and reverified to byte-identical
+//! source before this record was written:
+//!
+//! ```text
+//! state         rho      span (min..max)        span vs MIN_RATE_SPAN (0.05)
+//! unmutated     0.8312   0.679 (0.050..0.729)    clears by 13.6x
+//! force true    0.1266   0.350 (0.400..0.750)    clears by 7.0x
+//! force false   0.7542   0.390 (0.000..0.390)    clears by 7.8x
+//! ```
+//!
+//! **`rho` stays positive under both mutation controls.** It is heavily
+//! depressed under force-true (0.8312 → 0.1266 — consistent with the
+//! near-inversion the separation claim reads at the same state, since a
+//! correlation near a real sign flip should sag toward zero first) but never
+//! crosses it, and under force-false it barely moves (0.7542, close to
+//! baseline). **`rho > 0` therefore has no demonstrated failure mode against
+//! the only two perturbations this file has.**
+//!
+//! It is kept as an assertion and reframed honestly as a **directional
+//! record rather than a proven guard**: it still reads a real, computed
+//! quantity gated behind the span guard, and it still could in principle
+//! catch a defect neither shipped mutation happens to produce, but nothing
+//! in this file has shown a state in which it reddens on its own — the
+//! PRIMARY claim and the raider floor have always fired first in every
+//! measurement taken. Per this campaign's own rule against fitting a bound
+//! to make a guard look alive: the threshold is **not** tightened above 0.0
+//! to manufacture a failure mode, and no third mutation was invented to
+//! rescue it. `rho > 0` stays exactly as written, its epistemic status
+//! stated plainly rather than left implied by the other two assertions'
+//! strength.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
@@ -379,13 +427,18 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         under.len()
     );
 
-    // THE SPAN GUARD, and it is load-bearing rather than decorative. Both of
-    // this file's mutation controls (forcing `takes_the_initiative` to `true`
-    // and to `false`) move every people's rate in the SAME direction, so the
-    // rates collapse toward equal and any rank correlation over them becomes
-    // noise of arbitrary sign. Without this, `rho > 0` below would not
-    // reliably redden under either mutation — i.e. the correlation alone is
-    // not an anti-vacuity guard, and this is what makes it safe to assert.
+    // THE SPAN GUARD. Measured against the only two mutations this file has
+    // (`takes_the_initiative` forced `true` / `false`), it is DORMANT: the
+    // span narrows from 0.679 unmutated to 0.350 (force-true) and 0.390
+    // (force-false), never approaching the 0.05 floor — this bake's
+    // per-people variance in site quality, conquest and climate eviction is
+    // wide enough that neither mutation collapses the roster. It is kept
+    // because what it guards against is not either of those: a genuinely
+    // DEGENERATE roster, where the rates truly converge (every people
+    // authored with the same disposition, or a bake in which
+    // `threat_response` stopped reaching `takes_the_initiative` at all —
+    // scenarios neither mutation control produces). See this module's doc,
+    // "The Tare's rho-falsifiability follow-up", for the measured table.
     let mut all: Vec<f64> = raider_rates
         .iter()
         .chain(abstainer_rates.iter())
@@ -415,7 +468,11 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
 
     // SECONDARY: monotone across the WHOLE roster, which a min-versus-max
     // comparison can miss. Sign only — see this module's doc for why the
-    // measured 0.831 is a witness and not the threshold.
+    // measured 0.831 is a witness and not the threshold. Kept as an
+    // assertion despite a follow-up measurement finding it has NO
+    // demonstrated failure mode under this file's two mutation controls
+    // (rho stayed positive under both — 0.1266 force-true, 0.7542
+    // force-false); see this module's doc for the honest framing.
     let pairs: Vec<(f64, f64)> = raiders
         .iter()
         .chain(abstainers.iter())
