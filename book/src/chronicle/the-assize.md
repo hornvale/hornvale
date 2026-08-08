@@ -1,12 +1,12 @@
 # The Assize
 
-A tare is the weight subtracted from a scale so it reads the true weight of
-what is on it, not the weight of the container. Five of the world's own
-measurement instruments were red, and each had been carrying an unweighed
-container for some time — a stale assumption, a sample too small, a rule
-that had quietly stopped being true. The obvious move, tried first and wrong
-four times out of five, was to assume every red wanted the same tare: more
-worlds.
+An assize was the periodic official testing of weights and measures — the
+day the instruments themselves were brought in and checked, rather than the
+goods they had been weighing. Five of the world's own measurement instruments
+were red, each for its own reason: a stale assumption, a sample too small, a
+rule that had quietly stopped being true. The obvious move, tried first and
+wrong four times out of five, was to assume every red wanted the same remedy:
+more worlds.
 
 ## Two kinds of wrong instrument
 

@@ -1,6 +1,6 @@
 # The Assize — design
 
-*The tare is the weight you subtract to make a scale read true.*
+*An assize is the periodic official testing of weights and measures.*
 
 Campaign: **The Assize**. Clears the five red heavy-tier tests standing at main
 before C2d (The Radiation) begins. Not a feature campaign: every item is a
