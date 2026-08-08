@@ -218,24 +218,59 @@ fn regenerate_occupancy_readout() {
     .expect("write occupancy.csv fixture");
 }
 
-/// **Preregistered, and NOT met — the campaign's honest headline.**
+/// **Preregistered, and NOT met in any region — the campaign's honest
+/// headline, corrected.**
 ///
 /// The Vacancy's exit criterion 6 asked that hot-arid, savanna and boreal each
 /// gain at least one kind *centred* there. Measured against the committed
-/// readout at campaign close:
+/// readout, regenerated 2026-08-08 (The Tare):
 ///
 /// | region | new kinds present | top occupant |
 /// |---|---|---|
-/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **giant-scorpion** (0.0177) — met |
-/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | treant (0.0555) — NOT met |
-/// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | treant (0.0273) — NOT met |
+/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **otyugh** (0.0470) — NOT met |
+/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | **treant** (0.0822) — NOT met |
+/// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | **treant** (0.0545) — NOT met |
 ///
-/// **Witnesses refreshed 2026-08-05 (The Tolerance's close), verdict
-/// unchanged.** The three `mean_k` figures above are the re-read values
-/// (savanna moved most, 0.0581 → 0.0555); the *claim* — one of three regions
-/// gained a top-ranked occupant, and the other two are topped by a sessile
-/// autotroph — survives the re-pin intact, which is the only reason the numbers
-/// were allowed to move.
+/// **EC6 is met in ZERO of three regions, not one — and it always was.** The
+/// previous version of this table claimed `giant-scorpion` (0.0177) topped
+/// desert. That figure matches nothing in either fixture: `giant-scorpion`'s
+/// desert `mean_k` is **0.0359774** (`≈0.0359`), it is not the top occupant
+/// there (`otyugh` at 0.0470 is), and it is not even the best newly-authored
+/// kind in the region — `carrion-crawler` is, at rank 2 of 29 kinds present
+/// in desert. (A naively-inherited "rank 2 of 26" would be wrong here: 26 was
+/// desert's kind count in the *pre-regeneration* fixture, before this
+/// regeneration's three new dwarves — see below — each added a desert row,
+/// taking it to 29. Re-derived against the fixture this test actually reads,
+/// not copied.)
+///
+/// **All three region rows above are byte-identical before and after this
+/// regeneration** — `otyugh,desert`, `treant,savanna`, `treant,taiga` and
+/// `giant-scorpion,desert` all carry the exact same `mean_k` in the fixture at
+/// HEAD and in the regenerated one. This regeneration's drift (below) never
+/// touched EC6's subject, so the 2026-08-05 "witnesses refreshed, verdict
+/// unchanged" pass quoted above did not re-read the quantity this test
+/// actually computes — it refreshed the printed numbers without re-ranking
+/// them against the fixture's other occupants, and so missed that desert's
+/// verdict was already NOT MET at the values it was quoting. This is the
+/// **third** under-checked attribution recorded against this one file.
+///
+/// **This regeneration (2026-08-08, The Tare) has two disjoint causes of its
+/// own**, measured rather than inherited from the campaign brief that
+/// commissioned it. The row count went 350 → 386:
+///
+/// - **+36 rows are three new kinds** — `desert-dwarf`, `gully-dwarf` and
+///   `hill-dwarf` (C2c, The Delvers), each contributing rows across biomes
+///   that did not exist before.
+/// - **24 rows *changed*, and they are exclusively `rust-monster` (12) and
+///   `xorn` (12)** — the realm gate (`643d3c68`), whose own commit message
+///   names precisely these two kinds: "A sparse two-row store. Its occupants
+///   are the two kinds The Deep Realm re-authored for darkness and damp and
+///   then left being scored against sunlight." (`rust-monster,alpine` alone
+///   falls 83081 → 5586 occupied cells.)
+/// - **326 of the 350 rows shared between the two fixtures are
+///   byte-identical.** Attributing this drift to the three new dwarves alone
+///   would be the +36 only, and would miss the 24 changed rows entirely — the
+///   two causes are disjoint and both real.
 ///
 /// **Two campaigns drifted this fixture, not one, and neither is the campaign
 /// that re-pinned it.** The row count went 300 → 330, and the thirty new rows
@@ -265,9 +300,12 @@ fn regenerate_occupancy_readout() {
 /// because a committed test doc is where the next reader takes a cause on
 /// faith.
 ///
-/// So one of three regions gained a top-ranked occupant. The other two gained
-/// real presence and did not gain dominance, and in both the top slot belongs
-/// to a *sessile autotroph* — which is the whole diagnosis. `K = supply × Π
+/// **Zero of three regions gained a top-ranked occupant** — corrected above
+/// from the "one of three" this doc previously claimed. All three gained real
+/// presence and none gained dominance, and in all three the top slot belongs
+/// to a *sessile autotroph* (`treant`, twice) or a *detritivore* (`otyugh`),
+/// never to a predator or to a kind newly authored for that climate. That
+/// **strengthens** the diagnosis rather than weakening it: `K = supply × Π
 /// condition` multiplies a supply term spanning orders of magnitude by a
 /// condition product bounded in `[0, 1]`, so the condition niche can only ever
 /// modulate the NPP signal, never select against it. A photosynthate kind rides
