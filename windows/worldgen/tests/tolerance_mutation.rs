@@ -22,7 +22,10 @@
 //! **already varies per settlement**, independently of anything this campaign
 //! added. `windows/worldgen/tests/tolerance_baseline.rs` measured precisely
 //! that: victim-side raid-outcome variance of 0.029–0.22 *before any dispersion
-//! existed*. So zeroing dispersion cannot collapse raid-outcome variance to
+//! existed*. (That file is **retired** — The Confusion migrated its readouts
+//! onto the census as `raid-victim-rate`/`raid-initiator-rate`/
+//! `raid-attribution-unresolved`; the figure quoted here stands as the
+//! measurement it made, and this file does not depend on the file itself.) So zeroing dispersion cannot collapse raid-outcome variance to
 //! zero even for a perfectly correct implementation, and a mutation proof
 //! written against that quantity would fail on correct code — the two ways out
 //! (weakening the assertion, or retuning) are both forbidden here.
@@ -39,7 +42,7 @@
 //!
 //! `origin/main` was absorbed into this branch at merge `a025e55a`, bringing
 //! The Keeping — which changed the placement gate and moved world identity.
-//! Task 1's pre-dispersion numbers (`tolerance_baseline.rs`) were measured on
+//! Task 1's pre-dispersion numbers (the retired `tolerance_baseline.rs`) were measured on
 //! *pre-merge* physics, so they are no longer a clean "before" for this
 //! campaign's readout.
 //!
@@ -59,8 +62,8 @@
 //! Every occupation record of the six settling peoples over seeds
 //! [`SEEDS`] (`1..=30`), built through
 //! `hornvale_worldgen::history_for` at `BuildDepth::Terrain` — the same entry
-//! point, depth, seed range and roster `tolerance_baseline.rs` uses, so the two
-//! files measure the same population. **All** records, not only the settlements
+//! point, depth, seed range and roster the retired `tolerance_baseline.rs`
+//! used, so the two measured the same population. **All** records, not only the settlements
 //! alive at `now`: the gate reads a community's drawn disposition from the
 //! moment it opens, so a ruin was gated on its own draw exactly as a standing
 //! settlement was.
@@ -177,12 +180,15 @@ use hornvale_worldgen::disposition::{drawn_threat_response, occupation_draw_key}
 use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, history_for};
 use std::collections::BTreeMap;
 
-/// Seeds `1..=30` — the range `tolerance_baseline.rs` pools over, matched here
-/// so Task 6 compares populations rather than seed ranges.
+/// Seeds `1..=30` — the range the retired `tolerance_baseline.rs` pooled over,
+/// matched here so Task 6 compares populations rather than seed ranges. Also
+/// the range `raid_attribution_probe.rs` still builds, which is what keeps the
+/// two readable against each other now that the third file is gone.
 const SEEDS: std::ops::RangeInclusive<u64> = 1..=30;
 
-/// The six settling peoples (post-Generalist roster), mirroring
-/// `tolerance_baseline.rs`'s constant of the same name.
+/// The six settling peoples (post-Generalist roster). Formerly mirrored from
+/// `tolerance_baseline.rs`'s constant of the same name; that file is retired,
+/// so this declaration and `generalist_baseline.rs`'s are now the only two.
 /// **THE DELVERS (C2c, 2026-08-07): RENAMED, NOT WIDENED.** The roster is
 /// eleven peoples now, so the old name `PEOPLES_WITH_HUMAN` read as
 /// "the peoples, plus human" — i.e. as the whole roster — and is a lie by
@@ -197,9 +203,9 @@ const PEOPLES_AS_OF_THE_GENERALIST: [&str; 6] =
 /// The raid-initiative threshold the gate compares a drawn disposition
 /// against, mirroring `hornvale_worldgen::history_bake`'s private
 /// `RAID_DISPOSITION_MIN` (the same restatement
-/// `windows/lab/tests/disposition_calibration.rs` and
-/// `tolerance_baseline.rs` make — the constant is crate-private, and this is
-/// the established precedent for reading it from outside).
+/// `windows/lab/tests/disposition_calibration.rs` makes — the constant is
+/// crate-private, and this is the established precedent for reading it from
+/// outside).
 const RAID_DISPOSITION_MIN: f64 = 0.6;
 
 /// The floor the authored-dispersion arm must clear, **calibrated against the

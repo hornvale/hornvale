@@ -2212,6 +2212,48 @@
       "rung": "full"
     },
     {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "Share of this world's occupation records that ended at another community's hand (`Ended::By`) — the DEFENCE side of the raid mechanic (The Confusion). Over EVERY people with a record, not the six The Tolerance froze: this is the raid rate, not that campaign's readout. Absent on a world with no occupation records. Replaces `windows/worldgen/tests/tolerance_baseline.rs`'s 30-world victim-side proxy.",
+      "kind": "numeric",
+      "name": "raid-victim-rate",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "Share of this world's occupation records that ended at least one OTHER record — the OFFENCE side, the side the raid gate actually decides (The Confusion). Its own column rather than a derivative of `raid-victim-rate`, because the ratio of the two is the mean raids per raider: the two rates separate 'many settlements each raiding once' from 'a few serial raiders', which one rate alone cannot. Same unfiltered population as `raid-victim-rate`; Absent on a world with no occupation records. Measured on a 12-world scratch probe (seeds 1-12, NOT the census) the ratio of the two rates sits at 1.00-1.03, i.e. a raider almost never raids twice — that near-identity is the column's current reading, not a reason to drop it: nothing else would detect a shift toward serial raiders.",
+      "kind": "numeric",
+      "name": "raid-initiator-rate",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "How many `Ended::By(raider)` references on this world fail to name EXACTLY ONE occupation record — the self-consistency guard the retired 30-world battery held, as a census-wide invariant (The Confusion). Expected 0 on every world; a nonzero count means the victim- and initiator-side rates beside it are attributing raids to the wrong settlements. Per-REFERENCE, so compensating errors cannot cancel the way they can in a pooled count comparison. Absent on a world with no occupation records.",
+      "kind": "numeric",
+      "name": "raid-attribution-unresolved",
+      "rung": "settlements"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -2221,7 +2263,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xe7c27b7d73275285"
+    "fnv1a64": "0xe5459d18fae6cf1b"
   },
   "schema_version": 1,
   "study": {

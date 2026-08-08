@@ -226,8 +226,10 @@ pub fn drawn_threat_response(
 ///    H2 were measured over settlements alive at `now`, where the key IS
 ///    unique, so transients were outside the measured population. That was
 ///    already false at Task 5 and is false at Task 6:
-///    `tolerance_mutation.rs` and
-///    `tolerance_baseline.rs::report_the_preregistered_readout` both measure
+///    `tolerance_mutation.rs` and the Task 6 readout (which lived in the since-
+///    retired `tolerance_baseline.rs`; see The Confusion, and the census
+///    columns `raid-victim-rate`/`raid-initiator-rate` that replaced it) both
+///    measure
 ///    **every** occupation record, ruins included, and deliberately so — the
 ///    gate reads a community's drawn disposition from the moment it opens, so
 ///    a ruin was gated on its own draw exactly as a standing settlement was,
