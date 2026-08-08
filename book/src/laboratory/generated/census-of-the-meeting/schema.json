@@ -358,6 +358,12 @@
       "rung": "terrain"
     },
     {
+      "doc": "Which `Hydro` variants `hydro_at` reads anywhere on this world, as `+`-joined names in `Hydro::ALL` order (The Assay). Replaces `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability sweep: a variant no world in the census shows is structurally dead, and 1,000 worlds say so with a rate where 8 said so with a flag.",
+      "kind": "categorical",
+      "name": "hydro-variant-coverage",
+      "rung": "terrain"
+    },
+    {
       "buckets": [
         0.0,
         0.05,
@@ -2172,6 +2178,40 @@
       "rung": "full"
     },
     {
+      "buckets": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0,
+        24.0
+      ],
+      "doc": "How many concepts this world's registry reports in the `toponymic` domain (The Assay). The denominator for `toponymic-roots-won`, kept as its own column so a registry change is distinguishable from a worlds change.",
+      "kind": "numeric",
+      "name": "toponymic-core-size",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0,
+        24.0
+      ],
+      "doc": "How many toponymic-domain concepts reach `ExposureClass::Steeped` for at least one placed people (The Assay). Replaces `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a witness: a concept no world in the census ever steeps is a structurally dead gate, and the census says so as a rate.",
+      "kind": "numeric",
+      "name": "toponymic-roots-won",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether any placed people holds a live prediction crisis at day 36,525 (the hundredth year, the diachronic battery's preregistered epoch) — The Assay. Replaces `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a single instance. A crisis needs a Generated sky, an organized flagship's doctrine, >= 8 witnessed events of one recurrence class and a tail miss-run, so it cannot be synthesised — which is why it is a rate here rather than a hand-built behaviour test.",
+      "kind": "flag",
+      "name": "crisis-fires",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -2181,7 +2221,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x4c403f61d1e3bd89"
+    "fnv1a64": "0xe7c27b7d73275285"
   },
   "schema_version": 1,
   "study": {
