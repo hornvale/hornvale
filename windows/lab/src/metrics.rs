@@ -672,7 +672,7 @@ pub enum Domain {
     Hydrology,
     /// Species, ecology, life history.
     Biology,
-    /// Villages, placement, population.
+    /// Villages, their siting, and the geography of where peoples settle.
     Settlement,
     /// Population counts, survival, and the demographic fate of peoples.
     Demography,
@@ -1800,7 +1800,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Demography,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
@@ -1830,7 +1830,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Demography,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 let places = hornvale_terrain::places(v.world());
@@ -2360,7 +2360,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Demography,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "goblin") {
@@ -2376,7 +2376,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
-            domain: Domain::Settlement,
+            domain: Domain::Demography,
             role: Role::Descriptor,
             extract: Extractor::Settlement(|v: &SettlementView| {
                 match flagship_of(v.world(), "kobold") {
