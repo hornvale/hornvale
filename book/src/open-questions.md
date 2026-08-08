@@ -119,6 +119,29 @@ full account, including a naming collision with an unrelated, already-shipped
 campaign that shares this one's title — itself one more claim of absence
 ("the name is free") nobody checked.
 
+A sixth campaign adds a corner none of the five describes. The Digest
+(2026-08-08) set out to codify what the project holds about itself, and its
+central task was halted early on the conclusion that the intended finding did
+not exist: a rule forbidding numbered identifiers in the idea registry was
+enforced by a gate check that passed, against a frozen fixture that the live
+corpus matched exactly, with zero identifiers outside the list. Every
+observation was correct. The conclusion was wrong. The fixture was written
+seventeen days *after* the rule took effect, and in that interval the corpus
+grew from 171 numbered identifiers to 403 — so the freeze grandfathered 232
+violations and the check has been certifying conformance to them ever since.
+This is not a check that cannot fire, nor one without an anchor, nor one whose
+generator and verifier are never paired: it fires, it is anchored, it is
+paired, and it is green for the right reasons. The defect is that its
+**baseline was cut after the damage**, which is invisible in current state by
+construction and recoverable only from history. So the floor gains a question
+to ask of any conforms-to-a-frozen-list check: *when was the list written, and
+what was already true when it was?* The campaign's delta view answers it by
+reading git rather than the working tree, which is the only place the answer
+lives. The retraction itself is worth recording — the wrong conclusion was
+reached twice in one day by the same reasoning, first from a 1,055-commit-stale
+timing baseline, and was overturned by a human disagreeing with an artifact
+that looked authoritative.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

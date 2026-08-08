@@ -529,5 +529,8 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T13:27:30Z | rebaseline | 200.844 | 179.857 | 7.158 | 0.93 | 0 | c7e6e649 | the-lantern | MacBookPro | 10 |
 | 2026-08-08T14:15:10Z | rebaseline | 183.085 | 213.350 | 9.490 | 1.22 | 0 | 23f375e3 | the-delvers | MacBookPro | 10 |
 | 2026-08-08T14:42:55Z | gate | 650.025 | 5224.269 | 107.718 | 8.20 | 0 | f3b502d9 | the-delvers | MacBookPro | 10 |
+| 2026-08-08T18:52:08Z | rebaseline | 134.646 | 212.083 | 8.781 | 1.64 | 0 | 6d52efef | the-digest | Greyjoy | 10 |
+| 2026-08-08T19:04:04Z | gate | 683.824 | 5265.549 | 103.707 | 7.85 | 0 | 6d52efef | the-digest | Greyjoy | 10 |
 | 2026-08-08T16:19:17Z | census | 826.858 | 22249.330 | 310.619 | 27.28 | 0 | 5ec42fee |  | lefford | 40 |
 | 2026-08-08T16:45:45Z | gate | 650.518 | 5333.971 | 115.743 | 8.38 | 0 | 9c96e45f | the-confusion | MacBookPro | 10 |
+| 2026-08-08T19:44:29Z | gate | 720.883 | 5367.866 | 139.872 | 7.64 | 0 | ee007ceb | the-digest | Greyjoy | 10 |

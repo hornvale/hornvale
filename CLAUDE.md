@@ -199,15 +199,31 @@ cargo run -p hornvale -- lab list-metrics
 # which is a separate thing — an artifact, drift-checked like every other:
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
+# The digest — the project's own fact ledger, also OUTSIDE the workspace (The
+# Digest). docs/digest/facts.jsonl is the compacted, TIME-FREE store of what
+# the project asserts about itself (project time is git's); everything else is
+# scanned from source on read. `make gate` does NOT build this crate:
+cargo test --manifest-path tools/digest/Cargo.toml
+cargo run --manifest-path tools/digest/Cargo.toml -- render doctor     # make doctor's self-map
+cargo run --manifest-path tools/digest/Cargo.toml -- render decisions  # docs/digest/decisions-in-force.md
+cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/digest/intent-vs-reality.md
+
 # Generated-artifact freshness. The single source of truth is
 # scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
-# registry/manifest dumps, lab studies, the type-audit report); `make
-# rebaseline` and CI both call it, so they cannot silently diverge:
+# registry/manifest dumps, lab studies, the type-audit report, the digest's
+# decision index and delta report); `make rebaseline` and CI both call it, so
+# they cannot silently diverge:
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/
 # docs/audits/ is in that list — the type-audit report drifts on any
-# pub-boundary change, and omitting it is a common miss.
+# pub-boundary change, and omitting it is a common miss. So is docs/digest/
+# (The Digest): the in-force decision index drifts whenever a decision record
+# is added or superseded, and the delta report whenever the registry moves.
+# THE HAZARD THAT ADDING IT EXPOSED: `git diff --exit-code <path>` is silently
+# VACUOUS against a path with no index entry, so the FIRST commit that
+# introduces a new generated directory must `git add` it before the check can
+# ever fail. Nothing in regenerate-artifacts.sh guards that.
 # **CI is manual-only** (decision 0042: workflow_dispatch, Actions tab → Run
 # workflow). Nothing runs on push. The LOCAL gate is the gate; a red main is
 # invisible until someone runs it.

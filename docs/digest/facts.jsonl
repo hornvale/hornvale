@@ -1,0 +1,14 @@
+{"subject":26,"predicate":"supersession-scope","object":{"Text":"for decision records; the study/chronicle/registry-row provisions stand"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":100,"predicate":"self-map-line","object":{"Text":"  - same seed + pins => byte-identical worlds and artifacts; the seed is a world's identity"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":101,"predicate":"self-map-line","object":{"Text":"  - floats quantized to 8 significant digits at serialization boundaries ONLY (kernel/src/quantize.rs)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":102,"predicate":"self-map-line","object":{"Text":"  - no wall-clock time; no HashMap/HashSet (clippy.toml disallowed-types)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":103,"predicate":"self-map-line","object":{"Text":"  - stream labels and consumption order are save-format contracts (docs/decisions/0006-*)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":200,"predicate":"self-map-line","object":{"Text":"  - regenerate all: make rebaseline (censuses skip by default)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":201,"predicate":"self-map-line","object":{"Text":"  - census regen is LOCAL (decisions 0063/0081): bash scripts/census-run.sh, once per campaign pre-merge"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":202,"predicate":"self-map-line","object":{"Text":"  - byte-golden test fixtures: make rebaseline-goldens (REBASELINE=1 accept path; kernel/src/golden.rs)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":203,"predicate":"self-map-line","object":{"Text":"  - census review surface: make lab-diff STUDY=<name>"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":204,"predicate":"self-map-line","object":{"Text":"  - historical pre-<campaign> pins are frozen history: scripts/freeze-fixture.sh, never rebaselined"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":300,"predicate":"self-map-line","object":{"Text":"  - docs/README.md — what knowledge lives where and how ideas flow"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":301,"predicate":"self-map-line","object":{"Text":"  - docs/decisions/ — {decision_count} ratified records (append-only; grep before relitigating)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":302,"predicate":"self-map-line","object":{"Text":"  - book/src/frontier/idea-registry.md — the idea registry (check before proposing anything)"},"place":null,"day":null,"provenance":"asserted"}
+{"subject":303,"predicate":"self-map-line","object":{"Text":"      TOOL-*/PROC-* rows ARE the workflow/tooling backlog; a shipped row's Where cell records any deferred half"},"place":null,"day":null,"provenance":"asserted"}
