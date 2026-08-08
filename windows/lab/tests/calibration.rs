@@ -3291,11 +3291,14 @@ fn raiding_occurs_across_the_census_and_both_sides_agree() {
 
 // --- THE TARE: calibration for the two census columns that retire the
 // seed-42 displacement gate and both twelve-seed panels. Both tests are RED
-// until Task 9's census regen — the committed fixture predates these columns
-// and `seeded_nums` panics with "the census carries {name}". That window is
-// structural, not a mistake; see the plan's sequencing section. Step 3b's
-// mutation proof cannot run against the fixture until after the regen, and
-// is deferred to whoever runs that regen.
+// against the pre-regen fixture, because it predated these columns. The
+// census has since regenerated (the-tare, 2026-08-08, canonical box) and both
+// are green. **Both were mutation-proved after the regen**, and each produced
+// a real assertion failure naming its own guard rather than a compile error:
+// `pooled >= 1000.0` -> `1e12` reddens with "displacement has gone inert
+// across the whole census"; `hi - lo >= 10.0` -> `1e12` reddens with "the
+// tribute stock is effectively constant". Both targets were asserted present
+// before substitution and byte-identical after revert.
 
 /// Displacement fires across the census, and its distribution is the reason
 /// the single-seed gates were retired rather than re-pinned.
@@ -3303,6 +3306,16 @@ fn raiding_occurs_across_the_census_and_both_sides_agree() {
 /// The ZERO SHARE is printed, never asserted. It is the number that justified
 /// the migration — a bound on it would re-create, one level up, exactly the
 /// defect of pinning a wide distribution to a value someone happened to see.
+///
+/// **Measured over the census (the-tare, 2026-08-08): zero on 137 of 1000
+/// worlds (13.7%), median 10, max 1924, pooled 113 526 events.** The design
+/// probe that argued for this migration read 48 worlds and put the same
+/// figures at 12.5% zeros, median 6, **max 578**. The zero rate survived; the
+/// tail did not — the census max is 3.3x what 48 worlds could see. That gap is
+/// this column's own argument arriving as evidence rather than as a rationale.
+///
+/// The pooled floor of 1000 therefore sits ~113x under the measurement: an
+/// inertness floor, deliberately not a target.
 /// claim: rate(census: climate-displacement-events, all rows) — the pooled
 /// count clears an inertness floor and no world reports a negative or
 /// non-finite count
@@ -3352,6 +3365,14 @@ fn climate_displacement_fires_across_the_census() {
 /// including the bake's own flow — measured 0 zeros over 36 worlds, so that
 /// guard could essentially never fire. A constant column is a broken fold,
 /// and it is the failure this can actually see.
+///
+/// **And the 36-world probe was wrong about the zeros, which is why the floor
+/// it suggested was never written.** Measured over the census: **0..227,
+/// median 73, and 13 of 1000 worlds hold NO standing tribute relation at
+/// all.** A "tribute is never zero" assertion, the obvious reading of the
+/// probe, would be false on thirteen worlds today. This is The Confusion's
+/// three-in-a-thousand no-raid finding recurring: a small probe cannot
+/// resolve a rare event, and no amount of care changes that.
 /// claim: rate(census: tribute-relations-standing, all rows) — the column
 /// spans a real range and no world reports a negative or non-finite count
 #[test]
