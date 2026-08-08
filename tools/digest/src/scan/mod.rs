@@ -3,8 +3,7 @@
 //! PROC-11's rule governs what belongs here: store only geological-rate
 //! facts; derive-on-read anything faster (spec §4.4).
 
-// NOTE: `pub mod capability;` is added by Task 6, which creates that file.
-// Declaring a module before its file exists does not compile.
+pub mod capability;
 pub mod decisions;
 
 use std::path::PathBuf;

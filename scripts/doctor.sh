@@ -13,10 +13,7 @@ section() { printf '\n== %s\n' "$1"; }
 
 echo "hornvale doctor — the repo self-map"
 
-section "Layering (enforced: cli/tests/architecture.rs; picture: book/src/reference/layering.md)"
-echo "  kernel -> domains/* -> windows/* -> cli"
-echo "  a domain depends on the kernel and NOTHING else; windows/worldgen is the"
-echo "  composition root; external deps allowlist: serde, serde_json"
+cargo run --quiet --manifest-path tools/digest/Cargo.toml -- render doctor
 
 section "The gate (cost-ordered; Makefile / CLAUDE.md Commands)"
 make -s help
