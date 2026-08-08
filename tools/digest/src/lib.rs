@@ -9,6 +9,7 @@
 //! `None`; project time is git's (spec §4.2).
 #![warn(missing_docs)]
 
+pub mod render;
 pub mod scan;
 pub mod store;
 pub mod vocabulary;
