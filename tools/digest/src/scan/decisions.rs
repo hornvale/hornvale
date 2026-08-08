@@ -24,9 +24,6 @@ pub struct DecisionRecord {
     pub status: Status,
     /// The superseding decision's id, if any.
     pub superseded_by: Option<String>,
-    /// Which provisions the supersession covers. `None` means all of them —
-    /// so `Some(..)` is a PARTIAL supersession and the rest still governs.
-    pub scope: Option<String>,
 }
 
 /// Parse one decision file.
@@ -49,68 +46,34 @@ pub fn parse(id: &str, text: &str) -> DecisionRecord {
         .unwrap_or_default();
     let status_field = raw.split('·').next().unwrap_or("").trim().to_string();
 
-    let (status, superseded_by, scope) = if status_field.starts_with("Superseded") {
+    let (status, superseded_by) = if status_field.starts_with("Superseded") {
+        // Take the FIRST run of ascii digits after "by", wherever it sits:
+        // bare (`by 0063`), bracketed (`by [0099](0099-...md)`), or on the
+        // next line (0006). Everything after it — rationale, scope, or date —
+        // is deliberately ignored: those three are not distinguishable
+        // syntactically, and scope is asserted rather than scanned (spec §4.4).
         let after = status_field
             .split_once("by")
             .map(|(_, a)| a.trim())
             .unwrap_or("");
-
-        // The id token is either a bare number (`0063`) or a markdown link
-        // (`[0099](0099-worlds-are-version-locked.md)`). A link's own
-        // parenthesised target must not be mistaken for a trailing scope
-        // parenthetical, so the id is consumed first and the scope search
-        // starts only after it.
-        let (sup, after_id) = if let Some(bracket_rest) = after.strip_prefix('[') {
-            let close_bracket = bracket_rest.find(']').unwrap_or(bracket_rest.len());
-            let id_str = bracket_rest[..close_bracket].trim().to_string();
-            let after_bracket = &bracket_rest[close_bracket.min(bracket_rest.len())..];
-            let after_bracket = after_bracket.strip_prefix(']').unwrap_or(after_bracket);
-            // Skip the link's own `(target.md)` portion, if present.
-            let trimmed = after_bracket.trim_start();
-            let after_link = if let Some(link_rest) = trimmed.strip_prefix('(') {
-                match link_rest.find(')') {
-                    Some(close_paren) => &link_rest[close_paren + 1..],
-                    None => link_rest,
-                }
-            } else {
-                trimmed
-            };
-            let sup = if id_str.is_empty() {
-                None
-            } else {
-                Some(id_str)
-            };
-            (sup, after_link)
-        } else {
-            let digit_end = after
-                .find(|c: char| !c.is_ascii_digit())
-                .unwrap_or(after.len());
-            let id_str = after[..digit_end].to_string();
-            let sup = if id_str.is_empty() {
-                None
-            } else {
-                Some(id_str)
-            };
-            (sup, &after[digit_end..])
-        };
-
-        // Whatever parenthetical remains after the id (and, for a link, past
-        // its own target parens) is the scope note — the text describing
-        // which provisions the supersession covers.
-        let scope = {
-            let trimmed = after_id.trim_start();
-            trimmed.strip_prefix('(').and_then(|rest| {
-                rest.rfind(')')
-                    .map(|end| rest[..end].trim().to_string())
-                    .filter(|s| !s.is_empty())
-            })
-        };
-
-        (Status::Superseded, sup, scope)
+        let mut sup = None;
+        let mut run = String::new();
+        for c in after.chars() {
+            if c.is_ascii_digit() {
+                run.push(c);
+            } else if !run.is_empty() {
+                sup = Some(run.clone());
+                break;
+            }
+        }
+        if sup.is_none() && !run.is_empty() {
+            sup = Some(run);
+        }
+        (Status::Superseded, sup)
     } else if status_field.starts_with("Proposed") {
-        (Status::Proposed, None, None)
+        (Status::Proposed, None)
     } else {
-        (Status::Accepted, None, None)
+        (Status::Accepted, None)
     };
 
     DecisionRecord {
@@ -118,7 +81,6 @@ pub fn parse(id: &str, text: &str) -> DecisionRecord {
         title,
         status,
         superseded_by,
-        scope,
     }
 }
 
@@ -146,7 +108,6 @@ mod tests {
         let d = parse("0029", text);
         assert_eq!(d.status, Status::Superseded);
         assert_eq!(d.superseded_by.as_deref(), Some("0063"));
-        assert_eq!(d.scope, None, "an unqualified supersession has no scope");
     }
 
     #[test]
@@ -158,20 +119,36 @@ mod tests {
     }
 
     #[test]
-    fn a_partial_supersession_keeps_its_surviving_scope() {
+    fn a_trailing_parenthetical_is_never_read_as_scope() {
         // THE case this campaign exists for: 0026 reads as superseded to any
         // grepping reader, but its registry-row provision still stands, and
-        // the registry violates it 1,402 times.
+        // the registry violates it 1,402 times. The SCANNER must not try to
+        // infer that — the same slot holds a rationale in 0063 and a date in
+        // 0099. Scope is asserted, not scanned (spec §4.4).
         let text = "# 0026. Slugs, not numbers\n\n\
                     **Status:** Superseded by 0043 (for decision records; the \
                     study/chronicle/registry-row provisions stand) · **Decider:** Nathan\n";
         let d = parse("0026", text);
         assert_eq!(d.superseded_by.as_deref(), Some("0043"));
-        assert_eq!(
-            d.scope.as_deref(),
-            Some("for decision records; the study/chronicle/registry-row provisions stand"),
-            "a partial supersession must retain what survives"
-        );
+    }
+
+    #[test]
+    fn a_date_parenthetical_does_not_corrupt_the_superseder_id() {
+        // 0099's form: a bracket link followed by a DATE parenthetical.
+        let text = "# 0082. A thing\n\n\
+                    **Status:** Superseded by [0099](0099-worlds-are-version-locked.md) (2026-08-04) ·\n";
+        let d = parse("0082", text);
+        assert_eq!(d.superseded_by.as_deref(), Some("0099"));
+    }
+
+    #[test]
+    fn a_rationale_parenthetical_does_not_corrupt_the_superseder_id() {
+        // 0063's form: a prose rationale, not a scope.
+        let text = "# 0029. CI checks 500-seed censuses\n\n\
+                    **Status:** Superseded by 0063 (The Local Census made the full census a ~7-min\n\
+                    local run) · **Decider:** Nathan\n";
+        let d = parse("0029", text);
+        assert_eq!(d.superseded_by.as_deref(), Some("0063"));
     }
 
     #[test]
