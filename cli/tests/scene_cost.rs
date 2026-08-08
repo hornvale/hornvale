@@ -41,10 +41,13 @@
 //! `#[ignore]`d: a live-worldgen build takes minutes, so this is deferred
 //! from the commit gate (`make gate`) to `make gate-full`.
 //!
-//! ## The observed failure mode is contention, and it is legible
+//! ## The observed failure mode is contention — but the old discriminator was wrong, and is corrected here, not merely mechanized
 //!
-//! Every ceiling here is a wall time, so a pathological co-run trips them
-//! together. Seen once during The Cistern, when a second `gate-full`'s
+//! Every ceiling here is a wall time, so a contended co-run can trip any of
+//! them. **The rule this file used to state** — *"A real regression is
+//! local: one or two metrics move and the rest hold. A uniform 3x across
+//! metrics with unrelated causes is the machine"* — was written from a single
+//! incident, seen once during The Cistern when a second `gate-full`'s
 //! processes survived their parent and overlapped this one:
 //!
 //! ```text
@@ -55,14 +58,47 @@
 //! region per tile        565.9 ms (budget 420)
 //! ```
 //!
-//! Read the whole print-out before suspecting the code. **All five inflated by
-//! roughly 3x, and the two the code has not changed since 2026-07-28 blew
-//! their ceilings by the widest margins** — `genesis` by 86%, against 35% for
-//! the tightest new one. A real regression is local: one or two metrics move
-//! and the rest hold. A uniform 3x across metrics with unrelated causes is the
-//! machine. Re-run on an idle box before touching a constant, and never raise
-//! one from a contended reading — that is precisely the ratchet-upward the
-//! rule above exists to make deliberate.
+//! All five did move together there, which is what the rule generalized
+//! from. **The rule is wrong as stated.** The counter-example is the lefford
+//! heavy run of 2026-08-08 (`heavy-20260808T163452Z-442429.log`), read
+//! against each metric's basis rather than its budget:
+//!
+//! ```text
+//!                    quiet Mac   lefford basis   lefford heavy   ratio to basis
+//! genesis               3947.9          6318.6         13187.1   2.09x
+//! SceneContext::build    416.6          1308.0          1277.5   0.98x
+//! tiles(512)+json       1174.6          4319.9          4207.4   0.97x
+//! small docs+json          0.7             2.7             2.6   0.96x
+//! region per tile         75.5           206.1           266.7   1.29x
+//! ```
+//!
+//! `genesis` alone moved — exactly the shape the old rule calls "local", and
+//! therefore exactly what the old rule classifies as a **regression**. It is
+//! not one: a quiet box builds the identical world in 3947.9 ms, comfortably
+//! under the 13000 ms ceiling. Applying the documented discriminator to this
+//! data gives the wrong answer.
+//!
+//! **Why: the five metrics have different resource profiles.** `genesis` is
+//! the only one of the five that sculpts terrain across a large grid; the
+//! other four operate on a `World` and `SceneContext` already built in
+//! memory. A saturated runner starves the bandwidth-bound sculpting phase and
+//! leaves the four cache-resident operations alone, so contention here is
+//! *expected* to be **local to `genesis`**, not spread evenly across all
+//! five. Uniformity was never the right test — the Cistern incident above
+//! looked uniform because that particular co-run saturated the whole box
+//! evenly, not because uniformity is what contention *is*.
+//!
+//! **The corrected rule, mechanized in the test body below:** `genesis` is
+//! the contention-sensitive metric; the other four are the control set.
+//! Controls holding within `CONTROL_TOLERANCE` of their own basis while
+//! `genesis` breaches its ceiling reads as the machine; any control moving
+//! past tolerance reads as the code. That correctly separates the Cistern
+//! incident (every control past 1.5x) from the 2026-08-08 run (every control
+//! at 0.96–1.29x) — which "uniform vs. local" alone got backwards. Re-run on
+//! an idle box before touching a constant either way, and never raise a
+//! ceiling from a contended reading — that is precisely the ratchet-upward
+//! the rule above exists to make deliberate. **The ratchet rule is unchanged
+//! and no ceiling moves in this campaign.**
 //!
 //! ## Measured — The Cistern (2026-07-29), the current ceiling basis
 //!
@@ -240,6 +276,29 @@ const TILES_BUDGET_MS: f64 = 8700.0;
 /// while every other ceiling here stayed green.
 const SMALL_DOCS_BUDGET_MS: f64 = 5.2;
 
+/// The measured value `GENESIS_BUDGET_MS` was set from: 6318.6 ms, host
+/// `lefford`, dev profile, 2026-07-29 (The Cistern, slowest of three runs).
+/// A CONSTANT rather than prose so the failure path can compute a ratio —
+/// the discriminator below is arithmetic, not an instruction to the reader.
+const GENESIS_BASIS_MS: f64 = 6318.6;
+/// The measured basis for `CONTEXT_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const CONTEXT_BASIS_MS: f64 = 1308.0;
+/// The measured basis for `TILES_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const TILES_BASIS_MS: f64 = 4319.9;
+/// The measured basis for `SMALL_DOCS_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const SMALL_DOCS_BASIS_MS: f64 = 2.7;
+/// The measured basis for `REGION_PER_TILE_BUDGET_MS` (see `GENESIS_BASIS_MS`).
+const REGION_PER_TILE_BASIS_MS: f64 = 206.1;
+
+/// How far a CONTROL metric may drift from its basis before the run stops
+/// counting as "the controls held". Set at 1.5x: the widest control movement
+/// ever recorded on a run diagnosed as contention is 1.29x
+/// (`region per tile`, 2026-08-08), and the narrowest inflation on a run
+/// diagnosed as uniform contention is 1.79x (`.config/nextest.toml`, run B).
+/// The gap between those two is where this sits. It gates a DIAGNOSTIC
+/// MESSAGE, never a pass/fail — no assertion reads it.
+const CONTROL_TOLERANCE: f64 = 1.5;
+
 /// The cost gate. Prints every measured number (`--nocapture`) so a future
 /// re-baselining does not need to re-derive the harness.
 #[test]
@@ -316,13 +375,63 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     let region_ms = start.elapsed().as_secs_f64() * 1000.0;
     let per_tile_ms = region_ms / REGION_TILES as f64;
 
-    println!("genesis            {genesis_ms:9.1} ms (budget {GENESIS_BUDGET_MS})");
-    println!("SceneContext::build {context_ms:9.1} ms (budget {CONTEXT_BUDGET_MS})");
-    println!("tiles(512)+json    {tiles_ms:9.1} ms (budget {TILES_BUDGET_MS})");
-    println!(
-        "small docs+json    {small_ms:9.1} ms (budget {SMALL_DOCS_BUDGET_MS}) [{small_bytes} B]"
-    );
-    println!("region per tile    {per_tile_ms:9.1} ms (budget {REGION_PER_TILE_BUDGET_MS})");
+    // Named so the verdict below can speak about them: `genesis` is the only
+    // metric here that sculpts terrain across a large grid, and the other
+    // four run against an already-built world. That difference in RESOURCE
+    // PROFILE — not any difference in code health — is why a saturated runner
+    // moves genesis alone. See the module doc.
+    let measured: [(&str, f64, f64, f64); 5] = [
+        ("genesis", genesis_ms, GENESIS_BUDGET_MS, GENESIS_BASIS_MS),
+        (
+            "SceneContext::build",
+            context_ms,
+            CONTEXT_BUDGET_MS,
+            CONTEXT_BASIS_MS,
+        ),
+        ("tiles(512)+json", tiles_ms, TILES_BUDGET_MS, TILES_BASIS_MS),
+        (
+            "small docs+json",
+            small_ms,
+            SMALL_DOCS_BUDGET_MS,
+            SMALL_DOCS_BASIS_MS,
+        ),
+        (
+            "region per tile",
+            per_tile_ms,
+            REGION_PER_TILE_BUDGET_MS,
+            REGION_PER_TILE_BASIS_MS,
+        ),
+    ];
+    for (name, got, budget, basis) in measured {
+        println!(
+            "{name:<20}{got:9.1} ms (budget {budget:>8}) {:5.2}x basis {basis}",
+            got / basis
+        );
+    }
+    println!("small docs payload {small_bytes} B");
+
+    // THE DISCRIMINATOR, as arithmetic. `genesis` is the contention-sensitive
+    // metric; the other four are the CONTROL SET. Controls holding while
+    // genesis inflates is the machine. Any control moving is the code.
+    let controls_over: Vec<&str> = measured
+        .iter()
+        .skip(1)
+        .filter(|(_, got, _, basis)| got / basis > CONTROL_TOLERANCE)
+        .map(|(name, _, _, _)| *name)
+        .collect();
+    if controls_over.is_empty() {
+        println!(
+            "VERDICT: all 4 controls within {CONTROL_TOLERANCE}x of basis. A genesis \
+             breach here reads as CONTENTION, not a regression — re-run on a quiet box \
+             to confirm before touching any constant."
+        );
+    } else {
+        println!(
+            "VERDICT: {} control(s) moved: {controls_over:?}. This is NOT the contention \
+             signature — look at the code before blaming the box.",
+            controls_over.len()
+        );
+    }
 
     assert!(
         genesis_ms < GENESIS_BUDGET_MS,

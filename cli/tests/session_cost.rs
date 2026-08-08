@@ -23,10 +23,16 @@
 //! closes. Re-run the bench, not this test, when you want the release-
 //! profile per-verb-class split too.
 //!
-//! Read a red run as contention before suspecting the code: every ceiling
-//! here is a wall time, and `scene_cost.rs`'s documented failure mode — all
-//! metrics inflating together by roughly the same factor — is the machine,
-//! not a regression. A real regression is local.
+//! **Read a red run against `scene_cost.rs`'s corrected discriminator, not
+//! the old "uniform vs. local" rule** — see that file's module doc for the
+//! full correction. The same resource-profile reasoning applies here:
+//! `Session::start` builds a world from scratch (`terrain_of` ->
+//! `hornvale_terrain::generate`, uncached), so it is the contention-sensitive
+//! metric; the per-turn metrics (`handle+snapshot+json`, indoor
+//! `snapshot()+json`) run against a `World` already built in memory, so they
+//! are the control set. A saturated runner is expected to starve `start`
+//! alone and leave the controls near their basis — the verdict below is the
+//! same arithmetic `scene_cost.rs` uses, not a uniformity check.
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel};
@@ -223,6 +229,31 @@ const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 18.0;
 /// campaign's chamber work caused in the walk band.
 const WALK_BYTES_BUDGET: usize = 24600;
 
+/// The measured basis for `START_BUDGET_MS`: 3442.192 ms, the slowest of
+/// three runs, host `MacBookPro`, dev profile, 2026-08-06 — the ORIGINAL
+/// basis this ceiling was set from. The Sighting's Task 6 re-measure came in
+/// lower (2803.291 ms) and explicitly did not rebase the ceiling — see
+/// `START_BUDGET_MS`'s own doc for why. A CONSTANT rather than prose so the
+/// failure path can compute a ratio, the same pattern as
+/// `scene_cost.rs::GENESIS_BASIS_MS`.
+const START_BASIS_MS: f64 = 3442.192;
+/// The measured basis for `TURN_BUDGET_MS`: 3.906 ms, slowest of three runs,
+/// same box/date/profile as `START_BASIS_MS`. The Sighting's Task 6
+/// re-measure (3.939 ms) was read as "essentially flat" and left the ceiling
+/// unchanged — see `TURN_BUDGET_MS`'s own doc.
+const TURN_BASIS_MS: f64 = 3.906;
+/// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`: 8.910 ms, slowest of
+/// three runs, same box/profile, 2026-08-06 (The Sighting, Task 6 — the
+/// figure this ceiling was ITSELF set from; see that constant's own doc).
+const INDOOR_SNAPSHOT_BASIS_MS: f64 = 8.910;
+
+/// How far a CONTROL metric may drift from its basis before the run stops
+/// counting as "the controls held". Same value and reasoning as
+/// `cli/tests/scene_cost.rs::CONTROL_TOLERANCE` — see that constant's doc
+/// for the two data points it sits between. It gates a DIAGNOSTIC MESSAGE,
+/// never a pass/fail — no assertion reads it.
+const CONTROL_TOLERANCE: f64 = 1.5;
+
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn a_possessed_turn_stays_within_its_ceilings() {
@@ -291,12 +322,61 @@ fn a_possessed_turn_stays_within_its_ceilings() {
     let walk_bytes = hornvale_vessel::snapshot_json(&session.snapshot().unwrap()).len();
     std::hint::black_box(session.handle("enter"));
 
-    println!("Session::start        {start_median:9.3} ms (budget {START_BUDGET_MS})");
-    println!("handle+snapshot+json  {turn_median:9.3} ms (budget {TURN_BUDGET_MS})");
-    println!(
-        "indoor snapshot+json  {indoor_snapshot_median:9.3} ms (budget {INDOOR_SNAPSHOT_BUDGET_MS})"
-    );
-    println!("walk snapshot bytes   {walk_bytes:9} B  (budget {WALK_BYTES_BUDGET})");
+    // Named so the verdict below can speak about them: `Session::start`
+    // builds a world from scratch and is the only contention-sensitive
+    // metric here; the two per-turn metrics run against a `World` already
+    // built in memory. Same shape as `scene_cost.rs`'s `measured` array.
+    let measured: [(&str, f64, f64, f64); 3] = [
+        (
+            "Session::start",
+            start_median,
+            START_BUDGET_MS,
+            START_BASIS_MS,
+        ),
+        (
+            "handle+snapshot+json",
+            turn_median,
+            TURN_BUDGET_MS,
+            TURN_BASIS_MS,
+        ),
+        (
+            "indoor snapshot+json",
+            indoor_snapshot_median,
+            INDOOR_SNAPSHOT_BUDGET_MS,
+            INDOOR_SNAPSHOT_BASIS_MS,
+        ),
+    ];
+    for (name, got, budget, basis) in measured {
+        println!(
+            "{name:<20}{got:9.3} ms (budget {budget:>8}) {:5.2}x basis {basis}",
+            got / basis
+        );
+    }
+    println!("walk snapshot bytes {walk_bytes:9} B (budget {WALK_BYTES_BUDGET})");
+
+    // THE DISCRIMINATOR, as arithmetic — see `scene_cost.rs`'s module doc.
+    // `Session::start` is the contention-sensitive metric; the two per-turn
+    // metrics are the CONTROL SET. Controls holding while start inflates is
+    // the machine. Any control moving is the code.
+    let controls_over: Vec<&str> = measured
+        .iter()
+        .skip(1)
+        .filter(|(_, got, _, basis)| got / basis > CONTROL_TOLERANCE)
+        .map(|(name, _, _, _)| *name)
+        .collect();
+    if controls_over.is_empty() {
+        println!(
+            "VERDICT: both controls within {CONTROL_TOLERANCE}x of basis. A Session::start \
+             breach here reads as CONTENTION, not a regression — re-run on a quiet box \
+             to confirm before touching any constant."
+        );
+    } else {
+        println!(
+            "VERDICT: {} control(s) moved: {controls_over:?}. This is NOT the contention \
+             signature — look at the code before blaming the box.",
+            controls_over.len()
+        );
+    }
 
     assert!(
         start_median < START_BUDGET_MS,
