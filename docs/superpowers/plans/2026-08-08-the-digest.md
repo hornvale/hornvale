@@ -1677,6 +1677,22 @@ Read the generated `make doctor` output start to finish. If a fresh session woul
 
 Chronicle: what codification is, why the ~50% position was the missing one, and the two live drift instances that motivated it. Retrospective: process lessons only — including that the campaign's own brainstorm re-derived PROC-11 from scratch because 2.07M words made it unfindable.
 
+- [ ] **Step 4b: Carried-forward items from the task reviews — none may be dropped**
+
+1. **Root `CLAUDE.md`'s drift-check command omits `docs/digest/`.** The documented verification (`git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/`) would miss digest drift entirely. Add `docs/digest/` to it.
+
+2. **Record the MCP gap honestly (Nathan's ruling, 2026-08-08: "ship as-is and record the gap").** Spec §4.8 puts the MCP tool in v1 scope, but v1 ships `handle_assert`/`handle_query` as tested library functions with **no callable surface** — no CLI subcommand, no server. In the spec's risk table, change the "Authoring friction kills adoption → MCP tool in v1 scope" row from a mitigation to an **OPEN risk**, because the mitigation is not reachable by a user. Say so plainly in the chronicle and the retrospective. Follow-on candidate, not v1: a thin `digest assert`/`digest query` CLI, or the real MCP transport once the vocabulary settles.
+
+3. **Note the shallow-clone hazard.** `render::delta`'s two tests are live-git integration tests. A shallow checkout breaks them — loudly, which is the safe failure mode, but any CI that runs them needs full history.
+
+4. **Note the untracked-path hazard in the retrospective.** `git diff --exit-code <path>` is silently vacuous against a path with no index entry. Task 7's first S2 attempt hit exactly this: `docs/digest/` was new and unstaged, so the drift check could not fire, and only the require-RED mutation discipline exposed it. The fix was "stage this one, once" — the hazard remains structural for the next new generated directory, and nothing in `scripts/regenerate-artifacts.sh` guards it.
+
+- [ ] **Step 4c: The headline process finding**
+
+**Nine defects were authored by this plan's own text; zero originated in implementer code.** Module ordering, a missing `main.rs` against a declared `[[bin]]`, an E0716 borrow error, the scope-inference design error, a bracket-match that hit a type annotation instead of a literal, the S6 coverage gap, a one-argument call to a two-argument function, a phantom `digest check` subcommand, and `git show --name-only` conflating *touched* with *added*.
+
+Every one was caught — by TDD, by a task reviewer, or by an implementer declining to paper over it. Write this up as the retrospective's headline: in a campaign about documents drifting from the things they describe, the controlling document was the least reliable artifact in the room.
+
 - [ ] **Step 5: Update registry rows**
 
 Set UNI-29 / UNI-21 / UNI-28 / PROC-11 statuses to reflect what shipped, and add a row for the codification position if it earns one (Nathan's call at G6).
