@@ -500,3 +500,4 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-07T20:25:22Z | gate | 577.329 | 4368.126 | 92.153 | 7.73 | 0 | 8a62bad1 | the-beholding | MacBookPro | 10 |
 | 2026-08-07T22:18:52Z | gate | 683.708 | 4317.449 | 93.630 | 6.45 | 0 | c8d8ab14 | the-beholding | MacBookPro | 10 |
 | 2026-08-08T00:23:07Z | rebaseline | 169.240 | 177.922 | 9.206 | 1.11 | 0 | 490757f9 | campaign/the-assay | ambrose | 12 |
+| 2026-08-08T00:44:28Z | gate | 1032.408 | 5219.448 | 296.296 | 5.34 | 0 | 8ab36d1e | campaign/the-assay | ambrose | 12 |
