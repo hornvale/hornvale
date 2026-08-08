@@ -92,6 +92,33 @@ to be the failure the check was promised against, and a check written to
 replace one that could not fire inherits the burden of proof rather than the
 credit.
 
+A fifth campaign closes a corner instead of finding a new instance of one.
+The Assay (2026-08-07) is a worked instance of decision 0097's middle
+corner — the check that cries wolf, sitting beside the check that cannot
+fire (this chapter's original floor) and the drift check with no anchor
+(The Named). Three gate-resident tests were sweeping up to 200 worlds each
+to answer an existence claim — does a live prediction crisis occur
+*somewhere*, does every `Hydro` variant appear *somewhere*, does some world
+win every toponymic concept — the exact shape 0097 names as deciding on
+whichever single draw happens to sit nearest a hunt's break condition.
+Moving them onto the census's 1,000-world fixture, as a coverage table and
+a measured rate rather than a boolean the next campaign's true change could
+flip, is what 0097 §2 prescribed and had not yet been built. The mechanism
+this campaign shipped to make that safe — a tripwire that rebuilds three
+fixed seeds every commit and compares them against the fixture — was itself
+proven by mutation before anything moved onto it, per this chapter's own
+standing practice: a corrupted fixture cell turns it red, naming the metric,
+the seed, and both values; restoring the cell turns it green again. The
+same campaign also produced a sixth instance of a lesson this chapter has
+tracked under other names since The Timekeeper — a claim of absence
+asserted from an incomplete search, this time by the controller itself,
+mid-sentence while cataloguing five other agents making the identical
+error, caught only because the dispatch had told the correcting agent to
+verify rather than comply. See `docs/retrospectives/the-reassay.md` for the
+full account, including a naming collision with an unrelated, already-shipped
+campaign that shares this one's title — itself one more claim of absence
+("the name is free") nobody checked.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

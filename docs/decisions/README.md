@@ -147,3 +147,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0105](0105-water-keeps-bands-rock-becomes-a-graph.md) | Water keeps bands, rock becomes a graph — supersedes The Stratum's D3 for the rock realm only | Accepted |
 | [0106](0106-a-constants-justification-must-match-its-kind.md) | A constant's justification must match its kind | Accepted |
 | [0107](0107-habitability-is-a-relation-not-a-constant.md) | Habitability is a relation, not a constant | Accepted |
+| [0108](0108-a-reachability-claim-is-a-census-coverage-table.md) | A reachability claim is a census coverage table | Accepted |
+| [0109](0109-a-population-claim-is-asserted-in-the-gate-over-the-fixture.md) | A population claim is asserted in the commit gate, over the committed fixture | Accepted |
+| [0110](0110-the-census-is-the-suites-shared-world-building-pass.md) | The census is the suite's shared world-building pass | Accepted |
+| [0111](0111-a-census-resident-check-needs-a-live-tripwire.md) | A census-resident check requires a live tripwire in the gate | Accepted |
+| [0112](0112-the-synthetic-route-requires-committed-facts.md) | The synthetic route requires that the behaviour read committed facts | Accepted |
