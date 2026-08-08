@@ -8,6 +8,7 @@
 // decision 0022 licenses; they are not expected to agree glyph-for-glyph.
 
 import type { Snapshot } from "./snapshot.ts";
+import { type PaneCell, type PaneGrid, parseColor } from "./pane_cell.ts";
 
 /** The chart schema tag this pane understands. A different tag — absent,
  * unrecognised, or a future epoch that reuses a field name with new
@@ -30,6 +31,10 @@ interface ChartCell {
   seam: boolean;
   state: string;
   water: number;
+  /** Raw, unvalidated — `parseColor` narrows it. `unknown` because a
+   * malformed or absent `color` must become an uncoloured cell, never a
+   * thrown error. */
+  color: unknown;
 }
 
 /** The mark for the cell the observer stands in — the same `@` the floor
@@ -58,12 +63,12 @@ const WATER_KINDS = new Set(["ocean", "salt-basin", "river"]);
  * uncaught `TypeError` would. Refusing beats hanging the worker. */
 const MAX_COORD = 4096;
 
-/** The glyph rows for this snapshot's chart, or `null` when there is no
+/** The cell grid for this snapshot's chart, or `null` when there is no
  * chart to draw.
  *
  * Refusing beats drawing something wrong: a malformed or empty chart looks
  * plausible half-rendered, which is the worse failure. */
-export function chartRows(snap: Snapshot): string[] | null {
+export function chartCells(snap: Snapshot): PaneGrid | null {
   const spatial = snap.spatial;
   if (!spatial || spatial.band !== "walk") return null;
   const chart = spatial.chart as
@@ -90,7 +95,7 @@ export function chartRows(snap: Snapshot): string[] | null {
   // down-and-to-the-right instead of directly below, and a breadth-first
   // ball would draw as a right-leaning parallelogram rather than the
   // symmetric hexagon it actually is.
-  const placed = new Map<string, string>();
+  const placed = new Map<string, PaneCell>();
   let rMin = Infinity, rMax = -Infinity, cMin = Infinity, cMax = -Infinity;
   for (const raw of chart.cells) {
     const cell = parseCell(raw);
@@ -102,7 +107,12 @@ export function chartRows(snap: Snapshot): string[] | null {
     }
     const row = -cell.w;
     const col = 2 * cell.v + (cell.up ? 0 : 1) + cell.w;
-    placed.set(`${row},${col}`, glyphFor(cell, waterLegend));
+    const { glyph, ground } = glyphFor(cell, waterLegend);
+    // The ground rule (see `PaneCell`'s doc in `pane_cell.ts`): withheld,
+    // not merely unparsed, on a non-ground glyph (`YOU`, a water glyph) —
+    // regardless of what the payload sent.
+    const color = ground ? parseColor(cell.color) : null;
+    placed.set(`${row},${col}`, { glyph, color });
     rMin = Math.min(rMin, row);
     rMax = Math.max(rMax, row);
     cMin = Math.min(cMin, col);
@@ -110,15 +120,15 @@ export function chartRows(snap: Snapshot): string[] | null {
   }
   if (placed.size === 0) return null;
 
-  const rows: string[] = [];
+  const grid: PaneGrid = [];
   for (let r = rMin; r <= rMax; r++) {
-    let line = "";
+    const line: PaneCell[] = [];
     for (let c = cMin; c <= cMax; c++) {
-      line += placed.get(`${r},${c}`) ?? EMPTY;
+      line.push(placed.get(`${r},${c}`) ?? { glyph: EMPTY, color: null });
     }
-    rows.push(line);
+    grid.push(line);
   }
-  return rows;
+  return grid;
 }
 
 /** Validate and narrow one raw chart-cell payload, or `null` if it is not
@@ -139,16 +149,25 @@ function parseCell(raw: unknown): ChartCell | null {
     return null;
   }
   const water = typeof c.water === "number" ? c.water : -1;
-  return { v, w, up, seam: c.seam, state: c.state, water };
+  return { v, w, up, seam: c.seam, state: c.state, water, color: c.color };
 }
 
-/** The glyph one cell wears. Coarse on purpose: the pane distinguishes where
- * you are, what is water, and what is land. The `map` verb's lenses are
- * where fine distinctions live, and duplicating that table here would be a
- * second thing to keep in step with no test able to see the drift. */
-function glyphFor(cell: ChartCell, waterLegend: string[]): string {
-  if (cell.state === "here") return YOU;
+/** The glyph one cell wears, paired with whether that glyph draws the
+ * ground itself. Coarse on purpose: the pane distinguishes where you are,
+ * what is water, and what is land. The `map` verb's lenses are where fine
+ * distinctions live, and duplicating that table here would be a second
+ * thing to keep in step with no test able to see the drift.
+ *
+ * `ground` is this pane's instance of `PaneCell`'s ground rule (see its doc
+ * in `pane_cell.ts`), ported from `terrain_glyph` in
+ * `windows/scene/src/surrounds_ascii.rs`: `false` for the observer's own
+ * cell and for any water glyph, `true` for land — the caller uses this to
+ * decide whether `cell.color` is a truthful claim to carry. */
+function glyphFor(cell: ChartCell, waterLegend: string[]): { glyph: string; ground: boolean } {
+  // Not ground: `@` names the observer, not the bedrock beneath them.
+  if (cell.state === "here") return { glyph: YOU, ground: false };
   const water = waterLegend[cell.water];
-  if (water !== undefined && WATER_KINDS.has(water)) return "~";
-  return cell.state === "remembered" ? "," : ".";
+  // Not ground: water covers the bedrock the colour would describe.
+  if (water !== undefined && WATER_KINDS.has(water)) return { glyph: "~", ground: false };
+  return { glyph: cell.state === "remembered" ? "," : ".", ground: true };
 }

@@ -32,8 +32,8 @@ pub mod world;
 
 pub use astar::{AStarSolver, FieldSolver, SearchSpace, Solver, astar};
 pub use color::{
-    BAND_CENTERS_NM, BANDS, Illuminant, Mixture, Observer, Reflectance, Signal, Spectrum,
-    standard_observer,
+    BAND_CENTERS_NM, BANDS, ChannelRole, Illuminant, Mixture, Observer, Projection, Reflectance,
+    Signal, Spectrum, standard_observer,
 };
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};

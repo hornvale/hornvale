@@ -15,10 +15,15 @@
 
 use hornvale_kernel::{
     ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
-    ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, KindId, Ledger, LedgerError,
-    MARINE_FORAGE, MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError,
-    ResourceVector, Value, Void, World,
+    ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, Ledger, LedgerError, MARINE_FORAGE,
+    MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
+    Void, World,
 };
+// `perception_registry()` is keyed by `KindId`, so a caller resolving a
+// species by name (worldgen's `observer_named`, campaign "The Beholding")
+// needs the type nameable as `hornvale_species::KindId`, not just usable
+// internally.
+pub use hornvale_kernel::KindId;
 
 mod allometry;
 pub use allometry::{

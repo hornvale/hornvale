@@ -22,6 +22,7 @@ fn opts() -> PossessOpts {
         day: WorldTime { day: 0.0 },
         echo: false,
         wild_agents: true,
+        eyes: hornvale_vessel::eyes::Eyes::Own,
     }
 }
 
@@ -278,6 +279,7 @@ fn the_stitch_law_end_to_end() {
             day: WorldTime { day: 0.0 },
             echo: false,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
     )
     .unwrap();
@@ -330,6 +332,7 @@ fn the_stitch_law_end_to_end() {
             day: WorldTime { day: 0.0 },
             echo: false,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
     )
     .unwrap();
@@ -411,6 +414,7 @@ fn run_drives_a_script_deterministically() {
             day: WorldTime { day: 0.0 },
             echo: true,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -422,6 +426,7 @@ fn run_drives_a_script_deterministically() {
             day: WorldTime { day: 0.0 },
             echo: true,
             wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
         },
         std::io::Cursor::new(script),
         &mut out_b,
@@ -756,4 +761,81 @@ fn there_is_no_cave_at_the_flagships_own_starting_cell() {
         up.contains("not underground"),
         "climb with nothing to climb out of must name that: {up}"
     );
+}
+
+/// Bare `eyes` names whose eyes the chart is coloured through and the arity
+/// of what they see (The Beholding, Task 5).
+#[test]
+fn the_eyes_verb_reports_whose_eyes_and_what_the_projection_drops() {
+    let w = seam_world();
+    let (mut s, _) = Session::start(&w, &opts()).unwrap();
+    let out = match s.handle("eyes") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("eyes must not release"),
+    };
+    let species = s.agent().species.clone();
+    assert!(
+        out.contains(&species),
+        "the report must name whose eyes: {out}"
+    );
+    assert!(out.contains("channel"), "and the arity: {out}");
+}
+
+/// `eyes <name>` switches whose eyes colour the chart, and an unknown name
+/// refuses loudly rather than guessing — naming what was asked for and
+/// listing the roster (The Beholding, Task 5).
+#[test]
+fn eyes_switches_the_chart_and_an_unknown_name_lists_the_roster() {
+    let w = seam_world();
+    let (mut s, _) = Session::start(&w, &opts()).unwrap();
+    let before = s.purview(0).unwrap();
+    s.handle("eyes kobold");
+    let after = s.purview(0).unwrap();
+    if s.agent().species != "kobold" {
+        assert_ne!(
+            before.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
+            after.cells.iter().map(|c| c.color).collect::<Vec<_>>(),
+            "switching eyes must change the chart"
+        );
+    }
+    let refusal = match s.handle("eyes wyvern") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("eyes must not release"),
+    };
+    assert!(
+        refusal.contains("wyvern"),
+        "name what was refused: {refusal}"
+    );
+    assert!(
+        refusal.contains("bugbear"),
+        "and list the roster: {refusal}"
+    );
+}
+
+/// `map` draws the colour lens by default (Task 4's headline claim: a
+/// possession sees as its own kind does, not a human narrator) and falls all
+/// the way back to the plain terrain lens — no colour, no escape sequence —
+/// when the eyes are declined (The Beholding, Task 5).
+#[test]
+fn map_renders_the_colour_lens_unless_the_eyes_are_off() {
+    let w = seam_world();
+    let (mut s, _) = Session::start(&w, &opts()).unwrap();
+    let lit = match s.handle("map") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("map must not release"),
+    };
+    assert!(
+        lit.contains("[lens: colour"),
+        "possession draws the colour lens: {lit}"
+    );
+    s.handle("eyes off");
+    let bare = match s.handle("map") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("map must not release"),
+    };
+    assert!(
+        bare.contains("[lens: terrain"),
+        "eyes off falls back to terrain: {bare}"
+    );
+    assert!(!bare.contains('\u{1b}'), "and emits no escape sequences");
 }

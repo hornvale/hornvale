@@ -8,6 +8,7 @@ pub mod band;
 pub mod brief;
 pub mod chamber_prose;
 pub mod clock;
+pub mod eyes;
 mod focalize;
 pub mod interior;
 mod knowledge;
@@ -80,6 +81,10 @@ pub struct PossessOpts {
     /// fauna walking alongside the peoples. A settled-population unit test
     /// that isolates the peopled narration path sets this off.
     pub wild_agents: bool,
+    /// Whose eyes the possession's chart is coloured through (The Beholding,
+    /// Task 4). Defaults to [`eyes::Eyes::Own`] — colour on, through the
+    /// possessed agent's own species.
+    pub eyes: eyes::Eyes,
 }
 
 impl Default for PossessOpts {
@@ -93,6 +98,7 @@ impl Default for PossessOpts {
             day: hornvale_kernel::WorldTime { day: 0.5 },
             echo: false,
             wild_agents: true,
+            eyes: eyes::Eyes::Own,
         }
     }
 }

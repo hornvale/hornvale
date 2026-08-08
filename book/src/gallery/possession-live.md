@@ -27,6 +27,19 @@ to disagree about. The map is also not a capability the prose lacks — every
 pane can do only what a verb can do, so what you see beside the transcript is
 what `map` would have printed had you typed it.
 
+Since [The Beholding](../chronicle/the-beholding.md) the chart is **coloured,
+through the eyes of whoever you are possessing**. Colour is not a property of
+a cell: it is the product of the rock's reflectance, the light actually
+falling on it at your latitude and hour, and the sensitivity curves the
+possessed species' perception vector implies — so the pane carries a caption
+naming the eye, its channel count, and what its projection to a
+three-channel screen *preserves*. A dichromat's map is captioned as one,
+because a two-chromatic-channel signal on an RGB screen is a false-colour
+mapping and the honest place for that admission is the caption rather than
+the picture. Type `eyes kobold`, `eyes human`, `eyes own` or `eyes off` to
+change the eye without changing anything else. The tint is bedrock, so it is
+withheld wherever the glyph is drawing water, a mark, or you.
+
 ## The Demo
 
 <div id="casement"></div>
@@ -53,7 +66,11 @@ anything the chamber's prose or the floor plan's legend named),
 <code>back</code>,
 <code>wait</code> (the world moves too — a derived NPC keeps its own daily
 route, departing and returning), <code>npcs</code>, <code>why</code>,
-<code>whoami</code>, <code>knows</code>, <code>release</code>. This terminal
+<code>whoami</code>, <code>knows</code>,
+<code>eyes</code> (bare, it reports whose eyes you are seeing colour through
+and what their projection drops; <code>eyes own|human|off</code> or any
+species name switches them — The Beholding),
+<code>release</code>. This terminal
 is
 <a href="https://github.com/hornvale/hornvale/tree/main/clients/vessel">clients/vessel</a>;
 the world it derives is the same

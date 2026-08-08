@@ -165,6 +165,17 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
              {tinted} tinted, {withheld} withheld (water, a mark, or you), \
              {bare} carrying no colour.\n"
         ));
+        // The sight declaration, read from the document rather than assumed:
+        // a caption that hardcoded "the standard observer" would lie the
+        // moment a non-standard eye coloured the chart. Absent only when the
+        // scene predates the colour layer or was built through the
+        // uncoloured path.
+        if let Some(sight) = &scene.sight {
+            out.push_str(&format!(
+                "  sight: {} · {} channels ({} chromatic) · {} projection, preserving {}.\n",
+                sight.observer, sight.channels, sight.chromatic, sight.projection, sight.preserves
+            ));
+        }
     }
 
     if placed.is_empty() {
@@ -268,6 +279,7 @@ mod tests {
             sea_level_m: 0.0,
             cells,
             legend: vec![],
+            sight: None,
         }
     }
 

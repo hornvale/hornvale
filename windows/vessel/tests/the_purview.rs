@@ -275,12 +275,14 @@ fn map_out_reaches_a_coarser_rung_and_stops_at_the_bottom() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let fine = out(session.handle("map"));
     let coarse = out(session.handle("map out 3"));
-    assert!(fine.contains("[lens: terrain"), "{fine}");
-    assert!(coarse.contains("[lens: terrain"), "{coarse}");
+    // Default eyes are `Own` (The Beholding, Task 5): the walk-band chart
+    // draws the colour lens, not the plain terrain one.
+    assert!(fine.contains("[lens: colour"), "{fine}");
+    assert!(coarse.contains("[lens: colour"), "{coarse}");
     assert_ne!(fine, coarse, "a coarser rung shows different ground");
     let absurd = out(session.handle("map out 99"));
     assert!(
-        absurd.contains("no coarser") || absurd.contains("[lens: terrain"),
+        absurd.contains("no coarser") || absurd.contains("[lens: colour"),
         "an over-large zoom must refuse or clamp, never panic: {absurd}"
     );
 }
@@ -300,7 +302,8 @@ fn map_out_seven_is_just_past_the_real_bound_and_refuses_cleanly() {
     // Just inside the real bound (depth 12 - globe_level 6 = 6): must draw.
     let still_ok = out(session.handle("map out 6"));
     assert!(
-        still_ok.contains("[lens: terrain"),
+        // Default eyes are `Own` (The Beholding, Task 5): colour, not terrain.
+        still_ok.contains("[lens: colour"),
         "rung 6 is the real bound and must still draw: {still_ok}"
     );
     // One rung past the real bound: must refuse in player-facing language,

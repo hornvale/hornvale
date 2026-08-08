@@ -12,7 +12,9 @@ Ways on: NE, NW, S.
 Tropical rainforest — buttressed canopy, shaded, in a hollow — in the lands of Googo. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > map
-[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
+[lens: colour · depth 12 · radius 4 · lattice-aligned, not north-up]
+  colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
+  sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
   +++++
  +++++++
 ++++@++++
@@ -92,7 +94,9 @@ Ways on: NE, NW, S.
 > go n
 No way n from here.
 > map out 2
-[lens: terrain · depth 10 · radius 4 · lattice-aligned, not north-up]
+[lens: colour · depth 10 · radius 4 · lattice-aligned, not north-up]
+  colour: each cell's bedrock, tinted only where the glyph draws that ground — 0 tinted, 31 withheld (water, a mark, or you), 0 carrying no colour.
+  sight: bugbear · 3 channels (2 chromatic) · yellow-blue projection, preserving the short-to-long opposition; the red-green axis is not carried.
   +++++
  +++++++
 ++++@++++

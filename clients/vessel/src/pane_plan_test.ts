@@ -1,7 +1,16 @@
 import { assertEquals } from "@std/assert";
 import { parseSnapshot } from "./snapshot.ts";
 import type { PlanPayload } from "./snapshot.ts";
-import { planRows } from "./pane_plan.ts";
+import { planCells } from "./pane_plan.ts";
+import type { PaneGrid } from "./pane_cell.ts";
+
+/** Flatten a grid to plain glyph rows. Every test below this predates
+ * colour and only ever asserted on shape and glyph — this lets them keep
+ * doing exactly that against the new `PaneGrid` return, without each one
+ * re-deriving `.map((c) => c.glyph).join("")` inline. */
+function glyphRows(grid: PaneGrid | null): string[] | null {
+  return grid ? grid.map((row) => row.map((c) => c.glyph).join("")) : null;
+}
 
 const CHAMBER = Deno.readTextFileSync(
   new URL(
@@ -12,7 +21,7 @@ const CHAMBER = Deno.readTextFileSync(
 
 Deno.test("a real chamber snapshot renders one row per lattice row", () => {
   const snap = parseSnapshot(CHAMBER)!;
-  const rows = planRows(snap)!;
+  const rows = glyphRows(planCells(snap))!;
   const plan = (snap.spatial as { band: "chamber"; plan: PlanPayload }).plan;
   assertEquals(rows.length, plan.extent.h);
   for (const row of rows) assertEquals(row.length, plan.extent.w);
@@ -20,7 +29,7 @@ Deno.test("a real chamber snapshot renders one row per lattice row", () => {
 
 Deno.test("the standing cell is marked, and exactly once", () => {
   const snap = parseSnapshot(CHAMBER)!;
-  const rows = planRows(snap)!;
+  const rows = glyphRows(planCells(snap))!;
   const marks = rows.join("").split("").filter((c: string) => c === "@").length;
   assertEquals(marks, 1);
 });
@@ -32,12 +41,12 @@ Deno.test("a walk-band snapshot draws no plan", () => {
       spatial: { band: "walk", chart: {} },
     }),
   )!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });
 
 Deno.test("a snapshot with no spatial channel draws no plan", () => {
   const snap = parseSnapshot(JSON.stringify({ schema: "vessel/session/v1" }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });
 
 Deno.test("a grid whose length disagrees with its extent is refused", () => {
@@ -57,7 +66,7 @@ Deno.test("a grid whose length disagrees with its extent is refused", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });
 
 Deno.test("an index past the end of the palette is refused", () => {
@@ -74,12 +83,15 @@ Deno.test("an index past the end of the palette is refused", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });
 
-Deno.test("an unknown extra field on a palette entry still renders", () => {
+Deno.test("an unknown extra field still renders; a known one (color) flows through", () => {
   // The property the palette shape exists for: colour, warmth or rubble can
-  // ship later without touching a client that predates them.
+  // ship later without touching a client that predates them. `color` is no
+  // longer hypothetical as of this task — Task 6 shipped the slot on the
+  // wire and Task 7 gave this client a real parse for it — so `warmth`
+  // alone now stands in for a field this client has never heard of.
   const snap = parseSnapshot(JSON.stringify({
     schema: "vessel/session/v1",
     spatial: {
@@ -96,7 +108,13 @@ Deno.test("an unknown extra field on a palette entry still renders", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), ["#@"]);
+  const grid = planCells(snap)!;
+  assertEquals(glyphRows(grid), ["#@"]);
+  // Cell (0,0) draws the wall's own glyph ("#"), so the ground rule carries
+  // its colour; cell (1,0) draws `@` (the possession overlay), so its
+  // colour is withheld regardless of the floor entry's own (absent) colour.
+  assertEquals(grid[0][0].color, [1, 2, 3]);
+  assertEquals(grid[0][1].color, null);
 });
 
 Deno.test("an unknown cell kind renders as the fallback, not a throw", () => {
@@ -113,7 +131,7 @@ Deno.test("an unknown cell kind renders as the fallback, not a throw", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), ["?."]);
+  assertEquals(glyphRows(planCells(snap)), ["?."]);
 });
 
 Deno.test("a plan with no `you` at all is refused, not thrown", () => {
@@ -132,7 +150,7 @@ Deno.test("a plan with no `you` at all is refused, not thrown", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });
 
 Deno.test("a null palette entry is refused, not thrown on", () => {
@@ -153,7 +171,7 @@ Deno.test("a null palette entry is refused, not thrown on", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });
 
 Deno.test("a palette entry naming 'constructor' as its kind does not leak the prototype chain", () => {
@@ -175,7 +193,7 @@ Deno.test("a palette entry naming 'constructor' as its kind does not leak the pr
       },
     },
   }))!;
-  assertEquals(planRows(snap), ["?"]);
+  assertEquals(glyphRows(planCells(snap)), ["?"]);
 });
 
 Deno.test("a `you` with a non-integer coordinate is refused", () => {
@@ -192,5 +210,5 @@ Deno.test("a `you` with a non-integer coordinate is refused", () => {
       },
     },
   }))!;
-  assertEquals(planRows(snap), null);
+  assertEquals(planCells(snap), null);
 });

@@ -19,6 +19,13 @@ export interface Exit {
 export interface PaletteEntry {
   kind: string;
   chambers: number[];
+  // `unknown`, not `[number, number, number] | null`: `pane_cell.ts`'s
+  // `parseColor` narrows it, the same refuse-don't-guess treatment every
+  // other field on the wire gets. `windows/vessel/src/plan.rs::PaletteEntry`
+  // skips this key entirely when absent (`Option::None`, no building-fabric
+  // or interior-illuminant model exists yet to fill it), so it may be
+  // missing outright rather than merely `null`.
+  color?: unknown;
 }
 
 /** One individual standing on a cell of the plan — `windows/vessel/src/plan.rs`'s
@@ -80,6 +87,60 @@ export interface Snapshot {
   // channel, and the transcript must still work against one. The pane
   // renders nothing rather than the client throwing.
   spatial?: Spatial;
+}
+
+/** What eye a walk-band chart was coloured for, and what its projection
+ * preserves — the fields this client reads off `hornvale_scene::surrounds::
+ * Sight` (`windows/scene/src/surrounds.rs`). `sun_altitude_deg` is on the
+ * wire too but no pane reads it, so it is not carried here — the same
+ * "as much of it as this pane reads" discipline `pane_chart.ts`'s
+ * `ChartCell` already applies to its own payload. */
+export interface Sight {
+  /** The species (or other named eye) this chart was coloured for. */
+  observer: string;
+  /** How many channels that eye senses with. */
+  channels: number;
+  /** How many of those channels are chromatic. */
+  chromatic: number;
+  /** The eye's projection name, or `"none"` for no projection to sRGB. */
+  projection: string;
+  /** What that projection preserves, in prose. */
+  preserves: string;
+}
+
+/** The `sight` declaration off the walk-band chart, or `null` when there is
+ * no walk-band spatial channel, no chart, or the `sight` key is absent or
+ * malformed. `sight` is itself optional on the wire — `eyes.rs`'s "decline
+ * the observer step" path omits the key entirely rather than emitting a
+ * null — so a chart with no declared eye draws no caption, same as a sim
+ * predating The Beholding. Refuse, don't guess, field by field: the same
+ * discipline `pane_plan.ts` and `pane_chart.ts` already apply to their own
+ * payloads, applied here rather than trusting a cast — a partially-typed
+ * caption is worse than no caption at all. */
+export function sightOf(snap: Snapshot): Sight | null {
+  const spatial = snap.spatial;
+  if (!spatial || spatial.band !== "walk") return null;
+  const chart = spatial.chart as { sight?: unknown } | null | undefined;
+  if (chart === null || typeof chart !== "object") return null;
+  const raw = chart.sight;
+  if (raw === null || typeof raw !== "object" || raw === undefined) return null;
+  const s = raw as Record<string, unknown>;
+  if (
+    typeof s.observer !== "string" ||
+    !Number.isInteger(s.channels) ||
+    !Number.isInteger(s.chromatic) ||
+    typeof s.projection !== "string" ||
+    typeof s.preserves !== "string"
+  ) {
+    return null;
+  }
+  return {
+    observer: s.observer,
+    channels: s.channels as number,
+    chromatic: s.chromatic as number,
+    projection: s.projection,
+    preserves: s.preserves,
+  };
 }
 
 /** Parse a snapshot payload, or null if it is absent, junk, or a schema
