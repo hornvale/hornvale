@@ -3119,16 +3119,37 @@ fn a_prediction_crisis_occurs_and_the_census_reports_its_rate() {
 // — nine settling peoples at this commit. The two are therefore NOT comparable
 // numbers, and no assertion here treats them as one.
 //
-// **The census values are not in here yet.** The columns ship in this commit
-// and the fixture is regenerated on the canonical box afterwards, so the
-// bracketing prose every other test in this file carries ("values at the
-// <date> regen, n = 1000") is owed at that regen and is deliberately not
-// guessed here. What IS measured, on a 12-world scratch probe (seeds 1-12, run
-// live, NOT the census and never to be read as one): the victim rate spans
-// 0.014 to 0.373, the invariant column reads 0 on all twelve, and the two rates
-// stand in a ratio of 1.00-1.03 — a raider almost never raids twice. The
-// assertions below are written to hold over any population, precisely because
-// the census population has not been read yet.
+// **The census values, at the 2026-08-08 regen, n = 1000:**
+//
+// ```
+//   raid-victim-rate             min 0.000000  med 0.287904  max 0.450098
+//   raid-initiator-rate          min 0.000000  med 0.282229  max 0.435421
+//   raid-attribution-unresolved  0 on all 1000 rows
+//   victim/initiator ratio       min 1.0000  med 1.0217  max 1.1086  (n = 997)
+//   worlds with no raiding at all                      3
+//   worlds where initiators exceed victims             0
+// ```
+//
+// Two readings worth keeping. **The invariant holds census-wide**: every
+// `Ended::By` reference on all thousand worlds resolves to exactly one record,
+// which is the claim the retired battery's panic message denied and never
+// measured. And **a raider is very nearly one-shot** — a median of 1.02 raids
+// each — so the offence column is not a rescaled copy of the defence one, but
+// it is close enough that its whole value is in the tail, which is the reason
+// it earns a column rather than a derivation.
+//
+// **What the pre-regen scratch probe missed, recorded because it is the
+// argument for this whole migration.** Before the census ran, a 12-world live
+// probe (seeds 1-12) read the victim rate as spanning 0.014 to 0.373 and the
+// ratio as 1.00-1.03. The census says 0.000 to 0.450 and 1.0000 to 1.1086. The
+// small sample missed **both tails**: it never saw a peaceful world, and three
+// exist; and it understated the busiest world by 0.077. Nothing was wrong with
+// the probe — twelve worlds simply cannot see a 0.3% event. That is the case
+// for the population being the instrument rather than a sample of it, made by
+// the one battery whose replacement is being justified.
+//
+// The assertions below are written to hold over any population, and were
+// written before these numbers were read.
 
 /// Present numeric values of a named column over every non-refused census row,
 /// paired with the seed that produced them — the raid tests below all want to
