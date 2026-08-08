@@ -116,17 +116,30 @@ is a question of whether the instrument can see the thing at all.
   the bake counted. That second question is why the probe survives, and closing
   the gap properly would mean committing the tally.
 - **The heavy tier runs wall-clock cost ceilings on a box the heavy tier is
-  saturating.** Two of its assertions are millisecond budgets, and both failed on
+  saturating.** Two of its assertions are millisecond budgets and both failed on
   the canonical box during this run: scene genesis at 13187 ms against a 13000 ms
-  ceiling, and a possessed turn at 9.5 ms against 8 ms. Neither is a regression.
-  The same genesis measured **4829 ms on a quiet machine** against the same
-  ceiling — the canonical box was at loadavg 20, running the very battery whose
-  timings it was recording. One of the two had already been failing on two
-  unrelated branches, which is what a structural false positive looks like from
-  the outside: everybody's problem, nobody's fault, and quietly discounted every
-  time. This is the same blind spot the suite-timing alarm documents for itself
-  (it cannot see ordinary load), reappearing in a tier that has no such guard at
-  all. A cost ceiling either needs a quiet box or needs to stop being wall-clock.
+  ceiling, and a possessed turn at 9.5 ms against 8 ms. Neither is a regression —
+  the same genesis measures **4829 ms on a quiet machine** against the same
+  ceiling, with the box at loadavg 20 running the very battery whose timings it
+  was recording.
+
+  **A first draft of this entry claimed the project had no answer for that. It
+  does, and the correction belongs here rather than in a quiet edit.**
+  `session_cost.rs`'s own module doc says: *"Read a red run as contention before
+  suspecting the code… `scene_cost.rs`'s documented failure mode — all metrics
+  inflating together by roughly the same factor — is the machine, not a
+  regression. A real regression is local."* That is a real discriminator and it
+  was written down before this campaign existed.
+
+  What is actually missing is narrower. The discriminator asks whether the
+  metrics inflated *together*, and `scene_cost` asserts on the first budget it
+  checks, so a contended run panics at genesis and never measures the four
+  metrics that would settle it. The evidence the doc tells you to gather is
+  destroyed by the assertion that tells you to gather it. Collecting all
+  budgets and asserting once at the end would make the documented failure mode
+  checkable instead of merely describable — and would stop the advice
+  ("read it as contention") from being invoked on every heavy run rather than
+  as the exception it was written to be.
 - **Two of The Delvers' three open items remain**: a third history gate still
   samples a three-order-of-magnitude distribution once at seed 42, and the
   occupancy readout's committed fixture is owed a regeneration whose
