@@ -715,6 +715,10 @@ builds the join it described. Derived, never drawn."
 
 Spec §3, §6 H2. **This is where the campaign becomes visible**, and the test drives the entire path in one go: fabric → light → `sense` → `to_srgb` → `PaletteEntry.color`.
 
+**The torch's radius IS the sight radius, and they must be one constant.** `session.rs` has `const SIGHT_RADIUS: i32 = CHAMBER_SIDE / 2` (= **4**), and its doc was written anticipating this campaign: *"so that the day a light model arrives there is exactly one place to replace, and so no second caller can quietly disagree with the first."* Wire the implicit torch to that constant rather than introducing a second one. A torch radius *smaller* than sight would produce cells you can see with nothing illuminating them — not dim, incoherent.
+
+Consequence to expect, not to fix: at radius 4 the dimmest visible cell sits at `1/(1+4²)` = **0.0588** of the brightest, which renders near `[26, 20, 4]` for a human — plainly visible. **H4's `[0,0,0]` regime is structurally unreachable on this band**, exactly as the implicit-torch decision anticipated. That is H4a's finding; do not tune `ATTENUATION` to manufacture darkness. (Task 4's battery reported `0.0154`, which is `1/(1+8²)` at radius **8** — a light-model measurement, not a chamber reading. Do not quote it as one.)
+
 **A structural note the spec does not cover.** `plan_of` interns the palette on `CellKind` alone, so every wall in a chamber shares one entry — a per-cell light gradient **cannot be expressed**. Widen the intern key to `(CellKind, Option<[u8; 3]>)`. This needs no schema change: the palette is already an intern table and the client keys on the index. The `u8` triple is itself the quantization, so the palette stays bounded (extent is 19×19 = 361 cells, and radial attenuation collapses to far fewer distinct colours). **Measure the resulting palette size rather than assuming it.**
 
 **Files:**
