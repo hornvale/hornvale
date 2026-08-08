@@ -298,7 +298,10 @@ Add to `tools/digest/src/store.rs`'s test module:
         led.assert(fact(eid(2), "status", Value::Text("b".into()))).unwrap();
         led.assert(fact(eid(1), "supersedes", Value::Text("x".into()))).unwrap();
         led.assert(fact(eid(1), "status", Value::Text("a".into()))).unwrap();
-        let lines: Vec<&str> = led.to_jsonl().lines().collect();
+        // Bind the String first: `led.to_jsonl().lines().collect()` borrows
+        // from a temporary whose drop scope ends at the `let`, which is E0716.
+        let text = led.to_jsonl();
+        let lines: Vec<&str> = text.lines().collect();
         assert_eq!(lines.len(), 3);
         assert!(lines[0].contains("\"subject\":1") && lines[0].contains("\"status\""));
         assert!(lines[1].contains("\"subject\":1") && lines[1].contains("\"supersedes\""));
