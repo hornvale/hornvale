@@ -140,49 +140,97 @@ exists before substituting (a no-op mutation is worse than no mutation).
 
 ---
 
-## §3 Item 2 — the two panels split, and only one retires
+## §3 Item 2 — both panels retire, and the tribute one needs a new observable
 
-The brief and two recorded commitments (both panels' module docs; The Delvers'
-follow-up list) say to retire both. **Measurement permits only one.**
+Both 12-seed panels go. The Sundering panel is a clean supersession; the Tithe
+panel needs a replacement observable, and choosing it was a measurement
+exercise rather than a design one.
 
-### §3.1 Retire the Sundering migration panel
+### §3.1 The Sundering migration panel — superseded exactly
 
 `windows/worldgen/tests/history_sundering.rs`'s
-`the_migration_distribution_is_reported_over_a_panel` reads
-`migration_events` — the *same quantity* §2's census column measures, at 12
-worlds instead of 1000. Superseded exactly. Delete it, its `FLOOR_PANEL`
-reporting and `MIN_MIGRATION_EVENTS`, and point the module doc at the census
-column. The file's other gate (`isolation_predicts_divergence`) is untouched.
+`the_migration_distribution_is_reported_over_a_panel` reads `migration_events`
+— the *same quantity* §2's census column measures, at 12 worlds instead of
+1000. Delete it, its `FLOOR_PANEL` reporting and `MIN_MIGRATION_EVENTS`, and
+point the module doc at the census column. The file's other gate
+(`isolation_predicts_divergence`) is untouched.
 
-### §3.2 Keep the Tithe tribute panel — the census cannot reach it
+### §3.2 The Tithe panel measures what the world does not keep
 
-`windows/worldgen/tests/history_tithe.rs`'s
 `the_tribute_accumulator_is_reported_over_a_panel` asserts on
-`c.tribute_collected` and `c.tribute_collection_events`, read from
-`BakeCensus`. **`BakeCensus` lives on `History::tally`, which
-`build_world_to` discards before any census view exists.** The Confusion's
-follow-up already recorded this constraint; this campaign confirms it against
-the source rather than inheriting it.
+`c.tribute_collected` — a FLOW integrated inside `History::tally`, which
+`build_world_to` discards before any census view exists. The only committed
+tribute fact is `PAYS_TRIBUTE_TO`, on the subordinate, carrying the patron,
+**dated by the day the relation began**.
 
-The only tribute quantity that reaches the ledger is `PAYS_TRIBUTE_TO` — a
-**stock** (relations standing at `now`), where the panel asserts on a **flow**
-(volume collected over deep time). Substituting one for the other would be
-measuring a different thing and calling it the same test.
+That asymmetry is a design statement, not an oversight: **the world remembers
+who owes whom, not how much has been paid.** So the task is not to find a
+faithful stand-in for the flow; it is to measure what the world keeps, and to
+state honestly how well that tracks the flow.
 
-So: the panel **stays**, and its module doc's *"wait for the census"*
-instruction — currently an instruction that cannot be followed — is replaced
-with the measured constraint and the two options that would lift it:
+### §3.3 The observable, chosen by measurement over three refuted predictions
 
-1. commit the tally (a save-format-class change), or
-2. accept the stock as a different, additional measurement.
+Every ledger-visible candidate, scored against the bake's own
+`tribute_collected` over 36 worlds:
 
-**Neither is done here.** Option 1 is far out of scope for a tail-clearing
-campaign and would be minted to replace a **passing** test. Option 2 is
-declined on The Confusion's own "three columns, not six" reasoning: the probe
-shows tribute relations are a genuinely distinct quantity (0/48 zeros, only
-−0.357 rank-correlated with migration), but a column that replaces nothing is
-permanent cost on every future census regen for no retired battery.
+```
+  stock  (standing relation count)   spearman +0.9344   <- chosen
+  relation_years  SUM(now - since)            +0.8909
+  patrons (distinct)                          +0.8419
+  top_share (largest patron)                  -0.7692
+  oldest  MAX(now - since)                    +0.4571
+```
 
+Three predictions made during design were refuted here, and each is recorded
+because the refutation is what chose the column:
+
+1. **"Relation-years will win, because the flow accumulates and a stock is
+   steady."** False. The plain count beats it. Decomposed: count-only 0.934,
+   duration-only 0.457, count x duration 0.891 — the count carries the signal
+   and the duration dilutes it.
+2. **"`top_share` earns its own column at -0.769, since it is not a
+   rescaling."** Substantially an arithmetic artifact: `top_share >= 1/stock`
+   by construction, and excluding small worlds decays it -0.769 -> -0.727 ->
+   -0.702 -> -0.608 -> -0.539 (at `stock > 60`, n = 28) while `stock` holds at
+   +0.875. Declined.
+3. **"A census column should be a normalized share, for cross-world
+   comparability."** False, and by a wide margin: `stock / occupations` scores
+   **+0.623** against the raw count's **+0.934**. Raw counts are precedented
+   (`raid-attribution-unresolved` is one).
+
+**What ships: one metric, `tribute-relations-standing`** — the count of
+`PAYS_TRIBUTE_TO` facts on a world, Settlement rung, `Absent` on a world with
+no occupation records. Its doc names the panel it replaces and states the
+0.934 agreement as a measured witness, not as an equivalence.
+
+### §3.4 A second column is declined, and the reason is not cost alone
+
+An invariant column mirroring `raid-attribution-unresolved` — *does every
+patron reference resolve to an occupation record* — is **declined as
+structurally vacuous**. `history_emit.rs` already carries
+`.expect("a tribute patron names a community minted in this history")` at the
+commit site, so the property is true by construction and the column could
+only ever fire on hand-built input. The Confusion's equivalent was justified
+because its invariant had actually broken in production; this one has not and
+cannot.
+
+### §3.5 The retired panel was already near-vacuous, so the bar is not "match it"
+
+**All four candidates, and `tribute_collected` itself, are `0/36` zeros** —
+every sampled world collects tribute. The panel's only assertion
+(`live * 2 >= n`, at least half the panel collected anything) therefore could
+essentially never fire. The replacement must be *better* than the panel, not
+merely wider.
+
+The calibration test accordingly asserts:
+
+- the column is present and non-empty (anti-vacuity);
+- **the column spans a real range** across the census — a constant column is a
+  broken fold, and this is the assertion with actual teeth;
+- pooled non-inertness, with the floor set well under the measurement;
+- the **zero share is reported, not asserted** — at 1000 worlds there may be
+  zero-tribute worlds this 36-world probe cannot see, exactly as The Confusion
+  found three no-raid worlds in a thousand that a 12-world probe had missed.
 ---
 
 ## §4 Item 3 — the occupancy readout: two causes, and a claim that was never met
@@ -336,60 +384,85 @@ diagnosis needs", the defect §5.1 shows was misattributed to `scene_cost`.
 
 **The ordering claim survives; the hard partition at 0.6 is dead.** That is
 exactly what the file's own doc anticipated when The Tolerance replaced an
-authored-mean comparison in `Bake::takes_the_initiative` with a **per-settlement
-draw** around that mean. Under a draw, every people has settlements on both
-sides of the gate, so a two-set partition is no longer a partition of
-behaviour — but the rate remains a continuous increasing function of the mean.
+authored-mean comparison in `Bake::takes_the_initiative` with a
+**per-settlement draw** around that mean. Under a draw, every people has
+settlements on both sides of the gate, so a two-set partition is no longer a
+partition of behaviour — but the rate remains a continuous increasing function
+of the mean.
 
-What ships:
+### §6.3 Three assertions, none of them fitted
 
-1. **Collect every breach and assert once at the end**, reporting the whole
-   table. The instrument must not destroy its own evidence.
-2. **Replace the ceiling and the partition with a sign claim**: the
-   flagship-re-selection rate is monotone increasing in authored
-   `threat_response`, asserted as **Spearman ρ > 0** across the whole roster.
-3. **Keep `RAIDER_MIN` unchanged at 0.30.** It holds (0.433) and nothing
-   justifies touching it.
-4. **Demote `SEPARATION_FACTOR` to reported, not asserted**, with its
-   collapse 2.55 → 1.30 recorded, until a campaign that owns recalibration
-   takes it.
+Chosen by charting statistic-form against where-the-bound-comes-from and
+reading the saturated grid's gaps. Every bound this file ever carried sat in
+the *fitted* column; all three below sit in the *sign* column, which is why
+they are invariant to roster growth where their predecessors were not.
 
-### §6.3 Why ρ > 0 and not ρ > 0.8 — the honesty constraint
+1. **PRIMARY — `separation > 1.0`.** The weakest raider re-seats more often
+   than the strongest abstainer. This is the original preregistered claim with
+   the fitted magnitude stripped off and the direction kept. Measured
+   **0.433 > 0.333** (margin 1.30x): it holds. **The factor is not set anywhere
+   above 1.0** — thinness is the correct condition for a sign claim, and any
+   higher value would be refitting.
+2. **SECONDARY — `spearman(threat_response, rate) > 0`** across the whole
+   roster. Catches a global loss of ordering that a min-versus-max comparison
+   can miss. Measured 0.831, pinned as a **witness** and deliberately not used
+   as the threshold.
+3. **LOAD-BEARING — the span guard.** The rates must span a real range before
+   the correlation is read.
 
-**This is a post-hoc re-derivation and is labelled as one in the test.** The
-bound is set from the **mechanism**, not from the data: a per-settlement draw
-around an authored mean predicts monotonicity in that mean, and predicts the
-*sign* and nothing else. The measured 0.831 is pinned as a **witness**, and
-deliberately not used as the threshold — setting a bound at a value already
-seen is the metric-chasing this repo forbids, and it is the specific move The
-Delvers refused when it re-derived the diversity ceiling's rule instead of
-fitting its value.
+`RAIDER_MIN` stays unchanged at 0.30 (it holds at 0.433). The 2.55 -> 1.30
+collapse is recorded as a witness.
 
-The honest cost is stated at the test: **a sign claim is a weaker
-discriminator than the ceiling it replaces.** It is chosen because it is the
-strongest claim the shipped physics actually supports.
+**Collect every breach and assert once at the end**, reporting the whole table.
+An instrument must not destroy its own evidence — which is the defect this very
+campaign found misattributed elsewhere.
 
-### §6.4 Anti-vacuity
+### §6.4 Why the span guard is load-bearing, not decoration
 
-The existing mutation controls are preserved and must still work: forcing
-`Bake::takes_the_initiative` to `true` and to `false` must each redden the new
-assertion. A monotonicity claim is vacuous if every rate is equal, so the test
-additionally requires the rates to **span a real range** before reading the
-correlation.
+The file carries two mutation controls: forcing `Bake::takes_the_initiative`
+to `true` and to `false` must each redden the battery. Checking the proposed
+assertions against them found a real defect in an earlier draft of this spec:
 
+- Force everybody to raid, or nobody, and all nine rates move **together**.
+  The rates collapse toward equal, and **the correlation becomes noise of
+  arbitrary sign** — so `rho > 0` alone might or might not redden. It is not a
+  reliable anti-vacuity guard.
+- `separation > 1.0` reddens cleanly under both, because the ordering between
+  the subsets collapses.
+- The **span guard** reddens under both by construction, which is what makes
+  the correlation safe to assert at all.
+
+This is why the answer is all three and not the correlation alone. It is also
+why "delete the bound and report the table" is rejected: with nothing asserted
+both mutation controls pass, and a 400-second battery becomes a printout.
+
+### §6.5 The honesty constraint
+
+**This is a post-hoc re-derivation and is labelled as one in the test.** Every
+bound above is set from the **mechanism** — a per-settlement draw around an
+authored mean predicts monotonicity and predicts the *sign*, and nothing more.
+No measured value is used as a threshold anywhere. That is the move The Delvers
+made when it re-derived the diversity ceiling's rule instead of fitting its
+value, and the move this repo forbids is the one not taken here: `NONRAIDER_MAX`
+is **not** raised from 0.25 to clear 0.333.
+
+The honest cost is stated at the test: **a sign claim is a weaker discriminator
+than the ceiling it replaces.** It is chosen because it is the strongest claim
+the shipped physics actually supports.
 ---
 
 ## §7 Sequencing, and the window in which the workspace is legitimately red
 
-Adding one metric to `registry()` adds a column to **nine studies** — every
-study carrying `"metrics": "all"` (`the-census`, `census-of-eyes`,
+This campaign adds **two** metrics — `climate-displacement-events` (§2) and
+`tribute-relations-standing` (§3). Each adds a column to **nine studies**:
+every study carrying `"metrics": "all"` (`the-census`, `census-of-eyes`,
 `census-of-lands`, `census-of-peoples`, `census-of-tongues`, `census-of-words`,
 `census-of-the-meeting`, `census-of-faiths`, `the-pyx-probe`). That reddens the
 census-fixture tests until a census regen, which `make rebaseline` **cannot**
 perform. The Delvers measured **34** such reds for a comparable single-metric
-addition; that is the number to expect, and the implementer should diff the
-committed fixture header against the live registry to confirm it differs by
-**exactly one column** — which is what makes "these reds are expected" a
+addition; expect at least that. The implementer must diff the committed fixture
+header against the live registry and confirm it differs by **exactly two
+columns** and nothing else — which is what makes "these reds are expected" a
 verified statement rather than a hope.
 
 The order is therefore structural, not a preference:
@@ -398,15 +471,17 @@ The order is therefore structural, not a preference:
 2. Item 1's metric + calibration test, and item 2's panel retirement.
 3. `make rebaseline` + goldens.
 4. **Census regen on the canonical box** — `bash scripts/census-run.sh`.
-5. Re-pin the metric-registry size assertion (191 → 192) and the calibration
-   witnesses the regen moves.
+5. Re-pin the metric-registry size assertion (**191 → 193**) and the
+   calibration witnesses the regen moves. That line has caught three pairs of
+   parallel campaigns reconciling to a wrong number; add a provenance comment
+   rather than replacing the existing ones.
 6. Final green gate, then the heavy tier via `make heavy-remote REF=<sha>`.
 
 The gate cannot be green before step 4, the size of that red is knowable in
 advance, and knowing it is the difference between waiting and debugging.
 
-**The census regen is a carve-out requiring explicit authorization** and is
-flagged at G3 rather than assumed.
+**The census regen is a carve-out requiring explicit authorization.**
+Authorized by Nathan at G3, 2026-08-08.
 
 ---
 
@@ -441,6 +516,8 @@ flagged at G3 rather than assumed.
 
 - No change to any product behaviour: no domain, no kernel, no provider.
 - No ceiling recalibration on the cost gates.
-- No `BakeCensus` commit / save-format change.
+- No `BakeCensus` commit / save-format change. The tribute FLOW stays
+  unreachable from the census by design; §3 measures the stock instead and says
+  so.
 - No new species, and no touching C2d's surface.
 - No retuning of `NONRAIDER_MAX` to clear 0.333.
