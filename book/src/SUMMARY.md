@@ -316,6 +316,7 @@
 - [The Handle](./chronicle/the-handle.md)
 - [The Sighting](./chronicle/the-sighting.md)
 - [The Beholding](./chronicle/the-beholding.md)
+- [The Delvers](./chronicle/the-delvers.md)
 
 # Appendix: The Frontier
 
