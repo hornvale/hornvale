@@ -302,6 +302,28 @@ const INDOOR_SNAPSHOT_BASIS_MS: f64 = 18.720;
 /// never a pass/fail — no assertion reads it.
 const CONTROL_TOLERANCE: f64 = 1.5;
 
+/// The machine every basis constant above was measured on, as
+/// [`hornvale_lab::canonical_host`] would name it — **not** `hostname -s`,
+/// which is not a stable machine identity (this repo's own Mac has answered
+/// both `MacBookPro` and `Greyjoy`; see `docs/timings.md`'s host column).
+///
+/// This file's own doc comments name the box repeatedly: `START_BASIS_MS`
+/// and `TURN_BASIS_MS` say "host `MacBookPro`"; `INDOOR_SNAPSHOT_BUDGET_MS`'s
+/// basis doc says "this box (`MacBookPro`)" — all "this box, dev profile"
+/// language, never `lefford`. Decision 0090 records the Mac as `Darwin
+/// arm64` on 10 cores
+/// (`docs/decisions/0090-the-canonical-host-is-audited-not-assumed.md:36`) —
+/// `arm64` there is `uname -m`'s name for it. `canonical_host` builds this
+/// id from `std::env::consts::ARCH`, the Rust compile-target name, which
+/// reports 64-bit ARM as `aarch64` regardless of OS — confirmed empirically
+/// on this box during The Assize — hence `aarch64-10`, not `arm64-10`.
+///
+/// A ratio computed against this basis from any OTHER host measures the
+/// machines, not the code (The Assize) — see the verdict logic in the test
+/// below, which declines to compute one off this host.
+/// type-audit: bare-ok(identifier-text)
+const BASIS_HOST: &str = "aarch64-10";
+
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn a_possessed_turn_stays_within_its_ceilings() {
@@ -394,36 +416,54 @@ fn a_possessed_turn_stays_within_its_ceilings() {
             INDOOR_SNAPSHOT_BASIS_MS,
         ),
     ];
+    // A ratio against a basis measured on a DIFFERENT machine measures the
+    // machines, not the code (The Assize) — see `BASIS_HOST`'s doc. Compute
+    // this once and gate both the per-metric ratio column and the verdict on
+    // it.
+    let this_host = hornvale_lab::canonical_host();
+    let bases_apply = this_host == BASIS_HOST;
     for (name, got, budget, basis) in measured {
-        println!(
-            "{name:<20}{got:9.3} ms (budget {budget:>8}) {:5.2}x basis {basis}",
-            got / basis
-        );
+        if bases_apply {
+            println!(
+                "{name:<20}{got:9.3} ms (budget {budget:>8}) {:5.2}x basis {basis}",
+                got / basis
+            );
+        } else {
+            println!("{name:<20}{got:9.3} ms (budget {budget:>8})");
+        }
     }
     println!("walk snapshot bytes {walk_bytes:9} B (budget {WALK_BYTES_BUDGET})");
 
-    // THE DISCRIMINATOR, as arithmetic — see `scene_cost.rs`'s module doc.
-    // `Session::start` is the contention-sensitive metric; the two per-turn
-    // metrics are the CONTROL SET. Controls holding while start inflates is
-    // the machine. Any control moving is the code.
-    let controls_over: Vec<&str> = measured
-        .iter()
-        .skip(1)
-        .filter(|(_, got, _, basis)| got / basis > CONTROL_TOLERANCE)
-        .map(|(name, _, _, _)| *name)
-        .collect();
-    if controls_over.is_empty() {
+    if !bases_apply {
         println!(
-            "VERDICT: both controls within {CONTROL_TOLERANCE}x of basis. A Session::start \
-             breach here reads as CONTENTION, not a regression — re-run on a quiet box \
-             to confirm before touching any constant."
+            "VERDICT: not computed — bases were measured on {BASIS_HOST}, this is \
+             {this_host}. A ratio across two machines measures the machines. Raw ms \
+             above stand; the ratio column and the verdict do not."
         );
     } else {
-        println!(
-            "VERDICT: {} control(s) moved: {controls_over:?}. This is NOT the contention \
-             signature — look at the code before blaming the box.",
-            controls_over.len()
-        );
+        // THE DISCRIMINATOR, as arithmetic — see `scene_cost.rs`'s module
+        // doc. `Session::start` is the contention-sensitive metric; the two
+        // per-turn metrics are the CONTROL SET. Controls holding while start
+        // inflates is the machine. Any control moving is the code.
+        let controls_over: Vec<&str> = measured
+            .iter()
+            .skip(1)
+            .filter(|(_, got, _, basis)| got / basis > CONTROL_TOLERANCE)
+            .map(|(name, _, _, _)| *name)
+            .collect();
+        if controls_over.is_empty() {
+            println!(
+                "VERDICT: both controls within {CONTROL_TOLERANCE}x of basis. A Session::start \
+                 breach here reads as CONTENTION, not a regression — re-run on a quiet box \
+                 to confirm before touching any constant."
+            );
+        } else {
+            println!(
+                "VERDICT: {} control(s) moved: {controls_over:?}. This is NOT the contention \
+                 signature — look at the code before blaming the box.",
+                controls_over.len()
+            );
+        }
     }
 
     assert!(
