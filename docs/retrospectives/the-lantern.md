@@ -183,3 +183,44 @@ not a parameter of it.
 - **The absorption cadence held.** Main moved only twice during the close
   (docs-only spec commits), and re-running every readout after absorbing it cost
   minutes and confirmed all four numbers unmoved.
+
+## The second absorption, after the close was written
+
+The close ran against main at `16b1e32d`. By the time the merge was authorized,
+**The Reassay had landed** and main was at `bb16001b` — so the campaign absorbed
+a second time, and that absorption was *not* docs-only. Three findings, in
+descending order of how quietly they would have shipped.
+
+- **A conflict-free merge of a generated file was silently wrong, and this is
+  the instance that proves the rule rather than restating it.** Both branches
+  edited `docs/audits/type-audit-report.md`; git merged it without a conflict;
+  the result disagreed with a fresh regeneration in two cells
+  (`bare-ok(identifier-text)` 611 vs 612, `terrain` 298 vs 299). Nothing would
+  have reddened — the report is drift-checked against *itself*, and the merged
+  file was internally consistent, just not what the code says. **Regenerate
+  every generated artifact after an absorption and diff it against the merged
+  text; do not trust a clean merge.**
+
+- **A parallel campaign's new lint applied retroactively to our tests.** The
+  Reassay shipped `cli/tests/claim_shape.rs`, a default-deny repo-wide scan
+  requiring every seed-looping test to declare a claim shape (decision 0093).
+  Six of The Lantern's tests predated it. Five were genuine sweeps and were
+  tagged — H1's two as `readout(preregistered, 0016)` (aggregate distributions,
+  not per-seed properties), H2 and the lens's p10 guard as
+  `invariant(forall-seed)`, H4a as a `readout`. **`make preflight` cannot see
+  this class**: it compares ancestry, not whether another campaign has minted a
+  rule your code now violates.
+
+- **The sixth was a false positive, and the honest fix was ours, not theirs.**
+  `the_lens_is_a_deliberate_change_not_rounding_noise` iterates two hardcoded
+  colour triples and touches no seed — but it used `.map(|s| ...)` over the
+  three sRGB slots, and the lint's `seed_shaped` reads a bare `s` as a seed.
+  That breadth is deliberate in a default-deny scan, so the fix was to rename
+  the variable to `slot`, which it should always have been. **Silencing it with
+  a claim tag would have asserted a quantifier the test does not have** — a
+  false statement about our own claim, written to make a gate go green.
+
+**The transferable one:** an absorption's risk is not measured by its diff size.
+This one touched no colour code, no fixture and no constant, and every readout
+came back identical — while still breaking the build in two ways that a clean
+`git merge` reported as success.

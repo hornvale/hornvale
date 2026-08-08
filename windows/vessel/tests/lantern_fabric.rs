@@ -184,6 +184,11 @@ fn pairwise_max_channel_diffs(triples: &[[u8; 3]]) -> Vec<f64> {
 /// ships walls that all look alike. **A falsified H1 is a finding, not a
 /// failure**: it means fabric needs a second axis, and it must be reported
 /// rather than rescued by widening the threshold.
+///
+/// claim: readout(preregistered, 0016) — H1 is a preregistered measured
+/// distribution (spec §3, §6), not a per-seed property: the assertion is on an
+/// AGGREGATE over the swept population (max channel spread across every
+/// settlement of every seed), so no single seed can satisfy or violate it.
 #[test]
 fn h1_stone_fabrics_differ_across_settlements() {
     let triples = all_settlement_stone_triples();
@@ -218,6 +223,10 @@ fn h1_stone_fabrics_differ_across_settlements() {
 /// number is on the record for a reader to compare against — but authoring
 /// a second threshold over it would be inventing a claim the spec never
 /// preregistered.
+///
+/// claim: readout(preregistered, 0016) — literally a distribution: p10, median
+/// and max over 1,131,760 pairs. A median floor cannot see a heavy tail, which
+/// is why this reports percentiles rather than one number.
 #[test]
 fn h1_reports_the_whole_distribution_not_just_the_extremes() {
     let observer = standard_observer();
@@ -287,6 +296,10 @@ type WorkedPair = ([u8; 3], [u8; 3], [u8; 3], [u8; 3]);
 /// input range; this one proves it on the population that actually exists.
 ///
 /// FIRES WHEN: the lens compresses anywhere H1's real stone lives.
+///
+/// claim: invariant(forall-seed) — universally quantified over the pinned
+/// eight-seed set: EVERY pair one `u8` step apart must stay apart. One
+/// counterexample falsifies it, so a violation names the pair.
 #[test]
 fn the_lens_preserves_every_pair_h1_can_barely_tell_apart() {
     let triples = all_settlement_stone_triples();

@@ -511,3 +511,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T02:13:54Z | gate | 923.743 | 4955.322 | 244.078 | 5.63 | 0 | 1aa73b90 | campaign/the-assay | ambrose | 12 |
 | 2026-08-08T12:08:17Z | gate | 525.463 | 4316.741 | 99.502 | 8.40 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |
 | 2026-08-08T12:10:50Z | rebaseline | 132.231 | 179.320 | 9.711 | 1.43 | 0 | 6e65e3c5 | campaign/the-assay | MacBookPro | 10 |
+| 2026-08-08T12:35:32Z | rebaseline | 172.902 | 181.686 | 9.892 | 1.11 | 0 | 475d271c | the-lantern | MacBookPro | 10 |
+| 2026-08-08T12:54:45Z | gate | 1143.876 | 4681.693 | 280.780 | 4.34 | 0 | 475d271c | the-lantern | MacBookPro | 10 |

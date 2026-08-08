@@ -78,6 +78,10 @@ fn chamber_colours(seed: u64) -> Option<Vec<[u8; 3]>> {
 ///    finding to read, not a bug to fix**: re-run this reading, say in the
 ///    chronicle what made the chamber dark, and re-word the sentence below.
 ///    It must never be fixed by moving `light::ATTENUATION`.
+///
+/// claim: readout(preregistered, 0016) — H4a is a REPORTED READING, not a
+/// prediction (spec §6). It reports how dark a chamber gets and is expected to
+/// come back negative; the inverted tripwire is what keeps it honest.
 #[test]
 fn report_h4a_how_dark_a_chamber_gets() {
     let mut measured = 0;

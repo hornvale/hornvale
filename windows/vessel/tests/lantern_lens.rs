@@ -128,7 +128,12 @@ fn the_lens_is_a_deliberate_change_not_rounding_noise() {
     for rgb in [wall, lit_wall] {
         let after = lens::apply(&Lens::default(), rgb);
         let moved = (0..3)
-            .map(|s| u16::from(after[s]).abs_diff(u16::from(rgb[s])))
+            // `slot`, not `s`: this indexes the three sRGB slots, and a bare
+            // `s` is what `claim_shape`'s `seed_shaped` reads as a seed —
+            // which flagged this seedless test as a seed sweep. The lint is
+            // default-deny by design, so the honest fix is the name, not a
+            // claim tag asserting a quantifier this test does not have.
+            .map(|slot| u16::from(after[slot]).abs_diff(u16::from(rgb[slot])))
             .max()
             .expect("three slots");
         eprintln!("lens: {rgb:?} -> {after:?} ({moved} u8 steps)");

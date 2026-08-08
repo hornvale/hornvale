@@ -286,6 +286,10 @@ fn the_chamber_palette_carries_a_colour_derived_through_the_whole_seam() {
 /// would mean the two placed lights are one light as far as the screen is
 /// concerned, and the hearth earns nothing. **A falsified H2 is a finding, not
 /// a failure**: report the numbers, never widen the comparison.
+///
+/// claim: invariant(forall-seed) — H2 holds per seed over a pinned four-seed
+/// set: for EVERY seed the hearth-lit and doorway-lit triples must differ. The
+/// sweep exists because one world is an anecdote, not to build a distribution.
 #[test]
 fn h2_hearth_light_and_doorway_light_differ_on_derived_fabric() {
     let mut measured = 0;
