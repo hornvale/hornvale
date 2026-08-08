@@ -52,6 +52,8 @@ mod tests {
         assert!(SettlementPins::default().pin_strings().is_empty());
     }
 
+    /// claim: invariant(forall pin-strings; false-positive seed-loop flag — the
+    /// loop's `s` binds a pin string, not a seed)
     #[test]
     fn species_pin_round_trips_through_parse_pin() {
         let pins = SettlementPins {

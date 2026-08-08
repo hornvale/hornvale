@@ -977,6 +977,9 @@ mod tests {
     /// the risk): at least one seed must actually commit a pole-star fact,
     /// or this test fails loudly with the per-seed minimum separations so
     /// the 10-degree threshold can get controller attention.
+    /// claim: invariant(forall-seed) — per-seed north/south fact-vs-derived-view
+    /// check over all 64 seeds, with an embedded vacuity guard (any_committed)
+    /// riding on the same sweep
     #[test]
     fn genesis_commits_pole_star_facts_matching_the_derived_view_across_a_seed_sweep() {
         use crate::night_sky::{Hemisphere, night_sky_at};
@@ -1145,6 +1148,7 @@ mod tests {
     /// Night-sky stage 3: the figure-count fact tracks `figures().len()`
     /// exactly, quantized like every numeric object on commit, across a
     /// seed sweep.
+    /// claim: invariant(forall-seed) — figure-count fact tracks figures().len()
     #[test]
     fn genesis_commits_a_figure_count_fact_matching_figures_len_across_a_seed_sweep() {
         for seed in 0..16u64 {
@@ -1169,6 +1173,8 @@ mod tests {
     /// collapse to one committed fact (documented honestly on
     /// [`FIGURE_MEMBERS`], the same characteristic `wanderer-class`
     /// carries). This asserts the dedup rather than assuming one-per-figure.
+    /// claim: reachability(seed: local witness search, astronomy-rung, not
+    /// census-eligible) — finds a seed exercising the dedup path, then asserts on it
     #[test]
     fn figure_members_facts_dedupe_repeated_counts() {
         // Find a seed whose figures include a repeated member count, so the
@@ -1223,6 +1229,7 @@ mod tests {
     /// fact is ever committed per subject regardless of how many figures
     /// are on the ecliptic — assert presence tracks "any figure is",
     /// documented honestly on [`FIGURE_ON_ECLIPTIC`].
+    /// claim: invariant(forall-seed) — flag presence tracks "any figure qualifies"
     #[test]
     fn figure_on_ecliptic_flag_tracks_whether_any_figure_qualifies() {
         for seed in 0..16u64 {
@@ -1368,6 +1375,8 @@ mod tests {
     /// or the formation-fact test above could pass while only ever
     /// checking `"giant-impact"` — the same vacuous-sweep trap the
     /// pole-star test above guards against.
+    /// claim: reachability(seed: local witness search, astronomy-rung, not
+    /// census-eligible) — guards against a vacuous all-impact sweep
     #[test]
     fn moon_formation_fact_reads_capture_for_a_captured_moon_across_a_seed_sweep() {
         let mut found = false;
@@ -1404,6 +1413,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: local witness search, astronomy-rung, not
+    /// census-eligible) — finds a real clean period-ratio pair to prove the wiring
     #[test]
     fn moon_period_ratio_is_committed_when_a_clean_pair_exists() {
         // Detection itself is already proven by resonance.rs's own tests
@@ -1441,6 +1452,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: local witness search, astronomy-rung, not
+    /// census-eligible) — finds a seed with no clean pair to prove the negative wiring
     #[test]
     fn moon_period_ratio_is_absent_when_no_clean_pair_exists() {
         let mut verified = false;

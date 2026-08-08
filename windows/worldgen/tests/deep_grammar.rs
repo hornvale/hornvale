@@ -30,6 +30,9 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     .unwrap()
 }
 
+/// claim: invariant(census: none yet) — noun_class/day_schema biconditional
+/// over a targeted seed set, with an embedded vacuity guard
+/// (any_animate_sky) riding on the same sweep
 #[test]
 fn the_coherence_law() {
     // Every placed culture: noun_class_from(.., "sun") is Animate IFF
@@ -140,6 +143,8 @@ fn morphology_is_deterministic() {
     );
 }
 
+/// claim: readout — prints the drawn depth triple per seed x species,
+/// morphology depth landscape over seeds 1..=3
 #[test]
 fn depth_landscape_measured() {
     // Sweep seeds 1..=3 x placed species: print + pin the drawn depth

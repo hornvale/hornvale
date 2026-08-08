@@ -278,6 +278,7 @@ fn goblin_names_are_rebaselined_not_frozen() {
 /// **never-dominant does not mean absent** — now carried by the bugbear,
 /// whose stronghold axis is moisture rather than elevation and which the
 /// re-datum leaves shut out of dominance exactly as before.
+/// claim: structural(seed: 42)
 #[test]
 fn bugbear_and_kobold_are_present_in_settlement_composition() {
     let world = default_generated_seed_42();
@@ -384,6 +385,8 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
 /// (`windows/worldgen/src/lib.rs`), re-checked here from outside the
 /// crate as a structural guard on the shipped goblinoid family
 /// (goblin, hobgoblin, bugbear).
+/// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+/// Segment
 #[test]
 fn every_goblinoid_words_root_is_in_its_own_daughters_inventory() {
     let world = default_generated_seed_42();
@@ -621,6 +624,8 @@ fn the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42() {
 /// this campaign's measured evidence that distinct glosses now yield
 /// distinct names in the general case, not merely at seed 42. Ignored —
 /// nextest must never run it; invoke manually with `--ignored --nocapture`.
+/// claim: readout(chronicle evidence, run manually) — own #[ignore] reason
+/// states the shape
 #[test]
 #[ignore = "readout: chronicle evidence, run manually with --nocapture"]
 fn deity_name_distinctness_readout() {

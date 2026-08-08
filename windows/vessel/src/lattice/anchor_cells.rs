@@ -454,6 +454,7 @@ mod tests {
     /// reaches — but the claim that the SCAN earns it lives in
     /// [`the_grown_corpus_is_where_the_filter_binds`], where removing the
     /// filter doubles the failures.
+    /// claim: invariant(forall-seed) — over 1..=MAX_CHAMBERS x 0..64
     #[test]
     fn every_placement_is_faithful() {
         for n in 1..=crate::structure::MAX_CHAMBERS {
@@ -504,6 +505,8 @@ mod tests {
     /// answer is that some blobs cannot be embedded faithfully at all: five of
     /// 256 fall back to the stated relaxation. Asserting zero here would be
     /// asserting something false.
+    /// claim: rate(forall-seed, unfaithful.len() <= GROWN_RELAXATIONS, measured
+    /// ceiling) — with a non-vacuity guard (surplus not empty), over 256 cases
     #[test]
     fn the_grown_corpus_is_where_the_filter_binds() {
         let mut unfaithful: Vec<(usize, u64, usize, usize, usize)> = Vec::new();
@@ -625,6 +628,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: 0..16) — non-degeneracy: the seed is not
+    /// ignored
     #[test]
     fn the_seed_is_read_at_all() {
         // Task 5's negative control perturbs the placement with a different
@@ -641,6 +646,7 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-seed) — over 1..=MAX_CHAMBERS x 0..16
     #[test]
     fn the_embedder_invents_no_more_than_the_graph_leaves_free() {
         // §7 rule 7's discipline, applied to this embedder: `Lattice::dof`

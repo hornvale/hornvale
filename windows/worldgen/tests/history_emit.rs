@@ -471,6 +471,8 @@ fn parent_of(
     }
 }
 
+/// claim: invariant(census: none yet) — tie count over [42, 7, 1000], with
+/// re-measured corroborating counts (see file's own re-pin history)
 #[test]
 fn distinct_layers_tie_only_on_genuine_material_matches() {
     // Before The Salt, this test asserted the comparator was TOTAL: the
@@ -685,8 +687,8 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// asserts the fourth key's behaviour directly and fails if it stops working.
 ///
 /// **THE DELVERS (C2c, 2026-08-07): the witness is now GONE — 0/1/0 -> 0/0/0.**
-/// The note above named this exact reading as the degenerate one, and five
-/// settling peoples redeciding settlement survival is what produced it. On
+/// The note above named this exact reading as the degenerate one, and three
+/// new settling peoples redeciding settlement survival is what produced it. On
 /// this corpus the measurement can no longer distinguish the material fourth
 /// key from a dead one, so it is a green test that proves nothing about the
 /// key. It is re-pinned at the measured zeros rather than deleted, because it
@@ -697,6 +699,10 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// `same_day_layers_order_by_material_facts_not_mint_order`, which is green.
 /// Choosing a new witnessing seed would be a change to the instrument, not a
 /// re-pin, and is recorded here rather than made silently.
+///
+/// claim: invariant(seed: [42,7,1000]) — per-seed exact pinned
+/// order-change count, tuple pattern `(seed, expected)` (Fix round 1,
+/// Class 1)
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     for (seed, expected) in [(42u64, 0usize), (7, 0), (1000, 0)] {

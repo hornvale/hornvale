@@ -206,6 +206,8 @@ mod tests {
     use crate::streams;
     use hornvale_kernel::{Geosphere, Seed};
 
+    /// claim: invariant(forall-seed) — plate-count/id/rate/maturity bounds, plus
+    /// one pinned (plates: Some(12)) check
     #[test]
     fn plate_count_stays_in_the_drawn_range_and_pins_override() {
         for seed in 0..32u64 {
@@ -261,6 +263,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — weight bound and median Gini floor
     #[test]
     fn plate_weights_are_heavy_tailed_and_regions_concentrate() {
         let geo = Geosphere::new(4);

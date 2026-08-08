@@ -141,6 +141,10 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    /// claim: reachability(seed: 0..200) — forall NumeracyRung variant, exists
+    /// seed (Fix round 1, Class 2: `for i in 0..200u64` feeding `Seed(i)`,
+    /// the textbook forall-variant-exists-seed hunt this lint exists to
+    /// surface, previously invisible to the naming heuristic alone)
     #[test]
     fn numeracy_rung_covers_all_three_buckets_across_many_seeds() {
         let mut saw_subitizing = false;

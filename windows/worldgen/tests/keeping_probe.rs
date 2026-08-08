@@ -153,6 +153,8 @@ const FIT_THRESHOLDS: [f64; 4] = [0.0, 0.5, 1.0, 11.5];
 /// Probe seeds — the spec's set. 1234 has zero settlements today.
 const SEEDS: [u64; 5] = [42, 7, 999_999, 16_244_526_067_196_353_746, 1234];
 
+/// claim: sanctioned-sweep(probe: measurement only, run explicitly) — prints
+/// over SEEDS
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn keeping_task0_probe() {

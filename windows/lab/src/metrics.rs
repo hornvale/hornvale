@@ -1149,6 +1149,32 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "hydro-variant-coverage",
+            doc: "Which `Hydro` variants `hydro_at` reads anywhere on this world, as \
+                  `+`-joined names in `Hydro::ALL` order (The Assay). Replaces \
+                  `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability \
+                  sweep: a variant no world in the census shows is structurally dead, \
+                  and 1,000 worlds say so with a rate where 8 said so with a flag.",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let mut seen: std::collections::BTreeSet<hornvale_terrain::Hydro> =
+                    std::collections::BTreeSet::new();
+                for cell in geo.cells() {
+                    seen.insert(v.terrain.hydro_at(cell));
+                }
+                // `Hydro::ALL` order, not BTreeSet order, so the string is stable
+                // against a future reordering of the enum's `Ord` derivation.
+                let joined = hornvale_terrain::Hydro::ALL
+                    .iter()
+                    .filter(|h| seen.contains(h))
+                    .map(|h| h.name())
+                    .collect::<Vec<_>>()
+                    .join("+");
+                MetricValue::Text(joined)
+            }),
+        },
+        Metric {
             name: "aquifer-fraction",
             doc: "Fraction of land cells whose hydrogeology classifies as an \
                   aquifer (The Ground, spec §3)",
@@ -3509,7 +3535,108 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(spearman_defensibility_capacity),
         },
+        Metric {
+            name: "toponymic-core-size",
+            doc: "How many concepts this world's registry reports in the `toponymic` \
+                  domain (The Assay). The denominator for `toponymic-roots-won`, kept \
+                  as its own column so a registry change is distinguishable from a \
+                  worlds change.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                MetricValue::Number(toponymic_core(v).len() as f64)
+            }),
+        },
+        Metric {
+            name: "toponymic-roots-won",
+            doc: "How many toponymic-domain concepts reach `ExposureClass::Steeped` for \
+                  at least one placed people (The Assay). Replaces \
+                  `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a \
+                  witness: a concept no world in the census ever steeps is a \
+                  structurally dead gate, and the census says so as a rate.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 4.0, 8.0, 12.0, 16.0, 24.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                MetricValue::Number(toponymic_roots_won(v) as f64)
+            }),
+        },
+        Metric {
+            name: "crisis-fires",
+            doc: "Whether any placed people holds a live prediction crisis at day \
+                  36,525 (the hundredth year, the diachronic battery's preregistered \
+                  epoch) — The Assay. Replaces \
+                  `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a \
+                  single instance. A crisis needs a Generated sky, an organized \
+                  flagship's doctrine, >= 8 witnessed events of one recurrence class \
+                  and a tail miss-run, so it cannot be synthesised — which is why it \
+                  is a rate here rather than a hand-built behaviour test.",
+            summary: SummaryKind::Flag,
+            extract: Extractor::Full(|v: &FullView| {
+                let at = match hornvale_astronomy::StdDays::new(DIACHRONIC_EPOCH_DAYS) {
+                    Ok(days) => days,
+                    Err(_) => return MetricValue::Absent,
+                };
+                let (world, terrain, climate) = (v.world(), v.terrain(), v.climate());
+                for (species, _) in hornvale_worldgen::placed_peoples(world) {
+                    match hornvale_worldgen::crisis_from(world, species, at, terrain, climate) {
+                        Ok(Some(_)) => return MetricValue::Flag(true),
+                        Ok(None) => {}
+                        // A world whose sky cannot answer the question is Absent, not
+                        // false: `false` would claim "measured, no crisis", which is a
+                        // different fact and would understate the rate.
+                        Err(_) => return MetricValue::Absent,
+                    }
+                }
+                MetricValue::Flag(false)
+            }),
+        },
     ]
+}
+
+/// The preregistered readout epoch the diachronic battery uses (`EPOCH_2` in
+/// `windows/worldgen/tests/diachronic.rs`): day 36,525, the hundredth year.
+/// A crisis is a statement about a culture at a time, so the census must fix
+/// the time or the column means nothing.
+const DIACHRONIC_EPOCH_DAYS: f64 = 36_525.0;
+
+/// This world's toponymic-domain concepts, derived from its own registry
+/// exactly as `windows/worldgen/tests/exposure.rs` did before The Assay
+/// retired that sweep — so ADDING an unreachable toponymic concept moves this
+/// metric instead of slipping past it.
+fn toponymic_core(view: &FullView) -> Vec<String> {
+    view.world()
+        .registry
+        .concepts()
+        .filter(|c| concept_domain(&c.name) == Some("toponymic"))
+        .map(|c| c.name.clone())
+        .collect()
+}
+
+/// How many of `toponymic_core` reach `Steeped` for at least one placed people.
+/// A people whose exposure map fails to derive contributes nothing rather than
+/// aborting the metric: the census records a world's measurement, and one
+/// people's failure is not the world's.
+fn toponymic_roots_won(view: &FullView) -> usize {
+    let core = toponymic_core(view);
+    let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+    let mut won: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for (species, _) in hornvale_worldgen::placed_peoples(world) {
+        let Ok(exposures) = hornvale_worldgen::exposure_from(world, species, terrain, climate)
+        else {
+            continue;
+        };
+        for concept in &core {
+            if matches!(
+                exposures.get(concept.as_str()),
+                Some(hornvale_language::ExposureClass::Steeped)
+            ) {
+                won.insert(concept.clone());
+            }
+        }
+    }
+    won.len()
 }
 
 /// Every placed culture's account, read straight off the world (C4
@@ -7081,6 +7208,17 @@ mod tests {
         // place the two campaigns' metric sets could have been silently
         // reconciled to a wrong number, which is why both provenance comments
         // are kept rather than one replacing the other.
+        //
+        // +1 for The Assay (Task 4: hydro-variant-coverage, replacing
+        // `domains/terrain/tests/hydro_witness.rs`'s 8-seed reachability
+        // sweep with a census column), +2 more for The Assay (Task 5:
+        // toponymic-core-size and toponymic-roots-won, replacing
+        // `windows/worldgen/tests/exposure.rs`'s up-to-9-world sweep for a
+        // witness with two census columns), +1 more for The Assay (Task 6:
+        // crisis-fires, replacing
+        // `windows/worldgen/tests/diachronic.rs`'s up-to-200-world hunt for a
+        // single prediction crisis with a census column).
+        //
         // +1 for THE DELVERS (C2c Task 6: monophyly-dwarf — the roster's
         // second multi-member family measured by the SAME generalized check
         // `monophyly-goblinoid` uses, not a second implementation). The
@@ -7089,7 +7227,14 @@ mod tests {
         // The Vacancy (gnoll) each added a settling people without them, a new
         // metric reddens 34 census-fixture tests, and its cost is paid on every
         // census forever.
-        assert_eq!(registry().len(), 184);
+        //
+        // THE DELVERS AND THE ASSAY DEVELOPED IN PARALLEL and both moved this
+        // pin — 183 -> 187 there, 183 -> 184 here. As with The Contour and The
+        // Namesake above, the merged value is neither: it is 183 + 4 + 1. Both
+        // provenance blocks are kept rather than one replacing the other,
+        // because this line is again the one place two campaigns' metric sets
+        // could have been silently reconciled to a wrong number.
+        assert_eq!(registry().len(), 188);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
@@ -7140,6 +7285,8 @@ mod tests {
     /// The vowel set comes from the phonology's own inventory, so a language
     /// that never drew `u` does not count a `u` as a nucleus. Guards the
     /// tempting hard-coded `aeiou`.
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// Segment
     #[test]
     fn vowel_graphemes_come_from_the_inventory_not_a_hardcoded_alphabet() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
@@ -7561,6 +7708,8 @@ mod tests {
     /// cannot come back: a THREE-concept gloss is truthful, and the retired
     /// ordered-pair enumeration called it false. Also pins what the check
     /// still rejects — a concept outside the site vector, and a repeat.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a &&str concept name, no world seed at all
     #[test]
     fn a_three_concept_gloss_is_a_truthful_composition() {
         let site: Vec<String> = ["coast", "river", "temperate-forest", "sun"]
@@ -8365,6 +8514,7 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42)
     #[test]
     fn composition_varies_across_settlements_at_seed_42() {
         // The Niche's headline: refutes the task-C "oatmeal" (identical
@@ -8442,6 +8592,85 @@ mod tests {
         );
         assert!(
             matches!(m("fertile-land-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
+    }
+
+    /// The coverage metric reads a real Terrain-rung world and reports a non-empty
+    /// set drawn only from `Hydro::ALL`'s names. Deliberately NOT an assertion
+    /// about WHICH variants seed 0 shows — that is the census's question, asserted
+    /// over 1,000 worlds in `windows/lab/tests/calibration.rs`, not here over one.
+    #[test]
+    fn hydro_variant_coverage_reads_a_real_world() {
+        let view = TerrainView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let metric = registry()
+            .into_iter()
+            .find(|m| m.name == "hydro-variant-coverage")
+            .expect("the metric is registered");
+        let MetricValue::Text(joined) = metric.extract.apply(&BuiltView::Terrain(view)) else {
+            panic!("hydro-variant-coverage must be Text");
+        };
+        assert!(!joined.is_empty(), "seed 0 shows no hydro variant at all");
+        let names: Vec<&str> = joined.split('+').collect();
+        let legal: Vec<&str> = hornvale_terrain::Hydro::ALL
+            .iter()
+            .map(|h| h.name())
+            .collect();
+        for name in &names {
+            assert!(legal.contains(name), "{name:?} is not a Hydro variant name");
+        }
+        let mut sorted = names.clone();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            names.len(),
+            "the set must not repeat a variant"
+        );
+    }
+
+    /// Both toponymic columns read a real Full-rung world, and the won count never
+    /// exceeds the core size. Not an assertion that seed 0 wins ALL of them — that
+    /// is the census's question (`calibration.rs`), over 1,000 worlds.
+    #[test]
+    fn toponymic_roots_won_reads_a_real_world_and_is_bounded_by_the_core() {
+        let view = FullView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let built = BuiltView::Full(view);
+        let all = registry();
+        let value = |name: &str| {
+            let m = all
+                .iter()
+                .find(|m| m.name == name)
+                .expect("metric is registered");
+            match m.extract.apply(&built) {
+                MetricValue::Number(n) => n,
+                other => panic!("{name} must be Number, got {other:?}"),
+            }
+        };
+        let core = value("toponymic-core-size");
+        let won = value("toponymic-roots-won");
+        assert!(
+            core > 0.0,
+            "no concept reports the toponymic domain — the derivation broke"
+        );
+        assert!(won >= 0.0 && won <= core, "won {won} outside [0, {core}]");
+    }
+
+    /// `crisis-fires` reads a real Full-rung world and answers Flag, whichever way.
+    /// Deliberately NOT "seed 0 has a crisis" — whether any given seed does is
+    /// exactly the question this metric exists to stop asserting one world at a
+    /// time (The Assay, spec §3.4).
+    #[test]
+    fn crisis_fires_reads_a_real_world_as_a_flag() {
+        let view = FullView::build(Seed(0), &SkyPins::default()).expect("seed 0 builds");
+        let metric = registry()
+            .into_iter()
+            .find(|m| m.name == "crisis-fires")
+            .expect("the metric is registered");
+        assert!(
+            matches!(
+                metric.extract.apply(&BuiltView::Full(view)),
+                MetricValue::Flag(_)
+            ),
+            "crisis-fires must be a Flag"
         );
     }
 
@@ -8983,6 +9212,7 @@ mod tests {
     /// every unit test in this file uses. These three are taken from that
     /// failing set; the full list was `[21, 70, 130, 153, 187, 308, 371, 471,
     /// 502, 571, 836, 847, 849, 855]`.
+    /// claim: invariant(forall-seed) — over [21,70,130]
     #[test]
     fn monophyly_goblinoid_holds_on_the_seeds_the_unfiltered_universe_broke() {
         for seed in [21u64, 70, 130] {
@@ -9092,6 +9322,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — over [1,7,42]
     #[test]
     fn a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor() {
         // The test-only serpent roster exercises the tonal path (spec §11): a
@@ -9123,6 +9354,7 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — off-gate (heavy:); over [1,7,42,123,500]
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {

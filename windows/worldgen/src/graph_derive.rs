@@ -565,6 +565,8 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: none — sample_world() fixture) — byte-identity
+    /// against an independently reconstructed reference graph
     #[test]
     // Named construction site (decision 0092): this test's own reference
     // graph re-sculpts/re-fits, mirroring `connection_graph_of`'s own

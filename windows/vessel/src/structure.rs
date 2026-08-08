@@ -175,6 +175,8 @@ mod tests {
         assert_eq!(ids.len(), s.chambers.len(), "no chamber may repeat");
     }
 
+    /// claim: invariant(forall-seed) — determinism over a sweep, own doc: "a
+    /// single seed could be pure by accident"
     #[test]
     fn derivation_is_pure() {
         // Spec §8 asks for purity over a SWEEP, not one case: a single seed
@@ -208,6 +210,7 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: 0..8) — non-degeneracy: the seed is read at all
     #[test]
     fn the_draw_is_keyed_to_the_world_seed() {
         // Hold the locale FIXED and vary only the seed. Asserting that two

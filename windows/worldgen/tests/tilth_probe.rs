@@ -64,6 +64,7 @@ fn pct(sorted: &[f64], q: f64) -> f64 {
     sorted[i]
 }
 
+/// claim: sanctioned-sweep(probe: measurement only, run explicitly)
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn tilth_derivation_probe() {

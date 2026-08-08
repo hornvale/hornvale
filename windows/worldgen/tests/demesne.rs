@@ -409,6 +409,8 @@ fn world_42() -> World {
 /// peopled-by count is re-pinned 6 -> 9 as a measurement, and the assertion
 /// message no longer claims the structural reason, because the structure
 /// changed.
+///
+/// claim: structural(seed: 42)
 #[test]
 fn settlements_and_dominants_diversify_on_seed_42() {
     let world = world_42();

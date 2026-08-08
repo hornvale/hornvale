@@ -373,6 +373,7 @@ mod tests {
         assert_eq!(Seed(1).stream().weighted_index(&[0.0, 0.0]), None);
     }
 
+    /// claim: invariant(forall-seed) — a zero-weight index is never chosen
     #[test]
     fn weighted_index_respects_weights() {
         // With weights [0, 1], index 0 (weight 0) can never be chosen.
@@ -381,6 +382,8 @@ mod tests {
         }
     }
 
+    /// claim: reachability(seed: 0..200) — every index is reachable under equal
+    /// weights
     #[test]
     fn weighted_index_uniform_matches_pick_distribution() {
         // Equal weights → all indices reachable across seeds.

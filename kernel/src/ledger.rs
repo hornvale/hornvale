@@ -818,6 +818,8 @@ mod tests {
         (l, r, subjects)
     }
 
+    /// claim: invariant(forall-seed) — indexed facts_about/value_of agree with
+    /// a naive scan
     #[test]
     fn index_equals_scan_subject_and_predicate() {
         for seed in 0..64u64 {
@@ -849,6 +851,8 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — indexed query_by_object agrees with a
+    /// naive scan
     #[test]
     fn index_equals_scan_object() {
         for seed in 0..64u64 {

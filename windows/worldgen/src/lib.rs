@@ -8516,6 +8516,9 @@ mod tests {
         assert_eq!(vis, Visibility::CLEAR);
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a WeatherState in `for (s, c) in states`, no
+    /// world seed at all
     #[test]
     fn thicker_cloud_occludes_monotonically() {
         use hornvale_climate::{CloudType, WeatherState};
@@ -9906,6 +9909,8 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    /// claim: structural(seed: [7,42,1000]) — byte-identity between build_world
+    /// and the pre-assembled-components entry point
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn build_world_from_assembled_components_matches_build_world_byte_for_byte() {
@@ -9964,6 +9969,7 @@ mod tests {
         );
     }
 
+    /// claim: sanctioned-sweep(pinned regime, ForcingPin::Zero — no census home)
     #[test]
     fn zero_forcing_world_has_no_glacial_history() {
         // The forcing pin flattens the Milankovitch triad → flat caloric index →
@@ -10067,6 +10073,8 @@ mod tests {
         }
     }
 
+    /// claim: reachability(seed: 1..=4) — non-degeneracy: some adjacent pair of
+    /// constant-sky worlds differs
     #[test]
     fn different_seeds_differ() {
         let worlds: Vec<String> = (1..=4).map(|s| constant(s).to_json()).collect();
@@ -11030,6 +11038,8 @@ mod tests {
         );
     }
 
+    /// claim: reachability(seed: a panel of 3 known separators [3, 9, 11] of
+    /// 1..=24]) — own comment: "the claim is existential"
     #[test]
     fn locked_rotation_changes_the_flagship_cascade() {
         // A PANEL, not a single witness — this test has now burned three.
@@ -11138,6 +11148,7 @@ mod tests {
     /// after settlement placement, before the settlement-depth early
     /// return, so a shallow build gets alignments too (spec §4's "built to
     /// settlement depth or deeper").
+    /// claim: structural(seed: 42)
     #[test]
     fn settlements_carry_founding_alignments() {
         let wc = WorldComponents::assemble().unwrap();
@@ -11391,6 +11402,7 @@ mod tests {
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 
+    /// claim: structural(seed: 42)
     #[test]
     fn seed_42_names_are_non_english_and_not_degenerate() {
         let world = build_world(
@@ -11850,6 +11862,8 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// species &str, single fixed seed
     #[test]
     fn goblinoid_daughters_actually_diverge() {
         // DIVERGENCE-REALITY GUARD (stemmatics: descent is proven by shared
@@ -11892,6 +11906,8 @@ mod tests {
         );
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// Segment, single fixed seed across 3 species
     #[test]
     fn every_goblinoid_word_is_in_its_inventory() {
         let world = generated(42);
@@ -13066,6 +13082,8 @@ mod tests {
     /// builds against the authored registries themselves — so a fabricated,
     /// rescaled or defaulted spread reddens here even though every world still
     /// builds.
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds
+    /// a spread f64, no world seed at all (canonical registries only)
     #[test]
     fn the_composition_root_hands_the_bake_the_authored_dispersion() {
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");

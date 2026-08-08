@@ -64,6 +64,9 @@ fn enforcement_is_appropriate(claim: &Option<ClaimInfo>) -> bool {
     claim.is_none()
 }
 
+/// claim: structural(seed: none) — reads target/nextest/ci/run.json, not a
+/// seed sweep; "seed"-shaped tokens are timing-baseline plumbing, not a
+/// world-seed loop
 #[test]
 #[ignore = "timekeeper: reads the run.json `make ci` writes; not a standalone test"]
 fn durations_have_not_regressed() {

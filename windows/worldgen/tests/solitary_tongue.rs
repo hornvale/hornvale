@@ -351,6 +351,7 @@ const MIN_MARGIN: f64 = 0.03;
 /// smaller sample, and that cost is named rather than hidden.
 const DIVERGENCE_SEEDS: [u64; 3] = [1, 99, 777];
 
+/// claim: invariant(forall-seed, margin threshold) — over DIVERGENCE_SEEDS
 #[test]
 fn chromatic_dragons_diverge_less_than_the_goblinoid_family() {
     let mut gaps: Vec<(u64, f64, f64)> = Vec::new();

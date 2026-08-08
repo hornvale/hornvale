@@ -317,6 +317,7 @@
 - [The Sighting](./chronicle/the-sighting.md)
 - [The Beholding](./chronicle/the-beholding.md)
 - [The Delvers](./chronicle/the-delvers.md)
+- [The Reassay](./chronicle/the-reassay.md)
 
 # Appendix: The Frontier
 

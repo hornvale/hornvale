@@ -426,6 +426,8 @@ fn settlements_condense_near_rivers_emergently() {
 /// the fraction needs re-measuring, e.g. before or after a tuning pass:
 /// `cargo test --release -p hornvale-worldgen --test confluence --
 /// --ignored --nocapture measure_settlements_near_river_sweep`.
+/// claim: readout(bare #[ignore], prints only, no assertion) — settlements-
+/// near-river fraction per seed
 #[test]
 #[ignore]
 fn measure_settlements_near_river_sweep() {

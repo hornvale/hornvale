@@ -272,9 +272,12 @@ fn river_exposure_tracks_real_proximity() {
 /// settlement scatter across five peoples makes hitting at least one
 /// spring-adjacent cell near-certain). This is a genuine behavior change,
 /// not a broken gate — the rule that classifies `spring` did not change,
-/// and reachability for a genuine `spring` Gap is still proven on other
-/// seeds by `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
-/// sweep`. `hill` and `valley` are the two concepts that still
+/// and reachability for a genuine `spring` Gap is still proven across the
+/// census by `some_census_world_steeps_every_toponymic_concept`
+/// (`windows/lab/tests/calibration.rs`, The Assay Task 9 — originally this
+/// file's `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
+/// sweep`, retired once the census carried the same coverage over 1,000
+/// worlds). `hill` and `valley` are the two concepts that still
 /// discriminate at seed 42 after this re-pin (each 1/5 Root, 4/5 Gap, and
 /// each re-pinned alongside this test); `spring` joins `marsh`/`river`/
 /// `ford` as saturated, which is why this test is renamed and rewritten
@@ -607,8 +610,10 @@ fn valley_is_a_root_at_seed_42_for_gnoll_goblin_human_and_kobold() {
 /// 5.0`, see the Task 4 report), and it still produces a real Gap for at
 /// least some species on other seeds (nothing in this campaign requires
 /// `marsh` to discriminate on every seed, only that it is reachable —
-/// which `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
-/// sweep` already proves).
+/// which `some_census_world_steeps_every_toponymic_concept`
+/// (`windows/lab/tests/calibration.rs`, The Assay Task 9 — originally this
+/// file's `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
+/// sweep`) already proves).
 ///
 /// The Contour epoch v2 re-pin (2026-08-02, history/bake/v2 regen on
 /// lefford, 0063): the BAKE label bump reseats settlements again, and
@@ -721,144 +726,6 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
             exposures.get(concept)
         );
     }
-}
-
-/// The Task 4 review's Important 2 (round 2): `cli/tests/correspondence.rs`
-/// only checks that a concept declaring `Lexicalization::Expected` is
-/// listed as core (or has a compound recipe) — a purely STATIC, per-name
-/// check, blind to whether the `Steeped` rule that list-membership claims
-/// actually fires in any world. `TOPONYMIC_CORE`
-/// (`domains/language/src/packs.rs`) is a hand-maintained list asserting
-/// "this concept can win a Root"; the property it claims lives here, in
-/// `exposure_from`, which `hornvale_language` cannot depend on and so cannot
-/// enforce. That gap is exactly how `spring`'s Critical 1 shipped
-/// undetected in round 1: `Hydro::Spring` was structurally unreachable on
-/// EVERY seed, not just seed 42, and nothing caught it before review.
-///
-/// This is the guard-rail: sweep a small, fixed, deterministic set of
-/// seeds and require every core terrain concept to be `Steeped` for at
-/// least one placed species on at least one of them — existence across a
-/// real search of the reachable space, not a single seed's accident. A
-/// concept that is structurally dead (like `Hydro::Spring` actually was)
-/// fails this on every seed, so no sweep size saves it; a concept that is
-/// merely unlucky at one seed (like `island`, `valley` at seed 42) only
-/// needs the sweep to be wide enough to find its lucky one.
-///
-/// **There is no margin, and saying otherwise would be the third comment on
-/// this gate to claim more than it delivers.** Originally swept over seeds
-/// 0-7 (loop range `0..5`, seeds 0-4 actually exercised) and recorded every
-/// witness: `island` was witnessed at seed 2 ALONE, `valley` at seeds 2 and
-/// 7 only. Since this campaign deliberately breaks byte-identity, a later
-/// terrain or settlement change can redden this test through no fault of
-/// any gate — when that happens the honest repair is to widen the window
-/// and re-record the witnesses, never to drop a concept from the
-/// requirement.
-///
-/// **That happened.** The Wearing absorbed 77 commits from main (merge
-/// `166d4ad9`; new terrain, settlement placement, and a fifth placed
-/// people, `gnoll` — see `world()`'s doc comment), which moved `valley`'s
-/// earliest witness from seed 2 to seed 5 and reddened this test (the loop
-/// range was still only `0..5`, i.e. seeds 0-4, which no longer reached
-/// it). Re-swept seeds 0-11 on the merged tree and recorded every witness:
-/// `ford`/`hill`/`island`/`marsh`/`river`/`spring` are all witnessed
-/// starting at seed 0 (`island`'s witness widened from "seed 2 alone" to
-/// "seeds 0 and 1" — more redundant post-absorb, not less); `valley` is
-/// witnessed at seeds 5, 7, 10, and 11 — first at seed 5. The loop range
-/// below is widened to `0..8` (seeds 0-7) to comfortably cover `valley`'s
-/// new earliest witness with one seed of margin (seed 7 also witnesses it,
-/// so losing seed 5 alone would not immediately redden this again); the
-/// early-break below means a typical run still only builds seeds 0-5 (six
-/// worlds) before every concept is found. Wall-clock cost of the widened
-/// sweep, measured on this box: seeds 0-7 in isolation take ~53s to build
-/// and classify (seeds with zero placed peoples, e.g. 6 and 9 elsewhere in
-/// the swept range, are cheap — no coexistence winner means no
-/// `exposure_from` calls); the early break keeps the actual per-run cost
-/// close to ~43s (seeds 0-5), under the roughly-a-minute budget this test
-/// already implicitly accepted pre-absorb.
-///
-/// The set is **derived** from the language crate's own `concept_domain`
-/// rather than duplicated. An earlier version of this test hardcoded the
-/// seven and justified it by claiming the accession/correspondence tests
-/// would catch a drifted list "on their own terms." That was checked by
-/// injection and is false in the direction that matters: adding a
-/// `Steeped`-impossible concept (`mountain`) to `TOPONYMIC_CORE` left
-/// `cli/tests/accession.rs` 5/5 green and `cli/tests/correspondence.rs`
-/// 4/4 green, and this test blind — which is precisely the shape of the
-/// `spring` defect it exists to prevent. Removal was caught; addition, the
-/// dangerous direction, was not. `concept_domain` is `pub`
-/// (`domains/language/src/packs.rs`), and `cli/tests/correspondence.rs`
-/// already documents preferring exactly this derivation, so there was never
-/// a reason to duplicate.
-#[test]
-fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
-    // Derived, never duplicated: whatever `TOPONYMIC_CORE` holds today is
-    // what this test requires a witness for, so ADDING an unreachable
-    // concept to that list reds this test instead of slipping past it.
-    let core_toponymic: Vec<String> = {
-        let w = build_world(
-            hornvale_kernel::Seed(0),
-            &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .expect("seed 0 builds");
-        w.registry
-            .concepts()
-            .filter(|c| hornvale_language::packs::concept_domain(&c.name) == Some("toponymic"))
-            .map(|c| c.name.clone())
-            .collect()
-    };
-    assert!(
-        !core_toponymic.is_empty(),
-        "no concept reports domain \"toponymic\" — the derivation broke, and an \
-         empty requirement would make this test vacuously green"
-    );
-    let mut witnessed: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-    for seed in 0u64..8 {
-        let w = match build_world(
-            hornvale_kernel::Seed(seed),
-            &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        ) {
-            Ok(w) => w,
-            Err(_) => continue,
-        };
-        let Ok(terrain) = hornvale_worldgen::terrain_of(&w) else {
-            continue;
-        };
-        let Ok(climate) = hornvale_worldgen::climate_from(&w, &terrain) else {
-            continue;
-        };
-        for (species, _) in placed_peoples(&w) {
-            let Ok(exposures) = exposure_from(&w, species, &terrain, &climate) else {
-                continue;
-            };
-            for concept in &core_toponymic {
-                if matches!(
-                    exposures.get(concept.as_str()),
-                    Some(ExposureClass::Steeped)
-                ) {
-                    witnessed.insert(concept.clone());
-                }
-            }
-        }
-        if witnessed.len() == core_toponymic.len() {
-            break;
-        }
-    }
-    let missing: Vec<&String> = core_toponymic
-        .iter()
-        .filter(|c| !witnessed.contains(*c))
-        .collect();
-    assert!(
-        missing.is_empty(),
-        "these TOPONYMIC_CORE concepts never won a Root across seeds 0-4 on any \
-         placed species — a structurally dead gate (exactly spring's Critical 1 \
-         shape) would fail here on every seed, not just one: {missing:?}"
-    );
 }
 
 #[test]

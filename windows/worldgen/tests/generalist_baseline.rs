@@ -452,6 +452,8 @@ fn report_band(
     );
 }
 
+/// claim: readout(off-gate, heavy:) — prints axis percentiles and per-people
+/// pre-human fit means over SEEDS
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_land_distribution_and_pre_human_fits() {
@@ -520,6 +522,8 @@ fn report_land_distribution_and_pre_human_fits() {
 /// creates pressure to retune the niche until the suite goes green, which
 /// the spec forbids. `human_condition_niche()` and `BETA` are untouched by
 /// this test and must stay that way regardless of which way the numbers land.
+/// claim: readout(off-gate, heavy:, preregistered) — Gause-competition
+/// readout over SEEDS
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn report_the_preregistered_gause_readout() {

@@ -243,6 +243,8 @@ const HIGH_POPULATION: f64 = 0.5;
 /// See [`HIGH_POPULATION`].
 const LOW_POPULATION: f64 = 0.01;
 
+/// claim: sanctioned-sweep(calibration: run by hand, prints approach_ease
+/// quantiles over seeds 1..=30 — not census-eligible, own #[ignore] reason)
 #[test]
 #[ignore = "calibration: run by hand, prints the approach_ease quantiles"]
 fn print_approach_ease_quantiles() {

@@ -182,6 +182,8 @@ mod tests {
         assert!(pin_strings(&TerrainPins::default()).is_empty());
     }
 
+    /// claim: invariant(forall pin-strings; false-positive seed-loop flag — the
+    /// loop's `s` binds a pin string, not a seed)
     #[test]
     fn pin_strings_round_trip_through_parse_pin() {
         let pins = TerrainPins {

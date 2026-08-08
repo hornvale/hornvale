@@ -115,6 +115,8 @@ fn deep_history_shape_at_seed_42() {
 /// after this campaign — is diagnosed here rather than guessed at: a die-off
 /// concentrated in one epoch band is a climate event sweeping the map, while one
 /// spread evenly is ordinary attrition that never recovered.
+/// claim: sanctioned-sweep(probe: measurement only, run explicitly) — prints
+/// eviction causes/timeline over [42, 1234]
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn eviction_causes_and_timeline() {
@@ -170,6 +172,8 @@ fn eviction_causes_and_timeline() {
 /// the signature of re-rolling rather than of a trend. Any per-seed count here
 /// has to be read against the min–max band this prints, and an invariant floor
 /// (The Tithe's 400 occupations) has to be read against it too.
+/// claim: sanctioned-sweep(probe: measurement only, run explicitly — not
+/// census-eligible) — prints a per-seed history-shape table
 #[test]
 #[ignore = "probe: measurement only, run explicitly"]
 fn deep_history_shape_across_probe_seeds() {

@@ -785,6 +785,9 @@ mod tests {
         assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a node-unit position in
+    /// `for (i, s) in a.node_units().iter().enumerate()`
     #[test]
     fn discrete_layers_match_nearest_cell() {
         let w = gen42();
@@ -805,6 +808,8 @@ mod tests {
         }
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag; `s` binds a
+    /// swing f64; pinned RotationPin::Locked
     #[test]
     fn locked_world_zeroes_swing_and_omits_bands() {
         use hornvale_astronomy::{RotationPin, SkyPins};
@@ -888,6 +893,9 @@ mod tests {
         })
     }
 
+    /// claim: structural(seed: 42) — false-positive seed-loop flag (Fix
+    /// round 1); `s` binds a node-unit position in the inner
+    /// `for (i, s) in addr.node_units()...` loop
     #[test]
     fn temperature_grid_region_commutes_with_the_evaluator() {
         let w = gen42();

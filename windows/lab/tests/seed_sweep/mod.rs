@@ -157,6 +157,8 @@ where
 /// whose per-seed work takes wildly different amounts of time (so completion
 /// order is certainly not seed order) still returns its results in seed
 /// order, and visits every seed exactly once.
+/// claim: structural(seed: none) — tests the map_seeds harness itself, not
+/// a world; "seed" here is an arbitrary integer input, not a world seed
 #[test]
 fn map_seeds_returns_results_in_seed_order() {
     // Descending sleeps: the low seeds finish last within their chunk, so a
@@ -173,6 +175,8 @@ fn map_seeds_returns_results_in_seed_order() {
 /// 9 over a seed list that divides evenly into none of them — the
 /// equivalence the readouts' verification rests on, in miniature, with the
 /// chunking arithmetic's off-by-one exercised at each width.
+/// claim: structural(seed: none) — tests the map_seeds harness itself across
+/// worker counts 1..=9, not a world
 #[test]
 fn every_worker_count_agrees_with_the_serial_sweep() {
     let expected: Vec<u64> = (1..=23u64).map(|s| s * s + 7).collect();

@@ -307,6 +307,8 @@ mod tests {
         assert!(daily_weight(WeatherState::Storm) > daily_weight(WeatherState::Rain));
     }
 
+    /// claim: structural(seed: none) — false-positive seed-loop flag; `s` binds a
+    /// WeatherState, single synthetic fixed scenario, no world seed at all
     #[test]
     fn a_years_daily_precipitation_sums_to_the_annual_climatology() {
         // A synthetic year: 200 dry days, 100 rain days, 60 storm days.

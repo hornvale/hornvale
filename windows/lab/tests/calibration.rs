@@ -267,6 +267,8 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
     }
 }
 
+/// claim: invariant(census: tidally-locked, belief-kind-<species>) — reads
+/// the committed DRIFT census fixture, pinned per ADR 0016
 #[test]
 fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // The invariant is PHYSICAL: a tidally-locked world offers no
@@ -1098,6 +1100,9 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 /// mechanism can return the next time repair moves.
 const HONORIFIC_DETECTOR_BLIND_SEEDS: [u64; 0] = [];
 
+/// claim: readout(preregistered, 0016) — reads the committed DRIFT census
+/// fixture; pinned counts, with `HONORIFIC_DETECTOR_BLIND_SEEDS` now empty
+/// (zero detector-limit exceptions, down from two)
 #[test]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
@@ -1176,9 +1181,9 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     }
     assert_eq!(
         g_false_seeds, HONORIFIC_DETECTOR_BLIND_SEEDS,
-        "the goblin epithet-honorific falses are no longer exactly the two diagnosed \
-         detector-blind worlds — a new false is an UNDIAGNOSED world and must be chased, \
-         not added to the list"
+        "the goblin epithet-honorific falses are no longer exactly the (now empty) \
+         diagnosed detector-blind roster — any false here is an UNDIAGNOSED world and \
+         must be chased, not added to the list"
     );
     // F11 discharge re-pin (2026-07-30, committed `rows.csv` at `4cd19ff9`):
     // goblin 764/2/234 -> 766/1/233, kobold 762/238 -> 760/240. The claim is
@@ -1375,11 +1380,13 @@ fn lexicon_is_regular_for_both_species() {
 /// keeps the two copies in step are a campaign, not a followup.
 ///
 /// The gate itself is sound and that was checked rather than assumed:
-/// `windows/worldgen/tests/exposure.rs` is 19/19 green, including
-/// `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap` and
-/// `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`. No
-/// world is misclassifying anything. Only the lab's copy of the rulebook is
-/// out of date.
+/// `windows/worldgen/tests/exposure.rs` was 19/19 green at the time,
+/// including `toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap`
+/// and `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep`
+/// (the latter retired by The Assay Task 9; the same property now lives in
+/// `some_census_world_steeps_every_toponymic_concept`, this file). No world
+/// is misclassifying anything. Only the lab's copy of the rulebook is out of
+/// date.
 #[test]
 fn lexicon_is_exposure_sound_for_both_species() {
     let result = &*DRIFT;
@@ -2358,6 +2365,9 @@ fn name_transparency_is_measured_and_pinned() {
     );
 }
 
+/// claim: rate(forall-seed, indistinguishable/pairs > 0.5; twin-pick rate
+/// within 0.2 of chance when decided) — reads &*MEETING census fixture,
+/// tuple pattern `(seed, gs)` (Fix round 1, Class 1)
 #[test]
 fn null_control_blind_attribution_is_at_chance() {
     let result = &*MEETING;
@@ -2906,6 +2916,191 @@ fn obliquity_range_is_wider_on_moonless_worlds() {
         moonless_mean > mooned_mean,
         "moonless mean obliquity-range {moonless_mean:.4} !> mooned mean {mooned_mean:.4}"
     );
+}
+
+/// Every `Hydro` variant is reachable from the real derivation — the property
+/// `domains/terrain/tests/hydro_witness.rs` held over 8 seeds, now held over
+/// 1,000 (The Assay). A variant that is structurally dead reads 0 worlds here,
+/// and the failure names it; a variant that is merely rare reads a small share
+/// and passes, which the 8-seed sweep could not distinguish.
+///
+/// Shares at the 2026-08-07 regen (`d36be41b`), n = 1000 worlds: every
+/// variant is at 100.0% — `aquifer`, `aquitard`, `spring`, `runoff`, and
+/// `karst` all appear on all 1,000 worlds, and only one combination is ever
+/// observed (`"aquifer+aquitard+spring+runoff+karst"`). That is zero
+/// variance, not an interesting distribution: this assertion is a guard that
+/// will move if a variant ever dies, not a spread that tells us anything
+/// today. It is also the honest reading of what the retired 8-seed sweep was
+/// actually testing — every variant it certified was already showing up on
+/// the very first world of every run, 1,000 times over.
+/// claim: reachability(census: hydro-variant-coverage) — the retired
+/// hydro_witness hunt's census-backed replacement (The Assay, Task 8)
+#[test]
+fn every_hydro_variant_is_reachable_somewhere_in_the_census() {
+    let result = &*DRIFT;
+    let column = result
+        .metric_names
+        .iter()
+        .position(|n| *n == "hydro-variant-coverage")
+        .expect("the census carries hydro-variant-coverage");
+
+    let mut worlds_showing: std::collections::BTreeMap<&str, usize> =
+        std::collections::BTreeMap::new();
+    for variant in hornvale_terrain::Hydro::ALL {
+        worlds_showing.insert(variant.name(), 0);
+    }
+    let mut measured = 0usize;
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        let MetricValue::Text(joined) = &row.values[column] else {
+            continue;
+        };
+        measured += 1;
+        for name in joined.split('+').filter(|s| !s.is_empty()) {
+            if let Some(count) = worlds_showing.get_mut(name) {
+                *count += 1;
+            } else {
+                panic!("seed {} reports unknown hydro name {name:?}", row.seed);
+            }
+        }
+    }
+    assert!(
+        measured > 0,
+        "no world in the census reported hydro coverage"
+    );
+
+    let dead: Vec<&str> = worlds_showing
+        .iter()
+        .filter(|(_, n)| **n == 0)
+        .map(|(name, _)| *name)
+        .collect();
+    assert!(
+        dead.is_empty(),
+        "these Hydro variants appear on 0 of {measured} census worlds — unreachable \
+         from the real derivation, and no sweep width saves them: {dead:?}. \
+         Shares: {worlds_showing:?}"
+    );
+}
+
+/// Every toponymic concept wins a root somewhere — the property
+/// `windows/worldgen/tests/exposure.rs` held by building up to 9 worlds to
+/// find a witness, now held over 1,000 (The Assay).
+///
+/// Two columns rather than a ratio, because they fail differently: a drop in
+/// `toponymic-roots-won` is a worlds change, while a change in
+/// `toponymic-core-size` is a REGISTRY change and means someone added a
+/// concept — possibly an unreachable one, which is exactly what the retired
+/// sweep existed to catch.
+///
+/// Values at the 2026-08-07 regen (`d36be41b`), n = 1000: `toponymic-core-size`
+/// is 7 on every single world — it is derived from the registry via
+/// `register_all`, which runs unconditionally, so the registry's concept set
+/// does not depend on the seed. That makes it a cross-commit drift detector,
+/// not a per-world variable, which is why it stays its own column rather than
+/// folding into a ratio. `toponymic-roots-won` ranges from 2 to 7 with a mean
+/// of 5.28, and only 131 of 1,000 worlds (13.1%) reach all seven. So this
+/// assertion passes (`max == core == 7`) — but the interesting fact is not the
+/// pass, it is that steeping every concept is atypical: the retired sweep
+/// asked "does *some* world win each concept" and got yes, while the census
+/// can say how typical that is, and the answer is not very.
+#[test]
+fn some_census_world_steeps_every_toponymic_concept() {
+    let result = &*DRIFT;
+    let idx = |name: &str| {
+        result
+            .metric_names
+            .iter()
+            .position(|n| *n == name)
+            .unwrap_or_else(|| panic!("the census carries {name}"))
+    };
+    let (won_i, core_i) = (idx("toponymic-roots-won"), idx("toponymic-core-size"));
+
+    let mut best = 0.0f64;
+    let mut best_seed = None;
+    let mut cores: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        if let MetricValue::Number(core) = row.values[core_i] {
+            cores.insert(core as u64);
+        }
+        if let MetricValue::Number(won) = row.values[won_i]
+            && won > best
+        {
+            best = won;
+            best_seed = Some(row.seed);
+        }
+    }
+    assert_eq!(
+        cores.len(),
+        1,
+        "the toponymic core size differs across census worlds ({cores:?}) — it is \
+         derived from the registry, so every world must agree"
+    );
+    let core = *cores.iter().next().expect("one core size") as f64;
+    assert!(core > 0.0, "no concept reports the toponymic domain");
+    assert_eq!(
+        best, core,
+        "no census world steeps all {core} toponymic concepts — the best is {best} \
+         (seed {best_seed:?}). One or more concepts is a structurally dead gate; the \
+         retired 9-world sweep would have failed on every seed too."
+    );
+}
+
+/// A live prediction crisis occurs — the property
+/// `windows/worldgen/tests/diachronic.rs` held by building up to 200 worlds to
+/// find one, now measured over 1,000 (The Assay). The rate is the finding the
+/// hunt could never report: the hunt knew only that its search terminated, and
+/// could not say whether it stopped at seed 1 or seed 187.
+///
+/// Rate at the 2026-08-07 regen (`d36be41b`), n = 1000:
+/// `crisis-fires: true 659 · false 341 · Absent 0` — two worlds in three hold
+/// a live prediction crisis. That is the campaign's thesis in one number: the
+/// retired hunt was never slow, it was uninformative — it could report only
+/// that a crisis existed *somewhere* in its search range, never that the
+/// mechanism is this common.
+#[test]
+fn a_prediction_crisis_occurs_and_the_census_reports_its_rate() {
+    let result = &*DRIFT;
+    let column = result
+        .metric_names
+        .iter()
+        .position(|n| *n == "crisis-fires")
+        .expect("the census carries crisis-fires");
+    let (mut fired, mut measured, mut absent) = (0usize, 0usize, 0usize);
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        match row.values[column] {
+            MetricValue::Flag(true) => {
+                fired += 1;
+                measured += 1;
+            }
+            MetricValue::Flag(false) => measured += 1,
+            _ => absent += 1,
+        }
+    }
+    assert!(
+        measured > 0,
+        "crisis-fires was Absent on every census world ({absent})"
+    );
+    assert!(
+        fired > 0,
+        "no world in {measured} exhibits a live prediction crisis at the hundredth \
+         year — the mechanism ships unexercised. Do NOT weaken \
+         PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN to force a hit; those are \
+         the spec's own considered values."
+    );
+    assert_eq!(
+        absent, 0,
+        "crisis-fires was Absent on {absent} census world(s) — the census reads 0 \
+         Absent for this metric; a nonzero count here is a real change worth naming"
+    );
+    println!("crisis-fires: {fired}/{measured} worlds ({absent} absent)");
 }
 
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).

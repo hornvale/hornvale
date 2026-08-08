@@ -405,6 +405,8 @@ const ZERO_DISPERSION: Dispersion = Dispersion {
 /// all six settling peoples (task ruling 2) — the arm Task 6 compares against.
 /// H1/H2/H3 are reported here, never asserted: the assertions below are a
 /// *parameter-is-read* proof, not a preregistered prediction.
+/// claim: rate(forall-seed, variance in (HUMAN_VARIANCE_FLOOR,
+/// HUMAN_VARIANCE_CEILING)) — over SEEDS, off-gate (heavy:)
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn zero_dispersion_collapses_between_settlement_variance() {
@@ -577,6 +579,8 @@ fn every_zeroed_draw_is_the_authored_location() {
 /// it only constrains the reason string of those that are. A diagnosis that
 /// only arrives when someone dispatches `make gate-full` to lefford is not
 /// guarding the campaign's acceptance criterion.
+/// claim: reachability(seed: 1..=6) — existence claim: raids initiated by
+/// below-gate peoples over the pooled sweep
 #[test]
 fn the_shipped_bake_gates_on_a_drawn_value_not_the_authored_constant() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");

@@ -31,7 +31,9 @@ pub use roster::{
     awakened_owlbear_components, goblin_solo_components, goblin_twin_solo_components,
     serpent_tonal_solo_components,
 };
-pub use runner::{Row, RunResult, canonical_row, load_rows, run, run_forced_full, write_csv};
+pub use runner::{
+    Row, RunResult, canonical_row, canonical_value, load_rows, run, run_forced_full, write_csv,
+};
 pub use schema::{fnv1a64, render_schema};
 pub use study::{MetricSelection, PinSet, Seeds, Study, StudyError, load_study};
 pub use summary::render_summary;

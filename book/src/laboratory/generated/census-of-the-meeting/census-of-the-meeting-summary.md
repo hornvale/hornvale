@@ -415,6 +415,12 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.2, 0.3) | 0 | 0.0% |
 | >= 0.3 | 0 | 0.0% |
 
+### hydro-variant-coverage — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| aquifer+aquitard+spring+runoff+karst | 500 | 100.0% |
+
 ### aquifer-fraction — goblin-solo
 
 | value | count | share |
@@ -2141,6 +2147,37 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.3, 0.6) | 6 | 1.2% |
 | >= 0.6 | 0 | 0.0% |
 
+### toponymic-core-size — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 4) | 0 | 0.0% |
+| [4, 8) | 500 | 100.0% |
+| [8, 12) | 0 | 0.0% |
+| [12, 16) | 0 | 0.0% |
+| [16, 24) | 0 | 0.0% |
+| >= 24 | 0 | 0.0% |
+
+### toponymic-roots-won — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 4) | 379 | 75.8% |
+| [4, 8) | 121 | 24.2% |
+| [8, 12) | 0 | 0.0% |
+| [12, 16) | 0 | 0.0% |
+| [16, 24) | 0 | 0.0% |
+| >= 24 | 0 | 0.0% |
+
+### crisis-fires — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 311 | 62.2% |
+| false | 189 | 37.8% |
+
 ### star-class — goblin-twin-solo
 
 | value | count | share |
@@ -2549,6 +2586,12 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.1, 0.2) | 405 | 81.0% |
 | [0.2, 0.3) | 0 | 0.0% |
 | >= 0.3 | 0 | 0.0% |
+
+### hydro-variant-coverage — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| aquifer+aquitard+spring+runoff+karst | 500 | 100.0% |
 
 ### aquifer-fraction — goblin-twin-solo
 
@@ -4260,4 +4303,35 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0, 0.3) | 107 | 21.4% |
 | [0.3, 0.6) | 6 | 1.2% |
 | >= 0.6 | 0 | 0.0% |
+
+### toponymic-core-size — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 4) | 0 | 0.0% |
+| [4, 8) | 500 | 100.0% |
+| [8, 12) | 0 | 0.0% |
+| [12, 16) | 0 | 0.0% |
+| [16, 24) | 0 | 0.0% |
+| >= 24 | 0 | 0.0% |
+
+### toponymic-roots-won — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 4) | 500 | 100.0% |
+| [4, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| [12, 16) | 0 | 0.0% |
+| [16, 24) | 0 | 0.0% |
+| >= 24 | 0 | 0.0% |
+
+### crisis-fires — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 500 | 100.0% |
 

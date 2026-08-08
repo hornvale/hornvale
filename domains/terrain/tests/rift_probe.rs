@@ -232,6 +232,8 @@ const FRACTION_SWEEP: [f64; 3] = [0.05, 0.15, 0.30];
 /// Sweep points for the arms mechanism: every `(n_arms, depth)` pair.
 const ARM_SWEEP: [(usize, usize); 6] = [(4, 3), (4, 6), (8, 3), (8, 6), (16, 3), (16, 6)];
 
+/// claim: sanctioned-sweep(preregistered probe, run by hand — rift-and-fit
+/// spec §6, ledger #5; not a census candidate, a ranking instrument)
 #[test]
 #[ignore = "probe: Stage-0 rift instrument, run by hand (spec §6)"]
 fn rift_probe_tables() {

@@ -159,6 +159,9 @@ fn naive_effective(
     Some(t)
 }
 
+/// claim: invariant(forall-seed) — internal splitmix fuzzing seed (not a
+/// hornvale_kernel::Seed/world seed); join-equals-scan property over
+/// randomized ledger histories
 #[test]
 fn join_equals_scan_over_random_ledgers() {
     // Generator coverage (spec §5.2, the c4 lesson): kind changes 0/1/2+,
