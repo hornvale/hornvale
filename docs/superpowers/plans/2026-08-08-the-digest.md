@@ -741,7 +741,7 @@ pub fn parse(id: &str, text: &str) -> DecisionRecord {
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `cargo test --manifest-path tools/digest/Cargo.toml decisions`
-Expected: PASS, 5 tests — including all 112+ committed decisions parsing.
+Expected: PASS, 7 tests — including all 112+ committed decisions parsing.
 
 - [ ] **Step 5: Commit**
 
