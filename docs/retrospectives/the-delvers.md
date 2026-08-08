@@ -412,6 +412,72 @@ predicted shares separate, or every separated pair observed a tie — and its
 message named only the first. **A guard whose message describes one of its two
 triggers reads as total to the next person.**
 
+## The close ran long, and the last third taught the most
+
+Everything below happened after the chronicle was written, which is itself the
+lesson: a campaign's close is not bookkeeping, and treating it as bookkeeping is
+how a branch acquires defects that no task ever owned.
+
+**Eleven calibration witnesses moved, and the discipline is a distinction, not a
+procedure.** Each of those tests carries two things — a directional or structural
+CLAIM (the science) and an exact measured WITNESS (the drift pin). Only witnesses
+may be re-pinned. Every claim was re-checked *with its margin* rather than assumed
+to have survived: blind attribution at 0.9122 against a 0.75 floor, capacity
+clearing its preregistered floor by 6.3×, population-weighted latitude 17.67°
+below the uniform-sphere baseline. Two readings were flagged rather than quietly
+re-pinned — a binding margin that narrowed, and a floor that *rose* to the highest
+that row has recorded, which is the shape its own defect would take if it
+returned. A census re-pin also touches four files, not one: the SQL golden-pin
+tripwire disagreed on twenty-two rows and had to be re-synced in the same commit,
+because splitting them would defeat the tripwire.
+
+**The heavy tier answered a question the local suite structurally could not.** One
+of the three inherited tripwires this campaign promised not to disturb lives
+inside a heavy-tier-ignored test, so no local run made during the entire campaign
+could see it. It passed — but the campaign spent weeks able to state that claim
+only at the strength of "two of three verified", and did not know it. **A guard
+you cannot run is a guard you cannot cite.**
+
+That run also surfaced the campaign's third finding, in two tests at once: a raid
+attribution proxy reports that its key no longer names exactly one occupation
+record, so the rates it derives are invalid. Both tests detect this themselves and
+refuse to report numbers they know are wrong. **A proxy that assumed attribution
+uniqueness did not survive a nine-people roster** — a statement about the
+measurement, not about the world, and exactly the kind of thing a roster change is
+good for exposing.
+
+**Absorbing two campaigns at the close cost more than the campaign's own last
+task.** Both had regenerated the census; both had moved the same registry-size
+pin. That pin went 183 → 187 on one side and 183 → 184 on this one, and **the
+merged value is neither — it is 188.** The comment directly above it already
+recorded two *earlier* campaigns colliding on the same line. A line that has now
+caught three pairs of parallel campaigns is not a coincidence; it is a shape.
+
+**A generated artifact has no merge, and this campaign learned the corollary.**
+The census fixtures conflicted precisely *because* both campaigns had regenerated
+them, so neither side was correct at the merged code. The tiebreak is not "ours"
+or "theirs" but **which stale state is internally consistent**: this branch's
+fixture matched this branch's re-pinned calibration literals, and the analysis
+harness confirmed it while the other side failed on four rows. Then regenerate,
+which is the only thing that actually resolves it. The second merge repeated the
+pattern with byte goldens and was resolved the same way.
+
+## The second wrong-tree incident, on the axis the first fix did not cover
+
+A `git add -A` in the worktree swept a concurrently-running subagent's in-flight
+edits into an unrelated commit. Nothing was lost and nothing landed on the wrong
+branch, and the agent was told immediately so that a clean-looking tree would not
+read to it as vanished work.
+
+The point is its relationship to the earlier incident in this same campaign, where
+the shell's persistent working directory put a commit on `main`. That one
+concluded: *every mutating command should carry its directory explicitly.* This is
+the same lesson on the other axis — **every mutating command should carry its
+paths explicitly too.** `git add -A` is a blanket thrown over a workspace, and
+parallel subagents mean the controller no longer solely occupies it. The first
+fix does not cover the second case, and the resemblance between them was only
+visible after both had happened.
+
 ## Follow-ups
 
 - **The underworld should become a place**, not a coordinate. A cave's biome is a
@@ -438,6 +504,31 @@ triggers reads as total to the next person.**
 - **A constant one line below the floor that just crossed is eroding on the same
   clock** — doc cites ~6× headroom, it measures 2.3×, and it is still asserted.
 - **The diversity-ceiling re-derivation was measured on the five-dwarf roster**
-  (a peopled count of eleven) before the cut to three. The bound is derived, so it
-  is correct at any roster size, but the measured table quoted in its
-  documentation describes a roster that did not ship.
+  (a peopled count of eleven) before the cut to three. **Closed at the close**:
+  re-measured on the roster that shipped (peopled count twelve, mean 3.0101). The
+  re-measurement sharpened the point the derivation existed for — at the shipped
+  roster the retired literal would have failed *by 0.0101*, which is what a
+  compiled-in dependency looks like when it finally rots: not a loud failure that
+  names its cause, but a hair over the line, in the shape most likely to be waved
+  through as noise and re-pinned.
+- **A raid-attribution proxy no longer names exactly one occupation record**, so
+  two heavy-tier readouts correctly refuse to report their rates. Repairing it is
+  a measurement redesign belonging to whoever owns that readout, not to a roster
+  campaign; recorded rather than patched.
+- **A third history gate hit the seed-42 anecdote problem** that two of its
+  siblings were converted for. The ruling that produced those panels was not
+  assumed to transfer to a gate nobody had examined.
+- **The occupancy readout's committed fixture is owed a regeneration.** This
+  campaign drifted it by adding three kinds. Its writer is deliberately by-hand —
+  running it in the heavy tier would let the artifact self-heal past its own drift
+  check — and its documentation carries a preregistered claim from an earlier
+  campaign that must be **re-checked, not merely re-pinned**. Its own history
+  already records an under-checked attribution replacing another under-checked
+  attribution, which is a warning aimed squarely at whoever does this next.
+- **A census-fixture histogram's buckets were authored for a five-people roster**
+  and now put 96.7% of worlds in a catch-all top bucket. Left alone deliberately:
+  changing it would move the census fixtures.
+- **Roughly twenty-five "six settling peoples" claims remain in code comments.**
+  Several are deliberately frozen measurement populations and are correct as
+  scoped; the rest were not audited, and the distinction needs a reader, not a
+  grep.
