@@ -334,8 +334,16 @@ impl Board {
         Ok(roots.lines().next().map(str::to_string))
     }
 
-    /// Drop posts that are no longer live from the tip tree, as a FORWARD
-    /// commit whose parent is the current tip.
+    /// Drop posts `is_reapable` judges permanently dead from the tip tree,
+    /// as a FORWARD commit whose parent is the current tip.
+    ///
+    /// Deliberately judged by `is_reapable`, not `liveness`: liveness
+    /// governs what a render shows this time (wrong once, self-correcting);
+    /// this governs what disappears from the tip tree forever. The renders
+    /// already filter dead posts out at read time, so a dead post sitting
+    /// in the tip tree is already invisible -- reap buys tidiness and tree
+    /// size, not correctness, which is why it is held to the stricter,
+    /// separate predicate (see `is_reapable`'s doc comment).
     ///
     /// History is untouched, so every post ever written stays reachable
     /// (D13): there is no code path here that rewrites or force-updates the
@@ -343,16 +351,13 @@ impl Board {
     /// how many posts were dropped; a reap with nothing dead is a no-op (no
     /// empty commit).
     pub fn reap(&self, ctx: &crate::live::LiveContext) -> Result<usize, BoardError> {
-        use crate::live::{Liveness, liveness};
+        use crate::live::is_reapable;
 
         let Some(old) = self.tip()? else {
             return Ok(0);
         };
         let posts = self.posts_at_tip()?;
-        let keep: Vec<&StoredPost> = posts
-            .iter()
-            .filter(|s| liveness(s, ctx) == Liveness::Live)
-            .collect();
+        let keep: Vec<&StoredPost> = posts.iter().filter(|s| !is_reapable(s, ctx)).collect();
         let dropped = posts.len() - keep.len();
         if dropped == 0 {
             return Ok(0);
@@ -847,16 +852,36 @@ mod tests {
         );
     }
 
+    /// Create `branch` off `main`, commit once on it, merge it back into
+    /// `main` (`--no-ff`, so the merge is its own commit), and leave the
+    /// checkout on `main`. `main` needs a root commit of its own first --
+    /// the board's commits all live on `refs/hornvale/board`, entirely
+    /// separate from this checkout, so a fresh `temp_repo()` has no commit
+    /// on `main` to branch from until this helper adds one.
+    fn merge_branch_into_main(repo: &crate::git::Repo, branch: &str) {
+        std::fs::write(repo.root().join("root.txt"), "root").expect("write root");
+        repo.git(&["add", "root.txt"]).expect("add root");
+        repo.git(&["commit", "-m", "root"]).expect("commit root");
+        repo.git(&["checkout", "-q", "-b", branch]).expect("branch");
+        std::fs::write(repo.root().join("work.txt"), branch).expect("write work");
+        repo.git(&["add", "work.txt"]).expect("add work");
+        repo.git(&["commit", "-m", "work"]).expect("commit work");
+        repo.git(&["checkout", "-q", "main"]).expect("back to main");
+        repo.git(&["merge", "--no-ff", "-m", "merge", branch])
+            .expect("merge");
+    }
+
     #[test]
-    fn reap_drops_dead_posts_from_the_tip_but_history_still_holds_them() {
-        // D13: the ref's history is the research corpus. Compaction is a
-        // forward commit, never a rewrite.
+    fn reap_drops_a_notice_whose_branch_resolves_and_is_merged_regardless_of_age() {
+        // The unambiguous half of the split predicate: a resolved-and-merged
+        // branch is a positive statement no transient race can produce, so
+        // this notice is reaped on the very first reap -- no grace period.
         let (_d, repo) = temp_repo();
+        merge_branch_into_main(&repo, "campaign/merged");
         let board = Board::new(repo.clone());
         let dead = board
             .append(
-                &Post::new("notice", "campaign/never-existed")
-                    .with("note", serde_json::json!("stale")),
+                &Post::new("notice", "campaign/merged").with("note", serde_json::json!("stale")),
             )
             .expect("dead post");
         let durable = board
@@ -868,7 +893,10 @@ mod tests {
         let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
         let dropped = board.reap(&ctx).expect("reap");
 
-        assert_eq!(dropped, 1, "only the dead notice goes");
+        assert_eq!(
+            dropped, 1,
+            "a merged branch is unambiguous, so this must not wait on age"
+        );
         let ids = board.post_ids_at_tip().expect("ids");
         assert!(!ids.contains(&dead), "gone from the tip tree");
         assert!(ids.contains(&durable), "technique survives");
@@ -884,6 +912,110 @@ mod tests {
             still_there, "blob",
             "the post is still reachable through history"
         );
+    }
+
+    #[test]
+    fn reap_does_not_drop_an_unresolved_notice_within_the_grace_period_the_hazard_regression() {
+        // THE HAZARD REGRESSION: a branch that does not resolve at all is
+        // ambiguous -- it could be a transient race (a fetch in flight, a
+        // permissions blip), not genuine, permanent absence. A young notice
+        // on such a branch must survive a reap, or a wrongly-observed race
+        // would permanently erase it from the tip tree.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let notice = board
+            .append(
+                &Post::new("notice", "campaign/never-existed")
+                    .with("note", serde_json::json!("stale")),
+            )
+            .expect("notice");
+        board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("technique");
+        let before = board.tip().expect("tip");
+
+        let posts = board.posts_at_tip().expect("posts");
+        // Fresh probe: the notice's age relative to `now_unix` is ~0,
+        // nowhere near `NOTICE_GRACE_PERIOD_S`.
+        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        let dropped = board.reap(&ctx).expect("reap");
+
+        assert_eq!(
+            dropped, 0,
+            "an unresolved branch is ambiguous while young -- must not be reaped yet"
+        );
+        assert_eq!(
+            board.tip().expect("tip"),
+            before,
+            "no commit for a no-op reap"
+        );
+        let ids = board.post_ids_at_tip().expect("ids");
+        assert!(ids.contains(&notice), "the notice must still be present");
+    }
+
+    #[test]
+    fn reap_drops_the_same_unresolved_notice_once_past_the_grace_period() {
+        // Same setup as the hazard regression above, but with the clock
+        // advanced past `NOTICE_GRACE_PERIOD_S`: a branch that has stayed
+        // unresolved that long is durably gone, not a blip.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let dead = board
+            .append(
+                &Post::new("notice", "campaign/never-existed")
+                    .with("note", serde_json::json!("stale")),
+            )
+            .expect("notice");
+        let durable = board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("technique");
+        let root_before = board.root().expect("root");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let mut ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        ctx.now_unix += crate::live::NOTICE_GRACE_PERIOD_S + 1;
+        let dropped = board.reap(&ctx).expect("reap");
+
+        assert_eq!(dropped, 1, "past the grace period, the notice is reapable");
+        let ids = board.post_ids_at_tip().expect("ids");
+        assert!(!ids.contains(&dead), "gone from the tip tree");
+        assert!(ids.contains(&durable), "technique survives");
+        assert_eq!(
+            board.root().expect("root"),
+            root_before,
+            "D13: the ref was not rerooted"
+        );
+        let still_there = repo
+            .git(&["cat-file", "-t", &dead])
+            .expect("object still exists");
+        assert_eq!(
+            still_there, "blob",
+            "the post is still reachable through history"
+        );
+    }
+
+    #[test]
+    fn reap_still_drops_a_claim_past_its_ttl() {
+        // No regression: claim expiry is unambiguous (time only moves
+        // forward), so it is reaped exactly as before this task's change.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let dead = board
+            .append(&Post::new("claim", "campaign/x").with("ttl_s", serde_json::json!(1)))
+            .expect("claim");
+        let durable = board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("technique");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let mut ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        ctx.now_unix += 60; // well past the 1s ttl
+
+        let dropped = board.reap(&ctx).expect("reap");
+        assert_eq!(dropped, 1, "a claim past its ttl is unambiguous");
+        let ids = board.post_ids_at_tip().expect("ids");
+        assert!(!ids.contains(&dead));
+        assert!(ids.contains(&durable));
     }
 
     #[test]
@@ -903,16 +1035,18 @@ mod tests {
     #[test]
     fn reap_does_not_dirty_the_working_tree() {
         let (_d, repo) = temp_repo();
+        merge_branch_into_main(&repo, "campaign/merged");
         let board = Board::new(repo.clone());
         board
-            .append(&Post::new("notice", "campaign/never-existed"))
+            .append(&Post::new("notice", "campaign/merged"))
             .expect("dead post");
         board
             .append(&Post::new("technique", "campaign/x"))
             .expect("technique");
         let posts = board.posts_at_tip().expect("posts");
         let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
-        board.reap(&ctx).expect("reap");
+        let dropped = board.reap(&ctx).expect("reap");
+        assert_eq!(dropped, 1, "sanity: this reap must actually do something");
         let dirty = repo.git(&["status", "--porcelain"]).expect("status");
         assert!(
             dirty.is_empty(),

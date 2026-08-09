@@ -165,6 +165,7 @@ mod tests {
             retracted: BTreeSet::new(),
             live_pids: BTreeSet::new(),
             live_branches: BTreeSet::from(["campaign/live".to_string()]),
+            merged_branches: BTreeSet::new(),
         }
     }
 

@@ -30,6 +30,11 @@ pub struct LiveContext {
     pub live_pids: BTreeSet<u32>,
     /// Branches that exist and are not merged into `main`.
     pub live_branches: BTreeSet<String>,
+    /// Branches that RESOLVE and ARE merged into `main` — an unambiguous,
+    /// positive "definitely dead" signal that `is_reapable` treats
+    /// differently from a branch that simply does not resolve at all (see
+    /// `is_reapable`'s doc comment for why the distinction matters).
+    pub merged_branches: BTreeSet<String>,
 }
 
 /// Judge one already-run `ps -p <pid>` invocation. `Ok` means `ps` ran, so its
@@ -126,9 +131,10 @@ impl LiveContext {
         }
 
         let mut live_branches = BTreeSet::new();
+        let mut merged_branches = BTreeSet::new();
         for s in posts.iter() {
             let by = s.post.by.clone();
-            if live_branches.contains(&by) {
+            if live_branches.contains(&by) || merged_branches.contains(&by) {
                 continue;
             }
             // Resolve once; reuse the resolved ref for the ancestry check
@@ -144,7 +150,9 @@ impl LiveContext {
             let merged = repo
                 .git(&["merge-base", "--is-ancestor", &resolved, "refs/heads/main"])
                 .is_ok();
-            if !merged {
+            if merged {
+                merged_branches.insert(by);
+            } else {
                 live_branches.insert(by);
             }
         }
@@ -155,6 +163,7 @@ impl LiveContext {
             retracted,
             live_pids,
             live_branches,
+            merged_branches,
         })
     }
 }
@@ -195,6 +204,68 @@ pub fn liveness(stored: &StoredPost, ctx: &LiveContext) -> Liveness {
     }
 }
 
+/// How long a notice's authoring branch may sit unresolved before `reap` is
+/// permitted to treat its absence as durable.
+///
+/// Seven days: far beyond any plausible transient race (a fetch in flight,
+/// a permissions blip, a delete-and-recreate window), bounded so the tip
+/// tree does not carry a dead notice forever, and short compared to the
+/// interval over which anyone would notice tree size — so waiting it out
+/// costs little. See `is_reapable`'s doc comment for why this gate exists
+/// only for the unresolved-branch case and nowhere else.
+pub const NOTICE_GRACE_PERIOD_S: u64 = 7 * 24 * 60 * 60;
+
+/// Whether `reap` may permanently drop this post from the tip tree.
+///
+/// Deliberately a SEPARATE predicate from `liveness`, not the same
+/// threshold behind a flag: `liveness` governs what a render shows THIS
+/// TIME — wrong once, self-correcting on the next run — while this governs
+/// what disappears from the tip tree FOREVER (history still holds the
+/// bytes, per D13, but nothing will render it again once dropped). The two
+/// questions read the same underlying signals very differently:
+///
+/// - A `claim` past its TTL, or bound to a pid that a live process table
+///   genuinely does not contain, is unambiguous: time only moves forward,
+///   and `pid_probe_alive` already fails open on a spawn error rather than
+///   reporting a false negative. Reaped exactly when `liveness` would mark
+///   it `Expired`.
+/// - A `notice` whose branch RESOLVES and IS merged into `main` is
+///   unambiguous: a resolved ref plus a successful ancestry check is a
+///   positive statement that no transient race can produce. Reaped
+///   immediately, regardless of age.
+/// - A `notice` whose branch DOES NOT RESOLVE at all is ambiguous — gone
+///   for good, or a transient hiccup that will resolve normally moments
+///   later. Reaped only once it has sat unresolved for longer than
+///   `NOTICE_GRACE_PERIOD_S`; a single unresolved reading is never enough
+///   on its own.
+/// - Every other kind (durable posts, and a notice or claim that is
+///   genuinely still live) is never reaped.
+///
+/// Retraction is unambiguous regardless of kind — an explicit later post
+/// naming this one — and is reaped immediately, exactly as `liveness`
+/// treats it.
+pub fn is_reapable(stored: &StoredPost, ctx: &LiveContext) -> bool {
+    if ctx.retracted.contains(&stored.id) {
+        return true;
+    }
+    match stored.post.kind.as_str() {
+        "claim" => matches!(liveness(stored, ctx), Liveness::Expired(_)),
+        "notice" => {
+            if ctx.merged_branches.contains(&stored.post.by) {
+                return true;
+            }
+            if ctx.live_branches.contains(&stored.post.by) {
+                return false;
+            }
+            // Unresolved: ambiguous. Wait out the grace period rather than
+            // trust a single reading -- see `NOTICE_GRACE_PERIOD_S`.
+            let age = ctx.now_unix.saturating_sub(stored.committed_at);
+            age > NOTICE_GRACE_PERIOD_S
+        }
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,6 +288,7 @@ mod tests {
             retracted: BTreeSet::new(),
             live_pids: BTreeSet::from([42]),
             live_branches: BTreeSet::from(["campaign/live".to_string()]),
+            merged_branches: BTreeSet::new(),
         }
     }
 
@@ -298,6 +370,62 @@ mod tests {
             liveness(&stored(p, "a", 1), &ctx()),
             Liveness::Live
         ));
+    }
+
+    #[test]
+    fn is_reapable_drops_a_notice_whose_branch_resolves_and_is_merged_regardless_of_age() {
+        let mut c = ctx();
+        c.merged_branches.insert("campaign/merged".to_string());
+        let p = Post::new("notice", "campaign/merged");
+        // Fresh (age 0 relative to `now_unix`) and long-committed both reap:
+        // the merged-branch signal is unambiguous and unaffected by age.
+        assert!(is_reapable(&stored(p.clone(), "a", c.now_unix), &c));
+        assert!(is_reapable(&stored(p, "a", 0), &c));
+    }
+
+    #[test]
+    fn is_reapable_does_not_drop_an_unresolved_notice_within_the_grace_period() {
+        // THE HAZARD REGRESSION: "branch does not resolve" is ambiguous --
+        // it could be a transient race, not genuine absence. A notice that
+        // has only just gone unresolved must survive.
+        let c = ctx(); // "campaign/gone" is in neither live_branches nor merged_branches
+        let p = Post::new("notice", "campaign/gone");
+        assert!(!is_reapable(&stored(p, "a", c.now_unix), &c));
+    }
+
+    #[test]
+    fn is_reapable_drops_the_same_unresolved_notice_once_past_the_grace_period() {
+        let mut c = ctx();
+        c.now_unix = 1_000 + NOTICE_GRACE_PERIOD_S + 1;
+        let p = Post::new("notice", "campaign/gone");
+        assert!(is_reapable(&stored(p, "a", 1_000), &c));
+    }
+
+    #[test]
+    fn is_reapable_still_drops_a_claim_past_its_ttl() {
+        // No regression: an unambiguous claim expiry is reaped exactly as
+        // `liveness` marks it `Expired`.
+        let c = ctx();
+        let p = Post::new("claim", "campaign/live")
+            .with("host", json!("ambrose"))
+            .with("pid", json!(42))
+            .with("ttl_s", json!(60));
+        assert!(is_reapable(&stored(p, "a", 100), &c), "age 900s > ttl 60s");
+    }
+
+    #[test]
+    fn is_reapable_never_drops_a_durable_technique_post() {
+        let c = ctx();
+        let p = Post::new("technique", "campaign/gone");
+        assert!(!is_reapable(&stored(p, "a", 0), &c));
+    }
+
+    #[test]
+    fn is_reapable_drops_a_retracted_post_regardless_of_kind() {
+        let mut c = ctx();
+        c.retracted.insert("a".to_string());
+        let p = Post::new("technique", "campaign/gone");
+        assert!(is_reapable(&stored(p, "a", c.now_unix), &c));
     }
 
     #[test]
