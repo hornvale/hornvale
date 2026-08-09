@@ -4,7 +4,7 @@
 use crate::BoardError;
 use crate::git::Repo;
 use crate::post::Post;
-use crate::store::Board;
+use crate::store::{Board, StoredPost};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -38,6 +38,48 @@ pub fn is_relevant(post: &Post, changed: &[String]) -> bool {
         .any(|p| changed.iter().any(|c| c.starts_with(p.as_str())))
 }
 
+/// The subset of unseen posts a render actually shows this reader: unseen
+/// *and* relevant.
+///
+/// This type exists so that [`Cursor::record`] cannot be handed the wrong
+/// set by accident. Its only public constructor, [`Displayed::filter`],
+/// performs the unseen-and-relevant filter itself — there is no way to build
+/// a `Displayed` from an arbitrary `BTreeSet<String>` (in particular, from
+/// [`unseen`]'s own raw output) without going through that filter. That
+/// makes it a *compile* error to record the wrong set, closing structurally
+/// — not merely by doc comment — the bug where recording an
+/// unseen-but-irrelevant post as "seen" permanently hides it, even after it
+/// becomes relevant later.
+#[derive(Debug, Clone)]
+pub struct Displayed(Vec<StoredPost>);
+
+impl Displayed {
+    /// Filter `posts` down to exactly what one render displays to this
+    /// reader: a member of `unseen`, and relevant to `changed` per
+    /// [`is_relevant`]. This is the only way to construct a `Displayed`.
+    pub fn filter(posts: &[StoredPost], unseen: &BTreeSet<String>, changed: &[String]) -> Self {
+        Self(
+            posts
+                .iter()
+                .filter(|s| unseen.contains(&s.id) && is_relevant(&s.post, changed))
+                .cloned()
+                .collect(),
+        )
+    }
+
+    /// The posts actually displayed, in the order `posts` supplied them —
+    /// what a render draws its text from.
+    pub fn posts(&self) -> &[StoredPost] {
+        &self.0
+    }
+
+    /// Their ids, derived from the already-filtered posts (not a second
+    /// filter pass) — what [`Cursor::record`] consumes.
+    pub fn ids(&self) -> BTreeSet<String> {
+        self.0.iter().map(|s| s.id.clone()).collect()
+    }
+}
+
 /// A worktree's private record of which post ids it has actually been shown.
 ///
 /// Deliberately **not** a board tip. A tip cannot express "which posts have I
@@ -51,7 +93,10 @@ pub fn is_relevant(post: &Post, changed: &[String]) -> bool {
 /// exists to warn about, by construction rather than on any error path.
 /// Holding the set of ids actually shown closes this: an id that was skipped
 /// for relevance is never recorded, so it stays unseen until it is actually
-/// displayed.
+/// displayed. [`Displayed`] closes the remaining hole in that story — that
+/// "actually shown" was, until now, only a documented convention on
+/// [`Cursor::record`]'s parameter, and a `BTreeSet<String>` cannot enforce
+/// which set it holds.
 #[derive(Debug, Clone)]
 pub struct Cursor {
     path: PathBuf,
@@ -90,21 +135,22 @@ impl Cursor {
     /// Record `shown` as seen, unioned into whatever this worktree had
     /// already recorded.
     ///
-    /// **Caller contract:** `shown` must be exactly the ids actually
-    /// displayed to the reader — post-relevance-filtering, not the full
-    /// [`unseen`] set. Recording an id that was unseen but filtered out for
-    /// relevance is precisely the bug this representation exists to prevent:
-    /// it would mark the id seen before it was ever shown, so it could never
-    /// render later even after it became relevant.
+    /// `shown`'s type is the guarantee here, not a comment: a [`Displayed`]
+    /// can only have been built by [`Displayed::filter`], so there is no
+    /// unfiltered `BTreeSet<String>` — in particular, no raw [`unseen`]
+    /// result — that type-checks as an argument here. Recording something
+    /// that was never filtered for relevance is a compile error, not a
+    /// silent recreation of the swallowed-notice bug this representation
+    /// exists to prevent.
     ///
     /// Also prunes: any previously-recorded id no longer present at
     /// `board`'s tip is dropped. A reaped post can never render again, so
     /// keeping its id here forever would grow this file without bound — it
     /// stays sized to the live post count instead.
-    pub fn record(&self, board: &Board, shown: &BTreeSet<String>) -> Result<(), BoardError> {
+    pub fn record(&self, board: &Board, shown: &Displayed) -> Result<(), BoardError> {
         let live: BTreeSet<String> = board.post_ids_at_tip()?.into_iter().collect();
         let mut all = self.seen();
-        all.extend(shown.iter().cloned());
+        all.extend(shown.ids());
         all.retain(|id| live.contains(id));
         let text: String = all.iter().map(|id| format!("{id}\n")).collect();
         std::fs::write(&self.path, text)
@@ -121,6 +167,9 @@ impl Cursor {
 /// genuinely nothing new, never "could not tell": the only way to end up
 /// with a failure here is [`Board::post_ids_at_tip`] itself failing, which
 /// surfaces as `Err`, never as an empty set standing in for it.
+///
+/// This raw `BTreeSet<String>` is deliberately *not* what a render passes to
+/// [`Cursor::record`] — feed it through [`Displayed::filter`] first.
 pub fn unseen(board: &Board, cursor: &Cursor) -> Result<BTreeSet<String>, BoardError> {
     let at_tip: BTreeSet<String> = board.post_ids_at_tip()?.into_iter().collect();
     Ok(at_tip.difference(&cursor.seen()).cloned().collect())
@@ -183,9 +232,9 @@ mod tests {
         let first = board.append(&Post::new("notice", "b")).expect("first");
         assert!(unseen(&board, &cursor).expect("unseen").contains(&first));
 
-        cursor
-            .record(&board, &BTreeSet::from([first.clone()]))
-            .expect("record");
+        let posts = board.posts_at_tip().expect("posts");
+        let displayed = Displayed::filter(&posts, &BTreeSet::from([first.clone()]), &[]);
+        cursor.record(&board, &displayed).expect("record");
         assert!(
             unseen(&board, &cursor).expect("unseen").is_empty(),
             "nothing new after recording what was shown"
@@ -198,16 +247,16 @@ mod tests {
     }
 
     #[test]
-    fn recording_only_the_shown_ids_leaves_a_relevance_filtered_post_unseen() {
+    fn recording_only_the_displayed_posts_leaves_a_relevance_filtered_post_unseen() {
         // The regression test for the flaw this representation replaced: a
         // post that is unseen but dropped by the relevance filter must stay
-        // unseen. If `record` were ever called with the full unseen set
-        // instead of only what was actually displayed, the filtered-out post
-        // would be marked seen before anyone had shown it to this worktree —
-        // exactly the "hold-off notice for domains/terrain/ silently expires
-        // while this worktree is still editing kernel/, then never renders
-        // even once it starts touching domains/terrain/" scenario the
-        // coordinator described.
+        // unseen. If `Displayed::filter` ever included the full unseen set
+        // instead of only what actually passes `is_relevant`, the
+        // filtered-out post would be marked seen before anyone had shown it
+        // to this worktree — exactly the "hold-off notice for
+        // domains/terrain/ silently expires while this worktree is still
+        // editing kernel/, then never renders even once it starts touching
+        // domains/terrain/" scenario the coordinator described.
         let (_d, repo) = temp_repo();
         let board = Board::with_ref(repo.clone(), "refs/test/relevance-regression");
         let cursor = Cursor::open(&repo).expect("cursor");
@@ -217,13 +266,24 @@ mod tests {
             .append(&Post::new("notice", "c").with("paths", json!(["domains/terrain/"])))
             .expect("filtered out by relevance this render");
 
-        // Simulate a render: both are unseen, but only `relevant` survives
-        // this reader's relevance filter and is actually shown.
+        // Simulate a render: both are unseen, but this reader's changed
+        // paths (`kernel/...`) do not touch `domains/terrain/`, so only
+        // `relevant` survives the relevance filter and is actually shown.
+        let posts = board.posts_at_tip().expect("posts");
         let both_unseen = unseen(&board, &cursor).expect("unseen");
         assert!(both_unseen.contains(&relevant));
         assert!(both_unseen.contains(&filtered_out));
-        let shown = BTreeSet::from([relevant.clone()]);
-        cursor.record(&board, &shown).expect("record only shown");
+        let changed = vec!["kernel/src/lib.rs".to_string()];
+        let displayed = Displayed::filter(&posts, &both_unseen, &changed);
+        assert_eq!(
+            displayed.ids(),
+            BTreeSet::from([relevant.clone()]),
+            "only the relevant post should be displayed"
+        );
+
+        cursor
+            .record(&board, &displayed)
+            .expect("record only shown");
 
         let still_unseen = unseen(&board, &cursor).expect("unseen after render");
         assert!(
@@ -239,6 +299,64 @@ mod tests {
     }
 
     #[test]
+    fn a_displayed_with_no_relevant_posts_is_empty_and_records_nothing() {
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/none-relevant");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        let id = board
+            .append(&Post::new("notice", "b").with("paths", json!(["domains/terrain/"])))
+            .expect("scoped post");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let unseen_ids = unseen(&board, &cursor).expect("unseen");
+        let changed = vec!["kernel/src/lib.rs".to_string()]; // never touches domains/terrain/
+        let displayed = Displayed::filter(&posts, &unseen_ids, &changed);
+        assert!(
+            displayed.posts().is_empty(),
+            "no post should pass the filter"
+        );
+        assert!(displayed.ids().is_empty());
+
+        cursor
+            .record(&board, &displayed)
+            .expect("record an empty Displayed");
+        assert!(
+            cursor.seen().is_empty(),
+            "recording an empty Displayed must mark nothing seen: {:?}",
+            cursor.seen()
+        );
+        assert!(
+            unseen(&board, &cursor).expect("unseen").contains(&id),
+            "the post must still be unseen"
+        );
+    }
+
+    #[test]
+    fn a_displayed_includes_a_broadcast_post_with_no_paths_when_unseen() {
+        // A post with no `paths` reaches everyone (`is_relevant`'s broadcast
+        // rule) and so must always be displayed when unseen -- even against
+        // the weakest possible relevance context, an empty changed set. If
+        // `Displayed::filter` ever treated "no paths" as "not relevant",
+        // every broadcast on the board would silently vanish, which is this
+        // layer's worst failure mode.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/broadcast");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        let id = board.append(&Post::new("notice", "b")).expect("broadcast");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let unseen_ids = unseen(&board, &cursor).expect("unseen");
+        let displayed = Displayed::filter(&posts, &unseen_ids, &[]);
+        assert!(
+            displayed.ids().contains(&id),
+            "a broadcast must be displayed even with no changed paths: {:?}",
+            displayed.ids()
+        );
+    }
+
+    #[test]
     fn recording_is_cumulative_across_calls() {
         let (_d, repo) = temp_repo();
         let board = Board::with_ref(repo.clone(), "refs/test/cumulative");
@@ -246,12 +364,19 @@ mod tests {
 
         let a = board.append(&Post::new("notice", "b")).expect("a");
         let b = board.append(&Post::new("notice", "c")).expect("b");
+        let posts = board.posts_at_tip().expect("posts");
 
         cursor
-            .record(&board, &BTreeSet::from([a.clone()]))
+            .record(
+                &board,
+                &Displayed::filter(&posts, &BTreeSet::from([a.clone()]), &[]),
+            )
             .expect("record a");
         cursor
-            .record(&board, &BTreeSet::from([b.clone()]))
+            .record(
+                &board,
+                &Displayed::filter(&posts, &BTreeSet::from([b.clone()]), &[]),
+            )
             .expect("record b");
 
         let seen = cursor.seen();
@@ -269,8 +394,12 @@ mod tests {
         let cursor = Cursor::open(&repo).expect("cursor");
 
         let a = board.append(&Post::new("notice", "b")).expect("a");
+        let posts = board.posts_at_tip().expect("posts");
         cursor
-            .record(&board, &BTreeSet::from([a.clone()]))
+            .record(
+                &board,
+                &Displayed::filter(&posts, &BTreeSet::from([a.clone()]), &[]),
+            )
             .expect("record a");
         assert!(cursor.seen().contains(&a));
 
@@ -290,7 +419,7 @@ mod tests {
         );
 
         cursor
-            .record(&board, &BTreeSet::new())
+            .record(&board, &Displayed::filter(&[], &BTreeSet::new(), &[]))
             .expect("record after reap");
         assert!(
             !cursor.seen().contains(&a),
