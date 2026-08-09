@@ -135,6 +135,22 @@ byte-identical on regeneration.
 `HashMap`. `Absent` is counted and reported, never silently skipped — a metric
 that is absent on 900 worlds is itself a finding.
 
+**Median and percentile are DIFFERENT conventions, on repo precedent.**
+`the_fare_calibration.rs` (and `the_mire_calibration.rs`) already settled this:
+`median()` is the middle value for odd n and **the average of the two middle
+values** for even n; `percentile()` is **nearest-rank**, `ceil(p·n)`, never
+interpolated. Their doc comments state explicitly that `percentile(0.5)` may
+differ from `median()` on an even-length population and that the two are never
+interchanged. p25/p75 use the percentile convention; the median uses the median
+convention. A test pins that they differ on an even-length sample, so a later
+"cleanup" cannot collapse them.
+
+This corrects an earlier draft of this spec, which said percentiles are
+nearest-rank "so every reported value actually occurs in the data" — true of
+p25/p75, false of the median, and the blanket claim was what let a bare
+`sorted[n/2]` **upper**-median into the hand-measured oracle. The repo's own
+doc comment warns against precisely that bare form.
+
 ### 4.3 Comparators — data, not prose
 
 A committed JSON file (decision 0012: config is JSON), `studies/comparators.json`:
