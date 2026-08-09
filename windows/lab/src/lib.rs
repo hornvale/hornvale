@@ -6,6 +6,7 @@ pub mod census_claim;
 pub mod census_guard;
 pub mod chart;
 pub mod diff;
+pub mod domesday;
 pub mod health;
 mod metrics;
 pub mod publish;
