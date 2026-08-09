@@ -45,6 +45,21 @@ impl RenderOptions {
             max_post_chars: 2_000,
         }
     }
+
+    /// How many posts this budget can show in full.
+    ///
+    /// Reserves one line for each delimiter and one for a possible elision
+    /// notice, mirroring exactly what [`render`] itself spends those lines
+    /// on. A caller caps its post count to this value *before* constructing
+    /// anything [`Cursor::record`](crate::relevance::Cursor::record) will
+    /// see — see [`crate::relevance::Displayed::cap`] — rather than letting
+    /// `render` silently decide what to drop, which is what let a render's
+    /// own truncation disagree with what was recorded as shown.
+    /// `full()`'s `usize::MAX` line budget saturates here to an effectively
+    /// unbounded value, so it never truncates.
+    pub fn post_budget(&self) -> usize {
+        self.max_lines.saturating_sub(3)
+    }
 }
 
 /// The live, not-retracted subset of `posts`.
@@ -67,6 +82,14 @@ pub fn live_posts(posts: &[StoredPost], ctx: &LiveContext) -> Vec<StoredPost> {
 /// D12 — no `match` on `kind` here: every field in `extra` is printed
 /// whatever the kind, so an unrecognised convention still renders instead of
 /// silently vanishing.
+///
+/// D7c — attribution is never optional, so the `"  [kind] by —"` prefix is
+/// always emitted whole and is never itself subject to truncation: only the
+/// body (the convention fields after it) is cut to fit whatever of
+/// `max_chars` remains. If the prefix alone reaches or exceeds `max_chars`,
+/// the body is dropped entirely and the prefix still comes back whole —
+/// truncating into the prefix is exactly how a pathologically long `kind`
+/// could silently drop the author.
 fn line(post: &Post, max_chars: usize) -> String {
     let mut body = String::new();
     for (k, v) in &post.extra {
@@ -76,45 +99,46 @@ fn line(post: &Post, max_chars: usize) -> String {
         };
         body.push_str(&format!(" {k}={rendered}"));
     }
-    // Attribution (`post.by`, D7c) is never optional, and it sits right next
-    // to `kind` so a reader sees at a glance which session made the claim.
-    let mut out = format!("  [{}] {} —{}", post.kind, post.by, body);
-    out = out.replace('\n', " ");
-    if out.chars().count() > max_chars {
-        out = out
-            .chars()
-            .take(max_chars.saturating_sub(1))
-            .collect::<String>()
-            + "…";
+    let prefix = format!("  [{}] {} —", post.kind, post.by).replace('\n', " ");
+    let body = body.replace('\n', " ");
+
+    let prefix_chars = prefix.chars().count();
+    if body.is_empty() || prefix_chars >= max_chars {
+        return prefix;
     }
-    out
+    let remaining = max_chars - prefix_chars;
+    if body.chars().count() <= remaining {
+        return prefix + &body;
+    }
+    let truncated: String = body.chars().take(remaining.saturating_sub(1)).collect();
+    prefix + &truncated + "…"
 }
 
-/// Format `posts` — already chosen by a caller — into the text a reading
-/// session sees.
+/// Format `posts` — already chosen and already capped by a caller — into
+/// the text a reading session sees.
 ///
-/// A pure formatter: no git, no clock, no selection. Returns the empty
-/// string when `posts` is empty; silence is the common case and must cost
-/// nothing. The whole output is framed by [`DELIMITER_OPEN`] /
-/// [`DELIMITER_CLOSE`], which name it as untrusted data rather than
-/// instructions (D7b), and it is capped to `opts.max_lines` total lines and
-/// `opts.max_post_chars` per post, reporting how many posts were elided so
-/// the cap is never silent (D6).
-pub fn render(posts: &[StoredPost], opts: &RenderOptions) -> String {
-    if posts.is_empty() {
+/// A pure formatter: no git, no clock, no selection, and no decision about
+/// what to drop. `elided` is reported by the caller (typically
+/// [`RenderOptions::post_budget`] plus
+/// [`crate::relevance::Displayed::cap`]), not computed here — `render`
+/// itself has no information about what a caller chose not to pass in, and
+/// deciding that here is exactly what let a render's own truncation
+/// disagree with what a cursor was told was shown. Returns the empty string
+/// when there is nothing to say at all (`posts` empty and `elided` zero);
+/// silence is the common case and must cost nothing. The whole output is
+/// framed by [`DELIMITER_OPEN`] / [`DELIMITER_CLOSE`], which name it as
+/// untrusted data rather than instructions (D7b), and each post is
+/// truncated to `opts.max_post_chars` (D6) without ever truncating away its
+/// attribution (D7c; see [`line`]).
+pub fn render(posts: &[StoredPost], elided: usize, opts: &RenderOptions) -> String {
+    if posts.is_empty() && elided == 0 {
         return String::new();
     }
-
-    // Two lines are spent on the delimiters, and one may be spent on the
-    // elision notice.
-    let budget = opts.max_lines.saturating_sub(3);
-    let shown = posts.len().min(budget);
-    let elided = posts.len() - shown;
 
     let mut out = String::new();
     out.push_str(DELIMITER_OPEN);
     out.push('\n');
-    for stored in posts.iter().take(shown) {
+    for stored in posts {
         out.push_str(&line(&stored.post, opts.max_post_chars));
         out.push('\n');
     }
@@ -161,7 +185,7 @@ mod tests {
             "a",
         )];
         let live = live_posts(&posts, &ctx());
-        let out = render(&live, &RenderOptions::full());
+        let out = render(&live, 0, &RenderOptions::full());
         assert!(
             out.contains(DELIMITER_OPEN),
             "opens with the untrusted delimiter"
@@ -178,7 +202,7 @@ mod tests {
             "a",
         )];
         let live = live_posts(&posts, &ctx());
-        let out = render(&live, &RenderOptions::full());
+        let out = render(&live, 0, &RenderOptions::full());
         assert!(out.contains("campaign/live"), "attribution present: {out}");
     }
 
@@ -190,7 +214,7 @@ mod tests {
             "a",
         )];
         let live = live_posts(&posts, &ctx());
-        let out = render(&live, &RenderOptions::full());
+        let out = render(&live, 0, &RenderOptions::full());
         assert!(out.contains("weather-report"), "the kind appears: {out}");
         assert!(out.contains("cumulus"), "its fields appear: {out}");
     }
@@ -206,7 +230,7 @@ mod tests {
             live.is_empty(),
             "a dead branch's notice must not be live: {live:?}"
         );
-        let out = render(&live, &RenderOptions::full());
+        let out = render(&live, 0, &RenderOptions::full());
         assert!(
             !out.contains("stale"),
             "a dead branch's notice is gone: {out}"
@@ -229,7 +253,11 @@ mod tests {
     #[test]
     fn the_session_start_render_obeys_its_line_budget_and_says_what_it_elided() {
         // Assumption 1: the render is a permanent context tax, so it is
-        // capped.
+        // capped. render() itself only formats what it is given plus a
+        // reported elided count -- computing that split is the caller's job
+        // (RenderOptions::post_budget(), and on the ambient CLI path,
+        // Displayed::cap()) -- exercised here by hand so this test needs no
+        // git and no Board.
         let posts: Vec<StoredPost> = (0..100)
             .map(|i| {
                 stored(
@@ -239,7 +267,11 @@ mod tests {
             })
             .collect();
         let live = live_posts(&posts, &ctx());
-        let out = render(&live, &RenderOptions::session_start());
+        let opts = RenderOptions::session_start();
+        let budget = opts.post_budget();
+        let shown = &live[..live.len().min(budget)];
+        let elided = live.len().saturating_sub(budget);
+        let out = render(shown, elided, &opts);
         assert!(
             out.lines().count() <= 15,
             "line budget: got {}",
@@ -256,7 +288,7 @@ mod tests {
             "a",
         )];
         let live = live_posts(&posts, &ctx());
-        let out = render(&live, &RenderOptions::session_start());
+        let out = render(&live, 0, &RenderOptions::session_start());
         assert!(
             out.len() < 2_000,
             "one post cannot blow the budget: {} chars",
@@ -267,7 +299,7 @@ mod tests {
     #[test]
     fn an_empty_board_renders_nothing_at_all() {
         // Silence is the common case and must cost zero context.
-        let out = render(&[], &RenderOptions::session_start());
+        let out = render(&[], 0, &RenderOptions::session_start());
         assert!(out.is_empty(), "expected empty, got {out:?}");
     }
 
@@ -281,7 +313,102 @@ mod tests {
             Post::new("notice", "campaign/live").with("note", json!("hi")),
             "a",
         )];
-        let out = render(&posts, &RenderOptions::full());
+        let out = render(&posts, 0, &RenderOptions::full());
         assert!(out.contains("campaign/live"));
+    }
+
+    #[test]
+    fn full_renders_everything_and_elides_nothing() {
+        // I2's third bullet: full() must never truncate. post_budget() is
+        // effectively unbounded, and passing elided=0 (as the CLI's `read`
+        // path does, since it never caps) must never produce an elision
+        // notice even with a nontrivial post count.
+        assert!(
+            RenderOptions::full().post_budget() > 1_000_000,
+            "full()'s post budget must be effectively unbounded"
+        );
+        let posts: Vec<StoredPost> = (0..50)
+            .map(|i| {
+                stored(
+                    Post::new("notice", "campaign/live").with("note", json!(format!("n{i}"))),
+                    &format!("id{i}"),
+                )
+            })
+            .collect();
+        let live = live_posts(&posts, &ctx());
+        assert_eq!(
+            live.len(),
+            50,
+            "none of these should be filtered by liveness"
+        );
+        let out = render(&live, 0, &RenderOptions::full());
+        assert!(!out.contains("more"), "full() must never elide: {out}");
+        for i in 0..50 {
+            assert!(
+                out.contains(&format!("n{i}")),
+                "post {i} missing from a full render: {out}"
+            );
+        }
+    }
+
+    #[test]
+    fn post_budget_reserves_the_delimiter_and_elision_lines() {
+        // The exact arithmetic render() relies on: 2 delimiter lines plus 1
+        // possible elision line are reserved out of max_lines.
+        assert_eq!(RenderOptions::session_start().post_budget(), 12);
+        assert_eq!(
+            RenderOptions {
+                max_lines: 3,
+                max_post_chars: 240
+            }
+            .post_budget(),
+            0
+        );
+        assert_eq!(
+            RenderOptions {
+                max_lines: 2,
+                max_post_chars: 240
+            }
+            .post_budget(),
+            0,
+            "must saturate, not underflow, below the delimiter cost"
+        );
+    }
+
+    #[test]
+    fn attribution_survives_a_kind_long_enough_to_consume_the_whole_cap() {
+        // I3: the "[kind] by --" prefix is never itself truncated, even when
+        // it alone reaches or exceeds max_chars -- attribution (D7c) is
+        // never optional, so it must never be the casualty of a long, wholly
+        // unvalidated `kind` value.
+        let long_kind = "k".repeat(500);
+        let posts = vec![stored(
+            Post::new(&long_kind, "campaign/live").with("note", json!("should not appear")),
+            "a",
+        )];
+        let live = live_posts(&posts, &ctx());
+        let out = render(&live, 0, &RenderOptions::session_start()); // max_post_chars: 240
+        assert!(
+            out.contains("campaign/live"),
+            "attribution must survive even when the prefix alone exceeds the cap: {out}"
+        );
+        assert!(
+            !out.contains("should not appear"),
+            "the body is what gets dropped, not the attribution: {out}"
+        );
+    }
+
+    #[test]
+    fn attribution_and_some_body_coexist_when_the_prefix_leaves_room() {
+        // The ordinary case, pinned so the truncate-the-body-not-the-prefix
+        // fix does not regress into always dropping the body.
+        let posts = vec![stored(
+            Post::new("notice", "campaign/live").with("note", json!("hi")),
+            "a",
+        )];
+        let live = live_posts(&posts, &ctx());
+        let out = render(&live, 0, &RenderOptions::session_start());
+        assert!(out.contains("campaign/live"), "attribution present: {out}");
+        assert!(out.contains("note=hi"), "body present too: {out}");
     }
 }

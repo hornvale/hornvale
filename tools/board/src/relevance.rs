@@ -78,6 +78,27 @@ impl Displayed {
     pub fn ids(&self) -> BTreeSet<String> {
         self.0.iter().map(|s| s.id.clone()).collect()
     }
+
+    /// Shrink to at most `max_posts`, reporting how many were dropped.
+    ///
+    /// This does **not** weaken `Displayed`'s guarantee: `cap` can only ever
+    /// shrink a `Displayed` that [`filter`](Self::filter) already built, so
+    /// there is still no way to construct one holding a post that was never
+    /// selected by the unseen-and-relevant filter — it can only hold fewer
+    /// of them. It exists so a render's own line budget and
+    /// [`Cursor::record`]'s notion of "shown" can never disagree: the value
+    /// this returns is the exact value a render draws its text from, so
+    /// recording it (rather than the pre-cap `Displayed`) is what keeps a
+    /// post that a line budget elided from ever being marked seen. Order is
+    /// preserved from `filter`; posts past `max_posts` are the ones dropped.
+    pub fn cap(mut self, max_posts: usize) -> (Self, usize) {
+        if self.0.len() <= max_posts {
+            return (self, 0);
+        }
+        let elided = self.0.len() - max_posts;
+        self.0.truncate(max_posts);
+        (self, elided)
+    }
 }
 
 /// A worktree's private record of which post ids it has actually been shown.
@@ -425,6 +446,137 @@ mod tests {
             !cursor.seen().contains(&a),
             "an id no longer at the tip must be pruned from the persisted set: {:?}",
             cursor.seen()
+        );
+    }
+
+    #[test]
+    fn cap_at_exactly_the_budget_elides_nothing() {
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cap-boundary-exact");
+        for i in 0..3 {
+            board
+                .append(&Post::new("notice", "b").with("i", json!(i)))
+                .expect("append");
+        }
+        let posts = board.posts_at_tip().expect("posts");
+        let all: BTreeSet<String> = posts.iter().map(|s| s.id.clone()).collect();
+        let displayed = Displayed::filter(&posts, &all, &[]);
+        let (capped, elided) = displayed.cap(3);
+        assert_eq!(elided, 0, "exactly at budget must elide nothing");
+        assert_eq!(capped.posts().len(), 3);
+    }
+
+    #[test]
+    fn cap_one_over_the_budget_elides_exactly_one() {
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cap-boundary-over");
+        for i in 0..4 {
+            board
+                .append(&Post::new("notice", "b").with("i", json!(i)))
+                .expect("append");
+        }
+        let posts = board.posts_at_tip().expect("posts");
+        let all: BTreeSet<String> = posts.iter().map(|s| s.id.clone()).collect();
+        let displayed = Displayed::filter(&posts, &all, &[]);
+        let (capped, elided) = displayed.cap(3);
+        assert_eq!(
+            elided, 1,
+            "one over budget must elide exactly one, not off by one"
+        );
+        assert_eq!(capped.posts().len(), 3);
+    }
+
+    #[test]
+    fn cap_never_shrinks_below_what_filter_selected_when_under_budget() {
+        // A `Displayed` smaller than the budget must pass through untouched
+        // -- `cap` only ever removes, it never pads or reorders.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cap-under-budget");
+        let id = board.append(&Post::new("notice", "b")).expect("append");
+        let posts = board.posts_at_tip().expect("posts");
+        let displayed = Displayed::filter(&posts, &BTreeSet::from([id.clone()]), &[]);
+        let (capped, elided) = displayed.cap(50);
+        assert_eq!(elided, 0);
+        assert_eq!(capped.ids(), BTreeSet::from([id]));
+    }
+
+    #[test]
+    fn capping_before_recording_leaves_elided_posts_unseen_not_permanently_hidden() {
+        // The regression test for the Critical finding (C1): render()'s own
+        // line-budget cap must never disagree with what `Cursor::record` is
+        // told was shown. This mirrors main.rs's ambient path exactly --
+        // filter, then cap to the render budget, then render, then record
+        // the CAPPED `Displayed` -- and confirms that the posts the cap
+        // elided remain unseen (so they can still render once the board
+        // catches up), while the posts actually shown do not.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cap-regression");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        let budget = crate::render::RenderOptions::session_start().post_budget();
+        let total = budget + 5;
+        let ids: Vec<String> = (0..total)
+            .map(|i| {
+                board
+                    .append(&Post::new("notice", "b").with("note", json!(format!("n{i}"))))
+                    .unwrap_or_else(|e| panic!("append {i}: {e}"))
+            })
+            .collect();
+
+        let posts = board.posts_at_tip().expect("posts");
+        let unseen_ids = unseen(&board, &cursor).expect("unseen");
+        assert_eq!(
+            unseen_ids.len(),
+            total,
+            "every post should start out unseen"
+        );
+
+        let displayed = Displayed::filter(&posts, &unseen_ids, &[]);
+        let (shown, elided) = displayed.cap(budget);
+        assert_eq!(
+            elided, 5,
+            "exactly the overflow past the render budget must be reported as elided"
+        );
+        assert_eq!(shown.posts().len(), budget);
+
+        let out = crate::render::render(
+            shown.posts(),
+            elided,
+            &crate::render::RenderOptions::session_start(),
+        );
+        assert!(
+            out.contains("more"),
+            "the elision notice must appear: {out}"
+        );
+
+        // Record the CAPPED value -- the fix. Recording the pre-cap
+        // `displayed` instead is exactly the C1 bug: see the mutation check
+        // in the task report (it reliably turns this test red).
+        cursor
+            .record(&board, &shown)
+            .expect("record only what was actually rendered");
+
+        let still_unseen = unseen(&board, &cursor).expect("unseen after render");
+        let shown_ids = shown.ids();
+        for id in &ids {
+            if shown_ids.contains(id) {
+                assert!(
+                    !still_unseen.contains(id),
+                    "a post that was actually rendered must now be seen: {id}"
+                );
+            } else {
+                assert!(
+                    still_unseen.contains(id),
+                    "a post the cap elided -- never rendered -- must remain unseen, \
+                     not be permanently hidden just because it was in the pre-cap \
+                     Displayed at render time: {id}"
+                );
+            }
+        }
+        assert_eq!(
+            still_unseen.len(),
+            5,
+            "exactly the 5 elided posts should remain unseen"
         );
     }
 }
