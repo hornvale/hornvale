@@ -91,8 +91,15 @@ pub enum PossessTarget {
     /// An agent minted at the flagship settlement — the first `is-settlement`
     /// fact in the ledger, which is what `village_info` returns. **Not the
     /// largest**: on seed 42 the flagship is Googo (pop. 68) while the most
-    /// populous is Toa (pop. 84), which is what [`PossessTarget::
-    /// MostPopulousSettlement`] selects. `book/src/reference/scene-tiles-v1.md`
+    /// populous is Nenagabo (pop. 82), which is what [`PossessTarget::
+    /// MostPopulousSettlement`] selects. Those two names and numbers are a
+    /// *reading of one world*, not an invariant — The Range (2026-08-09)
+    /// re-decided the settlement contest and moved the most-populous
+    /// settlement from Toa (pop. 84) to Nenagabo, without touching the
+    /// flagship. Re-read them after any campaign that moves placement; the
+    /// property this variant relies on is only that the two can differ, and
+    /// that is what the driver test asserts rather than these values.
+    /// `book/src/reference/scene-tiles-v1.md`
     /// calls `kind: "flagship"` "the world's capital, the single
     /// highest-population settlement", which disagrees with that observation;
     /// the contradiction predates this campaign and is recorded in the registry
