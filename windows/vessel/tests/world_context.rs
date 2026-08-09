@@ -25,7 +25,7 @@ fn a_reused_context_produces_identical_sessions() {
     let world = world();
     let opts = PossessOpts::default();
 
-    let (a, open_a) = Session::start(&world, &opts).unwrap();
+    let (mut a, open_a) = Session::start(&world, &opts).unwrap();
     let snap_a = hornvale_vessel::snapshot_json(&a.snapshot().unwrap());
 
     let ctx = WorldContext::build(&world).unwrap();
@@ -39,10 +39,32 @@ fn a_reused_context_produces_identical_sessions() {
     assert_eq!(snap_a, snap_b, "start_in must match start");
     assert_eq!(snap_b, snap_c, "a reused context must not drift");
 
-    // And the sessions must be independently drivable — a shared context
-    // must not alias session state.
+    // The agreement has to hold for the whole session, not only at `start`.
+    // Every turn reads the world-scoped derivations back out of the held
+    // context, so an owned hold and a borrowed hold must answer a VERB
+    // identically too — `a` owns its context, `b` shares one. This is the
+    // half that can actually break: any `&self` read that came to depend on
+    // which `HeldContext` variant it is looking at would pass every
+    // assertion above and fail here.
+    let _ = a.handle("look");
     let _ = b.handle("look");
+    let after_a = hornvale_vessel::snapshot_json(&a.snapshot().unwrap());
     let after_b = hornvale_vessel::snapshot_json(&b.snapshot().unwrap());
-    let after_c = hornvale_vessel::snapshot_json(&c.snapshot().unwrap());
-    assert_ne!(after_b, after_c, "sessions must not share turn state");
+    assert_eq!(
+        after_a, after_b,
+        "a borrowed context must drive a turn exactly as an owned one does"
+    );
+
+    // What is NOT asserted here, deliberately: that two sessions sharing one
+    // context do not alias each other's turn state. That is guaranteed by the
+    // TYPE, not by this test — `WorldContext` holds no interior mutability
+    // (no `Cell`/`RefCell`/atomic anywhere in it) and `start_in` takes it by
+    // `&`, so no session can write through it at all; every mutable thing a
+    // turn touches (the ledger clone, the registry clone, the NPC roster, the
+    // turn counter, the accumulated knowledge) is owned by `Session`. An
+    // earlier draft asserted `after_b != after_c` for this, which passed only
+    // because `b` had taken a turn and `c` had not — it would have gone on
+    // passing whatever aliasing existed. Better a stated invariant than a
+    // check that cannot fail; if interior mutability is ever added to
+    // `WorldContext`, this comment is the thing that has to change with it.
 }

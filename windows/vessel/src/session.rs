@@ -241,9 +241,9 @@ pub struct WorldContext<'w> {
     ///
     /// Held as an `Option` — never `None` in practice, because `build`'s `?`
     /// already succeeded — so that every downstream `(terrain, climate)` match
-    /// in this module reads exactly as it did before the hoist. See
-    /// [`Session::terrain`]'s history: the `Option` is the field's defensive
-    /// posture, not a second derivation that could fail.
+    /// in this module reads exactly as it did before the hoist. The `Option`
+    /// is this field's defensive posture, inherited from the `Session::terrain`
+    /// field it replaced, and never a second derivation that could fail.
     pub(crate) terrain: Option<hornvale_terrain::GeneratedTerrain>,
     /// The world's climate, fit once from `terrain`
     /// (`hornvale_worldgen::climate_from`). `Option` for the same reason
@@ -281,10 +281,25 @@ impl<'w> WorldContext<'w> {
         // (`build` is still the right entry point for a caller that has not
         // already sculpted its own pair — see its doc).
         //
-        // THE ORDER OF THESE FIVE DERIVATIONS IS A SAVE-FORMAT CONTRACT.
-        // `windows/vessel/tests/world_context.rs` is the guard, and the
-        // committed `possess --script` gallery transcripts are the evidence
-        // it did not move.
+        // THE ORDER OF THESE FIVE DERIVATIONS IS A SAVE-FORMAT CONTRACT, and
+        // it is worth being exact about what does and does not check it.
+        //
+        // The committed `possess --script` gallery transcripts
+        // (`book/src/gallery/possession-*.md`) are the ONLY guard on the order
+        // itself. Re-derive them with `make rebaseline` and diff.
+        //
+        // `windows/vessel/tests/world_context.rs` does NOT guard it, despite
+        // living next door and looking like it should. Both arms of its
+        // comparison — `Session::start` and `Session::start_in` — route
+        // through THIS function, so a change made inside this block moves both
+        // arms identically and cancels. That is measured, not assumed: The
+        // Quire swapped two of these derivations and all 490 vessel tests
+        // stayed green. What that test does guard is the OTHER direction —
+        // that `start_in` agrees with `start`, and that a reused context does
+        // not drift between sessions.
+        //
+        // So: change the order here and the vessel suite will not stop you.
+        // The transcripts will.
         let terrain = hornvale_worldgen::terrain_of(world)
             .map_err(|e| VesselError::Locale(hornvale_locale::LocaleError::Build(e.to_string())))?;
         let climate = hornvale_worldgen::climate_from(world, &terrain)
