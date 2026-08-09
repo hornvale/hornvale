@@ -35,7 +35,7 @@ pub use plan::{
     PLAN_SCHEMA, PaletteEntry, PlanExtent, PlanMark, PlanPoint, SessionPlan, Shading, plan_of,
 };
 pub use purview::*;
-pub use session::Session;
+pub use session::{Session, WorldContext};
 pub use snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,

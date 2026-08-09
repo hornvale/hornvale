@@ -119,6 +119,11 @@ pub use history_emit::{
     occupations_at, occupations_by_cell, present_day, ruins_of_people, stratigraphy,
     sundered_landmasses, territories,
 };
+/// The demography fit's result, re-exported so a caller that only depends on
+/// the composition root can NAME what [`demography_report_from`] hands back
+/// (The Quire: `hornvale_vessel::WorldContext` stores one). A re-export, not a
+/// new dependency edge — the layering graph is unchanged.
+pub use hornvale_demography::DemographyReport;
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{
