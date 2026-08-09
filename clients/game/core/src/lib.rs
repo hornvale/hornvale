@@ -3,6 +3,7 @@
 //! character grid. This crate does not depend on any hornvale crate.
 
 pub mod cell;
+pub mod chart;
 pub mod schema;
 pub use cell::*;
 pub use schema::*;
