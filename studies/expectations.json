@@ -1,0 +1,10 @@
+{
+  "expect": [
+    {
+      "metric": "mean-land-temperature-c",
+      "tracks": "year-std-days",
+      "why": "orbital period is the only available proxy for orbital distance, and thus for insolation, which is the dominant term in a radiative balance: a longer year means a wider orbit and less energy received. The census measures no insolation directly (see the note below), so this is a proxy and a weak one — which is itself part of the finding.",
+      "declared": "dominant"
+    }
+  ]
+}

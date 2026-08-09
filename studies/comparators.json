@@ -1,0 +1,10 @@
+{
+  "worlds": [
+    {
+      "name": "Earth",
+      "kind": "real",
+      "values": { "mean-land-temperature-c": 14.0 },
+      "band": { "mean-land-temperature-c": 10.0 }
+    }
+  ]
+}
