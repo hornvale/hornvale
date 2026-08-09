@@ -24,8 +24,17 @@ fn all_three_regions_are_drawn() {
     let g = render(FIXTURE, 80, 24).unwrap();
     let text = g.to_plain_text();
     let lines: Vec<&str> = text.lines().collect();
-    let plate_has_ink = lines[..20].iter().any(|l| !l[..40].trim().is_empty());
-    let entry_has_ink = lines[..20].iter().any(|l| !l[40..].trim().is_empty());
+    // Index by CHARACTER, not by byte: a plate glyph could one day be
+    // multi-byte (the 22-biome glyph vocabulary is a planned follow-on),
+    // and `&l[..40]` byte-slicing a `String` panics the instant a
+    // multi-byte character crosses that boundary rather than failing with
+    // a useful assertion message.
+    let plate_has_ink = lines[..20]
+        .iter()
+        .any(|l| !l.chars().take(40).collect::<String>().trim().is_empty());
+    let entry_has_ink = lines[..20]
+        .iter()
+        .any(|l| !l.chars().skip(40).collect::<String>().trim().is_empty());
     let endpaper_has_ink = !lines[22].trim().is_empty();
     assert!(plate_has_ink, "the plate must be drawn");
     assert!(entry_has_ink, "the entry must be drawn");

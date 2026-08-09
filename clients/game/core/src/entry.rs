@@ -1,11 +1,50 @@
 //! The entry: the right page of the spread — the sim's own narration
 //! prose, wrapped (never reworded), followed by a command line that reads
 //! as the next line being written.
+//!
+//! ## Overflow is a decision, not an accident
+//!
+//! A page has finitely many rows; `narration.prose` does not have a
+//! bounded length. When the wrapped prose is longer than the space
+//! reserved for it, something has to give, and there were two candidate
+//! answers:
+//!
+//! 1. **A continuation marker on the last visible row** — draw as much
+//!    prose as fits, then replace the final row with an honest "more
+//!    below, not shown" marker ([`TRUNCATION_MARKER`]).
+//! 2. **Protect the `Ways on:` line specifically** — the prose's own
+//!    convention puts the exit list last, so always draw *that* line even
+//!    when the body between it and the fold is clipped.
+//!
+//! This module takes the first option. The second is kinder to a player
+//! who only cares about exits, but it requires *knowing* that the last
+//! line is special and reaching past the fold to fetch it — which is no
+//! longer wrapping, it is reading the prose for meaning and selecting
+//! which part of it survives. That is precisely the boundary this crate
+//! exists not to cross: `Snapshot`'s own doc says the prose is "carried
+//! verbatim... this client never re-derives it," and a renderer that
+//! knows "the last sentence is the important one" is one step from a
+//! renderer that also knows what the second-to-last sentence means. A
+//! future prose convention that moves the exit list, or a species whose
+//! narration doesn't end that way, would silently break an
+//! exits-protecting renderer in a way nothing here would catch.
+//!
+//! The marker is the weaker guarantee for the player — the exit list can
+//! still be the thing that gets cut — but it never guesses, and the loss
+//! is always visible instead of silent. See this module's
+//! `overflowing_prose_gets_a_visible_truncation_marker_not_a_silent_drop`
+//! test for the regression this decision is pinned against.
 
 use crate::{Cell, Narration, Weight};
 
 /// The glyph the command line opens with — a prompt, not a text box.
 const PROMPT_GLYPH: char = '>';
+
+/// Drawn on the last visible prose row in place of that row's own text
+/// when the wrapped prose is longer than the space available — an honest
+/// "there is more, and it is not shown" rather than a silent drop. See
+/// the module doc's "Overflow is a decision, not an accident".
+const TRUNCATION_MARKER: &str = "\u{2026} more, not shown \u{2026}";
 
 /// Word-wrap `text` into lines no wider than `width` columns.
 ///
@@ -64,11 +103,11 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// read as the next line the character is about to write rather than as a
 /// text field to fill in.
 ///
-/// If the wrapped prose runs longer than the rows available, the
-/// remainder is not drawn (`Vec::truncate`'s counterpart, `Iterator::take`)
-/// rather than bleeding into the command line or the endpaper below it;
-/// for every fixture this campaign ships, the prose is short enough that
-/// this never triggers.
+/// If the wrapped prose is longer than the rows available, the last
+/// visible prose row is replaced with [`TRUNCATION_MARKER`] rather than
+/// silently dropping the remainder — see the module doc's "Overflow is a
+/// decision, not an accident". For every fixture this campaign ships, the
+/// prose is short enough that this never triggers.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
@@ -81,8 +120,20 @@ pub fn draw(
     }
     let prose_rows = height - 1;
     let wrapped = wrap(&narration.prose, width as usize);
-    for (i, line) in wrapped.iter().take(prose_rows as usize).enumerate() {
+    let overflows = wrapped.len() as u16 > prose_rows;
+    // When the prose overflows, the last visible row is sacrificed to the
+    // marker, so only `prose_rows - 1` rows of real prose are drawn.
+    let visible_rows = if overflows {
+        prose_rows.saturating_sub(1)
+    } else {
+        prose_rows
+    };
+    for (i, line) in wrapped.iter().take(visible_rows as usize).enumerate() {
         write_line(into, origin.0, origin.1 + i as u16, line);
+    }
+    if overflows {
+        let marker_row = origin.1 + visible_rows;
+        write_line(into, origin.0, marker_row, TRUNCATION_MARKER);
     }
     let command_row = origin.1 + height - 1;
     into.set(
@@ -124,5 +175,56 @@ mod tests {
         draw(&n, &mut g, (0, 0), 10, 3);
         assert_eq!(g.get(0, 2).unwrap().glyph, Some(PROMPT_GLYPH));
         assert_eq!(g.get(0, 0).unwrap().glyph, Some('h'));
+    }
+
+    /// The regression this campaign's review found: a 400-word synthetic
+    /// prose (modelled on the reviewer's own case) used to be silently
+    /// clipped by `.take(prose_rows)` with nothing on the page to say so.
+    /// Now the last visible prose row carries [`TRUNCATION_MARKER`]
+    /// instead, and the words that would have landed past it are
+    /// genuinely gone from the page — this test checks both halves: the
+    /// marker is present, and the tail (including a synthetic "Ways on:"
+    /// line, mirroring the real prose convention) is not.
+    #[test]
+    fn overflowing_prose_gets_a_visible_truncation_marker_not_a_silent_drop() {
+        let words: Vec<String> = (0..400).map(|i| format!("word{i}")).collect();
+        let prose = format!("{}\nWays on: NE, NW, S.", words.join(" "));
+        let n = Narration {
+            prose,
+            nouns: vec![],
+        };
+        // width 40, height 10 => 9 prose rows, nowhere near enough for
+        // 400 words: this must overflow.
+        let mut g = crate::Grid::new(40, 10);
+        draw(&n, &mut g, (0, 0), 40, 10);
+        let text = g.to_plain_text();
+        assert!(
+            text.contains("more, not shown"),
+            "an overflowing entry must carry a visible truncation marker"
+        );
+        assert!(
+            !text.contains("word399"),
+            "the tail that does not fit must actually be gone, not just marked"
+        );
+        assert!(
+            !text.contains("Ways on:"),
+            "this synthetic case's exit line falls past the fold and is lost \
+             — exactly the cost the module doc's decision accepts"
+        );
+    }
+
+    /// The marker must never appear on prose that fits; otherwise the
+    /// truncation signal is meaningless noise on every ordinary turn.
+    #[test]
+    fn short_prose_never_shows_the_truncation_marker() {
+        let n = Narration {
+            prose: "Ways on: NE, NW, S.".to_string(),
+            nouns: vec![],
+        };
+        let mut g = crate::Grid::new(40, 10);
+        draw(&n, &mut g, (0, 0), 40, 10);
+        let text = g.to_plain_text();
+        assert!(!text.contains("more, not shown"));
+        assert!(text.contains("Ways on: NE, NW, S."));
     }
 }

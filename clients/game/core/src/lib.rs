@@ -75,3 +75,58 @@ pub fn render(json: &str, w: u16, h: u16) -> Result<Grid, Error> {
     let snapshot = Snapshot::parse(json)?;
     Ok(spread::compose(&snapshot, w, h))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `render` of a document that is not even valid JSON must surface
+    /// `Error::Parse`, not panic and not `Error::TooSmall`.
+    #[test]
+    fn render_of_invalid_json_is_a_parse_error() {
+        match render("not json at all", MIN_WIDTH, MIN_HEIGHT) {
+            Err(Error::Parse(_)) => {}
+            other => panic!("expected Error::Parse, got {other:?}"),
+        }
+    }
+
+    /// A width one short of the floor is refused, and the error carries
+    /// the exact `w`/`h` that was requested (not the floor, and not some
+    /// clamped value) — the whole reason `TooSmall` is a struct variant
+    /// rather than a unit one.
+    #[test]
+    fn render_one_column_short_of_the_floor_is_too_small() {
+        let got = render("{}", MIN_WIDTH - 1, MIN_HEIGHT);
+        assert!(matches!(
+            got,
+            Err(Error::TooSmall {
+                w,
+                h
+            }) if w == MIN_WIDTH - 1 && h == MIN_HEIGHT
+        ));
+    }
+
+    /// Symmetric case on the height axis, so a bug that only checked one
+    /// dimension would still be caught.
+    #[test]
+    fn render_one_row_short_of_the_floor_is_too_small() {
+        let got = render("{}", MIN_WIDTH, MIN_HEIGHT - 1);
+        assert!(matches!(
+            got,
+            Err(Error::TooSmall {
+                w,
+                h
+            }) if w == MIN_WIDTH && h == MIN_HEIGHT - 1
+        ));
+    }
+
+    /// `TooSmall` is checked before the document is even parsed — an
+    /// invalid document at an undersized grid must still report the size
+    /// problem, not a parse problem, so a caller sees the more actionable
+    /// error first.
+    #[test]
+    fn too_small_is_reported_even_for_invalid_json() {
+        let got = render("not json", MIN_WIDTH - 1, MIN_HEIGHT);
+        assert!(matches!(got, Err(Error::TooSmall { .. })));
+    }
+}
