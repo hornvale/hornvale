@@ -621,8 +621,20 @@ fn drive_session<'w>(
     input: impl std::io::BufRead,
     mut output: impl std::io::Write,
 ) -> Result<hornvale_vessel::Session<'w>, String> {
-    let (mut session, opening) =
-        hornvale_vessel::Session::start(world, opts).map_err(|e| e.to_string())?;
+    // Matches `hornvale_vessel::run`'s own failure path exactly: the message
+    // reaches `output`, not just the `Result`, so a `--script` run's
+    // transcript records why a possession never began, the same as it would
+    // for any other line the transcript captures. `main`'s top-level
+    // `eprintln!("error: {message}")` still fires too (the `?` below
+    // propagates this same string) — that double-surfacing is `run`'s own
+    // behaviour, not something this function adds.
+    let (mut session, opening) = match hornvale_vessel::Session::start(world, opts) {
+        Ok(x) => x,
+        Err(e) => {
+            writeln!(output, "error: {e}").map_err(|e| e.to_string())?;
+            return Err(e.to_string());
+        }
+    };
     writeln!(output, "{opening}").map_err(|e| e.to_string())?;
     for line in input.lines() {
         let line = line.map_err(|e| e.to_string())?;
