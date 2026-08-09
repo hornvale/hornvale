@@ -43,8 +43,9 @@ displayed them — and they were already on screen, because the simulation puts
 
 The row is deleted. With it went **three** client reimplementations of
 simulation knowledge: a filter over compass bearings, an invariant about how
-chambers connect, and a dispatch on which band the possession is in. No channel
-was added.
+chambers connect, and the ways-specific dispatch on which band the possession is
+in. No channel was added. (A band dispatch as such remains — `spread.rs` still
+chooses a plate by band, and must: which plate to draw is a layout question.)
 
 The general rule this record ratifies:
 
@@ -52,6 +53,19 @@ The general rule this record ratifies:
 > decision the simulation makes.** If a display needs an answer the wire does not
 > carry, the question to settle first is whether the client needs the answer at
 > all — not which channel should carry it.
+
+**Where the line falls, because the rule as stated is broader than it means.**
+The forbidden thing is re-deriving a *world-state or rules* decision — what the
+exits are, whether a move is legal, which object the player meant. A client may
+re-derive *presentation geometry*, which no part of the simulation decides on
+its behalf: `clients/game/core/src/chart.rs` deliberately reimplements
+`windows/scene/src/surrounds_ascii.rs`'s lattice-to-grid projection, because
+containment forbids depending on `windows/scene` and a projection is a window's
+own layout choice, not world knowledge. **The obligation that comes with it** is
+that a re-derived projection must be pinned byte-for-byte against the in-repo
+renderer's own output — which is exactly what caught this campaign's chart
+defect, and which `book/src/open-questions.md` records as the campaign's new
+instrument. Re-derive geometry with a golden; never re-derive a rule.
 
 ## Why deletion beat a better channel
 
@@ -91,4 +105,5 @@ channel to serve a consumer, check that the consumer acts on it.**
 
 [The Quire chronicle](../../book/src/chronicle/the-quire.md);
 [the retrospective](../retrospectives/the-quire.md);
-`clients/game/core/src/entry.rs`.
+`clients/game/core/src/entry.rs`; `clients/game/core/src/chart.rs` (the
+presentation-geometry exception, and its golden).

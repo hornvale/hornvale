@@ -38,8 +38,12 @@ executes verbs (*commanded*) — and the viewer is simply the case where
 real in every cell: `commanded = none` gives the viewer, attract mode, and the
 ethnographer's vantage; commanding an existing creature gives free possession;
 the off-diagonal gives playing an NPC through its own limited knowledge. This
-campaign filled two cells of the middle column and built the *parameter*, which
-is what stops the viewer from being built twice.
+campaign filled **one** cell of the middle column — the minted agent — and built
+the *parameter*, which is what stops the viewer from being built twice. The
+target has two values, but both of them mint; the row for commanding a creature
+that already exists is still empty. That distinction was got wrong in the first
+draft of this chapter and of decision 0116, and correcting it is the honest
+version of the claim.
 
 Recording both here is deliberate. A dissolved fork looks identical to an
 unexamined one six months later, and the only difference is whether someone
@@ -65,9 +69,11 @@ re-measured afterwards by a second party across three further runs:
 |---|---|---|
 | median | 694.9 – 755.6 ms | 14.94 – 15.18 ms |
 
-**46.5× to 49.8×.** Three independent runs agreed within eight per cent on the
-cold arm and within two per cent on the warm one, which is itself evidence of
-a quiet machine — contention produces scatter, not agreement.
+**46.5× to 49.8×.** The independent re-measurement agreed with the original to
+within 8.7 per cent on the cold arm and two per cent on the warm one, which is
+itself evidence of a quiet machine — contention produces scatter, not agreement.
+The spread in the table is the spread between those two measurements, each
+itself a median over its own runs.
 
 The honest caveat travels with the number. **The shipped game never
 repossesses.** Its driver starts one session per process and holds it, so this
@@ -80,9 +86,15 @@ a real number about a real mechanism, and it is not yet a number anybody feels.
 The mechanism was checked rather than inferred: the cold path calls
 `WorldContext::build` on every invocation and owns the result; the warm path
 takes a borrowed reference and pays none of it; the benchmark builds its
-context once, outside the timed loop; and the complete list of
-`WorldContext::build` call sites across the simulation and both clients is four
-lines. There is no hidden second derivation propping up the ratio.
+context once, outside the timed loop; and every `WorldContext::build` call site
+in the tree was enumerated. There are exactly two outside tests and the
+benchmark — `Session::start`, which owns its context, and the game client's
+driver, which builds one per process — so there is no hidden second derivation
+propping up the ratio. (The browser client is not among them: it calls
+`Session::start` and never touches `WorldContext` directly. The count is stated
+structurally rather than as a line total on purpose; an earlier draft gave a
+number that was already stale when written, and a number like that goes stale
+again the next time a test is added.)
 
 ## Containment is a missing symbol, not a rule
 
@@ -103,9 +115,13 @@ So the containment is structural in three ways, none of them a lint:
 
 1. **The crate split.** The rendering crate has no dependency on the simulation
    at all. Those methods are not merely discouraged; there is no symbol to
-   reach. A `cargo tree` check in the gate asserts this, and — after review
-   demonstrated the guard was blind to a dependency declared optional — it now
-   asserts it with all features enabled.
+   reach. A `cargo tree` check asserts this, and — after review demonstrated
+   the guard was blind to a dependency declared optional — it now asserts it
+   with all features enabled. It runs under `make game-check`, **not** under
+   `make gate`: like `make vessel-check` and `make world-check`, the client
+   gates are separate targets, because the workspace gate cannot see a tree
+   outside the workspace. So the structural claim is enforced when somebody runs
+   the client gate or CI (manual-only, decision 0042), not on every commit.
 2. **The mirror omits `social`.** The client defines its own deserialization
    types against the wire schema rather than the simulation gaining a derive.
    The schema's `social` channel documents, in its own doc comment, that any
@@ -128,7 +144,9 @@ became cheap enough to be a feedback loop rather than a demonstration.
 
 The map plate draws the surrounding lattice, which is not square — it is a
 sheared hexagonal embedding with a parity term. The implementation chose a
-projection, wrote seventeen tests, and mutation-proved four of them. All green.
+projection, wrote six tests of the chart itself, and mutation-proved four of
+them. All green — as was the whole render crate's suite of seventeen at that
+commit, which is what the section title counts.
 
 It was wrong. Rendered side by side against the simulation's own `map` verb
 over the identical thirty-one cells, the simulation drew five dense rows
@@ -219,28 +237,66 @@ gate, in two crates: a rendering core with no simulation dependency, and a
 binary that links the possession layer and owns exactly the terminal. The
 spread is a plate on the left, a written entry on the right, an identity strip
 below. The outdoor plate draws the sheared lattice; the indoor plate draws the
-floor plan; the band switches by itself. Movement is on arrows, numpad and
-vi-keys, plus the verbs the session already answers. The three epistemic ink
-weights are the whole visual channel in monochrome — bold for *here*, normal
-for *sensed*, dim for *remembered*, and never-known ground is not written at
-all, which is unmarked paper rather than black fog.
+floor plan; the band switches by itself. The three epistemic ink weights are the
+whole visual channel in monochrome — bold for *here*, normal for *sensed*, dim
+for *remembered*, and never-known ground is not written at all, which is
+unmarked paper rather than black fog.
+
+**Two things the spec put in scope shipped smaller than it said, and neither
+was written down until this review.** They are recorded here rather than
+quietly dropped.
+
+The ink weights ship **on the grid only**, not in the prose. The spec asked for
+both. The wire is why: `narration` carries a string and a noun list and no
+salience or novelty signal at all, so weighting a word would mean either adding
+a channel or reading prose for meaning — and reading prose for meaning is the
+exact boundary decision 0117 forbids and this crate's entry module refuses.
+Every prose glyph is `Normal`. This looks like a scope item that turned out
+unbuildable on the shipped contract rather than one that was forgotten, but
+nobody said so at the time, and an unrecorded shortfall reads six months later
+like an oversight.
+
+Movement is on arrows, numpad and vi-keys; the keyboard reaches **seven** of
+the roughly twenty-five behaviours `Session::handle` answers — `go`, `enter`,
+`out`, `wait`, `map`, `help`, `release`. The spec said twelve, the plan narrowed
+that to eight without comment, and `x` → `examine` was then deliberately
+unbound with a play-derived reason. So `eyes`, `whoami`, `knows`, `npcs`,
+`why`, `needs`, `provoke`, `soothe`, `consult`, `dive`, `surface` and the rest
+have no key, and there is no free-text entry mode. In a client whose stated
+purpose is being the first one you can actually *play* Hornvale in, that is the
+most player-visible gap in the branch. The fix is not more key bindings — the
+keyboard is nearly full at 80×24 — it is a typed-command line, which belongs
+with the noun-entry mode `x` is waiting on.
 
 Every visible cell carries a provenance: a test walks the composed grid and
 asserts that each non-blank cell traces to a named field of the snapshot. Six
-honest source categories survive; a seventh was deleted for naming a datum it
-did not describe. There is no `social` category, and there is no way to add
-one.
+categories survive — five that name an honest source, plus `Unattributed`,
+which by its own doc marks a datum nobody can justify and is the one the
+provenance test exists to keep empty. A seventh was deleted for naming a datum
+it did not describe. There is no `social` category: adding one would mean adding
+an enum variant *and* a mirror field, two deliberate visible edits against a
+schema whose own doc says rendering that channel unfiltered ships a cheat pane.
+That is the point of the design — not that it is impossible, but that it cannot
+happen by accident.
 
 On the simulation side: the world-scoped derivation is hoisted into a shareable
-context, and possession takes a target parameter with two values — the minted
-flagship, which is the unchanged default, and the first settlement's existing
-resident. Both stages were held to byte-identity against every committed
-gallery transcript and client fixture, and both met it.
+context, and possession takes a target parameter naming **which settlement the
+commanded agent is minted at** — the flagship, which is the unchanged default,
+or the most-populous settlement. Both values mint. Possessing a creature the
+world already derived is the doctrine the client's brief states and the thing
+this campaign did *not* build; the parameter is the seam it would attach to.
+Both stages were held to byte-identity against every committed gallery
+transcript and client fixture, and both met it.
 
 The terminal restores itself on normal exit, on panic, and on `SIGINT`,
-`SIGTERM` and `SIGHUP` — proven under a real pseudo-terminal harness, which had
-to be fixed first, because the naive version signalled ready before the child
-had entered raw mode and would have passed vacuously.
+`SIGTERM` and `SIGHUP`. This was proven under a real pseudo-terminal harness,
+which had to be fixed first, because the naive version signalled ready before
+the child had entered raw mode and would have passed vacuously — but the harness
+was a scratch instrument, so **no committed test reproduces it**. `panic_demo.rs`
+is a hand-run example and `bin/tests/driver.rs` never touches a terminal. The
+property is believed on the strength of a run nobody can repeat from this
+repository, which is a standing weakness of proving things in campaign scratch
+rather than in a fixture.
 
 The campaign also repaired a red gate it inherited rather than caused: a
 browser-client test whose hard-coded coordinates had gone stale when an earlier

@@ -63,10 +63,13 @@ fn weight_of(state: &str) -> Weight {
         "sensed" => Weight::Normal,
         "remembered" => Weight::Dim,
         // A never-known cell is not emitted at all, so an unrecognised
-        // state is a schema change, not a fourth ink. Fail loudly by
-        // drawing nothing rather than inventing a weight — callers still
-        // get a value back (this fn is infallible by design), but see
-        // the module doc: the producer never emits anything else.
+        // state would be a schema change, not a fourth ink. This function
+        // is infallible by design (a render must not panic on a document
+        // that parsed), so an unknown state falls back to `Normal` and the
+        // cell is still drawn — it does NOT fail, and it does not skip.
+        // The safety here is upstream: the producer emits exactly these
+        // three, `tests/chart.rs` pins the mapping, and a fourth state
+        // would arrive with a schema version bump.
         _ => Weight::Normal,
     }
 }
@@ -273,5 +276,23 @@ mod tests {
     fn here_offset_of_no_here_cell_falls_back_to_the_projection_origin() {
         let chart = minimal_chart(vec![chart_cell(0, 0, false, "sensed")]);
         assert_eq!(here_offset(&chart), (0, 0));
+    }
+
+    /// The whole state → weight mapping, pinned including the arm no
+    /// committed fixture reaches. Neither fixture contains a `remembered`
+    /// cell (the seed-42 openings are turn 0, so nothing has fallen out of
+    /// presence yet), so `Weight::Dim` has no coverage from a real render at
+    /// all and this is the only thing holding it. The unknown arm is pinned
+    /// too, because its comment used to claim it drew nothing.
+    #[test]
+    fn every_epistemic_state_maps_to_its_documented_weight() {
+        assert_eq!(weight_of("here"), Weight::Bold);
+        assert_eq!(weight_of("sensed"), Weight::Normal);
+        assert_eq!(weight_of("remembered"), Weight::Dim);
+        assert_eq!(
+            weight_of("no-such-state"),
+            Weight::Normal,
+            "the unknown arm falls back to Normal and the cell is still drawn"
+        );
     }
 }

@@ -38,17 +38,19 @@ fn handles_return_value_matches_a_following_snapshot_call() {
     assert_eq!(returned, read_back);
 }
 
-/// `--target first-settlement` must possess a DIFFERENT agent than the
-/// flagship default — seed 42's flagship is Googo (pop 68), the
+/// `--target most-populous-settlement` must mint at a DIFFERENT settlement
+/// than the flagship default — seed 42's flagship is Googo (pop 68), the
 /// most-populous settlement is Toa (pop 84), so the two snapshots'
 /// `self.settlement` fields must disagree. If they ever agreed, `target`
-/// would be silently ignored by the driver.
+/// would be silently ignored by the driver. (Both agents are MINTED; the
+/// target chooses the settlement, not an existing resident.)
 #[test]
-fn first_settlement_target_possesses_a_different_agent_than_flagship() {
+fn the_most_populous_target_mints_at_a_different_settlement_than_flagship() {
     let flagship = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-    let first = Driver::start(42, hornvale_vessel::PossessTarget::FirstSettlement).unwrap();
+    let popular =
+        Driver::start(42, hornvale_vessel::PossessTarget::MostPopulousSettlement).unwrap();
     let a = hornvale_game_core::Snapshot::parse(&flagship.snapshot()).unwrap();
-    let b = hornvale_game_core::Snapshot::parse(&first.snapshot()).unwrap();
+    let b = hornvale_game_core::Snapshot::parse(&popular.snapshot()).unwrap();
     assert_ne!(a.me.settlement, b.me.settlement);
 }
 

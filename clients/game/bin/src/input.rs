@@ -4,9 +4,19 @@
 //! and renders the reply; `Session::handle` tokenizes and parses, and an
 //! invalid move already comes back as the sim's own prose (`"No way n from
 //! here."`). So every mapped key emits its verb line *unconditionally* — no
-//! checking against exits, no dimming, no gating, no autocomplete. There is
-//! deliberately no exits data available in this crate to consult even if it
-//! wanted to.
+//! checking against exits, no dimming, no gating, no autocomplete.
+//!
+//! **This module's containment is convention, not absence — say so plainly.**
+//! `hornvale-game-core` genuinely cannot reach exits data: it has no hornvale
+//! dependency, so there is no symbol (`scripts/game-no-vessel-dep.sh` asserts
+//! that, and it is the campaign's structural claim). This crate is the other
+//! one. It depends on `hornvale-vessel`, `Session::ways()` is `pub`, and
+//! `driver.rs` already imports `Session` — so the data *is* reachable from
+//! here. What holds instead is a designated seam: `driver.rs` is the only
+//! module allowed to know `Session` exists, and [`crate::driver::Driver`]
+//! hands back nothing but `String`. This module never imports it. That is a
+//! weaker guarantee than a missing symbol and is worth naming as such rather
+//! than claiming the stronger one.
 //!
 //! An unmapped key yields [`None`] and costs no turn: [`verb_for`] returning
 //! [`None`] means nothing is ever sent to [`crate::driver::Driver::handle`],

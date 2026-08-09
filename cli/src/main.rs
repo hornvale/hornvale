@@ -38,12 +38,13 @@ usage:
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
-                                            [--lens off|lantern] [--target flagship|first-settlement]
+                                            [--lens off|lantern]
+                                            [--target flagship|most-populous-settlement]
                                             [--snapshot <PATH>]
                                             walk a frozen world as its flagship settler
-                                            (--target first-settlement instead possesses an agent
-                                            at the world's most-populous settlement — a creature
-                                            already living in the world);
+                                            (--target most-populous-settlement instead mints the
+                                            agent at the world's most-populous settlement; both
+                                            targets MINT — neither adopts an existing creature);
                                             --out saves the played world (the world remembers)
                                             (--lens filters the DRAWN chamber plan's colour for
                                             legibility: 'lantern' expands the crushed dark end of a
@@ -534,16 +535,17 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             )
         }),
     };
-    // Whose body the possession commands (The Quire, Task 2). Fails loudly on
-    // an unknown value — the project fails loudly, it does not fall back
-    // silently.
+    // Which settlement the commanded agent is minted at (The Quire, Task 2).
+    // Fails loudly on an unknown value — the project fails loudly, it does not
+    // fall back silently.
     let target = match flag_value(args, "--target") {
         None => hornvale_vessel::PossessTarget::Flagship,
         Some("flagship") => hornvale_vessel::PossessTarget::Flagship,
-        Some("first-settlement") => hornvale_vessel::PossessTarget::FirstSettlement,
+        Some("most-populous-settlement") => hornvale_vessel::PossessTarget::MostPopulousSettlement,
         Some(other) => {
             return Err(format!(
-                "--target: unknown target '{other}'; known targets: flagship, first-settlement"
+                "--target: unknown target '{other}'; known targets: flagship, \
+                 most-populous-settlement"
             ));
         }
     };

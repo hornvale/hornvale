@@ -630,11 +630,13 @@ impl<'w> Session<'w> {
         // paying for the fit; the fit is world-scoped and now lives in
         // `WorldContext::build`, so this resolves after it. See that
         // function's own note. `opts.target` picks WHICH settlement's agent
-        // is minted (The Quire, Task 2) — `Flagship` stays the exact call
-        // that predates the target, so that path is byte-identical.
+        // is minted (The Quire, Task 2) — BOTH arms mint, via `mint_at`;
+        // neither adopts an agent `derive_npcs` already produced. `Flagship`
+        // stays the exact call that predates the target, so that path is
+        // byte-identical.
         let agent = match opts.target {
             PossessTarget::Flagship => mint_flagship(world, ctx)?,
-            PossessTarget::FirstSettlement => {
+            PossessTarget::MostPopulousSettlement => {
                 let village = most_populous_settlement(world).ok_or(VesselError::NoSettlement)?;
                 mint_at(world, ctx, village)?
             }

@@ -19,9 +19,13 @@ and that this containment is **structural, never a lint**.
 
 Two crates, and the split is the mechanism:
 
-- `hornvale-game` (the binary) depends on `hornvale-vessel` and owns exactly
-  three operations: start a session, hand it a line of text, return a snapshot
-  as JSON. It renders nothing.
+- `hornvale-game` (the binary) depends on `hornvale-vessel`. Its **driver**
+  (`driver.rs`) owns exactly three operations: start a session, hand it a line
+  of text, return a snapshot as JSON — and *it* renders nothing; it never
+  composes a cell. The crate as a whole does own the terminal (`term.rs` writes
+  a composed `Grid` out; `main.rs` redraws), so the accurate statement is that
+  the crate owns the terminal and the driver seam, and that all *composition*
+  happens in the render crate below.
 - `hornvale-game-core` (the render crate) **has no Hornvale dependency at all.**
   It takes a `&str` of JSON and returns a grid of cells. It does not open a
   terminal and does not run world generation.

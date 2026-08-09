@@ -52,10 +52,12 @@ diverge (that's the point). Key knobs:
   census refresh alone, with no other code change.
   **`clients/game/core/tests/fixtures/`** joined it at The Quire (Task 3,
   extended Task 4): the committed seed-42 session snapshots every
-  `hornvale-game-core` render test reads instead of paying for genesis — one
-  walk-band, one chamber-band (the second exists so the `Spatial::Chamber`
-  mirror has committed coverage too, not just the walk-band branch turn 0
-  always lands on).
+  `hornvale-game-core` **integration** test reads instead of paying for
+  genesis — one walk-band, one chamber-band (the second exists so the
+  `Spatial::Chamber` mirror has committed coverage too, not just the walk-band
+  branch turn 0 always lands on). The crate's in-module unit tests build
+  synthetic snapshots and never read these files, so a change that only
+  reddens unit tests has not necessarily drifted a fixture, and vice versa.
 - **THE HAZARD ADDING A NEW GENERATED DIRECTORY EXPOSES**, and the near-miss
   this campaign actually hit: `git diff --exit-code <path>` is silently
   **VACUOUS** against a path git does not track. Regenerate into a brand-new

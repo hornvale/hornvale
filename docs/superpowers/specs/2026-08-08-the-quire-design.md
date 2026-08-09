@@ -27,6 +27,16 @@ makes urgent.
 
 ## 2. Scope
 
+> **CORRECTION (added at merge).** Two **In** items shipped smaller than stated.
+> The ink weights ship on the grid but **not in the prose** — every prose glyph
+> is `Normal`, because the wire carries no salience signal for prose and
+> inferring one means reading prose for meaning (decision 0117 forbids it).
+> And the keyboard reaches **seven** verbs, not twelve: `go`, `enter`, `out`,
+> `wait`, `map`, `help`, `release`. `Session::handle` answers about twenty-five
+> behaviours, so "the twelve verbs the session already answers" matched nothing
+> even when written. Both shortfalls are recorded in
+> [the chronicle](../../../book/src/chronicle/the-quire.md)'s "What shipped".
+
 **In**
 
 - `clients/game/` — a new client, outside the cargo workspace, in two crates.
@@ -193,6 +203,32 @@ drift surfaces as a diff rather than as an absence.
 
 ## 7. What possession is, and which two cells this campaign fills
 
+> **CORRECTION (added at merge; the section body below is left as the
+> historical record it is).** This section is wrong about what the target
+> parameter does, and the error travelled from here into decision 0116, the
+> chronicle, and the variant's own doc comment before the whole-branch review
+> caught it.
+>
+> **Both shipped targets MINT.** `PossessTarget::Flagship` and
+> `PossessTarget::MostPopulousSettlement` (named `FirstSettlement` until the
+> merge — it selected the *most-populous* settlement, while "the first
+> settlement" is literally what `Flagship` uses) both call `mint_at`, which
+> derives a fresh `AgentId` from a seed stream. They differ only in **which
+> settlement** the agent is minted at. Neither selects an agent `derive_npcs`
+> already produced.
+>
+> So the campaign filled **one** cell of the grid below — `commanded = a minted
+> agent`, parameterised twice — not two. The `commanded = an EXISTING creature`
+> row is unbuilt.
+>
+> Consequently the paragraph headed *"A doctrine gap this exposes, and closes"*
+> is right about the gap and wrong about closing it. The gap is **identified
+> and open**: possession is still a mint, the doctrine still says otherwise,
+> and closing it needs a derived-NPC identity that survives the session
+> boundary plus a session that starts from one. Carried forward as
+> `RENDER-possession-still-mints` in the idea registry; see the corrected
+> [decision 0116](../../decisions/0116-possession-is-a-parameter-not-a-fixture.md).
+
 `RENDER-focalized-not-commanded` already holds that *focalized* (whose senses
 filter the world) and *commanded* (whose body executes verbs) are independent
 parameters. Laid out as a saturated grid, every cell names something real:
@@ -283,6 +319,17 @@ different situations, so a rank may decide *which mark draws on top* and *which
 the legend names first*, and may never become a weight.
 
 ## 9. Stages
+
+> **CORRECTION (added at merge).** Two acceptance criteria below are wrong as
+> written; the substance of both was met.
+>
+> - **Stage 2** says the second cell is "the first derived NPC found in the
+>   world". It is not: it is an agent **minted** at the most-populous
+>   settlement. See §7's correction note.
+> - **Stage 4**'s command `cargo run -p hornvale-game -- --seed 42` **fails** —
+>   `clients/game/` is its own workspace, so `-p` cannot reach it. The working
+>   form, which the plan's Task 10 uses correctly, is
+>   `cargo run --manifest-path clients/game/bin/Cargo.toml -- --seed 42`.
 
 **Stage 1 — the derivation hoist.** Extract the world-scoped block out of
 `Session::start` into a reusable context borrowed by a session.

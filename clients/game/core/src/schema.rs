@@ -8,6 +8,25 @@
 //! **`social` is omitted on purpose.** serde ignores unknown keys, so the
 //! channel never enters this crate's address space. See The Quire spec §6.
 //!
+//! **The whole `sensed` channel is omitted too, and for a different reason.**
+//! Task 9b mirrored `sensed` to reach `locale/room/v2`'s `exits`
+//! (`Room`/`Exit`/`Direction`/`Compass`/`ExitKind`) for a dedicated ways-on
+//! row. Task 9d deleted that row (see `entry.rs`'s module doc and decision
+//! 0117) and with it every field mirrored solely to feed it, leaving `sensed`
+//! holding one field — `sky` — which no draw path, test or example in either
+//! crate has ever read, and whose content the sim already puts verbatim inside
+//! `narration.prose`, which this client renders. That is the duplication 0117
+//! forbids, so the channel went the same way `Sensed.room` did.
+//!
+//! **What "mirror only what a component needs" does and does not license.** It
+//! is a rule about *channels*, not about every leaf field. A whole top-level
+//! channel with no reader is carried weight and comes out. Fields *within* a
+//! record this crate does read — `ChartCell`'s lattice coordinates,
+//! `PaletteEntry::color` — stay even when nothing reads them yet, because the
+//! mirror's other job is to be a faithful model of the wire record, and a
+//! partial record is a worse proof that the emitted contract is sufficient.
+//! Individual unread fields are called out at their own doc comments.
+//!
 //! `Snapshot` and its fields derive `Serialize` in addition to `Deserialize`
 //! purely so `tests/schema.rs` can round-trip a parsed value back to a
 //! `serde_json::Value` and inspect its keys — that is the mechanism the
@@ -28,8 +47,6 @@ pub struct Snapshot {
     /// Who the player is. `self` is a Rust keyword on the wire.
     #[serde(rename = "self")]
     pub me: SelfChannel,
-    /// What the agent senses here and now.
-    pub sensed: Sensed,
     /// The sim's own rendering.
     pub narration: Narration,
     /// Where the possession stands, as cells.
@@ -37,6 +54,8 @@ pub struct Snapshot {
     // `social` is NOT mirrored. Do not add it.
     // `known` is not mirrored either: no component in this campaign renders
     // it. Add it when a component needs it, not before.
+    // `sensed` is not mirrored either — see the module doc's note on the
+    // ways-on removal.
 }
 
 /// The possessed agent's identity.
@@ -50,22 +69,6 @@ pub struct SelfChannel {
     pub settlement: String,
     /// How many live there.
     pub population: u32,
-}
-
-/// The presence-gated channel.
-///
-/// **Deliberately no `room`/exits mirror.** Task 9b briefly mirrored
-/// `locale/room/v2`'s `exits` (`Room`/`Exit`/`Direction`/`Compass`/
-/// `ExitKind`) to feed a dedicated ways-on row; The Quire (task 9d) removed
-/// that row and, with it, every field this schema mirror carried solely to
-/// feed it — see `entry.rs`'s module doc and [`crate::Source::Chrome`]'s doc
-/// for why. The sim's own "Ways on: …" sentence in `Narration::prose`
-/// already states this, correctly in every band; there is nothing left in
-/// this crate that needs the exits list as structured data.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Sensed {
-    /// The sky over this day, already written as a sentence.
-    pub sky: String,
 }
 
 /// The sim's own rendering of this turn.
@@ -105,7 +108,13 @@ pub enum Spatial {
 }
 
 /// One cell of the walk-band chart, mirroring `scene/surrounds/v2`'s
-/// `SurroundsCell`. Only the fields Tasks 6 and 7 need are mirrored.
+/// `SurroundsCell`.
+///
+/// Not every field here has a reader: [`ChartCell::u`] never enters the
+/// projection (see `chart.rs`'s module doc, which records it as residue of the
+/// wrong formula), and `seam` is carried for record fidelity. That is the
+/// deliberate line the module doc draws — a whole unread *channel* comes out, a
+/// leaf field of a record this crate does read stays.
 ///
 /// The brief's field list put `marks` on [`Chart`] rather than here; the
 /// producer (`windows/scene/src/surrounds.rs`) has no such top-level field —
@@ -137,7 +146,8 @@ pub struct ChartCell {
 }
 
 /// The walk-band chart, mirroring `scene/surrounds/v2`'s `SurroundsScene`.
-/// Only the fields Tasks 6 and 7 need are mirrored.
+/// The producer's whole record, minus channels this crate omits by rule
+/// (module doc); not every field has a reader.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Chart {
     /// Neighbourhood radius, in BFS rings.
@@ -179,9 +189,11 @@ pub struct LegendEntry {
 }
 
 /// The chamber-band floor plan, mirroring `vessel/plan/v1`'s `SessionPlan`.
-/// Only the fields Tasks 6 and 7 need are mirrored. Task 9b briefly added
-/// `at`/`of` to reimplement the sim's own path-graph invariant for a ways-on
-/// row The Quire (task 9d) removed — see `entry.rs`'s module doc.
+/// Task 9b briefly added `at`/`of` to reimplement the sim's own path-graph
+/// invariant for a ways-on row The Quire (task 9d) removed — see `entry.rs`'s
+/// module doc. What remains is the producer's record; not every field of it
+/// has a reader (`PaletteEntry::color` has none — monochrome is the whole
+/// visual channel in this campaign).
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Plan {
     /// The plan's bounds.

@@ -41,6 +41,31 @@ fn all_three_regions_are_drawn() {
     assert!(endpaper_has_ink, "the endpaper must be drawn");
 }
 
+/// THE GUTTER STAYS BLANK. Row `h - 3` (index 21 at 80x24) is the blank
+/// gutter between the plate/entry region and the endpaper. It carried a
+/// ways-on line for exactly one task before The Quire (task 9d) deleted it,
+/// and `spread.rs`'s module doc says "do not re-add a ways-on element here"
+/// — but that was PROSE, and the two tests above skip row 21 entirely, so
+/// re-claiming the gutter passed the whole suite. Given the element has now
+/// been added and removed twice, this is the cheap regression pin.
+///
+/// Rules and gutters carry no ink of their own, so the assertion is simply
+/// that the row is blank. Note it will NOT catch a non-ways-on element
+/// drawn elsewhere; it pins the row, which is what was actually at risk.
+#[test]
+fn the_gutter_row_carries_no_ink() {
+    for (w, h) in [(80u16, 24u16), (100, 30)] {
+        let g = render(FIXTURE, w, h).unwrap();
+        let text = g.to_plain_text();
+        let lines: Vec<&str> = text.lines().collect();
+        let gutter = lines[usize::from(h) - 3];
+        assert!(
+            gutter.trim().is_empty(),
+            "the gutter row (h-3) must stay blank at {w}x{h}, found: {gutter:?}"
+        );
+    }
+}
+
 /// ACCEPTANCE TEST 9: the noun join. Every noun the plate's legend names is
 /// examinable, i.e. present in the prose's own noun catalog namespace.
 #[test]

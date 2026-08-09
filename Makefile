@@ -32,7 +32,7 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit type-audit-report ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
 
-gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`

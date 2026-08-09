@@ -12,7 +12,7 @@ use hornvale_game::{input, term};
 use hornvale_game_core::{MIN_HEIGHT, MIN_WIDTH};
 use hornvale_vessel::PossessTarget;
 
-const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|first-settlement]";
+const USAGE: &str = "usage: hornvale-game --seed <N> [--target flagship|most-populous-settlement]";
 
 fn flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
     args.iter()
@@ -26,9 +26,10 @@ fn flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
 fn parse_target(args: &[String]) -> Result<PossessTarget, String> {
     match flag_value(args, "--target") {
         None | Some("flagship") => Ok(PossessTarget::Flagship),
-        Some("first-settlement") => Ok(PossessTarget::FirstSettlement),
+        Some("most-populous-settlement") => Ok(PossessTarget::MostPopulousSettlement),
         Some(other) => Err(format!(
-            "--target: unknown target '{other}'; known targets: flagship, first-settlement"
+            "--target: unknown target '{other}'; known targets: flagship, \
+             most-populous-settlement"
         )),
     }
 }

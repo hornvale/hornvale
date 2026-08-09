@@ -142,11 +142,21 @@ Two incidents, opposite ends of the campaign:
   campaign's own `make prewarm` was running. They were **3.3× wrong** and were
   discarded. The re-measurement on a quiet box is what the spec carries.
 - The first merged-tree gate ran at **loadavg 265** (15-minute average 626),
-  took 92 minutes with `cpu_ratio` 0.26, and produced a **false failure**: a
-  wall-clock assertion in an unrelated crate. It was initially diagnosed as a
-  pre-existing defect on main, on blob-identity evidence, and had to be walked
-  back after it passed in 0.05 s on a quiet box. The same run's second gate,
-  quiet, came back at `cpu_ratio` 7.03 and 398.6 s.
+  took **92 minutes** (5538 s, from the campaign ledger — *this run was never
+  written into `docs/timings.md`, so it carries no `cpu_ratio` of its own*),
+  and produced a **false failure**: a wall-clock assertion in an unrelated
+  crate. It was initially diagnosed as a pre-existing defect on main, on
+  blob-identity evidence, and had to be walked back after it passed in 0.05 s
+  on a quiet box. A separate contended gate the same day *is* ledgered —
+  `2026-08-09T17:01:34Z`, 598.1 s, `cpu_ratio` **0.26** — and the same run's
+  second gate, quiet, came back at `cpu_ratio` **7.03** and 398.6 s
+  (`19:37:58Z`).
+
+  The first draft of this bullet borrowed the 0.26 from the ledgered 10-minute
+  run and attached it to the unledgered 92-minute one. That is precisely the
+  failure this section's own lesson is about, committed inside the section
+  stating it: **the 92-minute datum is the one measurement here with no load
+  figure recorded beside it, which is why it was available to be mis-paired.**
 
 Both are the root `CLAUDE.md` "one gating agent at a time on the Mac" rule
 being violated in practice, and both cost more than the wait would have. The

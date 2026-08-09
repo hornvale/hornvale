@@ -88,10 +88,14 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
     mint_at(world, ctx, village)
 }
 
-/// The world's most-populous settlement by its own derivation ordering —
-/// population descending, then id ascending. Deliberately the SAME ordering
-/// `ordered_for_derivation` (`liveness.rs`) uses, so possession introduces no
-/// new seed ordering surface.
+/// The world's most-populous settlement — population descending, then id
+/// ascending.
+///
+/// Deliberately the SAME *comparator* `ordered_for_derivation` (`liveness.rs`)
+/// uses, so possession introduces no new tie-break rule. Not the same resulting
+/// **order**: `ordered_for_derivation` then hoists the home settlement to the
+/// front, so its first element is the home settlement and this function's is
+/// the most-populous one. Only the comparator is shared.
 pub fn most_populous_settlement(world: &World) -> Option<VillageInfo> {
     let mut all = hornvale_settlement::all_settlements(world);
     all.sort_by(|a, b| b.population.cmp(&a.population).then(a.id.cmp(&b.id)));

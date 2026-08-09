@@ -238,8 +238,9 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 # CSV changes — including a census refresh that lands with no other code
 # change at all.
 # So is clients/game/core/tests/fixtures/ (The Quire, Tasks 3-4): the
-# committed seed-42 session snapshots every hornvale-game-core render test
-# reads instead of paying for genesis (one walk-band, one chamber-band).
+# committed seed-42 session snapshots (one walk-band, one chamber-band) that
+# every hornvale-game-core INTEGRATION test reads instead of paying for
+# genesis. Its in-module unit tests use synthetic data and do not touch them.
 # THE HAZARD THAT ADDING IT EXPOSED: `git diff --exit-code <path>` is silently
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can

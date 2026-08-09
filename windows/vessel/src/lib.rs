@@ -74,20 +74,29 @@ impl std::fmt::Display for VesselError {
     }
 }
 
-/// Whose body the possession commands.
+/// Which settlement the commanded agent is minted at.
 ///
 /// The `commanded` half of the possession grid (The Quire spec §7). The
 /// `focalized` half is not yet a parameter, and `commanded = NONE` — which
 /// yields the world viewer and attract mode — is not yet expressible.
+///
+/// **Every variant MINTS.** Both arms call [`mint_at`], which derives a
+/// fresh [`AgentId`] from a seed stream; they differ only in *which*
+/// settlement they mint at. Selecting an agent the world already derived —
+/// what The Journal's brief means by "you possess a creature already living in
+/// the world" — is not implemented by any variant here, and decision 0116
+/// records that gap as open rather than closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PossessTarget {
-    /// The flagship settlement's agent. The default, and byte-identical to
-    /// the behaviour that predates this enum.
+    /// An agent minted at the flagship settlement — the world's capital, and
+    /// by settlement genesis the first `is-settlement` fact in the ledger.
+    /// The default, and byte-identical to the behaviour that predates this
+    /// enum.
     #[default]
     Flagship,
-    /// An agent at the world's most-populous settlement — a creature already
-    /// living in the world rather than one minted for the player.
-    FirstSettlement,
+    /// An agent minted at the world's most-populous settlement, ranked
+    /// population-descending then id-ascending.
+    MostPopulousSettlement,
 }
 
 /// Options for a possession.
@@ -161,7 +170,12 @@ pub enum Turn {
 /// shape as the repl's `run`, so tests drive it with buffers. Returns the
 /// played world (the session's evolved ledger + registry, folded onto the
 /// input world's seed — The First Mark, Task 4): "the world remembers"
-/// applies to every caller of `run`, not just the CLI's `--out` flag.
+/// applies to every caller of `run`, whether or not it saves the result.
+///
+/// The CLI no longer routes through here — `--out` calls `drive_session` and
+/// then `into_played_world` directly, so `run`'s only remaining callers are in
+/// `windows/vessel/tests/session.rs`. It stays public as the line-oriented
+/// entry point a future non-CLI driver would use.
 pub fn run(
     world: &hornvale_kernel::World,
     opts: PossessOpts,
