@@ -72,9 +72,12 @@ is what worktrees are for — but **stagger the gates**, and treat two to three
 active campaigns as the Mac's working ceiling. This is a human-staggering
 rule, not a lock: 0081 declined to claim the gate because waiting twelve
 minutes to start a four-minute gate is worse than the contention. That
-arithmetic assumed a four-minute gate. At ~15 min it may now argue the other
-way, which is new information rather than relitigation — reopen it with the
-`cpu_ratio` rows in hand, do not merely re-express the preference.
+arithmetic assumed a four-minute gate; the drift to ~15 min looked like it
+argued the other way. **The Whetstone (decision 0113) took it back to ~8 min**
+(`make gate` 460.8 s, `make ci` 412.3 s, both green on `ambrose`), so 0081's
+original arithmetic broadly holds again and the case for claiming the gate is
+weaker, not stronger. Reopen it only with fresh `cpu_ratio` rows in hand, do
+not merely re-express the preference.
 
 ```bash
 make doctor        # the repo self-map — run this first in a fresh session
@@ -85,16 +88,18 @@ make doctor        # the repo self-map — run this first in a fresh session
 # product, byte-identity rebuilds) are #[ignore]d out of it and run in
 # `make gate-full`. The #[ignore] tier AND nextest's parallelism together
 # got the commit gate to ~4 min at decision 0040 (234 s, 2026-07-13);
-# neither lever alone got there. It has since drifted to ~15 min
-# (934.5 s measured on a quiet Mac, 2026-07-29 — The Timekeeper), which is
-# what `make ci` now watches. The batteries this tiering deferred carry a
+# neither lever alone got there. It then drifted to ~15 min (934.5 s,
+# 2026-07-29 — The Timekeeper), and The Whetstone (0113: the dev profile is
+# optimized workspace-wide) took it back to ~8 min — `make gate` 460.8 s and
+# `make ci` 412.3 s on ambrose, 2026-08-09. `make ci` is what watches this.
+# The batteries this tiering deferred carry a
 # `heavy:` ignore-reason token (see cli/tests/heavy_tier.rs):
 #   make quick       # cheap half only: fmt-check + clippy + type-audit
-#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~15 min; 0040 budgeted 4)
+#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~8 min since 0113; 0040 budgeted 4)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
 #   make ci          # THE TIMEKEEPER: whole-workspace suite under the `ci` nextest
-#                     # profile (~15 min), writes target/nextest/ci/run.json +
+#                     # profile (~7 min since 0113), writes target/nextest/ci/run.json +
 #                     # run.log, alarms on a per-test or whole-suite duration
 #                     # shift against docs/timings/test-baseline-<host>.tsv,
 #                     # THEN (only if the alarm passed) rewrites that baseline
@@ -126,14 +131,21 @@ make doctor        # the repo self-map — run this first in a fresh session
 #                     #     Timekeeper's own runs. Run `make ci` on a QUIET box
 #                     #     and distrust a red alarm from a busy one. Candidate
 #                     #     fix: also suppress when loadavg exceeds core count.
-#                     # (2) THE BASELINE IS KEYED ON `hostname -s`, today
-#                     #     `MacBookPro` (NOT the machine's familiar name).
-#                     #     Rename the box and the baseline FORKS: the first
-#                     #     run under the new name finds no file, records
-#                     #     silently, and cannot alarm. Same free pass the
-#                     #     first time lefford runs `make ci`. First-run-never-
-#                     #     fails is deliberate; knowing when you are spending
-#                     #     it is not automatic.
+#                     # (2) THE BASELINE IS KEYED ON `hostname -s`, and there
+#                     #     is now more than one Mac in the ledger. A new or
+#                     #     renamed host FORKS the baseline: the first run
+#                     #     under that name finds no file, records silently,
+#                     #     and cannot alarm. First-run-never-fails is
+#                     #     deliberate; knowing when you are spending it is
+#                     #     not automatic. THIS HAS NOW FIRED FOR REAL — The
+#                     #     Whetstone ran on `ambrose` (M3 Pro, 12 cores)
+#                     #     against a baseline keyed `MacBookPro` at 10, took
+#                     #     the free pass, and wrote
+#                     #     test-baseline-ambrose.tsv. Two consequences:
+#                     #     `hostname -s` FIRST when you read a baseline, and
+#                     #     do NOT rank the suite off another host's file (it
+#                     #     named the wrong hot crate; see the Whetstone
+#                     #     retrospective §1 — measure your own before-arm).
 #   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
 #   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 # nextest is a dev tool, not a workspace dependency (decision 0040); install

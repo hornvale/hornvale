@@ -152,4 +152,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0110](0110-the-census-is-the-suites-shared-world-building-pass.md) | The census is the suite's shared world-building pass | Accepted |
 | [0111](0111-a-census-resident-check-needs-a-live-tripwire.md) | A census-resident check requires a live tripwire in the gate | Accepted |
 | [0112](0112-the-synthetic-route-requires-committed-facts.md) | The synthetic route requires that the behaviour read committed facts | Accepted |
+| [0113](0113-the-dev-profile-is-optimized-workspace-wide.md) | The dev profile is optimized workspace-wide | Accepted |
 | [0114](0114-an-instruments-silence-means-the-claim-held.md) | An instrument's silence means the claim held, and nothing else | Proposed |

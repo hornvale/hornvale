@@ -340,6 +340,7 @@
 - [The Domesday](./chronicle/the-domesday.md)
 - [The Assize](./chronicle/the-assize.md)
 - [The Armature](./chronicle/the-armature.md)
+- [The Whetstone](./chronicle/the-whetstone.md)
 
 # Appendix: The Frontier
 
