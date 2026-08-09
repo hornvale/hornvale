@@ -1,0 +1,14 @@
+# Standalone workspace: the root Cargo.toml `exclude`s this path, like
+# clients/vessel/wasm and tools/type-audit. Nothing here is bound by the
+# workspace dependency allowlist (decision 0055).
+#
+# PLAN DEFECT (noted in Task 4's report): the plan's Step 1 lists
+# `members = ["core", "bin"]` verbatim, but `bin/` is not created until
+# Task 10 ("hornvale-game — driver, input, terminal"). A workspace member
+# path that does not exist is a hard `cargo metadata`/`build`/`test` error
+# (confirmed), not a lazily-resolved glob, so listing it here before Task 10
+# breaks every command in this crate from Task 4 through Task 9. Scoped to
+# `["core"]` until Task 10 creates `bin/` and adds it back.
+[workspace]
+members = ["core"]
+resolver = "3"
