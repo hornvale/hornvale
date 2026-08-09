@@ -24,7 +24,7 @@ pub mod snapshot;
 pub mod streams;
 pub mod structure;
 mod vantage;
-pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
+pub use agent::{Agent, AgentId, mint_at, mint_flagship, most_populous_settlement, walk_depth};
 pub use band::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use brief::{Brief, brief_of};
 pub use chamber_prose::describe_chamber;
@@ -74,6 +74,22 @@ impl std::fmt::Display for VesselError {
     }
 }
 
+/// Whose body the possession commands.
+///
+/// The `commanded` half of the possession grid (The Quire spec §7). The
+/// `focalized` half is not yet a parameter, and `commanded = NONE` — which
+/// yields the world viewer and attract mode — is not yet expressible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PossessTarget {
+    /// The flagship settlement's agent. The default, and byte-identical to
+    /// the behaviour that predates this enum.
+    #[default]
+    Flagship,
+    /// An agent at the world's most-populous settlement — a creature already
+    /// living in the world rather than one minted for the player.
+    FirstSettlement,
+}
+
 /// Options for a possession.
 /// type-audit: bare-ok(flag: echo), bare-ok(flag: wild_agents)
 pub struct PossessOpts {
@@ -108,6 +124,10 @@ pub struct PossessOpts {
     /// This field reaches **only the terminal draw**. `plan_of` and the
     /// snapshot never see it — `lantern_lens.rs` proves both halves.
     pub lens: lens::Lens,
+    /// Whose body the possession commands (The Quire, Task 2). Defaults to
+    /// [`PossessTarget::Flagship`], byte-identical to the pre-existing
+    /// behaviour.
+    pub target: PossessTarget,
 }
 
 impl Default for PossessOpts {
@@ -123,6 +143,7 @@ impl Default for PossessOpts {
             wild_agents: true,
             eyes: eyes::Eyes::Own,
             lens: lens::Lens::Off,
+            target: PossessTarget::Flagship,
         }
     }
 }

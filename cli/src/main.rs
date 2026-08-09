@@ -38,8 +38,11 @@ usage:
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
-                                            [--lens off|lantern]
-                                            walk a frozen world as its flagship settler;
+                                            [--lens off|lantern] [--target flagship|first-settlement]
+                                            walk a frozen world as its flagship settler
+                                            (--target first-settlement instead possesses an agent
+                                            at the world's most-populous settlement — a creature
+                                            already living in the world);
                                             --out saves the played world (the world remembers)
                                             (--lens filters the DRAWN chamber plan's colour for
                                             legibility: 'lantern' expands the crushed dark end of a
@@ -523,6 +526,19 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             )
         }),
     };
+    // Whose body the possession commands (The Quire, Task 2). Fails loudly on
+    // an unknown value — the project fails loudly, it does not fall back
+    // silently.
+    let target = match flag_value(args, "--target") {
+        None => hornvale_vessel::PossessTarget::Flagship,
+        Some("flagship") => hornvale_vessel::PossessTarget::Flagship,
+        Some("first-settlement") => hornvale_vessel::PossessTarget::FirstSettlement,
+        Some(other) => {
+            return Err(format!(
+                "--target: unknown target '{other}'; known targets: flagship, first-settlement"
+            ));
+        }
+    };
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -539,6 +555,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 wild_agents: true,
                 eyes: hornvale_vessel::eyes::Eyes::Own,
                 lens: lens(hornvale_vessel::lens::Lens::Off)?,
+                target,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -556,6 +573,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
                 wild_agents: true,
                 eyes: hornvale_vessel::eyes::Eyes::Own,
                 lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
+                target,
             },
             stdin.lock(),
             stdout.lock(),

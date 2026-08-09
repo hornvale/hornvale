@@ -11,8 +11,9 @@ use crate::snapshot::{
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel,
 };
 use crate::{
-    Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
-    TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
+    Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, PossessTarget,
+    Projection, TemplateFocalizer, Turn, VesselError, absorb_common, mint_at, mint_flagship,
+    most_populous_settlement, observable, reader_set,
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, Value, World, WorldTime, tick,
@@ -623,12 +624,21 @@ impl<'w> Session<'w> {
         let terrain = &held.terrain;
         let wc = &held.wc;
         let report = &held.report;
-        // The flagship: a cheap failure path (a settlement/species lookup).
-        // It used to sit between `ctx` and the coexistence-stack fit, so that
-        // a settlement-less or unspecied world failed before paying for the
-        // fit; the fit is world-scoped and now lives in `WorldContext::build`,
-        // so this resolves after it. See that function's own note.
-        let agent = mint_flagship(world, ctx)?;
+        // The commanded agent: a cheap failure path (a settlement/species
+        // lookup). It used to sit between `ctx` and the coexistence-stack
+        // fit, so that a settlement-less or unspecied world failed before
+        // paying for the fit; the fit is world-scoped and now lives in
+        // `WorldContext::build`, so this resolves after it. See that
+        // function's own note. `opts.target` picks WHICH settlement's agent
+        // is minted (The Quire, Task 2) — `Flagship` stays the exact call
+        // that predates the target, so that path is byte-identical.
+        let agent = match opts.target {
+            PossessTarget::Flagship => mint_flagship(world, ctx)?,
+            PossessTarget::FirstSettlement => {
+                let village = most_populous_settlement(world).ok_or(VesselError::NoSettlement)?;
+                mint_at(world, ctx, village)?
+            }
+        };
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
         // Idempotent (same def every session): never conflicts, since
