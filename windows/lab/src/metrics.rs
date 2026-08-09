@@ -4323,6 +4323,26 @@ pub fn registry() -> Vec<Metric> {
                 // worlds, readable without re-deriving anything.
                 bucket_edges: &[0.0, 0.02, 0.06, 0.15, 0.3, 0.5],
             },
+            // Settlement, not Climate, though the per-room predicate read is a
+            // temperature one. The population this folds over is BUILT
+            // SETTLEMENT ROOMS, and `Terrain::is_cold` is the per-item lookup
+            // — the same shape as `flagship-biome`, which reads a climate
+            // attribute of a settlement and is filed Settlement, and the
+            // mirror image of `alignment-drift-deg-per-kyr`, which moved
+            // Settlement -> Astronomy in 3352fd91 precisely because there the
+            // settlement was "only a latitude lookup". Here the rooms are the
+            // subject. The reading is also not interpretable as a climate
+            // statistic: it is conditioned on where a world's peoples chose to
+            // build, so it cannot answer "how cold is this world" (that is
+            // `mean-land-temperature-c`, Climate's own temperature column, and
+            // the one carrying the Earth comparator). What it answers is how
+            // much of the SETTLED world would compose a hearth.
+            domain: Domain::Settlement,
+            // Descriptor: the committed census spreads it 0.0 to 0.9926 with a
+            // median of 0.1909 — about as far from "asserted to hold on every
+            // world" as a column gets. Every Invariant in the registry is a
+            // language-closure assertion.
+            role: Role::Descriptor,
             extract: Extractor::Full(|v: &FullView| {
                 let ctx =
                     hornvale_locale::LocaleContext::build_from(v.world(), v.terrain(), v.climate());

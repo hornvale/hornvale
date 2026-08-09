@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.18814815 | 0.23188848 | 0.23219373 | 0.23219373 | 0.23789174 | 0.23162825 |
+| 0.20421245 | 0.23188848 | 0.23219373 | 0.23219373 | 0.25037037 | 0.23230548 |
 
 ### `chorus-distortion`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.41189675 | 0.42450142 | 0.42450142 | 0.42999593 | 0.47407407 | 0.42595817 |
+| 0.41189675 | 0.42450142 | 0.42450142 | 0.42999593 | 0.47037037 | 0.42589636 |
 
 ### `chorus-param-spread`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.10833333 | 0.19638889 | 0.19638889 | 0.19638889 | 0.20803571 | 0.19426995 |
+| 0.11733333 | 0.19638889 | 0.19638889 | 0.19638889 | 0.22666667 | 0.19488744 |
 
 ### `chorus-recoverability`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.68888889 | 0.78125 | 0.8034188 | 0.8034188 | 0.87037037 | 0.79363313 |
+| 0.66666667 | 0.75396825 | 0.8034188 | 0.8034188 | 0.87037037 | 0.79257768 |
 
 ### `chorus-sky-calibration`
 
@@ -84,7 +84,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0048839184 | 0.0060064448 | 0.0060064448 | 0.0060064448 | 0.0079012346 | 0.0062938632 |
+| 0.0048839184 | 0.0060064448 | 0.0060064448 | 0.0067369583 | 0.010096022 | 0.006352087 |
 
 ### `clean-outgroup-kobold`
 
@@ -278,7 +278,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 7 | 12 | 21 | 134 | 16.349 |
+| 0 | 7 | 12 | 21 | 135 | 16.197 |
 
 ### `homophony-count-goblin`
 
@@ -288,7 +288,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 3 | 7 | 42 | 4.888 |
+| 0 | 1 | 3 | 7 | 47 | 4.863 |
 
 ### `homophony-count-hobgoblin`
 
@@ -298,7 +298,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 3 | 7 | 54 | 4.822 |
+| 0 | 0 | 3 | 7 | 58 | 4.822 |
 
 ### `homophony-count-kobold`
 
@@ -308,13 +308,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 3 | 7 | 51 | 5.072 |
+| 0 | 0 | 3 | 7 | 47 | 5.131 |
 
 ### `homophony-merger-share-bugbear`
 
 Fraction of bugbear colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if bugbear has no collision
 
-n = 993 present, 7 absent (of 1000 worlds)
+n = 994 present, 6 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -324,7 +324,7 @@ n = 993 present, 7 absent (of 1000 worlds)
 
 Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)
 
-n = 783 present, 217 absent (of 1000 worlds)
+n = 780 present, 220 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -334,7 +334,7 @@ n = 783 present, 217 absent (of 1000 worlds)
 
 Fraction of hobgoblin colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if hobgoblin has no collision
 
-n = 745 present, 255 absent (of 1000 worlds)
+n = 746 present, 254 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -344,7 +344,7 @@ n = 745 present, 255 absent (of 1000 worlds)
 
 Fraction of kobold colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if kobold has no collision
 
-n = 650 present, 350 absent (of 1000 worlds)
+n = 651 present, 349 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -453,22 +453,22 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 Whether every generated name (settlement, deity, epithet) attributed to goblins in this world re-validates against the goblin phonology, independently re-derived and re-parsed from the surface string; Absent if goblins produced no names
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 998 present, 2 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 1000 | 100.0% |
+| `true` | 998 | 100.0% |
 | `false` | 0 | 0.0% |
 
 ### `phonotactic-validity-kobold`
 
 Whether every generated name (settlement, deity, epithet) attributed to kobolds in this world re-validates against the kobold phonology, independently re-derived and re-parsed from the surface string; Absent if kobolds produced no names
 
-n = 968 present, 32 absent (of 1000 worlds)
+n = 969 present, 31 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 968 | 100.0% |
+| `true` | 969 | 100.0% |
 | `false` | 0 | 0.0% |
 
 ### `tone-count-goblin`
@@ -495,20 +495,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `chorus-distinctiveness`
 
-- **D3**: p25..p75 spans 0.00030524999999997915 (0.61% of the 0.049743590000000004 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0.00030524999999997915 (0.66% of the 0.04615792000000002 min..max range), under the 5% bar
 
 ### `chorus-param-spread`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 0.09970238000000001 min..max range), under the 5% bar
+- **D3**: p25..p75 spans 0 (0.00% of the 0.10933333999999999 min..max range), under the 5% bar
 
 ### `chorus-sky-calibration`
 
 - **D2**: min == median == max == -1 across 1000 worlds
 - **D4**: median -1 equals the min (-1 .. -1)
-
-### `chorus-variance`
-
-- **D3**: p25..p75 spans 0 (0.00% of the 0.003017316199999999 min..max range), under the 5% bar
 
 ### `clean-outgroup-kobold`
 
@@ -568,22 +564,22 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `homophony-merger-share-bugbear`
 
-- **D2**: min == median == max == 1 across 993 worlds
+- **D2**: min == median == max == 1 across 994 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-goblin`
 
-- **D2**: min == median == max == 1 across 783 worlds
+- **D2**: min == median == max == 1 across 780 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-hobgoblin`
 
-- **D2**: min == median == max == 1 across 745 worlds
+- **D2**: min == median == max == 1 across 746 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-kobold`
 
-- **D2**: min == median == max == 1 across 650 worlds
+- **D2**: min == median == max == 1 across 651 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `tone-count-goblin`
