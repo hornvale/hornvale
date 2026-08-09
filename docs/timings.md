@@ -552,3 +552,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T15:09:18Z | gate | 460.776 | 2176.987 | 174.637 | 5.10 | 0 | 89c5c9c5 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T15:17:41Z | ci | 412.317 | 2190.124 | 164.131 | 5.71 | 0 | 6cb43b46 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T16:04:25Z | census | 775.777 | 21482.605 | 338.046 | 28.13 | 0 | 4c2156a4 |  | lefford | 40 |
+| 2026-08-09T16:14:37Z | gate | 458.530 | 2197.705 | 174.988 | 5.17 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
+| 2026-08-09T16:16:29Z | rebaseline | 111.946 | 145.349 | 10.084 | 1.39 | 0 | 121da186 | campaign/the-whetstone | ambrose | 12 |
