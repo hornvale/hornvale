@@ -3,9 +3,212 @@
     {
       "metric": "mean-land-temperature-c",
       "tracks": "year-std-days",
-      "why": "orbital period is the only available proxy for orbital distance, and thus for insolation, which is the dominant term in a radiative balance: a longer year means a wider orbit and less energy received. The census measures no insolation directly (see the note below), so this is a proxy and a weak one — which is itself part of the finding.",
+      "why": "longer year ⇒ wider orbit ⇒ less insolation; the primary term in a radiative balance",
       "declared": "dominant",
       "direction": "negative"
+    },
+    {
+      "metric": "habitable-fraction",
+      "tracks": "obliquity-degrees",
+      "why": "higher tilt ⇒ more extreme seasons ⇒ fewer cells tolerable year-round",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "mean-land-temperature-c",
+      "tracks": "brightening-per-gyr",
+      "why": "faster main-sequence brightening tracks stellar mass, and so luminosity",
+      "declared": "weak",
+      "direction": "positive"
+    },
+    {
+      "metric": "mean-land-temperature-c",
+      "tracks": "day-length-hours",
+      "why": "day length sets the diurnal range, not the annual mean",
+      "declared": "none",
+      "direction": "none"
+    },
+    {
+      "metric": "shoreline-development",
+      "tracks": "total-tide",
+      "why": "stronger tides work the coast harder, cutting a more involved shoreline",
+      "declared": "weak",
+      "direction": "positive"
+    },
+    {
+      "metric": "mean-land-temperature-c",
+      "tracks": "ocean-fraction",
+      "why": "ocean lowers albedo and adds thermal inertia",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "mean-land-temperature-c",
+      "tracks": "mountain-coverage",
+      "why": "the lapse rate: more land held high is colder land on average",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "habitable-fraction",
+      "tracks": "mountain-coverage",
+      "why": "high ground is poor habitat",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "fertile-land-fraction",
+      "tracks": "mean-land-temperature-c",
+      "why": "warmth drives weathering and soil formation",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "shelf-fraction",
+      "tracks": "ocean-fraction",
+      "why": "more sea means more of it near sea level",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "waterfall-count",
+      "tracks": "mountain-coverage",
+      "why": "knickpoints need gradient",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "shoreline-development",
+      "tracks": "continent-count",
+      "why": "many separate landmasses carry more coast per unit land",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "shoreline-development",
+      "tracks": "largest-continent-share",
+      "why": "one dominant continent carries less coast per unit land",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "endorheic-coverage",
+      "tracks": "mean-land-temperature-c",
+      "why": "colder, drier worlds leave more basins without an outlet to the sea",
+      "declared": "weak",
+      "direction": "negative"
+    },
+    {
+      "metric": "karst-fraction",
+      "tracks": "mean-land-temperature-c",
+      "why": "carbonate dissolution runs faster warm and wet",
+      "declared": "weak",
+      "direction": "positive"
+    },
+    {
+      "metric": "basal-metabolic-rate-w-goblin",
+      "tracks": "mean-land-temperature-c",
+      "why": "a colder world costs more to thermoregulate in",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "basal-metabolic-rate-w-kobold",
+      "tracks": "mean-land-temperature-c",
+      "why": "as above, for the second species",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "pace-of-life-goblin",
+      "tracks": "mean-land-temperature-c",
+      "why": "warmth accelerates metabolism, and pace runs 0 = fast",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "reproductive-tempo-goblin",
+      "tracks": "habitable-fraction",
+      "why": "a forgiving world permits the slow, sparse end of the r–K axis",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "reproductive-tempo-kobold",
+      "tracks": "habitable-fraction",
+      "why": "as above, for the second species",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "lifespan-years-goblin",
+      "tracks": "mean-land-temperature-c",
+      "why": "higher metabolic rate shortens life",
+      "declared": "weak",
+      "direction": "negative"
+    },
+    {
+      "metric": "settlement-count",
+      "tracks": "habitable-fraction",
+      "why": "settlements need habitable ground",
+      "declared": "strong",
+      "direction": "positive"
+    },
+    {
+      "metric": "settlement-count",
+      "tracks": "mountain-coverage",
+      "why": "mountains subtract settleable land",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "settlement-count",
+      "tracks": "ocean-fraction",
+      "why": "less land, fewer settlements",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "pop-weighted-abs-latitude",
+      "tracks": "mean-land-temperature-c",
+      "why": "a warmer world lets people live further from the equator",
+      "declared": "moderate",
+      "direction": "positive"
+    },
+    {
+      "metric": "total-population",
+      "tracks": "fertile-land-fraction",
+      "why": "food supply bounds population",
+      "declared": "strong",
+      "direction": "positive"
+    },
+    {
+      "metric": "total-population",
+      "tracks": "habitable-fraction",
+      "why": "habitable area bounds population",
+      "declared": "strong",
+      "direction": "positive"
+    },
+    {
+      "metric": "climate-displacement-events",
+      "tracks": "habitable-fraction",
+      "why": "a harsher world drives more climate migration",
+      "declared": "moderate",
+      "direction": "negative"
+    },
+    {
+      "metric": "total-population",
+      "tracks": "plate-size-gini",
+      "why": "how unevenly plates are sized should not reach demography",
+      "declared": "none",
+      "direction": "none"
+    },
+    {
+      "metric": "tribute-relations-standing",
+      "tracks": "settlement-count",
+      "why": "more polities, more room for standing subordination",
+      "declared": "moderate",
+      "direction": "positive"
     }
   ]
 }
