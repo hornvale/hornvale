@@ -22,7 +22,8 @@ strings only*. No correlation was computed while authoring — not by the
 controller, not by the implementer who transcribed the table, not by the
 reviewer who checked the transcription. The thirty rows were frozen in the
 spec's own commit, before a line of implementation existed, and the commit that
-first reported a result is nine commits later in history.
+first reported a result is seven commits later along the campaign's own
+history.
 
 This is not fastidiousness for its own sake. A frame authored with the data in
 view is a *description*, and no amount of disclosure converts a description
@@ -118,13 +119,13 @@ They cluster in three places.
 
 *Climate does not read the land.* Mean land temperature against ocean fraction
 is `−0.0005` — not weak, effectively nil, against a declared albedo-and-
-thermal-inertia coupling. Against mountain coverage it is `+0.041`: no lapse
+thermal-inertia coupling. Against mountain coverage it is `−0.041`: no lapse
 rate reaches the mean. Habitable fraction against obliquity is `+0.058`: the
 tilt does not reach habitability.
 
 *Settlement reads one scalar and nothing else.* Settlement count tracks
 habitable fraction at `+0.230` — weak where strong was declared, but present.
-Against mountain coverage it is `+0.015` and against ocean fraction `+0.085`.
+Against mountain coverage it is `+0.015` and against ocean fraction `−0.085`.
 Terrain reaches settlement only through a single habitability number, and not
 at all through the shape of the ground.
 
@@ -158,14 +159,25 @@ simulation should express a real effect*, which the spec named in advance as
 the frame's least defensible part, and they are calibration error rather than
 discovery. Three are sign errors the author owns: shelf fraction against ocean
 fraction is almost certainly a definitional mistake about what a shelf fraction
-is a fraction *of*, and the other two are weak enough to sit near noise.
+is a fraction *of*, and the other two are weak enough to sit near noise. Two
+are under-claims — the same calibration error with its sign reversed. Fertile
+land fraction against temperature at `+0.730` and standing tribute relations
+against settlement count at `+0.954` were both declared merely moderate; the
+author was too modest, and these are the rows that serve above as the frame's
+positive controls. A frame that only ever over-claimed would be a frame tuned
+to flatter itself, so the two rows pointing the other way are worth counting
+rather than filing under good news.
 
-The remaining seven are structurally different, and the clause's arithmetic
-does not explain them. An over-claim gets the sign right and the magnitude
-wrong. A severed wire produces no signal at all — and seven declared moderate
+The remaining ten are structurally different, and the clause's arithmetic does
+not explain them. An over-claim gets the sign right and the magnitude wrong. A
+severed wire produces no signal at all — and **seven declared moderate**
 couplings measuring below `0.1`, in three coherent clusters that each name a
-subsystem boundary, is a statement about the simulation. *(That partition is
-the author's judgement, not a measurement; the measurement is the table.)* Two
+subsystem boundary, is a statement about the simulation. The other three of the
+ten were declared only *weak*, so their fall to `< 0.1` is a short one; they are
+counted here for completeness and not offered as evidence of anything severed.
+Six, four, three, two and ten: the twenty-five firings partition without
+remainder. *(That partition is the author's judgement, not a measurement; the
+measurement is the table.)* Two
 of those clusters were already suspected from the other side: the survey before
 this one found that the census never contained an insolation column, so the
 standing conclusion that climate is uninfluenced by its astronomy rested on one

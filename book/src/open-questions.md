@@ -1391,7 +1391,7 @@ its honest size.
    correlation was computed, and measured once: five silent, nineteen
    mis-strengthed, six unmeasurable. Ten of the nineteen measure `|r| < 0.1`
    and **seven of those ten were declared moderate** — mean land temperature
-   against ocean fraction at `−0.0005`, against mountain coverage at `+0.041`;
+   against ocean fraction at `−0.0005`, against mountain coverage at `−0.041`;
    habitable fraction against obliquity at `+0.058`; settlement count against
    mountain coverage at `+0.015`. So the previous entry's finding generalizes
    past astronomy: climate is uninfluenced by its **terrain** as well, measured

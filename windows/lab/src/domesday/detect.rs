@@ -27,7 +27,11 @@ use std::collections::BTreeSet;
 
 /// One finding a detector raised against a metric.
 ///
-/// `detector` names which of D1-D8 raised it; `metric` is the census column
+/// `detector` names the detector that raised it. That name is an open set,
+/// not the closed D1-D8 roster: a detector may report under several names to
+/// distinguish outcomes it must not conflate, and D5 does exactly that with
+/// `"D5 strength"`, `"D5 direction"` and `"D5 unmeasurable"`. Readers must
+/// treat the field as an opaque label and never enumerate it. `metric` is the census column
 /// (or, for D8, the `domains/` crate) it concerns; `detail` is a
 /// human-readable explanation carrying the actual numbers involved — every
 /// number in it is read from the committed census at render time, never
@@ -35,7 +39,7 @@ use std::collections::BTreeSet;
 /// type-audit: bare-ok(identifier-text: detector), bare-ok(identifier-text: metric), bare-ok(prose: detail)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Finding {
-    /// Which detector raised this finding, e.g. `"D1"`.
+    /// Which detector raised this finding, e.g. `"D1"` or `"D5 unmeasurable"`.
     pub detector: &'static str,
     /// The census metric (or, for D8, the `domains/` crate name) involved.
     pub metric: String,
