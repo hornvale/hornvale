@@ -60,6 +60,8 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
     let all_surface = vec![HabitatRealm::Surface; bio.len()];
     let mut one_subterranean = all_surface.clone();
     one_subterranean[tag] = HabitatRealm::Subterranean;
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let caps = |realm: &[HabitatRealm]| {
         per_species_capacity(
@@ -71,6 +73,7 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
             &regime,
             &bio,
             realm,
+            &affinity,
         )
         .into_iter()
         .find(|(t, _)| *t == tag as u32)

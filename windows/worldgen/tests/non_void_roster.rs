@@ -68,6 +68,8 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
 
     let world = build_world(
         Seed(seed),
@@ -95,7 +97,7 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     };
 
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
     let mut viable = BTreeSet::new();

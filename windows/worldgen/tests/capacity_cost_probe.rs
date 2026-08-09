@@ -136,6 +136,8 @@ fn cost_of_making_capacity_era_varying() {
         })
         .collect();
     let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
     #[allow(clippy::disallowed_types)] // benchmark harness, not sim logic
     let t0 = Instant::now();
@@ -161,6 +163,7 @@ fn cost_of_making_capacity_era_varying() {
         &regime,
         &biosphere,
         &realm,
+        &affinity,
     );
     let caps_ms = t1.elapsed().as_secs_f64() * 1000.0;
     std::hint::black_box(&caps);
@@ -380,6 +383,8 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
 fn hoisted_era_replay_versus_naive() {
     let (geo, terrain, climate, obliquity_deg, insolation_scalar, regime, biosphere, _wc) = setup();
     let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
     macro_rules! ms {
         ($e:expr) => {{
@@ -400,7 +405,8 @@ fn hoisted_era_replay_versus_naive() {
         insolation_scalar,
         &regime,
         &biosphere,
-        &realm
+        &realm,
+        &affinity
     ));
 
     // A 25-era replay, each era offset a little so nothing can be cached away.
@@ -426,6 +432,7 @@ fn hoisted_era_replay_versus_naive() {
                 &regime,
                 &biosphere,
                 &realm,
+                &affinity,
             ));
         }
         last
@@ -443,7 +450,7 @@ fn hoisted_era_replay_versus_naive() {
         let mut last = None;
         for adjust in &eras {
             last = Some(per_species_capacity_at(
-                geo, &terrain, &climate, &supply, adjust, &biosphere, &realm,
+                geo, &terrain, &climate, &supply, adjust, &biosphere, &realm, &affinity,
             ));
         }
         last

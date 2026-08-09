@@ -99,6 +99,8 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
 
     // Accumulated across every seed in the sweep, keyed by (kind, biome).
     // `occupied_k`: the K values of cells at/above the viability floor (the
@@ -138,7 +140,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
         };
 
         let ks = per_species_suitability(
-            geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+            geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
         );
         let biome_map = climate.biome_map();
 

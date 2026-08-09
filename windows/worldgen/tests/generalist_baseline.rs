@@ -218,6 +218,8 @@ fn measure_one(
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
 
     let world = build_world(
         seed,
@@ -253,6 +255,7 @@ fn measure_one(
         &regime,
         &bios,
         &realm,
+        &affinity,
     );
     // The exact substrate `per_species_suitability` builds internally (same
     // geo/terrain/climate/obliquity/insolation_scalar/regime) - not a

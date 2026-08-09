@@ -251,6 +251,10 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
     let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
     let realm_live = realm_slice(&wc);
     let realm_surface_forced: Vec<HabitatRealm> = vec![HabitatRealm::Surface; bio.len()];
+    // The Range: this battery measures the realm/availability question only;
+    // an empty registry makes every kind's affinity `None` regardless, so a
+    // flat all-`None` slice is exact, not a stand-in.
+    let none_affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let obliquity_deg = climate.obliquity_deg();
     let insolation_scalar = climate.insolation();
@@ -265,6 +269,7 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
         &regime,
         &bio,
         &realm_live,
+        &none_affinity,
     );
     let k_surface_forced = per_species_suitability(
         geo,
@@ -275,6 +280,7 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
         &regime,
         &bio,
         &realm_surface_forced,
+        &none_affinity,
     );
 
     let tag = names

@@ -258,8 +258,10 @@ fn measure_fits(
     // Every kind here is peopled and surface-scored — absent from the sparse
     // habitat-realm store, so all default to `Surface`.
     let realm = vec![HabitatRealm::SURFACE; bios.len()];
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
     // Build-local dense index -> slot mapping (per_species_suitability's doc
     // comment): `bios` above holds the human variants in order and goblin

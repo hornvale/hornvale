@@ -170,6 +170,9 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let species_affinity: Vec<Option<hornvale_species::BiomeAffinity>> =
+        vec![None; species_biosphere.len()];
 
     let per_species = per_species_suitability(
         geo,
@@ -180,6 +183,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         &regime,
         &species_biosphere,
         &species_realm,
+        &species_affinity,
     );
 
     let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();

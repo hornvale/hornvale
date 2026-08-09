@@ -177,6 +177,8 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
                 })
                 .collect();
         let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+        // The Range: an empty registry, so every kind's affinity is `None`.
+        let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
         let direct = per_species_capacity(
             geo,
@@ -187,6 +189,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
             &regime,
             &biosphere,
             &realm,
+            &affinity,
         );
         let hoisted = EraInvariantSupply::build(
             geo,
@@ -204,6 +207,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
             &EraAdjust::present(&terrain),
             &biosphere,
             &realm,
+            &affinity,
         );
 
         assert_eq!(direct.len(), via_era.len(), "seed {seed}: species count");
@@ -260,6 +264,8 @@ fn ocean_is_never_settleable_at_any_era() {
                 })
                 .collect();
         let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+        // The Range: an empty registry, so every kind's affinity is `None`.
+        let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,
             &terrain,
@@ -280,7 +286,7 @@ fn ocean_is_never_settleable_at_any_era() {
                 .expect("a finite low-stand"),
             };
             let caps = per_species_capacity_at(
-                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm,
+                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm, &affinity,
             );
             for (tag, cap) in &caps {
                 for cell in geo.cells() {

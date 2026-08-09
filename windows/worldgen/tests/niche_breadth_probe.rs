@@ -126,6 +126,8 @@ fn report(seed_value: u64) {
         })
         .collect();
     let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
     let caps = per_species_capacity(
         geo,
@@ -136,6 +138,7 @@ fn report(seed_value: u64) {
         &regime,
         &biosphere,
         &realm,
+        &affinity,
     );
     let substrate = substrate_field(
         geo,

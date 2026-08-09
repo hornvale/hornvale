@@ -93,6 +93,8 @@ fn temperature_gate_versus_era_mask() {
             })
             .collect();
         let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+        // The Range: an empty registry, so every kind's affinity is `None`.
+        let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,
             &terrain,
@@ -110,7 +112,7 @@ fn temperature_gate_versus_era_mask() {
             let substrate =
                 substrate_field_at(geo, &terrain, &climate, &hoisted.insolation, &adjust);
             let caps = per_species_capacity_at(
-                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm,
+                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm, &affinity,
             );
 
             // Land at this era. Ocean is excluded by capacity already (proven in

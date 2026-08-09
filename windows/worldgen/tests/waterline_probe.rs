@@ -125,6 +125,8 @@ fn waterline_probe() {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let ks = per_species_suitability(
         geo,
@@ -135,6 +137,7 @@ fn waterline_probe() {
         &regime,
         &bio,
         &realm,
+        &affinity,
     );
     let k_of = |tag: u32| -> &CellMap<f64> { &ks.iter().find(|(t, _)| *t == tag).unwrap().1 };
     let tag_of = |name: &str| -> u32 { names.iter().position(|n| *n == name).unwrap() as u32 };

@@ -144,6 +144,10 @@ fn measure_seed(
     let insolation_scalar = climate.insolation();
     let regime = climate.regime();
 
+    // The Range: this readout measures the realm question only; an empty
+    // registry makes every kind's affinity `None` regardless, so a flat
+    // all-`None` slice is exact, not a stand-in.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
     let k_after = per_species_suitability(
         geo,
         &terrain,
@@ -153,6 +157,7 @@ fn measure_seed(
         &regime,
         bio,
         realm_after,
+        &affinity,
     );
     let k_before = per_species_suitability(
         geo,
@@ -163,6 +168,7 @@ fn measure_seed(
         &regime,
         bio,
         realm_before,
+        &affinity,
     );
 
     let stats_for = |label: &str| -> KindSeedStats {

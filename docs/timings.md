@@ -545,3 +545,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T03:21:25Z | gate | 1237.949 | 5561.846 | 169.508 | 4.63 | 0 | 4ca26481 | the-range | Greyjoy | 10 |
 | 2026-08-09T04:40:05Z | gate | 19.210 | 30.705 | 18.173 | 2.54 | 0 | ebc56cbf | the-range | MacBookPro | 10 |
 | 2026-08-09T04:51:35Z | gate | 675.175 | 5442.585 | 143.219 | 8.27 | 0 | ebc56cbf | the-range | MacBookPro | 10 |
+| 2026-08-09T05:16:03Z | rebaseline | 169.717 | 219.438 | 11.587 | 1.36 | 0 | 46ecfeea | the-range | MacBookPro | 10 |
+| 2026-08-09T05:28:54Z | gate | 698.010 | 5490.849 | 151.606 | 8.08 | 0 | 46ecfeea | the-range | MacBookPro | 10 |

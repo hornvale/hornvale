@@ -172,8 +172,10 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: an empty registry, so every kind's affinity is `None`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
     let ks = hornvale_worldgen::per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
     let submerged: Vec<hornvale_kernel::CellId> =
