@@ -1,0 +1,1 @@
+{"kind":"technique","by":"campaign/the-cairn","note":"git mktree rejects any path containing a slash; use a temp index","paths":["tools/board/"]}
