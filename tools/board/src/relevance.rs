@@ -38,7 +38,20 @@ pub fn is_relevant(post: &Post, changed: &[String]) -> bool {
         .any(|p| changed.iter().any(|c| c.starts_with(p.as_str())))
 }
 
-/// A worktree's private record of the last board tip it rendered.
+/// A worktree's private record of which post ids it has actually been shown.
+///
+/// Deliberately **not** a board tip. A tip cannot express "which posts have I
+/// actually been shown" — those differ exactly when a render's relevance
+/// filter drops a post that was present at that tip. A `hold-off` notice
+/// naming `domains/terrain/`, posted while this worktree is editing
+/// `kernel/`, is unseen but irrelevant, so it does not render; if the cursor
+/// held a tip, recording that tip would mark the notice seen anyway, and it
+/// would never render even after the worktree later starts touching
+/// `domains/terrain/` — silently defeating the exact collision this board
+/// exists to warn about, by construction rather than on any error path.
+/// Holding the set of ids actually shown closes this: an id that was skipped
+/// for relevance is never recorded, so it stays unseen until it is actually
+/// displayed.
 #[derive(Debug, Clone)]
 pub struct Cursor {
     path: PathBuf,
@@ -58,87 +71,59 @@ impl Cursor {
         &self.path
     }
 
-    /// The last board tip this worktree rendered, if any.
-    pub fn last_seen(&self) -> Option<String> {
+    /// Post ids this worktree has already been shown.
+    ///
+    /// A read failure (most commonly: the file does not exist yet, for a
+    /// fresh worktree) reads as "nothing shown yet" — the safe direction,
+    /// since it can only cause a repeat render, never a swallowed one.
+    pub fn seen(&self) -> BTreeSet<String> {
         std::fs::read_to_string(&self.path)
-            .ok()
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
+            .map(|s| {
+                s.lines()
+                    .filter(|l| !l.is_empty())
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
-    /// Record a tip as seen.
-    pub fn record(&self, tip: &str) -> Result<(), BoardError> {
-        std::fs::write(&self.path, format!("{tip}\n"))
+    /// Record `shown` as seen, unioned into whatever this worktree had
+    /// already recorded.
+    ///
+    /// **Caller contract:** `shown` must be exactly the ids actually
+    /// displayed to the reader — post-relevance-filtering, not the full
+    /// [`unseen`] set. Recording an id that was unseen but filtered out for
+    /// relevance is precisely the bug this representation exists to prevent:
+    /// it would mark the id seen before it was ever shown, so it could never
+    /// render later even after it became relevant.
+    ///
+    /// Also prunes: any previously-recorded id no longer present at
+    /// `board`'s tip is dropped. A reaped post can never render again, so
+    /// keeping its id here forever would grow this file without bound — it
+    /// stays sized to the live post count instead.
+    pub fn record(&self, board: &Board, shown: &BTreeSet<String>) -> Result<(), BoardError> {
+        let live: BTreeSet<String> = board.post_ids_at_tip()?.into_iter().collect();
+        let mut all = self.seen();
+        all.extend(shown.iter().cloned());
+        all.retain(|id| live.contains(id));
+        let text: String = all.iter().map(|id| format!("{id}\n")).collect();
+        std::fs::write(&self.path, text)
             .map_err(|e| BoardError::Io(format!("writing cursor {:?}: {e}", self.path)))
     }
 }
 
-/// Post ids added to the board since the cursor was last recorded.
+/// Post ids at the board's tip that this worktree has not yet been shown.
 ///
-/// **An empty return means genuinely nothing is new — never "could not
-/// tell".** That distinction is the whole point: the caller filters a render
-/// down to exactly this set and then advances the cursor past it, so an
-/// empty set that actually meant "the read failed" would render nothing and
-/// then mark every pending post seen, permanently. Three cases, kept
-/// distinct on purpose:
-///
-/// 1. The board has no tip yet — legitimately nothing unseen: `Ok(empty)`.
-/// 2. The cursor names a commit git cannot resolve (a plausible if rare
-///    corruption). Treated as "this worktree has seen nothing" and reported
-///    against the no-cursor fallback range, with a one-line stderr warning —
-///    fail OPEN, because re-rendering a post is cosmetic and hiding one
-///    forever is the harm this board exists to prevent.
-/// 3. Any other git failure propagates as `Err`, so the caller can decline to
-///    advance the cursor rather than have the failure silently reported as
-///    "nothing new".
-///
-/// **Caller contract, for whoever wires this to a render:** advance the
-/// cursor based on the ids returned *here*, not based on which of them
-/// [`is_relevant`] chose to display. Filtering an id out for relevance is a
-/// per-render, per-reader display decision with no persistent memory of its
-/// own; treating a relevance-filtered id as "seen" would let a transient
-/// [`changed_paths`] failure (which makes every path-scoped post look
-/// irrelevant for that one pass) combine with cursor advancement to
-/// reproduce this exact hazard one layer up, permanently hiding a post this
-/// worktree never actually saw.
+/// A plain set difference against [`Cursor::seen`] — no git log, no commit
+/// range, no cursor-resolution fallback: the representation change that
+/// replaced a board tip with a set of shown ids retired that whole class of
+/// problem structurally, not just the failure path. An empty return means
+/// genuinely nothing new, never "could not tell": the only way to end up
+/// with a failure here is [`Board::post_ids_at_tip`] itself failing, which
+/// surfaces as `Err`, never as an empty set standing in for it.
 pub fn unseen(board: &Board, cursor: &Cursor) -> Result<BTreeSet<String>, BoardError> {
-    let Some(tip) = board.tip()? else {
-        return Ok(BTreeSet::new());
-    };
-    let range = match cursor.last_seen() {
-        // `^{commit}` forces git to confirm the object actually exists and is
-        // a commit, not merely that the string looks like one: a bare full
-        // hex sha passes `rev-parse --verify` as syntactically valid even
-        // when no such object is in the store, which would defeat this check
-        // entirely.
-        Some(seen)
-            if board
-                .repo()
-                .rev_parse_verify(&format!("{seen}^{{commit}}"))?
-                .is_some() =>
-        {
-            format!("{seen}..{tip}")
-        }
-        Some(seen) => {
-            eprintln!(
-                "board: cursor at {:?} names commit {seen}, which git cannot resolve; \
-                 ignoring it and treating this worktree as having seen nothing, rather than \
-                 risk reporting no unseen posts",
-                cursor.path()
-            );
-            tip.clone()
-        }
-        None => tip.clone(),
-    };
-    let log = board
-        .repo()
-        .git(&["log", "--format=", "--diff-filter=A", "--name-only", &range])?;
-    Ok(log
-        .lines()
-        .filter_map(|l| l.strip_prefix("posts/"))
-        .filter_map(|l| l.strip_suffix(".json"))
-        .map(str::to_string)
-        .collect())
+    let at_tip: BTreeSet<String> = board.post_ids_at_tip()?.into_iter().collect();
+    Ok(at_tip.difference(&cursor.seen()).cloned().collect())
 }
 
 #[cfg(test)]
@@ -183,15 +168,14 @@ mod tests {
             "the cursor must live under .git so it dies with the worktree: {:?}",
             cursor.path()
         );
-        assert_eq!(
-            cursor.last_seen(),
-            None,
-            "a fresh worktree has seen nothing"
+        assert!(
+            cursor.seen().is_empty(),
+            "a fresh worktree has been shown nothing"
         );
     }
 
     #[test]
-    fn unseen_reports_only_posts_added_since_the_cursor_was_recorded() {
+    fn unseen_reports_only_ids_not_yet_recorded_as_shown() {
         let (_d, repo) = temp_repo();
         let board = Board::with_ref(repo.clone(), "refs/test/cursor");
         let cursor = Cursor::open(&repo).expect("cursor");
@@ -200,11 +184,11 @@ mod tests {
         assert!(unseen(&board, &cursor).expect("unseen").contains(&first));
 
         cursor
-            .record(&board.tip().expect("tip").expect("some"))
+            .record(&board, &BTreeSet::from([first.clone()]))
             .expect("record");
         assert!(
             unseen(&board, &cursor).expect("unseen").is_empty(),
-            "nothing new after recording"
+            "nothing new after recording what was shown"
         );
 
         let second = board.append(&Post::new("notice", "c")).expect("second");
@@ -214,55 +198,104 @@ mod tests {
     }
 
     #[test]
-    fn unseen_falls_back_to_everything_when_the_cursor_names_an_unresolvable_commit() {
-        // A syntactically valid 40-hex-char sha that no object in the repo
-        // matches. This must fail OPEN: a repeat render is cosmetic, a
-        // silently swallowed post is the harm this board exists to prevent.
+    fn recording_only_the_shown_ids_leaves_a_relevance_filtered_post_unseen() {
+        // The regression test for the flaw this representation replaced: a
+        // post that is unseen but dropped by the relevance filter must stay
+        // unseen. If `record` were ever called with the full unseen set
+        // instead of only what was actually displayed, the filtered-out post
+        // would be marked seen before anyone had shown it to this worktree —
+        // exactly the "hold-off notice for domains/terrain/ silently expires
+        // while this worktree is still editing kernel/, then never renders
+        // even once it starts touching domains/terrain/" scenario the
+        // coordinator described.
         let (_d, repo) = temp_repo();
-        let board = Board::with_ref(repo.clone(), "refs/test/cursor-bad-sha");
+        let board = Board::with_ref(repo.clone(), "refs/test/relevance-regression");
         let cursor = Cursor::open(&repo).expect("cursor");
 
-        let id = board.append(&Post::new("notice", "b")).expect("append");
-        cursor
-            .record(&"0".repeat(40))
-            .expect("record an unresolvable cursor");
+        let relevant = board.append(&Post::new("notice", "b")).expect("relevant");
+        let filtered_out = board
+            .append(&Post::new("notice", "c").with("paths", json!(["domains/terrain/"])))
+            .expect("filtered out by relevance this render");
 
-        let ids = unseen(&board, &cursor).expect("unseen");
+        // Simulate a render: both are unseen, but only `relevant` survives
+        // this reader's relevance filter and is actually shown.
+        let both_unseen = unseen(&board, &cursor).expect("unseen");
+        assert!(both_unseen.contains(&relevant));
+        assert!(both_unseen.contains(&filtered_out));
+        let shown = BTreeSet::from([relevant.clone()]);
+        cursor.record(&board, &shown).expect("record only shown");
+
+        let still_unseen = unseen(&board, &cursor).expect("unseen after render");
         assert!(
-            ids.contains(&id),
-            "an unresolvable cursor must not silently hide a pending post: {ids:?}"
+            !still_unseen.contains(&relevant),
+            "the displayed post is now seen"
+        );
+        assert!(
+            still_unseen.contains(&filtered_out),
+            "a post that was unseen but filtered out by relevance must remain unseen, \
+             not get marked seen just because it was in the unseen set at render time: \
+             {still_unseen:?}"
         );
     }
 
     #[test]
-    fn unseen_propagates_a_genuine_git_failure_instead_of_reporting_empty() {
-        // Corrupts the board's own tree object (deletes its loose object
-        // file) so `git log` fails for a reason that has nothing to do with
-        // the cursor. This must surface as `Err`, not silently collapse to
-        // an empty set -- an empty set here would look identical to "nothing
-        // new" to the caller, which then advances the cursor and loses
-        // whatever was actually pending.
+    fn recording_is_cumulative_across_calls() {
         let (_d, repo) = temp_repo();
-        let board = Board::with_ref(repo.clone(), "refs/test/cursor-corrupt");
+        let board = Board::with_ref(repo.clone(), "refs/test/cumulative");
         let cursor = Cursor::open(&repo).expect("cursor");
 
-        board.append(&Post::new("notice", "b")).expect("append");
-        let tip = board.tip().expect("tip").expect("some");
-        let tree = repo
-            .git(&["rev-parse", "--verify", &format!("{tip}^{{tree}}")])
-            .expect("tree");
-        let object_path = repo
-            .root()
-            .join(".git/objects")
-            .join(&tree[0..2])
-            .join(&tree[2..]);
-        std::fs::remove_file(&object_path).expect("corrupt the tree object");
+        let a = board.append(&Post::new("notice", "b")).expect("a");
+        let b = board.append(&Post::new("notice", "c")).expect("b");
 
-        let err = unseen(&board, &cursor)
-            .expect_err("a genuine git failure must surface as Err, not an empty set");
+        cursor
+            .record(&board, &BTreeSet::from([a.clone()]))
+            .expect("record a");
+        cursor
+            .record(&board, &BTreeSet::from([b.clone()]))
+            .expect("record b");
+
+        let seen = cursor.seen();
         assert!(
-            matches!(err, BoardError::Git { .. }),
-            "expected a git error, got {err:?}"
+            seen.contains(&a) && seen.contains(&b),
+            "two separate record calls must union, not replace: {seen:?}"
+        );
+        assert!(unseen(&board, &cursor).expect("unseen").is_empty());
+    }
+
+    #[test]
+    fn recording_prunes_ids_no_longer_present_at_the_tip() {
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/prune");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        let a = board.append(&Post::new("notice", "b")).expect("a");
+        cursor
+            .record(&board, &BTreeSet::from([a.clone()]))
+            .expect("record a");
+        assert!(cursor.seen().contains(&a));
+
+        // Simulate a future reap (Task 5 does not implement one itself):
+        // force the ref onto a tip built from the well-known empty-tree
+        // object id, so `a`'s file is no longer present at the tip.
+        let empty_tree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+        let old_tip = board.tip().expect("tip").expect("some");
+        let reaped = repo
+            .git(&["commit-tree", empty_tree, "-p", &old_tip, "-m", "reap"])
+            .expect("reap commit");
+        repo.git(&["update-ref", board.refname(), &reaped])
+            .expect("force the ref past a's post");
+        assert!(
+            board.post_ids_at_tip().expect("ids").is_empty(),
+            "the simulated reap must have removed a from the tip"
+        );
+
+        cursor
+            .record(&board, &BTreeSet::new())
+            .expect("record after reap");
+        assert!(
+            !cursor.seen().contains(&a),
+            "an id no longer at the tip must be pruned from the persisted set: {:?}",
+            cursor.seen()
         );
     }
 }
