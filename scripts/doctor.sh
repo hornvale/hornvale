@@ -26,6 +26,18 @@ section "Live state"
 echo "  branch: $(git branch --show-current)   dirty files: $(git status --porcelain | wc -l | tr -d ' ')"
 git worktree list | sed 's/^/  /'
 
+board_bin=""
+for candidate in tools/board/target/release/board tools/board/target/debug/board; do
+  [ -x "${candidate}" ] && board_bin="${candidate}" && break
+done
+if [ -n "${board_bin}" ]; then
+  board_out="$("${board_bin}" read 2>/dev/null || true)"
+  if [ -n "${board_out}" ]; then
+    printf '\n== The board\n'
+    printf '%s\n' "${board_out}" | sed 's/^/  /'
+  fi
+fi
+
 section "Decisions never cited in sources or docs (informational, not a gate)"
 # Cites often wrap across lines (the "decision" keyword ends one comment line,
 # the backticked slug starts the next), which a per-line grep misses. Build a

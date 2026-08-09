@@ -22,7 +22,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check board board-digest
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -187,6 +187,16 @@ type-audit-report: ## Fail if the committed type-audit report is stale (regen cm
 		echo "  cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md" >&2; \
 		exit 1; \
 	fi
+
+# The Cairn (tools/board): a git-native message board for parallel agent
+# sessions, outside the cargo workspace like type-audit and the digest above
+# (so `make gate` never builds it — its own tests run under
+# `cargo test --manifest-path tools/board/Cargo.toml`).
+board: ## The Cairn: read the board (full, unfiltered)
+	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- read
+
+board-digest: ## The Cairn: the human digest over the board's history (default 14 days)
+	@cargo run --quiet --manifest-path tools/board/Cargo.toml -- digest $(DAYS)
 
 test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + doctests
 	cargo nextest run --workspace

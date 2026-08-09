@@ -12,8 +12,13 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Deduplicated by id: a post's id is the object id of its own bytes (D11),
 /// so a reap-then-repost of byte-identical content is the SAME post
 /// reappearing in the `--diff-filter=A` walk, not a new one. The walk is
-/// oldest-first, so the first occurrence recorded is already the earliest
-/// `committed_at` — that is when the project first learned the thing.
+/// oldest-first, and the cutoff for `since_days` is applied BEFORE this
+/// dedupe bookkeeping — so the `committed_at` recorded here is only the
+/// earliest occurrence *within the queried window*, not necessarily the
+/// post's true first appearance. If the true first appearance falls
+/// outside the window and only a later repost falls inside it, this
+/// reports the repost's later time. Fine for a windowed view; do not read
+/// it as "when the project first learned the thing."
 pub fn history(
     board: &Board,
     since_days: u64,
@@ -391,8 +396,10 @@ mod tests {
         board.append(&post).expect("repost identical content");
 
         let seen = history(&board, 3_650, ctx.now_unix + 1).expect("history");
-        let techniques: Vec<&StoredPost> =
-            seen.iter().filter(|s| s.post.kind == "technique").collect();
+        let techniques: Vec<&StoredPost> = seen
+            .iter()
+            .filter(|sp| sp.post.kind == "technique")
+            .collect();
         assert_eq!(
             techniques.len(),
             1,

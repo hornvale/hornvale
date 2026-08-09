@@ -459,7 +459,7 @@ mod tests {
                 .expect("append");
         }
         let posts = board.posts_at_tip().expect("posts");
-        let all: BTreeSet<String> = posts.iter().map(|s| s.id.clone()).collect();
+        let all: BTreeSet<String> = posts.iter().map(|sp| sp.id.clone()).collect();
         let displayed = Displayed::filter(&posts, &all, &[]);
         let (capped, elided) = displayed.cap(3);
         assert_eq!(elided, 0, "exactly at budget must elide nothing");
@@ -476,7 +476,7 @@ mod tests {
                 .expect("append");
         }
         let posts = board.posts_at_tip().expect("posts");
-        let all: BTreeSet<String> = posts.iter().map(|s| s.id.clone()).collect();
+        let all: BTreeSet<String> = posts.iter().map(|sp| sp.id.clone()).collect();
         let displayed = Displayed::filter(&posts, &all, &[]);
         let (capped, elided) = displayed.cap(3);
         assert_eq!(
