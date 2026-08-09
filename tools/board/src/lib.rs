@@ -4,6 +4,7 @@
 
 pub mod git;
 pub mod post;
+pub mod store;
 
 /// Everything that can go wrong, always carrying the physical reason.
 #[derive(Debug)]
