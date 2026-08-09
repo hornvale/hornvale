@@ -42,9 +42,15 @@ const OCCUPIED = Deno.readTextFileSync(
 Deno.test("a mark renders its glyph at its cell", () => {
   const snap = parseSnapshot(OCCUPIED)!;
   const grid = planCells(snap)!;
-  // The fixture's one mark: noun "bugbear of Bobakoba" at (5, 3),
+  // The fixture's one mark: noun "bugbear of Boxa" at (4, 11),
   // lattice-local == pane-local since this plan's extent origin is (0, 0).
-  assertEquals(grid[3][5].glyph, "b");
+  // Re-pinned when The Lantern's absorption regenerated this fixture
+  // (windows/vessel/tests/fixtures/snapshot-seed-1-chamber-occupied.json) —
+  // a generated artifact has no merge (see clients/CLAUDE.md), so its
+  // search-for-a-qualifying-world result moved to a different room, mark
+  // position and noun. The glyph is still `b`, coincidentally: this
+  // fixture's search only requires SOME agent mark, not this one.
+  assertEquals(grid[11][4].glyph, "b");
 });
 
 Deno.test("marks draw over the floor but never over `@`", () => {
