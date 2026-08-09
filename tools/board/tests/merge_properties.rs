@@ -70,12 +70,28 @@ fn identical_posts_recorded_independently_are_idempotent() {
         .expect("ib");
 
     let same = Post::new("technique", "campaign/x");
-    Board::with_ref(repo.clone(), "refs/test/ia")
-        .append(&same)
-        .expect("ia post");
-    Board::with_ref(repo.clone(), "refs/test/ib")
-        .append(&same)
-        .expect("ib post");
+    let ia = Board::with_ref(repo.clone(), "refs/test/ia");
+    let ib = Board::with_ref(repo.clone(), "refs/test/ib");
+    let id_a = ia.append(&same).expect("ia post");
+    let id_b = ib.append(&same).expect("ib post");
+    // Q9: establish the property on each side before merging, not just on
+    // the merged result — a no-op append on either side would also leave
+    // the merge at 2 entries, so the merge count alone does not prove both
+    // appends actually landed.
+    assert_eq!(
+        id_a, id_b,
+        "identical content must produce identical ids on both sides"
+    );
+    assert_eq!(
+        ia.post_ids_at_tip().expect("ia ids").len(),
+        2,
+        "ia should hold the shared base post plus this one"
+    );
+    assert_eq!(
+        ib.post_ids_at_tip().expect("ib ids").len(),
+        2,
+        "ib should hold the shared base post plus this one"
+    );
 
     let tree = repo
         .git(&["merge-tree", "--write-tree", "refs/test/ia", "refs/test/ib"])
@@ -132,9 +148,32 @@ fn a_shared_append_only_file_conflicts_which_is_why_we_do_not_use_one() {
             "b",
         ])
         .expect("b");
+    // I4: `Repo::git` discards stdout on failure, and that is exactly where
+    // git puts the one diagnostic (`CONFLICT (content)`) that tells us THIS
+    // failed for the reason the control exists to demonstrate, rather than
+    // for some unrelated reason (a bad object id, a dropped flag, a renamed
+    // subcommand) that would also exit non-zero and leave the control
+    // silently no longer watching anything. Spawning `git` directly here is
+    // deliberate, not a layering violation: this test asserts git's own
+    // behaviour, not the crate's API surface.
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(repo.root())
+        .args(["merge-tree", "--write-tree", &a, &b])
+        .output()
+        .expect("spawn git");
     assert!(
-        repo.git(&["merge-tree", "--write-tree", &a, &b]).is_err(),
+        !out.status.success(),
         "the shared-file shape must still conflict; if it does not, revisit D11"
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("CONFLICT (content)"),
+        "must fail because of a content conflict, not some other reason: {stdout}"
+    );
+    assert!(
+        stdout.contains("register.jsonl"),
+        "the conflict must be on the shared register file: {stdout}"
     );
 }
 
@@ -167,4 +206,16 @@ fn eight_concurrent_writers_lose_no_posts() {
         assert!(present.contains(id), "post {id} was lost under contention");
     }
     assert_eq!(present.len(), 9, "genesis plus eight writers");
+
+    // Q11/spec §7 test-plan item 1: "all N posts present, chain length N+1".
+    // Nine linear commits from nine appends, eight of which started
+    // concurrently, is itself indirect evidence that the retry path ran: at
+    // least two writers must have read the same tip and at least one of them
+    // lost a race and rebuilt on the winner's commit.
+    let tip = board.tip().expect("tip").expect("some");
+    let chain_len = repo.git(&["rev-list", "--count", &tip]).expect("rev-list");
+    assert_eq!(
+        chain_len, "9",
+        "genesis plus eight appends must form one linear chain of length 9"
+    );
 }

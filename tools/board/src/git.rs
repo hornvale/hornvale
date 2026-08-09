@@ -25,12 +25,42 @@ impl Repo {
 
     /// Run git, returning trimmed stdout, or the physical reason it failed.
     pub fn git(&self, args: &[&str]) -> Result<String, BoardError> {
-        let out = Command::new("git")
-            .arg("-C")
-            .arg(&self.root)
+        let out = self
+            .command()
             .args(args)
             .output()
             .map_err(|e| BoardError::Io(format!("spawning git: {e}")))?;
+        Self::finish(args, out)
+    }
+
+    /// Run git with `GIT_INDEX_FILE` pointed at `index`, returning trimmed
+    /// stdout. This is how a caller builds a tree without touching the
+    /// repository's real index (`git mktree` cannot place a file under a
+    /// path containing a slash, so a throwaway index plus `read-tree` /
+    /// `update-index` / `write-tree` is the working recipe — see
+    /// `store::Board::tree_with`). `index` must be an absolute path: git
+    /// resolves a relative `GIT_INDEX_FILE` against its own `-C` root, but
+    /// any Rust-side cleanup of the same path resolves against the
+    /// *process* cwd, so a relative path here is a latent leak.
+    pub fn git_with_index(&self, index: &Path, args: &[&str]) -> Result<String, BoardError> {
+        let out = self
+            .command()
+            .env("GIT_INDEX_FILE", index)
+            .args(args)
+            .output()
+            .map_err(|e| BoardError::Io(format!("spawning git: {e}")))?;
+        Self::finish(args, out)
+    }
+
+    /// The `git -C <root>` invocation common to every command this crate runs.
+    fn command(&self) -> Command {
+        let mut cmd = Command::new("git");
+        cmd.arg("-C").arg(&self.root);
+        cmd
+    }
+
+    /// Shared success/failure handling for a finished `git` invocation.
+    fn finish(args: &[&str], out: std::process::Output) -> Result<String, BoardError> {
         if !out.status.success() {
             return Err(BoardError::Git {
                 cmd: args.join(" "),
@@ -90,10 +120,17 @@ impl Repo {
         self.git_stdin(&["hash-object", "-w", "--stdin"], bytes)
     }
 
-    /// Resolve a per-worktree private path (untracked, dies with the worktree).
+    /// Resolve a per-worktree private path (untracked, dies with the
+    /// worktree). Always absolute: `--path-format=absolute` forces this even
+    /// in a plain (non-worktree) repository, where `--git-path` alone would
+    /// print a path relative to the repo root. Callers that pass this to
+    /// `std::fs` directly need the absolute form — a relative one resolves
+    /// against the *process* cwd, not the repo root, and silently no-ops on
+    /// cleanup.
     pub fn git_path(&self, name: &str) -> Result<PathBuf, BoardError> {
         Ok(PathBuf::from(self.git(&[
             "rev-parse",
+            "--path-format=absolute",
             "--git-path",
             name,
         ])?))
