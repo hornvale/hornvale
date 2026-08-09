@@ -29,6 +29,7 @@ A `domains/` crate no census metric measures at all is a gap in the world, not a
 
 - `alchemy`: no census metric measures any quantity the `alchemy` crate produces
 - `paleoclimate`: no census metric measures any quantity the `paleoclimate` crate produces
+- `person`: no census metric measures any quantity the `person` crate produces
 
 ## Findings by detector
 
@@ -43,4 +44,4 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | D5 | 1 |
 | D6 | 1 |
 | D7 | 0 |
-| D8 | 2 |
+| D8 | 3 |

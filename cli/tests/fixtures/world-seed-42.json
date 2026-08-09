@@ -182,6 +182,11 @@
         "functional": true,
         "doc": "subject is an occupation record"
       },
+      "is-person": {
+        "name": "is-person",
+        "functional": true,
+        "doc": "this entity is an individual person"
+      },
       "is-place": {
         "name": "is-place",
         "functional": true,
@@ -391,6 +396,21 @@
         "name": "peopled-by",
         "functional": true,
         "doc": "the species that peoples a settlement"
+      },
+      "person-born": {
+        "name": "person-born",
+        "functional": true,
+        "doc": "the day this person was born; negative if before the history record began"
+      },
+      "person-died": {
+        "name": "person-died",
+        "functional": true,
+        "doc": "the day this person died"
+      },
+      "person-founded": {
+        "name": "person-founded",
+        "functional": true,
+        "doc": "the community whose occupation this person founded"
       },
       "plate-count": {
         "name": "plate-count",
@@ -76708,9 +76728,4689 @@
         "place": null,
         "day": null,
         "provenance": "the people's own word for 'person'"
+      },
+      {
+        "subject": 537,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 8,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 537,
+        "predicate": "name",
+        "object": {
+          "Text": "Tvakvoshnga"
+        },
+        "place": 8,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 537,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5907.4487
+        },
+        "place": 8,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 537,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 8
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 538,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 7,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 538,
+        "predicate": "name",
+        "object": {
+          "Text": "Gvoashnga"
+        },
+        "place": 7,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 538,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5907.4487
+        },
+        "place": 7,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 538,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 7
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 539,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 38,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 539,
+        "predicate": "name",
+        "object": {
+          "Text": "Vngaavnga"
+        },
+        "place": 38,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 539,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5857.4487
+        },
+        "place": 38,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 539,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 38
+        },
+        "place": 38,
+        "day": 50.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 540,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 10,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 540,
+        "predicate": "name",
+        "object": {
+          "Text": "Shngoashngovnga"
+        },
+        "place": 10,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 540,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5907.4487
+        },
+        "place": 10,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 540,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 10
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 541,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 39,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 541,
+        "predicate": "name",
+        "object": {
+          "Text": "Qvogvoshngo"
+        },
+        "place": 39,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 541,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5857.4487
+        },
+        "place": 39,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 541,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 39
+        },
+        "place": 39,
+        "day": 50.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 542,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 9,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 542,
+        "predicate": "name",
+        "object": {
+          "Text": "Shngaobvo"
+        },
+        "place": 9,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 542,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5907.4487
+        },
+        "place": 9,
+        "day": -5907.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 542,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 9
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 543,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 37,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 543,
+        "predicate": "name",
+        "object": {
+          "Text": "Vngoavngovnga"
+        },
+        "place": 37,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 543,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5857.4487
+        },
+        "place": 37,
+        "day": -5857.4487,
+        "provenance": "person"
+      },
+      {
+        "subject": 543,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 37
+        },
+        "place": 37,
+        "day": 50.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 544,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 11,
+        "day": -19870.21,
+        "provenance": "person"
+      },
+      {
+        "subject": 544,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhemngomzhon"
+        },
+        "place": 11,
+        "day": -19870.21,
+        "provenance": "person"
+      },
+      {
+        "subject": 544,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19870.21
+        },
+        "place": 11,
+        "day": -19870.21,
+        "provenance": "person"
+      },
+      {
+        "subject": 544,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 11
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 545,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 12,
+        "day": -19870.21,
+        "provenance": "person"
+      },
+      {
+        "subject": 545,
+        "predicate": "name",
+        "object": {
+          "Text": "Naansam"
+        },
+        "place": 12,
+        "day": -19870.21,
+        "provenance": "person"
+      },
+      {
+        "subject": 545,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19870.21
+        },
+        "place": 12,
+        "day": -19870.21,
+        "provenance": "person"
+      },
+      {
+        "subject": 545,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 12
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 546,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 14,
+        "day": -5952.7961,
+        "provenance": "person"
+      },
+      {
+        "subject": 546,
+        "predicate": "name",
+        "object": {
+          "Text": "Sngaotsa"
+        },
+        "place": 14,
+        "day": -5952.7961,
+        "provenance": "person"
+      },
+      {
+        "subject": 546,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5952.7961
+        },
+        "place": 14,
+        "day": -5952.7961,
+        "provenance": "person"
+      },
+      {
+        "subject": 546,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 14
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 547,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 13,
+        "day": -5952.7961,
+        "provenance": "person"
+      },
+      {
+        "subject": 547,
+        "predicate": "name",
+        "object": {
+          "Text": "Zmoovtsadzov"
+        },
+        "place": 13,
+        "day": -5952.7961,
+        "provenance": "person"
+      },
+      {
+        "subject": 547,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5952.7961
+        },
+        "place": 13,
+        "day": -5952.7961,
+        "provenance": "person"
+      },
+      {
+        "subject": 547,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 13
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 548,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 16,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 548,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngavngov"
+        },
+        "place": 16,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 548,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3594.8115
+        },
+        "place": 16,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 548,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 16
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 549,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 97,
+        "day": -3169.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 549,
+        "predicate": "name",
+        "object": {
+          "Text": "Fnexvnox"
+        },
+        "place": 97,
+        "day": -3169.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 549,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3169.8115
+        },
+        "place": 97,
+        "day": -3169.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 549,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 97
+        },
+        "place": 97,
+        "day": 425.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 550,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 167,
+        "day": -2594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 550,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhoxngenov"
+        },
+        "place": 167,
+        "day": -2594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 550,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2594.8115
+        },
+        "place": 167,
+        "day": -2594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 550,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 167
+        },
+        "place": 167,
+        "day": 1000.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 551,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 90,
+        "day": -3219.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 551,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhaxnge"
+        },
+        "place": 90,
+        "day": -3219.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 551,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3219.8115
+        },
+        "place": 90,
+        "day": -3219.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 551,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 90
+        },
+        "place": 90,
+        "day": 375.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 552,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 166,
+        "day": -2594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 552,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhexfno"
+        },
+        "place": 166,
+        "day": -2594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 552,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2594.8115
+        },
+        "place": 166,
+        "day": -2594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 552,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 166
+        },
+        "place": 166,
+        "day": 1000.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 553,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 92,
+        "day": -3194.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 553,
+        "predicate": "name",
+        "object": {
+          "Text": "Vngoxfngof"
+        },
+        "place": 92,
+        "day": -3194.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 553,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3194.8115
+        },
+        "place": 92,
+        "day": -3194.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 553,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 92
+        },
+        "place": 92,
+        "day": 400.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 554,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 17,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 554,
+        "predicate": "name",
+        "object": {
+          "Text": "Nonafna"
+        },
+        "place": 17,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 554,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3594.8115
+        },
+        "place": 17,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 554,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 17
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 555,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 131,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 555,
+        "predicate": "name",
+        "object": {
+          "Text": "Xnexngaf"
+        },
+        "place": 131,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 555,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2919.8115
+        },
+        "place": 131,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 555,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 131
+        },
+        "place": 131,
+        "day": 675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 556,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 201,
+        "day": -2394.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 556,
+        "predicate": "name",
+        "object": {
+          "Text": "Sefnga"
+        },
+        "place": 201,
+        "day": -2394.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 556,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2394.8115
+        },
+        "place": 201,
+        "day": -2394.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 556,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 201
+        },
+        "place": 201,
+        "day": 1200.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 557,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 65,
+        "day": -3319.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 557,
+        "predicate": "name",
+        "object": {
+          "Text": "Nezhavngo"
+        },
+        "place": 65,
+        "day": -3319.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 557,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3319.8115
+        },
+        "place": 65,
+        "day": -3319.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 557,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 65
+        },
+        "place": 65,
+        "day": 275.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 558,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 15,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 558,
+        "predicate": "name",
+        "object": {
+          "Text": "Fngevzezhav"
+        },
+        "place": 15,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 558,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3594.8115
+        },
+        "place": 15,
+        "day": -3594.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 558,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 15
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 559,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 132,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 559,
+        "predicate": "name",
+        "object": {
+          "Text": "Fngoxne"
+        },
+        "place": 132,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 559,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2919.8115
+        },
+        "place": 132,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 559,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 132
+        },
+        "place": 132,
+        "day": 675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 560,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 159,
+        "day": -2644.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 560,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhazo"
+        },
+        "place": 159,
+        "day": -2644.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 560,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2644.8115
+        },
+        "place": 159,
+        "day": -2644.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 560,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 159
+        },
+        "place": 159,
+        "day": 950.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 561,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 320,
+        "day": -1894.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 561,
+        "predicate": "name",
+        "object": {
+          "Text": "Vngexfngonge"
+        },
+        "place": 320,
+        "day": -1894.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 561,
+        "predicate": "person-born",
+        "object": {
+          "Number": -1894.8115
+        },
+        "place": 320,
+        "day": -1894.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 561,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 320
+        },
+        "place": 320,
+        "day": 1700.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 562,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 98,
+        "day": -3169.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 562,
+        "predicate": "name",
+        "object": {
+          "Text": "Vngovngafnge"
+        },
+        "place": 98,
+        "day": -3169.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 562,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3169.8115
+        },
+        "place": 98,
+        "day": -3169.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 562,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 98
+        },
+        "place": 98,
+        "day": 425.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 563,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 51,
+        "day": -3419.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 563,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngevnofngo"
+        },
+        "place": 51,
+        "day": -3419.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 563,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3419.8115
+        },
+        "place": 51,
+        "day": -3419.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 563,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 51
+        },
+        "place": 51,
+        "day": 175.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 564,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 306,
+        "day": -1919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 564,
+        "predicate": "name",
+        "object": {
+          "Text": "Navnof"
+        },
+        "place": 306,
+        "day": -1919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 564,
+        "predicate": "person-born",
+        "object": {
+          "Number": -1919.8115
+        },
+        "place": 306,
+        "day": -1919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 564,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 306
+        },
+        "place": 306,
+        "day": 1675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 565,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 133,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 565,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhavzhenge"
+        },
+        "place": 133,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 565,
+        "predicate": "person-born",
+        "object": {
+          "Number": -2919.8115
+        },
+        "place": 133,
+        "day": -2919.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 565,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 133
+        },
+        "place": 133,
+        "day": 675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 566,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 77,
+        "day": -3244.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 566,
+        "predicate": "name",
+        "object": {
+          "Text": "Vngaxsongov"
+        },
+        "place": 77,
+        "day": -3244.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 566,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3244.8115
+        },
+        "place": 77,
+        "day": -3244.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 566,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 77
+        },
+        "place": 77,
+        "day": 350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 567,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 69,
+        "day": -3269.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 567,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngofngaxxngax"
+        },
+        "place": 69,
+        "day": -3269.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 567,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3269.8115
+        },
+        "place": 69,
+        "day": -3269.8115,
+        "provenance": "person"
+      },
+      {
+        "subject": 567,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 69
+        },
+        "place": 69,
+        "day": 325.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 568,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 18,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 568,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhngowzhne"
+        },
+        "place": 18,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 568,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19562.051
+        },
+        "place": 18,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 568,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 18
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 569,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 35,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 569,
+        "predicate": "name",
+        "object": {
+          "Text": "Gxeshmagfo"
+        },
+        "place": 35,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 569,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19562.051
+        },
+        "place": 35,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 569,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 35
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 570,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 64,
+        "day": -19287.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 570,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhmowtfawshngew"
+        },
+        "place": 64,
+        "day": -19287.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 570,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19287.051
+        },
+        "place": 64,
+        "day": -19287.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 570,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 64
+        },
+        "place": 64,
+        "day": 275.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 571,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 19,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 571,
+        "predicate": "name",
+        "object": {
+          "Text": "Kfozhma"
+        },
+        "place": 19,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 571,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19562.051
+        },
+        "place": 19,
+        "day": -19562.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 571,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 19
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 572,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 79,
+        "day": -19212.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 572,
+        "predicate": "name",
+        "object": {
+          "Text": "Qfetfow"
+        },
+        "place": 79,
+        "day": -19212.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 572,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19212.051
+        },
+        "place": 79,
+        "day": -19212.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 572,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 79
+        },
+        "place": 79,
+        "day": 350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 573,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 85,
+        "day": -19187.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 573,
+        "predicate": "name",
+        "object": {
+          "Text": "Shngawqfowzhne"
+        },
+        "place": 85,
+        "day": -19187.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 573,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19187.051
+        },
+        "place": 85,
+        "day": -19187.051,
+        "provenance": "person"
+      },
+      {
+        "subject": 573,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 85
+        },
+        "place": 85,
+        "day": 375.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 574,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 20,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 574,
+        "predicate": "name",
+        "object": {
+          "Text": "Shaowo"
+        },
+        "place": 20,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 574,
+        "predicate": "person-born",
+        "object": {
+          "Number": -20164.663
+        },
+        "place": 20,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 574,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 20
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 575,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 21,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 575,
+        "predicate": "name",
+        "object": {
+          "Text": "Loshowa"
+        },
+        "place": 21,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 575,
+        "predicate": "person-born",
+        "object": {
+          "Number": -20164.663
+        },
+        "place": 21,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 575,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 21
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 576,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 61,
+        "day": -19914.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 576,
+        "predicate": "name",
+        "object": {
+          "Text": "Saalo"
+        },
+        "place": 61,
+        "day": -19914.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 576,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19914.663
+        },
+        "place": 61,
+        "day": -19914.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 576,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 61
+        },
+        "place": 61,
+        "day": 250.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 577,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 322,
+        "day": -18439.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 577,
+        "predicate": "name",
+        "object": {
+          "Text": "Woola"
+        },
+        "place": 322,
+        "day": -18439.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 577,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18439.663
+        },
+        "place": 322,
+        "day": -18439.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 577,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 322
+        },
+        "place": 322,
+        "day": 1725.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 578,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 57,
+        "day": -19964.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 578,
+        "predicate": "name",
+        "object": {
+          "Text": "Shoowo"
+        },
+        "place": 57,
+        "day": -19964.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 578,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19964.663
+        },
+        "place": 57,
+        "day": -19964.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 578,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 57
+        },
+        "place": 57,
+        "day": 200.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 579,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 22,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 579,
+        "predicate": "name",
+        "object": {
+          "Text": "Loowosha"
+        },
+        "place": 22,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 579,
+        "predicate": "person-born",
+        "object": {
+          "Number": -20164.663
+        },
+        "place": 22,
+        "day": -20164.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 579,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 22
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 580,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 62,
+        "day": -19914.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 580,
+        "predicate": "name",
+        "object": {
+          "Text": "Waashowo"
+        },
+        "place": 62,
+        "day": -19914.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 580,
+        "predicate": "person-born",
+        "object": {
+          "Number": -19914.663
+        },
+        "place": 62,
+        "day": -19914.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 580,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 62
+        },
+        "place": 62,
+        "day": 250.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 581,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 277,
+        "day": -18564.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 581,
+        "predicate": "name",
+        "object": {
+          "Text": "Waolo"
+        },
+        "place": 277,
+        "day": -18564.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 581,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18564.663
+        },
+        "place": 277,
+        "day": -18564.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 581,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 277
+        },
+        "place": 277,
+        "day": 1600.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 582,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 243,
+        "day": -18739.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 582,
+        "predicate": "name",
+        "object": {
+          "Text": "Woala"
+        },
+        "place": 243,
+        "day": -18739.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 582,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18739.663
+        },
+        "place": 243,
+        "day": -18739.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 582,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 243
+        },
+        "place": 243,
+        "day": 1425.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 583,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 50,
+        "day": -20014.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 583,
+        "predicate": "name",
+        "object": {
+          "Text": "Laawolo"
+        },
+        "place": 50,
+        "day": -20014.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 583,
+        "predicate": "person-born",
+        "object": {
+          "Number": -20014.663
+        },
+        "place": 50,
+        "day": -20014.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 583,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 50
+        },
+        "place": 50,
+        "day": 150.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 584,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 40,
+        "day": -20114.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 584,
+        "predicate": "name",
+        "object": {
+          "Text": "Laashola"
+        },
+        "place": 40,
+        "day": -20114.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 584,
+        "predicate": "person-born",
+        "object": {
+          "Number": -20114.663
+        },
+        "place": 40,
+        "day": -20114.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 584,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 40
+        },
+        "place": 40,
+        "day": 50.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 585,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 45,
+        "day": -20089.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 585,
+        "predicate": "name",
+        "object": {
+          "Text": "Woawo"
+        },
+        "place": 45,
+        "day": -20089.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 585,
+        "predicate": "person-born",
+        "object": {
+          "Number": -20089.663
+        },
+        "place": 45,
+        "day": -20089.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 585,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 45
+        },
+        "place": 45,
+        "day": 75.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 586,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 316,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 586,
+        "predicate": "name",
+        "object": {
+          "Text": "Loashosha"
+        },
+        "place": 316,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 586,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18464.663
+        },
+        "place": 316,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 586,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 316
+        },
+        "place": 316,
+        "day": 1700.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 587,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 323,
+        "day": -18439.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 587,
+        "predicate": "name",
+        "object": {
+          "Text": "Shaola"
+        },
+        "place": 323,
+        "day": -18439.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 587,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18439.663
+        },
+        "place": 323,
+        "day": -18439.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 587,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 323
+        },
+        "place": 323,
+        "day": 1725.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 588,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 244,
+        "day": -18739.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 588,
+        "predicate": "name",
+        "object": {
+          "Text": "Lawoso"
+        },
+        "place": 244,
+        "day": -18739.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 588,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18739.663
+        },
+        "place": 244,
+        "day": -18739.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 588,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 244
+        },
+        "place": 244,
+        "day": 1425.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 589,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 357,
+        "day": -18339.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 589,
+        "predicate": "name",
+        "object": {
+          "Text": "Waolowa"
+        },
+        "place": 357,
+        "day": -18339.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 589,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18339.663
+        },
+        "place": 357,
+        "day": -18339.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 589,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 357
+        },
+        "place": 357,
+        "day": 1825.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 590,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 358,
+        "day": -18339.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 590,
+        "predicate": "name",
+        "object": {
+          "Text": "Woosola"
+        },
+        "place": 358,
+        "day": -18339.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 590,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18339.663
+        },
+        "place": 358,
+        "day": -18339.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 590,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 358
+        },
+        "place": 358,
+        "day": 1825.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 591,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 315,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 591,
+        "predicate": "name",
+        "object": {
+          "Text": "Shoshosa"
+        },
+        "place": 315,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 591,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18464.663
+        },
+        "place": 315,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 591,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 315
+        },
+        "place": 315,
+        "day": 1700.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 592,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 374,
+        "day": -18239.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 592,
+        "predicate": "name",
+        "object": {
+          "Text": "Saashalo"
+        },
+        "place": 374,
+        "day": -18239.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 592,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18239.663
+        },
+        "place": 374,
+        "day": -18239.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 592,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 374
+        },
+        "place": 374,
+        "day": 1925.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 593,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 314,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 593,
+        "predicate": "name",
+        "object": {
+          "Text": "Solo"
+        },
+        "place": 314,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 593,
+        "predicate": "person-born",
+        "object": {
+          "Number": -18464.663
+        },
+        "place": 314,
+        "day": -18464.663,
+        "provenance": "person"
+      },
+      {
+        "subject": 593,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 314
+        },
+        "place": 314,
+        "day": 1700.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 594,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 26,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 594,
+        "predicate": "name",
+        "object": {
+          "Text": "Njoxangjong"
+        },
+        "place": 26,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 594,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5125.4485
+        },
+        "place": 26,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 594,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 26
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 595,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 23,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 595,
+        "predicate": "name",
+        "object": {
+          "Text": "Bemjo"
+        },
+        "place": 23,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 595,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5125.4485
+        },
+        "place": 23,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 595,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 23
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 596,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 158,
+        "day": -4200.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 596,
+        "predicate": "name",
+        "object": {
+          "Text": "Njeqomte"
+        },
+        "place": 158,
+        "day": -4200.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 596,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4200.4485
+        },
+        "place": 158,
+        "day": -4200.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 596,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 158
+        },
+        "place": 158,
+        "day": 925.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 597,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 25,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 597,
+        "predicate": "name",
+        "object": {
+          "Text": "Vangto"
+        },
+        "place": 25,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 597,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5125.4485
+        },
+        "place": 25,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 597,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 25
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 598,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 157,
+        "day": -4200.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 598,
+        "predicate": "name",
+        "object": {
+          "Text": "Njaqom"
+        },
+        "place": 157,
+        "day": -4200.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 598,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4200.4485
+        },
+        "place": 157,
+        "day": -4200.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 598,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 157
+        },
+        "place": 157,
+        "day": 925.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 599,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 236,
+        "day": -3725.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 599,
+        "predicate": "name",
+        "object": {
+          "Text": "Taqenggan"
+        },
+        "place": 236,
+        "day": -3725.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 599,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3725.4485
+        },
+        "place": 236,
+        "day": -3725.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 599,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 236
+        },
+        "place": 236,
+        "day": 1400.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 600,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 327,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 600,
+        "predicate": "name",
+        "object": {
+          "Text": "Qenjan"
+        },
+        "place": 327,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 600,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3375.4485
+        },
+        "place": 327,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 600,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 327
+        },
+        "place": 327,
+        "day": 1750.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 601,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 229,
+        "day": -3750.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 601,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngjangvamngjong"
+        },
+        "place": 229,
+        "day": -3750.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 601,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3750.4485
+        },
+        "place": 229,
+        "day": -3750.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 601,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 229
+        },
+        "place": 229,
+        "day": 1375.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 602,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 182,
+        "day": -4025.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 602,
+        "predicate": "name",
+        "object": {
+          "Text": "Vambe"
+        },
+        "place": 182,
+        "day": -4025.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 602,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4025.4485
+        },
+        "place": 182,
+        "day": -4025.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 602,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 182
+        },
+        "place": 182,
+        "day": 1100.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 603,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 118,
+        "day": -4550.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 603,
+        "predicate": "name",
+        "object": {
+          "Text": "Tanjangve"
+        },
+        "place": 118,
+        "day": -4550.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 603,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4550.4485
+        },
+        "place": 118,
+        "day": -4550.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 603,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 118
+        },
+        "place": 118,
+        "day": 575.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 604,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 248,
+        "day": -3650.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 604,
+        "predicate": "name",
+        "object": {
+          "Text": "Fangkam"
+        },
+        "place": 248,
+        "day": -3650.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 604,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3650.4485
+        },
+        "place": 248,
+        "day": -3650.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 604,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 248
+        },
+        "place": 248,
+        "day": 1475.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 605,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 267,
+        "day": -3550.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 605,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngjoxan"
+        },
+        "place": 267,
+        "day": -3550.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 605,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3550.4485
+        },
+        "place": 267,
+        "day": -3550.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 605,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 267
+        },
+        "place": 267,
+        "day": 1575.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 606,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 36,
+        "day": -5100.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 606,
+        "predicate": "name",
+        "object": {
+          "Text": "Kamxobom"
+        },
+        "place": 36,
+        "day": -5100.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 606,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5100.4485
+        },
+        "place": 36,
+        "day": -5100.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 606,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 36
+        },
+        "place": 36,
+        "day": 25.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 607,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 24,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 607,
+        "predicate": "name",
+        "object": {
+          "Text": "Njenngja"
+        },
+        "place": 24,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 607,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5125.4485
+        },
+        "place": 24,
+        "day": -5125.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 607,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 24
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 608,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 119,
+        "day": -4525.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 608,
+        "predicate": "name",
+        "object": {
+          "Text": "Bongja"
+        },
+        "place": 119,
+        "day": -4525.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 608,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4525.4485
+        },
+        "place": 119,
+        "day": -4525.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 608,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 119
+        },
+        "place": 119,
+        "day": 600.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 609,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 181,
+        "day": -4025.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 609,
+        "predicate": "name",
+        "object": {
+          "Text": "Xanbeng"
+        },
+        "place": 181,
+        "day": -4025.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 609,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4025.4485
+        },
+        "place": 181,
+        "day": -4025.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 609,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 181
+        },
+        "place": 181,
+        "day": 1100.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 610,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 328,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 610,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngjakeng"
+        },
+        "place": 328,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 610,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3375.4485
+        },
+        "place": 328,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 610,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 328
+        },
+        "place": 328,
+        "day": 1750.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 611,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 257,
+        "day": -3600.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 611,
+        "predicate": "name",
+        "object": {
+          "Text": "Kaxenjem"
+        },
+        "place": 257,
+        "day": -3600.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 611,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3600.4485
+        },
+        "place": 257,
+        "day": -3600.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 611,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 257
+        },
+        "place": 257,
+        "day": 1525.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 612,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 334,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 612,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngjomnjafe"
+        },
+        "place": 334,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 612,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3375.4485
+        },
+        "place": 334,
+        "day": -3375.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 612,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 334
+        },
+        "place": 334,
+        "day": 1750.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 613,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 139,
+        "day": -4450.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 613,
+        "predicate": "name",
+        "object": {
+          "Text": "Njengtexen"
+        },
+        "place": 139,
+        "day": -4450.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 613,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4450.4485
+        },
+        "place": 139,
+        "day": -4450.4485,
+        "provenance": "person"
+      },
+      {
+        "subject": 613,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 139
+        },
+        "place": 139,
+        "day": 675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 614,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 27,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 614,
+        "predicate": "name",
+        "object": {
+          "Text": "Zngengo"
+        },
+        "place": 27,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 614,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5041.1658
+        },
+        "place": 27,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 614,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 27
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 615,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 28,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 615,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngoshngame"
+        },
+        "place": 28,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 615,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5041.1658
+        },
+        "place": 28,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 615,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 28
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 616,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 58,
+        "day": -4841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 616,
+        "predicate": "name",
+        "object": {
+          "Text": "Meomango"
+        },
+        "place": 58,
+        "day": -4841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 616,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4841.1658
+        },
+        "place": 58,
+        "day": -4841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 616,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 58
+        },
+        "place": 58,
+        "day": 200.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 617,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 211,
+        "day": -3791.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 617,
+        "predicate": "name",
+        "object": {
+          "Text": "Mote"
+        },
+        "place": 211,
+        "day": -3791.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 617,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3791.1658
+        },
+        "place": 211,
+        "day": -3791.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 617,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 211
+        },
+        "place": 211,
+        "day": 1250.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 618,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 195,
+        "day": -3866.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 618,
+        "predicate": "name",
+        "object": {
+          "Text": "Taongo"
+        },
+        "place": 195,
+        "day": -3866.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 618,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3866.1658
+        },
+        "place": 195,
+        "day": -3866.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 618,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 195
+        },
+        "place": 195,
+        "day": 1175.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 619,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 200,
+        "day": -3841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 619,
+        "predicate": "name",
+        "object": {
+          "Text": "Gope"
+        },
+        "place": 200,
+        "day": -3841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 619,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3841.1658
+        },
+        "place": 200,
+        "day": -3841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 619,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 200
+        },
+        "place": 200,
+        "day": 1200.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 620,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 43,
+        "day": -4966.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 620,
+        "predicate": "name",
+        "object": {
+          "Text": "Teongoma"
+        },
+        "place": 43,
+        "day": -4966.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 620,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4966.1658
+        },
+        "place": 43,
+        "day": -4966.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 620,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 43
+        },
+        "place": 43,
+        "day": 75.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 621,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 199,
+        "day": -3841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 621,
+        "predicate": "name",
+        "object": {
+          "Text": "Tashnge"
+        },
+        "place": 199,
+        "day": -3841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 621,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3841.1658
+        },
+        "place": 199,
+        "day": -3841.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 621,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 199
+        },
+        "place": 199,
+        "day": 1200.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 622,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 213,
+        "day": -3766.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 622,
+        "predicate": "name",
+        "object": {
+          "Text": "Ngozhnge"
+        },
+        "place": 213,
+        "day": -3766.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 622,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3766.1658
+        },
+        "place": 213,
+        "day": -3766.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 622,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 213
+        },
+        "place": 213,
+        "day": 1275.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 623,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 109,
+        "day": -4541.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 623,
+        "predicate": "name",
+        "object": {
+          "Text": "Shmenga"
+        },
+        "place": 109,
+        "day": -4541.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 623,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4541.1658
+        },
+        "place": 109,
+        "day": -4541.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 623,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 109
+        },
+        "place": 109,
+        "day": 500.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 624,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 108,
+        "day": -4541.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 624,
+        "predicate": "name",
+        "object": {
+          "Text": "Zngozhnga"
+        },
+        "place": 108,
+        "day": -4541.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 624,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4541.1658
+        },
+        "place": 108,
+        "day": -4541.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 624,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 108
+        },
+        "place": 108,
+        "day": 500.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 625,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 235,
+        "day": -3641.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 625,
+        "predicate": "name",
+        "object": {
+          "Text": "Tazhmo"
+        },
+        "place": 235,
+        "day": -3641.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 625,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3641.1658
+        },
+        "place": 235,
+        "day": -3641.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 625,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 235
+        },
+        "place": 235,
+        "day": 1400.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 626,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 48,
+        "day": -4941.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 626,
+        "predicate": "name",
+        "object": {
+          "Text": "Mekozhnge"
+        },
+        "place": 48,
+        "day": -4941.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 626,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4941.1658
+        },
+        "place": 48,
+        "day": -4941.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 626,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 48
+        },
+        "place": 48,
+        "day": 100.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 627,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 75,
+        "day": -4691.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 627,
+        "predicate": "name",
+        "object": {
+          "Text": "Shngootongo"
+        },
+        "place": 75,
+        "day": -4691.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 627,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4691.1658
+        },
+        "place": 75,
+        "day": -4691.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 627,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 75
+        },
+        "place": 75,
+        "day": 350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 628,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 68,
+        "day": -4716.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 628,
+        "predicate": "name",
+        "object": {
+          "Text": "Maazhngeshmo"
+        },
+        "place": 68,
+        "day": -4716.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 628,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4716.1658
+        },
+        "place": 68,
+        "day": -4716.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 628,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 68
+        },
+        "place": 68,
+        "day": 325.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 629,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 246,
+        "day": -3591.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 629,
+        "predicate": "name",
+        "object": {
+          "Text": "Memengo"
+        },
+        "place": 246,
+        "day": -3591.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 629,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3591.1658
+        },
+        "place": 246,
+        "day": -3591.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 629,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 246
+        },
+        "place": 246,
+        "day": 1450.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 630,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 345,
+        "day": -3266.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 630,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhngeozmo"
+        },
+        "place": 345,
+        "day": -3266.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 630,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3266.1658
+        },
+        "place": 345,
+        "day": -3266.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 630,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 345
+        },
+        "place": 345,
+        "day": 1775.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 631,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 44,
+        "day": -4966.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 631,
+        "predicate": "name",
+        "object": {
+          "Text": "Mazhngo"
+        },
+        "place": 44,
+        "day": -4966.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 631,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4966.1658
+        },
+        "place": 44,
+        "day": -4966.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 631,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 44
+        },
+        "place": 44,
+        "day": 75.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 632,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 30,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 632,
+        "predicate": "name",
+        "object": {
+          "Text": "Shmameshmo"
+        },
+        "place": 30,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 632,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5041.1658
+        },
+        "place": 30,
+        "day": -5041.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 632,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 30
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 633,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 49,
+        "day": -4941.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 633,
+        "predicate": "name",
+        "object": {
+          "Text": "Zhngeepo"
+        },
+        "place": 49,
+        "day": -4941.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 633,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4941.1658
+        },
+        "place": 49,
+        "day": -4941.1658,
+        "provenance": "person"
+      },
+      {
+        "subject": 633,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 49
+        },
+        "place": 49,
+        "day": 100.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 634,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 141,
+        "day": -4345.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 634,
+        "predicate": "name",
+        "object": {
+          "Text": "Roroxa"
+        },
+        "place": 141,
+        "day": -4345.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 634,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4345.3322
+        },
+        "place": 141,
+        "day": -4345.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 634,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 141
+        },
+        "place": 141,
+        "day": 675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 635,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 71,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 635,
+        "predicate": "name",
+        "object": {
+          "Text": "Xaaroxa"
+        },
+        "place": 71,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 635,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4670.3322
+        },
+        "place": 71,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 635,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 71
+        },
+        "place": 71,
+        "day": 350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 636,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 272,
+        "day": -3445.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 636,
+        "predicate": "name",
+        "object": {
+          "Text": "Xoaro"
+        },
+        "place": 272,
+        "day": -3445.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 636,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3445.3322
+        },
+        "place": 272,
+        "day": -3445.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 636,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 272
+        },
+        "place": 272,
+        "day": 1575.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 637,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 171,
+        "day": -3995.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 637,
+        "predicate": "name",
+        "object": {
+          "Text": "Rarora"
+        },
+        "place": 171,
+        "day": -3995.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 637,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3995.3322
+        },
+        "place": 171,
+        "day": -3995.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 637,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 171
+        },
+        "place": 171,
+        "day": 1025.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 638,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 33,
+        "day": -5020.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 638,
+        "predicate": "name",
+        "object": {
+          "Text": "Xoaro"
+        },
+        "place": 33,
+        "day": -5020.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 638,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5020.3322
+        },
+        "place": 33,
+        "day": -5020.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 638,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 33
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 639,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 191,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 639,
+        "predicate": "name",
+        "object": {
+          "Text": "Raro"
+        },
+        "place": 191,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 639,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3845.3322
+        },
+        "place": 191,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 639,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 191
+        },
+        "place": 191,
+        "day": 1175.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 640,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 232,
+        "day": -3645.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 640,
+        "predicate": "name",
+        "object": {
+          "Text": "Roaxa"
+        },
+        "place": 232,
+        "day": -3645.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 640,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3645.3322
+        },
+        "place": 232,
+        "day": -3645.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 640,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 232
+        },
+        "place": 232,
+        "day": 1375.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 641,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 32,
+        "day": -5020.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 641,
+        "predicate": "name",
+        "object": {
+          "Text": "Xoxaxo"
+        },
+        "place": 32,
+        "day": -5020.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 641,
+        "predicate": "person-born",
+        "object": {
+          "Number": -5020.3322
+        },
+        "place": 32,
+        "day": -5020.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 641,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 32
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 642,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 70,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 642,
+        "predicate": "name",
+        "object": {
+          "Text": "Rarora"
+        },
+        "place": 70,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 642,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4670.3322
+        },
+        "place": 70,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 642,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 70
+        },
+        "place": 70,
+        "day": 350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 643,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 121,
+        "day": -4420.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 643,
+        "predicate": "name",
+        "object": {
+          "Text": "Xaaroro"
+        },
+        "place": 121,
+        "day": -4420.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 643,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4420.3322
+        },
+        "place": 121,
+        "day": -4420.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 643,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 121
+        },
+        "place": 121,
+        "day": 600.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 644,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 225,
+        "day": -3670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 644,
+        "predicate": "name",
+        "object": {
+          "Text": "Xaoraxo"
+        },
+        "place": 225,
+        "day": -3670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 644,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3670.3322
+        },
+        "place": 225,
+        "day": -3670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 644,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 225
+        },
+        "place": 225,
+        "day": 1350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 645,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 331,
+        "day": -3270.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 645,
+        "predicate": "name",
+        "object": {
+          "Text": "Raaroro"
+        },
+        "place": 331,
+        "day": -3270.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 645,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3270.3322
+        },
+        "place": 331,
+        "day": -3270.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 645,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 331
+        },
+        "place": 331,
+        "day": 1750.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 646,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 173,
+        "day": -3970.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 646,
+        "predicate": "name",
+        "object": {
+          "Text": "Roxoxo"
+        },
+        "place": 173,
+        "day": -3970.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 646,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3970.3322
+        },
+        "place": 173,
+        "day": -3970.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 646,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 173
+        },
+        "place": 173,
+        "day": 1050.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 647,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 353,
+        "day": -3220.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 647,
+        "predicate": "name",
+        "object": {
+          "Text": "Roaraxa"
+        },
+        "place": 353,
+        "day": -3220.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 647,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3220.3322
+        },
+        "place": 353,
+        "day": -3220.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 647,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 353
+        },
+        "place": 353,
+        "day": 1800.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 648,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 189,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 648,
+        "predicate": "name",
+        "object": {
+          "Text": "Roxa"
+        },
+        "place": 189,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 648,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3845.3322
+        },
+        "place": 189,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 648,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 189
+        },
+        "place": 189,
+        "day": 1175.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 649,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 73,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 649,
+        "predicate": "name",
+        "object": {
+          "Text": "Roxo"
+        },
+        "place": 73,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 649,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4670.3322
+        },
+        "place": 73,
+        "day": -4670.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 649,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 73
+        },
+        "place": 73,
+        "day": 350.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 650,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 196,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 650,
+        "predicate": "name",
+        "object": {
+          "Text": "Roxoro"
+        },
+        "place": 196,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 650,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3845.3322
+        },
+        "place": 196,
+        "day": -3845.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 650,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 196
+        },
+        "place": 196,
+        "day": 1175.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 651,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 130,
+        "day": -4345.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 651,
+        "predicate": "name",
+        "object": {
+          "Text": "Raoxo"
+        },
+        "place": 130,
+        "day": -4345.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 651,
+        "predicate": "person-born",
+        "object": {
+          "Number": -4345.3322
+        },
+        "place": 130,
+        "day": -4345.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 651,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 130
+        },
+        "place": 130,
+        "day": 675.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 652,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 260,
+        "day": -3470.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 652,
+        "predicate": "name",
+        "object": {
+          "Text": "Roararo"
+        },
+        "place": 260,
+        "day": -3470.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 652,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3470.3322
+        },
+        "place": 260,
+        "day": -3470.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 652,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 260
+        },
+        "place": 260,
+        "day": 1550.0,
+        "provenance": "person"
+      },
+      {
+        "subject": 653,
+        "predicate": "is-person",
+        "object": {
+          "Flag": true
+        },
+        "place": 186,
+        "day": -3870.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 653,
+        "predicate": "name",
+        "object": {
+          "Text": "Roaroro"
+        },
+        "place": 186,
+        "day": -3870.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 653,
+        "predicate": "person-born",
+        "object": {
+          "Number": -3870.3322
+        },
+        "place": 186,
+        "day": -3870.3322,
+        "provenance": "person"
+      },
+      {
+        "subject": 653,
+        "predicate": "person-founded",
+        "object": {
+          "Entity": 186
+        },
+        "place": 186,
+        "day": 1150.0,
+        "provenance": "person"
       }
     ],
-    "next_entity": 536
+    "next_entity": 653
   },
   "derived_under": {}
 }

@@ -349,6 +349,10 @@ const DOMAIN_CRATES: &[&str] = &[
     "history",
     "language",
     "paleoclimate",
+    // The Particular's domain. Deliberately absent from `MEASURED_CRATES`: no
+    // census metric reads it yet, so D8 reports it as an unmeasured domain —
+    // a real gap in the world, rendered rather than papered over.
+    "person",
     "religion",
     "settlement",
     "species",
@@ -933,13 +937,16 @@ mod tests {
     }
 
     #[test]
-    fn d8_fires_on_exactly_alchemy_and_paleoclimate() {
+    fn d8_fires_on_exactly_alchemy_paleoclimate_and_person() {
         let f = detect_d8();
         let names: Vec<&str> = f.iter().map(|x| x.metric.as_str()).collect();
         assert_eq!(
             names,
-            vec!["alchemy", "paleoclimate"],
-            "D8 must fire on exactly the two crates no metric reaches"
+            vec!["alchemy", "paleoclimate", "person"],
+            "D8 must fire on exactly the crates no metric reaches. `person` \
+             joined the roster with The Particular and no census metric reads \
+             it yet — a real gap in the world, which D8 exists to render \
+             rather than to hide."
         );
     }
 
