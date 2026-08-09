@@ -12,12 +12,12 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 |---|---|---|---|
 | Astronomy | 23 | 5 | [page](./astronomy.md) |
 | Terrain | 18 | 1 | [page](./terrain.md) |
-| Climate | 6 | 3 | [page](./climate.md) |
-| Hydrology | 12 | 3 | [page](./hydrology.md) |
-| Biology | 14 | 28 | [page](./biology.md) |
-| Settlement | 19 | 6 | [page](./settlement.md) |
-| Demography | 7 | 5 | [page](./demography.md) |
-| Society | 5 | 2 | [page](./society.md) |
+| Climate | 6 | 9 | [page](./climate.md) |
+| Hydrology | 12 | 9 | [page](./hydrology.md) |
+| Biology | 14 | 34 | [page](./biology.md) |
+| Settlement | 19 | 9 | [page](./settlement.md) |
+| Demography | 7 | 7 | [page](./demography.md) |
+| Society | 5 | 3 | [page](./society.md) |
 | Religion | 21 | 12 | [page](./religion.md) |
 | Language | 47 | 37 | [page](./language.md) |
 | Naming | 17 | 9 | [page](./naming.md) |
@@ -40,7 +40,6 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | D2 | 31 |
 | D3 | 13 |
 | D4 | 39 |
-| D5 | 1 |
+| D5 strength | 25 |
 | D6 | 1 |
-| D7 | 0 |
 | D8 | 2 |

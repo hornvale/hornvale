@@ -162,11 +162,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D2**: min == median == max == 29.835811 across 1000 worlds
 - **D4**: median 29.835811 equals the min (29.835811 .. 29.835811)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed |r| = 0.000 (1000 pairs) is none
 
 ### `basal-metabolic-rate-w-kobold`
 
 - **D2**: min == median == max == 3.0098379 across 1000 worlds
 - **D4**: median 3.0098379 equals the min (3.0098379 .. 3.0098379)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed |r| = 0.000 (1000 pairs) is none
 
 ### `generation-length-years-goblin`
 
@@ -192,6 +194,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D2**: min == median == max == 49.210287 across 1000 worlds
 - **D4**: median 49.210287 equals the min (49.210287 .. 49.210287)
+- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.000 (1000 pairs) is none
 
 ### `lifespan-years-kobold`
 
@@ -202,6 +205,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D2**: min == median == max == 0.27948413 across 1000 worlds
 - **D4**: median 0.27948413 equals the min (0.27948413 .. 0.27948413)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed |r| = 0.000 (1000 pairs) is none
 
 ### `pace-of-life-kobold`
 
@@ -212,9 +216,11 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D2**: min == median == max == 0.41922619 across 1000 worlds
 - **D4**: median 0.41922619 equals the min (0.41922619 .. 0.41922619)
+- **D5 strength**: declared moderate tracking habitable-fraction, but observed |r| = 0.000 (1000 pairs) is none
 
 ### `reproductive-tempo-kobold`
 
 - **D2**: min == median == max == 0.56676945 across 1000 worlds
 - **D4**: median 0.56676945 equals the min (0.56676945 .. 0.56676945)
+- **D5 strength**: declared moderate tracking habitable-fraction, but observed |r| = 0.000 (1000 pairs) is none
 

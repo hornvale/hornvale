@@ -128,15 +128,30 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ## Weaknesses found here
 
+### `endorheic-coverage`
+
+- **D5 strength**: declared weak tracking mean-land-temperature-c, but observed |r| = 0.017 (1000 pairs) is none
+
 ### `hydro-variant-coverage`
 
 - **D1**: "aquifer+aquitard+spring+runoff+karst" holds 1000/1000 worlds (100.0%), at or above the 80% threshold
+
+### `shelf-fraction`
+
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.755 (1000 pairs) is dominant
 
 ### `shelf-width-passive-median`
 
 - **D3**: p25..p75 spans 0 (0.00% of the 3 min..max range), under the 5% bar
 
+### `shoreline-development`
+
+- **D5 strength**: declared weak tracking total-tide, but observed |r| = 0.019 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking continent-count, but observed |r| = 0.004 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking largest-continent-share, but observed |r| = 0.130 (1000 pairs) is weak
+
 ### `waterfall-count`
 
 - **D4**: median 0 equals the min (0 .. 4)
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.083 (1000 pairs) is none
 

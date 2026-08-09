@@ -92,3 +92,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 - **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
 - **D4**: median 9 equals the max (5 .. 9)
 
+### `total-population`
+
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed |r| = 0.226 (1000 pairs) is weak
+- **D5 strength**: declared strong tracking habitable-fraction, but observed |r| = 0.307 (1000 pairs) is moderate
+

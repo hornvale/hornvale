@@ -1124,7 +1124,10 @@ mod tests {
             "median -11.988568 vs Earth's 14, a 25.988568 gap exceeding the comparator band"
         );
         assert!(
-            hit("D5", "mean-land-temperature-c"),
+            // D5 split into "D5 strength"/"D5 direction" names (Task 2); this
+            // hit is a strength mismatch (band moved, not sign), so it now
+            // lives under "D5 strength".
+            hit("D5 strength", "mean-land-temperature-c"),
             "declared dominant tracking year-std-days, but observed |r| = 0.245 is weak"
         );
         assert!(
@@ -1149,6 +1152,25 @@ mod tests {
         assert_eq!(
             d1, 27,
             "D1 hit count changed; investigate before re-pinning"
+        );
+
+        // The Armature's single measurement (Task 4): all thirty frozen
+        // expectations run against the live census for the first time. Of
+        // the 30, 25 fired "D5 strength" (an observed band different from
+        // the declared one) and 0 fired "D5 direction" (right band, sign
+        // backwards) -- five expectations were silent (declared and
+        // observed agree, or the two "none"-declared rows saw no spurious
+        // coupling). These counts are a measurement to investigate, not a
+        // target: if either moves, find out why before updating it.
+        let d5_strength = f.iter().filter(|x| x.detector == "D5 strength").count();
+        assert_eq!(
+            d5_strength, 25,
+            "D5 strength hit count changed; investigate before re-pinning"
+        );
+        let d5_direction = f.iter().filter(|x| x.detector == "D5 direction").count();
+        assert_eq!(
+            d5_direction, 0,
+            "D5 direction hit count changed; investigate before re-pinning"
         );
     }
 
