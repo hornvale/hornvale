@@ -13267,6 +13267,20 @@ mod tests {
         // and this assertion caught it; damping further (80%) instead
         // inverted the ranking and the assertion above caught that. Both
         // paths are covered.
+        //
+        // WHAT KEEPS A RELATIVE FLOOR OFF ZERO. A fraction of a predicted
+        // spread has no absolute lower bound of its own: if `predicted_spread`
+        // ever went to zero this assertion would degrade to `observed > 0`,
+        // which is the very floors-erode-unseen case the rewrite above cites,
+        // reached by arithmetic instead of by an edit. It cannot today, and the
+        // reason is a COUPLING to code fifty lines up rather than anything
+        // visible here: `compared > 0` passed, so at least one pair survived the
+        // `< SEPARATION` skip, so two peoples' predicted shares differ by at
+        // least `SEPARATION` (0.15) — and `most`/`least` are the extremes of
+        // that same predicted profile, so `predicted_spread >= SEPARATION` and
+        // `floor >= 0.075`. Lowering `SEPARATION`, or admitting pairs the
+        // separation test currently skips, lowers this floor with it. Asserted
+        // rather than only stated, so that coupling breaks loudly.
         const VISIBILITY_FRACTION: f64 = 0.5;
         let most = peoples
             .iter()
@@ -13278,6 +13292,18 @@ mod tests {
             .expect("non-empty");
         let predicted_spread = most.1 - least.1;
         let observed_spread = most.2 - least.2;
+        assert!(
+            predicted_spread >= SEPARATION,
+            "the extremes of the predicted profile ({} at {:.3}, {} at {:.3}) span only \
+             {predicted_spread:.3}, below {SEPARATION} — yet {compared} pair(s) cleared the \
+             separation test above, which is impossible unless that test and this floor have \
+             come uncoupled. The relative floor below has no absolute lower bound of its own; \
+             it is kept off zero ONLY by this inequality, so it must be checked and not assumed",
+            most.0,
+            most.1,
+            least.0,
+            least.1,
+        );
         let floor = VISIBILITY_FRACTION * predicted_spread;
         assert!(
             observed_spread > floor,

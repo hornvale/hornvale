@@ -218,7 +218,18 @@ fn measure_one(
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and `gnoll` is in both peoples
+    // constants above. So this is a deliberate CONTROL, not a copy of the
+    // registry.
+    //
+    // Deliberate for the same reason those constants are frozen at five and six
+    // peoples: this file's assertions were PREREGISTERED over a stated
+    // population and a stated physics, and feeding them a mechanism authored two
+    // campaigns later would silently change what they measured. Task 3's
+    // `an_absent_affinity_is_bit_identical` proves all-`None` reproduces the
+    // pre-affinity world exactly, which is the world this baseline is a baseline
+    // OF.
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
 
     let world = build_world(

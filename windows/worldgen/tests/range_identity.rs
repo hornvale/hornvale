@@ -60,7 +60,18 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
     let all_surface = vec![HabitatRealm::Surface; bio.len()];
     let mut one_subterranean = all_surface.clone();
     one_subterranean[tag] = HabitatRealm::Subterranean;
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and gnoll is this test's own
+    // subject. So this is a deliberate CONTROL, not a copy of the registry, and
+    // here the distinction matters more than anywhere else in this directory.
+    //
+    // This test's two arms differ in ONE component, the realm slice, so that a
+    // difference in capacity is attributable to the realm and to nothing else.
+    // Threading the live affinity would apply gnoll's factors identically to
+    // both arms and so could not change the verdict — but it would put a second
+    // moving mechanism inside a matched pair whose whole value is that only one
+    // thing moves. All-`None` is bit-identical to the pre-affinity physics (task
+    // 3's `an_absent_affinity_is_bit_identical`), which keeps the pair minimal.
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let caps = |realm: &[HabitatRealm]| {

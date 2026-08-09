@@ -46,9 +46,22 @@
 //! ## What "arid" means, fixed before the first measurement
 //!
 //! [`ARID`] is derived from `classify_land`'s own moisture thresholds
-//! (`domains/climate/src/biome.rs`), not from the affinity rows: a land biome
-//! is arid iff its **moisture band tops out at ≤ 0.4** and its thermal band is
-//! **≥ 0 °C**. That admits exactly three:
+//! (`domains/climate/src/biome.rs`), not from the affinity rows. **Two clauses,
+//! applied in order**, because the first alone is not sufficient and saying so
+//! is cheaper than letting a reader re-derive a different set:
+//!
+//! 1. *Dry by the lookup's own cuts:* the biome's **moisture band tops out at
+//!    ≤ 0.4** and its thermal band is **≥ 0 °C**. This admits **four**, not
+//!    three — the three below plus `tundra`, which `classify_land` also returns
+//!    on the 0–7 °C branch below moisture 0.30.
+//! 2. *Dry because it is arid, not because it is frozen:* `tundra` is then
+//!    excluded. `classify_land` reaches it by **cold** — it is the dry half of
+//!    both sub-freezing branches and of the 0–7 °C branch — so its dryness is a
+//!    consequence of the water being locked up rather than of aridity. A gnoll
+//!    at −5 °C is not "at home in the desert", and counting a tundra settlement
+//!    as an arid one would let P1″ pass on a relocation to the wrong pole.
+//!
+//! What survives both clauses is exactly three:
 //!
 //! ```text
 //!   desert               hot        moisture < 0.20
@@ -56,10 +69,8 @@
 //!   shrubland            temperate  moisture 0.25 – 0.40
 //! ```
 //!
-//! `savanna` is excluded (its band runs to 0.45 — the wet side of the hot
-//! tier). `tundra` is excluded although it is dry: `classify_land` reaches it
-//! by *cold*, and its dryness is a consequence of freezing rather than of
-//! aridity — a gnoll at −5 °C is not "at home in the desert". Fixing this
+//! `savanna` fails clause 1 (its band runs to 0.45 — the wet side of the hot
+//! tier). `tundra` passes clause 1 and fails clause 2. Fixing all of this
 //! before looking is what stops the set being widened until the prediction
 //! passes.
 //!
@@ -129,7 +140,13 @@
 //!
 //! Neither prediction asked what happens to the *other* peoples, and the answer
 //! is much larger than either measured effect. Total settlements barely move,
-//! but who founds them does — measured across the same seeds:
+//! but who founds them does. Measured across [`SEEDS`] — 42, 7 and 1234 — **plus
+//! seed 1, which is not in `SEEDS`**: it is `diachronic.rs`'s seed set, where the
+//! same suppression showed up independently as gnoll losing its priesthood, and
+//! it is quoted here because it is the largest cascade any world on the branch
+//! produced. Its `gnoll 61 -> 13` is the same figure that file records at its
+//! own line 262. Four seeds, not three, and the difference is named because "the
+//! same seeds" would be false:
 //!
 //! ```text
 //!   seed 7    total 274 -> 287     gnoll 4 -> 4  (unchanged)
@@ -600,9 +617,10 @@ fn the_affinity_differentiates_gnoll_from_the_other_peoples() {
 }
 
 /// Every authored affinity row must be **non-uniform**, must spell its biome
-/// keys correctly, and must not contain `0.0` unless a hard exclusion is meant.
+/// keys correctly, must not contain `0.0` unless a hard exclusion is meant, and
+/// must not exceed `1.0`.
 ///
-/// All three are silent-failure modes, which is why they are asserted rather
+/// All four are silent-failure modes, which is why they are asserted rather
 /// than trusted:
 ///
 /// 1. **Uniformity is a provable no-op for placement.** Genesis and `best_home`
@@ -616,6 +634,23 @@ fn the_affinity_differentiates_gnoll_from_the_other_peoples() {
 ///    founding pool on `caps_now()[pidx].at(c) > 0.0` — "a proto-site a people
 ///    cannot feed is not a founding, it is a death two epochs later". Neither
 ///    row shipped here means *never*, so neither may carry a zero.
+/// 4. **`1.0` is the ceiling, and crossing it changes what the mechanism IS.**
+///    Below `1.0` an affinity is a *mask*: every other kind carries an implicit
+///    unrestricted `1.0`, so a declared row can only ever subtract capacity from
+///    the kind that declares it, and no row can lift a kind above the field the
+///    world already gave it. A factor above `1.0` makes the same store a
+///    *boost*, and every result this campaign measured — the arid-share rise, the
+///    correlation fall, the whole-placement cascade — was measured under the mask
+///    reading. The spec pre-commits permitting a boost as the repair path if
+///    binding proves too weak, which makes it a spec-level decision to record,
+///    not a literal to edit; `domains/species/src/lib.rs`'s registry doc states
+///    it in the same words.
+///
+///    This test is the ONLY enforcement of that bound. `BiomeAffinity`'s fields
+///    are `pub`, so a validating `new()` would be advisory — any caller can still
+///    write the struct literal — and adding one would create the appearance of
+///    enforcement without the fact of it. The registry is the only production
+///    construction site, and this test reads the registry.
 #[test]
 fn every_authored_affinity_row_is_well_formed() {
     let names: Vec<&'static str> = hornvale_climate::biome::ALL
@@ -643,8 +678,46 @@ fn every_authored_affinity_row_is_well_formed() {
                  (genesis filters its pool on capacity > 0.0), not a strong \
                  preference"
             );
+            assert!(
+                *factor <= 1.0,
+                "{kind:?} sets {key:?} to {factor}, above the 1.0 CEILING. An \
+                 affinity is a MASK: every undeclared kind carries an implicit \
+                 1.0, so a row below the ceiling can only subtract capacity from \
+                 the kind that declares it. A factor above 1.0 makes the same \
+                 store a BOOST, which is a different mechanism — it lifts a kind \
+                 above the field the world gave it, and every result this \
+                 campaign measured was measured under the mask reading. The spec \
+                 pre-commits permitting a boost as the repair path if binding \
+                 proves too weak; taking it is a decision to RECORD, not a \
+                 literal to edit"
+            );
         }
         assert!(aff.default > 0.0, "{kind:?} has a zero default");
+        assert!(
+            aff.default <= 1.0,
+            "{kind:?} has a default of {}, above the 1.0 CEILING — see the \
+             per-biome message above; the default is the factor every one of the \
+             ~20 unlisted biomes takes, so raising it past 1.0 boosts the kind \
+             nearly everywhere at once",
+            aff.default
+        );
+
+        // No biome may be listed twice. `BiomeAffinity::factor` returns the
+        // FIRST match, so a duplicated key resolves deterministically to one
+        // value and silently ignores the other — the identical silent-inertness
+        // failure mode as the misspelling guarded above, and the reason that one
+        // is guarded applies here unchanged. Left unguarded, an author who edits
+        // `("savanna", 0.45)` to `0.70` by appending a second row rather than
+        // changing the first gets no error and no effect.
+        let mut seen: std::collections::BTreeSet<&'static str> = std::collections::BTreeSet::new();
+        for (key, _) in &aff.by_biome {
+            assert!(
+                seen.insert(key),
+                "{kind:?} lists {key:?} more than once; `factor` returns the \
+                 FIRST match, so the later value is silently inert — exactly the \
+                 misspelling failure mode, reached by a different route"
+            );
+        }
 
         // Non-uniform across the WHOLE catalog, resolved through `factor` — the
         // same accessor the pipeline uses, so this cannot pass on a row whose

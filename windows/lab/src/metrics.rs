@@ -3786,8 +3786,15 @@ pub fn registry() -> Vec<Metric> {
         // example of "an existence claim over 15 draws is decided by
         // whichever single world happens to sit nearest the threshold". The
         // Contour flipped it once by five rooms; The Range's biome ranges
-        // flipped it again, leaving the best of 15 at 109/235 = 46.4% against
-        // a 50% bar, while every other prevalence reading in that test held.
+        // flipped it again, leaving the best of 15 at **50/101 = 49.5%
+        // (seed 6)** against a 50% bar — a miss of half a percentage point —
+        // while every other prevalence reading in that test held.
+        //
+        // Seed 6, not seed 13: the retired clause compared `cold * 2 > built`,
+        // a RATIO. Seed 13 carries the sweep's largest cold COUNT (109 of 235
+        // = 46.4%) but seed 6's smaller 50 of 101 is the larger share. The
+        // count and the share rank the sweep differently, and only the share
+        // is what the bar was ever about.
         //
         // A SHARE, not a count, because that is what the retired clause
         // actually compared: `cold * 2 > built` is `share > 0.5`. Reading a

@@ -2211,7 +2211,7 @@ pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
         // in the opposite climate. Temperature optimum **-25.0 °C at devotion
         // 0.85** is the roster's strongest COLD authoring, and the admission
         // table shows it discarded exactly as gnoll's desert authoring is: at
-        // 6000 kg its sovereignty floor is 0.692328 and its elevation devotion
+        // 6000 kg its sovereignty floor is 0.692367 and its elevation devotion
         // is 0.50, so elevation is the minimum on every cell and the deep-cold
         // curve never binds.
         //

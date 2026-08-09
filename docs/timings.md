@@ -83,6 +83,27 @@ Both 2026-08-05 `heavy` rows also carry a hand-filled `branch` cell.
 dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 `the-scatter`.
 
+**A note on the four `gate (RED, ...)` rows of 2026-08-09 (The Range, task 4).**
+`scripts/timed.sh` ledgers a run's wall time under the label it was given
+whether the command SUCCEEDED or not — it prints `rc=<n>` to stdout and the
+table has no column for it. `make gate` stops at the first failing test, so a
+red gate's wall time is however long it took to reach that test: those four
+rows read 47–177 s against a healthy gate's ~900 s, and without this note
+they would read as a dramatic speed-up. The rows are kept rather than deleted
+(they are real measurements of real commands) and relabelled so they cannot be
+mistaken for gate timings. **Adding an `rc` column to the table would fix this
+properly**; it is recorded here rather than done, because the schema is
+consumed by more than this file.
+
+**Every note belongs above this line, never between two rows.** The note above
+first landed *inside* the table, between the last RED row and the census row
+after it. Markdown needs a header plus a delimiter row to start a table, so
+prose in the middle ends the table: the six rows below it rendered as literal
+pipe-delimited text, and any reader or tool walking the table stopped there.
+Below the table is no better a home, because `timed.sh` appends new rows with
+`>> "$LEDGER"` — anything at the file's end is overtaken by the next run. So
+the preamble is the only position that survives both Markdown and the writer.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -551,19 +572,10 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T06:10:25Z | gate (RED, aborted at first failure — NOT a gate timing) | 47.745 | 178.973 | 13.642 | 4.03 | 0 | d844cd48 | the-range | MacBookPro | 10 |
 | 2026-08-09T06:17:40Z | gate (RED, aborted at first failure — NOT a gate timing) | 129.348 | 821.637 | 30.417 | 6.59 | 0 | d844cd48 | the-range | MacBookPro | 10 |
 | 2026-08-09T06:30:15Z | gate (RED, aborted at first failure — NOT a gate timing) | 176.679 | 1020.216 | 72.533 | 6.18 | 0 | d844cd48 | the-range | MacBookPro | 10 |
-
-**A note on the four `gate (RED, ...)` rows above (The Range, task 4).**
-`scripts/timed.sh` ledgers a run's wall time under the label it was given
-whether the command SUCCEEDED or not — it prints `rc=<n>` to stdout and the
-table has no column for it. `make gate` stops at the first failing test, so a
-red gate's wall time is however long it took to reach that test: the four rows
-above read 47–177 s against a healthy gate's ~900 s, and without this note
-they would read as a dramatic speed-up. The rows are kept rather than deleted
-(they are real measurements of real commands) and relabelled so they cannot be
-mistaken for gate timings. **Adding an `rc` column to the table would fix this
-properly**; it is recorded here rather than done, because the schema is
-consumed by more than this file.
 | 2026-08-09T11:00:43Z | census | 920.964 | 22515.362 | 398.599 | 24.88 | 0 | eb2a660d |  | lefford | 40 |
 | 2026-08-09T11:20:42Z | gate | 139.015 | 136.696 | 65.900 | 1.46 | 0 | d3457790 | the-range | MacBookPro | 10 |
 | 2026-08-09T12:49:30Z | gate | 339.976 | 1315.759 | 44.130 | 4.00 | 0 | 54ef9a8c | the-range | MacBookPro | 10 |
 | 2026-08-09T13:18:59Z | census | 886.849 | 22735.004 | 364.368 | 26.05 | 0 | 101a5395 |  | lefford | 40 |
+| 2026-08-09T13:58:32Z | gate | 69.416 | 95.223 | 20.386 | 1.67 | 0 | 584cb85f | the-range | MacBookPro | 10 |
+| 2026-08-09T14:31:43Z | gate | 673.663 | 5411.968 | 114.709 | 8.20 | 0 | 12fdd917 | the-range | MacBookPro | 10 |
+| 2026-08-09T15:27:31Z | gate | 1024.541 | 5599.183 | 292.478 | 5.75 | 0 | 12fdd917 | the-range | MacBookPro | 10 |

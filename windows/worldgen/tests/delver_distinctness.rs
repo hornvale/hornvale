@@ -170,7 +170,19 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster scored here. So this is a deliberate CONTROL, not a
+    // copy of the registry.
+    //
+    // Deliberate, and load-bearing for a second campaign: The Range's own P2
+    // reports gnoll's correlations "alongside this campaign's published table
+    // rather than beside it in different units", which requires the two to have
+    // been measured under the same physics. Task 3's
+    // `an_absent_affinity_is_bit_identical` proves all-`None` is exactly the
+    // pre-affinity world these numbers were published from — see
+    // `range_readout.rs`, whose ABSENT arm reproduces this file's `gnoll vs
+    // kobold` value at seed 42 to six places.
     let species_affinity: Vec<Option<hornvale_species::BiomeAffinity>> =
         vec![None; species_biosphere.len()];
 

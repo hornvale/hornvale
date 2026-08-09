@@ -715,7 +715,7 @@ fn legacy_layer_key(r: &OccupationRecord) -> (u64, u8, u64, std::cmp::Reverse<u3
 /// discover the second one — this campaign paid that toll and removed it.
 ///
 /// claim: invariant(seed: [42,7,1000]) — per-seed exact pinned
-/// order-change count, tuple pattern `(seed, expected)` (Fix round 1,
+/// order-change count, asserted once as a whole vector (Fix round 1,
 /// Class 1)
 #[test]
 fn the_material_fourth_key_barely_moves_the_stratigraphy() {
@@ -723,8 +723,14 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // reports all three counts. The per-seed `assert_eq!` stopped at the first
     // difference, which meant every re-pin of this table needed as many runs as
     // it had moved seeds — a real cost at ~5 s a world.
+    //
+    // The pin lives in ONE place — the `assert_eq!` below. The loop iterates
+    // bare seeds rather than `(seed, expected)` pairs: carrying the expected
+    // values here as well would be the same pin written twice, and the copy the
+    // loop held was already dead (`_expected` was never read), so the two could
+    // have drifted apart with nothing to notice.
     let mut measured: Vec<(u64, usize)> = Vec::new();
-    for (seed, _expected) in [(42u64, 1usize), (7, 0), (1000, 1)] {
+    for seed in [42u64, 7, 1000] {
         let w = build_world(
             Seed(seed),
             &Default::default(),

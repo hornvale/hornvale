@@ -136,7 +136,18 @@ fn cost_of_making_capacity_era_varying() {
         })
         .collect();
     let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and `SETTLERS` contains gnoll.
+    // So this is a deliberate CONTROL, not a copy of the registry.
+    //
+    // Deliberate, and cost is the reason rather than physics: this is a TIMING
+    // harness, comparing the naive per-era path against the hoisted one, and
+    // both arms are handed this same slice. An affinity resolves through
+    // `BiomeAffinity::factor`, a short linear scan per cell per kind, so
+    // threading it would add identical work to both arms and shift the absolute
+    // milliseconds this probe reports against H4's 1.5x budget without changing
+    // the ratio it exists to measure. All-`None` keeps the numbers comparable
+    // with the pre-campaign readings they are budgeted against.
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
     #[allow(clippy::disallowed_types)] // benchmark harness, not sim logic
@@ -383,7 +394,18 @@ fn where_substrate_cost_lives_and_whether_latitudes_repeat() {
 fn hoisted_era_replay_versus_naive() {
     let (geo, terrain, climate, obliquity_deg, insolation_scalar, regime, biosphere, _wc) = setup();
     let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and `SETTLERS` contains gnoll.
+    // So this is a deliberate CONTROL, not a copy of the registry.
+    //
+    // Deliberate, and cost is the reason rather than physics: this is a TIMING
+    // harness, comparing the naive per-era path against the hoisted one, and
+    // both arms are handed this same slice. An affinity resolves through
+    // `BiomeAffinity::factor`, a short linear scan per cell per kind, so
+    // threading it would add identical work to both arms and shift the absolute
+    // milliseconds this probe reports against H4's 1.5x budget without changing
+    // the ratio it exists to measure. All-`None` keeps the numbers comparable
+    // with the pre-campaign readings they are budgeted against.
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
     macro_rules! ms {

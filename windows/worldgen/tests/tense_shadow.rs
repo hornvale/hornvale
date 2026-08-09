@@ -93,7 +93,19 @@ fn temperature_gate_versus_era_mask() {
             })
             .collect();
         let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
-        // The Range: an empty registry, so every kind's affinity is `None`.
+        // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+        // `woolly-mammoth` carry rows since task 4, and `SETTLERS` contains
+        // gnoll. So this is a deliberate CONTROL, not a copy of the registry.
+        //
+        // Deliberate because this is a SHADOW comparison of two exclusion rules,
+        // and its whole value is that the difference it prints is the rules'
+        // and not something else's. The gate side asks whether every settler's
+        // capacity falls below `SURVIVE_K`; an affinity multiplies exactly that
+        // capacity, so threading it would push gnoll under the threshold on
+        // whole biome classes and be read as the gate excluding more land than
+        // the mask. All-`None` is bit-identical to the physics this shadow run
+        // was characterised under (task 3's
+        // `an_absent_affinity_is_bit_identical`).
         let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,

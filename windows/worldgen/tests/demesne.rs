@@ -172,7 +172,17 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster scored here. So this is a deliberate CONTROL, not a
+    // copy of the registry.
+    //
+    // Deliberate because this readout is about the SUBMERGED/land partition and
+    // the marine roster, a question upstream of any per-biome preference: an
+    // affinity re-weights a kind across biomes it can already reach, it does not
+    // change which cells the field reaches. All-`None` is bit-identical to the
+    // pre-affinity physics this file's numbers were taken under (task 3's
+    // `an_absent_affinity_is_bit_identical`).
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
     let ks = hornvale_worldgen::per_species_suitability(
         geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,

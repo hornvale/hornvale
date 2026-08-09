@@ -177,7 +177,19 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
                 })
                 .collect();
         let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
-        // The Range: an empty registry, so every kind's affinity is `None`.
+        // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+        // `woolly-mammoth` carry rows since task 4, and the settler list above
+        // contains gnoll. So this is a deliberate CONTROL, not a copy of the
+        // registry.
+        //
+        // Deliberate, and the choice is safe rather than merely conventional:
+        // this file asserts an EQUIVALENCE — the direct per-era
+        // `per_species_capacity` against the hoisted `EraInvariantSupply` path —
+        // and both sides are handed this same slice, so no affinity value can
+        // make them agree or disagree. What the all-`None` slice buys is that a
+        // failure here is unambiguously about the hoist, with no second
+        // mechanism in the frame. All-`None` is bit-identical to the
+        // pre-affinity physics (task 3's `an_absent_affinity_is_bit_identical`).
         let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
         let direct = per_species_capacity(
@@ -264,7 +276,19 @@ fn ocean_is_never_settleable_at_any_era() {
                 })
                 .collect();
         let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
-        // The Range: an empty registry, so every kind's affinity is `None`.
+        // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+        // `woolly-mammoth` carry rows since task 4, and the settler list above
+        // contains gnoll. So this is a deliberate CONTROL, not a copy of the
+        // registry.
+        //
+        // Deliberate, and here it is the STRICTER arm rather than a convenience.
+        // The claim is that capacity is exactly `0.0` on every sea cell at every
+        // era. An affinity is a MULTIPLIER in `[0.25, 1.0]`, so threading it
+        // could only ever shrink a leak toward zero and hide it; scoring at the
+        // unrestricted 1.0 every kind carried before task 4 is the largest
+        // capacity the pipeline will produce, and therefore the hardest place
+        // for an ocean leak to stay invisible. All-`None` is bit-identical to
+        // that unrestricted case (task 3's `an_absent_affinity_is_bit_identical`).
         let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,

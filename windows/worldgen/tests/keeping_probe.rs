@@ -219,7 +219,17 @@ fn probe_seed(seed: u64) {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
-    // The Range: an empty registry, so every kind's affinity is `None`.
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster this probe scores. So this is a deliberate CONTROL,
+    // not a copy of the registry.
+    //
+    // Deliberate because this probe is The Keeping's, and its published numbers
+    // are about what decomposing `habitable` into `is_land` opened up. Feeding
+    // it a mechanism authored several campaigns later would re-scale two of its
+    // kinds and leave the rest alone, which is a change to the instrument rather
+    // than a new reading. All-`None` is bit-identical to the pre-affinity
+    // physics (task 3's `an_absent_affinity_is_bit_identical`).
     let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let ks = per_species_suitability(

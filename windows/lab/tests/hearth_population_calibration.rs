@@ -263,9 +263,19 @@ fn cold_built_settlements_are_common_not_rare() {
     // threshold", carrying "a value pin's noise profile with an invariant's
     // authority". The Contour moved seed 13 from 56.9% to 48.7% by five
     // rooms and flipped it; The Range's biome ranges moved it again, and the
-    // best of the 15 now reads 109/235 = 46.4% against a 50% bar. Nothing
-    // about cold-built prevalence broke — the three assertions above, which
-    // are different claims about the same sweep, never moved.
+    // best of the 15 now reads **50/101 = 49.5% (seed 6)** against a 50% bar
+    // — the claim misses by half a percentage point. Nothing about cold-built
+    // prevalence broke — the three assertions above, which are different
+    // claims about the same sweep, never moved.
+    //
+    // The nearest world is seed 6, NOT seed 13, and getting that wrong is
+    // itself an instance of 0097's point. The retired clause compared
+    // `cold * 2 > built`, a RATIO; seed 13 has the sweep's highest cold COUNT
+    // (109 rooms, `most_cold` below) but only 46.4% of its 235 built rooms,
+    // while seed 6's 50 cold rooms are 49.5% of a much smaller 101. Reading
+    // the count column and reporting it as the share is how a 0.5 pp miss got
+    // written down as a 3.6 pp one. Measured 2026-08-09 from this test's own
+    // `{sweep:?}` output.
     //
     // The question is now the census column `cold-built-room-share`
     // (`windows/lab/src/metrics.rs`), verified by
