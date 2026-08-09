@@ -421,6 +421,19 @@ digest already depends on `serde`, `serde_json`, and `hornvale-kernel`.
    Unmeasured: real steady-state post volume with several sessions live. If the
    cap is routinely hit, either D4's content rule is being violated or the
    relevance filter is too loose — and the diagnosis differs.
+
+   **Measured at wiring time, and it is the LATENCY that binds, not the tokens:**
+   `scripts/board-render.sh` takes **~0.57 s (five runs) with two posts on the
+   board**, and the hook is deliberately synchronous. It must be: `async: true`
+   is fire-and-forget, and while `SessionStart` stdout is added to context, the
+   documentation is silent on whether an *async* hook's stdout still is — so async
+   would probably kill this read seam with no signal, which is a worse failure
+   than a slow start. The cost is dominated by subprocess spawns, not by the board
+   being large: `LiveContext::probe` runs a resolve and a `merge-base` per distinct
+   author, plus `hostname` and a `ps` per local claim. It therefore grows with
+   **authors**, not posts. Two consequences: the render carries a tight visible
+   budget (2 s, and a skipped render says so rather than rendering nothing), and
+   batching those probes is a named followup rather than a vague "optimise later".
 2. **CAS retry stays sufficient at realistic concurrency.** Verified at 8
    writers on one box; unmeasured beyond. The failure mode is loud.
 3. **Relevance-by-changed-paths matches the collisions we care about.** The
