@@ -121,6 +121,11 @@ with `main`. How tractable is now measured rather than assumed — [The
 Timekeeper](../chronicle/the-timekeeper.md) found the gate running at
 934.5 s against decision 0040's budget of 234 s, and gave the suite a
 per-test baseline and an alarm so the next such drift announces itself.
+[The Whetstone](../chronicle/the-whetstone.md) then took most of that back —
+460.8 s, by optimizing the *test* build rather than by cutting any test —
+and found, in passing, that the per-test baseline is keyed on the machine's
+hostname and so cannot be read as a ranking of what is slow unless it was
+recorded on the box you are reading it from.
 
 That last sentence is a *convention*, and it has failed. [The
 Siding](../chronicle/the-siding.md) found the census stale for **139
