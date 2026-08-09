@@ -31,6 +31,7 @@ pub struct NumericStats {
 /// (`rank = ceil(p/100 · n)`, clamped, 1-indexed then converted to a
 /// 0-index) — see [`median`]'s doc for why the two are never interchanged.
 fn percentile(sorted: &[f64], q: f64) -> f64 {
+    assert!(!sorted.is_empty(), "percentile of an empty population");
     let idx = ((q * sorted.len() as f64).ceil() as usize).saturating_sub(1);
     sorted[idx.min(sorted.len() - 1)]
 }
@@ -51,6 +52,7 @@ fn percentile(sorted: &[f64], q: f64) -> f64 {
 /// are intentionally distinct (see `median_and_percentile_diverge_on_an_
 /// even_length_sample` below).
 fn median(sorted: &[f64]) -> f64 {
+    assert!(!sorted.is_empty(), "median of an empty population");
     let n = sorted.len();
     if n % 2 == 1 {
         sorted[n / 2]
@@ -125,7 +127,9 @@ mod tests {
         let s = super::numeric(&c, "m").expect("stats");
         assert_eq!(s.n, 5);
         assert_eq!(s.min, 1.0);
+        assert_eq!(s.p25, 2.0, "nearest-rank: ceil(0.25*5)=2 -> index 1");
         assert_eq!(s.median, 3.0);
+        assert_eq!(s.p75, 4.0, "nearest-rank: ceil(0.75*5)=4 -> index 3");
         assert_eq!(s.max, 5.0);
         assert_eq!(s.mean, 3.0);
     }
@@ -165,6 +169,7 @@ mod tests {
             &crate::domesday::census::repo_root().join("book/src/laboratory/generated/the-census"),
         )
         .expect("census");
+
         let s = super::numeric(&c, "mean-land-temperature-c").expect("stats");
         // Verified directly against the committed CSV (1000 worlds, this
         // metric absent on none of them) using the repo's `median()`
@@ -182,6 +187,26 @@ mod tests {
         );
         assert!((s.min - (-47.151131)).abs() < 1e-4, "min was {}", s.min);
         assert!((s.max - 23.141691).abs() < 1e-4, "max was {}", s.max);
+        // p25/p75 are `percentile`'s nearest-rank formula (ceil(q·n)),
+        // independently verified against the committed CSV.
+        assert!((s.p25 - (-22.551606)).abs() < 1e-4, "p25 was {}", s.p25);
+        assert!((s.p75 - 2.037309).abs() < 1e-4, "p75 was {}", s.p75);
+
+        // A second metric with a different distribution shape, so a
+        // percentile formula that happens to land right on one metric
+        // (e.g. an off-by-one that only shows up at certain n or certain
+        // clustering) cannot hide behind a single sample.
+        let o = super::numeric(&c, "ocean-fraction").expect("stats");
+        assert!(
+            (o.p25 - 0.559787).abs() < 1e-4,
+            "ocean-fraction p25 was {}",
+            o.p25
+        );
+        assert!(
+            (o.p75 - 0.683219).abs() < 1e-4,
+            "ocean-fraction p75 was {}",
+            o.p75
+        );
     }
 
     #[test]
