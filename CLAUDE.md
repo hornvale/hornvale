@@ -174,15 +174,26 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # book/src/laboratory/generated/*/rows.csv current with main rather than
 # lagging it.
 #
-# THE CENSUS RUNS ON lefford, NOT LOCALLY. This paragraph used to say the
-# sanctioned refresh was local ("a ~7-min LOCAL run, since The Local Census").
-# That is FALSE and the guard in census-run.sh enforces the opposite: it
-# REFUSES on any host but lefford, citing decision 0063 — the boxes differ on
-# ~0.1% of discrete-count metrics, decided upstream of quantize-at-emit, so a
-# local run would commit values that silently disagree with canonical and then
-# DRIFT-CHECK GREEN FOREVER. The Range read this line, recommended a local run
-# on its strength, and was refused by the guard; the text was the defect.
-# Measured on lefford: 887 s and 921 s (~15 min), cpu_ratio ~25 on 40 cores.
+# THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
+# whatever box you are sitting at". That ambiguity is the whole trap, and it
+# is worth two sentences because it has now cost two sessions. 0063 retired
+# the AWS spot box and put the census back on the project's own canonical
+# hardware ("~7 minutes on the 40-core Linux box"); 0079 then *enforced which*
+# box, because the machines are not byte-identical — they disagree by one unit
+# on ~0.1% of discrete-count metrics, decided in the COMPUTE path upstream of
+# quantize-at-emit, so an off-host run commits values that silently disagree
+# with canonical and then DRIFT-CHECK GREEN FOREVER.
+#
+# So from lefford the run is local and 0063's word is exact. From this Mac it
+# is not, and `census-run.sh` fails closed on the hostname. This paragraph
+# previously read "the sanctioned refresh is local" with no host named; The
+# Range read it from the Mac, recommended a local run, and was refused by the
+# guard. The sentence was not false — it was written from the canonical box's
+# point of view and silently changes meaning depending on where you read it.
+#
+# COST HAS ROUGHLY DOUBLED since 0063 measured it: 776 s / 887 s / 921 s
+# (13-15 min) on lefford, 2026-08-09, cpu_ratio ~25 on 40 cores, against
+# 0063's "~7 minutes". Not a contradiction — a drift datum. Budget 15.
 #
 # Push the branch first, then dispatch with a FULL SHA (never a branch name —
 # HV_CENSUS_REF feeds `reset --hard`, which can land on a stale local branch
