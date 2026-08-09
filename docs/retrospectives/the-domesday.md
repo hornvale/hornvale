@@ -206,3 +206,50 @@ reddens.
 `docs/digest/` is missing from the drift-check path lists quoted in
 `cli/CLAUDE.md` and `windows/CLAUDE.md` — pre-existing, unrelated to this
 campaign, and not fixed here to keep the diff honest.
+
+## What the absorption taught, after the close was written
+
+Twenty-nine commits of `main` (The Tare, The Assize) landed between this
+campaign's close and its merge. Absorbing them produced three findings that
+postdate everything above, and they are the ones most worth keeping.
+
+**The required field made a parallel campaign's omission a compile error.**
+The Assize added `climate-displacement-events` and `tribute-relations-standing`
+on a branch where `Metric` had no `domain`/`role`. The auto-merge succeeded
+textually and then **`cargo check` refused it** — `missing fields domain and
+role`. A metric can no longer enter this repo unclassified, and the enforcement
+needed no test, no lint and no reviewer: it is the type. That is the strongest
+argument for the required-field design, and it arrived unsolicited from a
+campaign that had never heard of it.
+
+**The survey audited the incoming work on first exposure.** Once classified and
+re-rendered, `climate-displacement-events` immediately fired **D3** (its
+interquartile spread is under 5 % of its range). A metric written by another
+campaign, that same day, was measured by an instrument it did not know existed.
+That is the whole argument for Part IV in one line.
+
+**A census run on any branch re-stales `schema.json`, and the regeneration
+script cannot self-heal it.** `regenerate-artifacts.sh` skips censuses by
+design, so the `domain`/`role` keys it never wrote stay missing until someone
+runs `lab backfill-schema` by hand. **This happened twice in one campaign** —
+first from The Delvers' census during Task 2, then from The Assize's during the
+merge. Both times the gate caught it (`every_column_carries_a_domain_and_role`
+went red naming the offending metric), and both times only because that test
+exists.
+
+The pattern is not "remember to backfill." It is that **a generated artifact
+with two producers has no single command that makes it current**: the census
+writes the rows, the schema carries fields the census's branch may not have
+known about, and nothing reconciles them. The follow-on is to put
+`backfill-schema` into `regenerate-artifacts.sh` so the schema is always
+re-derived from the current registry rather than inherited from whichever
+branch last ran a census.
+
+**A semantic collision in the Confidence Gradient, resolved by keeping both.**
+This campaign and The Assize each claimed "a seventh campaign" in the
+cannot-fire thread, on the same day, from opposite ends of it — one found
+guards that could not fire, the other a guard that fired wrongly. Neither was
+wrong. They are now the seventh and eighth, with a note that they collided in a
+merge, which is itself the strongest evidence the chapter offers about how
+common the family is. `make preflight` cannot see this class; only reading the
+other branch's chronicle can.
