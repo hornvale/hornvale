@@ -324,9 +324,34 @@ finding, not a failure.
   which case D2 must stay silent and the declaration is itself the answer.
   Found while testing the detectors, not sought; it is the first evidence the
   survey catches things nobody was looking for.
-- **S2c.** **D1 fires on at most 10 `descriptor` metrics.** Without §4.1a's
-  `role` split it would fire on 40 of 57 and the section would be unreadable.
-  This is the falsification clause made into a number.
+- **S2c. FALSIFIED, 2026-08-08 — recorded, threshold NOT moved.** The
+  prediction was that D1 would fire on **at most 10** `descriptor` metrics.
+  It fires on **27**. The `role` split did real work (40 → 27) but far less
+  than predicted, because I set the ceiling without measuring the split
+  distribution first.
+
+  **The 27 were inspected before ruling, and they are overwhelmingly real.**
+  Ten metrics do not vary *at all* across 1,000 worlds — `dominant-soil-order`
+  is `leptosol` on every world, `pantheon-verticality` is `flat`,
+  `head-deity-domain-goblin` is `solar`, `dominant-hazard` is `structural`,
+  `hydro-variant-coverage` is one identical string. Seventeen more are heavy
+  skews: `belief-kind-*` is `cyclic` on 90–95 % across four species,
+  `dominant-commodity` is `salt` on 98.6 %.
+
+  **So the detector is right and the prediction was wrong.** D1's 0.80
+  threshold stands; S2c's ceiling is retired rather than raised to a number
+  that would have flattered the outcome. The survey is not drowned — 27
+  findings over 194 metrics is what "make weaknesses visible" looks like when
+  there are many weaknesses.
+
+  **Deliberately NOT done:** two hits are *expected* skews rather than defects
+  (`tidally-locked` false on 95.2 %, `refused-a-moon` false on 95.3 % — both
+  correct physics). A declared "expected skew" class would separate those from
+  genuine degeneracies, exactly as `role` separates invariants. That mechanism
+  is **not** being added now, because adding a count-reducing mechanism *after
+  seeing the count* is the same phase-order violation that cost D5 its
+  threshold. It is a follow-on, preregistered before the next run or not at
+  all.
 - **S3.** Regenerating the survey twice produces byte-identical output; mutating
   one value in `rows.csv` makes the drift check exit non-zero (**demonstrated
   RED on command**, with the target asserted present before mutation).
