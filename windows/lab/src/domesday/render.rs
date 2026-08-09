@@ -545,7 +545,17 @@ pub fn render_index(c: &Census, findings: &[Finding]) -> String {
          no reader counts the same metric twice.\n\n",
     );
     out.push_str("| detector | findings |\n|---|---|\n");
-    for detector in ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"] {
+    // Derived from the findings themselves, not a hardcoded roster: a
+    // detector that fires nothing has no row, which is correct (an empty
+    // row would assert a measurement that was never taken), and a detector
+    // whose name changes (as D5 split into "D5 direction"/"D5 strength")
+    // cannot silently vanish from a frozen literal this table forgot to
+    // update. This is the fourth frozen roster this programme has found —
+    // close the class, not the instance.
+    let mut detectors: Vec<&str> = findings.iter().map(|f| f.detector).collect();
+    detectors.sort_unstable();
+    detectors.dedup();
+    for detector in detectors {
         let n = findings.iter().filter(|f| f.detector == detector).count();
         out.push_str(&format!("| {detector} | {n} |\n"));
     }
@@ -762,6 +772,32 @@ mod tests {
                 "{d}'s page must not carry a D8 crate-coverage finding"
             );
         }
+    }
+
+    #[test]
+    fn a_novel_detector_name_reaches_the_rendered_index() {
+        // render_index's "Findings by detector" table once iterated a
+        // hardcoded `["D1".."D8"]` literal (the same class of bug D5's
+        // rename exposed): a detector whose name the code never anticipated
+        // would fire, be counted by `detect()`, and then be silently
+        // dropped from the published table -- an undercount in the
+        // artifact whose whole claim is that it computes rather than
+        // restates. `render_index` must derive its roster from the
+        // findings themselves, so this passes against the fix and would
+        // fail against the old fixed-eight-detector loop (which would
+        // render no row at all for "D9 test").
+        let c = census();
+        let findings = vec![Finding {
+            detector: "D9 test",
+            metric: "mean-land-temperature-c".to_string(),
+            detail: "a detector this renderer was never told about".to_string(),
+        }];
+        let index = render_index(&c, &findings);
+        assert!(
+            index.contains("| D9 test | 1 |"),
+            "a novel detector name must get its own row in the findings-by-detector \
+             table, not be silently absent: {index}"
+        );
     }
 
     #[test]

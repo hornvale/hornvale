@@ -238,10 +238,15 @@ fn band_of(abs_r: f64) -> &'static str {
     }
 }
 
-/// D5 Mis-declared strength: an expectation declares a relationship class;
-/// fire when the observed Pearson `|r|`, mapped to a band, differs from it.
-/// Pairs are formed from worlds where BOTH `metric` and `tracks` are
-/// present, in row order (deterministic — no `HashMap`).
+/// D5 Mis-declared relationship: an expectation declares a relationship
+/// class and sign; fire `"D5 strength"` when the observed Pearson `|r|`,
+/// mapped to a band, differs from the declared class, or `"D5 direction"`
+/// when the band matches but the observed sign is backwards from the
+/// declared one (spec §4.2) — a link that runs the wrong way is a more
+/// serious defect than a merely over- or under-claimed strength. The sign
+/// is never reported when the observed band is `none`: a near-zero `r`'s
+/// sign is noise. Pairs are formed from worlds where BOTH `metric` and
+/// `tracks` are present, in row order (deterministic — no `HashMap`).
 fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
     let mut out = Vec::new();
     for e in exps {
@@ -263,9 +268,12 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
         }
         if let Some(r) = pearson(&xs, &ys) {
             let observed = band_of(r.abs());
+            let observed_dir = if r < 0.0 { "negative" } else { "positive" };
             if observed != e.declared {
+                // Strength mismatch. The sign is NOT reported when nothing was
+                // measured — a near-zero r's sign is noise (spec §4.2).
                 out.push(Finding {
-                    detector: "D5",
+                    detector: "D5 strength",
                     metric: e.metric.clone(),
                     detail: format!(
                         "declared {} tracking {}, but observed |r| = {:.3} ({} pairs) is {}",
@@ -274,6 +282,23 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
                         r.abs(),
                         xs.len(),
                         observed
+                    ),
+                });
+            } else if observed != "none" && observed_dir != e.direction {
+                // Right strength, WRONG SIGN: the link exists and runs
+                // backwards. More serious than an over-claim.
+                out.push(Finding {
+                    detector: "D5 direction",
+                    metric: e.metric.clone(),
+                    detail: format!(
+                        "declared {} {} tracking {}, but the observed coupling is {} \
+                         (r = {:+.3}, {} pairs) — the link runs backwards",
+                        e.direction,
+                        e.declared,
+                        e.tracks,
+                        observed_dir,
+                        r,
+                        xs.len()
                     ),
                 });
             }
@@ -759,6 +784,110 @@ mod tests {
         // Only rows 0 and 3 have both present: (1,1) and (4,4) -> perfectly
         // correlated, "dominant", matching the declaration.
         assert!(!fires(&detect_d5(&c, std::slice::from_ref(&e))));
+    }
+
+    /// A two-column synthetic census, both numeric descriptors.
+    fn two_numeric_columns(a: &str, av: &[f64], b: &str, bv: &[f64]) -> Census {
+        Census {
+            columns: vec![
+                Column {
+                    name: a.to_string(),
+                    kind: "numeric".to_string(),
+                    doc: String::new(),
+                    domain: "climate".to_string(),
+                    role: "descriptor".to_string(),
+                },
+                Column {
+                    name: b.to_string(),
+                    kind: "numeric".to_string(),
+                    doc: String::new(),
+                    domain: "climate".to_string(),
+                    role: "descriptor".to_string(),
+                },
+            ],
+            rows: av
+                .iter()
+                .zip(bv.iter())
+                .map(|(x, y)| {
+                    BTreeMap::from([
+                        (a.to_string(), x.to_string()),
+                        (b.to_string(), y.to_string()),
+                    ])
+                })
+                .collect(),
+        }
+    }
+
+    /// An expectation with the given declared class and direction.
+    fn expectation(metric: &str, tracks: &str, declared: &str, direction: &str) -> Expectation {
+        Expectation {
+            metric: metric.to_string(),
+            tracks: tracks.to_string(),
+            why: String::new(),
+            declared: declared.to_string(),
+            direction: direction.to_string(),
+        }
+    }
+
+    #[test]
+    fn d5_fires_direction_when_the_sign_is_backwards() {
+        // Perfectly anti-correlated, declared positive at the same strength.
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
+        let e = expectation("m", "d", "dominant", "positive");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(f.len(), 1, "a backwards coupling must fire");
+        assert_eq!(f[0].detector, "D5 direction");
+        assert!(
+            f[0].detail.contains("negative"),
+            "must name what was observed: {}",
+            f[0].detail
+        );
+    }
+
+    #[test]
+    fn d5_is_silent_when_strength_and_sign_both_match() {
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
+        let e = expectation("m", "d", "dominant", "negative");
+        assert!(
+            detect_d5(&c, &[e]).is_empty(),
+            "a correct claim must be silent"
+        );
+    }
+
+    #[test]
+    fn d5_reports_strength_not_sign_when_the_observed_band_is_none() {
+        // Zero correlation (verified exactly, not merely small): the sign
+        // is noise and must not be reported. The brief's original fixture
+        // here, `&[1.0, 1.0, 1.0, 1.0001]` against `&[1.0, 2.0, 3.0, 4.0]`,
+        // does not actually land in the "none" band -- the lone perturbed
+        // point coincides with the largest x, which pearson reads as a
+        // strong pattern (r = 0.7745966692414834, "dominant" -- the same
+        // magnitude `pearson_reads_a_nontrivial_correlation_and_its_sign`
+        // pins above as "nontrivial"), not noise. This fixture is chosen so
+        // cov = 0 exactly: dx = [-1.5, -0.5, 0.5, 1.5], dy = [-0.5, 1.5,
+        // -1.5, 0.5], dx . dy = 0.75 - 0.75 - 0.75 + 0.75 = 0.
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[2.0, 4.0, 1.0, 3.0]);
+        let e = expectation("m", "d", "dominant", "positive");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(f.len(), 1);
+        assert_eq!(
+            f[0].detector, "D5 strength",
+            "a none-band result is a strength finding"
+        );
+        assert!(
+            !f[0].detail.contains("direction"),
+            "the sign of a near-zero r is noise and must not be reported: {}",
+            f[0].detail
+        );
+    }
+
+    #[test]
+    fn d5_fires_strength_when_the_band_differs() {
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
+        let e = expectation("m", "d", "weak", "negative");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].detector, "D5 strength");
     }
 
     // --- D6 ---
