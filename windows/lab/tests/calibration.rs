@@ -3589,6 +3589,84 @@ fn the_tribute_stock_varies_across_the_census() {
     );
 }
 
+/// The verifier decision 0097 prescription 4 requires: `cold-built-room-share`
+/// (the census column that replaced the 15-seed cold-DOMINATION existence
+/// clause `hearth_population_calibration.rs` used to carry — see that
+/// decision and the metric's own doc in `windows/lab/src/metrics.rs`) is a
+/// *generator* with no verifier until this row exists. An unpaired census
+/// claim "scores as unchecked no matter how large its sample" (0097
+/// prescription 4); this pairs it.
+///
+/// # The band was fixed before the number was read
+///
+/// Rule, chosen first: the measured dominated-world rate, ± 5 binomial
+/// standard errors, rounded outward to the nearest 0.5 percentage point.
+/// Applied to the committed fixture:
+///
+/// ```text
+/// n = 1000, present = 1000, absent = 0
+/// dominated (share >= 0.5)   = 222   ->  22.20%
+/// binomial SE = sqrt(p(1-p)/n) = 1.3142 pp
+/// 5 SE = 6.5711 pp
+/// raw band   = [15.629%, 28.771%]
+/// rounded outward to 0.5 pp -> [15.5%, 29.0%]
+/// ```
+///
+/// The preregistered contingency — if fewer than 30 worlds were dominated,
+/// assert no positive lower bound, since a rate estimated from under 30
+/// successes has no binomial-normal approximation worth a band — is **not
+/// triggered**: 222 clears it by a wide margin.
+///
+/// # What a 15-seed probe could not see
+///
+/// The retired existence clause asked only whether ANY of 15 worlds crossed
+/// 50% cold-built; The Contour flipped that answer by five rooms on the one
+/// seed sitting near the bar, and The Range's biome ranges flipped it again.
+/// At n = 1000 the same physics reads as a rate with a confidence interval
+/// instead of a coin flip decided by whichever world sits nearest the
+/// threshold — the difference 0097 exists to draw.
+///
+/// claim: rate(census: cold-built-room-share, [15.5, 29.0])
+#[test]
+fn cold_built_room_share_dominated_rate_is_measured_and_pinned() {
+    let shares = seeded_nums(&DRIFT, "cold-built-room-share");
+    assert!(
+        !shares.is_empty(),
+        "cold-built-room-share was Absent on every census world — the \
+         distribution is being read over an empty population"
+    );
+    for (seed, share) in &shares {
+        assert!(
+            share.is_finite() && (0.0..=1.0).contains(share),
+            "seed {seed}: cold-built-room-share {share} is not a share in [0, 1]"
+        );
+    }
+    let dominated = shares.iter().filter(|(_, share)| *share >= 0.5).count();
+    // The preregistered contingency: under 30 dominated worlds, a binomial
+    // band has nothing solid to stand on, so only report, never bound.
+    assert!(
+        dominated >= 30,
+        "only {dominated} of {} worlds are cold-dominated — too few for the \
+         preregistered binomial band; report the rate, do not assert one",
+        shares.len()
+    );
+    let rate = dominated as f64 / shares.len() as f64;
+    assert!(
+        (0.155..=0.290).contains(&rate),
+        "cold-dominated rate {:.4} ({dominated}/{}) drifted outside the \
+         preregistered [15.5%, 29.0%] band (measured rate +/- 5 binomial SE, \
+         rounded outward to 0.5pp)",
+        rate,
+        shares.len()
+    );
+    println!(
+        "cold-built-room-share over {} census worlds: {dominated} dominated \
+         (share >= 0.5), rate {:.4}",
+        shares.len(),
+        rate
+    );
+}
+
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).
 fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
