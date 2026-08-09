@@ -7,7 +7,7 @@
 //! lists and are quoted in the committed fixture, so a naive `split(',')`
 //! would shred them across extra fields.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 #[cfg(test)]
 use std::path::PathBuf;
@@ -34,6 +34,7 @@ pub(crate) fn repo_root() -> PathBuf {
 
 /// One column of the census, as `schema.json` describes it.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: kind), bare-ok(prose: doc), bare-ok(identifier-text: domain), bare-ok(identifier-text: role)
+#[derive(Debug)]
 pub struct Column {
     /// Metric name (the CSV header).
     pub name: String,
@@ -49,6 +50,7 @@ pub struct Column {
 
 /// The committed census table: one row per world, one column per metric.
 /// type-audit: bare-ok(artifact: rows)
+#[derive(Debug)]
 pub struct Census {
     /// Column descriptors, in schema order.
     pub columns: Vec<Column>,
@@ -58,9 +60,30 @@ pub struct Census {
 }
 
 impl Census {
+    /// Whether this census has a column of this name at all.
+    ///
+    /// The distinction `values`/`absent_count` need: a metric absent from
+    /// every world looks, row by row, identical to a metric name that is
+    /// not a column at all (both produce `None` from every row's map), so
+    /// without a schema-level check a typo'd metric name would silently
+    /// read as "1,000 worlds declined to report this" instead of failing.
+    /// type-audit: bare-ok(identifier-text: metric), bare-ok(flag: return)
+    pub fn has(&self, metric: &str) -> bool {
+        self.columns.iter().any(|c| c.name == metric)
+    }
+
     /// Present (non-empty) values for a metric, in row order.
+    ///
+    /// Panics on an unknown metric name rather than returning a `Vec` that
+    /// would be indistinguishable from "every world declined to report
+    /// this" — see `has`. Every caller of this reader is our own code (a
+    /// detector, an expectations file, a comparator) passing a name that
+    /// must exist; an unknown name is a programming error (a typo), not a
+    /// data condition, and this is the one artifact whose purpose is not
+    /// saying false things about the project.
     /// type-audit: bare-ok(identifier-text: metric), bare-ok(artifact: return)
     pub fn values(&self, metric: &str) -> Vec<&str> {
+        assert!(self.has(metric), "unknown census metric: {metric}");
         self.rows
             .iter()
             .filter_map(|r| r.get(metric).map(String::as_str))
@@ -70,9 +93,11 @@ impl Census {
 
     /// How many worlds have no value for this metric (absent, not present
     /// with an empty value coincidentally — the CSV never distinguishes the
-    /// two, so this is "present count subtracted from total rows").
+    /// two, so this is "present count subtracted from total rows"). Panics
+    /// on an unknown metric name (see `values`).
     /// type-audit: bare-ok(identifier-text: metric), bare-ok(count: return)
     pub fn absent_count(&self, metric: &str) -> usize {
+        assert!(self.has(metric), "unknown census metric: {metric}");
         self.rows.len() - self.values(metric).len()
     }
 }
@@ -111,7 +136,16 @@ fn split_csv_line(line: &str) -> Vec<String> {
 }
 
 /// Load `rows.csv` and `schema.json` from a study's generated directory
-/// (e.g. `book/src/laboratory/generated/the-census`).
+/// (e.g. `book/src/laboratory/generated/the-census`), and refuse to load a
+/// pair that have drifted apart.
+///
+/// This is not a hypothetical: the census-of-the-meeting and the-census
+/// fixtures actually did drift (`schema.json` regenerated six hours before
+/// a metric-registry change that `rows.csv` predates), and this reader
+/// would otherwise have loaded the mismatch silently. Every column named in
+/// `schema.json` must appear in `rows.csv`'s header and vice versa, or
+/// `load` errors naming the offending columns instead of returning a
+/// `Census` whose `columns` and row keys disagree.
 /// type-audit: bare-ok(prose: return)
 pub fn load(dir: &Path) -> Result<Census, String> {
     let schema_text = std::fs::read_to_string(dir.join("schema.json"))
@@ -135,6 +169,18 @@ pub fn load(dir: &Path) -> Result<Census, String> {
         std::fs::read_to_string(dir.join("rows.csv")).map_err(|e| format!("rows.csv: {e}"))?;
     let mut lines = csv.lines();
     let header = split_csv_line(lines.next().ok_or("rows.csv is empty")?);
+
+    let schema_names: BTreeSet<&str> = columns.iter().map(|c| c.name.as_str()).collect();
+    let csv_names: BTreeSet<&str> = header.iter().map(String::as_str).collect();
+    let schema_only: Vec<&str> = schema_names.difference(&csv_names).copied().collect();
+    let csv_only: Vec<&str> = csv_names.difference(&schema_names).copied().collect();
+    if !schema_only.is_empty() || !csv_only.is_empty() {
+        return Err(format!(
+            "schema.json and rows.csv disagree on columns: in schema.json \
+             only: {schema_only:?}; in rows.csv only: {csv_only:?}"
+        ));
+    }
+
     let rows = lines
         .filter(|l| !l.trim().is_empty())
         .map(|line| {
@@ -207,5 +253,121 @@ mod tests {
             split_csv_line("a,b,c"),
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
         );
+    }
+
+    /// A minimal in-memory census: one real column (`seed`, always present)
+    /// and one metric column that every row leaves empty — the case
+    /// `absent_count` must report as "1000 absent", not confuse with a
+    /// metric name that isn't a column at all.
+    fn synthetic_census() -> Census {
+        Census {
+            columns: vec![
+                Column {
+                    name: "seed".to_string(),
+                    kind: "integer".to_string(),
+                    doc: String::new(),
+                    domain: String::new(),
+                    role: String::new(),
+                },
+                Column {
+                    name: "always-absent".to_string(),
+                    kind: "numeric".to_string(),
+                    doc: "a metric no world reported".to_string(),
+                    domain: "terrain".to_string(),
+                    role: "descriptor".to_string(),
+                },
+            ],
+            rows: vec![
+                BTreeMap::from([
+                    ("seed".to_string(), "1".to_string()),
+                    ("always-absent".to_string(), String::new()),
+                ]),
+                BTreeMap::from([
+                    ("seed".to_string(), "2".to_string()),
+                    ("always-absent".to_string(), String::new()),
+                ]),
+            ],
+        }
+    }
+
+    #[test]
+    fn an_unknown_metric_is_distinguishable_from_an_all_absent_one() {
+        let c = synthetic_census();
+
+        // A real column every world left absent: has() sees it, and
+        // absent_count reports every row.
+        assert!(c.has("always-absent"));
+        assert_eq!(c.absent_count("always-absent"), 2);
+
+        // A name that is not a column at all: has() says so plainly,
+        // instead of absent_count silently agreeing to report "2 absent"
+        // for a metric that was never measured.
+        assert!(!c.has("not-a-real-metric"));
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown census metric: not-a-real-metric")]
+    fn values_panics_loudly_on_an_unknown_metric_rather_than_reporting_zero() {
+        synthetic_census().values("not-a-real-metric");
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown census metric: not-a-real-metric")]
+    fn absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent() {
+        synthetic_census().absent_count("not-a-real-metric");
+    }
+
+    #[test]
+    fn load_refuses_a_schema_and_csv_that_disagree_on_columns() {
+        let dir = std::env::temp_dir().join(format!(
+            "hv-domesday-census-mismatch-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).expect("create scratch dir");
+        std::fs::write(
+            dir.join("schema.json"),
+            r#"{"columns":[
+                {"name":"seed","kind":"integer"},
+                {"name":"schema-only-metric","kind":"numeric","domain":"terrain","role":"descriptor"}
+            ]}"#,
+        )
+        .expect("write schema.json");
+        std::fs::write(dir.join("rows.csv"), "seed,csv-only-metric\n1,2\n")
+            .expect("write rows.csv");
+
+        let err = load(&dir).expect_err("mismatched columns must fail to load");
+        assert!(
+            err.contains("schema-only-metric"),
+            "error should name the schema-only column: {err}"
+        );
+        assert!(
+            err.contains("csv-only-metric"),
+            "error should name the csv-only column: {err}"
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_accepts_a_schema_and_csv_that_agree_on_columns() {
+        let dir = std::env::temp_dir().join(format!(
+            "hv-domesday-census-agree-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).expect("create scratch dir");
+        std::fs::write(
+            dir.join("schema.json"),
+            r#"{"columns":[
+                {"name":"seed","kind":"integer"},
+                {"name":"a-metric","kind":"numeric","domain":"terrain","role":"descriptor"}
+            ]}"#,
+        )
+        .expect("write schema.json");
+        std::fs::write(dir.join("rows.csv"), "seed,a-metric\n1,2\n").expect("write rows.csv");
+
+        let c = load(&dir).expect("agreeing columns must load");
+        assert_eq!(c.rows.len(), 1);
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
