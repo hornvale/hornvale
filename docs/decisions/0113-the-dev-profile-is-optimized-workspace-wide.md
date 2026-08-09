@@ -63,9 +63,15 @@ shape was designed around was a hypothesis nobody had priced.
 - **A future per-crate `opt-level` entry is now a smell**, not a tool. If one
   crate needs different treatment, the question to answer first is why the
   workspace-wide setting is wrong for it.
-- **The census has not been re-measured under this.** It should have gained —
-  the world build is most of what it does — but a census is an authorization
-  carve-out and runs on lefford, so the gain is expected, not claimed.
+- **This buys the TEST build and nothing else, which the census proved.**
+  Authorized and run at close on lefford: the 1,000-world goldens came back
+  **byte-identical** (Linux x86_64, against changes authored on aarch64
+  Darwin — a cross-platform confirmation as well as a determinism one), and
+  **3% faster**, 22,170 → 21,482 processor-seconds. Not the large gain
+  predicted, and the reason is the scope of this record: **the census runs in
+  `release`, already optimized at 3**, so this decision cannot touch it. Its
+  3% is the two algorithmic fixes alone. Do not cite this record's 2x for any
+  release-profile path.
 
 ## See also
 

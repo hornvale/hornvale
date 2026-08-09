@@ -110,6 +110,12 @@ thing a future edit could silently break.
 Then the whole thing was regenerated: every almanac, every map, every derived
 page, the thousand-world survey. Zero bytes different.
 
+And then the census, which is the real verdict — a thousand worlds built from
+scratch and measured on some two hundred metrics each, run on the canonical
+machine, which is a 40-core Linux box on an entirely different processor
+architecture from the laptop the changes were written on. Zero bytes different
+there too.
+
 ## What it measures
 
 The whole suite, one machine, one morning, the before and after arms run three
@@ -149,8 +155,19 @@ a dense, complete run of small integers — the shape the kernel's own house
 rules say should be an array — and converting it is a change of *meaning* as
 well as representation, because the type currently distinguishes an axis
 recorded as zero from an axis not recorded at all. That is its own campaign,
-not a rider on this one. And the thousand-world census, which costs six hours
-of processor time and runs on another machine entirely, has not been
-re-measured under any of this; the same reasoning says it should have gained
-substantially, but the same discipline says a number nobody has run is not a
-result.
+not a rider on this one.
+
+The census deserves its own note, because the expectation this campaign held
+about it was wrong. It costs six hours of processor time, the world build is
+most of what it does, and the obvious inference was that it should gain
+enormously. It gained about three per cent — 22,170 processor-seconds to
+21,482, and 820 seconds of wall clock to 776.
+
+The reason is worth keeping. **The census runs in the shipping build, which
+was already fully optimized.** This campaign's largest lever — the one worth
+half the test suite — is a fact about the *test* build only, and touches the
+census not at all. What the census gained is exactly the two recomputations,
+which are real code changes and are worth their three per cent everywhere.
+The correct summary is that the campaign made the tests twice as fast and the
+simulation three per cent faster, and that those are two different findings
+which it would have been easy, and wrong, to report as one.

@@ -125,11 +125,19 @@ independent evidence. Cost: about four minutes each.
 
 ## 6. What was left on the table, deliberately
 
-- **The census is unmeasured.** It is 22,000 processor-seconds per run, on
-  lefford, and every one of these fixes should help it — the world build is
-  most of what it does. But a census is an explicit authorization carve-out and
-  runs on another box. Claiming a census speedup without running one would be
-  the exact failure this retrospective's §3 is about, pointed the other way.
+- **The census was left unmeasured, then authorized and run — and the
+  prediction was wrong.** Held open on the grounds that claiming a speedup
+  without running one would be §3's failure pointed the other way. Nathan
+  authorized it at close; it ran on lefford at the branch tip. Result: **zero
+  bytes different** across the 1,000-world goldens (on Linux x86_64, against
+  changes authored on aarch64 Darwin — a cross-platform confirmation this
+  campaign did not set out to get), and a **3% speedup**, not the
+  "substantial" one the draft predicted: 22,170 → 21,482 processor-seconds.
+  The reason is that **the census runs in `release`, which was already
+  optimized**, so the campaign's headline lever cannot touch it; only the two
+  algorithmic fixes reach it. Refusing to write the number down before running
+  it is what kept a 2x claim out of a 1.03x place — the discipline paid on its
+  first outing.
 - **`ResourceVector`'s representation.** The kernel's own dense-index rule says
   it should be an array; its `PartialEq` currently distinguishes "axis recorded
   as 0.0" from "axis absent", so converting it changes meaning. Recorded as an
