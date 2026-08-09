@@ -32,6 +32,28 @@ pub struct LiveContext {
     pub live_branches: BTreeSet<String>,
 }
 
+/// Judge one already-run `ps -p <pid>` invocation. `Ok` means `ps` ran, so its
+/// exit status is authoritative: success is alive, failure is dead. `Err`
+/// means `ps` itself could not be spawned (missing binary, a sandboxed PATH,
+/// …), so liveness is *unknown*, not dead — this board's claims exist so a
+/// session can see another session is using the box, and a claim that wrongly
+/// vanishes causes a silent double-start (the exact harm the board prevents),
+/// while a claim that wrongly persists is merely visible and self-correcting
+/// on the next TTL. So this fails OPEN on a spawn error: treat the pid as
+/// live, and say so loudly on stderr rather than swallowing the unknown.
+fn pid_probe_alive(pid: u32, spawned: std::io::Result<std::process::Output>) -> bool {
+    match spawned {
+        Ok(out) => out.status.success(),
+        Err(e) => {
+            eprintln!(
+                "board: could not run `ps -p {pid}` ({e}); process liveness for pid {pid} is \
+                 unknown, not dead -- treating it as live so its claim keeps rendering"
+            );
+            true
+        }
+    }
+}
+
 impl LiveContext {
     /// Probe the world once for a whole render.
     pub fn probe(repo: &Repo, posts: &[StoredPost]) -> Result<Self, BoardError> {
@@ -67,12 +89,10 @@ impl LiveContext {
                 let pid = pid as u32;
                 // `ps -p` works on Darwin and Linux alike; `kill -0` would need
                 // libc, which this crate deliberately does not depend on.
-                let alive = std::process::Command::new("ps")
+                let spawned = std::process::Command::new("ps")
                     .args(["-p", &pid.to_string()])
-                    .output()
-                    .map(|o| o.status.success())
-                    .unwrap_or(false);
-                if alive {
+                    .output();
+                if pid_probe_alive(pid, spawned) {
                     live_pids.insert(pid);
                 }
             }
@@ -248,5 +268,37 @@ mod tests {
             liveness(&stored(p, "a", 1), &ctx()),
             Liveness::Live
         ));
+    }
+
+    #[test]
+    fn pid_probe_alive_trusts_a_successful_ps_exit_status() {
+        // Deterministic stand-in for "ps ran and found the process": any
+        // command that exits 0 exercises the exact same `Ok(out) =>
+        // out.status.success()` branch `ps` would, without depending on any
+        // real pid's liveness.
+        let out = std::process::Command::new("true")
+            .output()
+            .expect("spawn true");
+        assert!(pid_probe_alive(1, Ok(out)));
+    }
+
+    #[test]
+    fn pid_probe_alive_trusts_a_failing_ps_exit_status() {
+        // Same idea for "ps ran and found nothing": any command that exits
+        // nonzero, not a pid anyone has to believe is dead.
+        let out = std::process::Command::new("false")
+            .output()
+            .expect("spawn false");
+        assert!(!pid_probe_alive(1, Ok(out)));
+    }
+
+    #[test]
+    fn pid_probe_alive_fails_open_when_ps_cannot_be_spawned_at_all() {
+        // The bug this task exists to close: a spawn failure (missing
+        // binary, sandboxed PATH, ...) must read as "unknown", not "dead".
+        // Collapsing the two is how a live local claim silently vanishes
+        // from a render.
+        let err = std::io::Error::new(std::io::ErrorKind::NotFound, "no such file or directory");
+        assert!(pid_probe_alive(1, Err(err)));
     }
 }
