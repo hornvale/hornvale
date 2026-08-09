@@ -126,6 +126,31 @@ mod tests {
     }
 
     #[test]
+    fn a_present_but_blank_kind_or_by_is_rejected_by_the_explicit_guards() {
+        // These cases have `kind` and `by` present as strings, so serde's own
+        // deserialization succeeds; only the `.trim().is_empty()` guards in
+        // `from_json` catch them. Distinct from `a_post_missing_kind_or_by_is_rejected`,
+        // which exercises serde's missing-field failure instead.
+        assert!(
+            Post::from_json(r#"{"kind":"","by":"campaign/x"}"#).is_err(),
+            "blank kind"
+        );
+        assert!(
+            Post::from_json(r#"{"kind":"notice","by":""}"#).is_err(),
+            "blank by"
+        );
+        let err = Post::from_json(r#"{"kind":"notice","by":"   "}"#)
+            .expect_err("whitespace-only by is not attribution");
+        let BoardError::Json(msg) = err else {
+            panic!("expected BoardError::Json, got {err:?}")
+        };
+        assert!(
+            msg.contains("attribution"),
+            "the guard's own message should name attribution, not serde's parse error; got: {msg}"
+        );
+    }
+
+    #[test]
     fn paths_reads_a_string_array_and_tolerates_its_absence() {
         let p = Post::new("notice", "b").with("paths", json!(["domains/terrain/", "kernel/"]));
         assert_eq!(
