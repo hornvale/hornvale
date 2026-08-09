@@ -192,3 +192,17 @@ jobs:
             clients/world-wasm
       - name: Catalog gate (lint + golden smoke + size)
         run: make world-check
+
+  game:
+    name: Game client (hornvale-game-core, hornvale-game)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            clients/game
+      - name: Game client gate (fmt + clippy + test + containment guard)
+        run: make game-check
