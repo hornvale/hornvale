@@ -40,7 +40,22 @@ impl Post {
 
     /// The bytes this post is addressed by: compact JSON plus a trailing
     /// newline, so the file is a well-behaved text blob.
+    ///
+    /// `#[serde(flatten)]` does not deduplicate `extra` against the named
+    /// `kind`/`by` fields, so a reserved key left in `extra` (e.g. via
+    /// `with("kind", ..)`) would otherwise serialize to a literal duplicate
+    /// JSON key — bytes `from_json` then refuses to parse. Since Task 3
+    /// content-addresses a post by hashing exactly these bytes into an
+    /// immutable, append-only store, that defect must be caught here, at
+    /// write time, or it becomes permanent corruption.
     pub fn canonical_bytes(&self) -> Result<Vec<u8>, BoardError> {
+        for reserved in ["kind", "by"] {
+            if self.extra.contains_key(reserved) {
+                return Err(BoardError::Json(format!(
+                    "extra field \"{reserved}\" is reserved and cannot be set via with()"
+                )));
+            }
+        }
         let mut v = serde_json::to_vec(self).map_err(|e| BoardError::Json(e.to_string()))?;
         v.push(b'\n');
         Ok(v)
@@ -148,6 +163,57 @@ mod tests {
             msg.contains("attribution"),
             "the guard's own message should name attribution, not serde's parse error; got: {msg}"
         );
+    }
+
+    #[test]
+    fn canonical_bytes_rejects_a_reserved_kind_key_in_extra() {
+        let post = Post::new("notice", "campaign/x").with("kind", json!("evil"));
+        let err = post
+            .canonical_bytes()
+            .expect_err("a duplicate `kind` key must not be allowed to serialize");
+        let BoardError::Json(msg) = err else {
+            panic!("expected BoardError::Json, got {err:?}")
+        };
+        assert!(
+            msg.contains("kind"),
+            "message should name the key; got: {msg}"
+        );
+        assert!(
+            msg.contains("reserved"),
+            "message should say the key is reserved; got: {msg}"
+        );
+    }
+
+    #[test]
+    fn canonical_bytes_rejects_a_reserved_by_key_in_extra() {
+        let post = Post::new("notice", "campaign/x").with("by", json!("someone-else"));
+        let err = post
+            .canonical_bytes()
+            .expect_err("a duplicate `by` key must not be allowed to serialize");
+        let BoardError::Json(msg) = err else {
+            panic!("expected BoardError::Json, got {err:?}")
+        };
+        assert!(
+            msg.contains("by"),
+            "message should name the key; got: {msg}"
+        );
+        assert!(
+            msg.contains("reserved"),
+            "message should say the key is reserved; got: {msg}"
+        );
+    }
+
+    #[test]
+    fn an_ordinary_post_round_trips_through_canonical_bytes() {
+        // Positive form of the invariant Task 3 depends on: anything
+        // `canonical_bytes` emits must be re-readable by `from_json`.
+        let post = Post::new("notice", "campaign/x")
+            .with("subject", json!("elevation"))
+            .with("paths", json!(["kernel/"]));
+        let bytes = post.canonical_bytes().expect("ordinary post serializes");
+        let text = String::from_utf8(bytes).expect("utf8");
+        let reparsed = Post::from_json(&text).expect("canonical_bytes output must always parse");
+        assert_eq!(post, reparsed);
     }
 
     #[test]
