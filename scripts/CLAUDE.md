@@ -10,10 +10,11 @@ them.
 `regenerate-artifacts.sh` regenerates **every** committed generated artifact
 (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
 studies, the type-audit report, the digest's decision index + delta report
-under `docs/digest/`, and the committed `vessel/session/v1` client fixture
-under `clients/game/core/tests/fixtures/`) — and CI + `make rebaseline` both
-call it, so local and CI regeneration cannot silently diverge (that's the
-point). Key knobs:
+under `docs/digest/`, and the committed `vessel/session/v1` client fixtures
+under `clients/game/core/tests/fixtures/` — one walk-band (turn 0), one
+chamber-band, reached via `scripts/possession-chamber.txt`) — and CI + `make
+rebaseline` both call it, so local and CI regeneration cannot silently
+diverge (that's the point). Key knobs:
 
 - **`SKIP_CENSUS=1`** — skip the census `lab run`s. CI sets this and uses a
   fast seed probe (`ci-census-probe.sh`) instead; everyday local regen also
@@ -46,8 +47,11 @@ point). Key knobs:
   miss), and so is **`docs/digest/`** (the in-force decision index drifts
   when a decision is added or superseded, the delta report when the idea
   registry moves). **`clients/game/core/tests/fixtures/`** joined it at The
-  Quire (Task 3): the committed seed-42 session snapshot every
-  `hornvale-game-core` render test reads instead of paying for genesis.
+  Quire (Task 3, extended Task 4): the committed seed-42 session snapshots
+  every `hornvale-game-core` render test reads instead of paying for genesis
+  — one walk-band, one chamber-band (the second exists so the
+  `Spatial::Chamber` mirror has committed coverage too, not just the
+  walk-band branch turn 0 always lands on).
 - **THE HAZARD ADDING A NEW GENERATED DIRECTORY EXPOSES**, and the near-miss
   this campaign actually hit: `git diff --exit-code <path>` is silently
   **VACUOUS** against a path git does not track. Regenerate into a brand-new

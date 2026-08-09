@@ -212,7 +212,7 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/di
 # scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
 # registry/manifest dumps, lab studies, the type-audit report, the digest's
 # decision index and delta report, the committed vessel/session/v1 client
-# fixture); `make rebaseline` and CI both call it, so they cannot silently
+# fixtures); `make rebaseline` and CI both call it, so they cannot silently
 # diverge:
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
@@ -221,9 +221,9 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 # pub-boundary change, and omitting it is a common miss. So is docs/digest/
 # (The Digest): the in-force decision index drifts whenever a decision record
 # is added or superseded, and the delta report whenever the registry moves.
-# So is clients/game/core/tests/fixtures/ (The Quire, Task 3): the committed
-# seed-42 session snapshot every hornvale-game-core render test reads instead
-# of paying for genesis.
+# So is clients/game/core/tests/fixtures/ (The Quire, Tasks 3-4): the
+# committed seed-42 session snapshots every hornvale-game-core render test
+# reads instead of paying for genesis (one walk-band, one chamber-band).
 # THE HAZARD THAT ADDING IT EXPOSED: `git diff --exit-code <path>` is silently
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
