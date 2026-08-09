@@ -620,6 +620,87 @@ mod tests {
     }
 
     #[test]
+    fn a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim() {
+        // Fix round 1/5 (review finding): `no_domain_is_currently_empty`
+        // proves `cols.is_empty()` (render.rs's §4.6a branch) is UNREACHED
+        // by every real call in this test module -- all twelve domains have
+        // metrics on the live census, so nothing here ever exercised the
+        // "gap in the world is rendered" branch itself. A synthetic Census
+        // whose columns cover every domain EXCEPT `hydrology` reaches it
+        // directly, and asserts on the actual emitted sentence (not merely
+        // that the page is non-empty -- a length check alone would pass
+        // just as well if this branch were deleted and replaced with any
+        // other non-trivial text).
+        fn col(name: &str, domain: &str) -> Column {
+            Column {
+                name: name.to_string(),
+                kind: "flag".to_string(),
+                doc: "a synthetic metric".to_string(),
+                domain: domain.to_string(),
+                role: "descriptor".to_string(),
+            }
+        }
+        let other_domains: Vec<&str> = DOMAINS
+            .iter()
+            .copied()
+            .filter(|d| *d != "hydrology")
+            .collect();
+        assert_eq!(
+            other_domains.len(),
+            11,
+            "sanity: every domain but hydrology"
+        );
+        let columns: Vec<Column> = other_domains
+            .iter()
+            .map(|d| col(&format!("{d}-metric"), d))
+            .collect();
+        let c = Census {
+            columns,
+            rows: vec![],
+        };
+
+        // Every other domain still renders its (empty-of-worlds but
+        // present) metric section, never the "no metrics" branch.
+        for d in &other_domains {
+            let page = render_domain(&c, d, &[]);
+            assert!(
+                !page.contains("no metrics"),
+                "{d} has a column and must not claim it has none: {page}"
+            );
+        }
+
+        let page = render_domain(&c, "hydrology", &[]);
+        assert!(
+            page.starts_with(HEADER),
+            "the no-metrics page must still carry the generated header: {page}"
+        );
+        assert!(
+            page.contains(&format!("# {} — The Domesday", title_of("hydrology"))),
+            "the no-metrics page must still carry its title: {page}"
+        );
+        assert!(
+            page.contains(framing_line("hydrology")),
+            "the no-metrics page must still carry its one authored framing \
+             sentence: {page}"
+        );
+        // The exact sentence render_domain's `cols.is_empty()` branch
+        // emits -- asserted verbatim, not just "contains no metrics",
+        // so a future rewording is a deliberate edit here too.
+        assert_eq!(
+            page,
+            format!(
+                "{HEADER}\n\n# Hydrology — The Domesday\n\n{}\n\n\
+                 This domain has no metrics in the committed census. That is a gap in the \
+                 world the survey measures, not an error in the survey itself (spec §4.6a) \
+                 — see [the index](./index.md) for whether an unmeasured `domains/` crate \
+                 (detector D8) explains it.\n",
+                framing_line("hydrology")
+            ),
+            "the no-metrics page must match its emitted text exactly: {page}"
+        );
+    }
+
+    #[test]
     fn a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two() {
         // reproductive-tempo-goblin is frozen (D2) and, by construction,
         // also at-rail (D4) -- see S2b and detect.rs's D2-subset-of-D4 doc.
