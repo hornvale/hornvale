@@ -16,12 +16,17 @@ use std::path::Path;
 /// against.
 ///
 /// `band` is the declared tolerance: a detector fires when
-/// `|median − value| > band` for the same metric key.
-/// type-audit: bare-ok(identifier-text: name), bare-ok(artifact: values), bare-ok(artifact: band)
+/// `|median − value| > band` for the same metric key. `kind` is always
+/// `"real"` — `load_comparators` rejects anything else (real worlds only
+/// for v1, spec §8, ratified at G3), so a caller can trust every
+/// `Comparator` it receives without re-checking.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: kind), bare-ok(artifact: values), bare-ok(artifact: band)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Comparator {
     /// The real world this comparator names (e.g. `Earth`).
     pub name: String,
+    /// Always `"real"` — see the struct doc.
+    pub kind: String,
     /// Measured values, keyed by census metric name.
     pub values: BTreeMap<String, f64>,
     /// Declared tolerance per metric, keyed by the same metric names as
@@ -33,9 +38,11 @@ pub struct Comparator {
 /// influence on `metric`, at the declared strength class.
 ///
 /// `declared` carries no numeric threshold — it names a strength *class*
-/// (`dominant`, `strong`, `moderate`, `weak`, `none`) that a detector
-/// reports the observed correlation against, rather than a frozen `r`
-/// value chosen after the data was already seen.
+/// (`dominant`, `strong`, `moderate`, `weak`, `none`; see
+/// [`DECLARED_CLASSES`]) that a detector reports the observed correlation
+/// against, rather than a frozen `r` value chosen after the data was
+/// already seen. `load_expectations` rejects any other value, so a caller
+/// can trust `declared` is one of the five without re-checking.
 /// type-audit: bare-ok(identifier-text: metric), bare-ok(identifier-text: tracks), bare-ok(prose: why), bare-ok(identifier-text: declared)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expectation {
@@ -49,6 +56,15 @@ pub struct Expectation {
     /// The declared strength class, e.g. `dominant`.
     pub declared: String,
 }
+
+/// The permitted values of [`Expectation::declared`] (conventional
+/// effect-size bands): `dominant` (`|r| ≥ 0.7`), `strong` (`0.5–0.7`),
+/// `moderate` (`0.3–0.5`), `weak` (`0.1–0.3`), `none` (`< 0.1`).
+/// `load_expectations` rejects anything outside this set at load, rather
+/// than letting a typo survive to silently never match in a later
+/// detector.
+/// type-audit: bare-ok(identifier-text)
+pub const DECLARED_CLASSES: &[&str] = &["dominant", "strong", "moderate", "weak", "none"];
 
 /// Read one field's value as a `&str`, erroring with the file and field
 /// name if it is missing or not a string.
@@ -86,7 +102,10 @@ fn map_of_f64(
 ///
 /// Errors name the file (see `census::load`'s error style): a bad path, bad
 /// JSON, or a missing/malformed field all return `Err(String)` describing
-/// what went wrong, rather than panicking.
+/// what went wrong, rather than panicking. Rejects any comparator whose
+/// `kind` is not `"real"`, naming the offending world and its kind — real
+/// worlds only for v1 (spec §8, ratified at G3), enforced here rather than
+/// left to convention and review.
 /// type-audit: bare-ok(prose: return)
 pub fn load_comparators(path: &Path) -> Result<Vec<Comparator>, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -98,8 +117,18 @@ pub fn load_comparators(path: &Path) -> Result<Vec<Comparator>, String> {
     worlds
         .iter()
         .map(|w| {
+            let name = required_str(w, "name", path)?.to_string();
+            let kind = required_str(w, "kind", path)?.to_string();
+            if kind != "real" {
+                return Err(format!(
+                    "{}: comparator {name:?} has kind {kind:?}, but only \"real\" \
+                     comparators are supported (real worlds only for v1, spec §8)",
+                    path.display()
+                ));
+            }
             Ok(Comparator {
-                name: required_str(w, "name", path)?.to_string(),
+                name,
+                kind,
                 values: map_of_f64(w, "values", path)?,
                 band: map_of_f64(w, "band", path)?,
             })
@@ -109,7 +138,10 @@ pub fn load_comparators(path: &Path) -> Result<Vec<Comparator>, String> {
 
 /// Load `expectations.json`'s `expect` array.
 ///
-/// Errors name the file (see `census::load`'s error style).
+/// Errors name the file (see `census::load`'s error style). Rejects any
+/// `declared` value outside [`DECLARED_CLASSES`], naming the offending
+/// value and the permitted set — a typo'd class must fail loudly here
+/// rather than survive to a detector that then silently never matches it.
 /// type-audit: bare-ok(prose: return)
 pub fn load_expectations(path: &Path) -> Result<Vec<Expectation>, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -121,11 +153,22 @@ pub fn load_expectations(path: &Path) -> Result<Vec<Expectation>, String> {
     expect
         .iter()
         .map(|e| {
+            let metric = required_str(e, "metric", path)?.to_string();
+            let tracks = required_str(e, "tracks", path)?.to_string();
+            let why = required_str(e, "why", path)?.to_string();
+            let declared = required_str(e, "declared", path)?.to_string();
+            if !DECLARED_CLASSES.contains(&declared.as_str()) {
+                return Err(format!(
+                    "{}: expectation {metric:?} declares unknown strength class {declared:?}; \
+                     must be one of {DECLARED_CLASSES:?}",
+                    path.display()
+                ));
+            }
             Ok(Expectation {
-                metric: required_str(e, "metric", path)?.to_string(),
-                tracks: required_str(e, "tracks", path)?.to_string(),
-                why: required_str(e, "why", path)?.to_string(),
-                declared: required_str(e, "declared", path)?.to_string(),
+                metric,
+                tracks,
+                why,
+                declared,
             })
         })
         .collect()
@@ -162,6 +205,56 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_comparator_naming_an_invented_kind_is_rejected() {
+        let path = std::env::temp_dir().join(format!(
+            "hv-domesday-comparators-invented-kind-{}.json",
+            std::process::id()
+        ));
+        std::fs::write(
+            &path,
+            r#"{"worlds":[{"name":"Arrakis","kind":"invented","values":{"mean-land-temperature-c":45.0},"band":{"mean-land-temperature-c":5.0}}]}"#,
+        )
+        .expect("write fixture");
+
+        let err = load_comparators(&path).expect_err("an invented comparator must be rejected");
+        assert!(
+            err.contains("Arrakis"),
+            "error should name the offending world: {err}"
+        );
+        assert!(
+            err.contains("invented"),
+            "error should name the offending kind: {err}"
+        );
+
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn an_expectation_with_an_unknown_declared_class_is_rejected() {
+        let path = std::env::temp_dir().join(format!(
+            "hv-domesday-expectations-typo-declared-{}.json",
+            std::process::id()
+        ));
+        std::fs::write(
+            &path,
+            r#"{"expect":[{"metric":"mean-land-temperature-c","tracks":"year-std-days","why":"typo test","declared":"domnant"}]}"#,
+        )
+        .expect("write fixture");
+
+        let err = load_expectations(&path).expect_err("an unknown declared class must be rejected");
+        assert!(
+            err.contains("domnant"),
+            "error should name the offending value: {err}"
+        );
+        assert!(
+            err.contains("dominant"),
+            "error should name the permitted set: {err}"
+        );
+
+        std::fs::remove_file(&path).ok();
     }
 
     #[test]
