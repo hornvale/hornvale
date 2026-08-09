@@ -8,25 +8,37 @@ Process lessons, not product. The product is in
 `docs/timings/test-baseline-MacBookPro.tsv` is committed, is the thing
 `make ci` alarms against, and reads like the authoritative answer to "what is
 slow". It named `hornvale-book` as the hot crate — 4,040 s across 39 tests,
-43% of the suite. A fresh measurement on the same box named
-`hornvale-vessel`, at 39%, with book fourth.
+43% of the suite. A fresh measurement named `hornvale-vessel`, at 39%, with
+book fourth. Twenty minutes went into profiling the wrong crate on its
+authority.
 
-Both were true when recorded. The baseline was written 2026-07-30 under the
-loadavg 42–63 that The Timekeeper's own retrospective documents, and its rows
-are inflated roughly sevenfold and *unevenly* — contention does not scale every
-test by the same factor, so it reorders them. Ten days of campaigns then moved
-the actual costs underneath it.
+Three separate reasons it could not have been right, only the first of which
+was visible at the time:
 
-**The lesson is not "distrust the baseline"** — it is doing its job, which is
-alarming on *change*, not ranking by *cost*. The lesson is that a ranking read
-off it is a different question than the one it answers, and needs its own
-fresh, quiet-box run. Cost 20 minutes here, spent profiling the wrong crate
-first.
+1. It was written 2026-07-30 under the loadavg 42–63 that The Timekeeper's own
+   retrospective documents, so its rows are inflated ~7x and **unevenly** —
+   contention does not scale every test by the same factor, so it *reorders*
+   them.
+2. Ten days of campaigns moved the real costs underneath it.
+3. **It was not recorded on this machine.** This session ran on `ambrose`, an
+   M3 Pro reporting 12 cores; the baseline is keyed `MacBookPro` at 10. Same
+   ledger, different box. `make ci` here found no `test-baseline-ambrose.tsv`,
+   recorded one silently, and *could not alarm* — The Timekeeper's documented
+   blind spot (2), spent live. Nothing was wrong with `make ci`'s behaviour;
+   the free pass is deliberate. What is missing is any signal that it was
+   being spent.
 
-**Follow-up:** the file's header explains the format but not its provenance.
-A `# recorded at loadavg N` field, written by `ci-record`, would make a
-contended baseline self-identifying. Related to The Timekeeper's open blind
-spot (1), which is the same gap seen from the other side.
+**The lesson is not "distrust the baseline"** — it does its job, which is
+alarming on *change*, not ranking by *cost*, and only against its own host. A
+ranking read off it is a different question than the one it answers. The
+practical rule: **measure your own before-arm.** This campaign's headline
+numbers are two runs three hours apart on one box, not a comparison against
+anything committed, and that is the only reason they mean anything.
+
+**Follow-up:** the header explains the format but not the provenance. A
+`# loadavg` / core-count field written by `ci-record`, plus a line in the
+output when a first-run pass is being spent, would make both (1) and (3)
+self-identifying.
 
 ## 2. Five campaigns each fixed this correctly and each leaked through the same hole
 
