@@ -329,7 +329,8 @@ there is no shared read-state to contend on.
 
 ### 4e. The tool
 
-`tools/board/`, outside the cargo workspace, std-only, alongside
+`tools/board/`, outside the cargo workspace, using `serde`/`serde_json` and
+shelling out to `git` for plumbing, alongside
 `tools/digest/` and `tools/type-audit/`. The neighbour it most resembles is the
 digest — both are time-free append-and-compact stores that render into
 `make doctor` — and it is deliberately *not* a digest subcommand: the digest's
@@ -337,7 +338,20 @@ store is derivable (scanned from source, committed, drift-checked) and the
 board's is irreducible (authored, an orphan ref, never committed). Fusing them
 would violate `PROC-11` at the level of tools rather than data.
 
-Subcommands: `post`, `read`, `render`, `digest`, `retract`, `reap`.
+Subcommands: `post`, `read`, `render`, `digest`, `retract`, `reap`. Argument
+parsing is std-only positional matching on `std::env::args()`, exiting 2 on a
+usage error — the digest's pattern, and the repo's no-clap rule.
+
+**Two mandatory details taken from `tools/digest/Cargo.toml`, both of which bite
+silently if omitted.** First, the manifest needs its own **empty `[workspace]`
+table**: the root `Cargo.toml`'s `exclude` list is *not* sufficient, because a
+checkout nested under `.claude/worktrees/` makes cargo walk past this package's
+own root and bind to the outer workspace. Second, `serde`/`serde_json` are
+available here and **wanted**: D12's promise to round-trip unknown fields
+untouched is `serde_json::Value` in one line and an error-prone hand-rolled
+parser otherwise. `std`-only was an unforced constraint and is dropped; the
+workspace dependency allowlist does not reach outside the workspace, and the
+digest already depends on `serde`, `serde_json`, and `hornvale-kernel`.
 
 ## 5. Non-goals
 
