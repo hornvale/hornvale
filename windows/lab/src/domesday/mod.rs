@@ -6,6 +6,7 @@
 
 pub mod census;
 pub mod comparators;
+pub mod detect;
 pub mod stats;
 
 #[cfg(test)]
