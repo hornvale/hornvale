@@ -112,8 +112,13 @@ mod tests {
         // glyph vocabulary differs (chart.rs/plan.rs each test their own),
         // this just proves compose() actually calls one of them either
         // way rather than leaving the plate blank for one band.
-        for s in [walk, chamber] {
-            let g = compose(&s, 80, 24);
+        // The binding is `snap`, not the shorter `s`: the repo-wide scan in
+        // `cli/tests/claim_shape.rs` treats a bare `s` as a seed-shaped name
+        // (the census corpora spell that loop the short way), and this loop
+        // walks two Snapshots. Tagging it `/// claim:` instead would declare
+        // a quantified claim over seeds that this test does not make.
+        for snap in [walk, chamber] {
+            let g = compose(&snap, 80, 24);
             let text = g.to_plain_text();
             let plate_has_ink = text
                 .lines()
