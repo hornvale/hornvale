@@ -88,8 +88,15 @@ impl std::fmt::Display for VesselError {
 /// records that gap as open rather than closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PossessTarget {
-    /// An agent minted at the flagship settlement — the world's capital, and
-    /// by settlement genesis the first `is-settlement` fact in the ledger.
+    /// An agent minted at the flagship settlement — the first `is-settlement`
+    /// fact in the ledger, which is what `village_info` returns. **Not the
+    /// largest**: on seed 42 the flagship is Googo (pop. 68) while the most
+    /// populous is Toa (pop. 84), which is what [`PossessTarget::
+    /// MostPopulousSettlement`] selects. `book/src/reference/scene-tiles-v1.md`
+    /// calls `kind: "flagship"` "the world's capital, the single
+    /// highest-population settlement", which disagrees with that observation;
+    /// the contradiction predates this campaign and is recorded in the registry
+    /// rather than resolved here.
     /// The default, and byte-identical to the behaviour that predates this
     /// enum.
     #[default]

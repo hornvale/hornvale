@@ -54,8 +54,13 @@ ships two values, and **both mint**:
 
 - **`Flagship`** — the default, unchanged, `mint_flagship` exactly as before,
   byte-identical against every committed gallery transcript and client fixture.
-  The flagship is the world's capital: by settlement genesis it is the first
-  `is-settlement` fact in the ledger, which is what `village_info` returns.
+  The flagship is the first `is-settlement` fact in the ledger, which is what
+  `village_info` returns — **not** the largest settlement. On seed 42 the
+  flagship is Googo (pop. 68) while the most populous is Toa (pop. 84).
+  (`book/src/reference/scene-tiles-v1.md` describes `kind: "flagship"` as "the
+  world's capital, the single highest-population settlement any species
+  founded", which that observation contradicts. The disagreement predates this
+  campaign and is recorded in the idea registry, not resolved here.)
 - **`MostPopulousSettlement`** — an agent minted at the world's most-populous
   settlement, ranked population-descending then id-ascending. Deterministic and
   seed-stable.
