@@ -536,3 +536,5 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-08T19:44:29Z | gate | 720.883 | 5367.866 | 139.872 | 7.64 | 0 | ee007ceb | the-digest | Greyjoy | 10 |
 | 2026-08-08T23:54:16Z | rebaseline | 175.806 | 214.011 | 9.624 | 1.27 | 0 | c3f03eda | the-quire | Greyjoy | 10 |
 | 2026-08-09T01:12:34Z | gate | 930.476 | 5505.971 | 172.640 | 6.10 | 0 | c3f03eda | the-quire | Greyjoy | 10 |
+| 2026-08-09T01:59:17Z | rebaseline | 191.397 | 221.731 | 10.139 | 1.21 | 0 | e6e101fb | the-quire | Greyjoy | 10 |
+| 2026-08-09T02:30:36Z | rebaseline | 213.930 | 240.968 | 15.772 | 1.20 | 0 | 32b8237b | the-quire | Greyjoy | 10 |
