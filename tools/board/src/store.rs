@@ -38,6 +38,18 @@ const EXHAUSTION_MARKER: &str = "compare-and-swap races";
 /// across processes.
 static CALL_DISCRIMINANT: AtomicU64 = AtomicU64::new(0);
 
+/// A post as stored: its id, its content, and when it was appended. The commit
+/// is the clock (D5) — posts carry durations, never instants.
+#[derive(Debug, Clone)]
+pub struct StoredPost {
+    /// Object id of the post's bytes; also its filename.
+    pub id: String,
+    /// The post itself.
+    pub post: Post,
+    /// Unix seconds of the commit that appended it.
+    pub committed_at: u64,
+}
+
 /// One board, on one ref, in one repository.
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -161,6 +173,62 @@ impl Board {
             .collect();
         ids.sort();
         Ok(ids)
+    }
+
+    /// Every post in the tip tree, with its append time, oldest first.
+    ///
+    /// A post that fails to parse is skipped with a warning: one corrupt post
+    /// must never break a session's render (D7).
+    pub fn posts_at_tip(&self) -> Result<Vec<StoredPost>, BoardError> {
+        let Some(tip) = self.tip()? else {
+            return Ok(Vec::new());
+        };
+        let ids = self.post_ids_at_tip()?;
+        let mut when: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+        // One `git log` over the ref, mapping each added post file to the
+        // commit time that added it — cheaper than a call per post.
+        let log = self.repo.git(&[
+            "log",
+            "--format=@%ct",
+            "--diff-filter=A",
+            "--name-only",
+            "--reverse",
+            &tip,
+        ])?;
+        let mut current = 0u64;
+        for line in log.lines() {
+            if let Some(ts) = line.strip_prefix('@') {
+                current = ts.parse().unwrap_or(0);
+            } else if let Some(id) = line
+                .strip_prefix("posts/")
+                .and_then(|l| l.strip_suffix(".json"))
+            {
+                when.entry(id.to_string()).or_insert(current);
+            }
+        }
+        let mut out = Vec::new();
+        for id in ids {
+            let text = match self
+                .repo
+                .git(&["cat-file", "-p", &format!("{tip}:posts/{id}.json")])
+            {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("board: skipping unreadable post {id}: {e}");
+                    continue;
+                }
+            };
+            match Post::from_json(&text) {
+                Ok(post) => out.push(StoredPost {
+                    committed_at: *when.get(&id).unwrap_or(&0),
+                    id,
+                    post,
+                }),
+                Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
+            }
+        }
+        out.sort_by_key(|s| (s.committed_at, s.id.clone()));
+        Ok(out)
     }
 
     /// Build a tree equal to `base`'s tree plus one post file.

@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod git;
+pub mod live;
 pub mod post;
 pub mod store;
 
