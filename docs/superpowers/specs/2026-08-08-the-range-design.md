@@ -195,6 +195,44 @@ and thereby collapses this matrix to one row**, so the mechanism is chosen
 mechanically rather than argued after a falsification. Recorded here in advance
 so that the choice cannot later be presented as a discovery.
 
+**TASK 0 RESOLVED, 2026-08-08 — the contest is shape (a), so row 1 is
+selected.** The affinity is a mask in `[0, 1]`. Evidence, from
+`windows/worldgen/src/history_bake.rs`:
+
+- **Genesis** ranks each people's pool in *that people's own units* —
+  `pool.sort_by(caps_now()[pidx].at(c) * river_factor(…))`, under the comment
+  "the pool is each people's own best ground". That comment also records a
+  measured precedent for the opposite design: a species-blind shared pool once
+  seeded kobold onto cells worth zero to it, and the people vanished from the
+  world. "Measured, not reasoned."
+- **Migration and raiding** use `best_home`, whose every score is
+  "`eff_capacity` **for the rolling people**", taking the best in the accepted
+  ring. Inter-kind competition exists (held ground scores higher; ties break on
+  the weakest defender) but the *ranking* driving choice is the kind's own field.
+
+A downward-only mask therefore relocates: multiplying gnoll's non-desert cells
+down raises desert cells within gnoll's own ranking, which is the ranking both
+genesis and migration read.
+
+Two consequences follow, and both are load-bearing:
+
+- **A UNIFORM affinity is a no-op for placement.** Because the ranking is
+  per-people and scale-free, multiplying every biome by the same factor cannot
+  reorder anything. **Only the affinity's *shape* across biomes matters; its
+  absolute level is gauge.** Any authored row whose values are all equal is
+  inert by construction, and a test should assert that rather than trusting it.
+- **`0.0` is a hard exclusion, not merely a strong preference.** The genesis
+  pool filters on `caps_now()[pidx].at(c) > 0.0`, and that filter is documented
+  as load-bearing — "a proto-site a people cannot feed is not a founding, it is
+  a death two epochs later". So a `0.0` affinity removes a cell from
+  consideration entirely, which is a different mechanism from a small one and
+  must be authored deliberately.
+
+The **ratchet** concern above survives task 0 but narrows: uniform downward
+composition cannot move placement (it is gauge), so the ratchet degrades
+capacity *magnitudes* and populations rather than *where* peoples live. The
+**double-counting** hazard of §3.1a survives task 0 completely unchanged.
+
 Two constraints on the choice, both from the same pass:
 
 - **A boost above 1.0 is ecologically incoherent** in a model where capacity is
@@ -271,9 +309,12 @@ diff:
    depends on it: if the contest is (b) or (c), a downward-only mask is dead on
    arrival and P1″ would falsify for a reason having nothing to do with biomes.
 1. **Carry the realm gate to the identity path.** `per_species_capacity_at`
-   gains the realm slice and applies `availability`. No new mechanism. Its own
-   before/after world diff. This is where xorn and rust-monster start actually
-   being confined, which moves worlds.
+   gains the realm slice and applies `availability`. No new mechanism.
+   **Byte-neutral on the shipped roster** — see P4's correction: the bake takes
+   only `SocialForm::Settled` kinds and both `Subterranean` kinds are fauna, so
+   nothing in today's world is confined by it. Its evidence is therefore a
+   *perturbed* before/after, not a plain one. A latent repair whose first
+   beneficiary is C2d's drow.
 2. **Add `BiomeAffinity`**, sparse and empty. Byte-neutral by construction;
    proved, not asserted (§5, P3).
 3. **Declare occupants** (§4) and measure.
@@ -368,12 +409,31 @@ predicted that nothing discards it. The chain it should have been measured along
   kind undeclared, its capacity field is bit-identical to before, and seed 42's
   committed world is byte-identical across commit 2. Asserted at bit level, as
   The Warren did for its `Surface` path.
-- **P4 — the identity fix moves worlds.** Commit 1 changes seed 42's committed
-  world. **Falsifier:** it does not, which would mean the diagnosis in §1 is
-  incomplete and the campaign stops until it is understood.
+- **P4 — the identity fix reaches identity.** ~~Commit 1 changes seed 42's
+  committed world.~~ **CORRECTED 2026-08-09, before measurement, by Task 1's
+  implementer.** The original wording was wrong, and wrong in a way that would
+  have manufactured a false alarm.
 
-P4 is deliberately the cheap one to run first: it is the mutation proof of §1
-run in reverse, and if it fails, nothing else in this spec is trustworthy.
+  The bake's roster is filtered to `SocialForm::Settled`
+  (`windows/worldgen/src/lib.rs:6069`), and the only two `Subterranean` kinds in
+  `habitat_realm_registry` are **fauna** — `xorn` and `rust-monster`. No
+  Subterranean kind reaches the capacity path at all, so commit 1 is
+  **byte-neutral on the shipped roster** and always would have been. An
+  unmutated before/after diff was never capable of showing anything.
+
+  P4 is therefore stated against the perturbation, which is what §1's proof
+  used: **with a peopled kind declared `Subterranean`, the committed world
+  moves after the fix and did not before it.** Falsifier: it still does not
+  move, which would mean §1's diagnosis is incomplete and the campaign stops.
+
+  **Consequence, and it is not a small one: commit 1 is a LATENT repair.** It
+  makes the realm gate reach the identity path for a kind that does not yet
+  exist; its first beneficiary is C2d's drow. That is legitimate — the gate is
+  now wired to the path that decides worlds, and `range_identity.rs` exercises
+  it with a peopled kind — but the distinction between *unreachable* (The
+  Warren's defect) and *reachable but unexercised by the current roster* (this)
+  must be stated wherever commit 1 is described, or a later reader will find an
+  inert-looking mechanism and mistake it for the defect this campaign fixed.
 
 ## 6. Non-goals
 
@@ -393,9 +453,13 @@ run in reverse, and if it fails, nothing else in this spec is trustworthy.
 
 ## 7. Costs, flagged
 
-- **Census regen on lefford** — required, and **authorization-gated**. Both
-  fixtures rewrite wholesale (1000 + 1000 rows): commit 1 re-decides the
-  settlement contest, and any new metric column rewrites every row textually.
+- **Census regen on lefford** — authorization-gated, and **cheaper than this
+  spec first claimed**. Commit 1 was costed on the belief that it re-decides
+  the settlement contest; P4's correction shows it is byte-neutral on the
+  shipped roster, so **commit 1 needs no regen at all**. The regen is driven by
+  Task 4's occupants — which do re-decide the contest — plus any new metric
+  column, which rewrites every row of both fixtures textually regardless of
+  content.
 - **~40 fixture tests redden** until that regen lands, if a lab metric is added.
   The gate cannot be green before it.
 - **Epoch:** *provisionally none.* Worlds move, but no new draws are consumed
