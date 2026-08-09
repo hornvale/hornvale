@@ -113,6 +113,7 @@ usage:
   hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
   hornvale lab claim-status                is a heavy run holding the box? (0081)
+  hornvale lab domesday                    render the Domesday survey (book/src/domesday/) from the committed census
   hornvale ci-record                       record this run's durations as the host baseline
 
 sky flags (shared by new and scout):
@@ -1197,13 +1198,14 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
 }
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
-/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, and `list-metrics`.
+/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, `list-metrics`, and `domesday`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
         Some("diff") => cmd_lab_diff(args),
         Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
+        Some("domesday") => cmd_lab_domesday(),
         Some("claim-status") => {
             // Answers "is a heavy run holding the box right now?" without
             // ps | grep (decision 0081). `scripts/census-run.sh status` and
@@ -1214,7 +1216,7 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|claim-status)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|domesday|claim-status)\n{}",
             usage()
         )),
     }
@@ -1313,6 +1315,51 @@ fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
 
 fn cmd_lab_list_metrics() -> Result<(), String> {
     print!("{}", hornvale_lab::render_metric_list());
+    Ok(())
+}
+
+/// Render the Domesday survey (2026-08-08 campaign): read the committed
+/// census + comparators + expectations from their fixed paths, run the
+/// eight detectors, and write one page per domain plus an index into
+/// `book/src/domesday/`. Takes no arguments — unlike `backfill-schema`,
+/// there is nothing to select: it always reads the one committed census and
+/// always writes the one survey (spec §4.5, "it does not re-run the
+/// census").
+fn cmd_lab_domesday() -> Result<(), String> {
+    let census_dir = std::path::Path::new("book/src/laboratory/generated/the-census");
+    let census = hornvale_lab::domesday::census::load(census_dir)?;
+    let comparators = hornvale_lab::domesday::comparators::load_comparators(std::path::Path::new(
+        "studies/comparators.json",
+    ))?;
+    let expectations = hornvale_lab::domesday::comparators::load_expectations(
+        std::path::Path::new("studies/expectations.json"),
+    )?;
+    let findings = hornvale_lab::domesday::detect::detect(&census, &comparators, &expectations);
+
+    let out_dir = std::path::Path::new("book/src/domesday");
+    std::fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
+
+    let index_path = out_dir.join("index.md");
+    std::fs::write(
+        &index_path,
+        hornvale_lab::domesday::render::render_index(&census, &findings),
+    )
+    .map_err(|e| format!("writing {}: {e}", index_path.display()))?;
+
+    let domains = hornvale_lab::domesday::render::domains();
+    for domain in &domains {
+        let page = hornvale_lab::domesday::render::render_domain(&census, domain, &findings);
+        let path = out_dir.join(format!("{domain}.md"));
+        std::fs::write(&path, page).map_err(|e| format!("writing {}: {e}", path.display()))?;
+    }
+
+    println!(
+        "domesday: {} worlds, {} domains, {} findings -> {}",
+        census.rows.len(),
+        domains.len(),
+        findings.len(),
+        out_dir.display()
+    );
     Ok(())
 }
 

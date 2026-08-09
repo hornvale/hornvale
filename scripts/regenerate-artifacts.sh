@@ -412,6 +412,44 @@ else
     echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 on the canonical box to refresh; ~7 min, decision 0063)" >&2
 fi
 
+# RE-DERIVE every census schema from the CURRENT metric registry.
+#
+# WHY THIS EXISTS. `schema.json` is written by whichever branch last ran the
+# census (publish.rs), so it carries the schema FIELDS that branch knew about —
+# not the ones the registry has now. A campaign that adds a per-metric field
+# (The Domesday added `domain` and `role`) silently invalidates every committed
+# schema until someone re-derives it by hand. That happened TWICE in one
+# campaign: once from The Delvers' census, once from The Assize's, each time
+# caught only by a test that went red naming the offending metric.
+#
+# `backfill-schema` re-renders the manifest from the committed rows.csv against
+# the live registry. It builds NO world, so this is safe to run unconditionally
+# and costs nothing. It must run AFTER the census block above (so a fresh run's
+# rows are re-schema'd) and BEFORE the domesday survey below (which reads it).
+#
+# The `"backfilled": true` marker the re-render adds is accurate: a committed
+# schema IS derived after the fact relative to the census run that wrote its
+# rows.
+echo "regenerate-artifacts: re-deriving census schemas from the current registry" >&2
+for study in the-census census-of-the-meeting; do
+    rows="book/src/laboratory/generated/$study/rows.csv"
+    schema="book/src/laboratory/generated/$study/schema.json"
+    if [ -f "$rows" ]; then
+        # Write via a temp so a failure cannot leave a truncated manifest.
+        run -p hornvale -- lab backfill-schema "studies/$study.study.json" "$rows" > "$schema.tmp"
+        mv "$schema.tmp" "$schema"
+    fi
+done
+
+# The Domesday survey (2026-08-08 campaign): reads the COMMITTED census at
+# book/src/laboratory/generated/the-census/ (whatever the last HV_CENSUS=1
+# refresh left there, not a fresh run) and renders book/src/domesday/ — the
+# index plus one page per domain. It never triggers a census itself (spec
+# §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
+# above.
+echo "regenerate-artifacts: the domesday survey" >&2
+run -p hornvale -- lab domesday
+
 echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
