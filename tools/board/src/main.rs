@@ -147,6 +147,28 @@ fn main() {
                 }
             }
         }
+        // board digest [days] — the human read seam, over history (D14).
+        // Never advances the read cursor and never writes to the board: it
+        // is a rendering of history, not a new fact about it.
+        Some("digest") => {
+            let days: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(14);
+            // Wall clock: the digest's window is measured in real days, and
+            // this tool lives outside the workspace's no-wall-clock rule
+            // (see the crate's Global Constraints) — this is the sanctioned
+            // call site for it in this crate, alongside `live.rs`'s probe.
+            #[allow(clippy::disallowed_types)]
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            match board::digest::history(&board, days, now) {
+                Ok(posts) => print!("{}", board::digest::digest(&posts)),
+                Err(e) => {
+                    eprintln!("board: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
         _ => {
             eprintln!("usage: board <post|read|render|digest|retract|reap>");
             std::process::exit(2);

@@ -2,6 +2,7 @@
 //! coordination. See `docs/superpowers/specs/2026-08-09-the-cairn-design.md`.
 #![warn(missing_docs)]
 
+pub mod digest;
 pub mod git;
 pub mod live;
 pub mod post;
