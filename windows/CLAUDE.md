@@ -68,6 +68,10 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   path.
 - **A rendering change is an artifact change.** Regenerate and review:
   `make rebaseline`, then diff `book/src/gallery/ book/src/reference/
-  book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/`. Scene schemas
+  book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/
+  clients/game/core/tests/fixtures/`. That last one is a window's artifact
+  too, despite living outside the workspace: `windows/vessel`'s
+  `snapshot_json` is the only place a session's floats quantize, so a change
+  there drifts the committed `vessel/session/v1` fixtures. Scene schemas
   additionally cross the repo boundary to external clients (decision 0055)
   — additive-or-versioned only.

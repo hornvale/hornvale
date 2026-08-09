@@ -73,8 +73,13 @@ tweak — drifts those. After any output change:
 
 ```bash
 make rebaseline
-git diff book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/
+git diff book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
 ```
+
+`clients/game/core/tests/fixtures/` belongs on that list even though it lives
+outside the cargo workspace: `possess --snapshot` writes it, so a change to
+the possession command's *output* drifts it exactly the way a rendering change
+drifts an almanac.
 
 and review the diff rather than committing it blind: the point of the drift
 check is that it makes you look.
