@@ -339,6 +339,7 @@
 - [The Digest](./chronicle/the-digest.md)
 - [The Domesday](./chronicle/the-domesday.md)
 - [The Assize](./chronicle/the-assize.md)
+- [The Whetstone](./chronicle/the-whetstone.md)
 
 # Appendix: The Frontier
 
