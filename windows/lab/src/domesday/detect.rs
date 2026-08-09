@@ -10,10 +10,14 @@
 //! D1 and D2 look only at `descriptor` metrics; an `invariant` is a claim the
 //! project makes about every world, and a claim the data contradicts is a
 //! **D7** finding (broken invariant), not a degeneracy. Without that split,
-//! D1 alone would fire on 40 of 57 categorical/flag metrics (spec §4.1a). The
-//! role split does real work — down to 27 — but S2c's preregistered ceiling
-//! of 10 was a guess made without measuring the post-split distribution and
-//! is FALSIFIED: it is retired, not raised to a flattering number. See
+//! D1 alone would fire on 39 of 58 categorical/flag metric columns (46
+//! `descriptor` + 12 `invariant`; corrected from the spec's original "40 of
+//! 57" — the 57 undercounted the real total by one, and the 40 double-counted
+//! the structural `pin_set` column, which is not a metric but is
+//! categorical-shaped and 100% single-valued). The role split does real
+//! work — down to 27 — but S2c's preregistered ceiling of 10 was a guess
+//! made without measuring the post-split distribution and is FALSIFIED: it
+//! is retired, not raised to a flattering number. See
 //! `the_live_census_reproduces_the_preregistered_findings`'s S2c comment.
 
 use crate::domesday::census::Census;
@@ -154,7 +158,15 @@ fn detect_d3(c: &Census) -> Vec<Finding> {
 }
 
 /// D4 At-rail: a `numeric`/`integer` metric whose median equals its min or
-/// its max (e.g. "median waterfall count is 0").
+/// its max (e.g. "median waterfall count is 0"). **D2 ⊆ D4 exactly**: a
+/// `min == max` metric trivially has `median == min == max` too, so every D2
+/// hit also fires D4 (on the live census, D2's 31 hits and D4's 39 hits
+/// cover only 39 distinct metrics between them, not 70 — D2's 31 are a
+/// subset of D4's 39). D3 overlaps D4 on a further 6 metrics. This overlap
+/// is expected, not a bug — D2/D3/D4 answer different questions ("is it
+/// frozen", "is the middle 50% narrow", "is the typical value extreme") —
+/// but a renderer must not present one metric as three independent
+/// weaknesses.
 fn detect_d4(c: &Census) -> Vec<Finding> {
     let mut out = Vec::new();
     for col in &c.columns {
@@ -344,14 +356,27 @@ const DOMAIN_CRATES: &[&str] = &[
     "topology",
 ];
 
-/// Crates under `domains/` that at least one census metric reaches —
-/// directly (a `hornvale_<crate>::` reference in `windows/lab/src/`) or
-/// transitively (e.g. `topology` is never imported directly but
-/// `defensibility-capacity-rank-corr` reaches it through
-/// `hornvale_worldgen::connection_graph_of`). Hand-verified against the
-/// source at authoring time (spec §4.4a); a metric is Rust code living in
-/// this crate, so Rust's own dependency rules make this a real fact about
-/// the source, not a guess.
+/// Crates under `domains/` that at least one census metric MEASURES: the
+/// metric's output is computed from a value or type the crate itself
+/// produces. This is narrower than mere call-graph reachability —
+/// `windows/worldgen` calls into BOTH `paleoclimate`
+/// (`glaciated`/`extract`/`genesis`, inside the terrain build) and `alchemy`
+/// while constructing every world, so by a reachability rule every terrain
+/// metric would count as "reaching" paleoclimate. No metric's `extract`
+/// function reads a value either crate produces (verified by a zero-hit grep
+/// for `glaci|fossil|refugium|paleo|EraClimate` and
+/// `alchem|substrate|reagent|transmut` across `windows/lab/src/`), so both
+/// are absent from this list despite being reachable.
+///
+/// Most entries here are direct (a `hornvale_<crate>::` reference somewhere
+/// in `windows/lab/src/`, cross-checked live by
+/// `direct_references_match_measured_crates`). `topology` is the one
+/// exception, allowlisted as `TRANSITIVELY_MEASURED`: it is never imported
+/// directly, but `defensibility-capacity-rank-corr` (`metrics.rs:4519`)
+/// computes over the `ConnectionGraph` `hornvale_worldgen::
+/// connection_graph_of` returns — a topology-produced value the metric's
+/// output is actually derived from, which is what distinguishes it from
+/// paleoclimate/alchemy's mere reachability.
 const MEASURED_CRATES: &[&str] = &[
     "astronomy",
     "climate",
@@ -366,17 +391,35 @@ const MEASURED_CRATES: &[&str] = &[
     "topology",
 ];
 
-/// D8 Unmeasured domain: a `domains/` crate no census metric reaches at
-/// all — a gap in the WORLD (spec §4.6a), rendered rather than fixed.
-/// Expected to fire on exactly `alchemy` and `paleoclimate` (spec §4.4a).
+/// The subset of `MEASURED_CRATES` that clears the bar only *transitively*
+/// (no `hornvale_<crate>::` reference exists anywhere in
+/// `windows/lab/src/`) — see `MEASURED_CRATES`'s doc for `topology`'s
+/// justification. `direct_references_match_measured_crates` checks that
+/// every OTHER entry in `MEASURED_CRATES` is a genuine direct reference, so
+/// this allowlist can only grow by a deliberate, reviewed edit here.
+#[cfg(test)]
+const TRANSITIVELY_MEASURED: &[&str] = &["topology"];
+
+/// D8 Unmeasured domain: a `domains/` crate no census metric measures — a
+/// gap in the WORLD (spec §4.6a), rendered rather than fixed. Expected to
+/// fire on exactly `alchemy` and `paleoclimate` (spec §4.4a).
 fn detect_d8() -> Vec<Finding> {
-    DOMAIN_CRATES
+    detect_d8_over(DOMAIN_CRATES, MEASURED_CRATES)
+}
+
+/// D8's actual logic, parameterised over the two rosters so a test can
+/// exercise the real filter against a synthetic pair instead of
+/// re-implementing it and asserting on its own output.
+fn detect_d8_over(all_crates: &[&str], measured_crates: &[&str]) -> Vec<Finding> {
+    all_crates
         .iter()
-        .filter(|crate_name| !MEASURED_CRATES.contains(crate_name))
+        .filter(|crate_name| !measured_crates.contains(crate_name))
         .map(|crate_name| Finding {
             detector: "D8",
             metric: crate_name.to_string(),
-            detail: format!("no census metric reaches the `{crate_name}` crate under domains/"),
+            detail: format!(
+                "no census metric measures any quantity the `{crate_name}` crate produces"
+            ),
         })
         .collect()
 }
@@ -396,6 +439,20 @@ fn crate_names_under(dir: &std::path::Path) -> Vec<String> {
         .collect();
     names.sort();
     names
+}
+
+/// Every `.rs` file under `dir`, recursively (for the `MEASURED_CRATES`
+/// live cross-check — `windows/lab/src/` nests `domesday/` and others).
+#[cfg(test)]
+fn rs_files_under(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+    for entry in std::fs::read_dir(dir).expect("read_dir") {
+        let path = entry.expect("dir entry").path();
+        if path.is_dir() {
+            rs_files_under(&path, out);
+        } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+            out.push(path);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -594,6 +651,26 @@ mod tests {
     // --- D5 ---
 
     #[test]
+    fn pearson_reads_a_nontrivial_correlation_and_its_sign() {
+        // Every other pearson-exercising test here uses perfectly
+        // correlated pairs (r = 1.0), and D5 takes `.abs()` of the result,
+        // so a sign error is structurally invisible to them (fix round 1/5,
+        // Finding 4). This pins a non-trivial magnitude and confirms the
+        // sign survives.
+        let xs = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let ys = [2.0, 4.0, 5.0, 4.0, 5.0];
+        let r = pearson(&xs, &ys).expect("a defined correlation");
+        assert!((r - 0.7745966692414834).abs() < 1e-12, "r was {r}");
+
+        let neg_ys: Vec<f64> = ys.iter().map(|y| -y).collect();
+        let r_neg = pearson(&xs, &neg_ys).expect("a defined correlation");
+        assert!(
+            (r_neg + 0.7745966692414834).abs() < 1e-12,
+            "negating one side must flip the sign; r_neg was {r_neg}"
+        );
+    }
+
+    #[test]
     fn band_of_pins_the_conventional_edges() {
         assert_eq!(band_of(0.95), "dominant");
         assert_eq!(band_of(0.7), "dominant");
@@ -770,23 +847,19 @@ mod tests {
 
     #[test]
     fn d8_fires_on_an_unmeasured_crate_and_not_on_a_measured_one() {
-        let found = ["astronomy".to_string(), "unmeasured-crate".to_string()];
-        let measured: Vec<&str> = MEASURED_CRATES.to_vec();
-        let findings: Vec<Finding> = found
-            .iter()
-            .filter(|n| !measured.contains(&n.as_str()))
-            .map(|n| Finding {
-                detector: "D8",
-                metric: n.clone(),
-                detail: String::new(),
-            })
-            .collect();
+        // Calls the real filter (`detect_d8_over`) against a synthetic
+        // roster pair, rather than re-implementing the filter in the test
+        // body — a test that re-implements what it tests stays green even
+        // if `detect_d8_over`'s body is deleted.
+        let all = ["astronomy", "unmeasured-crate"];
+        let measured = ["astronomy"];
+        let f = detect_d8_over(&all, &measured);
         assert!(
-            findings.iter().any(|f| f.metric == "unmeasured-crate"),
+            f.iter().any(|x| x.metric == "unmeasured-crate"),
             "an unmeasured crate must fire"
         );
         assert!(
-            !findings.iter().any(|f| f.metric == "astronomy"),
+            !f.iter().any(|x| x.metric == "astronomy"),
             "a measured crate must not fire"
         );
     }
@@ -802,6 +875,49 @@ mod tests {
         assert_eq!(
             live, frozen,
             "domains/ has drifted from the frozen DOMAIN_CRATES roster"
+        );
+    }
+
+    #[test]
+    fn direct_references_match_measured_crates() {
+        // Live cross-check for MEASURED_CRATES' unguarded half (fix round
+        // 1/5, Finding 2): grep windows/lab/src/*.rs for `hornvale_<crate>::`
+        // and assert the direct-reference set equals MEASURED_CRATES minus
+        // the explicit transitive allowlist. If `alchemy` gains a metric
+        // tomorrow this goes red on the "missing" side; if `topology` (the
+        // one transitive entry) loses its indirection this test cannot see
+        // that regression, but `d8_fires_on_exactly_alchemy_and_paleoclimate`
+        // and `the_live_census_reproduces_the_preregistered_findings` both
+        // would, since D8 would then fire on three crates instead of two.
+        let mut files = Vec::new();
+        rs_files_under(&repo_root().join("windows/lab/src"), &mut files);
+        let sources: Vec<String> = files
+            .iter()
+            .map(|p| std::fs::read_to_string(p).expect("read source file"))
+            .collect();
+
+        let mut found_direct: Vec<&str> = DOMAIN_CRATES
+            .iter()
+            .filter(|crate_name| {
+                let needle = format!("hornvale_{crate_name}::");
+                sources.iter().any(|src| src.contains(&needle))
+            })
+            .copied()
+            .collect();
+        found_direct.sort();
+
+        let mut expected: Vec<&str> = MEASURED_CRATES
+            .iter()
+            .filter(|c| !TRANSITIVELY_MEASURED.contains(c))
+            .copied()
+            .collect();
+        expected.sort();
+
+        assert_eq!(
+            found_direct, expected,
+            "the direct-reference crates in windows/lab/src/ no longer match \
+             MEASURED_CRATES minus TRANSITIVELY_MEASURED -- update whichever \
+             one drifted"
         );
     }
 
