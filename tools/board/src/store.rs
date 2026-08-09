@@ -325,6 +325,115 @@ impl Board {
         result
     }
 
+    /// The ref's root commit — the invariant D13 protects.
+    pub fn root(&self) -> Result<Option<String>, BoardError> {
+        let Some(tip) = self.tip()? else {
+            return Ok(None);
+        };
+        let roots = self.repo.git(&["rev-list", "--max-parents=0", &tip])?;
+        Ok(roots.lines().next().map(str::to_string))
+    }
+
+    /// Drop posts that are no longer live from the tip tree, as a FORWARD
+    /// commit whose parent is the current tip.
+    ///
+    /// History is untouched, so every post ever written stays reachable
+    /// (D13): there is no code path here that rewrites or force-updates the
+    /// ref to anything other than a descendant of the tip it read. Returns
+    /// how many posts were dropped; a reap with nothing dead is a no-op (no
+    /// empty commit).
+    pub fn reap(&self, ctx: &crate::live::LiveContext) -> Result<usize, BoardError> {
+        use crate::live::{Liveness, liveness};
+
+        let Some(old) = self.tip()? else {
+            return Ok(0);
+        };
+        let posts = self.posts_at_tip()?;
+        let keep: Vec<&StoredPost> = posts
+            .iter()
+            .filter(|s| liveness(s, ctx) == Liveness::Live)
+            .collect();
+        let dropped = posts.len() - keep.len();
+        if dropped == 0 {
+            return Ok(0);
+        }
+
+        // A fresh throwaway index, never the repo's real one (`Repo::git_path`
+        // is a private, per-worktree path) -- a reap must not dirty the
+        // working tree. Named with a per-CALL discriminant, not just the
+        // pid: two reaps (or a reap racing an append) in the same process
+        // would otherwise collide on git's index lock. This is the exact
+        // atomic `append_with_attempts` uses for the same reason, reused
+        // here rather than reinvented -- see its doc comment above.
+        let call_id = CALL_DISCRIMINANT.fetch_add(1, Ordering::SeqCst);
+        let raw = self
+            .repo
+            .git_path(&format!("hv-board-reap-{}-{call_id}", std::process::id()))?;
+        // `Repo::git_path` documents itself as always absolute; guard
+        // defensively anyway, exactly as `tree_with` does, since a relative
+        // path here would resolve the `std::fs` cleanup below against the
+        // *process* cwd rather than the repo root.
+        let index = if raw.is_absolute() {
+            raw
+        } else {
+            self.repo.root().join(raw)
+        };
+
+        // Pre-clean: a leaked index from an earlier crashed run must not
+        // contaminate this write.
+        match std::fs::remove_file(&index) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                return Err(BoardError::Io(format!(
+                    "removing stale throwaway index {}: {e}",
+                    index.display()
+                )));
+            }
+        }
+
+        let result = (|| -> Result<String, BoardError> {
+            // Built from the survivors only -- no `read-tree` of the old
+            // tree first, so a dead post is never present to begin with,
+            // not merely removed after the fact.
+            for s in &keep {
+                self.repo.git_with_index(
+                    &index,
+                    &[
+                        "update-index",
+                        "--add",
+                        "--cacheinfo",
+                        &format!("100644,{},posts/{}.json", s.id, s.id),
+                    ],
+                )?;
+            }
+            self.repo.git_with_index(&index, &["write-tree"])
+        })();
+
+        // Post-clean on every exit path, success or failure.
+        let _ = std::fs::remove_file(&index);
+        let tree = result?;
+
+        let new = self.repo.git(&[
+            "commit-tree",
+            &tree,
+            "-p",
+            &old,
+            "-m",
+            &format!("board: reap {dropped}"),
+        ])?;
+
+        // If someone posted while we were reaping, `cas` reports a lost
+        // race, not an error. Reaping is idempotent and cheap: rather than
+        // retry against a moving target here, let the next run catch it,
+        // and report nothing dropped THIS call since the tree we built no
+        // longer reflects the current tip.
+        if self.cas(&new, Some(&old))?.is_some() {
+            return Ok(0);
+        }
+        Ok(dropped)
+    }
+
     /// Compare-and-swap the ref.
     ///
     /// `Ok(None)` means we won. `Ok(Some(stderr))` means we lost a *genuine*
@@ -735,6 +844,79 @@ mod tests {
         assert!(
             stderr.contains("NOT recorded"),
             "the error should say the post was not recorded: {stderr}"
+        );
+    }
+
+    #[test]
+    fn reap_drops_dead_posts_from_the_tip_but_history_still_holds_them() {
+        // D13: the ref's history is the research corpus. Compaction is a
+        // forward commit, never a rewrite.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let dead = board
+            .append(
+                &Post::new("notice", "campaign/never-existed")
+                    .with("note", serde_json::json!("stale")),
+            )
+            .expect("dead post");
+        let durable = board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("technique");
+        let root_before = board.root().expect("root");
+
+        let posts = board.posts_at_tip().expect("posts");
+        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        let dropped = board.reap(&ctx).expect("reap");
+
+        assert_eq!(dropped, 1, "only the dead notice goes");
+        let ids = board.post_ids_at_tip().expect("ids");
+        assert!(!ids.contains(&dead), "gone from the tip tree");
+        assert!(ids.contains(&durable), "technique survives");
+        assert_eq!(
+            board.root().expect("root"),
+            root_before,
+            "D13: the ref was not rerooted"
+        );
+        let still_there = repo
+            .git(&["cat-file", "-t", &dead])
+            .expect("object still exists");
+        assert_eq!(
+            still_there, "blob",
+            "the post is still reachable through history"
+        );
+    }
+
+    #[test]
+    fn reap_with_nothing_dead_is_a_no_op_and_does_not_commit() {
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("post");
+        let before = board.tip().expect("tip");
+        let posts = board.posts_at_tip().expect("posts");
+        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        assert_eq!(board.reap(&ctx).expect("reap"), 0);
+        assert_eq!(board.tip().expect("tip"), before, "no empty commit");
+    }
+
+    #[test]
+    fn reap_does_not_dirty_the_working_tree() {
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        board
+            .append(&Post::new("notice", "campaign/never-existed"))
+            .expect("dead post");
+        board
+            .append(&Post::new("technique", "campaign/x"))
+            .expect("technique");
+        let posts = board.posts_at_tip().expect("posts");
+        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        board.reap(&ctx).expect("reap");
+        let dirty = repo.git(&["status", "--porcelain"]).expect("status");
+        assert!(
+            dirty.is_empty(),
+            "a reap must not dirty the checkout: {dirty:?}"
         );
     }
 }

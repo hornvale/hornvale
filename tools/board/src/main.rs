@@ -116,6 +116,37 @@ fn main() {
                 eprintln!("board: could not record the read cursor: {e}");
             }
         }
+        // board reap — compact away posts no longer live from the tip tree.
+        // Conservative by construction: `LiveContext::probe` is asked for
+        // fresh once, and a probe failure aborts the reap outright rather
+        // than compacting against a partial picture of the world.
+        Some("reap") => {
+            let posts = board.posts_at_tip().unwrap_or_default();
+            match LiveContext::probe(&repo, &posts).and_then(|ctx| board.reap(&ctx)) {
+                Ok(n) => println!("reaped {n}"),
+                Err(e) => {
+                    eprintln!("board: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        // board retract <by> <post-id> — appends a new post; never rewrites
+        // or deletes anything. Retraction is data, not an operation on the
+        // store.
+        Some("retract") => {
+            let (Some(by), Some(id)) = (args.get(2), args.get(3)) else {
+                eprintln!("usage: board retract <by> <post-id>");
+                std::process::exit(2);
+            };
+            let post = Post::new("retract", by).with("post", serde_json::Value::String(id.clone()));
+            match board.append(&post) {
+                Ok(new_id) => println!("{new_id}"),
+                Err(e) => {
+                    eprintln!("board: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
         _ => {
             eprintln!("usage: board <post|read|render|digest|retract|reap>");
             std::process::exit(2);
