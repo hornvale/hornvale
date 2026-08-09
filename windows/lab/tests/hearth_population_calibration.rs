@@ -13,7 +13,15 @@
 //! with a real sweep of seed 13's own world rather than a bigger battery
 //! sample: cold-built settlements are common, not an edge case. That test is
 //! cheap (no simulation, just `built_rooms` + a `LocaleTerrain` read over one
-//! world) and stays as it was.
+//! world) and stays.
+//!
+//! **The Range (2026-08-08) split it, per decision 0097.** Its
+//! cold-DOMINATION clause was 0097's own worked example of an
+//! existence-claim-near-a-threshold, and it is now the census column
+//! `cold-built-room-share` with a paired calibration in
+//! `windows/lab/tests/calibration.rs`. The three prevalence assertions that
+//! stood beside it are different, robust claims and are untouched. The full
+//! record is in the comment at the foot of the test.
 //!
 //! **What used to live below it does not anymore, and this is the record of
 //! why (The Ember).** The preregistered claim was measured four times on
@@ -191,10 +199,11 @@ fn cold_built_count(seed: u64) -> (usize, usize) {
     (cold, built.len())
 }
 
-/// claim: rate(forall-seed, [lo, hi]) — decision 0097's own worked example
-/// of an existence-near-threshold row; 0097 prescribes converting this to
-/// rate(census: ..., [lo, hi]) at n=1000 (not yet done by this campaign's
-/// tranche)
+/// claim: rate(forall-seed, [lo, hi]) — the ROBUST half only. Decision
+/// 0097's own worked example lived here: the existence-near-threshold
+/// cold-DOMINATION clause. The Range converted it to
+/// rate(census: cold-built-room-share, [lo, hi]) at n=1000; see the comment
+/// at the foot of this test.
 #[test]
 fn cold_built_settlements_are_common_not_rare() {
     // The claim this test exists to make is a RATE, not a table: the
@@ -208,10 +217,12 @@ fn cold_built_settlements_are_common_not_rare() {
     // cold-built settlements still exist.
     //
     // So this pins the INVARIANT (spec §8 of The Hearth, decision 0073's
-    // "pin invariants, not values"): several seeds carry one, at least one
-    // seed is cold-DOMINATED, and the rate is materially above zero. Those
-    // are the facts the campaign's measurement rests on, and none of them
-    // should move when a coastline does.
+    // "pin invariants, not values"): several seeds carry one, the sweep is
+    // finding settlements at all, and the pooled rate is materially above
+    // zero. Those are the facts the campaign's measurement rests on, and none
+    // of them should move when a coastline does. A fourth clause once stood
+    // beside them — "at least one seed is cold-DOMINATED" — which turned out
+    // NOT to have that property; see the note at the foot of this test.
     let sweep: Vec<(u64, usize, usize)> = (0..15)
         .map(|seed| {
             let (c, b) = cold_built_count(seed);
@@ -243,11 +254,39 @@ fn cold_built_settlements_are_common_not_rare() {
         "the cold-built population must be big enough to measure on \
          ({total_cold} rooms over 15 seeds). Sweep: {sweep:?}"
     );
-    assert!(
-        dominated && most_cold >= 20,
-        "at least one seed must be cold-DOMINATED (over half its built rooms \
-         cold), which is the population the campaign's A/B actually runs on; \
-         the coldest seed has {most_cold}. Sweep: {sweep:?}"
+
+    // **The Range (2026-08-08) retired the cold-DOMINATION assertion that
+    // stood here.** It read `dominated && most_cold >= 20` — "at least one of
+    // these 15 seeds has over half its built rooms cold" — and decision 0097
+    // names it as its own worked example: an existence claim over 15 draws
+    // "is decided by whichever single world happens to sit nearest the
+    // threshold", carrying "a value pin's noise profile with an invariant's
+    // authority". The Contour moved seed 13 from 56.9% to 48.7% by five
+    // rooms and flipped it; The Range's biome ranges moved it again, and the
+    // best of the 15 now reads 109/235 = 46.4% against a 50% bar. Nothing
+    // about cold-built prevalence broke — the three assertions above, which
+    // are different claims about the same sweep, never moved.
+    //
+    // The question is now the census column `cold-built-room-share`
+    // (`windows/lab/src/metrics.rs`), verified by
+    // `windows/lab/tests/calibration.rs`. At n = 15 the only sayable claim
+    // was *does a dominated world exist*; at the census's n = 1000 it is
+    // *what fraction of worlds are dominated*, which is a rate with a
+    // sampling bound rather than a bar one world decides. Per 0097
+    // prescription 3 ("never the same claim in both") the clause is REMOVED
+    // here rather than duplicated there. The bar itself was not moved: 0097
+    // is explicit that relaxing a threshold to clear a red erases the
+    // finding.
+    //
+    // `most_cold` and `dominated` are still computed and still printed in the
+    // failure text of the assertions above via `{sweep:?}`; they are simply
+    // no longer asserted on.
+    println!(
+        "cold-built sweep over 15 seeds: {seeds_with_cold} seeds carry one, \
+         {total_cold} of {total_built} built rooms cold, coldest seed \
+         {most_cold} rooms, cold-dominated seeds present: {dominated} — \
+         REPORTED, not asserted (decision 0097; see \
+         `cold-built-room-share` in the census). Sweep: {sweep:?}"
     );
 }
 

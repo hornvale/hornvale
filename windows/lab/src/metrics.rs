@@ -3779,6 +3779,76 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(standing as f64)
             }),
         },
+        // THE CENSUS COLUMN THAT RETIRES THE COLD-DOMINATION GATE (The
+        // Range). `windows/lab/tests/hearth_population_calibration.rs`
+        // asserted, over a 15-seed sweep, that at least one seed was
+        // cold-DOMINATED (`cold * 2 > built`) — decision 0097's own worked
+        // example of "an existence claim over 15 draws is decided by
+        // whichever single world happens to sit nearest the threshold". The
+        // Contour flipped it once by five rooms; The Range's biome ranges
+        // flipped it again, leaving the best of 15 at 109/235 = 46.4% against
+        // a 50% bar, while every other prevalence reading in that test held.
+        //
+        // A SHARE, not a count, because that is what the retired clause
+        // actually compared: `cold * 2 > built` is `share > 0.5`. Reading a
+        // share also makes the column robust to the settlement count moving
+        // under it, which is the drift that broke the per-seed value pins
+        // this test carried before The Hearth rewrote it.
+        //
+        // Calls `built_rooms` and `Terrain::is_cold` rather than re-folding
+        // the ledger here, for the reason `climate-displacement-events` gives
+        // above: the census must measure the SAME quantity the gate did, and
+        // a second implementation would silently become a different
+        // measurement. `LocaleContext::build_from` (not `build`) threads the
+        // view's already-sculpted terrain and already-fitted climate in, so
+        // this column costs an index and a strangeness budget per world, not
+        // a second sculpt.
+        //
+        // FULL rung, not Settlements, even though `all_settlements` is
+        // committed at the Settlements stop: deep time runs only past that
+        // stop (`BuildDepth::Full` is "…plus culture, religion, species, and
+        // deep time"), and it founds, abandons and relocates settlements. The
+        // retired clause measured a `build_world` world, which is Full.
+        Metric {
+            name: "cold-built-room-share",
+            doc: "The share of this world's built settlement rooms that read `is_cold` \
+                  (below `FURNISHING_COLD_C` at the frozen furnishing-reference day) — the \
+                  fraction of the settled world where `interior_of` would compose a hearth \
+                  (The Range). Replaces the cold-DOMINATION clause of \
+                  `windows/lab/tests/hearth_population_calibration.rs`, which asked over 15 \
+                  seeds whether ANY world exceeded 0.5 here; decision 0097 converts an \
+                  existence claim sitting on a threshold into a census rate, because at \
+                  n=15 the answer is decided by one world and at n=1000 it is a fraction \
+                  with a sampling bound. A world's whole settled area can be temperate \
+                  (0.0 is a real reading, not a broken fold); Absent only when the world \
+                  has no built rooms at all.",
+            summary: SummaryKind::Numeric {
+                // Cut from the measured 15-seed distribution rather than
+                // spread evenly: six of fifteen worlds crowd into [0, 0.06),
+                // so the two low edges resolve that mode, and the rest spread
+                // over the 0.17-0.50 body. The top edge is 0.5 ON PURPOSE and
+                // is not a distributional choice — it is the retired clause's
+                // own domination threshold, so the `>= 0.5` bucket of this
+                // column's summary table IS the count of cold-dominated
+                // worlds, readable without re-deriving anything.
+                bucket_edges: &[0.0, 0.02, 0.06, 0.15, 0.3, 0.5],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let ctx =
+                    hornvale_locale::LocaleContext::build_from(v.world(), v.terrain(), v.climate());
+                let built = hornvale_vessel::liveness::built_rooms(v.world(), &ctx);
+                if built.is_empty() {
+                    return MetricValue::Absent;
+                }
+                let terrain = hornvale_vessel::liveness::LocaleTerrain::new(&ctx);
+                let cold = built
+                    .iter()
+                    .filter_map(|id| id.unpack().ok())
+                    .filter(|addr| hornvale_vessel::liveness::Terrain::is_cold(&terrain, addr))
+                    .count();
+                MetricValue::Number(cold as f64 / built.len() as f64)
+            }),
+        },
     ]
 }
 
@@ -7626,7 +7696,15 @@ mod tests {
         // `history_tithe`'s twelve-world tribute-volume panel because the
         // census can only reach the ledger's tribute STOCK, never the bake's
         // discarded FLOW).
-        assert_eq!(registry().len(), 193);
+        //
+        // +1 for THE RANGE (cold-built-room-share, retiring the
+        // cold-DOMINATION clause of
+        // `windows/lab/tests/hearth_population_calibration.rs` — decision
+        // 0097's own worked example). One column and not two: the same test's
+        // three surviving prevalence assertions are robust claims that stay
+        // in the gate, and 0097 prescription 3 forbids the same claim living
+        // in both instruments.
+        assert_eq!(registry().len(), 194);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---
