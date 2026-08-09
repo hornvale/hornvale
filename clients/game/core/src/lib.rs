@@ -4,6 +4,7 @@
 
 pub mod cell;
 pub mod chart;
+pub mod plan;
 pub mod schema;
 pub use cell::*;
 pub use schema::*;
