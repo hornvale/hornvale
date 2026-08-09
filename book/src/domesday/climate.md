@@ -82,16 +82,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `fertile-land-fraction`
 
-- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed |r| = 0.730 (1000 pairs) is dominant
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.730 (1000 pairs) is dominant (positive)
 
 ### `habitable-fraction`
 
 - **D5 strength**: declared moderate tracking obliquity-degrees, but observed |r| = 0.058 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.151 (1000 pairs) is weak
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = +0.151 (1000 pairs) is weak -- and the sign is backwards: the coupling is positive, not the declared negative
 
 ### `mean-land-temperature-c`
 
-- **D5 strength**: declared dominant tracking year-std-days, but observed |r| = 0.245 (1000 pairs) is weak
+- **D5 strength**: declared dominant tracking year-std-days, but observed r = -0.245 (1000 pairs) is weak (negative)
 - **D5 strength**: declared weak tracking brightening-per-gyr, but observed |r| = 0.049 (1000 pairs) is none
 - **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.000 (1000 pairs) is none
 - **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.041 (1000 pairs) is none

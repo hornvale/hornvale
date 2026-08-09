@@ -273,8 +273,13 @@ fn band_of(abs_r: f64) -> &'static str {
 /// correlation is a statement that the census cannot test the claim, not a
 /// measurement and not silence (Task 4b, spec §1). The sign is never
 /// reported when the observed band is `none`: a near-zero `r`'s sign is
-/// noise. Pairs are formed from worlds where BOTH `metric` and `tracks` are
-/// present, in row order (deterministic — no `HashMap`).
+/// noise. Whenever the band is anything else, the strength branch names the
+/// observed sign too — a link can be both mis-strengthed and backwards, and
+/// a bare `|r|` would hide the second defect (Task 4c) — calling it out
+/// explicitly when it contradicts the declared direction, since that row is
+/// a backwards link that also happens to have the wrong strength. Pairs are
+/// formed from worlds where BOTH `metric` and `tracks` are present, in row
+/// order (deterministic — no `HashMap`).
 ///
 /// A pairing with fewer than two rows is left silent, not reported as
 /// `"D5 unmeasurable"`: that is a different failure (a too-small census),
@@ -314,7 +319,7 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
                     detector: "D5 unmeasurable",
                     metric: e.metric.clone(),
                     detail: format!(
-                        "declared {} tracking {}, but {} across {} worlds -- the census \
+                        "declared {} tracking {}, but {} across {} paired worlds -- the census \
                          cannot test this link",
                         e.declared,
                         e.tracks,
@@ -329,18 +334,40 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
             let observed = band_of(r.abs());
             let observed_dir = if r < 0.0 { "negative" } else { "positive" };
             if observed != e.declared {
-                // Strength mismatch. The sign is NOT reported when nothing was
-                // measured — a near-zero r's sign is noise (spec §4.2).
+                // Strength mismatch. The sign is reported whenever it was
+                // measured, and suppressed exactly when it was not: a
+                // near-zero r's sign is noise (spec §4.2), so `none` still
+                // gets a bare |r|. Anything else names the observed sign --
+                // and, when that sign contradicts the declared direction,
+                // says so plainly rather than leaving the reader to notice a
+                // minus sign buried in a signed r: this row is a backwards
+                // link that also happens to have the wrong strength.
+                let sign_note = if observed == "none" {
+                    String::new()
+                } else if e.direction != "none" && observed_dir != e.direction {
+                    format!(
+                        " -- and the sign is backwards: the coupling is {}, not the declared {}",
+                        observed_dir, e.direction
+                    )
+                } else {
+                    format!(" ({observed_dir})")
+                };
+                let r_display = if observed == "none" {
+                    format!("|r| = {:.3}", r.abs())
+                } else {
+                    format!("r = {r:+.3}")
+                };
                 out.push(Finding {
                     detector: "D5 strength",
                     metric: e.metric.clone(),
                     detail: format!(
-                        "declared {} tracking {}, but observed |r| = {:.3} ({} pairs) is {}",
+                        "declared {} tracking {}, but observed {} ({} pairs) is {}{}",
                         e.declared,
                         e.tracks,
-                        r.abs(),
+                        r_display,
                         xs.len(),
-                        observed
+                        observed,
+                        sign_note
                     ),
                 });
             } else if observed != "none" && observed_dir != e.direction {
@@ -941,6 +968,57 @@ mod tests {
     }
 
     #[test]
+    fn d5_strength_omits_the_sign_when_the_observed_band_is_none() {
+        // Reuses `d5_reports_strength_not_sign_when_the_observed_band_is_none`'s
+        // cov = 0 fixture (the sign of a near-zero r is noise), but checks a
+        // different invariant: Task 4c teaches the strength branch to name
+        // "positive"/"negative" when the band is anything else, so this
+        // guards that it must still say neither word when the band is
+        // `none` -- a regression this task's own change could introduce,
+        // which the older test (checking only for the word "direction")
+        // does not cover.
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[2.0, 4.0, 1.0, 3.0]);
+        let e = expectation("m", "d", "dominant", "positive");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].detector, "D5 strength");
+        assert!(
+            !f[0].detail.contains("positive") && !f[0].detail.contains("negative"),
+            "a none-band result must carry no sign claim at all: {}",
+            f[0].detail
+        );
+    }
+
+    #[test]
+    fn d5_strength_names_the_observed_sign_when_it_contradicts_the_declaration() {
+        // Mirrors row #10 (shelf-fraction tracking ocean-fraction): declared
+        // moderate positive, but the data is perfectly anti-correlated, so
+        // the observed band is dominant negative -- both the strength AND
+        // the sign are wrong. Before Task 4c the strength branch reported
+        // only `|r|` and never named the sign, so a dominant-strength link
+        // running backwards published as a bare strength mismatch.
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
+        let e = expectation("m", "d", "moderate", "positive");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(f.len(), 1);
+        assert_eq!(
+            f[0].detector, "D5 strength",
+            "the detector taxonomy must not move: this is still a strength finding"
+        );
+        assert!(
+            f[0].detail.contains("negative"),
+            "must name the observed sign: {}",
+            f[0].detail
+        );
+        assert!(
+            f[0].detail.contains("backwards"),
+            "must make the contradiction legible as prose, not just embed a minus \
+             sign in the number: {}",
+            f[0].detail
+        );
+    }
+
+    #[test]
     fn d5_fires_strength_when_the_band_differs() {
         let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
         let e = expectation("m", "d", "weak", "negative");
@@ -1008,14 +1086,26 @@ mod tests {
 
     #[test]
     fn d5_does_not_report_unmeasurable_when_both_columns_vary() {
-        // A guard against the new branch swallowing an ordinary finding: the
-        // existing strength-mismatch fixture must still report "D5 strength",
-        // not "D5 unmeasurable".
-        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
+        // Finding 2's replacement for a verbatim duplicate of
+        // `d5_fires_strength_when_the_band_differs` (same fixture, same
+        // assertions -- it could never fail independently of that test). The
+        // guard this test actually names: a fixture sitting right at the
+        // boundary of `constant_value`'s exact-equality check -- 999
+        // identical values plus one differing by only 1e-9 -- must still be
+        // treated as varying (report "D5 strength") and not swallowed by
+        // "D5 unmeasurable" as if the column were frozen.
+        let mut xs = vec![1.0; 999];
+        xs.push(1.0 + 1e-9);
+        let ys: Vec<f64> = (0..999).map(|i| i as f64).chain([999.0]).collect();
+        let c = two_numeric_columns("m", &xs, "d", &ys);
         let e = expectation("m", "d", "weak", "negative");
         let f = detect_d5(&c, &[e]);
         assert_eq!(f.len(), 1);
-        assert_eq!(f[0].detector, "D5 strength");
+        assert_eq!(
+            f[0].detector, "D5 strength",
+            "a column with one value 1e-9 off its other 999 is varying, not frozen: {:?}",
+            f
+        );
     }
 
     // --- D6 ---

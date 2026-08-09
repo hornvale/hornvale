@@ -243,7 +243,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `settlement-count`
 
-- **D5 strength**: declared strong tracking habitable-fraction, but observed |r| = 0.230 (1000 pairs) is weak
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.230 (1000 pairs) is weak (positive)
 - **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.015 (1000 pairs) is none
 - **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.085 (1000 pairs) is none
 

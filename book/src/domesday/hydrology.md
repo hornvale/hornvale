@@ -138,7 +138,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `shelf-fraction`
 
-- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.755 (1000 pairs) is dominant
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed r = -0.755 (1000 pairs) is dominant -- and the sign is backwards: the coupling is negative, not the declared positive
 
 ### `shelf-width-passive-median`
 
@@ -148,7 +148,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 - **D5 strength**: declared weak tracking total-tide, but observed |r| = 0.019 (1000 pairs) is none
 - **D5 strength**: declared moderate tracking continent-count, but observed |r| = 0.004 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking largest-continent-share, but observed |r| = 0.130 (1000 pairs) is weak
+- **D5 strength**: declared moderate tracking largest-continent-share, but observed r = +0.130 (1000 pairs) is weak -- and the sign is backwards: the coupling is positive, not the declared negative
 
 ### `waterfall-count`
 
