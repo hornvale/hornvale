@@ -6,6 +6,7 @@ pub mod git;
 pub mod live;
 pub mod post;
 pub mod relevance;
+pub mod render;
 pub mod store;
 
 /// Everything that can go wrong, always carrying the physical reason.
