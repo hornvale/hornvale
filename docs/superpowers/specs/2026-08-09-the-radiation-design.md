@@ -644,6 +644,19 @@ Standard, plus:
 - Chronicle entry (`book/src/chronicle/the-radiation.md`) and a book freshness
   sweep; the Confidence Gradient re-scored if this moves one of its bets.
 - Retrospective (`docs/retrospectives/the-radiation.md`).
+- **The client fixtures, added to the drift list by an absorption after this
+  spec was drafted.** Main moved 43 commits (The Quire) between the spec and
+  G3, and `clients/game/core/tests/fixtures/` — committed seed-42 session
+  snapshots that most `hornvale-game-core` tests read instead of paying for
+  genesis — is now the seventh path in the artifact drift check. **Six new
+  peoples move the world those snapshots record**, so they will drift and must
+  be regenerated. The precedent is already on main: The Range's world change
+  forced `b16005b7` (re-pin the session fixtures) and `86bb7244` (the
+  most-populous settlement is Nenagabo now, not Toa) as follow-ups by another
+  campaign. Do the sweep here rather than leave it for whoever comes next —
+  and note that the drift-check path list has **five copies across the repo**,
+  brought into agreement by `58fcbecc`; check them, not just the one in the
+  root `CLAUDE.md`.
 - Frontier bookkeeping: `LANG-53` → `partial`, with the star delivered and the
   tree blocked on `LANG-split-time-from-history` (which gains this family as its
   motivating case); `BIO-elf-radiation` unchanged and re-affirmed as blocked;
