@@ -5,6 +5,7 @@
 //! and 0110 that the census is the suite's shared world-building pass.
 
 pub mod census;
+pub mod stats;
 
 #[cfg(test)]
 mod guard {
