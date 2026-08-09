@@ -104,12 +104,13 @@ registration also takes a required `role`:
 - `descriptor` — a measured property of a world that is *expected to vary*.
 - `invariant` — a property asserted to hold on every world. Decision 0110
   explicitly encourages this shape (`Flag(bool)` for invariants), and 33 of the
-  57 categorical/flag metrics are currently ≥95 % single-valued because of it:
+  **58** categorical/flag metric columns are currently ≥95 % single-valued because of it:
   `phonotactic-validity-goblin`, `monophyly-dwarf`, `lexicon-regular-family`,
   and so on are `true` on all 1,000 worlds *by design*.
 
 **D1 and D2 fire only on `descriptor` metrics.** Without this split, D1 fires
-on 40 of 57 metrics and the survey's weakness section is unreadable — the
+on **39 of 58** metric columns (the earlier figure of 40/57 miscounted: it
+included the structural `pin_set` column and undercounted the total by one) and the survey's weakness section is unreadable — the
 falsification clause's predicted failure, arriving before any code was written.
 
 An `invariant` that *does* vary is its own finding and gets its own detector
