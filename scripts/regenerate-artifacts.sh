@@ -412,6 +412,15 @@ else
     echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 on the canonical box to refresh; ~7 min, decision 0063)" >&2
 fi
 
+# The Domesday survey (2026-08-08 campaign): reads the COMMITTED census at
+# book/src/laboratory/generated/the-census/ (whatever the last HV_CENSUS=1
+# refresh left there, not a fresh run) and renders book/src/domesday/ — the
+# index plus one page per domain. It never triggers a census itself (spec
+# §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
+# above.
+echo "regenerate-artifacts: the domesday survey" >&2
+run -p hornvale -- lab domesday
+
 echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 

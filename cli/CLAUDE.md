@@ -73,7 +73,7 @@ tweak — drifts those. After any output change:
 
 ```bash
 make rebaseline
-git diff book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+git diff book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ book/src/domesday/
 ```
 
 and review the diff rather than committing it blind: the point of the drift

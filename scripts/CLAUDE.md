@@ -40,10 +40,13 @@ knobs:
   `fetch-depth: 0` for exactly this reason.
 - After regen, the drift check is `git diff` over
   `book/src/gallery book/src/reference book/src/laboratory docs/audits
-  docs/digest` — note **`docs/audits/`** is in the list (the type-audit report
-  drifts on pub-boundary changes; a common miss), and so is **`docs/digest/`**
-  (the in-force decision index drifts when a decision is added or superseded,
-  the delta report when the idea registry moves).
+  docs/digest book/src/domesday` — note **`docs/audits/`** is in the list (the
+  type-audit report drifts on pub-boundary changes; a common miss), and so is
+  **`docs/digest/`** (the in-force decision index drifts when a decision is
+  added or superseded, the delta report when the idea registry moves) and
+  **`book/src/domesday/`** (2026-08-08, The Domesday): it is a pure read over
+  the committed census, never a re-run of one, so it drifts whenever that CSV
+  moves — even from a census refresh alone, with no other code change.
 - **THE HAZARD ADDING A NEW GENERATED DIRECTORY EXPOSES**, and the near-miss
   this campaign actually hit: `git diff --exit-code <path>` is silently
   **VACUOUS** against a path git does not track. Regenerate into a brand-new
