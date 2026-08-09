@@ -46,6 +46,16 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0 | 0.22844828 | 0.2879043 | 0.33141762 | 0.45009785 | 0.26356024 |
 
+### `tribute-relations-standing`
+
+How many standing tribute relations (`pays-tribute-to`) this world holds at `now` — the subordination stock (The Assize). Replaces `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume panel, whose quantity lives on the bake's discarded tally and is unreachable from any census metric. Agrees with that flow at spearman 0.934 over 36 worlds — a measured witness, NOT an equivalence: this is a stock and that was a flow. Absent on a world with no occupation records.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0 | 43 | 72.5 | 102 | 227 | 73.646 |
+
 ## Weaknesses found here
 
 ### `raid-attribution-unresolved`

@@ -6,6 +6,16 @@ How many, and of what structure: the population counts a world's peoples carry.
 
 ## Metrics
 
+### `climate-displacement-events`
+
+How many occupations on this world ended in climate-driven migration (`occ-cause` = `migrated`), excluding conquest-relocations — the displacement mechanic's volume (The Assize). Replaces the seed-42 gate in `cli/tests/history_battery.rs` and the twelve-seed panel in `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit in single digits and a minority run to the hundreds, and a real minority measure zero — a mild deep past, not an inert bake. Absent on a world with no occupation records.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0 | 2 | 10 | 92 | 1924 | 113.526 |
+
 ### `goblin-flagship-population`
 
 The goblin flagship settlement's committed population; Absent if goblins placed no settlement
@@ -67,6 +77,10 @@ n = 1000 present, 0 absent (of 1000 worlds)
 | 166 | 3890 | 6218 | 8221 | 18300 | 6128.73 |
 
 ## Weaknesses found here
+
+### `climate-displacement-events`
+
+- **D3**: p25..p75 spans 90 (4.68% of the 1924 min..max range), under the 5% bar
 
 ### `peoples-alive-at-bake-end`
 
