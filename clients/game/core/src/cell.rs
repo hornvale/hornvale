@@ -59,23 +59,6 @@ pub enum Source {
     /// — the marker is an honest signal about that same channel, not an
     /// invented one.
     Prose,
-    /// The ways-on line (`ways.rs`): which directions are open from here.
-    ///
-    /// **Restored, and attached to a different cell than before.** An
-    /// earlier draft of this enum had a `WaysOn` variant assigned to the
-    /// entry's `>` command-line prompt, on the theory that the command line
-    /// represents the character's own "ways on." Task 9's review deleted it
-    /// as a false provenance claim — there was no `ways_on` (or equivalent)
-    /// field anywhere on `vessel/session/v1` at the time, so the category
-    /// named a channel the wire never separately emitted. That ruling was
-    /// itself wrong: it was derived from this crate's OWN schema mirror
-    /// (which never mirrored the field) rather than from the producer.
-    /// `windows/vessel/src/snapshot.rs`'s `SensedChannel::room` doc says the
-    /// opposite — `locale/room/v2`'s `exits` are the authoritative ways on —
-    /// and `windows/locale::Locale.exits` is real. The variant returns, this
-    /// time on the cells that actually carry exits (see `ways.rs`); the
-    /// prompt stays [`Source::Chrome`], which was correct all along.
-    WaysOn,
     /// The endpaper identity strip (`SelfChannel`, plus `day`/`turn`, drawn
     /// by `endpaper.rs`).
     Identity,
@@ -84,6 +67,29 @@ pub enum Source {
     /// cell whose real channel was merely inconvenient to name — the prompt
     /// qualifies honestly: `PROMPT_GLYPH` is a hardcoded constant, not
     /// derived from any wire field, so it is UI chrome, not a datum.
+    ///
+    /// **There is deliberately no `WaysOn` variant, on its second deletion
+    /// for two different reasons.** Task 9's review first deleted it (it had
+    /// been assigned to this same prompt cell) as a false provenance claim:
+    /// there was no `ways_on` field on `vessel/session/v1`, so the category
+    /// named a channel the wire never separately emitted. Task 9b restored
+    /// it on better information — `sensed.room.exits` really is on the wire
+    /// — and gave it its own always-visible row (`ways.rs`), re-deriving the
+    /// walk band's compass filter and the chamber band's `at + 1 < of`
+    /// path-graph invariant from the mirrored fields rather than reading
+    /// them off the sim. That row shipped a real bug: underground, it
+    /// disagreed with the room's own prose, because the derivation read
+    /// `sensed.room.exits` (the outdoor locale, unchanged by stepping
+    /// indoors) while the prose was built by the sim, which knows which band
+    /// it is in. The Quire (task 9d) deleted it a second time, for the true
+    /// reason: the sim already states "Ways on: …" in `Narration::prose`,
+    /// correctly in every band, one line above where the row used to sit —
+    /// so the row's entire job was to reproduce a conclusion the sim had
+    /// already reached, which is the defect this crate exists to avoid
+    /// regardless of whether the reproduction happens to agree today. If a
+    /// future need requires ways-on as a separately addressable UI element,
+    /// that need should be met by parsing the sim's authoritative sentence,
+    /// not by re-deriving it from lower-level fields a second time.
     Chrome,
 }
 

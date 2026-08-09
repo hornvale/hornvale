@@ -9,21 +9,18 @@
 //!   floor plan indoors) occupies columns `0..PLATE_WIDTH`;
 //! - the **entry** (the narration prose, wrapped, plus the command line)
 //!   occupies columns `PLATE_WIDTH..w`;
-//! - both share rows `0..(h - 3)`, then the **ways-on** line (Task 9b) at
-//!   row `h - 3` spans the full width, the **endpaper** strip follows at
-//!   row `h - 2`, and a blank margin row closes it at `h - 1`. Only the
-//!   margin row is pure ornament now; the row the ways-on line took over
-//!   used to be a blank gutter, and "ornament may never occupy a cell that
-//!   carries information" cuts the other way here — a real datum is
-//!   exactly what belongs there instead of nothing.
+//! - both share rows `0..(h - 3)`, leaving a blank gutter row, the
+//!   **endpaper** strip at row `h - 2`, and a blank margin row at `h - 1`.
+//!   Rules and gutters carry no ink of their own — "ornament may never
+//!   occupy a cell that carries information" — so reserving them is
+//!   simply *not drawing there*, never a drawn border.
 //!
-//! The ways-on line is deliberately full-width and its own row rather than
-//! squeezed into the entry pane's narration flow: it must stay legible
-//! regardless of how long `narration.prose` is (`entry.rs` truncates the
-//! prose, never this), and it is not really "part of" either the plate or
-//! the entry — it is a property of the possessed character's current
-//! position, read from `sensed.room.exits`/`spatial`, not from either pane's
-//! own channel.
+//! **The gutter row briefly carried a ways-on line (Task 9b).** The Quire
+//! (task 9d) removed it — see `entry.rs`'s module doc for why — and this
+//! row went back to being blank rather than being claimed by anything else.
+//! Do not re-add a ways-on element here without reading that doc first: the
+//! sim's own prose already states the same fact, correctly in every band,
+//! and the row's job was to reproduce that conclusion a second time.
 //!
 //! `chart::draw` and `plan::draw` read their own target region's size
 //! from the `Grid` they are handed (see those modules' docs), so the
@@ -36,8 +33,8 @@ use crate::{Grid, Spatial};
 /// The column where the entry begins; the plate occupies `0..PLATE_WIDTH`.
 pub const PLATE_WIDTH: u16 = 40;
 
-/// Rows reserved below the shared plate/entry region: the ways-on line, the
-/// endpaper's own row, and one blank margin row beneath it.
+/// Rows reserved below the shared plate/entry region: one blank gutter
+/// row, the endpaper's own row, and one blank margin row beneath it.
 const RESERVED_ROWS: u16 = 3;
 
 /// Copy every non-blank cell of `src` into `dst`, offset by `origin`.
@@ -77,17 +74,6 @@ pub fn compose(snapshot: &crate::Snapshot, w: u16, h: u16) -> Grid {
         &mut page,
         (plate_width, 0),
         entry_width,
-        content_height,
-    );
-
-    // The ways-on line takes the row directly below the shared plate/entry
-    // content — see the module doc for why it is its own full-width row
-    // rather than living inside either pane.
-    crate::ways::draw(
-        &snapshot.sensed,
-        &snapshot.spatial,
-        &mut page,
-        0,
         content_height,
     );
 

@@ -34,6 +34,24 @@
 //! is always visible instead of silent. See this module's
 //! `overflowing_prose_gets_a_visible_truncation_marker_not_a_silent_drop`
 //! test for the regression this decision is pinned against.
+//!
+//! **This was reconsidered once, and the marker won again.** Task 9b (commit
+//! `630d41c0`) tried the second option: a dedicated, always-visible ways-on
+//! row (`ways.rs`), re-deriving the exit list from `sensed.room.exits` and
+//! the chamber `at`/`of` pair so it would survive truncation here. It shipped
+//! a Critical bug — underground, the row disagreed with the prose's own
+//! "Ways on:" sentence, because the row read the outdoor locale's exits
+//! (unchanged by stepping indoors) while the prose was built by the sim,
+//! which knows the band it is in. The Quire (task 9d) removed that row: the
+//! prose sentence is the sim's own correct answer in every band, and this
+//! client's job is to render it, not to re-derive it a second time from
+//! lower-level fields and risk disagreeing with the thing it is supposedly
+//! restating. So the truncation trade-off above stands *as originally
+//! decided* — the exits sentence can still be the thing that gets cut on an
+//! overlong passage — and that is accepted, not an oversight. If a future
+//! need makes this cost too high, the fix is a scrollable entry, not a
+//! second copy of an exit list this crate has already gotten wrong once by
+//! trying to keep one on hand.
 
 use crate::{Cell, Narration, Source, Weight};
 
@@ -120,15 +138,13 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// [`Source::Prose`]; the prompt is attributed to [`Source::Chrome`] —
 /// `PROMPT_GLYPH` is a hardcoded constant, not derived from any
 /// `vessel/session/v1` field, so it is UI chrome rather than a datum this
-/// client read off the wire. (An earlier draft attributed the prompt to
-/// `Source::WaysOn` instead, on the theory that the command line represents
-/// the character's own "ways on"; that was a false provenance claim, and
-/// the variant now names a real, separately-drawn element — see
-/// `ways.rs` and [`Source::WaysOn`]'s doc.) This module never special-cases
-/// the prose's own trailing `"Ways on:"` sentence (see the module doc), so
-/// that exit list is carried as ordinary [`Source::Prose`] text, same as
-/// the rest of the passage — `ways.rs` draws the same information again,
-/// from the wire channel rather than the prose, elsewhere on the page.
+/// client read off the wire. (An earlier draft attributed the prompt to a
+/// since-deleted `Source::WaysOn`, on the theory that the command line
+/// represents the character's own "ways on" — see [`Source::Chrome`]'s doc
+/// for why that was a false provenance claim.) This module never
+/// special-cases the prose's own trailing `"Ways on:"` sentence (see the
+/// module doc), so that exit list is carried as ordinary [`Source::Prose`]
+/// text, same as the rest of the passage.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,

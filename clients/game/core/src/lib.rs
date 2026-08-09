@@ -9,7 +9,6 @@ pub mod entry;
 pub mod plan;
 pub mod schema;
 pub mod spread;
-pub mod ways;
 pub use cell::*;
 pub use schema::*;
 

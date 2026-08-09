@@ -53,85 +53,19 @@ pub struct SelfChannel {
 }
 
 /// The presence-gated channel.
+///
+/// **Deliberately no `room`/exits mirror.** Task 9b briefly mirrored
+/// `locale/room/v2`'s `exits` (`Room`/`Exit`/`Direction`/`Compass`/
+/// `ExitKind`) to feed a dedicated ways-on row; The Quire (task 9d) removed
+/// that row and, with it, every field this schema mirror carried solely to
+/// feed it — see `entry.rs`'s module doc and [`crate::Source::Chrome`]'s doc
+/// for why. The sim's own "Ways on: …" sentence in `Narration::prose`
+/// already states this, correctly in every band; there is nothing left in
+/// this crate that needs the exits list as structured data.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Sensed {
-    /// The room, mirroring `locale/room/v2` — pruned to the one field this
-    /// crate reads from it: `exits`. `windows/vessel/src/snapshot.rs`'s
-    /// `SensedChannel::room` doc names these the authoritative ways on for
-    /// the WALK band (`ways.rs`'s `Session::ways()` filter); the CHAMBER
-    /// band does not use them at all — see that module's doc for why.
-    pub room: Room,
     /// The sky over this day, already written as a sentence.
     pub sky: String,
-}
-
-/// Our mirror of `locale/room/v2`'s `Locale`, pruned to `exits` — every
-/// other field (`id`, `biome`, `fields`, `regime`, …) is unread by this
-/// crate today.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Room {
-    /// Base + vertical exits, mirroring `windows/locale::Exit`.
-    pub exits: Vec<Exit>,
-}
-
-/// Mirrors `windows/locale::Exit`, pruned to `direction`/`kind`. `to` (the
-/// destination packed room id) is not mirrored: nothing in this crate
-/// renders where an exit leads, only whether/which one exists.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Exit {
-    /// Which way this exit goes.
-    pub direction: Direction,
-    /// The kind of traversal.
-    pub kind: ExitKind,
-}
-
-/// Mirrors `windows/locale::Direction`. All three variants are mirrored
-/// even though `ways.rs` renders only `Compass` exits with `kind: Edge` —
-/// a `Vertical` exit's `Enter`/`Exit` direction is still real JSON on the
-/// wire (every locale carries a parent `Exit` and up to four child `Enter`
-/// exits alongside its lateral `Compass` ones), and an unparseable variant
-/// would fail the whole document rather than just being filtered out.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-pub enum Direction {
-    /// A lateral edge, bucketed to eight compass points.
-    Compass(Compass),
-    /// Descend into finer child `digit` (0..4).
-    Enter(u8),
-    /// Step back out to the containing room.
-    Exit,
-}
-
-/// Mirrors `windows/locale::Compass`. Variant names match the producer's
-/// exactly (`Ne`, not `NE`) — the wire's default enum representation keys
-/// on the Rust identifier, and it is `ways.rs` that uppercases it for
-/// display, the same transform `Session::ways()`'s own `{c:?}` makes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-pub enum Compass {
-    /// North.
-    N,
-    /// North-east.
-    Ne,
-    /// East.
-    E,
-    /// South-east.
-    Se,
-    /// South.
-    S,
-    /// South-west.
-    Sw,
-    /// West.
-    W,
-    /// North-west.
-    Nw,
-}
-
-/// Mirrors `windows/locale::ExitKind`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-pub enum ExitKind {
-    /// A geometric base-mesh edge — a lateral, walkable exit.
-    Edge,
-    /// A vertical scale change (enter/exit a chamber structure).
-    Vertical,
 }
 
 /// The sim's own rendering of this turn.
@@ -245,15 +179,11 @@ pub struct LegendEntry {
 }
 
 /// The chamber-band floor plan, mirroring `vessel/plan/v1`'s `SessionPlan`.
-/// Only the fields Tasks 6, 7 and 9b need are mirrored.
+/// Only the fields Tasks 6 and 7 need are mirrored. Task 9b briefly added
+/// `at`/`of` to reimplement the sim's own path-graph invariant for a ways-on
+/// row The Quire (task 9d) removed — see `entry.rs`'s module doc.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Plan {
-    /// Which chamber of the structure the possession stands in, zero-based.
-    /// Task 9b's `ways.rs` derives the chamber band's "further in" way from
-    /// this and [`Plan::of`], rather than from prose.
-    pub at: usize,
-    /// How many chambers the structure has, total.
-    pub of: usize,
     /// The plan's bounds.
     pub extent: PlanExtent,
     /// The distinct cell types, in first-seen row-major order.

@@ -35,10 +35,6 @@ fn every_drawn_cell_names_its_channel() {
         p.get(&Source::Identity).copied().unwrap_or(0) > 0,
         "the endpaper is drawn"
     );
-    assert!(
-        p.get(&Source::WaysOn).copied().unwrap_or(0) > 0,
-        "the ways-on line is drawn"
-    );
 }
 
 /// The redaction, restated at the render layer: no cell may claim `social`
@@ -78,24 +74,15 @@ fn every_drawn_cell_names_its_channel_in_the_chamber_band() {
         "the endpaper is drawn"
     );
     // The command line (the `>` prompt) is drawn every turn regardless of
-    // band, attributed to `Source::Chrome` — it is a hardcoded constant
-    // (`entry.rs::PROMPT_GLYPH`), not derived from any wire field, so it is
-    // UI chrome rather than a datum. This is also the acceptance test above
-    // never checks: it is the only assertion in this file that proves
-    // `Source::Chrome` is reachable from a real render at all, so it must
-    // stay a positive count, not merely ride along on the
-    // `Unattributed == 0` check above.
+    // band, attributed to `Source::Chrome` (see that variant's doc for the
+    // provenance defect this replaced: a twice-deleted `Source::WaysOn`).
+    // This is also the acceptance test above never checks: it is the only
+    // assertion in this file that proves `Source::Chrome` is reachable from
+    // a real render at all, so it must stay a positive count, not merely
+    // ride along on the `Unattributed == 0` check above.
     assert!(
         p.get(&Source::Chrome).copied().unwrap_or(0) > 0,
         "the command line is drawn"
-    );
-    // The chamber band's ways-on comes from `plan.at`/`plan.of`, not from
-    // the compass exits `every_drawn_cell_names_its_channel` exercises for
-    // the walk band — this is the only assertion in this file that proves
-    // `ways.rs`'s chamber-band path is reachable from a real render.
-    assert!(
-        p.get(&Source::WaysOn).copied().unwrap_or(0) > 0,
-        "the ways-on line is drawn"
     );
 }
 
