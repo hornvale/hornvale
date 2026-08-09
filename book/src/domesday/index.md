@@ -4,7 +4,7 @@
 
 A generated survey of the committed census: what Hornvale's worlds actually produce, and where the instrument finds them wanting.
 
-1000 worlds, 193 metrics across 12 domains.
+1000 worlds, 194 metrics across 12 domains.
 
 ## Domains
 
@@ -15,11 +15,11 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Climate | 6 | 3 | [page](./climate.md) |
 | Hydrology | 12 | 3 | [page](./hydrology.md) |
 | Biology | 14 | 28 | [page](./biology.md) |
-| Settlement | 19 | 6 | [page](./settlement.md) |
-| Demography | 7 | 5 | [page](./demography.md) |
+| Settlement | 20 | 6 | [page](./settlement.md) |
+| Demography | 7 | 4 | [page](./demography.md) |
 | Society | 5 | 2 | [page](./society.md) |
 | Religion | 21 | 12 | [page](./religion.md) |
-| Language | 47 | 37 | [page](./language.md) |
+| Language | 47 | 36 | [page](./language.md) |
 | Naming | 17 | 9 | [page](./naming.md) |
 | History | 4 | 1 | [page](./history.md) |
 
@@ -38,7 +38,7 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 |---|---|
 | D1 | 27 |
 | D2 | 31 |
-| D3 | 13 |
+| D3 | 11 |
 | D4 | 39 |
 | D5 | 1 |
 | D6 | 1 |

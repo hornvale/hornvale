@@ -24,7 +24,8 @@ editing:
 - `windows/` — what a window may and may not do; how to add one.
   `windows/worldgen/` — the composition root and the `BuildDepth` ladder.
   `windows/lab/` — studies are data, metrics are code; nextest is process-per-
-  test; censuses regen locally in ~7 min since The Local Census.
+  test; censuses regen **on lefford, never locally** (the guard refuses
+  elsewhere, decision 0063 — see the census block below).
 - `cli/` — the thin command surface, but also the home of the **workspace-wide
   enforcement tests** (layering, dep allowlist, doc drift, the heavy tier).
 - `clients/` — the browser clients and the wasm ABIs. Outside the cargo
@@ -169,11 +170,38 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 # Censuses (the measurement instrument's goldens; details in windows/lab/ and
 # scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
 # reasons, so even `make gate-full` skips them; the everyday gate never pays
-# for them. Since The Local Census the full ~2000-world census is a ~7-min
-# LOCAL run, so the sanctioned refresh is local — once per campaign at the
-# pre-merge close, keeping book/src/laboratory/generated/*/rows.csv current
-# with main rather than lagging it:
-bash scripts/census-run.sh              # THE sanctioned refresh (decision 0081)
+# for them. Refreshed once per campaign at the pre-merge close, keeping
+# book/src/laboratory/generated/*/rows.csv current with main rather than
+# lagging it.
+#
+# THE CENSUS RUNS ON lefford. "LOCAL" IN 0063 MEANS *NOT AWS* — NOT "on
+# whatever box you are sitting at". That ambiguity is the whole trap, and it
+# is worth two sentences because it has now cost two sessions. 0063 retired
+# the AWS spot box and put the census back on the project's own canonical
+# hardware ("~7 minutes on the 40-core Linux box"); 0079 then *enforced which*
+# box, because the machines are not byte-identical — they disagree by one unit
+# on ~0.1% of discrete-count metrics, decided in the COMPUTE path upstream of
+# quantize-at-emit, so an off-host run commits values that silently disagree
+# with canonical and then DRIFT-CHECK GREEN FOREVER.
+#
+# So from lefford the run is local and 0063's word is exact. From this Mac it
+# is not, and `census-run.sh` fails closed on the hostname. This paragraph
+# previously read "the sanctioned refresh is local" with no host named; The
+# Range read it from the Mac, recommended a local run, and was refused by the
+# guard. The sentence was not false — it was written from the canonical box's
+# point of view and silently changes meaning depending on where you read it.
+#
+# COST HAS ROUGHLY DOUBLED since 0063 measured it: 776 s / 887 s / 921 s
+# (13-15 min) on lefford, 2026-08-09, cpu_ratio ~25 on 40 cores, against
+# 0063's "~7 minutes". Not a contradiction — a drift datum. Budget 15.
+#
+# Push the branch first, then dispatch with a FULL SHA (never a branch name —
+# HV_CENSUS_REF feeds `reset --hard`, which can land on a stale local branch
+# of that name over there):
+ssh lefford 'cd ~/Projects/hornvale && HV_CENSUS_WORKTREE=canonical \
+  HV_CENSUS_REF=<full-sha> scripts/census-run.sh'   # decisions 0063/0079/0081
+# Commit the regenerated goldens ON lefford — the canonical box authors them —
+# then push and fast-forward locally.
 bash scripts/census-run.sh status       # is a heavy run already holding the box?
 make lab-diff STUDY=the-census          # which metrics moved vs HEAD (review surface)
 make census-check                       # analysis-harness gate (needs duckdb + python3)

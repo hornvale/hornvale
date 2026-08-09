@@ -258,8 +258,17 @@ fn measure_fits(
     // Every kind here is peopled and surface-scored — absent from the sparse
     // habitat-realm store, so all default to `Surface`.
     let realm = vec![HabitatRealm::SURFACE; bios.len()];
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4. This is the ONE call site on the
+    // branch where an all-`None` slice really is exact rather than a control:
+    // the roster here is the human variants plus `goblin`, none of which carries
+    // a row, so `wc.biome_affinity.get(kind)` would return `None` for every
+    // element of `bios` anyway. Stated as a property of THIS roster, not of the
+    // registry — widen `bios` to a kind with a row and the sentence stops being
+    // true.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bios.len()];
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
     // Build-local dense index -> slot mapping (per_species_suitability's doc
     // comment): `bios` above holds the human variants in order and goblin

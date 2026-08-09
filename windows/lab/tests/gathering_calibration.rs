@@ -285,9 +285,21 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // below the uniform-sphere baseline of 32.7 — is untouched and still
     // clears the baseline by better than 2x (17.67 degrees of margin),
     // re-checked rather than assumed.
+    //
+    // The Range's close regen (2026-08-09, canonical census on the canonical
+    // box, two kinds gaining declared biome ranges): settlement placement
+    // moves again, pulling population slightly poleward (15.0340 ->
+    // 15.5271). The cause is stated no more narrowly than the campaign's own
+    // mechanism (a declared biome range now constrains where a settling
+    // people may found a settlement); nothing here measured where by
+    // latitude either range-bearing kind sits, so no story about which
+    // biomes moved the mean is asserted. The preregistered directional claim
+    // asserted above — below the uniform-sphere baseline of 32.7 — is
+    // untouched and still clears the baseline by better than 2x (17.17
+    // degrees of margin), re-checked rather than assumed.
     assert!(
-        (mean - 15.0340).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.0340)"
+        (mean - 15.5271).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.5271)"
     );
 }
 

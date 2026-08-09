@@ -1224,6 +1224,17 @@ pub fn tolerance_tiered(
 /// defaults to [`hornvale_species::HabitatRealm::SURFACE`], the same default
 /// a kind absent from [`WorldComponents::habitat_realm`](crate::components::WorldComponents::habitat_realm) carries.
 ///
+/// **`species_affinity` is a second parallel slice** (The Range): same order,
+/// same length as `species_biosphere`, enforced by its own `debug_assert_eq!`.
+/// `species_affinity[tag]` is `None` for a kind absent from the sparse
+/// [`WorldComponents::biome_affinity`](crate::components::WorldComponents::biome_affinity)
+/// store (unrestricted at every biome) or `Some` of its declared
+/// [`hornvale_species::BiomeAffinity`]; an index past the slice's end
+/// defaults to `None`, the same "unrestricted" default. Resolved against a
+/// cell's biome name via [`hornvale_species::BiomeAffinity::factor`] — see
+/// the placement note below on why this multiplies outside
+/// [`tolerance_liebig`] rather than folding into it.
+///
 /// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
@@ -1261,11 +1272,17 @@ pub fn per_species_suitability(
     regime: &RotationRegime,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
     species_realm: &[hornvale_species::HabitatRealm],
+    species_affinity: &[Option<hornvale_species::BiomeAffinity>],
 ) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
     debug_assert_eq!(
         species_realm.len(),
         species_biosphere.len(),
         "species_realm must be parallel to species_biosphere — same order, same length"
+    );
+    debug_assert_eq!(
+        species_affinity.len(),
+        species_biosphere.len(),
+        "species_affinity must be parallel to species_biosphere — same order, same length"
     );
     let base_inputs = carrying_inputs_of(geo, terrain, climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
@@ -1291,6 +1308,11 @@ pub fn per_species_suitability(
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
     let prey = prey_supply_field(geo, &forage);
+    // The Range: the biome at every cell, hoisted exactly as the other
+    // per-cell fields above — read only by a kind with a declared affinity
+    // (see the `affinity` factor below); a clone of the already-computed
+    // field, so this costs no new draws and no new sculpting.
+    let biome = climate.biome_map();
 
     species_biosphere
         .iter()
@@ -1367,7 +1389,24 @@ pub fn per_species_suitability(
                 // kept here is semantic, so a later reader does not mistake
                 // the gate for a condition curve.) `1.0` for every `Surface`
                 // kind, an IEEE-754 no-op.
-                saturated * tolerance_liebig(cn, s, floor_buf) * availability
+                //
+                // THE RANGE's `affinity` ALSO stays outside the minimum, but
+                // for a different reason than `availability`'s: it is not a
+                // presence mask, it is a GRADED factor in [0, 1] — an
+                // authored per-biome preference, resolved by
+                // `BiomeAffinity::factor` against this cell's biome name.
+                // Where a mask in {0,1} makes `min` and `*` agree, a graded
+                // factor does not: folding it into `tolerance_liebig` would
+                // let it be silently overridden whenever some other axis
+                // happened to floor lower, instead of always scaling the
+                // result — exactly the distinction decision the module
+                // doc calls load-bearing. `1.0` for every kind absent from
+                // the sparse affinity store, an IEEE-754 no-op.
+                let affinity = species_affinity
+                    .get(tag)
+                    .and_then(|a| a.as_ref())
+                    .map_or(1.0, |a| a.factor(biome.get(cell).name()));
+                saturated * tolerance_liebig(cn, s, floor_buf) * availability * affinity
             });
             (tag as u32, k)
         })
@@ -1407,7 +1446,17 @@ pub const CAPACITY_K_M: f64 = 0.03004;
 /// The return needs only an `index` verdict: the `u32` is the build-local tag, and
 /// the capacity itself is a [`CapacityMap`] rather than a bare primitive — which is
 /// decision 0103 doing exactly the work it was ratified for.
+///
+/// **The Range: `species_realm` gates a `Subterranean` kind's capacity to zero
+/// on every cell without a cave**, the same direction
+/// [`per_species_suitability`] enforces — this is that gate reaching the
+/// dimensional path settlement placement actually consumes, which is this
+/// campaign's whole point (see the module-level founding measurement).
+/// `species_affinity` reaches this same dimensional path for the identical
+/// reason: a parallel slice to `species_biosphere`, forwarded unchanged to
+/// [`per_species_capacity_at`], which is where it is actually applied.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+#[allow(clippy::too_many_arguments)]
 pub fn per_species_capacity(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
@@ -1416,6 +1465,8 @@ pub fn per_species_capacity(
     insolation_scalar: f64,
     regime: &RotationRegime,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
+    species_affinity: &[Option<hornvale_species::BiomeAffinity>],
 ) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
     let hoisted = EraInvariantSupply::build(
         geo,
@@ -1432,6 +1483,8 @@ pub fn per_species_capacity(
         &hoisted,
         &EraAdjust::present(terrain),
         species_biosphere,
+        species_realm,
+        species_affinity,
     )
 }
 
@@ -1498,7 +1551,20 @@ impl EraInvariantSupply {
 /// At [`EraAdjust::present`] this is bit-identical to [`per_species_capacity`],
 /// which is what makes the seam safe to introduce ahead of the behaviour change
 /// that will use it (`era_substrate.rs` asserts it).
+///
+/// **The Range: `species_realm` gates a `Subterranean` kind's capacity to zero
+/// on every cell without a cave**, mirroring [`per_species_suitability`]'s
+/// gate exactly — this is the entry point [`bake_history_from`] actually
+/// calls, so before this parameter existed the gate could move the readout
+/// and leave settlement placement untouched. `species_realm` is a parallel
+/// slice to `species_biosphere` (same order, same length), enforced by a
+/// `debug_assert_eq!`, exactly as `per_species_suitability` documents.
+/// `species_affinity` is a second parallel slice, same discipline, gating
+/// this same dimensional path the way [`per_species_suitability`] gates the
+/// readout — see that function's doc for why the factor multiplies outside
+/// [`tolerance_liebig`] rather than folding into it.
 /// type-audit: bare-ok(index: return)
+#[allow(clippy::too_many_arguments)]
 pub fn per_species_capacity_at(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
@@ -1506,14 +1572,33 @@ pub fn per_species_capacity_at(
     hoisted: &EraInvariantSupply,
     adjust: &EraAdjust,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
+    species_affinity: &[Option<hornvale_species::BiomeAffinity>],
 ) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    debug_assert_eq!(
+        species_realm.len(),
+        species_biosphere.len(),
+        "species_realm must be parallel to species_biosphere — same order, same length"
+    );
+    debug_assert_eq!(
+        species_affinity.len(),
+        species_biosphere.len(),
+        "species_affinity must be parallel to species_biosphere — same order, same length"
+    );
     let base_carrying = hornvale_demography::carrying_capacity(
         geo,
         &carrying_inputs_at(geo, terrain, climate, adjust),
     );
     let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
+    // The Warren, carried to the capacity path: the subterranean reading of
+    // every cell, hoisted exactly as `per_species_suitability` hoists it.
+    let subterranean =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| subterranean_substrate(*substrate.get(cell)));
     let forage = forage_supply_field(geo, base_carrying.as_cell_map());
     let prey = prey_supply_field(geo, &forage);
+    // The Range, carried to the capacity path: the biome at every cell,
+    // hoisted exactly as `per_species_suitability` hoists it.
+    let biome = climate.biome_map();
 
     species_biosphere
         .iter()
@@ -1521,11 +1606,37 @@ pub fn per_species_capacity_at(
         .map(|(tag, bio)| {
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
+            // Two loop-invariant hoists from two campaigns, kept together
+            // because they are complementary rather than competing: The Range
+            // lifts the realm lookup, The Whetstone the niche weights. Both are
+            // read inside the per-cell closure below (`realm` by the cave gate,
+            // `niche_weights` by `axis_supply_with`), so dropping either at the
+            // merge would have been a silent regression rather than a build
+            // error.
+            let realm = species_realm
+                .get(tag)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             // Loop-invariant, as in `per_species_suitability` above: six
             // `BTreeMap` reads per species instead of six per cell per species.
             let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
             let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-                let s = substrate.get(cell);
+                // The Warren: which realm's substrate this kind is scored
+                // against, and — for a subterranean kind only — whether the
+                // cell actually holds a cave at all. A `Surface` kind's
+                // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
+                // documents at its matching match.
+                let (s, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => (substrate.get(cell), 1.0),
+                    hornvale_species::HabitatRealm::Subterranean => (
+                        subterranean.get(cell),
+                        if terrain.cave_at(cell).is_some() {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                    ),
+                };
                 use hornvale_kernel::{
                     ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
@@ -1540,7 +1651,22 @@ pub fn per_species_capacity_at(
                 ];
                 let supply = axis_supply_with(&niche_weights, &per_axis);
                 let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
-                headcount * tolerance_liebig(cn, s, floor_buf)
+                // `availability` stays OUTSIDE the tolerance product, exactly as
+                // `per_species_suitability` keeps it outside the Liebig
+                // minimum: a presence mask in {0.0, 1.0}, not a condition
+                // curve. `1.0` for every `Surface` kind, an IEEE-754 no-op.
+                //
+                // `affinity` stays outside it too, for the same reason
+                // `per_species_suitability` documents at its matching site: a
+                // GRADED factor in [0, 1], not a {0,1} mask, so `min` and `*`
+                // would disagree if it were folded into the minimum. `1.0`
+                // for every kind absent from the sparse affinity store, an
+                // IEEE-754 no-op.
+                let affinity = species_affinity
+                    .get(tag)
+                    .and_then(|a| a.as_ref())
+                    .map_or(1.0, |a| a.factor(biome.get(cell).name()));
+                headcount * tolerance_liebig(cn, s, floor_buf) * availability * affinity
             });
             let map = hornvale_kernel::ecology::CapacityMap::new(raw)
                 .expect("a Michaelis-Menten product of non-negative terms is finite and >= 0");
@@ -1611,6 +1737,16 @@ pub(crate) fn demography_report_with_beta_from(
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: which declared affinity each kind (same order) carries,
+    // built from the SAME `wc.biosphere` iteration as `species_biosphere`
+    // and `species_realm` above, so all three stay index-aligned — a kind
+    // absent from the sparse `WorldComponents::biome_affinity` store is
+    // `None` (unrestricted at every biome).
+    let species_affinity: Vec<Option<hornvale_species::BiomeAffinity>> = wc
+        .biosphere
+        .iter()
+        .map(|(kind, _)| wc.biome_affinity.get(kind).cloned())
+        .collect();
 
     let per_species_k = per_species_suitability(
         geo,
@@ -1621,6 +1757,7 @@ pub(crate) fn demography_report_with_beta_from(
         &regime,
         &species_biosphere,
         &species_realm,
+        &species_affinity,
     );
     // `tag as u32` here is the same build-local dense index documented on
     // `per_species_suitability` — never serialized, never identity.
@@ -6132,6 +6269,30 @@ fn bake_history_from(
             })
         })
         .collect::<Result<_, _>>()?;
+    // The Range: which realm each settling kind (same `peoples` order — a
+    // filtered, order-preserving subsequence of `wc.biosphere`'s ascending-
+    // `KindId` order, the same assembly `demography_report_with_beta_from`
+    // performs over the full roster) lives in, so `per_species_capacity_at`
+    // can gate this build's capacity field the same way
+    // `per_species_suitability` already gates the readout. A kind absent from
+    // the sparse `WorldComponents::habitat_realm` store defaults to `Surface`.
+    let species_realm: Vec<hornvale_species::HabitatRealm> = peoples
+        .iter()
+        .map(|k| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
+    // The Range: which declared affinity each settling kind (same `peoples`
+    // order) carries, built the same way `species_realm` above is — a kind
+    // absent from the sparse `WorldComponents::biome_affinity` store is
+    // `None` (unrestricted at every biome).
+    let species_affinity: Vec<Option<hornvale_species::BiomeAffinity>> = peoples
+        .iter()
+        .map(|k| wc.biome_affinity.get(k).cloned())
+        .collect();
     // ONE CAPACITY FIELD PER ERA (The Tense §3.1). The era-invariant supply --
     // insolation above all, which is ~100% of the pipeline's cost -- is built
     // once and shared across all of them; only what an era actually moves is
@@ -6153,10 +6314,19 @@ fn bake_history_from(
     let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
         .iter()
         .map(|adjust| {
-            per_species_capacity_at(geo, terrain, climate, &hoisted, adjust, &species_biosphere)
-                .into_iter()
-                .map(|(_tag, map)| map)
-                .collect()
+            per_species_capacity_at(
+                geo,
+                terrain,
+                climate,
+                &hoisted,
+                adjust,
+                &species_biosphere,
+                &species_realm,
+                &species_affinity,
+            )
+            .into_iter()
+            .map(|(_tag, map)| map)
+            .collect()
         })
         .collect();
     // The raid gate's two authored inputs, resolved in ONE place so a test can
@@ -8817,7 +8987,17 @@ mod tests {
         // above moved with it (104 -> 88) because two peopled pantheons went
         // away; the two quantities are still tracking different things and
         // still separate cleanly.
-        assert_eq!(count("name-gloss"), 213);
+        //
+        // The Range (task 4, 2026-08-09): 213 -> 211. The first biome-affinity
+        // row re-places seed 42 (gnoll 20 -> 2 settlements, with the rest of
+        // the roster re-contesting the freed ground), so settlement volume
+        // moves and the gloss count with it. The pantheon counts above are
+        // UNCHANGED at 88 across this change, for the same reason they held
+        // through the last one: the pantheon is a function of the peopled
+        // roster, which did not move, while the gloss count is a function of
+        // settlement volume, which did. Two settlements' worth of glosses is
+        // the smallest movement this line has ever recorded.
+        assert_eq!(count("name-gloss"), 211);
     }
 
     #[test]
@@ -9436,6 +9616,16 @@ mod tests {
             .collect()
     }
 
+    /// The Range: `wc.biosphere`-ordered affinity slice, built the same way
+    /// `demography_report_with_beta_from` builds its own — the
+    /// `species_realm_of` sibling for `species_affinity`.
+    fn species_affinity_of(wc: &WorldComponents) -> Vec<Option<hornvale_species::BiomeAffinity>> {
+        wc.biosphere
+            .iter()
+            .map(|(kind, _)| wc.biome_affinity.get(kind).cloned())
+            .collect()
+    }
+
     /// C1 T2: the dominant race is the peopled kind maximizing
     /// `Σ(population × mass)`, deterministic across rebuilds; `world_name`
     /// is that race's capitalized word for "earth" (its endonym).
@@ -9493,6 +9683,7 @@ mod tests {
             wc.culture.clone(),
             wc.material.clone(),
             wc.habitat_realm.clone(),
+            wc.biome_affinity.clone(),
         )
         .expect("cloned canonical stores stay integrity-valid");
 
@@ -9701,6 +9892,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 
@@ -9795,6 +9987,7 @@ mod tests {
             lexicon,
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
@@ -11363,6 +11556,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 
@@ -12357,6 +12551,7 @@ mod tests {
         let bio: Vec<&hornvale_species::BiosphereTraits> =
             wc.biosphere.iter().map(|(_, b)| b).collect();
         let realm = species_realm_of(&wc);
+        let affinity = species_affinity_of(&wc);
         let ks = per_species_suitability(
             geo,
             &terrain,
@@ -12366,6 +12561,7 @@ mod tests {
             &regime,
             &bio,
             &realm,
+            &affinity,
         );
 
         // wc.biosphere.ids() = registry() key order (ascending KindId):
@@ -12419,6 +12615,7 @@ mod tests {
         let bio: Vec<&hornvale_species::BiosphereTraits> =
             wc.biosphere.iter().map(|(_, b)| b).collect();
         let realm = species_realm_of(&wc);
+        let affinity = species_affinity_of(&wc);
         let ks = per_species_suitability(
             geo,
             &terrain,
@@ -12428,6 +12625,7 @@ mod tests {
             &regime,
             &bio,
             &realm,
+            &affinity,
         );
         let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
         assert_eq!(land.len(), 11_066, "P5's land-cell count (spec §1)");
@@ -13190,6 +13388,52 @@ mod tests {
         // And the separation has to be VISIBLE, not merely correctly
         // ordered: the extremes must be far apart in the world, or a
         // world-wide distribution with a lucky ordering would pass.
+        //
+        // THE RANGE: this used to be a constant (`> 0.2`), chosen when the
+        // extreme pair at seed 42 happened to predict a wide 0.2+ gap. Since
+        // then the roster narrowed to two peoples clearing
+        // `SHAPE_SAMPLE_FLOOR` — kobold and hobgoblin — whose OWN shipped
+        // weights predict a narrower gap: 0.836 vs 0.676, a spread of only
+        // 0.160. Their observed spread, 0.791 vs 0.659 (0.132), is 82.0% of
+        // that predicted spread — the world is tracking the model closely —
+        // but 0.132 is less than the fixed 0.2 floor demanded, so the test
+        // was failing peoples for reproducing their own model too faithfully,
+        // not for losing it. A constant floor has no relationship to what
+        // the current extremes predict; it happened to fit the pair that was
+        // extreme when it was written and stopped fitting when the roster
+        // moved.
+        //
+        // The fix ties the floor to the SAME prediction the ranking above
+        // already trusts: require the observed spread to be at least half of
+        // the predicted spread for the current extremes. Half is well below
+        // the 82.0% measured at seed 42 (comfortable headroom for the
+        // spread this floor is meant to pass), while still demanding that
+        // most of the model's predicted separation survive into the world —
+        // a mechanism that stopped reaching the draw collapses the observed
+        // spread toward zero (the world-wide-distribution null this whole
+        // test exists to rule out), which sits nowhere near half of any
+        // nonzero predicted spread. Proved by mutation (The Range,
+        // 2026-08-09): damping each people's morphology 65% toward a fixed
+        // reference — without reversing which extreme predicts more simplex
+        // names — shrank the observed spread to 0.041 against a 0.080 floor
+        // and this assertion caught it; damping further (80%) instead
+        // inverted the ranking and the assertion above caught that. Both
+        // paths are covered.
+        //
+        // WHAT KEEPS A RELATIVE FLOOR OFF ZERO. A fraction of a predicted
+        // spread has no absolute lower bound of its own: if `predicted_spread`
+        // ever went to zero this assertion would degrade to `observed > 0`,
+        // which is the very floors-erode-unseen case the rewrite above cites,
+        // reached by arithmetic instead of by an edit. It cannot today, and the
+        // reason is a COUPLING to code fifty lines up rather than anything
+        // visible here: `compared > 0` passed, so at least one pair survived the
+        // `< SEPARATION` skip, so two peoples' predicted shares differ by at
+        // least `SEPARATION` (0.15) — and `most`/`least` are the extremes of
+        // that same predicted profile, so `predicted_spread >= SEPARATION` and
+        // `floor >= 0.075`. Lowering `SEPARATION`, or admitting pairs the
+        // separation test currently skips, lowers this floor with it. Asserted
+        // rather than only stated, so that coupling breaks loudly.
+        const VISIBILITY_FRACTION: f64 = 0.5;
         let most = peoples
             .iter()
             .max_by(|a, b| a.1.total_cmp(&b.1))
@@ -13198,11 +13442,28 @@ mod tests {
             .iter()
             .min_by(|a, b| a.1.total_cmp(&b.1))
             .expect("non-empty");
+        let predicted_spread = most.1 - least.1;
+        let observed_spread = most.2 - least.2;
         assert!(
-            most.2 - least.2 > 0.2,
-            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}) yet their \
-             observed simplex shares are {:.3} and {:.3} — too close together for these to be \
-             different naming practices",
+            predicted_spread >= SEPARATION,
+            "the extremes of the predicted profile ({} at {:.3}, {} at {:.3}) span only \
+             {predicted_spread:.3}, below {SEPARATION} — yet {compared} pair(s) cleared the \
+             separation test above, which is impossible unless that test and this floor have \
+             come uncoupled. The relative floor below has no absolute lower bound of its own; \
+             it is kept off zero ONLY by this inequality, so it must be checked and not assumed",
+            most.0,
+            most.1,
+            least.0,
+            least.1,
+        );
+        let floor = VISIBILITY_FRACTION * predicted_spread;
+        assert!(
+            observed_spread > floor,
+            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}, a spread of \
+             {predicted_spread:.3}) yet their observed simplex shares are {:.3} and {:.3} (a \
+             spread of {observed_spread:.3}) — less than {VISIBILITY_FRACTION} of the predicted \
+             spread ({floor:.3}) reached the world, too little to call these different naming \
+             practices",
             most.0,
             least.0,
             most.1,

@@ -251,6 +251,20 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
     let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
     let realm_live = realm_slice(&wc);
     let realm_surface_forced: Vec<HabitatRealm> = vec![HabitatRealm::Surface; bio.len()];
+    // The Range: the `biome_affinity` registry is NOT empty. Since task 4 it
+    // carries `gnoll` and `woolly-mammoth`, and both are in the whole-biosphere
+    // roster this battery scores — so the all-`None` slice below is a deliberate
+    // CONTROL, not a restatement of the registry, and the earlier claim that it
+    // was "exact, not a stand-in" is false from task 4 onward.
+    //
+    // Deliberate because this battery measures the realm/availability question
+    // and nothing else: its subjects are `rust-monster` and `xorn`, neither of
+    // which carries an affinity row, and its comparison is between two REALM
+    // slices holding everything else equal. Task 3's
+    // `an_absent_affinity_is_bit_identical` proves all-`None` reproduces the
+    // pre-affinity physics exactly, so this keeps the two arms differing in the
+    // one component the battery is about.
+    let none_affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
 
     let obliquity_deg = climate.obliquity_deg();
     let insolation_scalar = climate.insolation();
@@ -265,6 +279,7 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
         &regime,
         &bio,
         &realm_live,
+        &none_affinity,
     );
     let k_surface_forced = per_species_suitability(
         geo,
@@ -275,6 +290,7 @@ fn live_vs_surface_forced_on_cave_cells(label: &str) -> (f64, f64, usize) {
         &regime,
         &bio,
         &realm_surface_forced,
+        &none_affinity,
     );
 
     let tag = names

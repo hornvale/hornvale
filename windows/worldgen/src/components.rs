@@ -12,7 +12,7 @@
 
 use hornvale_kernel::{ComponentStore, KindId};
 use hornvale_species::{
-    BiosphereTraits, HabitatRealm, MindVector, PerceptionVector, SocietyVector,
+    BiomeAffinity, BiosphereTraits, HabitatRealm, MindVector, PerceptionVector, SocietyVector,
 };
 
 use crate::BuildError;
@@ -50,6 +50,12 @@ pub struct WorldComponents {
     /// Which realm a kind's carrying capacity is scored in (The Warren).
     /// Sparse: absence means [`HabitatRealm::Surface`].
     pub habitat_realm: ComponentStore<KindId, HabitatRealm>,
+    /// A kind's declared affinity across biomes (The Range). Sparse: absence
+    /// means unrestricted (`BiomeAffinity::default == 1.0` at every biome).
+    /// Two authored rows as of task 4 — see
+    /// [`hornvale_species::biome_affinity_registry`] for the admission test a
+    /// row must pass.
+    pub biome_affinity: ComponentStore<KindId, BiomeAffinity>,
 }
 
 impl WorldComponents {
@@ -73,6 +79,7 @@ impl WorldComponents {
         let culture = hornvale_culture::culture_registry();
         let material = hornvale_terrain::material_registry();
         let habitat_realm = hornvale_species::habitat_realm_registry();
+        let biome_affinity = hornvale_species::biome_affinity_registry();
 
         check_integrity(
             &biosphere,
@@ -98,6 +105,7 @@ impl WorldComponents {
             culture,
             material,
             habitat_realm,
+            biome_affinity,
         })
     }
 
@@ -123,6 +131,7 @@ impl WorldComponents {
         culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
         material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
         habitat_realm: ComponentStore<KindId, HabitatRealm>,
+        biome_affinity: ComponentStore<KindId, BiomeAffinity>,
     ) -> Result<Self, BuildError> {
         check_integrity(
             &biosphere,
@@ -148,6 +157,7 @@ impl WorldComponents {
             culture,
             material,
             habitat_realm,
+            biome_affinity,
         })
     }
 }
@@ -724,6 +734,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
         );
         // Match the message, not just the variant: the perception check
         // follows the psyche check in the same loop, and red-dragon carries a
@@ -767,6 +778,7 @@ mod tests {
             lexicon,
             family_proto(),
             family_of,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),

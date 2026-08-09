@@ -524,6 +524,79 @@ waits on the underworld being declared as **places** — biomes, the way the sea
 depth layers already are — rather than as a coordinate pushed through a
 tolerance curve.
 
+*Re-scored twice by [The Range](./chronicle/the-range.md) (2026-08-08), once
+against a claim this chapter already makes and once against The Delvers'
+result. The two moves are independent and are kept apart deliberately.*
+
+**First, and this is a confidence-lowering event about how a claim got here:
+the realm sentence above was asserted before it was true.** *"An authored realm
+selects, absolutely"* was a true statement about a **readout** and a false one
+about the **world**. The gate reached `per_species_suitability`, whose only
+production caller is a demography report — its own comment says the figure is
+never serialized and never identity — while the function that decides where
+settlements actually go took no realm parameter and applied no realm gate at
+all. Declaring a peopled kind `Subterranean` moves that readout from 99.49% to
+5.62% of land and moves the committed seed-42 world by **zero bytes**: the same
+hash, the same 7,764 facts, the same flagship village, with three positive
+controls run before the null was believed. The Range repaired the identity
+path, so the sentence is true now, and nothing about the twenty-five-world
+exclusion measurement was wrong — it measured a quantity no world reads.
+
+What should lose confidence is the *procedure that produced the sentence*. The
+measurement behind it is the one the peoples programme mandates, and it scored
+the top rung of the programme's own probe-validity ladder, whose fourth and
+highest rung reads "the readout differentiates the axis". A mechanism can be
+authorable, read, correctly coupled and demonstrably differentiating, and still
+never touch a world; until this campaign the programme had no rung in which
+that sentence could be said. There is now a fifth — **reaches world identity**,
+scored by perturbing the axis and asking whether the committed world changed.
+Rung four remains necessary. It had simply been reading as sufficient.
+
+**Second, and this sharpens The Delvers rather than reversing it: a preference
+applied *outside* the limiting product both binds and differentiates.** The
+Range added a biome affinity — a per-kind, per-biome multiplier applied beside
+the realm mask rather than folded in as a fifth tolerance axis — and froze two
+predictions before the rows existed. Both were confirmed. The arid share of
+gnoll's settlements rose from 0.000 to 0.500, against a baseline captured by
+running the test red on an empty registry, so a downward-only mask **relocates**
+rather than merely thinning. And mean pairwise Pearson correlation between
+gnoll's capacity field and the other peopled kinds' **fell on all three seeds a
+previous campaign published** — 0.851 → 0.795, 0.790 → 0.706, 0.857 → 0.806,
+with all twenty-four individual pairs down, the instrument cross-checked
+against a previously published pair value to six places.
+
+The honest reading is not that The Delvers was wrong. It is that the two
+campaigns applied a preference at **different points in the same pipeline**.
+The Delvers' climate niche sits *inside* the Liebig minimum, where it competes
+with an elevation axis passed a literal zero rather than the sovereignty floor,
+and a factor the minimum discards cannot separate anything. The Range's biome
+affinity multiplies the product from outside, where it cannot be discarded. So
+the candidate this chapter now holds is that **where in the pipeline a
+preference is applied decides whether it can differentiate, not merely whether
+it binds** — a structural property, not a fact about niches.
+
+It is held as a candidate and not as a law, on two grounds. It rests on one
+mechanism and two authored occupants. And the alternative reading survives the
+evidence: the falls are real but modest, gnoll still correlating at 0.71–0.93
+with most peoples afterwards, so the peoples may be so alike in their surviving
+tolerances that no factor of this kind could pull them far apart. Pearson is
+scale-invariant besides, so this measures how the fields **sort** cells, not how
+large they are — the same scope limit The Delvers' own supply-factor correlation
+carries.
+
+**A third thing was measured and is deliberately left without a cause.** One
+authored row redistributed the entire placement. On seed 7 the total moved 274
+→ 287 while gnoll — the kind whose affinity was declared — stayed at 4 and
+bugbear went 49 → 153. The attribution is proven rather than argued: the
+campaign's second occupant is fauna, chosen so that exactly one *peopled* kind's
+placement could move, and a test rebuilds three seeds with and without its row
+and asserts the complete list of (people, cell) placements is identical. So
+every movement is gnoll's row alone. **Why one row moves everyone is not
+established, and no mechanism is narrated here.** What the chapter should carry
+is the magnitude: authoring an ecological preference for one kind is not a local
+edit to that kind, and a future occupant should expect to move every people's
+numbers.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held

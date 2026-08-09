@@ -87,7 +87,26 @@ measurement from a number:
    2    expressible, unread       authorable, but no consumer reads it
    3    read, but miscoupled      read through a relation that is wrong
    4    genuinely measured        the readout differentiates the axis
+   5    reaches world identity    perturbing the axis changes the world
 ```
+
+**Rung 5 was added by The Range (2026-08-09), which found the ladder one rung
+short by walking off the end of it.** The Warren performed the mutation step
+§3 mandates, on the readout, and passed: its cave gate moves
+`per_species_suitability` from 99.49 % to 5.62 % of land. It also moves the
+committed world by **zero bytes**, because that function's only production
+caller is a report and the identity path took no realm parameter at all.
+
+A readout-only mechanism therefore scored a perfect **4** on this ladder.
+The mandate below says "a demonstration that the *readout* would report
+differently if the axis moved", and that word is the whole gap: a mechanism
+can be read, can differentiate, and can still never reach a world. Nothing in
+the programme's vocabulary could express what was wrong, which is why it took
+a campaign tripping over it rather than a review catching it.
+
+The step §8's spine owes is therefore the **rung-5** one — perturb the axis and
+show the *committed world* changes — not the rung-4 one. Rung 4 remains
+necessary; it is simply not sufficient, and it reads as sufficient.
 
 At brainstorm time the three probes sat on rungs 1, 3 and 4 respectively — elf,
 dwarf, human.
@@ -368,7 +387,9 @@ Each of the five follows the same shape:
   absorb main; make preflight (from the branch)
   author or extend
   preregister the prediction on a NAMED axis
-  MUTATION STEP: show the readout would differ if the axis moved   <- §3
+  MUTATION STEP: perturb the axis; show the COMMITTED WORLD differs  <- §3 rung 5
+    (the readout differing is rung 4 and is NOT sufficient — The Warren
+     passed that and still moved zero bytes of world)
   declare the epoch only if a derivation actually moved (0084)
   census regen on lefford (0079 / 0086 / 0081) -- AUTHORIZATION REQUIRED
   refresh BOTH census fixtures (1000 + 1000 rows -- see §5)

@@ -83,6 +83,27 @@ Both 2026-08-05 `heavy` rows also carry a hand-filled `branch` cell.
 dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 `the-scatter`.
 
+**A note on the four `gate (RED, ...)` rows of 2026-08-09 (The Range, task 4).**
+`scripts/timed.sh` ledgers a run's wall time under the label it was given
+whether the command SUCCEEDED or not — it prints `rc=<n>` to stdout and the
+table has no column for it. `make gate` stops at the first failing test, so a
+red gate's wall time is however long it took to reach that test: those four
+rows read 47–177 s against a healthy gate's ~900 s, and without this note
+they would read as a dramatic speed-up. The rows are kept rather than deleted
+(they are real measurements of real commands) and relabelled so they cannot be
+mistaken for gate timings. **Adding an `rc` column to the table would fix this
+properly**; it is recorded here rather than done, because the schema is
+consumed by more than this file.
+
+**Every note belongs above this line, never between two rows.** The note above
+first landed *inside* the table, between the last RED row and the census row
+after it. Markdown needs a header plus a delimiter row to start a table, so
+prose in the middle ends the table: the six rows below it rendered as literal
+pipe-delimited text, and any reader or tool walking the table stopped there.
+Below the table is no better a home, because `timed.sh` appends new rows with
+`>> "$LEDGER"` — anything at the file's end is overtaken by the next run. So
+the preamble is the only position that survives both Markdown and the writer.
+
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
@@ -547,11 +568,30 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T00:22:37Z | gate | 875.512 | 5361.649 | 147.067 | 6.29 | 0 | 6ce36e9f | the-tare | Greyjoy | 10 |
 | 2026-08-09T00:47:44Z | gate | 837.112 | 5361.162 | 133.124 | 6.56 | 0 | b1797d16 | the-tare | Greyjoy | 10 |
 | 2026-08-09T00:50:25Z | rebaseline | 160.991 | 215.814 | 10.296 | 1.40 | 0 | b1797d16 | the-tare | Greyjoy | 10 |
+| 2026-08-09T03:00:31Z | gate | 7.112 | 18.233 | 3.675 | 3.08 | 0 | 4ca26481 | the-range | Greyjoy | 10 |
+| 2026-08-09T03:21:25Z | gate | 1237.949 | 5561.846 | 169.508 | 4.63 | 0 | 4ca26481 | the-range | Greyjoy | 10 |
+| 2026-08-09T04:40:05Z | gate | 19.210 | 30.705 | 18.173 | 2.54 | 0 | ebc56cbf | the-range | MacBookPro | 10 |
+| 2026-08-09T04:51:35Z | gate | 675.175 | 5442.585 | 143.219 | 8.27 | 0 | ebc56cbf | the-range | MacBookPro | 10 |
+| 2026-08-09T05:16:03Z | rebaseline | 169.717 | 219.438 | 11.587 | 1.36 | 0 | 46ecfeea | the-range | MacBookPro | 10 |
+| 2026-08-09T05:28:54Z | gate | 698.010 | 5490.849 | 151.606 | 8.08 | 0 | 46ecfeea | the-range | MacBookPro | 10 |
+| 2026-08-09T06:07:47Z | gate (RED, aborted at first failure — NOT a gate timing) | 117.613 | 236.854 | 77.933 | 2.68 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T06:10:25Z | gate (RED, aborted at first failure — NOT a gate timing) | 47.745 | 178.973 | 13.642 | 4.03 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T06:17:40Z | gate (RED, aborted at first failure — NOT a gate timing) | 129.348 | 821.637 | 30.417 | 6.59 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T06:30:15Z | gate (RED, aborted at first failure — NOT a gate timing) | 176.679 | 1020.216 | 72.533 | 6.18 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T11:00:43Z | census | 920.964 | 22515.362 | 398.599 | 24.88 | 0 | eb2a660d |  | lefford | 40 |
+| 2026-08-09T11:20:42Z | gate | 139.015 | 136.696 | 65.900 | 1.46 | 0 | d3457790 | the-range | MacBookPro | 10 |
+| 2026-08-09T12:49:30Z | gate | 339.976 | 1315.759 | 44.130 | 4.00 | 0 | 54ef9a8c | the-range | MacBookPro | 10 |
+| 2026-08-09T13:18:59Z | census | 886.849 | 22735.004 | 364.368 | 26.05 | 0 | 101a5395 |  | lefford | 40 |
+| 2026-08-09T13:58:32Z | gate | 69.416 | 95.223 | 20.386 | 1.67 | 0 | 584cb85f | the-range | MacBookPro | 10 |
+| 2026-08-09T14:31:43Z | gate | 673.663 | 5411.968 | 114.709 | 8.20 | 0 | 12fdd917 | the-range | MacBookPro | 10 |
+| 2026-08-09T15:27:31Z | gate | 1024.541 | 5599.183 | 292.478 | 5.75 | 0 | 36f242b0 | the-range | MacBookPro | 10 |
 | 2026-08-09T03:42:08Z | gate | 166.773 | 970.250 | 52.143 | 6.13 | 0 | a1397eb4 | the-domesday | Greyjoy | 10 |
 | 2026-08-09T03:56:04Z | gate | 609.495 | 5351.635 | 105.095 | 8.95 | 0 | 3c8bce1d | the-domesday | Greyjoy | 10 |
 | 2026-08-09T11:32:23Z | gate | 712.251 | 5392.274 | 132.705 | 7.76 | 0 | d5556484 | the-domesday | MacBookPro | 10 |
 | 2026-08-09T16:50:36Z | rebaseline | 1031.462 | 221.929 | 24.358 | 0.24 | 0 | a0425d42 | the-quire | MacBookPro | 10 |
 | 2026-08-09T17:01:34Z | gate | 598.129 | 120.308 | 34.201 | 0.26 | 0 | a0425d42 | the-quire | MacBookPro | 10 |
+| 2026-08-09T15:58:04Z | rebaseline | 219.623 | 221.226 | 12.718 | 1.07 | 0 | f376b02e | the-range | MacBookPro | 10 |
+| 2026-08-09T16:28:04Z | gate | 1618.466 | 5563.237 | 145.263 | 3.53 | 0 | f232ea27 | the-range | MacBookPro | 10 |
 | 2026-08-09T14:27:59Z | rebaseline | 88.974 | 120.295 | 3.950 | 1.40 | 0 | 89c5c9c5 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T14:58:36Z | rebaseline | 154.631 | 149.990 | 10.195 | 1.04 | 0 | 89c5c9c5 | campaign/the-whetstone | ambrose | 12 |
 | 2026-08-09T15:00:31Z | gate | 61.111 | 82.301 | 68.257 | 2.46 | 0 | 89c5c9c5 | campaign/the-whetstone | ambrose | 12 |
@@ -565,3 +605,7 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T19:53:22Z | rebaseline | 120.383 | 157.567 | 7.035 | 1.37 | 0 | f466f316 | the-quire | MacBookPro | 10 |
 | 2026-08-09T20:33:46Z | rebaseline | 86.543 | 152.313 | 8.764 | 1.86 | 0 | 5442b5dd | the-quire | MacBookPro | 10 |
 | 2026-08-09T20:38:56Z | gate | 281.713 | 2018.793 | 118.298 | 7.59 | 0 | 5442b5dd | the-quire | MacBookPro | 10 |
+| 2026-08-09T16:42:40Z | gate | 42.239 | 9.524 | 1.359 | 0.26 | 0 | bde7ea5b | the-range | MacBookPro | 10 |
+| 2026-08-09T17:10:54Z | gate | 1573.493 | 742.990 | 142.404 | 0.56 | 0 | 48273750 | the-range | MacBookPro | 10 |
+| 2026-08-09T19:29:23Z | gate | 375.331 | 2055.533 | 104.130 | 5.75 | 0 | 48273750 | the-range | MacBookPro | 10 |
+| 2026-08-09T22:11:09Z | gate | 303.086 | 2011.615 | 99.506 | 6.97 | 0 | 0e9f71b2 | the-range | MacBookPro | 10 |

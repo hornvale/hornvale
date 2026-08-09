@@ -440,6 +440,21 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster scored here. So this is a deliberate CONTROL, not a
+    // copy of the registry.
+    //
+    // Deliberate because this file is The Delvers' PREREGISTERED readout: its
+    // published figures are the frozen record of what that campaign measured,
+    // and re-scoring them under a mechanism authored afterwards would restate
+    // someone else's result rather than reproduce it. All-`None` is
+    // bit-identical to the world those numbers were taken from (task 3's
+    // `an_absent_affinity_is_bit_identical`). The affinity's effect on this same
+    // question is `range_readout.rs`'s P2, which reports its ABSENT arm
+    // alongside this file's table for exactly that reason.
+    let species_affinity: Vec<Option<hornvale_species::BiomeAffinity>> =
+        vec![None; species_biosphere.len()];
 
     let per_species = per_species_suitability(
         geo,
@@ -450,6 +465,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
         &regime,
         &species_biosphere,
         &species_realm,
+        &species_affinity,
     );
 
     let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
@@ -612,6 +628,21 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and both are in the
+    // whole-biosphere roster scored here. So this is a deliberate CONTROL, not a
+    // copy of the registry.
+    //
+    // Deliberate because this file is The Delvers' PREREGISTERED readout: its
+    // published figures are the frozen record of what that campaign measured,
+    // and re-scoring them under a mechanism authored afterwards would restate
+    // someone else's result rather than reproduce it. All-`None` is
+    // bit-identical to the world those numbers were taken from (task 3's
+    // `an_absent_affinity_is_bit_identical`). The affinity's effect on this same
+    // question is `range_readout.rs`'s P2, which reports its ABSENT arm
+    // alongside this file's table for exactly that reason.
+    let species_affinity: Vec<Option<hornvale_species::BiomeAffinity>> =
+        vec![None; species_biosphere.len()];
     let per_species = per_species_suitability(
         geo,
         &terrain,
@@ -621,6 +652,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
         &regime,
         &species_biosphere,
         &species_realm,
+        &species_affinity,
     );
 
     let land: Vec<CellId> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();

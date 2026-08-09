@@ -244,6 +244,35 @@ type Row = (
 // roster and is Predictive only at three — the caste threshold is not
 // monotone in roster size, which is the standing reason to read these rows as
 // a threshold rather than a trend.
+//
+// THE RANGE re-measure (task 4, 2026-08-09). Seven of the 45 rows moved, ALL
+// of them Predictive -> Counted, and — for the fourth re-measure running —
+// **every witnessed COUNT held**:
+//
+//   seed 1 gnoll         Predictive -> Counted   (6472 witnessed, unchanged)
+//   seed 2 gnoll         Predictive -> Counted   (81)
+//   seed 3 gnoll         Predictive -> Counted   (53)
+//   seed 3 hobgoblin     Predictive -> Counted   (32)
+//   seed 4 gnoll         Predictive -> Counted   (3785)
+//   seed 4 desert-dwarf  Predictive -> Counted   (3785)
+//   seed 5 gnoll         Predictive -> Counted   (500)
+//
+// Gnoll loses its priesthood on ALL FIVE seeds, which is the campaign's first
+// declared biome affinity doing exactly what it was declared to do: gnoll's
+// settlement count falls hard (seed 1: 61 -> 13; seed 42: 20 -> 2), castes are
+// downstream of settlement scale, and `cult_form` reads `organized` only where
+// a shaman caste emerges. hobgoblin@3 and desert-dwarf@4 are the competitive
+// cascade — no other kind carries an affinity, but suppressing one people
+// frees ground the rest re-contest, and two of them land the wrong side of the
+// caste threshold (`windows/worldgen/tests/range_readout.rs` measures that
+// cascade directly).
+//
+// This is the first re-measure where the movement is entirely ONE-WAY. The
+// comment above reads two-way movement as evidence of a threshold rather than
+// a collapse; seven losses and no gains is the other shape, and it is the
+// honest reading that this change pushed the roster down rather than around.
+// The counts holding is what says it is a doctrine loss and not a world that
+// stopped observing.
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -265,59 +294,59 @@ const LADDER_TABLE: &[Row] = &[
         1,
         "gnoll",
         LadderRung::Unknown,
+        LadderRung::Counted,
+        6472,
+        None,
+    ),
+    (
+        1,
+        "goblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "gully-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "hill-dwarf",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "hobgoblin",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "human",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        4010,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "kobold",
+        LadderRung::Unknown,
         LadderRung::Predictive,
         6472,
         Some(36531.74198950235),
     ),
     (
-        1,
-        "goblin",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
-    ),
-    (
-        1,
-        "gully-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
-    ),
-    (
-        1,
-        "hill-dwarf",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
-    ),
-    (
-        1,
-        "hobgoblin",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
-    ),
-    (
-        1,
-        "human",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        4010,
-        Some(36531.74198950235),
-    ),
-    (
-        1,
-        "kobold",
-        LadderRung::Unknown,
-        LadderRung::Predictive,
-        6472,
-        Some(36531.74198950235),
-    ),
-    (
         2,
         "bugbear",
         LadderRung::Unknown,
@@ -337,9 +366,9 @@ const LADDER_TABLE: &[Row] = &[
         2,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36337.174658835705),
+        None,
     ),
     (
         2,
@@ -409,9 +438,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         53,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -441,9 +470,9 @@ const LADDER_TABLE: &[Row] = &[
         3,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         32,
-        Some(36125.669504115634),
+        None,
     ),
     (
         3,
@@ -473,17 +502,17 @@ const LADDER_TABLE: &[Row] = &[
         4,
         "desert-dwarf",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         3785,
-        Some(36540.36159622378),
+        None,
     ),
     (
         4,
@@ -553,9 +582,9 @@ const LADDER_TABLE: &[Row] = &[
         5,
         "gnoll",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         500,
-        Some(36556.47532198732),
+        None,
     ),
     (
         5,

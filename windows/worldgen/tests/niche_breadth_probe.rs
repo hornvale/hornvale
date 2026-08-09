@@ -125,6 +125,19 @@ fn report(seed_value: u64) {
                 .expect("settler has biosphere traits")
         })
         .collect();
+    let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
+    // The Range: the `biome_affinity` registry is NOT empty — `gnoll` and
+    // `woolly-mammoth` carry rows since task 4, and `SETTLERS` contains gnoll.
+    // So this is a deliberate CONTROL, not a copy of the registry.
+    //
+    // Deliberate because this probe reads the shape of the CONDITION niche —
+    // how broad a band of the world each settler's authored curves admit — and
+    // a biome affinity is a separate factor applied on top of that product.
+    // Threading it would narrow gnoll's measured breadth for a reason that has
+    // nothing to do with its condition niche, which is the quantity printed
+    // here. All-`None` is bit-identical to the pre-affinity physics (task 3's
+    // `an_absent_affinity_is_bit_identical`).
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; biosphere.len()];
 
     let caps = per_species_capacity(
         geo,
@@ -134,6 +147,8 @@ fn report(seed_value: u64) {
         insolation_scalar,
         &regime,
         &biosphere,
+        &realm,
+        &affinity,
     );
     let substrate = substrate_field(
         geo,

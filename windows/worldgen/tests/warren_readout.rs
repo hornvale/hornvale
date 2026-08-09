@@ -144,6 +144,20 @@ fn measure_seed(
     let insolation_scalar = climate.insolation();
     let regime = climate.regime();
 
+    // The Range: the `biome_affinity` registry is NOT empty. Since task 4 it
+    // carries `gnoll` and `woolly-mammoth`, and both are in the whole-biosphere
+    // roster this readout scores — so the all-`None` slice below is a deliberate
+    // CONTROL, not a restatement of the registry, and the earlier claim that it
+    // was "exact, not a stand-in" is false from task 4 onward.
+    //
+    // Deliberate because this readout measures the REALM question — what the
+    // habitat gate does to a kind's field — and its published numbers were
+    // measured against the pre-affinity world. Task 3's
+    // `an_absent_affinity_is_bit_identical` proves an all-`None` slice
+    // reproduces exactly that world, so holding it here keeps a realm reading
+    // from silently becoming a realm-plus-biome reading. The affinity's own
+    // readout is `range_readout.rs`.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = vec![None; bio.len()];
     let k_after = per_species_suitability(
         geo,
         &terrain,
@@ -153,6 +167,7 @@ fn measure_seed(
         &regime,
         bio,
         realm_after,
+        &affinity,
     );
     let k_before = per_species_suitability(
         geo,
@@ -163,6 +178,7 @@ fn measure_seed(
         &regime,
         bio,
         realm_before,
+        &affinity,
     );
 
     let stats_for = |label: &str| -> KindSeedStats {

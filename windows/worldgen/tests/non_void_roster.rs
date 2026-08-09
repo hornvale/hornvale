@@ -68,6 +68,29 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
                 .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
         })
         .collect();
+    // THE LIVE `biome_affinity` REGISTRY, not an all-`None` stand-in — and this
+    // is the one place on the branch where that distinction has teeth.
+    //
+    // This test is the ghost guard: "a kind can be authored, load, satisfy every
+    // referential-integrity check, and still have K = 0 on every cell of every
+    // world". A biome affinity is a per-biome MULTIPLIER on exactly that K, and
+    // it is the only mechanism in the codebase that can push a kind's field
+    // toward zero across a whole class of biomes at once. A guard against
+    // vanishing kinds that is handed `None` for every kind is structurally blind
+    // to the newest way a kind can vanish — it would keep passing while the
+    // shipped registry drove a row's factor to a value no cell could clear.
+    //
+    // Same `wc.biosphere` order as `bios` and `realm`, so the three slices stay
+    // index-aligned; a kind absent from the sparse store resolves to `None`,
+    // which task 3's `an_absent_affinity_is_bit_identical` proved is the
+    // unrestricted 1.0 no-op. That is what makes threading the real store safe
+    // for the 27 kinds that carry no row: they are scored exactly as before, and
+    // only the two occupants see anything new.
+    let affinity: Vec<Option<hornvale_species::BiomeAffinity>> = wc
+        .biosphere
+        .iter()
+        .map(|(k, _)| wc.biome_affinity.get(k).cloned())
+        .collect();
 
     let world = build_world(
         Seed(seed),
@@ -95,7 +118,7 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     };
 
     let ks = per_species_suitability(
-        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm,
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios, &realm, &affinity,
     );
 
     let mut viable = BTreeSet::new();
