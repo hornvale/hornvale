@@ -5,9 +5,15 @@
 use crate::BoardError;
 use crate::post::Post;
 use crate::store::{Board, StoredPost};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Every post appended in the last `since_days`, oldest first, from history.
+///
+/// Deduplicated by id: a post's id is the object id of its own bytes (D11),
+/// so a reap-then-repost of byte-identical content is the SAME post
+/// reappearing in the `--diff-filter=A` walk, not a new one. The walk is
+/// oldest-first, so the first occurrence recorded is already the earliest
+/// `committed_at` — that is when the project first learned the thing.
 pub fn history(
     board: &Board,
     since_days: u64,
@@ -26,6 +32,7 @@ pub fn history(
         &tip,
     ])?;
     let mut out = Vec::new();
+    let mut seen_ids: BTreeSet<String> = BTreeSet::new();
     let mut when = 0u64;
     for l in log.lines() {
         if let Some(ts) = l.strip_prefix('@') {
@@ -37,17 +44,29 @@ pub fn history(
             if when < cutoff {
                 continue;
             }
+            if seen_ids.contains(id) {
+                // Same content, already recorded from an earlier (or equal)
+                // commit in this oldest-first walk -- not a second post.
+                continue;
+            }
             // Read the blob by id — it survives compaction because the id IS
             // the object id (D11).
-            let Ok(text) = board.repo().git(&["cat-file", "-p", id]) else {
-                continue;
+            let text = match board.repo().git(&["cat-file", "-p", id]) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("board: skipping unreadable post {id}: {e}");
+                    continue;
+                }
             };
             match Post::from_json(&text) {
-                Ok(post) => out.push(StoredPost {
-                    id: id.to_string(),
-                    post,
-                    committed_at: when,
-                }),
+                Ok(post) => {
+                    seen_ids.insert(id.to_string());
+                    out.push(StoredPost {
+                        id: id.to_string(),
+                        post,
+                        committed_at: when,
+                    });
+                }
                 Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
             }
         }
@@ -103,11 +122,22 @@ pub fn digest(posts: &[StoredPost]) -> String {
         .iter()
         .filter(|s| s.post.kind == "ask")
         .filter(|a| {
-            let thread = a.post.str_field("thread");
-            thread.is_none()
-                || !posts
-                    .iter()
-                    .any(|r| r.post.kind == "reply" && r.post.str_field("thread") == thread)
+            // Answered-ness is judged PER ASK, not per thread value: two
+            // asks can share a `thread`, and a single reply must not mark
+            // both answered — a later question the reply never saw is still
+            // open. A reply only counts if it was committed at or after
+            // this specific ask, so a reply that predates the ask (and thus
+            // cannot be responding to it) does not count either.
+            let Some(thread) = a.post.str_field("thread") else {
+                // No thread named: nothing could ever be correlated to this
+                // ask, so it can never show as answered.
+                return true;
+            };
+            !posts.iter().any(|r| {
+                r.post.kind == "reply"
+                    && r.post.str_field("thread") == Some(thread)
+                    && r.committed_at >= a.committed_at
+            })
         })
         .collect();
     if !unanswered.is_empty() {
@@ -200,6 +230,177 @@ mod tests {
         assert!(
             !out.is_empty(),
             "say 'nothing yet' rather than printing nothing"
+        );
+    }
+
+    #[test]
+    fn a_single_ask_with_no_reply_is_unanswered() {
+        let posts = vec![StoredPost {
+            id: "a".into(),
+            post: Post::new("ask", "campaign/x")
+                .with("thread", json!("t1"))
+                .with("note", json!("is anyone else seeing this")),
+            committed_at: 10,
+        }];
+        let out = digest(&posts);
+        assert!(
+            out.contains("is anyone else seeing this"),
+            "an ask with no reply at all must be flagged: {out}"
+        );
+    }
+
+    #[test]
+    fn a_single_ask_with_a_later_reply_in_its_thread_is_answered() {
+        let posts = vec![
+            StoredPost {
+                id: "a".into(),
+                post: Post::new("ask", "campaign/x")
+                    .with("thread", json!("t1"))
+                    .with("note", json!("is anyone else seeing this")),
+                committed_at: 10,
+            },
+            StoredPost {
+                id: "b".into(),
+                post: Post::new("reply", "campaign/y").with("thread", json!("t1")),
+                committed_at: 20,
+            },
+        ];
+        let out = digest(&posts);
+        assert!(
+            !out.contains("is anyone else seeing this"),
+            "a reply committed after the ask, in the same thread, must clear it: {out}"
+        );
+    }
+
+    #[test]
+    fn an_ask_with_no_thread_field_is_always_unanswered() {
+        // Nothing can correlate a reply to a threadless ask, so it must
+        // never be able to show as answered.
+        let posts = vec![StoredPost {
+            id: "a".into(),
+            post: Post::new("ask", "campaign/x").with("note", json!("untethered question")),
+            committed_at: 10,
+        }];
+        let out = digest(&posts);
+        assert!(
+            out.contains("untethered question"),
+            "a threadless ask must always be flagged: {out}"
+        );
+    }
+
+    #[test]
+    fn an_ask_is_answered_per_ask_not_per_thread_so_a_later_question_still_shows_unanswered() {
+        // I1: two asks share one thread; a single reply that predates the
+        // second question must not silently mark it answered too -- that
+        // false negative is exactly the failure mode the unanswered-ask
+        // list exists to catch.
+        let posts = vec![
+            StoredPost {
+                id: "ask1".into(),
+                post: Post::new("ask", "campaign/x")
+                    .with("thread", json!("t1"))
+                    .with("note", json!("first question")),
+                committed_at: 10,
+            },
+            StoredPost {
+                id: "reply1".into(),
+                post: Post::new("reply", "campaign/y").with("thread", json!("t1")),
+                committed_at: 20,
+            },
+            StoredPost {
+                id: "ask2".into(),
+                post: Post::new("ask", "campaign/x")
+                    .with("thread", json!("t1"))
+                    .with("note", json!("second question")),
+                committed_at: 30,
+            },
+        ];
+        let out = digest(&posts);
+        assert!(
+            out.contains("second question"),
+            "the later, genuinely unanswered question must be flagged: {out}"
+        );
+        assert!(
+            !out.contains("first question"),
+            "the earlier question was answered by the reply and must not be flagged: {out}"
+        );
+    }
+
+    #[test]
+    fn a_reply_older_than_its_ask_does_not_answer_it() {
+        // I1's other half: a reply that predates the ask cannot possibly be
+        // responding to it, so it must not count as an answer.
+        let posts = vec![
+            StoredPost {
+                id: "reply1".into(),
+                post: Post::new("reply", "campaign/y").with("thread", json!("t1")),
+                committed_at: 50,
+            },
+            StoredPost {
+                id: "ask1".into(),
+                post: Post::new("ask", "campaign/x")
+                    .with("thread", json!("t1"))
+                    .with("note", json!("asked after the only reply")),
+                committed_at: 100,
+            },
+        ];
+        let out = digest(&posts);
+        assert!(
+            out.contains("asked after the only reply"),
+            "a reply older than the ask it shares a thread with must not clear it: {out}"
+        );
+    }
+
+    #[test]
+    fn history_dedupes_a_reap_then_repost_of_identical_content_keeping_the_earliest_committed_at() {
+        // I3: a post's id is the hash of its own bytes, so a reap-then-
+        // repost of byte-identical content is the SAME post reappearing in
+        // the `--diff-filter=A` walk, not a new one -- double-counting it
+        // would be exactly the "did the board double-count" blind spot the
+        // review named.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let post = Post::new("technique", "campaign/x").with("note", json!("reuse a temp index"));
+        let id = board.append(&post).expect("first append");
+        let first_committed_at: u64 = repo
+            .git(&[
+                "log",
+                "-1",
+                "--format=%ct",
+                &board.tip().expect("tip").expect("some"),
+            ])
+            .expect("first commit time")
+            .parse()
+            .expect("timestamp");
+
+        // A bare technique never decays on its own (`is_reapable` never
+        // drops one unretracted); retract it explicitly so it can be
+        // legitimately reaped, then reappend byte-identical content -- the
+        // repost the review describes.
+        board
+            .append(&Post::new("retract", "campaign/x").with("post", json!(id)))
+            .expect("retract");
+        let posts = board.posts_at_tip().expect("posts");
+        let ctx = crate::live::LiveContext::probe(&repo, &posts).expect("probe");
+        let dropped = board.reap(&ctx).expect("reap");
+        assert_eq!(
+            dropped, 1,
+            "the retracted technique should be the only thing reaped"
+        );
+
+        board.append(&post).expect("repost identical content");
+
+        let seen = history(&board, 3_650, ctx.now_unix + 1).expect("history");
+        let techniques: Vec<&StoredPost> =
+            seen.iter().filter(|s| s.post.kind == "technique").collect();
+        assert_eq!(
+            techniques.len(),
+            1,
+            "identical content must count once, not twice: {seen:?}"
+        );
+        assert_eq!(
+            techniques[0].committed_at, first_committed_at,
+            "the earliest commit's timestamp must win, not the repost's"
         );
     }
 }
