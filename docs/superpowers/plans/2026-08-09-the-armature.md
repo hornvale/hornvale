@@ -162,7 +162,7 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 ### Task 2: D5 reports direction distinctly from strength
 
-**Files:** Modify `windows/lab/src/domesday/detect.rs`
+**Files:** Modify `windows/lab/src/domesday/detect.rs`, `windows/lab/src/domesday/render.rs`
 
 **Interfaces:**
 - Consumes: `Expectation { …, direction }`, `DIRECTIONS`
@@ -291,11 +291,38 @@ Replace `detect_d5`'s reporting block (currently `detect.rs:265-279`) with:
 Run: `cargo test -p hornvale-lab --lib domesday::detect`
 Expected: PASS. Other tests referencing `"D5"` will need their detector string updated to `"D5 strength"` — update them, and say in your report which you changed.
 
+- [ ] **Step 4b: Fix the renderer's hardcoded detector list — REQUIRED, or the survey silently undercounts**
+
+`render.rs:548` iterates a frozen literal:
+
+```rust
+    for detector in ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"] {
+```
+
+Renaming D5 makes that row report **0** while findings exist — a published
+undercount, in the artifact whose whole claim is that it computes rather than
+restates. This is the fourth frozen roster this programme has found; close the
+class rather than patching the literal.
+
+**Derive the list from the findings** instead:
+
+```rust
+    let mut detectors: Vec<&str> = findings.iter().map(|f| f.detector).collect();
+    detectors.sort_unstable();
+    detectors.dedup();
+    for detector in detectors {
+```
+
+A detector that fires nothing then has no row, which is correct — an empty row
+asserts a measurement that was never taken. Add a test that a finding with a
+novel detector name appears in the rendered index, so a future rename cannot
+silently vanish again.
+
 - [ ] **Step 5: Commit**
 
 ```bash
 cargo fmt
-git add windows/lab/src/domesday/detect.rs
+git add windows/lab/src/domesday/detect.rs windows/lab/src/domesday/render.rs
 git commit -m "feat(lab): D5 separates a backwards link from a weak one
 
 A direction mismatch means the wire is on the wrong terminal; a strength
