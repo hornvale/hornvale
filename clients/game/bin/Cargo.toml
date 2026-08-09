@@ -1,0 +1,27 @@
+[package]
+name = "hornvale-game"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Hornvale: the game."
+
+[lib]
+name = "hornvale_game"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hornvale-game"
+path = "src/main.rs"
+
+[dependencies]
+hornvale-game-core = { path = "../core" }
+hornvale-kernel = { path = "../../../kernel" }
+hornvale-worldgen = { path = "../../../windows/worldgen" }
+hornvale-vessel = { path = "../../../windows/vessel" }
+# `SkyPins`/`TerrainPins` are re-exported from these two domains, not from
+# hornvale-worldgen (a private `use`, not `pub use`, in its lib.rs) — the
+# same pair `clients/vessel/wasm/Cargo.toml` depends on directly for the
+# identical reason.
+hornvale-astronomy = { path = "../../../domains/astronomy" }
+hornvale-terrain = { path = "../../../domains/terrain" }
+crossterm = "0.29"
