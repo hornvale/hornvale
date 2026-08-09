@@ -17,7 +17,7 @@ use hornvale_terrain::{
 use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
     accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
-    commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
+    commodity_name, flagship_of, language_of_in, migration_events, observed_phenomena_as_at_from,
     observed_phenomena_as_in_from, occupation_records, rock_class_name,
     settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
     soil_order_name, terrain_of, vestiges_field,
@@ -4173,6 +4173,95 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(a.unresolved as f64)
             }),
         },
+        // THE CENSUS COLUMN THAT RETIRES THE SINGLE-SEED DISPLACEMENT GATES
+        // (The Assize). `cli/tests/history_battery.rs` asserted `mig42 > 0` on
+        // seed 42 alone, and `history_sundering.rs` reported the same quantity
+        // over twelve worlds. Measured over 48 worlds the distribution is
+        // bimodal with deciles [0, 0, 3, 5, 111, 291, 578] and is **exactly
+        // zero on 6 of 48 worlds** — so a single-seed firing gate has a ~12.5%
+        // failure rate by construction, and the nine-seed sweep that asserted
+        // it per seed was passing on luck.
+        //
+        // Calls `migration_events` rather than re-folding the ledger here: the
+        // census must measure the SAME quantity the battery did, and a second
+        // implementation would silently become a different measurement.
+        Metric {
+            name: "climate-displacement-events",
+            domain: Domain::Demography,
+            role: Role::Descriptor,
+            doc: "How many occupations on this world ended in climate-driven migration \
+                  (`occ-cause` = `migrated`), excluding conquest-relocations — the \
+                  displacement mechanic's volume (The Assize). Replaces the seed-42 gate in \
+                  `cli/tests/history_battery.rs` and the twelve-seed panel in \
+                  `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit \
+                  in single digits and a minority run to the hundreds, and a real minority \
+                  measure zero — a mild deep past, not an inert bake. Absent on a world \
+                  with no occupation records.",
+            summary: SummaryKind::Numeric {
+                // Straddling the measured bimodality rather than spreading evenly:
+                // the lower edges resolve the crowded 0-10 mode, the upper ones the
+                // long tail that runs to 578.
+                bucket_edges: &[0.0, 1.0, 5.0, 25.0, 100.0, 300.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                MetricValue::Number(migration_events(v.world()) as f64)
+            }),
+        },
+        // THE CENSUS COLUMN THAT RETIRES THE TRIBUTE PANEL (The Assize).
+        // `windows/worldgen/tests/history_tithe.rs` asserted on
+        // `BakeCensus::tribute_collected` — a FLOW integrated inside
+        // `History::tally`, which `build_world_to` DISCARDS before any census
+        // view exists. The world is designed to remember who owes whom, not
+        // how much has been paid, so this measures the stock the world keeps
+        // rather than proxying the flow it throws away.
+        //
+        // CHOSEN BY MEASUREMENT over three alternatives, all scored against
+        // the bake's own `tribute_collected` over 36 worlds:
+        //     stock (this column)          spearman +0.9344
+        //     SUM(now - since)                      +0.8909
+        //     distinct patrons                      +0.8419
+        //     largest patron's share                -0.7692  (partly arithmetic:
+        //                                    top >= 1/stock, decaying to -0.539
+        //                                    once small worlds are excluded)
+        // A normalized share was also tried and is markedly WORSE:
+        // `stock / occupations` scores +0.623 against this column's +0.934.
+        // The flow tracks the absolute number of relations, not a rate.
+        //
+        // An invariant sibling ("does every patron reference resolve", the
+        // shape of `raid-attribution-unresolved`) was DECLINED as structurally
+        // vacuous: `history_emit.rs` already `.expect`s that a tribute patron
+        // names a minted community, so such a column could only ever fire on
+        // hand-built input.
+        Metric {
+            name: "tribute-relations-standing",
+            domain: Domain::Society,
+            role: Role::Descriptor,
+            doc: "How many standing tribute relations (`pays-tribute-to`) this world holds \
+                  at `now` — the subordination stock (The Assize). Replaces \
+                  `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume \
+                  panel, whose quantity lives on the bake's discarded tally and is \
+                  unreachable from any census metric. Agrees with that flow at spearman \
+                  0.934 over 36 worlds — a measured witness, NOT an equivalence: this is \
+                  a stock and that was a flow. Absent on a world with no occupation \
+                  records.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0, 25.0, 60.0, 100.0, 150.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                if occupation_records(v.world()).is_empty() {
+                    return MetricValue::Absent;
+                }
+                let standing = v
+                    .world()
+                    .ledger
+                    .find(hornvale_history::PAYS_TRIBUTE_TO)
+                    .count();
+                MetricValue::Number(standing as f64)
+            }),
+        },
     ]
 }
 
@@ -8013,7 +8102,14 @@ mod tests {
         // identical to `raid-victim-rate` — every raid closes exactly one
         // victim, so the count column would have been a second copy of the
         // first rate. Each column here is paid for on every census forever.
-        assert_eq!(registry().len(), 191);
+        //
+        // +2 for THE TARE (climate-displacement-events, retiring
+        // `history_battery`'s seed-42 gate and `history_sundering`'s
+        // twelve-seed panel; tribute-relations-standing, retiring
+        // `history_tithe`'s twelve-world tribute-volume panel because the
+        // census can only reach the ledger's tribute STOCK, never the bake's
+        // discarded FLOW).
+        assert_eq!(registry().len(), 193);
     }
 
     // --- The Wearing (Task 11): the syllable and transparency readings. ---

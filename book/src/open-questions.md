@@ -142,6 +142,11 @@ reached twice in one day by the same reasoning, first from a 1,055-commit-stale
 timing baseline, and was overturned by a human disagreeing with an artifact
 that looked authoritative.
 
+Two campaigns reached this thread independently on the same day, from opposite
+ends of it — one from a check that could not fire, one from a check that fired
+wrongly. That they collided here, in a merge, is itself the strongest evidence
+the chapter offers about how common the family is.
+
 A seventh campaign finds the family in a place none of the six had looked. The
 Domesday (2026-08-08) built a generated survey of the thousand-world census
 whose whole purpose is finding weaknesses, and produced three unenforced guards
@@ -169,6 +174,46 @@ preregistered study — and it carries no information about any world. So the
 floor gains a second question, asked of measurements rather than of checks:
 *can this metric take a different value on a different world, and if not, what
 is the study reading it actually scoring?*
+
+An eighth campaign, landing the same day, moves the finding from the check to the *order of its
+repair*. The Assize (2026-08-08) inherited a queued task reading "mechanize the
+prose discriminator" — the cost batteries' rule for telling a contended run
+from a regression, written in a module doc and applied by hand. Measured
+against the run it was written for, the rule gives the **wrong answer**:
+`genesis` at 2.09x its recorded basis with four control metrics at 0.96-1.29x
+reads, under "a real regression is LOCAL", as a regression — while a quiet box
+builds the same world in 3948 ms against a 13000 ms ceiling. The rule fails
+because the five metrics have different resource profiles, only one of them
+sculpting terrain, so a saturated runner starves exactly one and uniformity was
+never the right test. Executing the task as written would have promoted a wrong
+predicate from prose into code, where it would carry the authority of having
+been computed. **A criterion earns mechanization by being correct, not by being
+written down**; and the corrected version paid at once, finding a real localised
+cost increase on its first run and bisecting it to a single commit while four
+named sibling candidates moved it by zero.
+
+The same campaign supplies the corner's other half, from its own repair. The
+mechanized verdict then gave a confident wrong answer on a *second* battery,
+because the two files' bases had been measured on different machines and the
+heavy tier runs on only one of them — a ratio across two machines measures the
+machines. The fix is the shape this chapter keeps arriving at: a check that
+**states its own applicability** and declines rather than computing, printing
+"bases were measured on aarch64-10, this is x86_64-40" and suppressing only the
+ratio-derived claim while the raw milliseconds stand.
+
+Two smaller instances from the same campaign are worth the floor's attention
+because neither is a test. A committed, published artifact carried a headline
+line reading `0 migration events (floor 5). PASS` — a verdict string never
+wired to any check at all, which is this chapter's original floor in its purest
+form (a check that cannot fire, with no check behind it) and which stayed
+invisible for as long as the number it reported was healthy. And a rank-order
+bound adopted to replace a rotted threshold turned out to be **unfalsifiable by
+the only two mutation controls its file carries** — the correlation moves 0.831
+to 0.127 under one of them and never crosses zero. It was retained, relabelled
+in place as a directional record rather than a proven guard, and the tempting
+threshold that *would* have made it fire was refused because it would have been
+chosen for firing. Disclosing an unfalsifiable check beats quietly shipping one,
+which is this chapter's practice working rather than a new failure.
 
 ## What the world can already check itself on (high confidence)
 

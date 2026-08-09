@@ -19,7 +19,9 @@ pub mod synthetic;
 pub mod timings;
 
 pub use blackbox::record_failure;
-pub use census_guard::{CENSUS_GOLDENS_DIR, current_hostname, require_canonical_host_for};
+pub use census_guard::{
+    CENSUS_GOLDENS_DIR, canonical_host, current_hostname, require_canonical_host_for,
+};
 pub use chart::{bar_chart_svg, charts_for};
 pub use diff::{render_diff, render_diff_results};
 pub use metrics::{

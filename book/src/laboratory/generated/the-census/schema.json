@@ -2637,6 +2637,34 @@
       "rung": "settlements"
     },
     {
+      "buckets": [
+        0.0,
+        1.0,
+        5.0,
+        25.0,
+        100.0,
+        300.0
+      ],
+      "doc": "How many occupations on this world ended in climate-driven migration (`occ-cause` = `migrated`), excluding conquest-relocations — the displacement mechanic's volume (The Assize). Replaces the seed-42 gate in `cli/tests/history_battery.rs` and the twelve-seed panel in `windows/worldgen/tests/history_sundering.rs`. Bimodal: most worlds sit in single digits and a minority run to the hundreds, and a real minority measure zero — a mild deep past, not an inert bake. Absent on a world with no occupation records.",
+      "kind": "numeric",
+      "name": "climate-displacement-events",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        25.0,
+        60.0,
+        100.0,
+        150.0
+      ],
+      "doc": "How many standing tribute relations (`pays-tribute-to`) this world holds at `now` — the subordination stock (The Assize). Replaces `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume panel, whose quantity lives on the bake's discarded tally and is unreachable from any census metric. Agrees with that flow at spearman 0.934 over 36 worlds — a measured witness, NOT an equivalence: this is a stock and that was a flow. Absent on a world with no occupation records.",
+      "kind": "numeric",
+      "name": "tribute-relations-standing",
+      "rung": "settlements"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -2646,7 +2674,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x1e105047d2423081"
+    "fnv1a64": "0x7f32c268e6f106c0"
   },
   "schema_version": 1,
   "study": {

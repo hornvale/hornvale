@@ -338,6 +338,7 @@
 - [The Reassay](./chronicle/the-reassay.md)
 - [The Digest](./chronicle/the-digest.md)
 - [The Domesday](./chronicle/the-domesday.md)
+- [The Assize](./chronicle/the-assize.md)
 
 # Appendix: The Frontier
 
