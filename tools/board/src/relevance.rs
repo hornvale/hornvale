@@ -74,18 +74,65 @@ impl Cursor {
 }
 
 /// Post ids added to the board since the cursor was last recorded.
+///
+/// **An empty return means genuinely nothing is new — never "could not
+/// tell".** That distinction is the whole point: the caller filters a render
+/// down to exactly this set and then advances the cursor past it, so an
+/// empty set that actually meant "the read failed" would render nothing and
+/// then mark every pending post seen, permanently. Three cases, kept
+/// distinct on purpose:
+///
+/// 1. The board has no tip yet — legitimately nothing unseen: `Ok(empty)`.
+/// 2. The cursor names a commit git cannot resolve (a plausible if rare
+///    corruption). Treated as "this worktree has seen nothing" and reported
+///    against the no-cursor fallback range, with a one-line stderr warning —
+///    fail OPEN, because re-rendering a post is cosmetic and hiding one
+///    forever is the harm this board exists to prevent.
+/// 3. Any other git failure propagates as `Err`, so the caller can decline to
+///    advance the cursor rather than have the failure silently reported as
+///    "nothing new".
+///
+/// **Caller contract, for whoever wires this to a render:** advance the
+/// cursor based on the ids returned *here*, not based on which of them
+/// [`is_relevant`] chose to display. Filtering an id out for relevance is a
+/// per-render, per-reader display decision with no persistent memory of its
+/// own; treating a relevance-filtered id as "seen" would let a transient
+/// [`changed_paths`] failure (which makes every path-scoped post look
+/// irrelevant for that one pass) combine with cursor advancement to
+/// reproduce this exact hazard one layer up, permanently hiding a post this
+/// worktree never actually saw.
 pub fn unseen(board: &Board, cursor: &Cursor) -> Result<BTreeSet<String>, BoardError> {
     let Some(tip) = board.tip()? else {
         return Ok(BTreeSet::new());
     };
     let range = match cursor.last_seen() {
-        Some(seen) => format!("{seen}..{tip}"),
+        // `^{commit}` forces git to confirm the object actually exists and is
+        // a commit, not merely that the string looks like one: a bare full
+        // hex sha passes `rev-parse --verify` as syntactically valid even
+        // when no such object is in the store, which would defeat this check
+        // entirely.
+        Some(seen)
+            if board
+                .repo()
+                .rev_parse_verify(&format!("{seen}^{{commit}}"))?
+                .is_some() =>
+        {
+            format!("{seen}..{tip}")
+        }
+        Some(seen) => {
+            eprintln!(
+                "board: cursor at {:?} names commit {seen}, which git cannot resolve; \
+                 ignoring it and treating this worktree as having seen nothing, rather than \
+                 risk reporting no unseen posts",
+                cursor.path()
+            );
+            tip.clone()
+        }
         None => tip.clone(),
     };
     let log = board
         .repo()
-        .git(&["log", "--format=", "--diff-filter=A", "--name-only", &range])
-        .unwrap_or_default();
+        .git(&["log", "--format=", "--diff-filter=A", "--name-only", &range])?;
     Ok(log
         .lines()
         .filter_map(|l| l.strip_prefix("posts/"))
@@ -164,5 +211,58 @@ mod tests {
         let now = unseen(&board, &cursor).expect("unseen");
         assert!(now.contains(&second), "the new post is unseen");
         assert!(!now.contains(&first), "the old post is not");
+    }
+
+    #[test]
+    fn unseen_falls_back_to_everything_when_the_cursor_names_an_unresolvable_commit() {
+        // A syntactically valid 40-hex-char sha that no object in the repo
+        // matches. This must fail OPEN: a repeat render is cosmetic, a
+        // silently swallowed post is the harm this board exists to prevent.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cursor-bad-sha");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        let id = board.append(&Post::new("notice", "b")).expect("append");
+        cursor
+            .record(&"0".repeat(40))
+            .expect("record an unresolvable cursor");
+
+        let ids = unseen(&board, &cursor).expect("unseen");
+        assert!(
+            ids.contains(&id),
+            "an unresolvable cursor must not silently hide a pending post: {ids:?}"
+        );
+    }
+
+    #[test]
+    fn unseen_propagates_a_genuine_git_failure_instead_of_reporting_empty() {
+        // Corrupts the board's own tree object (deletes its loose object
+        // file) so `git log` fails for a reason that has nothing to do with
+        // the cursor. This must surface as `Err`, not silently collapse to
+        // an empty set -- an empty set here would look identical to "nothing
+        // new" to the caller, which then advances the cursor and loses
+        // whatever was actually pending.
+        let (_d, repo) = temp_repo();
+        let board = Board::with_ref(repo.clone(), "refs/test/cursor-corrupt");
+        let cursor = Cursor::open(&repo).expect("cursor");
+
+        board.append(&Post::new("notice", "b")).expect("append");
+        let tip = board.tip().expect("tip").expect("some");
+        let tree = repo
+            .git(&["rev-parse", "--verify", &format!("{tip}^{{tree}}")])
+            .expect("tree");
+        let object_path = repo
+            .root()
+            .join(".git/objects")
+            .join(&tree[0..2])
+            .join(&tree[2..]);
+        std::fs::remove_file(&object_path).expect("corrupt the tree object");
+
+        let err = unseen(&board, &cursor)
+            .expect_err("a genuine git failure must surface as Err, not an empty set");
+        assert!(
+            matches!(err, BoardError::Git { .. }),
+            "expected a git error, got {err:?}"
+        );
     }
 }
