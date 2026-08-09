@@ -25,3 +25,16 @@ hornvale-vessel = { path = "../../../windows/vessel" }
 hornvale-astronomy = { path = "../../../domains/astronomy" }
 hornvale-terrain = { path = "../../../domains/terrain" }
 crossterm = "0.29"
+# CONCERN, flagged per the task brief: a third new dependency beyond
+# crossterm. Added only after review found that an external SIGINT/SIGTERM/
+# SIGHUP (e.g. `kill` from another terminal, or the controlling terminal
+# closing) took Rust's default disposition — terminate immediately, no
+# unwind, no `Drop` — and left the terminal in raw mode on the alternate
+# screen (see `term.rs`'s `watch_signals` doc and the task report's pty
+# evidence). `signal-hook`'s self-pipe-backed `iterator::Signals` is the
+# standard, minimal-risk way to do this without hand-rolling async-signal-
+# safety; `cargo tree` already resolves it at 0.3.18 as a TRANSITIVE
+# dependency of crossterm itself (crossterm's own SIGWINCH/resize handling
+# uses it), so this adds no new crate to the build — only a direct `use` of
+# one already being compiled.
+signal-hook = "0.3"

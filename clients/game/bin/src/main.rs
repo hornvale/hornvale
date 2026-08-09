@@ -89,6 +89,14 @@ fn play(driver: &mut Driver, term: &term::Term) -> std::io::Result<()> {
                 let Some(verb) = input::verb_for(key) else {
                     continue;
                 };
+                // Detected by matching the SENT verb, not the sim's answer —
+                // correct today only because `input::verb_for` is the sole
+                // source of outgoing verbs and its only release-shaped line
+                // is the literal string `"release"` (it never emits
+                // `"quit"`, the sim's other synonym for the same thing). If
+                // a future free-text input mode lets a player type `quit`
+                // directly, this check needs to grow with it or move to
+                // reading the driver's answer instead.
                 let released = verb == "release";
                 let json = driver.handle(&verb);
                 redraw(term, &json)?;

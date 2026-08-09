@@ -22,13 +22,19 @@ use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, VesselError, WorldContext, snapshot_json,
 };
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world};
 
 /// Why a [`Driver`] could not start.
+///
+/// Each variant wraps the real typed error from the layer that failed
+/// (`hornvale-worldgen`'s [`BuildError`], `hornvale-vessel`'s
+/// [`VesselError`] twice over) rather than flattening any of them to a
+/// `String` — a caller that wants to match on the underlying cause still
+/// can, and `Display` below is the only place formatting happens.
 #[derive(Debug)]
 pub enum DriverError {
     /// Genesis refused the seed.
-    Genesis(String),
+    Genesis(BuildError),
     /// The world-scoped [`WorldContext`] could not be derived.
     Context(VesselError),
     /// The possession itself failed (no settlement, no species, ...).
@@ -87,7 +93,7 @@ impl Driver {
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
-        .map_err(|e| DriverError::Genesis(e.to_string()))?;
+        .map_err(DriverError::Genesis)?;
         let world = Box::into_raw(Box::new(world));
         // SAFETY: `world` is a fresh heap allocation this function owns.
         // Nothing else can alias it yet, and it outlives `ctx`/`session`

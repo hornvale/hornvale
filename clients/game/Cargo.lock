@@ -166,6 +166,7 @@ dependencies = [
  "hornvale-terrain",
  "hornvale-vessel",
  "hornvale-worldgen",
+ "signal-hook",
 ]
 
 [[package]]
