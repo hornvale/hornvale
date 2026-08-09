@@ -92,49 +92,105 @@ fn gnoll_tag(wc: &hornvale_worldgen::WorldComponents) -> usize {
 /// approximately equal. The Warren proved its `Surface` path to bit-difference
 /// 0 and the same standard applies here: this is what makes Task 3 provably
 /// inert, so that only Task 4 moves the world.
+///
+/// **Fix round 1:** the first version of this test called
+/// `per_species_suitability` twice with the SAME `None`-filled slice and
+/// compared the two results — which only proves the function is
+/// deterministic, not that an absent affinity is a no-op. It would have
+/// passed if `None` resolved to "multiply by 0.5" instead of "multiply by
+/// 1.0", because both calls would have multiplied by 0.5 identically. Its own
+/// `compared > 0` anti-vacuity guard couldn't catch this either: it counted
+/// how many cells were compared, not whether the comparison was capable of
+/// discriminating anything.
+///
+/// Fixed to make the real claim, split into two parts against a shared
+/// `gnoll` reading:
+///
+/// 1. `None` and an explicit `Some(BiomeAffinity { default: 1.0, by_biome:
+///    vec![] })` — an affinity that is a no-op BY VALUE rather than by
+///    absence — must be bit-identical. That is the actual "absent == no-op"
+///    claim.
+/// 2. A NON-uniform affinity must differ from both (1)'s baselines. This is
+///    what makes (1) non-vacuous by construction: it proves the comparison
+///    in (1) is capable of failing, so its passing is evidence and not an
+///    artifact of comparing a value against itself.
 #[test]
 fn an_absent_affinity_is_bit_identical() {
     let (terrain, climate, obliquity_deg, insolation_scalar, regime, wc) = fixture();
     let geo = terrain.geosphere();
     let (bio, realm) = slices(&wc);
+    let tag = gnoll_tag(&wc);
+
     let none: Vec<Option<BiomeAffinity>> = vec![None; bio.len()];
+    let mut explicit_noop = none.clone();
+    explicit_noop[tag] = Some(BiomeAffinity {
+        default: 1.0,
+        by_biome: vec![],
+    });
+    let mut non_uniform = none.clone();
+    non_uniform[tag] = Some(BiomeAffinity {
+        default: 0.25,
+        by_biome: vec![("desert", 1.0)],
+    });
 
-    let a = per_species_suitability(
-        geo,
-        &terrain,
-        &climate,
-        obliquity_deg,
-        insolation_scalar,
-        &regime,
-        &bio,
-        &realm,
-        &none,
-    );
-    let b = per_species_suitability(
-        geo,
-        &terrain,
-        &climate,
-        obliquity_deg,
-        insolation_scalar,
-        &regime,
-        &bio,
-        &realm,
-        &none,
-    );
+    let gnoll_k = |aff: &[Option<BiomeAffinity>]| {
+        per_species_suitability(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+            &bio,
+            &realm,
+            aff,
+        )
+        .into_iter()
+        .find(|(t, _)| *t == tag as u32)
+        .expect("gnoll's suitability map")
+        .1
+    };
 
+    let absent = gnoll_k(&none);
+    let explicit = gnoll_k(&explicit_noop);
+    let varied = gnoll_k(&non_uniform);
+
+    // (1) The real "absent == no-op" claim: `None` and an explicit 1.0
+    // no-op must be bit-identical at every cell.
     let mut compared = 0usize;
-    for ((ta, ka), (tb, kb)) in a.iter().zip(b.iter()) {
-        assert_eq!(ta, tb, "species order must match");
-        for cell in geo.cells() {
-            assert_eq!(
-                ka.get(cell).to_bits(),
-                kb.get(cell).to_bits(),
-                "an absent affinity must be bit-identical at {cell:?} for tag {ta}"
-            );
-            compared += 1;
-        }
+    for cell in geo.cells() {
+        assert_eq!(
+            absent.get(cell).to_bits(),
+            explicit.get(cell).to_bits(),
+            "an absent affinity must be bit-identical to an explicit 1.0 \
+             no-op at {cell:?}"
+        );
+        compared += 1;
     }
     assert!(compared > 0, "the comparison must not be vacuous");
+
+    // (2) The comparison in (1) is capable of failing: a non-uniform
+    // affinity must move the result away from BOTH baselines.
+    let mut moved_from_absent = 0usize;
+    let mut moved_from_explicit = 0usize;
+    for cell in geo.cells() {
+        if varied.get(cell).to_bits() != absent.get(cell).to_bits() {
+            moved_from_absent += 1;
+        }
+        if varied.get(cell).to_bits() != explicit.get(cell).to_bits() {
+            moved_from_explicit += 1;
+        }
+    }
+    assert!(
+        moved_from_absent > 0,
+        "a non-uniform affinity must differ from the absent baseline, or (1)'s \
+         bit-identity check cannot discriminate a broken no-op resolution"
+    );
+    assert!(
+        moved_from_explicit > 0,
+        "a non-uniform affinity must differ from the explicit 1.0 no-op \
+         baseline too"
+    );
 }
 
 /// A declared affinity multiplies OUTSIDE the Liebig minimum. Proven by
