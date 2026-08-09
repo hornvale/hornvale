@@ -1029,6 +1029,52 @@ opposite-facing test caught. So the row now reads: parity is mechanized in both
 the plan and the prose, in one direction, and the second direction is held by
 regression tests rather than by a rule.
 
+**Re-scored by [The Quire](./chronicle/the-quire.md) (2026-08-09): the seam
+gets its first consumer that structurally *cannot* cheat, and its first
+finding of incompleteness rather than of error.** Every earlier test of this
+bet was in-tree. Both browser panes are compiled beside the sim; the wasm shim
+links it. Their discipline was real and it was a discipline. The Quire's render
+crate is outside the cargo workspace and has **no dependency on the simulation
+at all**, so the methods a client must not reach — whether a creature would
+turn hostile, its grievance against you, the knowledge store — are not
+discouraged but absent: there is no symbol to reach. The same move applies one
+level down, where the client's hand-written mirror of the schema simply does
+not declare the channel the schema itself warns is world truth, so the
+forbidden pane cannot be built rather than must not be. This is the first time
+the redaction boundary has been enforced by what was *not written down*, and it
+is a stronger form of the claim than any prior test produced.
+
+What that strength bought was a negative result, which is the news. A client
+that renders only the emitted contract is standing evidence that the contract
+is renderable — and this one found a place where it is not. The session's
+spatial channel splits `walk` from `chamber`, where `walk` means *not inside a
+built structure*; being submerged and being underground both fold into it.
+Underground, a pane drawing the exits from the document drew the surface's
+exits, while the prose in the same document said *out*. Nothing on the wire
+distinguishes the two states except the literal word inside the prose, which no
+consumer may parse. So the ledger above gains an entry of a kind it did not
+have: not the drawn thing failing to match the thing, but the **document
+correctly describing less than a consumer needs, with no defect anywhere to
+point at**. Its resolution is instructive too — the pane was deleted, because
+the client never needed the exits: command parsing lives in the sim, the key
+mapping sends its verb unconditionally, and an invalid move is answered with a
+sentence. A consumer's requirement for a channel should be checked before the
+channel is designed.
+
+One older row recurs and one instrument for it becomes mechanizable. The
+recurrence: the outdoor chart was geometrically wrong — the sim's own render of
+the identical thirty-one cells is five dense rows and the client drew nine
+sparse sheared ones — under seventeen green tests and four mutation proofs,
+which is The Purview's leaning parallelogram a second time in a different
+codebase. Twice is a structural property of picture-versus-property, not an
+anecdote. The instrument: the repair pinned the client's projection against the
+sim's own ASCII rendering of the same document, byte for byte, and the indoor
+plate was pinned the same way pre-emptively and passed. Where the repository
+already contains a second, independent renderer of a document, "does the
+picture state the document's geometry" stops being taste and becomes a
+comparison — which is the first time a row on this ledger has been converted by
+something other than a human remembering to look.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
