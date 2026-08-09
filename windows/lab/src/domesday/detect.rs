@@ -319,7 +319,7 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
                     detector: "D5 unmeasurable",
                     metric: e.metric.clone(),
                     detail: format!(
-                        "declared {} tracking {}, but {} across {} paired worlds -- the census \
+                        "declared {} tracking {}, but {} across {} paired worlds — the census \
                          cannot test this link",
                         e.declared,
                         e.tracks,
@@ -346,7 +346,7 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
                     String::new()
                 } else if e.direction != "none" && observed_dir != e.direction {
                     format!(
-                        " -- and the sign is backwards: the coupling is {}, not the declared {}",
+                        " — and the sign is backwards: the coupling is {}, not the declared {}",
                         observed_dir, e.direction
                     )
                 } else {

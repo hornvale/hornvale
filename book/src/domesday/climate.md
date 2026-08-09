@@ -87,7 +87,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 ### `habitable-fraction`
 
 - **D5 strength**: declared moderate tracking obliquity-degrees, but observed |r| = 0.058 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = +0.151 (1000 pairs) is weak -- and the sign is backwards: the coupling is positive, not the declared negative
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed r = +0.151 (1000 pairs) is weak — and the sign is backwards: the coupling is positive, not the declared negative
 
 ### `mean-land-temperature-c`
 
