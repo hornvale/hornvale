@@ -727,6 +727,7 @@ mod tests {
             tracks: "b".to_string(),
             why: "test".to_string(),
             declared: "dominant".to_string(),
+            direction: "positive".to_string(),
         };
         let mismatched = Expectation {
             declared: "weak".to_string(),
@@ -753,6 +754,7 @@ mod tests {
             tracks: "b".to_string(),
             why: "test".to_string(),
             declared: "dominant".to_string(),
+            direction: "positive".to_string(),
         };
         // Only rows 0 and 3 have both present: (1,1) and (4,4) -> perfectly
         // correlated, "dominant", matching the declaration.
