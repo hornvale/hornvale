@@ -67,7 +67,28 @@ fn a_uniform_affinity_is_flat_across_every_biome() {
     );
 }
 
+/// Task 2 shipped this as `the_registry_ships_empty_in_this_task`, asserting a
+/// length of `0` — the store existed and resolved but nobody was in it, which
+/// was the whole point of that task's byte-neutrality claim. **Task 4 is the
+/// task that makes it false on purpose.**
+///
+/// It is rewritten rather than deleted, because "who is in this registry" is a
+/// fact worth an assertion in either direction: an occupant appearing (or
+/// vanishing) is a deliberate act with a measured world-diff behind it, and it
+/// should not be possible to do silently. The admission test each occupant had
+/// to pass is enforced separately, at
+/// `windows/worldgen/tests/range_readout.rs::every_occupant_has_climate_curves_the_minimum_currently_discards`
+/// — it needs the kernel's `sovereignty_floor` against the biosphere store, so
+/// it cannot live in this domain-local file.
 #[test]
-fn the_registry_ships_empty_in_this_task() {
-    assert_eq!(biome_affinity_registry().len(), 0);
+fn the_registry_ships_exactly_the_declared_occupants() {
+    let registry = biome_affinity_registry();
+    let occupants: Vec<&str> = registry.ids().map(|k| k.0).collect();
+    assert_eq!(
+        occupants,
+        vec!["gnoll", "woolly-mammoth"],
+        "The Range task 4 declares exactly two occupants: gnoll (Desert) and \
+         woolly-mammoth (Tundra/Ice). Adding or removing one moves every world, \
+         so it belongs in a commit that says so."
+    );
 }

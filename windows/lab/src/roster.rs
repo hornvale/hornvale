@@ -195,7 +195,7 @@ pub fn awakened_owlbear_components() -> WorldComponents {
         ComponentStore::new(), // culture
         ComponentStore::new(), // material
         ComponentStore::new(), // habitat_realm: both kinds here are surface-dwelling
-        ComponentStore::new(), // biome_affinity: no authored rows in this task
+        ComponentStore::new(), // biome_affinity: neither owlbear kind is an occupant
     )
     .expect("the awakened-owlbear roster is well-formed")
 }

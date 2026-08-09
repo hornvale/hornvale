@@ -7874,9 +7874,16 @@ mod tests {
         // 2.333_333_333_333_333_5 — placement is decided by the whole
         // competitive field, so removing two competitors is not the inverse of
         // adding them. Still inside the 2-3 target, which is the row's claim.
+        // The Range re-pin (task 4, 2026-08-09): 2.487_804_878_048_780_5 ->
+        // 2.218_75. Gnoll's biome-affinity row re-places seed 42 once more
+        // (goblin 21 -> 12 settlements, measured in
+        // `windows/worldgen/tests/range_readout.rs`'s sibling sweep), so the
+        // named-goblin-settlement denominator moved again — the same
+        // placement reshuffle every entry above records, and the naming
+        // machinery is untouched. Still inside the 2-3 target, the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.487_804_878_048_780_5)
+            MetricValue::Number(2.218_75)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -7968,9 +7975,20 @@ mod tests {
         // neither returned to its pre-Delvers value (2.8 and 2.333). Both
         // still read inside the 2-3 target and kobold is still live rather
         // than Absent, which is the whole of the row's claim.
+        //
+        // The Range re-pin (task 4, 2026-08-09): 2.884_615_384_615_384_6 ->
+        // 2.868_852_459_016_393_3. Kobold BARELY moved (-0.016) while goblin
+        // fell hard (2.488 -> 2.219), so the two are opposed again and by very
+        // different magnitudes — this row's own stated signature of a
+        // placement reshuffle rather than a drift in the naming machinery,
+        // which gnoll's biome-affinity row does not touch. Kobold in fact
+        // GAINED settlements at seed 42 (34 -> 43) while goblin lost them
+        // (21 -> 12), which is the competitive cascade a suppressed people
+        // leaves behind. Both still inside the 2-3 target and kobold still
+        // live rather than Absent — the whole of the row's claim.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.884_615_384_615_384_6)
+            MetricValue::Number(2.868_852_459_016_393_3)
         );
     }
 
@@ -8093,7 +8111,16 @@ mod tests {
         // check above (which is the row's actual claim) is asserted
         // separately and still bites. The denominator is not reachable here —
         // `share` arrives as an opaque `Number` — so no fraction is invented.
-        assert_eq!(share, 0.6, "seed 42 transparency drifted");
+        // The Range re-pin (task 4, 2026-08-09): 0.6 -> 0.636_363_636_363_636_4
+        // (the round value did not survive one campaign, which is the best
+        // evidence it was a coincidence rather than a fixed point). Gnoll's
+        // biome-affinity row re-places seed 42, the same settlement-survival
+        // shift every re-pin above records. Still strictly between 0 and 1, so
+        // the distribution claim — asserted separately above — holds.
+        assert_eq!(
+            share, 0.636_363_636_363_636_4,
+            "seed 42 transparency drifted"
+        );
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -8644,7 +8671,19 @@ mod tests {
             // untouched. The coverage cost noted above is partly repaid: at
             // three concepts the river gate class and the karst/wetland gate
             // are both exercised again.
-            vec!["river", "ford", "marsh"],
+            //
+            // The Range re-pin (task 4, 2026-08-09): back to two — "marsh"
+            // leaves again, and the precondition has now oscillated between
+            // exactly these two readings four times. Gnoll's biome-affinity
+            // row re-places seed 7 (its own count is unchanged at 4 while
+            // bugbear goes 49 -> 153 — measured in
+            // `windows/worldgen/tests/range_readout.rs`), so goblin's reach
+            // narrows once more. Re-pin the set, do not swap the seed, per the
+            // precedent above; two rooted concepts is still a nonempty
+            // precondition and the mutation below still flips, so the claim is
+            // untouched. The coverage cost returns with it: the river gate
+            // class only.
+            vec!["river", "ford"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -8769,14 +8808,35 @@ mod tests {
         // species returns to gnoll, which carried this witness one campaign
         // ago; there is no same-seed second species at seed 1, so this
         // witness is load-bearing alone.
-        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        // THE RANGE re-witness (task 4, 2026-08-09): seed 1's gnolls no longer
+        // root `island` — for the fourth time the flood-fill half of the
+        // witness is lost, and for the first time to a change made ON PURPOSE
+        // to move gnoll. The precondition caught it again rather than letting
+        // the test pass on nothing, which is what it is for.
+        //
+        // RE-DERIVED BY THE SAME PROCEDURE: swept 0..60 over every placed
+        // people and took the earliest pair rooting AND steeping BOTH
+        // concepts. That is **(2, bugbear)**. TWENTY-ONE pairs qualify
+        // (2/bugbear, 7/bugbear, 7/hobgoblin, 11/gully-dwarf, 15/bugbear,
+        // 15/hobgoblin, 15/human, 25/bugbear, 26/hobgoblin, 28/bugbear,
+        // 34/desert-dwarf, 35/hobgoblin, 40/hobgoblin, 44/bugbear, 46/bugbear,
+        // 46/hill-dwarf, 46/hobgoblin, 54/gnoll, 59/bugbear, 59/gully-dwarf,
+        // 59/human) — against twenty-three, twenty-six and twenty-one before
+        // it, so unlike its sibling test's staple witness this population did
+        // NOT thin: both terrain gates remain emphatically live. Note gnoll
+        // itself still qualifies at seed 54, which is the honest reading of
+        // what its affinity did — it moved the people, it did not delete it.
+        //
+        // No same-seed second species at seed 2, so this witness is
+        // load-bearing alone.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
         let steeped =
-            independently_steeped_concepts(&view, "gnoll").expect("gnoll is in the roster");
-        let lexicon = lex(&view, "gnoll").expect("seed 1 gnolls hold a lexicon");
+            independently_steeped_concepts(&view, "bugbear").expect("bugbear is in the roster");
+        let lexicon = lex(&view, "bugbear").expect("seed 2 bugbears hold a lexicon");
         for concept in ["island", "hill"] {
             assert!(
                 matches!(lexicon.entry(concept), Some(LexEntry::Root { .. })),
-                "seed 1 gnolls must root {concept} for this test to bite"
+                "seed 2 bugbears must root {concept} for this test to bite"
             );
             assert!(
                 steeped.contains(concept),
@@ -9200,7 +9260,20 @@ mod tests {
         // `flagship-subsistence` is STILL "farming" through all four, which is
         // the stable fact here — the seat is farmable, and which farmable
         // biome it is, is not a claim this list makes.
-        assert_eq!(m("flagship-biome"), MetricValue::Text("taiga".to_string()));
+        //
+        // Fourth pass (The Range, task 4, 2026-08-09): taiga ->
+        // temperate-forest, oscillating between the same two biomes a fifth
+        // time. Cause: the campaign's first biome-affinity row (gnoll,
+        // desert-preferring) suppresses gnoll's capacity off arid ground,
+        // which frees interior cells the other peoples re-contest — the
+        // competitive cascade `windows/worldgen/tests/range_readout.rs`
+        // measures directly (seed 7: gnoll unchanged at 4 settlements while
+        // bugbear goes 49 -> 153). `flagship-subsistence` is STILL "farming"
+        // through all five, which remains the stable fact.
+        assert_eq!(
+            m("flagship-biome"),
+            MetricValue::Text("temperate-forest".to_string())
+        );
         // The Tense re-pin (2026-08-05): the flagship is no longer coastal.
         // Consistent with the biome move directly above -- it reseated onto
         // temperate-forest, inland -- rather than an independent fact.
@@ -10317,9 +10390,32 @@ mod tests {
         // intervening re-witness. And for the FIRST time in this test's
         // history there IS same-seed corroboration: (5, hobgoblin) qualifies
         // too, so the witness is no longer load-bearing alone.
+        //
+        // FOURTH PASS (The Range, task 4, 2026-08-09): seed 5's bugbear lost a
+        // staple band. Re-swept 0..150 by the identical method (peoples read
+        // dynamically off `FullView::components().perception`).
+        //
+        // **THE PROPERTY GOT MUCH RARER, and that is the finding.** THREE
+        // qualifying pairs — (5, desert-dwarf), (66, kobold), (90, goblin) —
+        // against ELEVEN before it, seven, four and three. The count had risen
+        // at three successive re-sweeps; this is the first time it has fallen,
+        // and it has fallen by nearly four-fifths. Cause: the campaign's first
+        // biome-affinity row suppresses gnoll off non-arid ground, and the
+        // competitive cascade that follows re-places every people
+        // (`windows/worldgen/tests/range_readout.rs` measures it directly), so
+        // fewer peoples end up spread across enough farmable biomes to steep
+        // all six staples. The witness survives with room to spare, but the
+        // margin is now thin enough to be worth watching: at three pairs, one
+        // more campaign of the same size could leave none.
+        //
+        // Witness is **(5, desert-dwarf)** — the earliest qualifying pair, the
+        // same selection-free rule every pass above used. The SEED does not
+        // move (a fourth pass in a row at seed 5) and the species moves
+        // bugbear -> desert-dwarf. There is no same-seed second species, so
+        // this witness is load-bearing alone again.
         let view = FullView::build(Seed(5), &SkyPins::default()).unwrap();
-        let steeped =
-            independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed at seed 5");
+        let steeped = independently_steeped_concepts(&view, "desert-dwarf")
+            .expect("desert-dwarf is placed at seed 5");
         for staple in STAPLE_CONCEPTS {
             assert!(
                 steeped.contains(staple),

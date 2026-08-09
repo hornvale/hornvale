@@ -547,3 +547,19 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T04:51:35Z | gate | 675.175 | 5442.585 | 143.219 | 8.27 | 0 | ebc56cbf | the-range | MacBookPro | 10 |
 | 2026-08-09T05:16:03Z | rebaseline | 169.717 | 219.438 | 11.587 | 1.36 | 0 | 46ecfeea | the-range | MacBookPro | 10 |
 | 2026-08-09T05:28:54Z | gate | 698.010 | 5490.849 | 151.606 | 8.08 | 0 | 46ecfeea | the-range | MacBookPro | 10 |
+| 2026-08-09T06:07:47Z | gate (RED, aborted at first failure — NOT a gate timing) | 117.613 | 236.854 | 77.933 | 2.68 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T06:10:25Z | gate (RED, aborted at first failure — NOT a gate timing) | 47.745 | 178.973 | 13.642 | 4.03 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T06:17:40Z | gate (RED, aborted at first failure — NOT a gate timing) | 129.348 | 821.637 | 30.417 | 6.59 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+| 2026-08-09T06:30:15Z | gate (RED, aborted at first failure — NOT a gate timing) | 176.679 | 1020.216 | 72.533 | 6.18 | 0 | d844cd48 | the-range | MacBookPro | 10 |
+
+**A note on the four `gate (RED, ...)` rows above (The Range, task 4).**
+`scripts/timed.sh` ledgers a run's wall time under the label it was given
+whether the command SUCCEEDED or not — it prints `rc=<n>` to stdout and the
+table has no column for it. `make gate` stops at the first failing test, so a
+red gate's wall time is however long it took to reach that test: the four rows
+above read 47–177 s against a healthy gate's ~900 s, and without this note
+they would read as a dramatic speed-up. The rows are kept rather than deleted
+(they are real measurements of real commands) and relabelled so they cannot be
+mistaken for gate timings. **Adding an `rc` column to the table would fix this
+properly**; it is recorded here rather than done, because the schema is
+consumed by more than this file.

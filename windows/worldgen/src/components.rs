@@ -52,7 +52,9 @@ pub struct WorldComponents {
     pub habitat_realm: ComponentStore<KindId, HabitatRealm>,
     /// A kind's declared affinity across biomes (The Range). Sparse: absence
     /// means unrestricted (`BiomeAffinity::default == 1.0` at every biome).
-    /// Empty as of task 2 — the store resolves but ships no rows.
+    /// Two authored rows as of task 4 — see
+    /// [`hornvale_species::biome_affinity_registry`] for the admission test a
+    /// row must pass.
     pub biome_affinity: ComponentStore<KindId, BiomeAffinity>,
 }
 

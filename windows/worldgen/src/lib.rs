@@ -8835,7 +8835,17 @@ mod tests {
         // above moved with it (104 -> 88) because two peopled pantheons went
         // away; the two quantities are still tracking different things and
         // still separate cleanly.
-        assert_eq!(count("name-gloss"), 213);
+        //
+        // The Range (task 4, 2026-08-09): 213 -> 211. The first biome-affinity
+        // row re-places seed 42 (gnoll 20 -> 2 settlements, with the rest of
+        // the roster re-contesting the freed ground), so settlement volume
+        // moves and the gloss count with it. The pantheon counts above are
+        // UNCHANGED at 88 across this change, for the same reason they held
+        // through the last one: the pantheon is a function of the peopled
+        // roster, which did not move, while the gloss count is a function of
+        // settlement volume, which did. Two settlements' worth of glosses is
+        // the smallest movement this line has ever recorded.
+        assert_eq!(count("name-gloss"), 211);
     }
 
     #[test]

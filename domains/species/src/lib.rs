@@ -2101,10 +2101,8 @@ impl BiomeAffinity {
 impl Component for BiomeAffinity {}
 
 /// The sparse biome-affinity component: **only** kinds with an authored,
-/// non-uniform affinity across biomes appear. Empty in this task (The
-/// Range, task 2) — the store exists and resolves, but no kind has been
-/// authored into it, so every kind is unrestricted across every biome and
-/// this is a byte-neutral no-op.
+/// non-uniform affinity across biomes appear. Two occupants as of The Range
+/// task 4 — every other kind is unrestricted across every biome.
 ///
 /// Sparse rather than a `BiosphereTraits` field because this has two
 /// consumers (genesis placement and `best_home`), each of which holds a
@@ -2112,8 +2110,146 @@ impl Component for BiomeAffinity {}
 /// (a `BiosphereTraits` field is for a component every consumer already
 /// holds the row for; a sparse store is for a component only a few
 /// slice-holding consumers read).
+///
+/// # The admission test: a row may only add a preference that is ABSENT
+///
+/// A biome affinity that merely restates a climate preference the model
+/// already applies would double-count it, and the resulting movement would be
+/// unattributable — it could be read as evidence for the mechanism when it was
+/// only the old curve counted twice. So a kind is admitted here only when its
+/// authored climate curves are **currently discarded**, and the discipline is
+/// mechanical rather than a judgement call.
+///
+/// `tolerance_liebig` (`windows/worldgen/src/lib.rs`) evaluates temperature,
+/// moisture and insolation floored by `sovereignty_floor(mass, potency)` and
+/// evaluates **elevation floored by `0.0`**, then takes the minimum. A floored
+/// axis can never read below its floor; an unfloored one peaks at its own
+/// `devotion`. So whenever
+///
+/// ```text
+///   elevation.devotion  <  sovereignty_floor(mass, potency)
+/// ```
+///
+/// the elevation term is below the other three at **every** cell of every
+/// world, the minimum is elevation everywhere, and the temperature, moisture
+/// and insolation curves contribute exactly nothing. Both occupants below clear
+/// that bar, so each affinity restores a preference the model was throwing
+/// away rather than duplicating one it already honours:
+///
+/// ```text
+///   kind              mass kg   potency   floor      elev devotion   below?
+///   gnoll               136.1      0.00   0.495384        0.40        YES
+///   woolly-mammoth     6000.0      0.00   0.692367        0.50        YES
+/// ```
+///
+/// `windows/worldgen/tests/range_readout.rs` asserts this inequality for every
+/// row in this registry, so a later edit to a mass or an elevation devotion
+/// cannot quietly turn one of these rows into a double count.
+///
+/// # The ladder both rows are authored on
+///
+/// Four steps, so the two rows are read against one another rather than each
+/// tuned by eye. Level is gauge for placement (genesis and `best_home` rank
+/// cells in the kind's *own* units, so a constant factor reorders nothing) —
+/// only the shape matters, and the shape is:
+///
+/// ```text
+///   1.00  stronghold  the biome `classify_land` returns for the kind's OWN
+///                     authored (temperature, moisture) reading
+///   0.70  near        one band out, still recognisably the kind's country
+///   0.45  marginal    two bands out, or the right climate in the wrong form
+///   0.25  default     everything else, including all ten marine biomes
+/// ```
+///
+/// The ceiling is `1.00` deliberately: an affinity here is a **penalty
+/// relative to the unrestricted 1.0 every other kind carries**, never a boost,
+/// so declaring one can only lower a kind's capacity. Permitting a factor above
+/// `1.0` is the spec's pre-committed repair path if binding proves too weak; it
+/// is not the shipped design, and taking it is a decision to record rather than
+/// a knob to turn.
+///
+/// The floor is `0.25` and never `0.0`. Zero is a **hard exclusion**, not a
+/// strong preference — genesis filters its founding pool on
+/// `caps_now()[pidx].at(c) > 0.0` ("a proto-site a people cannot feed is not a
+/// founding, it is a death two epochs later"). Neither kind here means *never*:
+/// a gnoll war-band in a temperate forest is a rarity, not an impossibility.
 pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
-    [].into_iter().collect()
+    [
+        // THE RANGE (task 4), occupant one: the gnoll, the roster's strongest
+        // DESERT authoring and — until this row — a people that selected no
+        // arid cell at all. Its niche states temperature optimum 29.0 °C at
+        // devotion 0.80 and moisture optimum 0.12 at devotion 0.75, the most
+        // committed hot-arid pair in `biosphere_registry`, and the admission
+        // table above shows every bit of it discarded on every land cell of
+        // every world. Measured on seed 42 before this row existed: 20 gnoll
+        // settlements, **zero** of them on an arid biome.
+        //
+        // `desert` is the stronghold by derivation, not by theme:
+        // `classify_land` at gnoll's own authored reading (29.0 °C, moisture
+        // 0.12) returns `Desert` exactly (hot band, moisture < 0.20).
+        (
+            KindId("gnoll"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — gnoll's own authored climate, classified.
+                    ("desert", 1.00),
+                    // Near: the two temperate dry bands (moisture < 0.25 and
+                    // 0.25-0.40). Right dryness, wrong thermal band — a gnoll
+                    // steppe is a real place, a gnoll rainforest is not.
+                    ("temperate-grassland", 0.70),
+                    ("shrubland", 0.70),
+                    // Marginal: the hot band's next step out (moisture
+                    // 0.20-0.45) — the ground the savanna-authored giant-hyena
+                    // is documented onto, which a desert pack raids and does
+                    // not hold.
+                    ("savanna", 0.45),
+                ],
+            },
+        ),
+        // THE RANGE (task 4), occupant two: the woolly mammoth — gnoll's defect
+        // in the opposite climate. Temperature optimum **-25.0 °C at devotion
+        // 0.85** is the roster's strongest COLD authoring, and the admission
+        // table shows it discarded exactly as gnoll's desert authoring is: at
+        // 6000 kg its sovereignty floor is 0.692328 and its elevation devotion
+        // is 0.50, so elevation is the minimum on every cell and the deep-cold
+        // curve never binds.
+        //
+        // FAUNA, and that is the point of choosing it. `SocialForm::Gregarious`
+        // never enters the bake's `SocialForm::Settled` roster, so this row
+        // moves capacity and occupancy but places no settlement. Exactly ONE
+        // peopled kind's placement moves in this campaign, which is what makes
+        // the P1" readout attributable to gnoll's row alone.
+        //
+        // Two strongholds rather than one, because the kind's authored
+        // temperature curve straddles a classification boundary rather than
+        // sitting inside a band: `classify_land` returns `Ice` below -20 °C and
+        // `Tundra` from there to freezing at moisture < 0.35, and the mammoth's
+        // optimum (-25.0) and its one-sigma shoulder (-5.0) at its authored
+        // moisture (0.30) land one in each. Splitting them would be an artifact
+        // of where the lookup cuts, not a claim about the animal.
+        (
+            KindId("woolly-mammoth"),
+            BiomeAffinity {
+                default: 0.25,
+                by_biome: vec![
+                    // Stronghold — the two cold-dry classes its own authored
+                    // curve covers.
+                    ("ice", 1.00),
+                    ("tundra", 1.00),
+                    // Near: the same cold band, wetter than its 0.30 optimum
+                    // (moisture >= 0.35) — forest rather than open plain.
+                    ("taiga", 0.70),
+                    // Marginal: cold, but reached by ALTITUDE rather than by
+                    // latitude, and this is a 200 m lowland grazer. The right
+                    // climate in the wrong form — the giant goat's country.
+                    ("alpine", 0.45),
+                ],
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
 }
 
 /// The biosphere component: every entity has one. The packer and the
