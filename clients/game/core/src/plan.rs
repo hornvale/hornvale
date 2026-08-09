@@ -61,7 +61,7 @@
 //! creatures found by sight, not the possession itself), so the marks pass
 //! never has occasion to overdraw the `@` it follows.
 
-use crate::{Cell, Plan, PlanMark, Weight};
+use crate::{Cell, Plan, PlanMark, Source, Weight};
 
 /// The glyph for a wall cell — the building's fabric, impassable.
 const WALL_GLYPH: char = '#';
@@ -138,13 +138,13 @@ pub fn draw(plan: &Plan, into: &mut crate::Grid, origin: (u16, u16)) {
                 continue;
             };
             if let Some((gx, gy)) = grid_pos(plan, x, y, origin, into) {
-                into.set(gx, gy, Cell::glyph(glyph, Weight::Normal));
+                into.set(gx, gy, Cell::glyph(glyph, Weight::Normal, Source::Plan));
             }
         }
     }
 
     if let Some((gx, gy)) = grid_pos(plan, plan.you.x, plan.you.y, origin, into) {
-        into.set(gx, gy, Cell::glyph(YOU_GLYPH, Weight::Bold));
+        into.set(gx, gy, Cell::glyph(YOU_GLYPH, Weight::Bold, Source::Plan));
     }
 
     for m in &plan.marks {
@@ -170,7 +170,7 @@ fn draw_mark(plan: &Plan, m: &PlanMark, origin: (u16, u16), into: &mut crate::Gr
         return;
     };
     if let Some((gx, gy)) = grid_pos(plan, m.x, m.y, origin, into) {
-        into.set(gx, gy, Cell::glyph(glyph, Weight::Normal));
+        into.set(gx, gy, Cell::glyph(glyph, Weight::Normal, Source::Plan));
     }
 }
 

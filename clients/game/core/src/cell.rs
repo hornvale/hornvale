@@ -1,6 +1,8 @@
 //! The cell buffer: the one artifact every backend renders and no backend
 //! owns.
 
+use std::collections::BTreeMap;
+
 /// How much a thing commands the character's notice right now.
 ///
 /// The brief's most important channel, because it is the only one surviving
@@ -26,6 +28,50 @@ pub enum Ink {
     Plain,
 }
 
+/// The snapshot channel a drawn cell traces back to — the executable form of
+/// the brief's "trace listing: every visible datum on the composed screen,
+/// and which channel from the inventory it came from."
+///
+/// Every drawn cell must name one of these. The brief allows exactly two
+/// categories and no third: a mark is either **derived from world state**
+/// (every variant below except [`Source::Chrome`]) or **declared inert**
+/// ([`Source::Chrome`], and nothing else).
+///
+/// There is deliberately **no `Social` variant**. `hornvale-game-core`'s own
+/// schema mirror omits the `social` channel entirely (see `schema.rs`'s
+/// module doc), so no cell in this crate can ever be attributed to it — the
+/// redaction is enforced by the type system here, restating the guarantee
+/// `tests/schema.rs` already proves at the parse layer. Do not add a
+/// `Social` variant "for completeness"; its absence is the mechanism.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub enum Source {
+    /// No draw path has claimed this cell yet. A drawn cell (`glyph.is_some()`)
+    /// left at this value is a datum nobody can justify — see
+    /// `tests/provenance.rs`'s `every_drawn_cell_names_its_channel`.
+    #[default]
+    Unattributed,
+    /// The walk-band chart (`scene/surrounds/v2`, drawn by `chart.rs`).
+    Chart,
+    /// The chamber-band floor plan (`vessel/plan/v1`, drawn by `plan.rs`).
+    Plan,
+    /// The entry's wrapped narration prose (`Narration::prose`, drawn by
+    /// `entry.rs`), including its truncation marker when the prose overflows
+    /// — the marker is an honest signal about that same channel, not an
+    /// invented one.
+    Prose,
+    /// The entry's command line: the `>` prompt `entry.rs` draws on the
+    /// page's last row, read as the next line the possessed character is
+    /// about to write — the character's own onward affordance, not a datum
+    /// this client reads off the wire.
+    WaysOn,
+    /// The endpaper identity strip (`SelfChannel`, plus `day`/`turn`, drawn
+    /// by `endpaper.rs`).
+    Identity,
+    /// Declared-inert decoration: rules, gutters, margins. Never a dumping
+    /// ground for a cell whose real channel was merely inconvenient to name.
+    Chrome,
+}
+
 /// One character cell. A tile is a drop-in replacement for exactly one of
 /// these: same box, same metrics, same position (the brief's cell law).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,6 +82,8 @@ pub struct Cell {
     pub weight: Weight,
     /// Substance.
     pub ink: Ink,
+    /// Which snapshot channel this cell traces back to.
+    pub source: Source,
 }
 
 impl Default for Cell {
@@ -44,17 +92,19 @@ impl Default for Cell {
             glyph: None,
             weight: Weight::Normal,
             ink: Ink::Plain,
+            source: Source::Unattributed,
         }
     }
 }
 
 impl Cell {
-    /// A drawn cell.
-    pub fn glyph(glyph: char, weight: Weight) -> Cell {
+    /// A drawn cell, attributed to the snapshot channel it came from.
+    pub fn glyph(glyph: char, weight: Weight, source: Source) -> Cell {
         Cell {
             glyph: Some(glyph),
             weight,
             ink: Ink::Plain,
+            source,
         }
     }
 
@@ -158,5 +208,22 @@ impl Grid {
             }
         }
         out
+    }
+
+    /// The provenance census: how many *drawn* cells (`glyph.is_some()`)
+    /// trace to each [`Source`]. Unmarked paper (a cell that was never
+    /// written at all) is not counted here — a gutter that is simply never
+    /// drawn into needs no source, the same discipline `Cell::is_blank`
+    /// already treats as "not a space, and not black". A `BTreeMap`, not a
+    /// `HashMap`, matching the kernel's deterministic-ordering discipline
+    /// even though this tree is not bound by it.
+    pub fn provenance(&self) -> BTreeMap<Source, usize> {
+        let mut counts = BTreeMap::new();
+        for cell in &self.cells {
+            if !cell.is_blank() {
+                *counts.entry(cell.source).or_insert(0) += 1;
+            }
+        }
+        counts
     }
 }

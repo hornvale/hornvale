@@ -44,7 +44,7 @@
 //! and relative direction; what does not is metric distance and the true
 //! 60/120-degree angles between neighbours.
 
-use crate::{Cell, Chart, ChartCell, Mark, Weight};
+use crate::{Cell, Chart, ChartCell, Mark, Source, Weight};
 
 /// The `here` cell's glyph: the possessed character's own position.
 const HERE_GLYPH: char = '@';
@@ -143,7 +143,7 @@ fn place_cell(
     into.set(
         x as u16,
         y as u16,
-        Cell::glyph(glyph_of(&cell.state), weight_of(&cell.state)),
+        Cell::glyph(glyph_of(&cell.state), weight_of(&cell.state), Source::Chart),
     );
 }
 

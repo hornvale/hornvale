@@ -35,7 +35,7 @@
 //! `overflowing_prose_gets_a_visible_truncation_marker_not_a_silent_drop`
 //! test for the regression this decision is pinned against.
 
-use crate::{Cell, Narration, Weight};
+use crate::{Cell, Narration, Source, Weight};
 
 /// The glyph the command line opens with — a prompt, not a text box.
 const PROMPT_GLYPH: char = '>';
@@ -88,12 +88,19 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
-/// Write `line` into `into`, starting at `(x0, y)`, one glyph per column.
-/// Columns past `into`'s own bounds are silently refused by [`crate::Grid::set`];
-/// this function does not clip `line` itself, relying on that discipline.
+/// Write `line` into `into`, starting at `(x0, y)`, one glyph per column,
+/// attributed to [`Source::Prose`] — this draws both the wrapped narration
+/// body and [`TRUNCATION_MARKER`], since the marker is an honest signal
+/// about the same prose channel, not an invented one. Columns past `into`'s
+/// own bounds are silently refused by [`crate::Grid::set`]; this function
+/// does not clip `line` itself, relying on that discipline.
 fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
     for (i, ch) in line.chars().enumerate() {
-        into.set(x0 + i as u16, y, Cell::glyph(ch, Weight::Normal));
+        into.set(
+            x0 + i as u16,
+            y,
+            Cell::glyph(ch, Weight::Normal, Source::Prose),
+        );
     }
 }
 
@@ -108,6 +115,14 @@ fn write_line(into: &mut crate::Grid, x0: u16, y: u16, line: &str) {
 /// silently dropping the remainder — see the module doc's "Overflow is a
 /// decision, not an accident". For every fixture this campaign ships, the
 /// prose is short enough that this never triggers.
+///
+/// The prose body (and the marker, should it appear) is attributed to
+/// [`Source::Prose`]; the prompt is attributed to [`Source::WaysOn`] — a
+/// structural distinction (a separate draw call, on a separate row), not a
+/// read of the prose for meaning. This module never special-cases the
+/// prose's own trailing `"Ways on:"` sentence (see the module doc), so that
+/// exit list is carried as ordinary [`Source::Prose`] text, same as the rest
+/// of the passage.
 pub fn draw(
     narration: &Narration,
     into: &mut crate::Grid,
@@ -139,7 +154,7 @@ pub fn draw(
     into.set(
         origin.0,
         command_row,
-        Cell::glyph(PROMPT_GLYPH, Weight::Bold),
+        Cell::glyph(PROMPT_GLYPH, Weight::Bold, Source::WaysOn),
     );
 }
 

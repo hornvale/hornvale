@@ -6,7 +6,7 @@
 //! wire actually names: who the possession is, where it is from, and
 //! when.
 
-use crate::{Cell, SelfChannel, Weight};
+use crate::{Cell, SelfChannel, Source, Weight};
 
 /// The separator between the endpaper's three clauses.
 const SEPARATOR: char = '\u{b7}';
@@ -24,7 +24,7 @@ pub fn draw(me: &SelfChannel, day: f64, turn: u64, into: &mut crate::Grid, origi
         into.set(
             origin.0 + i as u16,
             origin.1,
-            Cell::glyph(ch, Weight::Normal),
+            Cell::glyph(ch, Weight::Normal, Source::Identity),
         );
     }
 }
