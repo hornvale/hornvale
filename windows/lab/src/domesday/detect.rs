@@ -864,6 +864,10 @@ mod tests {
         );
     }
 
+    // claim: structural(seed: none — false-positive seed-loop flag; the
+    // `.map(|s| ...)` closure below binds a `&str` crate name from
+    // DOMAIN_CRATES, not a seed) — the frozen roster vs. the live tree,
+    // Task 6's workspace-wide run is what surfaced this tag was missing.
     #[test]
     fn domain_crates_are_still_exactly_this_list() {
         // Live assertion: the frozen DOMAIN_CRATES roster must match the

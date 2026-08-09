@@ -1,0 +1,80 @@
+<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab domesday`. -->
+
+# Demography — The Domesday
+
+How many, and of what structure: the population counts a world's peoples carry.
+
+## Metrics
+
+### `goblin-flagship-population`
+
+The goblin flagship settlement's committed population; Absent if goblins placed no settlement
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 2 | 34 | 40 | 41 | 43 | 35.295 |
+
+### `kobold-flagship-population`
+
+The kobold flagship settlement's committed population; Absent if kobolds placed no settlement
+
+n = 968 present, 32 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 2 | 28 | 46 | 54 | 70 | 40.235537 |
+
+### `mean-population`
+
+Mean population across every settlement's committed population fact; Absent if there are none
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 5.3214286 | 24.850174 | 30.405836 | 33.448276 | 47.392857 | 28.419819 |
+
+### `peoples-alive-at-bake-end`
+
+M3: how many distinct peoples still hold a live community when the bake ends — the decision-0089 compliance reading
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 5 | 9 | 9 | 9 | 9 | 8.956 |
+
+### `peoples-placed`
+
+How many peoples hold a flagship settlement in this world — the n in the 1/n chance baseline The Namesake §5.1(2) is judged against, published so that verdict is re-derivable from rows.csv without inferring n; Absent if no people is placed
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 5 | 9 | 9 | 9 | 9 | 8.956 |
+
+### `total-population`
+
+Sum of every settlement's committed population fact; Absent if there are none
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 166 | 3890 | 6218 | 8221 | 18300 | 6128.73 |
+
+## Weaknesses found here
+
+### `peoples-alive-at-bake-end`
+
+- **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
+- **D4**: median 9 equals the max (5 .. 9)
+
+### `peoples-placed`
+
+- **D3**: p25..p75 spans 0 (0.00% of the 4 min..max range), under the 5% bar
+- **D4**: median 9 equals the max (5 .. 9)
+
