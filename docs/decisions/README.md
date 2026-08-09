@@ -152,3 +152,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0110](0110-the-census-is-the-suites-shared-world-building-pass.md) | The census is the suite's shared world-building pass | Accepted |
 | [0111](0111-a-census-resident-check-needs-a-live-tripwire.md) | A census-resident check requires a live tripwire in the gate | Accepted |
 | [0112](0112-the-synthetic-route-requires-committed-facts.md) | The synthetic route requires that the behaviour read committed facts | Accepted |
+| [0113](0113-the-dev-profile-is-optimized-workspace-wide.md) | The dev profile is optimized workspace-wide | Accepted |
+| [0114](0114-a-native-client-drives-across-the-linker-and-reads-across-the-serializer.md) | A native client drives across the linker and reads across the serializer | Accepted |
+| [0115](0115-a-clients-mirror-may-omit-a-channel.md) | A client's mirror may omit a channel, and the omission is the enforcement | Accepted |
+| [0116](0116-possession-is-a-parameter-not-a-fixture.md) | Possession is a parameter, not a fixture | Accepted |
+| [0117](0117-the-client-re-derives-nothing-the-sim-emits.md) | The client re-derives nothing the simulation already decides | Accepted |

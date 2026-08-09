@@ -24,6 +24,7 @@ fn opts() -> PossessOpts {
         wild_agents: true,
         eyes: hornvale_vessel::eyes::Eyes::Own,
         lens: hornvale_vessel::lens::Lens::Off,
+        target: hornvale_vessel::PossessTarget::Flagship,
     }
 }
 
@@ -282,6 +283,7 @@ fn the_stitch_law_end_to_end() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
+            target: hornvale_vessel::PossessTarget::Flagship,
         },
     )
     .unwrap();
@@ -336,6 +338,7 @@ fn the_stitch_law_end_to_end() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
+            target: hornvale_vessel::PossessTarget::Flagship,
         },
     )
     .unwrap();
@@ -419,6 +422,7 @@ fn run_drives_a_script_deterministically() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
+            target: hornvale_vessel::PossessTarget::Flagship,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -432,6 +436,7 @@ fn run_drives_a_script_deterministically() {
             wild_agents: true,
             eyes: hornvale_vessel::eyes::Eyes::Own,
             lens: hornvale_vessel::lens::Lens::Off,
+            target: hornvale_vessel::PossessTarget::Flagship,
         },
         std::io::Cursor::new(script),
         &mut out_b,

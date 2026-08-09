@@ -113,6 +113,39 @@ run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt 
 } > book/src/gallery/possession-seed-42.md
 rm -f "$possess_tmp"
 
+# The committed session fixture (The Quire, Task 3): `hornvale-game-core`'s
+# render tests read this instead of paying for genesis (measured 1.43 s).
+# Regenerated here, beside the transcripts above, so it cannot silently lag
+# `vessel/session/v1`'s schema.
+#
+# `--script` is REQUIRED here, even though the script is empty (the fixture
+# is turn 0, the opening — no verb should run before the snapshot). Every
+# OTHER `possess` call in this file passes `--script`, which routes input
+# through a `Cursor`; without one, `possess` falls into its interactive arm
+# and blocks reading `stdin.lock()`. That hangs a human running `make
+# rebaseline` from an ordinary terminal even though it is invisible to a
+# non-interactive agent or CI, whose stdin is already at EOF — an empty
+# `--script` cannot block either way. `--lens`/`--echo` differ between the
+# two arms, but neither reaches the snapshot (only the terminal draw does;
+# see `PossessOpts::lens`'s doc), so this is byte-identical to the possess
+# call this replaced.
+mkdir -p clients/game/core/tests/fixtures
+run -p hornvale -- possess --seed 42 --script scripts/possession-empty.txt \
+    --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null
+
+# The committed CHAMBER-band fixture (The Quire, Task 4 fix round): the
+# turn-0 fixture above always lands on `spatial.band == "walk"`, so
+# `hornvale-game-core`'s `Spatial::Chamber` mirror (`Plan`, `PlanExtent`,
+# `PaletteEntry`, `PlanPoint`, `PlanMark`) had no committed coverage —
+# nothing would catch a regression before Tasks 6/7 lean on those types.
+# `scripts/possession-chamber.txt` is a single `enter`, verified to land
+# seed 42's flagship possession inside a structure (`spatial.band ==
+# "chamber"`) from its opening room — the same first move
+# `possession-walk.txt` makes. `--script` is required for the same reason
+# as the turn-0 call above: without it `possess` blocks on `stdin.lock()`.
+run -p hornvale -- possess --seed 42 --script scripts/possession-chamber.txt \
+    --snapshot clients/game/core/tests/fixtures/session-seed-42-chamber.json > /dev/null
+
 # The over-time transcript (the-quickening, T4; the-wanting, T4): a NEW,
 # separate recording — the day-0 transcript above never advances time, so it
 # cannot show the world moving. This one `wait`s across a full drive cycle,

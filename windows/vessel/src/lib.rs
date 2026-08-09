@@ -24,7 +24,7 @@ pub mod snapshot;
 pub mod streams;
 pub mod structure;
 mod vantage;
-pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
+pub use agent::{Agent, AgentId, mint_at, mint_flagship, most_populous_settlement, walk_depth};
 pub use band::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
 pub use brief::{Brief, brief_of};
 pub use chamber_prose::describe_chamber;
@@ -35,7 +35,7 @@ pub use plan::{
     PLAN_SCHEMA, PaletteEntry, PlanExtent, PlanMark, PlanPoint, SessionPlan, Shading, plan_of,
 };
 pub use purview::*;
-pub use session::Session;
+pub use session::{Session, WorldContext};
 pub use snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
     SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
@@ -74,6 +74,45 @@ impl std::fmt::Display for VesselError {
     }
 }
 
+/// Which settlement the commanded agent is minted at.
+///
+/// The `commanded` half of the possession grid (The Quire spec §7). The
+/// `focalized` half is not yet a parameter, and `commanded = NONE` — which
+/// yields the world viewer and attract mode — is not yet expressible.
+///
+/// **Every variant MINTS.** Both arms call [`mint_at`], which derives a
+/// fresh [`AgentId`] from a seed stream; they differ only in *which*
+/// settlement they mint at. Selecting an agent the world already derived —
+/// what The Journal's brief means by "you possess a creature already living in
+/// the world" — is not implemented by any variant here, and decision 0116
+/// records that gap as open rather than closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PossessTarget {
+    /// An agent minted at the flagship settlement — the first `is-settlement`
+    /// fact in the ledger, which is what `village_info` returns. **Not the
+    /// largest**: on seed 42 the flagship is Googo (pop. 68) while the most
+    /// populous is Nenagabo (pop. 82), which is what [`PossessTarget::
+    /// MostPopulousSettlement`] selects. Those two names and numbers are a
+    /// *reading of one world*, not an invariant — The Range (2026-08-09)
+    /// re-decided the settlement contest and moved the most-populous
+    /// settlement from Toa (pop. 84) to Nenagabo, without touching the
+    /// flagship. Re-read them after any campaign that moves placement; the
+    /// property this variant relies on is only that the two can differ, and
+    /// that is what the driver test asserts rather than these values.
+    /// `book/src/reference/scene-tiles-v1.md`
+    /// calls `kind: "flagship"` "the world's capital, the single
+    /// highest-population settlement", which disagrees with that observation;
+    /// the contradiction predates this campaign and is recorded in the registry
+    /// rather than resolved here.
+    /// The default, and byte-identical to the behaviour that predates this
+    /// enum.
+    #[default]
+    Flagship,
+    /// An agent minted at the world's most-populous settlement, ranked
+    /// population-descending then id-ascending.
+    MostPopulousSettlement,
+}
+
 /// Options for a possession.
 /// type-audit: bare-ok(flag: echo), bare-ok(flag: wild_agents)
 pub struct PossessOpts {
@@ -108,6 +147,10 @@ pub struct PossessOpts {
     /// This field reaches **only the terminal draw**. `plan_of` and the
     /// snapshot never see it — `lantern_lens.rs` proves both halves.
     pub lens: lens::Lens,
+    /// Whose body the possession commands (The Quire, Task 2). Defaults to
+    /// [`PossessTarget::Flagship`], byte-identical to the pre-existing
+    /// behaviour.
+    pub target: PossessTarget,
 }
 
 impl Default for PossessOpts {
@@ -123,6 +166,7 @@ impl Default for PossessOpts {
             wild_agents: true,
             eyes: eyes::Eyes::Own,
             lens: lens::Lens::Off,
+            target: PossessTarget::Flagship,
         }
     }
 }
@@ -140,7 +184,12 @@ pub enum Turn {
 /// shape as the repl's `run`, so tests drive it with buffers. Returns the
 /// played world (the session's evolved ledger + registry, folded onto the
 /// input world's seed — The First Mark, Task 4): "the world remembers"
-/// applies to every caller of `run`, not just the CLI's `--out` flag.
+/// applies to every caller of `run`, whether or not it saves the result.
+///
+/// The CLI no longer routes through here — `--out` calls `drive_session` and
+/// then `into_played_world` directly, so `run`'s only remaining callers are in
+/// `windows/vessel/tests/session.rs`. It stays public as the line-oriented
+/// entry point a future non-CLI driver would use.
 pub fn run(
     world: &hornvale_kernel::World,
     opts: PossessOpts,

@@ -415,6 +415,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     // §7). `hornvale possess --lens lantern` is the documented
                     // way to ask for it.
                     lens: hornvale_vessel::lens::Lens::Off,
+                    ..hornvale_vessel::PossessOpts::default()
                 };
                 match hornvale_vessel::Session::start(world, &opts) {
                     Err(e) => writeln!(output, "error: {e}")?,

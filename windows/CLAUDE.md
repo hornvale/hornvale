@@ -68,6 +68,14 @@ scene JSON, the census CSVs, the book's generated pages). Two consequences:
   path.
 - **A rendering change is an artifact change.** Regenerate and review:
   `make rebaseline`, then diff `book/src/gallery/ book/src/reference/
-  book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/`. Scene schemas
+  book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/
+  clients/game/core/tests/fixtures/`. That last one is a window's artifact
+  too, despite living outside the workspace: a change to `windows/vessel`'s
+  `snapshot_json` drifts the committed `vessel/session/v1` fixtures. **It is
+  not the only surface that can.** The snapshot embeds
+  `hornvale_scene::SurroundsScene` (`snapshot.rs`), and `windows/scene/src/
+  region.rs` carries its own `quantize_serde` attributes — so a float-emitting
+  change anywhere under `windows/scene` reaches those fixtures too. Check the
+  whole embedded path, not just the vessel end of it. Scene schemas
   additionally cross the repo boundary to external clients (decision 0055)
   — additive-or-versioned only.

@@ -89,8 +89,11 @@ jobs:
           # out would regenerate two files and never look at them.
           # book/src/domesday/ is in this list too (The Domesday, 2026-08-08):
           # a pure read over the committed census, so it drifts whenever that
-          # CSV moves, even with no other code change at all.
-          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ \
+          # CSV moves, even with no other code change at all. So is
+          # clients/game/core/tests/fixtures/ (The Quire, 2026-08-08): the
+          # committed seed-42 vessel/session/v1 snapshots the game client's
+          # render tests read instead of paying for genesis.
+          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
             ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \
@@ -195,3 +198,17 @@ jobs:
             clients/world-wasm
       - name: Catalog gate (lint + golden smoke + size)
         run: make world-check
+
+  game:
+    name: Game client (hornvale-game-core, hornvale-game)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            clients/game
+      - name: Game client gate (fmt + clippy + test + containment guard)
+        run: make game-check
