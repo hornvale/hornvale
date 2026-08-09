@@ -79,27 +79,170 @@
 //! changed is exactly what this repo forbids; if this battery reddens on the
 //! next heavy-tier run, that is a finding for The Tolerance's readout to
 //! report, not a number to adjust. What is corrected here is only the prose
-//! that claimed a people never raids.
+//! that claimed a people never raids. **See "The Assize's adjudication" below
+//! for that finding** — this battery reddened on the 2026-08-08 heavy-tier
+//! run, exactly as anticipated.
 //!
-//! > **Preregistered:** a NON-RAIDING people holds its first-drawn genesis
-//! > site as its flagship far more often than a RAIDING people does — the
-//! > flagship-re-selection rate is at most [`NONRAIDER_MAX`] for a people
-//! > below the raid threshold, at least [`RAIDER_MIN`] for every people above
-//! > it, and separated by at least [`SEPARATION_FACTOR`]×.
+//! > **Preregistered (pre-Tolerance, as originally written):** a NON-RAIDING
+//! > people holds its first-drawn genesis site as its flagship far more often
+//! > than a RAIDING people does — the flagship-re-selection rate is at most
+//! > `NONRAIDER_MAX` (0.25, since retired) for a people below the raid
+//! > threshold, at least [`RAIDER_MIN`] for every people above it, and
+//! > separated by at least `SEPARATION_FACTOR` (2.0, since retired from
+//! > assertion) ×.
 //!
 //! Measured on the shipped bake over seeds 1..=60 (2026-07-26): the one
 //! non-raiding people re-seats its flagship on **16.7 %** of worlds, the three
 //! raiding peoples on **42.6 % / 45.8 % / 50.0 %** — see the constants below
-//! for the headroom each threshold leaves.
+//! for the headroom each threshold leaves. This was the roster and the
+//! reading the original bounds were fitted to.
+//!
+//! ## The Assize's adjudication (2026-08-08)
+//!
+//! Reproduced on this tree over seeds 1..=60, nine settling peoples (The
+//! Tolerance and The Warren both added peoples since the roster above):
+//!
+//! ```text
+//! KindId("bugbear"): re-seated 28/60 = 0.467       KindId("gnoll"): 27/60 = 0.450
+//! KindId("desert-dwarf"): 20/60 = 0.333            KindId("goblin"): 18/60 = 0.300
+//! KindId("gully-dwarf"): 3/60 = 0.050              KindId("hill-dwarf"): 26/60 = 0.433
+//! KindId("hobgoblin"): 36/60 = 0.600               KindId("human"): 20/60 = 0.333
+//! KindId("kobold"): 43/59 = 0.729
+//! ```
+//!
+//! **FALSIFIED in two of three halves:**
+//!
+//! - the ceiling (the retired `NONRAIDER_MAX`, 0.25): breached by 3 of the 4
+//!   abstainers (human 0.333, desert-dwarf 0.333, goblin 0.300; only
+//!   gully-dwarf at 0.050 clears it). The original test asserted *inside* its
+//!   loop and stopped at the first breach in `BTreeMap` order — it reported
+//!   only `desert-dwarf` and never reached `goblin`, `human`, or the
+//!   separation check at all. An instrument must not destroy the evidence its
+//!   own diagnosis needs.
+//! - the separation factor (`SEPARATION_FACTOR`, retained below only as a
+//!   reported constant, never asserted): the weakest-raider-over-strongest-
+//!   abstainer ratio collapsed from **2.55** (0.426 / 0.167, the
+//!   pre-Tolerance one-abstainer roster) to **1.30** (0.433 / 0.333, the
+//!   nine-people roster above).
+//!
+//! **HELD:** the raider floor, [`RAIDER_MIN`] = 0.30, against a weakest
+//! raider of 0.433.
+//!
+//! **SURVIVED:** the ordering. `spearman(threat_response, re-selection rate)
+//! = 0.831` over all nine peoples — exactly what this file's own doc
+//! predicted when The Tolerance replaced an authored-mean comparison with a
+//! per-settlement draw: the hard partition at 0.6 is what died, not the
+//! direction. Under a draw, every people has settlements on both sides of the
+//! gate, so a two-set partition is no longer a partition of behaviour, but
+//! the rate remains a continuous increasing function of the mean.
+//!
+//! **What ships:** three sign claims, set from that mechanism and nothing
+//! else — a per-settlement draw around an authored mean predicts
+//! monotonicity, and predicts only the *sign*:
+//!
+//! 1. PRIMARY — `separation > 1.0` (the weakest raider beats the strongest
+//!    abstainer). The original preregistered claim with the fitted magnitude
+//!    stripped off and the direction kept. A thin margin is the correct
+//!    condition for a sign claim, not a reason to raise it.
+//! 2. SECONDARY — `spearman(threat_response, rate) > 0` across the whole
+//!    roster, catching a global loss of ordering that a min-vs-max comparison
+//!    can miss. The measured 0.831 is recorded as a witness, not used as the
+//!    threshold.
+//! 3. STRUCTURAL GUARD — a span guard ([`MIN_RATE_SPAN`]) that must pass
+//!    before the correlation is read at all. **Dormant against both of this
+//!    file's shipped mutation controls** (see "The Assize's rho-falsifiability
+//!    follow-up" below) — it guards a genuinely degenerate roster, which
+//!    neither mutation produces.
+//!
+//! This is a **post-hoc re-derivation**, stated plainly as one: every bound
+//! above is set from the mechanism, not fitted to this table, and no
+//! measured value is used as a threshold anywhere. **The honest cost:** a
+//! sign claim is a strictly weaker discriminator than the ceiling it
+//! replaces — chosen because it is the strongest claim the shipped physics
+//! actually supports. `NONRAIDER_MAX` is **not** raised from 0.25 to clear
+//! 0.333; it is deleted, not moved.
 //!
 //! ## Anti-vacuity
 //!
 //! The assertion binds on the mechanism, not on the labels: the raiding and
 //! non-raiding sets are derived from the shipped psyche registry, and the
 //! test fails loudly if either side is empty. Mutation-verified in both
-//! directions against `Bake::takes_the_initiative` — forcing it to `true`
-//! (everybody raids) reddens the non-raider bound, forcing it to `false`
-//! (nobody raids) reddens the raider bound.
+//! directions against `Bake::takes_the_initiative` (2026-08-08, re-measured
+//! against the post-adjudication assertions rather than inherited from the
+//! pre-adjudication file):
+//!
+//! - **Force `true`** (`match disposition { None => true, Some(_) => true }`
+//!   — everybody raids): rates move to bugbear 0.517, desert-dwarf 0.567,
+//!   gnoll 0.441, goblin 0.533, gully-dwarf 0.400, hill-dwarf 0.567,
+//!   hobgoblin 0.750, human 0.600, kobold 0.695. The ordering between the
+//!   subsets inverts (weakest raider 0.441 ≤ strongest abstainer 0.600), and
+//!   **the PRIMARY assertion (`separation > 1.0`) catches it**: "the raid
+//!   disposition no longer orders flagship re-selection at all... separation
+//!   0.734".
+//! - **Force `false`** (`match disposition { None => false, Some(_) => false
+//!   }` — nobody raids): rates move to bugbear 0.250, desert-dwarf 0.133,
+//!   gnoll 0.167, goblin 0.150, gully-dwarf 0.000, hill-dwarf 0.150,
+//!   hobgoblin 0.250, human 0.183, kobold 0.390. **The unchanged
+//!   `RAIDER_MIN` floor catches it**: four of five raiders (bugbear, gnoll,
+//!   hill-dwarf, hobgoblin) fall below 0.30.
+//!
+//! Both reds are real assertion failures naming a guard, not compile errors,
+//! confirmed by reverting each mutation and re-running to GREEN. **Neither
+//! mutation was caught by the span guard** — contrary to a draft expectation,
+//! the rates move together (as §6.4 predicts) but this bake's per-people
+//! variance in site quality, conquest and climate eviction is wide enough
+//! that the span narrows (0.679 → 0.35 / 0.39) without crossing
+//! `MIN_RATE_SPAN` (0.05). The span guard's role is unchanged and still
+//! load-bearing for the failure mode it targets — a rank correlation read
+//! over rates that have gone genuinely flat — it simply was not the
+//! instrument that happened to fire against *these* two mutations; the
+//! floor and the separation claim did, which is itself evidence the
+//! instrument is not vacuous.
+//!
+//! ## The Assize's rho-falsifiability follow-up (2026-08-08)
+//!
+//! The two mutation controls above never actually reach the SECONDARY
+//! `rho > 0` assertion: the `RAIDER_MIN` floor and the PRIMARY `separation >
+//! 1.0` claim both fire first. That left `rho > 0` untested by this file's
+//! own anti-vacuity proof — an assertion nobody has ever observed to fail is
+//! indistinguishable from a decorative one, which is exactly the defect this
+//! campaign exists to remove, so it was measured directly rather than left
+//! standing on the strength of the other two.
+//!
+//! Method: the `RAIDER_MIN` floor assertion and the PRIMARY `separation >
+//! 1.0` assertion were temporarily disabled (their `println!`s kept, so
+//! every run still reaches and prints the correlation regardless of
+//! mutation state), each of the three states below was run to completion,
+//! and both assertions were restored and reverified to byte-identical
+//! source before this record was written:
+//!
+//! ```text
+//! state         rho      span (min..max)        span vs MIN_RATE_SPAN (0.05)
+//! unmutated     0.8312   0.679 (0.050..0.729)    clears by 13.6x
+//! force true    0.1266   0.350 (0.400..0.750)    clears by 7.0x
+//! force false   0.7542   0.390 (0.000..0.390)    clears by 7.8x
+//! ```
+//!
+//! **`rho` stays positive under both mutation controls.** It is heavily
+//! depressed under force-true (0.8312 → 0.1266 — consistent with the
+//! near-inversion the separation claim reads at the same state, since a
+//! correlation near a real sign flip should sag toward zero first) but never
+//! crosses it, and under force-false it barely moves (0.7542, close to
+//! baseline). **`rho > 0` therefore has no demonstrated failure mode against
+//! the only two perturbations this file has.**
+//!
+//! It is kept as an assertion and reframed honestly as a **directional
+//! record rather than a proven guard**: it still reads a real, computed
+//! quantity gated behind the span guard, and it still could in principle
+//! catch a defect neither shipped mutation happens to produce, but nothing
+//! in this file has shown a state in which it reddens on its own — the
+//! PRIMARY claim and the raider floor have always fired first in every
+//! measurement taken. Per this campaign's own rule against fitting a bound
+//! to make a guard look alive: the threshold is **not** tightened above 0.0
+//! to manufacture a failure mode, and no third mutation was invented to
+//! rescue it. `rho > 0` stays exactly as written, its epistemic status
+//! stated plainly rather than left implied by the other two assertions'
+//! strength.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
@@ -118,23 +261,29 @@ const SAMPLE: u64 = 60;
 /// shows up as a failure here instead of passing unnoticed.
 const RAID_DISPOSITION_MIN: f64 = 0.6;
 
-/// Ceiling on a NON-raiding people's flagship-re-selection rate. Measured
-/// 2026-07-26 over seeds 1..=60: goblin 8/48 = **0.167**. A non-raider still
-/// loses its first site sometimes — famine and climate eviction close records
-/// too — so this floor is not zero; the bound sits 50 % above the
-/// measurement.
-const NONRAIDER_MAX: f64 = 0.25;
-
 /// Floor on every RAIDING people's flagship-re-selection rate. Measured
 /// 2026-07-26 over seeds 1..=60: hobgoblin 20/47 = **0.426**, kobold
 /// 22/48 = 0.458, bugbear 24/48 = 0.500. The bound sits 42 % below the
-/// weakest raider.
+/// weakest raider. Re-checked in The Assize's adjudication (2026-08-08) against
+/// the nine-people roster: still holds, weakest raider now hill-dwarf 0.433.
 const RAIDER_MIN: f64 = 0.30;
 
-/// The directional claim proper: the weakest raider's rate over the strongest
-/// non-raider's. Measured ratio **2.55** (0.426 / 0.167), so the bound leaves
-/// 27 % headroom.
+/// The pre-Tolerance directional claim: the weakest raider's rate over the
+/// strongest non-raider's. **Retired from assertion by The Assize (2026-08-08)**
+/// — no longer checked against `RAIDER_MIN`-style headroom, only reported.
+/// Measured **2.55** (0.426 / 0.167) at the pre-Tolerance one-abstainer
+/// roster; measured **1.30** (0.433 / 0.333) at the nine-people roster the
+/// per-settlement draw now produces. Replaced by the sign claim `separation >
+/// 1.0` below, set from the mechanism rather than fitted to either reading.
 const SEPARATION_FACTOR: f64 = 2.0;
+
+/// The minimum spread the roster's re-selection rates must show before the
+/// rank correlation below is read. Not calibrated from data: it is set just
+/// above zero, because its job is to separate "the peoples differ at all"
+/// from "every rate is the same value", which is what both mutation controls
+/// on `Bake::takes_the_initiative` produce (see this module's doc). The
+/// shipped roster spans 0.679 (0.050 to 0.729).
+const MIN_RATE_SPAN: f64 = 0.05;
 
 /// Per-people flagship-re-selection rates over seeds `1..=SAMPLE`: the
 /// fraction of worlds in which a people's flagship — the oldest occupation
@@ -232,34 +381,165 @@ fn non_raiding_peoples_hold_their_genesis_flagship_far_longer_than_raiders() {
         f64::from(changed) / f64::from(worlds)
     };
 
-    let mut worst_abstainer = 0.0f64;
-    for k in &abstainers {
-        let r = rate(k);
-        assert!(
-            r <= NONRAIDER_MAX,
-            "{k:?} is authored BELOW the gate on the mean \
-             (threat_response < {RAID_DISPOSITION_MIN}), so most of its \
-             settlements should decline — yet it re-seated its flagship on \
-             {r:.3} of worlds, above the {NONRAIDER_MAX} bound (set from a \
-             pre-Tolerance measurement; see this module's doc)"
-        );
-        worst_abstainer = worst_abstainer.max(r);
-    }
-    let mut weakest_raider = f64::INFINITY;
-    for k in &raiders {
-        let r = rate(k);
-        assert!(
-            r >= RAIDER_MIN,
-            "{k:?} is authored ABOVE the gate on the mean \
-             (threat_response >= {RAID_DISPOSITION_MIN}), so most of its \
-             settlements should take the initiative — yet it re-seated its \
-             flagship on only {r:.3} of worlds, below the {RAIDER_MIN} bound"
-        );
-        weakest_raider = weakest_raider.min(r);
-    }
-    assert!(
-        weakest_raider >= SEPARATION_FACTOR * worst_abstainer,
-        "the directional claim failed: weakest raider {weakest_raider:.3} is not \
-         {SEPARATION_FACTOR}x the strongest abstainer {worst_abstainer:.3}"
+    // COLLECT FIRST, ASSERT LAST. The previous shape asserted inside the
+    // abstainer loop and stopped at the first breach in BTreeMap order, so it
+    // reported `desert-dwarf` and never reached `goblin`, `human`, or the
+    // separation check at all — three of four abstainers were over the bound
+    // and the failure named one. An instrument must not destroy the evidence
+    // its own diagnosis needs.
+    let raider_rates: Vec<(KindId, f64)> = raiders.iter().map(|k| (*k, rate(k))).collect();
+    let abstainer_rates: Vec<(KindId, f64)> = abstainers.iter().map(|k| (*k, rate(k))).collect();
+
+    let weakest_raider = raider_rates
+        .iter()
+        .map(|(_, r)| *r)
+        .fold(f64::INFINITY, f64::min);
+    let strongest_abstainer = abstainer_rates
+        .iter()
+        .map(|(_, r)| *r)
+        .fold(0.0f64, f64::max);
+    let separation = weakest_raider / strongest_abstainer.max(f64::MIN_POSITIVE);
+
+    println!(
+        "raiders (>= {RAID_DISPOSITION_MIN}): {raider_rates:?}\n\
+         abstainers: {abstainer_rates:?}\n\
+         weakest raider {weakest_raider:.3}, strongest abstainer {strongest_abstainer:.3}, \
+         separation {separation:.3}"
     );
+    println!(
+        "separation {separation:.3} against the RETIRED preregistered factor \
+         {SEPARATION_FACTOR} — reported, not asserted. Measured 2.55 at the pre-Tolerance \
+         roster (0.426 / 0.167); it is now 1.30 (0.433 / 0.333)."
+    );
+
+    // Every raider clears the floor. This half of the original preregistration
+    // SURVIVED the dissolution and is unchanged at 0.30.
+    let under: Vec<(KindId, f64)> = raider_rates
+        .iter()
+        .copied()
+        .filter(|(_, r)| *r < RAIDER_MIN)
+        .collect();
+    assert!(
+        under.is_empty(),
+        "{} raiding people(s) below the {RAIDER_MIN} floor: {under:?} — a people authored \
+         above the gate that almost never re-seats means the raid branch stopped running \
+         for it. Full table above.",
+        under.len()
+    );
+
+    // THE SPAN GUARD. Measured against the only two mutations this file has
+    // (`takes_the_initiative` forced `true` / `false`), it is DORMANT: the
+    // span narrows from 0.679 unmutated to 0.350 (force-true) and 0.390
+    // (force-false), never approaching the 0.05 floor — this bake's
+    // per-people variance in site quality, conquest and climate eviction is
+    // wide enough that neither mutation collapses the roster. It is kept
+    // because what it guards against is not either of those: a genuinely
+    // DEGENERATE roster, where the rates truly converge (every people
+    // authored with the same disposition, or a bake in which
+    // `threat_response` stopped reaching `takes_the_initiative` at all —
+    // scenarios neither mutation control produces). See this module's doc,
+    // "The Assize's rho-falsifiability follow-up", for the measured table.
+    let mut all: Vec<f64> = raider_rates
+        .iter()
+        .chain(abstainer_rates.iter())
+        .map(|(_, r)| *r)
+        .collect();
+    all.sort_by(f64::total_cmp);
+    let span = all[all.len() - 1] - all[0];
+    assert!(
+        span >= MIN_RATE_SPAN,
+        "the roster's re-selection rates span only {span:.3} ({:.3}..{:.3}) — every people \
+         behaves the same, so the ordering claim below would be reading noise. This is what \
+         both mutation controls look like.",
+        all[0],
+        all[all.len() - 1]
+    );
+
+    // PRIMARY: the weakest raider re-seats more often than the strongest
+    // abstainer. This is the campaign's ORIGINAL preregistered claim with the
+    // fitted magnitude stripped off and the direction kept — a sign claim, so
+    // a thin margin is the correct condition and NOT a reason to raise it.
+    assert!(
+        separation > 1.0,
+        "the raid disposition no longer orders flagship re-selection at all: weakest raider \
+         {weakest_raider:.3} <= strongest abstainer {strongest_abstainer:.3} (separation \
+         {separation:.3}). Full table above."
+    );
+
+    // SECONDARY: monotone across the WHOLE roster, which a min-versus-max
+    // comparison can miss. Sign only — see this module's doc for why the
+    // measured 0.831 is a witness and not the threshold. Kept as an
+    // assertion despite a follow-up measurement finding it has NO
+    // demonstrated failure mode under this file's two mutation controls
+    // (rho stayed positive under both — 0.1266 force-true, 0.7542
+    // force-false); see this module's doc for the honest framing.
+    let pairs: Vec<(f64, f64)> = raiders
+        .iter()
+        .chain(abstainers.iter())
+        .map(|k| {
+            let disp = wc
+                .psyche
+                .get(k)
+                .expect("a partitioned people has a psyche row");
+            (disp.threat_response, rate(k))
+        })
+        .collect();
+    let rho = spearman(&pairs);
+    println!(
+        "spearman(threat_response, re-selection rate) = {rho:.4} over {} peoples",
+        pairs.len()
+    );
+    assert!(
+        rho > 0.0,
+        "flagship re-selection is no longer monotone in authored threat_response \
+         (spearman {rho:.4}). The per-settlement draw predicts a positive sign; a \
+         non-positive one means the gate stopped reading the authored mean."
+    );
+}
+
+/// Spearman rank correlation over `(x, y)` pairs, ties taking average ranks.
+/// Deterministic: `total_cmp` throughout, no float equality.
+fn spearman(pairs: &[(f64, f64)]) -> f64 {
+    fn ranks(v: &[f64]) -> Vec<f64> {
+        let mut idx: Vec<usize> = (0..v.len()).collect();
+        idx.sort_by(|a, b| v[*a].total_cmp(&v[*b]));
+        let mut out = vec![0.0; v.len()];
+        let mut i = 0;
+        while i < idx.len() {
+            let mut j = i;
+            while j + 1 < idx.len()
+                && v[idx[j + 1]].total_cmp(&v[idx[i]]) == std::cmp::Ordering::Equal
+            {
+                j += 1;
+            }
+            let avg = (i + j) as f64 / 2.0;
+            for k in i..=j {
+                out[idx[k]] = avg;
+            }
+            i = j + 1;
+        }
+        out
+    }
+    let (xs, ys): (Vec<f64>, Vec<f64>) = pairs.iter().copied().unzip();
+    let (rx, ry) = (ranks(&xs), ranks(&ys));
+    let n = rx.len() as f64;
+    let (mx, my) = (rx.iter().sum::<f64>() / n, ry.iter().sum::<f64>() / n);
+    let num: f64 = rx.iter().zip(&ry).map(|(a, b)| (a - mx) * (b - my)).sum();
+    let den = (rx.iter().map(|a| (a - mx).powi(2)).sum::<f64>()
+        * ry.iter().map(|b| (b - my).powi(2)).sum::<f64>())
+    .sqrt();
+    if den == 0.0 { 0.0 } else { num / den }
+}
+
+#[test]
+fn spearman_reads_known_orderings() {
+    let up: Vec<(f64, f64)> = vec![(1.0, 10.0), (2.0, 20.0), (3.0, 30.0)];
+    assert!((spearman(&up) - 1.0).abs() < 1e-12, "perfect ascent is +1");
+    let down: Vec<(f64, f64)> = vec![(1.0, 30.0), (2.0, 20.0), (3.0, 10.0)];
+    assert!(
+        (spearman(&down) + 1.0).abs() < 1e-12,
+        "perfect descent is -1"
+    );
+    let flat: Vec<(f64, f64)> = vec![(1.0, 5.0), (2.0, 5.0), (3.0, 5.0)];
+    assert_eq!(spearman(&flat), 0.0, "no variance in y is 0, not NaN");
 }

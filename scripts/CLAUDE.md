@@ -42,16 +42,20 @@ diverge (that's the point). Key knobs:
   `fetch-depth: 0` for exactly this reason.
 - After regen, the drift check is `git diff` over
   `book/src/gallery book/src/reference book/src/laboratory docs/audits
-  docs/digest clients/game/core/tests/fixtures` — note **`docs/audits/`** is
-  in the list (the type-audit report drifts on pub-boundary changes; a common
-  miss), and so is **`docs/digest/`** (the in-force decision index drifts
-  when a decision is added or superseded, the delta report when the idea
-  registry moves). **`clients/game/core/tests/fixtures/`** joined it at The
-  Quire (Task 3, extended Task 4): the committed seed-42 session snapshots
-  every `hornvale-game-core` render test reads instead of paying for genesis
-  — one walk-band, one chamber-band (the second exists so the
-  `Spatial::Chamber` mirror has committed coverage too, not just the
-  walk-band branch turn 0 always lands on).
+  docs/digest book/src/domesday clients/game/core/tests/fixtures` — note
+  **`docs/audits/`** is in the list (the type-audit report drifts on
+  pub-boundary changes; a common miss), and so is **`docs/digest/`** (the
+  in-force decision index drifts when a decision is added or superseded, the
+  delta report when the idea registry moves) and **`book/src/domesday/`**
+  (2026-08-08, The Domesday): it is a pure read over the committed census,
+  never a re-run of one, so it drifts whenever that CSV moves — even from a
+  census refresh alone, with no other code change.
+  **`clients/game/core/tests/fixtures/`** joined it at The Quire (Task 3,
+  extended Task 4): the committed seed-42 session snapshots every
+  `hornvale-game-core` render test reads instead of paying for genesis — one
+  walk-band, one chamber-band (the second exists so the `Spatial::Chamber`
+  mirror has committed coverage too, not just the walk-band branch turn 0
+  always lands on).
 - **THE HAZARD ADDING A NEW GENERATED DIRECTORY EXPOSES**, and the near-miss
   this campaign actually hit: `git diff --exit-code <path>` is silently
   **VACUOUS** against a path git does not track. Regenerate into a brand-new

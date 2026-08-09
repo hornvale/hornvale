@@ -538,3 +538,15 @@ dispatch checks out a detached HEAD, so it wrote neither. Both commits are on
 | 2026-08-09T01:12:34Z | gate | 930.476 | 5505.971 | 172.640 | 6.10 | 0 | c3f03eda | the-quire | Greyjoy | 10 |
 | 2026-08-09T01:59:17Z | rebaseline | 191.397 | 221.731 | 10.139 | 1.21 | 0 | e6e101fb | the-quire | Greyjoy | 10 |
 | 2026-08-09T02:30:36Z | rebaseline | 213.930 | 240.968 | 15.772 | 1.20 | 0 | 32b8237b | the-quire | Greyjoy | 10 |
+| 2026-08-09T03:05:11Z | rebaseline | 230.757 | 226.166 | 8.568 | 1.02 | 0 | 243be98b | the-domesday | Greyjoy | 10 |
+| 2026-08-09T03:24:02Z | gate | 1118.304 | 5388.444 | 132.908 | 4.94 | 0 | 243be98b | the-domesday | Greyjoy | 10 |
+| 2026-08-08T22:22:53Z | rebaseline | 221.906 | 214.565 | 7.569 | 1.00 | 0 | e9cb4a09 | the-tare | Greyjoy | 10 |
+| 2026-08-08T22:37:51Z | census | 818.223 | 22085.898 | 289.309 | 27.35 | 0 | fb4629ce |  | lefford | 40 |
+| 2026-08-08T22:58:34Z | gate | 666.946 | 5332.498 | 125.161 | 8.18 | 0 | ce74f902 | the-tare | Greyjoy | 10 |
+| 2026-08-09T00:07:00Z | census | 823.758 | 22170.172 | 286.555 | 27.26 | 0 | 426eaa18 |  | lefford | 40 |
+| 2026-08-09T00:22:37Z | gate | 875.512 | 5361.649 | 147.067 | 6.29 | 0 | 6ce36e9f | the-tare | Greyjoy | 10 |
+| 2026-08-09T00:47:44Z | gate | 837.112 | 5361.162 | 133.124 | 6.56 | 0 | b1797d16 | the-tare | Greyjoy | 10 |
+| 2026-08-09T00:50:25Z | rebaseline | 160.991 | 215.814 | 10.296 | 1.40 | 0 | b1797d16 | the-tare | Greyjoy | 10 |
+| 2026-08-09T03:42:08Z | gate | 166.773 | 970.250 | 52.143 | 6.13 | 0 | a1397eb4 | the-domesday | Greyjoy | 10 |
+| 2026-08-09T03:56:04Z | gate | 609.495 | 5351.635 | 105.095 | 8.95 | 0 | 3c8bce1d | the-domesday | Greyjoy | 10 |
+| 2026-08-09T11:32:23Z | gate | 712.251 | 5392.274 | 132.705 | 7.76 | 0 | d5556484 | the-domesday | MacBookPro | 10 |

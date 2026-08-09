@@ -23,10 +23,16 @@
 //! closes. Re-run the bench, not this test, when you want the release-
 //! profile per-verb-class split too.
 //!
-//! Read a red run as contention before suspecting the code: every ceiling
-//! here is a wall time, and `scene_cost.rs`'s documented failure mode — all
-//! metrics inflating together by roughly the same factor — is the machine,
-//! not a regression. A real regression is local.
+//! **Read a red run against `scene_cost.rs`'s corrected discriminator, not
+//! the old "uniform vs. local" rule** — see that file's module doc for the
+//! full correction. The same resource-profile reasoning applies here:
+//! `Session::start` builds a world from scratch (`terrain_of` ->
+//! `hornvale_terrain::generate`, uncached), so it is the contention-sensitive
+//! metric; the per-turn metrics (`handle+snapshot+json`, indoor
+//! `snapshot()+json`) run against a `World` already built in memory, so they
+//! are the control set. A saturated runner is expected to starve `start`
+//! alone and leave the controls near their basis — the verdict below is the
+//! same arithmetic `scene_cost.rs` uses, not a uniformity check.
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel};
@@ -193,7 +199,45 @@ const TURN_BUDGET_MS: f64 = 8.0;
 /// samples — `enter`, `map`, `look` alike, 15 per run) gave 8.910, 8.503,
 /// 8.530 ms — slowest 8.910 ms. Budgeted at ~2x, rounded up: `2 * 8.910 =
 /// 17.82` -> 18.0.
-const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 18.0;
+///
+/// # **RAISED by The Assize: 18.0 -> 40.0 ms**, and the basis with it
+///
+/// An explicit, reviewed act (Nathan, 2026-08-08), recorded here because the
+/// ratchet rule requires a raise to be exactly that. **Ceilings still ratchet
+/// DOWN freely; this is the deliberate exception, not a precedent for
+/// re-baselining a red.**
+///
+/// **CAUSE, BISECTED RATHER THAN ASSUMED.** The metric read 18.720 ms at main
+/// against the 18.0 ceiling — and it is *not* contention: reproduced three
+/// times at 1-min loadavg 5.0-5.4 while both control metrics sat at 1.08x and
+/// 0.92x of their own bases. A commit-by-commit bisect over the whole range
+/// since this ceiling was set puts the entire step on **one** commit:
+///
+/// ```text
+///   109f8422  the commit that SET this ceiling      indoor  8.85 / 8.80 ms
+///   211e99ca  a built cell has a fabric                     8.92
+///   bcf4a596  light is a derived view over shadowcaster     8.61
+///   7f198ea5  a hearth is at a wall                         8.57 / 8.67
+///   c25bb1d2  PaletteEntry.color fills                     17.71 / 17.30  <--
+///   f962ee95  the lens                                     17.17
+///   155b0901  main                                         18.72
+/// ```
+///
+/// `c25bb1d2` widened palette interning from `CellKind` to
+/// `(CellKind, Option<[u8; 3]>)`, replacing one shared entry per wall material
+/// with a per-cell `Observer::sense` + `to_srgb` summed over `light_field`'s
+/// illuminants — a per-chamber lookup became per-cell work on every indoor
+/// snapshot. **The four sibling Lantern commits moved it by ZERO**, and both
+/// controls stayed flat across every point, so this is localised code cost.
+///
+/// **This is the price of per-cell colour, not a defect.** The feature does
+/// exactly what it says. Budgeted at ~2x the new measurement in the same
+/// method as every other ceiling here: `2 * 18.720 = 37.44` -> 40.0.
+///
+/// The 8.85 -> 17.71 step is left legible above rather than smoothed away: a
+/// future reader must be able to see that this ceiling doubled and why, which
+/// is the entire reason the ratchet rule exists.
+const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 40.0;
 
 /// Ceiling for one walk-band snapshot's serialized bytes. The spec measured
 /// `scene/surrounds/v1` at 7,049 bytes at radius 4; this bounds the whole
@@ -222,6 +266,63 @@ const INDOOR_SNAPSHOT_BUDGET_MS: f64 = 18.0;
 /// margin against a basis that was already wrong, not a growth this
 /// campaign's chamber work caused in the walk band.
 const WALK_BYTES_BUDGET: usize = 24600;
+
+/// The measured basis for `START_BUDGET_MS`: 3442.192 ms, the slowest of
+/// three runs, host `MacBookPro`, dev profile, 2026-08-06 — the ORIGINAL
+/// basis this ceiling was set from. The Sighting's Task 6 re-measure came in
+/// lower (2803.291 ms) and explicitly did not rebase the ceiling — see
+/// `START_BUDGET_MS`'s own doc for why. A CONSTANT rather than prose so the
+/// failure path can compute a ratio, the same pattern as
+/// `scene_cost.rs::GENESIS_BASIS_MS`.
+const START_BASIS_MS: f64 = 3442.192;
+/// The measured basis for `TURN_BUDGET_MS`: 3.906 ms, slowest of three runs,
+/// same box/date/profile as `START_BASIS_MS`. The Sighting's Task 6
+/// re-measure (3.939 ms) was read as "essentially flat" and left the ceiling
+/// unchanged — see `TURN_BUDGET_MS`'s own doc.
+const TURN_BASIS_MS: f64 = 3.906;
+/// The measured basis for `INDOOR_SNAPSHOT_BUDGET_MS`.
+///
+/// **Moved by The Assize, 8.910 -> 18.720**, in the same reviewed act that
+/// raised the ceiling above it. The old figure was 8.910 ms (The Sighting,
+/// 2026-08-06, slowest of three runs); it is superseded because `c25bb1d2`
+/// made per-cell colour a real cost, bisected and evidenced at
+/// `INDOOR_SNAPSHOT_BUDGET_MS`'s own doc.
+///
+/// **The basis MUST move with the ceiling.** Leaving it at 8.910 while the
+/// ceiling went to 40.0 would make this metric read 2.09x on every future
+/// green run, and the verdict logic below would then report a control as
+/// having "moved" forever — an alarm that fires always is an alarm nobody
+/// reads.
+const INDOOR_SNAPSHOT_BASIS_MS: f64 = 18.720;
+
+/// How far a CONTROL metric may drift from its basis before the run stops
+/// counting as "the controls held". Same value and reasoning as
+/// `cli/tests/scene_cost.rs::CONTROL_TOLERANCE` — see that constant's doc
+/// for the two data points it sits between. It gates a DIAGNOSTIC MESSAGE,
+/// never a pass/fail — no assertion reads it.
+const CONTROL_TOLERANCE: f64 = 1.5;
+
+/// The machine every basis constant above was measured on, as
+/// [`hornvale_lab::canonical_host`] would name it — **not** `hostname -s`,
+/// which is not a stable machine identity (this repo's own Mac has answered
+/// both `MacBookPro` and `Greyjoy`; see `docs/timings.md`'s host column).
+///
+/// This file's own doc comments name the box repeatedly: `START_BASIS_MS`
+/// and `TURN_BASIS_MS` say "host `MacBookPro`"; `INDOOR_SNAPSHOT_BUDGET_MS`'s
+/// basis doc says "this box (`MacBookPro`)" — all "this box, dev profile"
+/// language, never `lefford`. Decision 0090 records the Mac as `Darwin
+/// arm64` on 10 cores
+/// (`docs/decisions/0090-the-canonical-host-is-audited-not-assumed.md:36`) —
+/// `arm64` there is `uname -m`'s name for it. `canonical_host` builds this
+/// id from `std::env::consts::ARCH`, the Rust compile-target name, which
+/// reports 64-bit ARM as `aarch64` regardless of OS — confirmed empirically
+/// on this box during The Assize — hence `aarch64-10`, not `arm64-10`.
+///
+/// A ratio computed against this basis from any OTHER host measures the
+/// machines, not the code (The Assize) — see the verdict logic in the test
+/// below, which declines to compute one off this host.
+/// type-audit: bare-ok(identifier-text)
+const BASIS_HOST: &str = "aarch64-10";
 
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
@@ -291,12 +392,79 @@ fn a_possessed_turn_stays_within_its_ceilings() {
     let walk_bytes = hornvale_vessel::snapshot_json(&session.snapshot().unwrap()).len();
     std::hint::black_box(session.handle("enter"));
 
-    println!("Session::start        {start_median:9.3} ms (budget {START_BUDGET_MS})");
-    println!("handle+snapshot+json  {turn_median:9.3} ms (budget {TURN_BUDGET_MS})");
-    println!(
-        "indoor snapshot+json  {indoor_snapshot_median:9.3} ms (budget {INDOOR_SNAPSHOT_BUDGET_MS})"
-    );
-    println!("walk snapshot bytes   {walk_bytes:9} B  (budget {WALK_BYTES_BUDGET})");
+    // Named so the verdict below can speak about them: `Session::start`
+    // builds a world from scratch and is the only contention-sensitive
+    // metric here; the two per-turn metrics run against a `World` already
+    // built in memory. Same shape as `scene_cost.rs`'s `measured` array.
+    let measured: [(&str, f64, f64, f64); 3] = [
+        (
+            "Session::start",
+            start_median,
+            START_BUDGET_MS,
+            START_BASIS_MS,
+        ),
+        (
+            "handle+snapshot+json",
+            turn_median,
+            TURN_BUDGET_MS,
+            TURN_BASIS_MS,
+        ),
+        (
+            "indoor snapshot+json",
+            indoor_snapshot_median,
+            INDOOR_SNAPSHOT_BUDGET_MS,
+            INDOOR_SNAPSHOT_BASIS_MS,
+        ),
+    ];
+    // A ratio against a basis measured on a DIFFERENT machine measures the
+    // machines, not the code (The Assize) — see `BASIS_HOST`'s doc. Compute
+    // this once and gate both the per-metric ratio column and the verdict on
+    // it.
+    let this_host = hornvale_lab::canonical_host();
+    let bases_apply = this_host == BASIS_HOST;
+    for (name, got, budget, basis) in measured {
+        if bases_apply {
+            println!(
+                "{name:<20}{got:9.3} ms (budget {budget:>8}) {:5.2}x basis {basis}",
+                got / basis
+            );
+        } else {
+            println!("{name:<20}{got:9.3} ms (budget {budget:>8})");
+        }
+    }
+    println!("walk snapshot bytes {walk_bytes:9} B (budget {WALK_BYTES_BUDGET})");
+
+    if !bases_apply {
+        println!(
+            "VERDICT: not computed — bases were measured on {BASIS_HOST}, this is \
+             {this_host}. A ratio across two machines measures the machines. Raw ms \
+             above stand; the ratio column and the verdict do not."
+        );
+    } else {
+        // THE DISCRIMINATOR, as arithmetic — see `scene_cost.rs`'s module
+        // doc. `Session::start` is the contention-sensitive metric; the two
+        // per-turn metrics are the CONTROL SET. Controls holding while start
+        // inflates is the machine. Any control moving is the code.
+        let controls_over: Vec<&str> = measured
+            .iter()
+            .skip(1)
+            .filter(|(_, got, _, basis)| got / basis > CONTROL_TOLERANCE)
+            .map(|(name, _, _, _)| *name)
+            .collect();
+        if controls_over.is_empty() {
+            println!(
+                "VERDICT: both controls within {CONTROL_TOLERANCE}x of basis. A Session::start \
+                 breach here reads as CONTENTION, not a regression — re-run on a quiet box \
+                 to confirm before touching any constant."
+            );
+        } else {
+            println!(
+                "VERDICT: {} control(s) moved: {controls_over:?}. This is NOT the contention \
+                 signature — look at the code before blaming the box.",
+                controls_over.len()
+            );
+        }
+    }
 
     assert!(
         start_median < START_BUDGET_MS,

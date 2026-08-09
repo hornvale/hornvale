@@ -117,6 +117,44 @@ pub fn current_hostname() -> String {
         .unwrap_or_default()
 }
 
+/// A stable machine identity of the form `<arch>-<cores>` (e.g. `aarch64-10`,
+/// `x86_64-40`), for callers that need to tell "which physical box measured
+/// this" apart from [`current_hostname`]'s `hostname -s`, which is NOT
+/// stable: this box alone has answered both `MacBookPro` and `Greyjoy` across
+/// its life, forking every hostname-keyed record it touches (`docs/timings/
+/// test-baseline-<host>.tsv` is the concrete casualty — see that file's own
+/// history and `docs/timings.md`'s host column).
+///
+/// Deliberately **not** a replacement for [`current_hostname`]: the census
+/// host guard above is safety-critical and fails closed on an exact string
+/// match against `scripts/census-canonical-host.txt`, and migrating it to
+/// this id is out of scope here (a follow-on; see the idea registry). This
+/// function is for NEW call sites — today, the cost-gate files under
+/// `cli/tests/` — that want a host identity that survives a rename.
+///
+/// **Known limitation, stated rather than hidden**: two distinct machines
+/// with the same architecture and logical core count are indistinguishable
+/// under this id. That is deliberate, not an oversight — a UUID would
+/// disambiguate them but could not be derived on a fresh checkout with
+/// nothing configured, which is the property this id trades for. It is
+/// verified to separate the four machines in use as of The Assize
+/// (`docs/timings.md`'s host column): `aarch64-10` (the Mac, whether it
+/// answers `MacBookPro` or `Greyjoy`), `aarch64-12` (`ambrose`), and
+/// `x86_64-40` (`lefford`) are each attested by at least one committed row;
+/// a fourth combination is reserved for any future box but is unmeasured
+/// today. `std::env::consts::ARCH` is the Rust compile-target name, not
+/// `uname -m` — it reports `aarch64` uniformly for 64-bit ARM on both
+/// macOS (where `uname -m` says `arm64`) and Linux, so this id happens to
+/// paper over that OS-level naming split for free.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn canonical_host() -> String {
+    let arch = std::env::consts::ARCH;
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+    format!("{arch}-{cores}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +223,27 @@ mod tests {
     #[test]
     fn canonical_host_constant_matches_the_shared_file() {
         assert_eq!(CANONICAL_CENSUS_HOST, "lefford");
+    }
+
+    /// Deliberately does NOT assert a specific value: that would pin the
+    /// test to whatever box runs it, which is the exact defect
+    /// `canonical_host` exists to fix. Only the SHAPE is checked — one
+    /// `-`-joined pair, arch half matching `std::env::consts::ARCH`, core
+    /// half a positive integer.
+    #[test]
+    fn canonical_host_has_the_arch_dash_cores_shape() {
+        let id = canonical_host();
+        assert!(!id.is_empty(), "must be non-empty");
+        let parts: Vec<&str> = id.split('-').collect();
+        assert_eq!(parts.len(), 2, "must contain exactly one '-': got {id:?}");
+        assert_eq!(
+            parts[0],
+            std::env::consts::ARCH,
+            "arch half must match std::env::consts::ARCH"
+        );
+        let cores: usize = parts[1]
+            .parse()
+            .unwrap_or_else(|e| panic!("core half {:?} must parse as an integer: {e}", parts[1]));
+        assert!(cores > 0, "core count must be positive, got {cores}");
     }
 }

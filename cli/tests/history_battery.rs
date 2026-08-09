@@ -40,6 +40,72 @@
 //! median depth/capacity correlation is **-0.2815** (seed 3), and seed 42's
 //! own Full-depth correlation is **-0.1092**. Every gate still passes; **no
 //! floor has moved** since the re-sync below, here or anywhere in this file.
+//!
+//! **The Assize (2026-08-08) retired the seed-42 and per-seed displacement
+//! FIRING assertions.** Both were `migration > 0` checks — one on seed 42 at
+//! `BuildDepth::Full`, one inside the cross-seed sweep loop — and both are
+//! now the census column `climate-displacement-events`. Measured over 48
+//! worlds the distribution is bimodal and **exactly zero on 6 of 48**, so a
+//! single-seed or per-seed firing gate has a ~12.5% failure rate by
+//! construction; the nine-seed sweep here was asserting the per-seed floor
+//! and passing on luck. `mig42` itself is unchanged — it still prints in the
+//! report artifact — and every other gate in this file (the pooled
+//! `SWEEP_MIGRATION_FLOOR`, territory separation, stratigraphy, and the
+//! median depth/capacity correlation) is untouched.
+//!
+//! **The Assize, task 6b (2026-08-08), pays the attribution debt task 6 left
+//! open.** Task 6 removed the assertion above but deliberately deferred
+//! regenerating the artifact ("that deserves its own attribution rather than
+//! riding along here" — its own commit message, `b013b97d`). Between the
+//! artifact's last write (`1d19d84e`, The Tense, 2026-08-06) and this run,
+//! `history_battery` had been RED the whole time — `assert!(mig42 > 0, ...)`
+//! panicked before reaching the write step — so the artifact was frozen for
+//! two campaigns' worth of landed history: the realm gate (`643d3c68`) and
+//! the dwarf family (`d34e28a5`/`b3583640`), both of which re-decide
+//! settlement placement world-wide, plus everything else this branch
+//! absorbed from main (The Digest, 28 commits). This run does not isolate
+//! which landed commit moved which number — that would need a bisection this
+//! task did not do — so what follows is the measured *shape* of the drift,
+//! not a claim about its mechanism.
+//!
+//! Every sweep seed's `occupied_sites` and `restacked_sites` rose except
+//! **seed 100**, which fell sharply on both (occupied 131→65, restacked
+//! 77→21, restacked fraction 0.5878→0.3231) while every other seed's
+//! fraction stayed in its former 0.43–0.66 band. That is the one reading
+//! that does not fit "more of everything," and this task did not chase why.
+//! The sweep migration total rose **188→237** (still every seed but one
+//! firing; seed 42's sweep row is the exception, at 0 — see below). The
+//! **median depth/capacity correlation reversed direction**: the prior log
+//! entry recorded three campaigns of drift toward zero (-0.4741 → -0.3431 →
+//! -0.3527 → -0.2815) with a standing warning that "the next campaign to
+//! touch this number should expect to have to re-argue the finding, not just
+//! re-pin it." This run measures **-0.3907** (seed 13) — away from zero, not
+//! toward it, and still negative on all nine seeds — so the finding does not
+//! need re-arguing this time, but the reversal itself is worth recording:
+//! the drift was not monotone.
+//!
+//! **Seed 42's own Full-depth reading is the one genuine surprise.**
+//! `mig42` fell **4→0** — seed 42 now measures literally zero
+//! climate-migration events, at both `BuildDepth::Full` (this file) and
+//! `BuildDepth::Settlements` (its sweep row). The committed `summary.md`'s
+//! first amendment ("Displacement is MIGRATION, not raiding") illustrated
+//! its point with seed 42 specifically; that illustration is no longer
+//! supported by seed 42's current state, and the amendment text below now
+//! says so rather than silently keeping a stale worked example. The
+//! amendment's *mechanism* claim is untouched — 237 events, 8 of 9 sweep
+//! seeds nonzero, still migration-only by construction — seed 42 just isn't
+//! evidence for it anymore. `mig42`'s render line also carried a
+//! long-standing bug independent of this drift: it printed an unconditional
+//! "PASS" against `MIGRATION_FLOOR` even though the actual assertion this
+//! file ran (before The Assize) was `mig42 > 0`, not `mig42 >= MIGRATION_FLOOR`
+//! — the two were never the same check, and the mismatch was invisible while
+//! `mig42` stayed comfortably above both. At `mig42 = 0` it stopped being
+//! invisible (`0 events (floor 5). PASS` reads as self-contradicting), so
+//! the line is now informational text, not a claimed verdict. The second
+//! amendment ("stratigraphy accretes on marginal land") remains true and,
+//! per the correlation reading above, more strongly evidenced than at the
+//! last regen. **No floor moved.** Every gate in this file still passes,
+//! most by a wider margin than before this run.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -167,9 +233,11 @@ fn measure(seed: u64, depth: BuildDepth) -> Row {
     }
 }
 
-/// claim: rate(forall-seed, per-seed firing floors + a pooled volume floor
-/// SWEEP_MIGRATION_FLOOR) — off-gate (heavy:); also exercises seed 42 at
-/// BuildDepth::Full for cascade-depth coverage
+/// claim: rate(forall-seed, a pooled volume floor SWEEP_MIGRATION_FLOOR) —
+/// off-gate (heavy:); also exercises seed 42 at BuildDepth::Full for
+/// cascade-depth coverage. The seed-42 and per-seed displacement FIRING
+/// floors this claim used to include moved to the census column
+/// `climate-displacement-events` (The Assize) — see this file's module doc.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn history_gates_full_world_and_cross_seed() {
@@ -187,11 +255,13 @@ fn history_gates_full_world_and_cross_seed() {
     // with how much a world's climate actually moves, and seed 42's deep past
     // is mild — it measures 4. The volume claim belongs to the cross-seed
     // sweep below, where it can tell a mild world from an inert bake.
-    assert!(
-        mig42 > 0,
-        "seed-42 displacement does not fire at all at Full depth: the gates do not \
-         survive the cascade"
-    );
+    //
+    // The FIRING check (`mig42 > 0`) that used to sit here retired to the
+    // census column `climate-displacement-events` (The Assize, 2026-08-08):
+    // measured over 48 worlds displacement is exactly zero on 6 of 48, so a
+    // single-seed firing gate was passing on a ~87.5% chance rather than
+    // measuring the mechanism. `mig42` itself stays — the report artifact
+    // below still prints it.
     let terr = territories(&w);
     for k in GOBLINOIDS {
         assert!(
@@ -220,15 +290,11 @@ fn history_gates_full_world_and_cross_seed() {
     let mut rows: Vec<Row> = Vec::new();
     for seed in SWEEP {
         let r = measure(seed, BuildDepth::Settlements);
-        // No per-seed floor — see SWEEP_MIGRATION_FLOOR's comment. Displacement
-        // must fire at all on each sampled world; the VOLUME is asserted across
-        // the sweep, after the loop.
-        assert!(
-            r.migration > 0,
-            "seed {} displacement does not fire at all: {}",
-            r.seed,
-            r.migration
-        );
+        // No per-seed floor — see SWEEP_MIGRATION_FLOOR's comment. The
+        // per-seed firing check that used to live here (`r.migration > 0`)
+        // retired to the census column `climate-displacement-events` (The
+        // Tare, 2026-08-08) — see this file's module doc. The VOLUME is
+        // still asserted across the sweep, after the loop.
         assert!(
             r.region_overlap < MAX_REGION_OVERLAP,
             "seed {} peoples interleaved: {:.4} >= {MAX_REGION_OVERLAP}",
@@ -362,16 +428,25 @@ fn render_report(
     md.push_str("## Two honest post-data amendments\n\n");
     md.push_str(
         "1. **Displacement is MIGRATION, not raiding.** The campaign was \
-         preregistered around a raid->flee->resettle floor. On the real seed-42 \
-         world — ample vacant habitable land — glacially-displaced communities \
-         migrate to empty cells instead of crowding into raids (raids ~ 0), so the \
-         displacement gate is re-pointed at `census(bake).migrated`, read off the \
-         ledger. Raid-driven displacement is deferred to campaign C3. *(C3, The \
-         Tumult, has since arrived: raids are no longer ~ 0 — seed 42 resolves 76 \
-         conquests, driven by coveted VALUE rather than by crowding. This gate \
-         still measures climate displacement only; `migration_events` excludes \
-         conquest-relocations by design, and conflict displacement is measured \
-         separately in `windows/worldgen/tests/history_tumult.rs`.)*\n",
+         preregistered around a raid->flee->resettle floor. On the original seed-42 \
+         world measured at this campaign's start — ample vacant habitable land — \
+         glacially-displaced communities migrated to empty cells instead of crowding \
+         into raids (raids ~ 0), so the displacement gate is re-pointed at \
+         `census(bake).migrated`, read off the ledger. Raid-driven displacement is \
+         deferred to campaign C3. *(C3, The Tumult, has since arrived: raids are no \
+         longer ~ 0 — seed 42 resolves 76 conquests, driven by coveted VALUE rather \
+         than by crowding. This gate still measures climate displacement only; \
+         `migration_events` excludes conquest-relocations by design, and conflict \
+         displacement is measured separately in \
+         `windows/worldgen/tests/history_tumult.rs`.)* *(The Assize, 2026-08-08: \
+         seed 42 itself now measures ZERO climate-migration events at both Full and \
+         Settlements depth — the roster and realm-gate campaigns landed since have \
+         moved this specific world past the regime this amendment illustrates. The \
+         mechanism claim still holds in aggregate — 237 migration events across the \
+         nine-seed sweep below, 8 of 9 seeds nonzero, all still migration by \
+         construction since the metric excludes conquest — but seed 42 is no longer \
+         a witness for it; read the sweep table, not this seed, for the live \
+         evidence.)*\n",
     );
     md.push_str(
         "2. **Stratigraphy accretes on MARGINAL land.** The preregistered \
@@ -386,8 +461,13 @@ fn render_report(
     md.push_str("## Seed-42 headline (built to `BuildDepth::Full`)\n\n");
     writeln!(
         md,
-        "- **migration-fired-at-volume**: {mig42} migration events (floor {MIGRATION_FLOOR}). \
-         PASS — climate-driven displacement fires at volume.",
+        "- **migration events**: {mig42} at Full depth. Informational only — the \
+         per-seed firing/volume claim this line used to gate (against a floor of \
+         {MIGRATION_FLOOR}) retired to the census column `climate-displacement-events` \
+         (The Assize, 2026-08-08), because a single-seed firing gate has a ~12.5% \
+         failure rate by construction (zero on 6 of 48 worlds). This regen measures \
+         seed 42 itself as one of the zero-migration worlds, which is exactly the case \
+         the retired gate could not have survived.",
     )
     .unwrap();
     writeln!(

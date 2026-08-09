@@ -131,15 +131,58 @@ is a question of whether the instrument can see the thing at all.
   regression. A real regression is local."* That is a real discriminator and it
   was written down before this campaign existed.
 
-  What is actually missing is narrower. The discriminator asks whether the
-  metrics inflated *together*, and `scene_cost` asserts on the first budget it
-  checks, so a contended run panics at genesis and never measures the four
-  metrics that would settle it. The evidence the doc tells you to gather is
-  destroyed by the assertion that tells you to gather it. Collecting all
-  budgets and asserting once at the end would make the documented failure mode
-  checkable instead of merely describable — and would stop the advice
-  ("read it as contention") from being invoked on every heavy run rather than
-  as the exception it was written to be.
+  **CORRECTION (The Assize, 2026-08-08): the claim above — that `scene_cost`
+  asserts on the first budget it checks and so never measures the four metrics
+  that would settle it — was wrong, and had never been checked against the log
+  it was written about.** `cli/tests/scene_cost.rs` takes all five measurements,
+  prints all five (`:319-325` before The Assize's edits below moved the lines),
+  and asserts only afterwards (`:327-349`). The very heavy-run log this bullet
+  describes has all five, printed before any assertion ran
+  (`heavy-20260808T163452Z-442429.log`, lefford):
+
+  ```text
+  genesis              13187.1 ms (budget 13000)
+  SceneContext::build    1277.5 ms (budget 2700)
+  tiles(512)+json       4207.4 ms (budget 8700)
+  small docs+json          2.6 ms (budget 5.2) [12712 B]
+  region per tile        266.7 ms (budget 420)
+  test scene_api_cost_is_bounded_on_seed_42 ... FAILED
+  ```
+
+  That is the FAILED line coming *after* all five, not the panic-at-genesis
+  this bullet claimed. This is the same failure this retrospective's own
+  subject names — an inherited diagnosis, read as a finding without being
+  tested — recurring a second and third time inside the document that first
+  named it: this bullet's own "first draft… does have an answer" correction
+  was itself untested, and stayed uncorrected until The Assize re-read the file.
+
+  **The sharper finding is not that the evidence was reachable — it always
+  was — but that the documented discriminator gives the WRONG answer when
+  applied to it.** Read against each metric's own measured basis rather than
+  its budget, the run above shows `genesis` at 2.09x while the four other
+  metrics sit at 0.96–1.29x. *"A real regression is local: one or two metrics
+  move and the rest hold"* — the rule this file quoted approvingly —
+  classifies that shape as a regression. It is not one: a quiet box builds
+  the identical world in 3947.9 ms against the same 13000 ms ceiling. The
+  correct diagnosis was reached only by overruling the documented
+  discriminator with a quiet-box re-measure, not by applying it.
+
+  The rule failed because it tested the wrong property. The five metrics have
+  different resource profiles: `genesis` is the only one that sculpts terrain
+  across a large grid, and the other four run against a `World` and
+  `SceneContext` already built in memory. A saturated runner starves the
+  bandwidth-bound sculpting phase and leaves the cache-resident ones alone —
+  contention here is *expected* to be local to `genesis`, not spread evenly.
+  Uniformity was never the right test; it only looked right because the one
+  incident on record for it happened to saturate the whole box evenly.
+
+  `cli/tests/scene_cost.rs` and `cli/tests/session_cost.rs` now name each
+  budget's basis as a constant, print a ratio-to-basis per metric, and compute
+  a verdict from it: `genesis` (or `Session::start`) is the contention-
+  sensitive metric, the rest are a control set, and any control moving past a
+  measured tolerance reads as the code rather than the box. See
+  `scene_cost.rs`'s module doc for the corrected rule and its own worked
+  counter-example. No ceiling moved.
 - **Two of The Delvers' three open items remain**: a third history gate still
   samples a three-order-of-magnitude distribution once at seed 42, and the
   occupancy readout's committed fixture is owed a regeneration whose

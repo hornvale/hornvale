@@ -142,6 +142,79 @@ reached twice in one day by the same reasoning, first from a 1,055-commit-stale
 timing baseline, and was overturned by a human disagreeing with an artifact
 that looked authoritative.
 
+Two campaigns reached this thread independently on the same day, from opposite
+ends of it — one from a check that could not fire, one from a check that fired
+wrongly. That they collided here, in a merge, is itself the strongest evidence
+the chapter offers about how common the family is.
+
+A seventh campaign finds the family in a place none of the six had looked. The
+Domesday (2026-08-08) built a generated survey of the thousand-world census
+whose whole purpose is finding weaknesses, and produced three unenforced guards
+*inside the detector module itself*: a rendered sentence whose stated rule was
+false as worded, a hand-frozen roster of measured crates with no live guard
+beside a partner roster that had one, and a boundary test that re-implemented
+the membership filter in its own body instead of calling the code it tested, so
+emptying the real function left it green. A fourth, caught earlier, was a quine
+— a test asserting the survey never builds a world, implemented by scanning its
+own source for forbidden identifiers, which were present in that file by
+definition. All four were found by an independent reimplementation that *ran*
+the system rather than reading it. Knowing this failure mode confers no immunity
+to it, which is now demonstrated rather than suspected.
+
+The same campaign extends the family beyond checks entirely, and that is the new
+corner. A **metric** can be unable to fire. The chorus sky-calibration metric is
+a Kendall tau over [−1, +1] that reads exactly −1.000 on all one thousand
+worlds, because it correlates a culture's sky capability against its sky-domain
+distortion — and distortion in that domain is the fraction of sky facts lost,
+while a sky fact is lost precisely when capability falls below the fact's
+threshold. The two series are coupled through the same comparison, so every
+strictly-comparable pair is discordant and the coefficient saturates by
+construction. It is anchored, paired, drift-checked, current, and read by a
+preregistered study — and it carries no information about any world. So the
+floor gains a second question, asked of measurements rather than of checks:
+*can this metric take a different value on a different world, and if not, what
+is the study reading it actually scoring?*
+
+An eighth campaign, landing the same day, moves the finding from the check to the *order of its
+repair*. The Assize (2026-08-08) inherited a queued task reading "mechanize the
+prose discriminator" — the cost batteries' rule for telling a contended run
+from a regression, written in a module doc and applied by hand. Measured
+against the run it was written for, the rule gives the **wrong answer**:
+`genesis` at 2.09x its recorded basis with four control metrics at 0.96-1.29x
+reads, under "a real regression is LOCAL", as a regression — while a quiet box
+builds the same world in 3948 ms against a 13000 ms ceiling. The rule fails
+because the five metrics have different resource profiles, only one of them
+sculpting terrain, so a saturated runner starves exactly one and uniformity was
+never the right test. Executing the task as written would have promoted a wrong
+predicate from prose into code, where it would carry the authority of having
+been computed. **A criterion earns mechanization by being correct, not by being
+written down**; and the corrected version paid at once, finding a real localised
+cost increase on its first run and bisecting it to a single commit while four
+named sibling candidates moved it by zero.
+
+The same campaign supplies the corner's other half, from its own repair. The
+mechanized verdict then gave a confident wrong answer on a *second* battery,
+because the two files' bases had been measured on different machines and the
+heavy tier runs on only one of them — a ratio across two machines measures the
+machines. The fix is the shape this chapter keeps arriving at: a check that
+**states its own applicability** and declines rather than computing, printing
+"bases were measured on aarch64-10, this is x86_64-40" and suppressing only the
+ratio-derived claim while the raw milliseconds stand.
+
+Two smaller instances from the same campaign are worth the floor's attention
+because neither is a test. A committed, published artifact carried a headline
+line reading `0 migration events (floor 5). PASS` — a verdict string never
+wired to any check at all, which is this chapter's original floor in its purest
+form (a check that cannot fire, with no check behind it) and which stayed
+invisible for as long as the number it reported was healthy. And a rank-order
+bound adopted to replace a rotted threshold turned out to be **unfalsifiable by
+the only two mutation controls its file carries** — the correlation moves 0.831
+to 0.127 under one of them and never crosses zero. It was retained, relabelled
+in place as a directional record rather than a proven guard, and the tempting
+threshold that *would* have made it fire was refused because it would have been
+chosen for firing. Disclosing an unfalsifiable check beats quietly shipping one,
+which is this chapter's practice working rather than a new failure.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only
@@ -1247,6 +1320,26 @@ its honest size.
    metric measures. So the caution generalizes: *an instrument scores a bet
    only if something reads it AND the instrument is itself current*, and
    nothing in this repo reddens when a deliberate duplicate falls behind.
+
+   **The Domesday adds the third clause (2026-08-08), and it is the one that
+   bites hardest.** *An instrument scores a bet only if it measures the quantity
+   the bet is about.* The census's most-cited climate finding — that the climate
+   is not merely cold but near-uninfluenced by its own astronomy — was drawn
+   from twenty-three astronomy metrics, not one of which is insolation, stellar
+   luminosity, or orbital distance. The facts exist and are committed to every
+   world's ledger; `anchor-orbit-au` and `insolation-rel` sit in the same
+   registration block as `brightening-per-gyr`, which the census does read. The
+   evidence for *astronomy does not drive climate* is therefore a single
+   orbital-period proxy, and the driver itself was never in the dataset. The
+   conclusion may well survive measurement — the survey takes no position on
+   that — but its current standing is weaker than the sentence it produced, and
+   the first campaign to read all 193 metrics at once is what made that visible.
+   The same survey found the complementary gap in the other direction: fourteen
+   biology metrics are frozen across all thousand worlds because species life
+   history is a pure allometric function of authored mass, class and schedule,
+   so no world quantity reaches any creature's physiology. Between the two, the
+   census's coverage of *what influences what* is materially thinner than its
+   193-metric breadth suggested.
 
    That campaign also moved the self-scorable half in both directions at once.
    Sonority sequencing made pronounceability a property held **by

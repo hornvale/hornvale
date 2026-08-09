@@ -211,16 +211,20 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render delta      # docs/di
 # Generated-artifact freshness. The single source of truth is
 # scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
 # registry/manifest dumps, lab studies, the type-audit report, the digest's
-# decision index and delta report, the committed vessel/session/v1 client
-# fixtures); `make rebaseline` and CI both call it, so they cannot silently
-# diverge:
+# decision index and delta report, the Domesday survey, the committed
+# vessel/session/v1 client fixtures); `make rebaseline` and CI both call it,
+# so they cannot silently diverge:
 make rebaseline                        # regenerate everything EXCEPT censuses
 make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ clients/game/core/tests/fixtures/
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ docs/digest/ book/src/domesday/ clients/game/core/tests/fixtures/
 # docs/audits/ is in that list — the type-audit report drifts on any
 # pub-boundary change, and omitting it is a common miss. So is docs/digest/
 # (The Digest): the in-force decision index drifts whenever a decision record
 # is added or superseded, and the delta report whenever the registry moves.
+# book/src/domesday/ (The Domesday) is in the list too: it is a pure read over
+# the committed census (never re-runs one), so it drifts whenever that census
+# CSV changes — including a census refresh that lands with no other code
+# change at all.
 # So is clients/game/core/tests/fixtures/ (The Quire, Tasks 3-4): the
 # committed seed-42 session snapshots every hornvale-game-core render test
 # reads instead of paying for genesis (one walk-band, one chamber-band).
