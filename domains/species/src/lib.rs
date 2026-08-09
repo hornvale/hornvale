@@ -2067,6 +2067,55 @@ pub fn habitat_realm_registry() -> ComponentStore<KindId, HabitatRealm> {
     .collect()
 }
 
+/// A kind's declared affinity across biomes (The Range). `domains/climate`
+/// owns the richer `Biome` enum; this is deliberately NOT keyed by it — a
+/// domain crate may not depend on a sibling domain. The store is keyed by
+/// the biome's stable name string (`Biome::name()`, already used for concept
+/// registration), and resolution against the live `Biome` value happens at
+/// the composition root, which sits above both domains.
+/// type-audit: bare-ok(ratio: default), bare-ok(ratio: by_biome)
+#[derive(Clone, Debug, PartialEq)]
+pub struct BiomeAffinity {
+    /// The factor an unlisted biome takes. `1.0` is unrestricted; the value
+    /// every kind absent from [`biome_affinity_registry`] carries for every
+    /// biome.
+    pub default: f64,
+    /// Per-biome overrides, keyed by the biome's stable name string. A biome
+    /// not listed here takes `default`.
+    pub by_biome: Vec<(&'static str, f64)>,
+}
+
+impl BiomeAffinity {
+    /// The affinity factor for `biome_name`: the listed override if present,
+    /// else `default`.
+    /// type-audit: bare-ok(identifier-text: biome_name), bare-ok(ratio: return)
+    pub fn factor(&self, biome_name: &str) -> f64 {
+        self.by_biome
+            .iter()
+            .find(|(name, _)| *name == biome_name)
+            .map(|(_, factor)| *factor)
+            .unwrap_or(self.default)
+    }
+}
+
+impl Component for BiomeAffinity {}
+
+/// The sparse biome-affinity component: **only** kinds with an authored,
+/// non-uniform affinity across biomes appear. Empty in this task (The
+/// Range, task 2) — the store exists and resolves, but no kind has been
+/// authored into it, so every kind is unrestricted across every biome and
+/// this is a byte-neutral no-op.
+///
+/// Sparse rather than a `BiosphereTraits` field because this has two
+/// consumers (genesis placement and `best_home`), each of which holds a
+/// slice, not a row — the consumer-count rule The Long Age established
+/// (a `BiosphereTraits` field is for a component every consumer already
+/// holds the row for; a sparse store is for a component only a few
+/// slice-holding consumers read).
+pub fn biome_affinity_registry() -> ComponentStore<KindId, BiomeAffinity> {
+    [].into_iter().collect()
+}
+
 /// The biosphere component: every entity has one. The packer and the
 /// habitat/niche-K layer read only these traits.
 /// type-audit: bare-ok(identifier-text)
