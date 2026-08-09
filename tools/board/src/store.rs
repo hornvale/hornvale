@@ -15,6 +15,15 @@ pub const BOARD_REF: &str = "refs/hornvale/board";
 /// How many times a contended write retries before failing loudly.
 const MAX_ATTEMPTS: u32 = 24;
 
+/// Text that appears in exactly one place a stderr can come from: CAS-loss
+/// exhaustion (the final `Err` in `append_with_attempts`). Shared by the
+/// message itself and by the test that checks a *permanent* failure is never
+/// misreported as exhaustion — hoisting it here means a future reword of the
+/// message cannot silently decouple that assertion from what it is meant to
+/// be checking (it would otherwise still compile and still pass, just
+/// against nothing).
+const EXHAUSTION_MARKER: &str = "compare-and-swap races";
+
 /// Discriminates concurrent throwaway-index paths (and, mixed into the retry
 /// jitter, concurrent backoffs) within one process.
 ///
@@ -131,7 +140,7 @@ impl Board {
             cmd: format!("append to {}", self.refname),
             code: None,
             stderr: format!(
-                "lost {max_attempts} compare-and-swap races; the ref is under sustained \
+                "lost {max_attempts} {EXHAUSTION_MARKER}; the ref is under sustained \
                  contention and this post was NOT recorded. Last reason: {}",
                 last_reason.as_deref().unwrap_or("unknown")
             ),
@@ -232,6 +241,9 @@ impl Board {
     /// nothing moved — the failure is permanent (a name collision, a
     /// permissions problem, …) and must not be retried away, so it comes back
     /// as `Err` with git's own diagnosis intact.
+    ///
+    /// D13 carve-out: a present `old` reading back as `None` is never treated
+    /// as "the ref just doesn't exist yet" — see the guard below.
     fn cas(&self, new: &str, old: Option<&str>) -> Result<Option<String>, BoardError> {
         let result = match old {
             Some(old) => self.repo.git(&["update-ref", &self.refname, new, old]),
@@ -244,7 +256,36 @@ impl Board {
             Ok(_) => return Ok(None),
             Err(e) => e,
         };
-        let moved = matches!(self.tip(), Ok(current) if current.as_deref() != old);
+        let current = self.tip();
+
+        // D13: never treat a vanished ref as an as-yet-uncreated one. If we
+        // had a tip (`old` was `Some`) and the ref now reads back as `None`,
+        // it was deleted out from under us — the `moved` check below would
+        // otherwise read this as an ordinary lost race (`None != old`), and
+        // the retry would then take the `old == None` branch, build a tree
+        // with no parent, and mint a fresh root: every earlier post silently
+        // orphaned. That is unrecoverable in a way nothing else in this
+        // function is, so it is always permanent, regardless of how
+        // `update-ref`'s stderr happens to read.
+        if old.is_some() && matches!(&current, Ok(None)) {
+            return Err(BoardError::Git {
+                cmd: format!("append to {}", self.refname),
+                code: None,
+                stderr: format!(
+                    "the ref {} was deleted while we were writing to it; this is not a \
+                     retryable race — retrying would build a tree with no parent and \
+                     reroot the board, discarding its entire history (D13). git's \
+                     original diagnosis: {}",
+                    self.refname,
+                    match &err {
+                        BoardError::Git { stderr, .. } => stderr.as_str(),
+                        _ => "unknown",
+                    }
+                ),
+            });
+        }
+
+        let moved = matches!(&current, Ok(c) if c.as_deref() != old);
         if moved {
             let stderr = match &err {
                 BoardError::Git { stderr, .. } => stderr.clone(),
@@ -336,6 +377,75 @@ mod tests {
     }
 
     #[test]
+    fn cas_treats_a_deleted_ref_as_permanent_not_a_lost_race() {
+        // D13/A: a ref that vanishes between our tip-read and our
+        // `update-ref` must never be treated as "no one has created it yet"
+        // -- doing so would let a retry rebuild a tree with no parent and
+        // mint a fresh root, orphaning every earlier post. Reproduces the
+        // exact interleaving the re-review measured, directly against `cas`
+        // (no second thread needed): append once, capture the tip and the
+        // board's root commit, delete the ref out from under it, then
+        // attempt a `cas` that still believes `old` is the captured tip --
+        // exactly the state a caller's in-flight attempt would be in.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        board.append(&Post::new("claim", "a")).expect("a");
+        let old_tip = board.tip().expect("tip").expect("some");
+        let root = repo
+            .git(&["rev-list", "--max-parents=0", &old_tip])
+            .expect("root commit");
+
+        repo.git(&["update-ref", "-d", BOARD_REF])
+            .expect("delete the ref out from under the board");
+
+        // The commit a caller would already have built before discovering
+        // the deletion: parented on `old_tip`, exactly as `append_with_attempts`
+        // constructs it.
+        let tree = repo
+            .git(&["rev-parse", "--verify", &format!("{old_tip}^{{tree}}")])
+            .expect("tree");
+        let new = repo
+            .git(&["commit-tree", &tree, "-p", &old_tip, "-m", "would-be-next"])
+            .expect("candidate commit");
+
+        let err = board
+            .cas(&new, Some(&old_tip))
+            .expect_err("a deleted ref must be a permanent failure, not a lost race");
+        let BoardError::Git { stderr, .. } = err else {
+            panic!("expected BoardError::Git, got a different variant");
+        };
+        assert!(
+            stderr.contains("deleted"),
+            "the error should say the ref was deleted, not just that it moved: {stderr}"
+        );
+        assert!(
+            !stderr.contains(EXHAUSTION_MARKER),
+            "this is a single-call classification, not exhaustion: {stderr}"
+        );
+        assert!(
+            board.tip().expect("tip").is_none(),
+            "the rejected cas must not have created a fresh root: the ref must stay absent"
+        );
+
+        // Positive half of the same invariant: once the ref is legitimately
+        // restored (as an operator recovering from the deletion would do)
+        // and a normal append follows, the original root commit is still
+        // there and still an ancestor -- D13 holds on the path that is
+        // supposed to succeed, not only rejected on the path that must not.
+        repo.git(&["update-ref", BOARD_REF, &old_tip])
+            .expect("restore the ref");
+        board
+            .append(&Post::new("claim", "b"))
+            .expect("recovered append");
+        let new_tip = board.tip().expect("tip").expect("some");
+        let ancestor = repo.git(&["merge-base", "--is-ancestor", &root, &new_tip]);
+        assert!(
+            ancestor.is_ok(),
+            "the original root must still be an ancestor of a legitimately continued history"
+        );
+    }
+
+    #[test]
     fn cas_reports_a_lost_race_when_the_ref_moved_away_from_the_expected_old_value() {
         // Q1/I1: a deterministic stand-in for a real race. `update-ref`'s
         // expected-value check fails exactly the same way whether the ref
@@ -364,8 +474,12 @@ mod tests {
     }
 
     #[test]
-    fn cas_reports_a_real_error_when_nothing_moved() {
-        // Q1/I1: the reviewer's D/F-conflict setup. A ref already exists
+    fn cas_reports_a_real_error_on_a_permanent_df_conflict() {
+        // Q1/I1/M2: the reviewer's D/F-conflict setup, isolated. `new` here
+        // is a real, valid commit (not a bogus oid), so a D/F conflict is
+        // the *only* anomaly in play — this test pins that cause
+        // specifically, unlike the original version which also passed a
+        // bogus oid and could not tell the two apart. A ref already exists
         // *under* the board's own ref path, so creating a leaf ref there
         // fails every single time — permanently, not by chance — and the
         // board's own ref never budges. `cas` must not classify this as a
@@ -381,14 +495,44 @@ mod tests {
 
         let board = Board::new(repo.clone());
         let err = board
-            .cas("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", None)
-            .expect_err("nothing moved, so this must propagate as a real error, not a lost race");
+            .cas(&commit, None)
+            .expect_err("a D/F conflict is permanent even with a perfectly valid object");
         let BoardError::Git { stderr, .. } = err else {
             panic!("expected BoardError::Git, got a different variant");
         };
         assert!(
             stderr.contains(BOARD_REF),
             "should carry git's own diagnosis: {stderr}"
+        );
+        assert!(
+            board.tip().expect("tip").is_none(),
+            "the failed create must not have made the ref exist"
+        );
+    }
+
+    #[test]
+    fn cas_reports_a_real_error_on_a_nonexistent_object() {
+        // M2's other half: isolates the "bogus object" cause on its own,
+        // with no D/F conflict set up at all, so a nonexistent `new` is the
+        // only possible reason this can fail. Confirms the classification
+        // is not accidentally tied to the D/F conflict's specific stderr
+        // shape — any permanent, non-retryable git failure must come back
+        // as `Err`, not just this one.
+        let (_d, repo) = temp_repo();
+        let board = Board::new(repo.clone());
+        let err = board
+            .cas("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", None)
+            .expect_err("a nonexistent object must not be classified as a lost race");
+        let BoardError::Git { stderr, .. } = err else {
+            panic!("expected BoardError::Git, got a different variant");
+        };
+        assert!(
+            stderr.contains("nonexistent object"),
+            "should carry git's own diagnosis: {stderr}"
+        );
+        assert!(
+            board.tip().expect("tip").is_none(),
+            "the failed create must not have made the ref exist"
         );
     }
 
@@ -421,7 +565,7 @@ mod tests {
             panic!("expected BoardError::Git, got a different variant");
         };
         assert!(
-            !stderr.contains("compare-and-swap"),
+            !stderr.contains(EXHAUSTION_MARKER),
             "a permanent failure must propagate git's own diagnosis, not the generic exhaustion message: {stderr}"
         );
         assert!(

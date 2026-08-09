@@ -208,10 +208,15 @@ fn eight_concurrent_writers_lose_no_posts() {
     assert_eq!(present.len(), 9, "genesis plus eight writers");
 
     // Q11/spec §7 test-plan item 1: "all N posts present, chain length N+1".
-    // Nine linear commits from nine appends, eight of which started
-    // concurrently, is itself indirect evidence that the retry path ran: at
-    // least two writers must have read the same tip and at least one of them
-    // lost a race and rebuilt on the winner's commit.
+    // D6 correction: this does NOT establish that a retry happened -- nine
+    // appends produce a chain of nine commits whether or not any of them
+    // contended (each successful append adds exactly one commit either way).
+    // What it *does* establish, on top of the `present.len()` check above:
+    // linearity (no stray merge or branch), and that no append silently
+    // produced an empty commit (Q7's regression would still show 9 distinct
+    // posts but a chain longer than 9). Direct evidence that the retry path
+    // itself runs lives in `store.rs`'s `cas_reports_a_lost_race_...` and
+    // `exhaustion_is_loud_...` unit tests, not here.
     let tip = board.tip().expect("tip").expect("some");
     let chain_len = repo.git(&["rev-list", "--count", &tip]).expect("rev-list");
     assert_eq!(
