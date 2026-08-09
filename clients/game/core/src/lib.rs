@@ -2,7 +2,9 @@
 //! Hornvale's game client, renderer half: `vessel/session/v1` to a
 //! character grid. This crate does not depend on any hornvale crate.
 
+pub mod cell;
 pub mod schema;
+pub use cell::*;
 pub use schema::*;
 
 impl Snapshot {
