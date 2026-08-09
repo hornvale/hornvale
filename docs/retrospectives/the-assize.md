@@ -127,6 +127,42 @@ worse, not better.**
 The correction paid immediately: on its first real use the new verdict found a
 genuine localised cost increase, which bisected cleanly to one commit.
 
+## The instrument caught its own defect, one layer down
+
+The corrected cost discriminator was mechanized, and on its first run against
+the canonical box it returned a confident **wrong** answer — on the *other*
+battery. `scene_cost`'s bases were measured on lefford and `session_cost`'s on
+the Mac, and the heavy tier runs on lefford. **A ratio across two machines
+measures the machines.**
+
+The repair is the shape this project keeps arriving at from different
+directions: a check that **states its own applicability**. The verdict now
+declines rather than computing when it is off its basis host, printing "bases
+were measured on aarch64-10, this is x86_64-40" and suppressing only the
+ratio-derived claim while the raw milliseconds stand.
+
+That required a stable machine identity, and `hostname -s` is not one. Measured
+in `docs/timings.md`: this box has written **216 rows as `MacBookPro` and 12 as
+`Greyjoy`**, and `hostname -s` answers `Greyjoy` today while the committed
+baseline is `test-baseline-MacBookPro.tsv`. The timings baseline had already
+forked and nobody had noticed. `canonical_host()` (`<arch>-<cores>`) fixes it
+for the cost gates only; the baseline merge and the fail-closed census host
+guard are deliberately deferred, because a safety-critical guard and a data
+merge do not belong in a tail-clearing branch.
+
+Two notes worth keeping. **The id is `aarch64-10`, not `arm64-10`** —
+`std::env::consts::ARCH` and `uname -m` disagree, and written from the shell's
+answer the "should compute" branch would never have matched. And the scheme
+**cannot separate two machines of the same architecture and core count**; it
+separates the three we have evidence for, and the fourth is unmeasured. That
+limit is documented at the function rather than discovered later.
+
+**The generalisable part:** the two cost batteries had been compared against
+each other's conventions for months without anyone noticing, because nothing
+computed the comparison. Mechanizing the rule is what surfaced it — an
+instrument that states a number invites the question "against what?", and
+prose never does.
+
 ## Small probes miss rare events, again, in the campaign that says so
 
 Both new census columns were designed off scratch probes, and the census
