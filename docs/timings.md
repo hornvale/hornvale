@@ -563,3 +563,4 @@ they would read as a dramatic speed-up. The rows are kept rather than deleted
 mistaken for gate timings. **Adding an `rc` column to the table would fix this
 properly**; it is recorded here rather than done, because the schema is
 consumed by more than this file.
+| 2026-08-09T11:00:43Z | census | 920.964 | 22515.362 | 398.599 | 24.88 | 0 | eb2a660d |  | lefford | 40 |
