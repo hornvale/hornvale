@@ -14,7 +14,7 @@
 - **Never re-run the census.** Read `book/src/laboratory/generated/the-census/{rows.csv,schema.json}` only. The gate must never pay for 1,000 worlds. A test asserts this.
 - **Never set `HV_CENSUS=1`.** `scripts/regenerate-artifacts.sh` skips censuses by default and must stay that way.
 - **Determinism:** all float output goes through `hornvale_kernel::quantize` at the emit boundary. Sorting uses `total_cmp`. Ties break lexicographically. No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only (enforced workspace-wide by `clippy.toml`).
-- **Preregistered thresholds are frozen** (decision 0016): D1 ≥ 80 %, D3 IQR < 5 % of range, D5 `min_abs_r` per expectation, D6 per-comparator band. Retuning is a named commit that says so, never a silent edit.
+- **Preregistered thresholds are frozen** (decision 0016): D1 ≥ 80 %, D3 IQR < 5 % of range, D6 per-comparator band. **D5 has no threshold** — an expectation declares a strength *class* and the detector compares it to the observed class against conventional effect-size bands (spec §4.4). Retuning is a named commit that says so, never a silent edit.
 - **`book/src/domesday/` must be `git add`ed in the commit that creates it.** `git diff --exit-code` is silently vacuous against an untracked path (The Digest, Task 7).
 - Rust edition 2024; `#![warn(missing_docs)]` — every public item, field, and variant gets a one-line doc comment; primitives at `pub` boundaries need a `type-audit:` tag.
 - Run `cargo fmt` as the final step before every commit.
@@ -620,7 +620,7 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 - Modify: `windows/lab/src/domesday/mod.rs`
 
 **Interfaces:**
-- Produces: `pub struct Comparator { pub name: String, pub values: BTreeMap<String, f64>, pub band: BTreeMap<String, f64> }`; `pub fn load_comparators(path: &Path) -> Result<Vec<Comparator>, String>`; `pub struct Expectation { pub metric: String, pub tracks: String, pub why: String, pub min_abs_r: f64 }`; `pub fn load_expectations(path: &Path) -> Result<Vec<Expectation>, String>`
+- Produces: `pub struct Comparator { pub name: String, pub values: BTreeMap<String, f64>, pub band: BTreeMap<String, f64> }`; `pub fn load_comparators(path: &Path) -> Result<Vec<Comparator>, String>`; `pub struct Expectation { pub metric: String, pub tracks: String, pub why: String, pub declared: String }`; `pub fn load_expectations(path: &Path) -> Result<Vec<Expectation>, String>`
 
 **Real worlds only for v1** (spec §8, ratified at G3). An invented number rendered beside a measured one is the confusion this programme exists to remove.
 
@@ -652,7 +652,7 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
       "metric": "mean-land-temperature-c",
       "tracks": "year-std-days",
       "why": "orbital period is the only available proxy for orbital distance, and thus for insolation, which is the dominant term in a radiative balance: a longer year means a wider orbit and less energy received. The census measures no insolation directly (see the note below), so this is a proxy and a weak one — which is itself part of the finding.",
-      "min_abs_r": 0.50
+      "declared": "dominant"
     }
   ]
 }
@@ -662,7 +662,7 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 **1. The census cannot measure insolation.** Its 24 astronomy columns include `star-class`, `obliquity-degrees`, `year-std-days`, `total-tide` — and no luminosity, no orbital distance, no habitable-zone position. The primary energy input to a planetary climate is not a column. `year-std-days` is used as a proxy by Kepler's third law. **Record this as a follow-on finding in Task 8**; it may matter more than any correlation, because SKY-19 concludes the climate is "near-uninfluenced by its own astronomy" using a dataset that never measured the influence.
 
-**2. `min_abs_r = 0.50` was chosen knowing the measured value.** SKY-19 reports `year-std-days` r = −0.245 against mean land temperature, so this floor *will* fire. That is disclosed rather than buried. The justification is definitional, not empirical: if insolation is the **dominant** term, its proxy should explain much more than the ~6 % of variance that r = −0.245 implies, and a floor of 0.10 would only ask for "any relationship at all". Compare Task 5, where the opposite temptation was refused — D1's threshold was *not* lowered to make ice-dominance fire, because 65 % is genuinely not a degeneracy. **If Nathan judges 0.50 to be chosen-to-fire, lower it to 0.10 and let D5 stay silent; the survey is still worth shipping and D6 still catches the climate defect.**
+**2. D5 carries no threshold of ours — SUPERSEDED BY IDEONOMY (2026-08-08).** An earlier draft froze `min_abs_r = 0.50` while already knowing SKY-19's measured r = −0.245, i.e. the value was measured before the judgement was frozen. No justification repairs that phase-order violation. The fix is a different *source*, not a better number: the expectation declares a strength **class** (`dominant`), and the detector reports the observed class against conventional effect-size bands (`|r| ≥ 0.7` dominant, `0.5–0.7` strong, `0.3–0.5` moderate, `0.1–0.3` weak, `< 0.1` none). Observed |r| = 0.245 is **weak**, so D5 reports *"declared dominant, measured weak"*. Nothing we knew about the data can shape either the claim or the bands, and the tension with D1 dissolves — D1 is a global definition of degenerate, D5 now has no threshold at all.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -739,7 +739,7 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 - Consumes: `census::Census`, `stats::{numeric, categorical}`, `comparators::{Comparator, Expectation}`
 - Produces: `pub struct Finding { pub detector: &'static str, pub metric: String, pub detail: String }`; `pub fn detect(c: &Census, cmps: &[Comparator], exps: &[Expectation]) -> Vec<Finding>`
 
-**Thresholds are preregistered and frozen** (spec §4.4). D1 ≥ 0.80; D3 IQR < 5 % of range; D5 per-expectation `min_abs_r`; D6 per-comparator `band`.
+**Thresholds are preregistered and frozen** (spec §4.4). D1 ≥ 0.80; D3 IQR < 5 % of range; D6 per-comparator `band`. **D5 has no threshold of ours** — it maps observed |r| to a conventional band (`≥0.7` dominant, `0.5–0.7` strong, `0.3–0.5` moderate, `0.1–0.3` weak, `<0.1` none) and fires when that differs from the expectation's `declared` class.
 
 - [ ] **Step 1: Write the failing tests — each detector must fire AND not fire**
 
@@ -771,7 +771,7 @@ Claude-Session: https://claude.ai/code/session_01BMX7dSxg723Kvmn4p2NmKU"
 
 - [ ] **Step 2: Run to verify they fail, then implement all seven**
 
-D1 degenerate (descriptor categorical/flag, top share ≥ 0.80). D2 frozen (descriptor numeric, `min == max`). D3 narrow (`(p75-p25) < 0.05*(max-min)`, and `max > min`). D4 at-rail (`median == min || median == max`). D5 decoupled (Pearson r over paired present values, `|r| < min_abs_r`). D6 off-comparator (`|median - value| > band`). D7 broken invariant (role `invariant` with more than one distinct value).
+D1 degenerate (descriptor categorical/flag, top share ≥ 0.80). D2 frozen (descriptor numeric, `min == max`). D3 narrow (`(p75-p25) < 0.05*(max-min)`, and `max > min`). D4 at-rail (`median == min || median == max`). D5 mis-declared strength (Pearson r over paired present values; map |r| to a band; fire when the observed band differs from `declared`). D6 off-comparator (`|median - value| > band`). D7 broken invariant (role `invariant` with more than one distinct value). D8 unmeasured domain (a crate under `domains/` with no metric in any domain — `alchemy` and `paleoclimate` are the expected hits; they are WORLD gaps, so they render, per spec §4.6a).
 
 - [ ] **Step 3: Run to verify they pass**
 
