@@ -92,6 +92,7 @@ fn temperature_gate_versus_era_mask() {
                     .expect("settler has biosphere traits")
             })
             .collect();
+        let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,
             &terrain,
@@ -108,8 +109,9 @@ fn temperature_gate_versus_era_mask() {
             };
             let substrate =
                 substrate_field_at(geo, &terrain, &climate, &hoisted.insolation, &adjust);
-            let caps =
-                per_species_capacity_at(geo, &terrain, &climate, &hoisted, &adjust, &biosphere);
+            let caps = per_species_capacity_at(
+                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm,
+            );
 
             // Land at this era. Ocean is excluded by capacity already (proven in
             // `era_substrate.rs`), so counting it here would drown the signal.

@@ -125,6 +125,7 @@ fn report(seed_value: u64) {
                 .expect("settler has biosphere traits")
         })
         .collect();
+    let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
 
     let caps = per_species_capacity(
         geo,
@@ -134,6 +135,7 @@ fn report(seed_value: u64) {
         insolation_scalar,
         &regime,
         &biosphere,
+        &realm,
     );
     let substrate = substrate_field(
         geo,

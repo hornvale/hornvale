@@ -1346,7 +1346,14 @@ pub const CAPACITY_K_M: f64 = 0.03004;
 /// The return needs only an `index` verdict: the `u32` is the build-local tag, and
 /// the capacity itself is a [`CapacityMap`] rather than a bare primitive — which is
 /// decision 0103 doing exactly the work it was ratified for.
+///
+/// **The Range: `species_realm` gates a `Subterranean` kind's capacity to zero
+/// on every cell without a cave**, the same direction
+/// [`per_species_suitability`] enforces — this is that gate reaching the
+/// dimensional path settlement placement actually consumes, which is this
+/// campaign's whole point (see the module-level founding measurement).
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+#[allow(clippy::too_many_arguments)]
 pub fn per_species_capacity(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
@@ -1355,6 +1362,7 @@ pub fn per_species_capacity(
     insolation_scalar: f64,
     regime: &RotationRegime,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
 ) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
     let hoisted = EraInvariantSupply::build(
         geo,
@@ -1371,6 +1379,7 @@ pub fn per_species_capacity(
         &hoisted,
         &EraAdjust::present(terrain),
         species_biosphere,
+        species_realm,
     )
 }
 
@@ -1437,6 +1446,14 @@ impl EraInvariantSupply {
 /// At [`EraAdjust::present`] this is bit-identical to [`per_species_capacity`],
 /// which is what makes the seam safe to introduce ahead of the behaviour change
 /// that will use it (`era_substrate.rs` asserts it).
+///
+/// **The Range: `species_realm` gates a `Subterranean` kind's capacity to zero
+/// on every cell without a cave**, mirroring [`per_species_suitability`]'s
+/// gate exactly — this is the entry point [`bake_history_from`] actually
+/// calls, so before this parameter existed the gate could move the readout
+/// and leave settlement placement untouched. `species_realm` is a parallel
+/// slice to `species_biosphere` (same order, same length), enforced by a
+/// `debug_assert_eq!`, exactly as `per_species_suitability` documents.
 /// type-audit: bare-ok(index: return)
 pub fn per_species_capacity_at(
     geo: &Geosphere,
@@ -1445,12 +1462,22 @@ pub fn per_species_capacity_at(
     hoisted: &EraInvariantSupply,
     adjust: &EraAdjust,
     species_biosphere: &[&hornvale_species::BiosphereTraits],
+    species_realm: &[hornvale_species::HabitatRealm],
 ) -> Vec<(u32, hornvale_kernel::ecology::CapacityMap)> {
+    debug_assert_eq!(
+        species_realm.len(),
+        species_biosphere.len(),
+        "species_realm must be parallel to species_biosphere — same order, same length"
+    );
     let base_carrying = hornvale_demography::carrying_capacity(
         geo,
         &carrying_inputs_at(geo, terrain, climate, adjust),
     );
     let substrate = substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust);
+    // The Warren, carried to the capacity path: the subterranean reading of
+    // every cell, hoisted exactly as `per_species_suitability` hoists it.
+    let subterranean =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| subterranean_substrate(*substrate.get(cell)));
     let forage = forage_supply_field(geo, base_carrying.as_cell_map());
     let prey = prey_supply_field(geo, &forage);
 
@@ -1460,8 +1487,27 @@ pub fn per_species_capacity_at(
         .map(|(tag, bio)| {
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
+            let realm = species_realm
+                .get(tag)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE);
             let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-                let s = substrate.get(cell);
+                // The Warren: which realm's substrate this kind is scored
+                // against, and — for a subterranean kind only — whether the
+                // cell actually holds a cave at all. A `Surface` kind's
+                // arithmetic is UNTOUCHED, exactly as `per_species_suitability`
+                // documents at its matching match.
+                let (s, availability) = match realm {
+                    hornvale_species::HabitatRealm::Surface => (substrate.get(cell), 1.0),
+                    hornvale_species::HabitatRealm::Subterranean => (
+                        subterranean.get(cell),
+                        if terrain.cave_at(cell).is_some() {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                    ),
+                };
                 use hornvale_kernel::{
                     ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
@@ -1475,7 +1521,11 @@ pub fn per_species_capacity_at(
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
                 let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
-                headcount * tolerance_liebig(cn, s, floor_buf)
+                // `availability` stays OUTSIDE the tolerance product, exactly as
+                // `per_species_suitability` keeps it outside the Liebig
+                // minimum: a presence mask in {0.0, 1.0}, not a condition
+                // curve. `1.0` for every `Surface` kind, an IEEE-754 no-op.
+                headcount * tolerance_liebig(cn, s, floor_buf) * availability
             });
             let map = hornvale_kernel::ecology::CapacityMap::new(raw)
                 .expect("a Michaelis-Menten product of non-negative terms is finite and >= 0");
@@ -6067,6 +6117,22 @@ fn bake_history_from(
             })
         })
         .collect::<Result<_, _>>()?;
+    // The Range: which realm each settling kind (same `peoples` order — a
+    // filtered, order-preserving subsequence of `wc.biosphere`'s ascending-
+    // `KindId` order, the same assembly `demography_report_with_beta_from`
+    // performs over the full roster) lives in, so `per_species_capacity_at`
+    // can gate this build's capacity field the same way
+    // `per_species_suitability` already gates the readout. A kind absent from
+    // the sparse `WorldComponents::habitat_realm` store defaults to `Surface`.
+    let species_realm: Vec<hornvale_species::HabitatRealm> = peoples
+        .iter()
+        .map(|k| {
+            wc.habitat_realm
+                .get(k)
+                .copied()
+                .unwrap_or(hornvale_species::HabitatRealm::SURFACE)
+        })
+        .collect();
     // ONE CAPACITY FIELD PER ERA (The Tense §3.1). The era-invariant supply --
     // insolation above all, which is ~100% of the pipeline's cost -- is built
     // once and shared across all of them; only what an era actually moves is
@@ -6088,10 +6154,18 @@ fn bake_history_from(
     let caps_by_era: Vec<Vec<hornvale_kernel::ecology::CapacityMap>> = era_adjusts
         .iter()
         .map(|adjust| {
-            per_species_capacity_at(geo, terrain, climate, &hoisted, adjust, &species_biosphere)
-                .into_iter()
-                .map(|(_tag, map)| map)
-                .collect()
+            per_species_capacity_at(
+                geo,
+                terrain,
+                climate,
+                &hoisted,
+                adjust,
+                &species_biosphere,
+                &species_realm,
+            )
+            .into_iter()
+            .map(|(_tag, map)| map)
+            .collect()
         })
         .collect();
     // The raid gate's two authored inputs, resolved in ONE place so a test can

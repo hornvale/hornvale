@@ -176,6 +176,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
                         .expect("settler has biosphere traits")
                 })
                 .collect();
+        let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
 
         let direct = per_species_capacity(
             geo,
@@ -185,6 +186,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
             insolation_scalar,
             &regime,
             &biosphere,
+            &realm,
         );
         let hoisted = EraInvariantSupply::build(
             geo,
@@ -201,6 +203,7 @@ fn present_era_capacity_is_bit_identical_to_the_unparameterised_field() {
             &hoisted,
             &EraAdjust::present(&terrain),
             &biosphere,
+            &realm,
         );
 
         assert_eq!(direct.len(), via_era.len(), "seed {seed}: species count");
@@ -256,6 +259,7 @@ fn ocean_is_never_settleable_at_any_era() {
                         .expect("settler has biosphere traits")
                 })
                 .collect();
+        let realm = vec![hornvale_species::HabitatRealm::Surface; biosphere.len()];
         let hoisted = EraInvariantSupply::build(
             geo,
             &terrain,
@@ -275,8 +279,9 @@ fn ocean_is_never_settleable_at_any_era() {
                 )
                 .expect("a finite low-stand"),
             };
-            let caps =
-                per_species_capacity_at(geo, &terrain, &climate, &hoisted, &adjust, &biosphere);
+            let caps = per_species_capacity_at(
+                geo, &terrain, &climate, &hoisted, &adjust, &biosphere, &realm,
+            );
             for (tag, cap) in &caps {
                 for cell in geo.cells() {
                     // "Sea at this era" is the same predicate `carrying_inputs_at`
