@@ -39,6 +39,7 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
                                             [--lens off|lantern] [--target flagship|first-settlement]
+                                            [--snapshot <PATH>]
                                             walk a frozen world as its flagship settler
                                             (--target first-settlement instead possesses an agent
                                             at the world's most-populous settlement — a creature
@@ -51,6 +52,12 @@ usage:
                                             world or a committed artifact. Interactive defaults to
                                             lantern; --script is always unlensed, because a
                                             transcript is a recording.)
+                                            (--snapshot writes the `vessel/session/v1` JSON for the
+                                            turn the possession is left on — the opening turn with
+                                            no --script, or wherever the script's last line left it
+                                            with one — via hornvale_vessel::snapshot_json, the only
+                                            place its floats quantize. A client-fixture emitter, not
+                                            part of --out's saved world.)
   hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column|features]
                                             render the elevation, lithology, or sediment/carve-delta map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
@@ -539,6 +546,12 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             ));
         }
     };
+    // A client fixture, not part of `--out`'s saved world (The Quire, Task
+    // 3). This needs the `Session` itself, at the turn the caller left it
+    // on — `hornvale_vessel::run` folds the session into the played `World`
+    // before returning, which loses exactly that — so both arms below drive
+    // the session through `drive_session` instead of calling `run` directly.
+    let snapshot_path = flag_value(args, "--snapshot");
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -547,38 +560,35 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         writeln!(out, "# A Possession of Seed {} — day {day}\n", world.seed.0)
             .map_err(|e| e.to_string())?;
         writeln!(out, "```text").map_err(|e| e.to_string())?;
-        let played = hornvale_vessel::run(
-            &world,
-            hornvale_vessel::PossessOpts {
-                day: WorldTime { day },
-                echo: true,
-                wild_agents: true,
-                eyes: hornvale_vessel::eyes::Eyes::Own,
-                lens: lens(hornvale_vessel::lens::Lens::Off)?,
-                target,
-            },
-            std::io::Cursor::new(script),
-            &mut out,
-        )
-        .map_err(|e| e.to_string())?;
+        let opts = hornvale_vessel::PossessOpts {
+            day: WorldTime { day },
+            echo: true,
+            wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: lens(hornvale_vessel::lens::Lens::Off)?,
+            target,
+        };
+        let session = drive_session(&world, &opts, std::io::Cursor::new(script), &mut out)?;
         writeln!(out, "```").map_err(|e| e.to_string())?;
-        played
+        if let Some(path) = snapshot_path {
+            write_snapshot(&session, path)?;
+        }
+        session.into_played_world(world.seed)
     } else {
         let stdin = std::io::stdin();
-        hornvale_vessel::run(
-            &world,
-            hornvale_vessel::PossessOpts {
-                day: WorldTime { day },
-                echo: false,
-                wild_agents: true,
-                eyes: hornvale_vessel::eyes::Eyes::Own,
-                lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
-                target,
-            },
-            stdin.lock(),
-            stdout.lock(),
-        )
-        .map_err(|e| e.to_string())?
+        let opts = hornvale_vessel::PossessOpts {
+            day: WorldTime { day },
+            echo: false,
+            wild_agents: true,
+            eyes: hornvale_vessel::eyes::Eyes::Own,
+            lens: lens(hornvale_vessel::lens::Lens::Lantern)?,
+            target,
+        };
+        let session = drive_session(&world, &opts, stdin.lock(), stdout.lock())?;
+        if let Some(path) = snapshot_path {
+            write_snapshot(&session, path)?;
+        }
+        session.into_played_world(world.seed)
     };
     // The input `--world` file is read-only; only `--out` writes (The First
     // Mark, Task 4 — the played world outlives the session).
@@ -596,6 +606,53 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+/// Drive a session over line-based I/O until release or EOF, returning the
+/// live [`hornvale_vessel::Session`] rather than the played `World` it
+/// evolved (The Quire, Task 3). Otherwise the same loop as
+/// `hornvale_vessel::run`, whose public signature folds the session into a
+/// `World` before returning and so cannot serve `--snapshot`: that flag
+/// needs `session.snapshot()` for the turn the caller left the session on,
+/// which only exists before that fold.
+fn drive_session<'w>(
+    world: &'w World,
+    opts: &hornvale_vessel::PossessOpts,
+    input: impl std::io::BufRead,
+    mut output: impl std::io::Write,
+) -> Result<hornvale_vessel::Session<'w>, String> {
+    let (mut session, opening) =
+        hornvale_vessel::Session::start(world, opts).map_err(|e| e.to_string())?;
+    writeln!(output, "{opening}").map_err(|e| e.to_string())?;
+    for line in input.lines() {
+        let line = line.map_err(|e| e.to_string())?;
+        if opts.echo {
+            writeln!(output, "> {line}").map_err(|e| e.to_string())?;
+        }
+        match session.handle(&line) {
+            hornvale_vessel::Turn::Out(s) => {
+                if !s.is_empty() {
+                    writeln!(output, "{s}").map_err(|e| e.to_string())?;
+                }
+            }
+            hornvale_vessel::Turn::Released(s) => {
+                writeln!(output, "{s}").map_err(|e| e.to_string())?;
+                break;
+            }
+        }
+    }
+    Ok(session)
+}
+
+/// Write a session's current-turn snapshot as `vessel/session/v1` JSON to
+/// `path` (The Quire, Task 3) — the fixture every `hornvale-game-core`
+/// render test reads instead of paying for genesis.
+/// `hornvale_vessel::snapshot_json` is the only correct serializer: floats
+/// quantize at that boundary and nowhere else.
+fn write_snapshot(session: &hornvale_vessel::Session<'_>, path: &str) -> Result<(), String> {
+    let snap = session.snapshot().map_err(|e| e.to_string())?;
+    std::fs::write(path, hornvale_vessel::snapshot_json(&snap))
+        .map_err(|e| format!("writing {path}: {e}"))
 }
 
 /// Render the world's elevation map: a markdown page (title, land lines,

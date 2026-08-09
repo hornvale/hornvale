@@ -113,6 +113,14 @@ run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt 
 } > book/src/gallery/possession-seed-42.md
 rm -f "$possess_tmp"
 
+# The committed session fixture (The Quire, Task 3): `hornvale-game-core`'s
+# render tests read this instead of paying for genesis (measured 1.43 s).
+# Regenerated here, beside the transcripts above, so it cannot silently lag
+# `vessel/session/v1`'s schema.
+mkdir -p clients/game/core/tests/fixtures
+run -p hornvale -- possess --seed 42 \
+    --snapshot clients/game/core/tests/fixtures/session-seed-42-turn-0.json > /dev/null
+
 # The over-time transcript (the-quickening, T4; the-wanting, T4): a NEW,
 # separate recording — the day-0 transcript above never advances time, so it
 # cannot show the world moving. This one `wait`s across a full drive cycle,
