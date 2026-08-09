@@ -108,6 +108,10 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
         // client's business. Applying it here would put a look inside the
         // byte-identity smoke.
         lens: hornvale_vessel::lens::Lens::Off,
+        // The Casement possesses the flagship, the same default every
+        // committed transcript and this ABI's byte-identity smoke depend on
+        // (The Quire, Task 2).
+        target: hornvale_vessel::PossessTarget::Flagship,
     };
     match Session::start(world_ref, &opts) {
         Ok((session, opening)) => {

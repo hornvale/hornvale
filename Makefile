@@ -18,11 +18,12 @@
 #   make gate-remote  # ABANDONED (decision 0063): the AWS path is unused; kept only as history
 #   make vessel-check  # the Casement's local gate: deno + wasm fmt/clippy + byte-identity smoke
 #   make world-check  # the world catalog's local gate: fmt/clippy + byte-identity smoke + size gate
+#   make game-check  # the game client's local gate: fmt/clippy/test on both crates + the containment guard
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
+.PHONY: help quick gate gate-run gate-fast gate-full ci ci-run heavy-remote heavy-status heavy-log nextest-check prewarm fmt fmt-check clippy type-audit type-audit-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check game-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -31,7 +32,7 @@ help: ## Show this help
 
 quick: fmt-check clippy type-audit type-audit-report ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report)
 
-gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~15 min — 0040 budgeted 4)
+gate: ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~8 min since 0113 — 0040 budgeted 4)
 	@bash scripts/timed.sh gate -- make --no-print-directory gate-run
 
 # The gate's body, split out so `timed.sh` can wrap it — the same shape `ci`
@@ -355,3 +356,12 @@ world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity
 	  gz=$$(gzip -9 -c clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm | wc -c); \
 	  echo "world wasm size: $$gz bytes gzipped ($$raw raw)"; \
 	  [ $$gz -le 524288 ] || { echo "SIZE GATE FAILED: > 512 KiB gzipped"; exit 1; }
+
+game-check: ## The game client's local gate: fmt/clippy/test on both crates
+	cargo fmt --check --manifest-path clients/game/core/Cargo.toml
+	cargo fmt --check --manifest-path clients/game/bin/Cargo.toml
+	cargo clippy --manifest-path clients/game/core/Cargo.toml --all-targets -- -D warnings
+	cargo clippy --manifest-path clients/game/bin/Cargo.toml --all-targets -- -D warnings
+	cargo test --manifest-path clients/game/core/Cargo.toml
+	cargo test --manifest-path clients/game/bin/Cargo.toml
+	@bash scripts/game-no-vessel-dep.sh

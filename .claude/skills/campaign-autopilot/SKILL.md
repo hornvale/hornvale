@@ -88,6 +88,59 @@ external systems had been verified at all. Fold this into G2's own
 self-review pass explicitly; don't rely on it being implied by "spec
 consistency."
 
+### Imperative mood hides assertions — the reason the check above kept missing
+
+The Quire (2026-08-08) put **five** defects into plan text underneath this
+very section. None was caught by it, and the reason is mechanical rather
+than a lapse: the check hunts for sentences "of the shape *X will/won't
+happen*," and **not one of the five had that shape.** Every one was an
+imperative with an outcome smuggled inside:
+
+| what it looked like | what it actually asserted | how it was wrong |
+|---|---|---|
+| "Run `make rebaseline` and confirm an empty diff" | the diff *will* be empty | the task added `pub` items, so the type-audit report always drifts |
+| "Swap two adjacent derivations and confirm the test fails" | the swap *is* observable | both are pure and share no stream; 490 tests stayed green |
+| "`git add windows/vessel cli/src/main.rs`" | that *is* the complete file set | adding a struct field breaks every full-literal construction site |
+| "`possess --seed 42 --snapshot X`" | the command *terminates* | no `--script`, so it blocks on stdin |
+| "root cause `c25bb1d2`" | that *is* the provenance | `c25bb1d2` changed only a comment; the cause was a later merge |
+
+A step reads as a thing to *do*, so the claim inside it is never audited.
+So the check is not "scan for predictions" — it is **scan every imperative
+for the outcome hiding inside it.** Two rules follow, and they are cheaper
+than more scanning:
+
+- **Write decision rules, not predictions.** Instead of "Expected: empty
+  diff," enumerate the branches: *`book/src/gallery/` moved → STOP, epoch
+  event; only `docs/audits/` moved → regenerate and commit in the same
+  commit.* A prediction can be wrong; a branch table covering the responses
+  cannot, and it is more useful to the implementer. The Quire's first
+  defect is pure self-inflicted proof: that exact branch table was written
+  correctly into Task 2 and omitted from Task 1.
+- **Never prescribe a specific mutation from outside the code.** Name the
+  *property* the mutation must demonstrate and let the implementer find
+  one. A plan author does not know which derivations share a stream; the
+  implementer does, after reading. Both prescribed mutations in The Quire
+  were nulls, and in both cases the implementer found a discriminating one
+  by hunting — the outside guess was strictly worse than the inside search,
+  every time.
+
+**What not to do about it.** A plan pre-flight that runs every command
+before the plan commits is the obvious heavyweight fix and does not earn
+its cost: it would have caught three of the five, missed the Critical one
+entirely (see the stdin note below), and missed the provenance one. What
+did catch all five was every plan step demanding executable proof, plus
+implementers empowered to override the plan and say so in their report.
+Keep that sharp in preference to adding a gate in front of it.
+
+**The drafting environment is not the execution environment.** An agent's
+stdin is at EOF, it has no TTY, and the box may be loaded. So a command
+that reads stdin *cannot* be validated by running it here — it will pass
+for you and hang for the human at a terminal. That is what made The
+Quire's stdin defect Critical and structurally invisible to the session
+that wrote it. Same family: timings taken on a contended box (that
+campaign discarded a 5-run pair taken at load average 50, which was 3.3x
+wrong).
+
 ### Four more claim-classes, each with a command that settles it
 
 The Benchmark and The Handle added seven more plan-text defects (2026-08-06/07),
