@@ -40,6 +40,7 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | D2 | 31 |
 | D3 | 13 |
 | D4 | 39 |
-| D5 strength | 25 |
+| D5 strength | 19 |
+| D5 unmeasurable | 6 |
 | D6 | 1 |
 | D8 | 2 |

@@ -193,12 +193,34 @@ fn detect_d4(c: &Census) -> Vec<Finding> {
     out
 }
 
+/// The single value `vals` holds if every entry is bit-identical, or `None`
+/// if it varies (or is empty). Exact equality is correct and sufficient
+/// here, not a tuned epsilon: census floats are quantized to 8 significant
+/// digits at emit (`hornvale_kernel::quantize`), so a genuinely constant
+/// metric yields bit-identical `f64`s across every world.
+fn constant_value(vals: &[f64]) -> Option<f64> {
+    let first = *vals.first()?;
+    if vals.iter().all(|v| *v == first) {
+        Some(first)
+    } else {
+        None
+    }
+}
+
 /// Pearson correlation coefficient over paired samples, or `None` when
-/// either side has zero variance (an undefined correlation) or fewer than
-/// two pairs.
+/// either side is constant (an undefined correlation), either side has zero
+/// variance, or there are fewer than two pairs.
 fn pearson(xs: &[f64], ys: &[f64]) -> Option<f64> {
     let n = xs.len();
     if n < 2 || n != ys.len() {
+        return None;
+    }
+    // A constant column has no correlation to report. Test this EXACTLY
+    // rather than via the variance: `sum()` accumulates left to right, so a
+    // thousand copies of one value leave ~1e-22 of rounding residue in the
+    // variance -- strictly greater than zero, which defeated the guard below
+    // and let this function return a correlation computed from noise.
+    if constant_value(xs).is_some() || constant_value(ys).is_some() {
         return None;
     }
     let mean_x = xs.iter().sum::<f64>() / n as f64;
@@ -213,6 +235,8 @@ fn pearson(xs: &[f64], ys: &[f64]) -> Option<f64> {
         var_x += dx * dx;
         var_y += dy * dy;
     }
+    // Kept as a backstop, not a replacement: it is not wrong, only
+    // insufficient on its own (see the exact check above).
     if var_x <= 0.0 || var_y <= 0.0 {
         return None;
     }
@@ -240,13 +264,24 @@ fn band_of(abs_r: f64) -> &'static str {
 
 /// D5 Mis-declared relationship: an expectation declares a relationship
 /// class and sign; fire `"D5 strength"` when the observed Pearson `|r|`,
-/// mapped to a band, differs from the declared class, or `"D5 direction"`
-/// when the band matches but the observed sign is backwards from the
-/// declared one (spec §4.2) — a link that runs the wrong way is a more
-/// serious defect than a merely over- or under-claimed strength. The sign
-/// is never reported when the observed band is `none`: a near-zero `r`'s
-/// sign is noise. Pairs are formed from worlds where BOTH `metric` and
-/// `tracks` are present, in row order (deterministic — no `HashMap`).
+/// mapped to a band, differs from the declared class, `"D5 direction"` when
+/// the band matches but the observed sign is backwards from the declared one
+/// (spec §4.2) — a link that runs the wrong way is a more serious defect
+/// than a merely over- or under-claimed strength — or `"D5 unmeasurable"`
+/// when either column is constant across the whole census, naming which
+/// side is frozen: a declared link whose inputs cannot support a
+/// correlation is a statement that the census cannot test the claim, not a
+/// measurement and not silence (Task 4b, spec §1). The sign is never
+/// reported when the observed band is `none`: a near-zero `r`'s sign is
+/// noise. Pairs are formed from worlds where BOTH `metric` and `tracks` are
+/// present, in row order (deterministic — no `HashMap`).
+///
+/// A pairing with fewer than two rows is left silent, not reported as
+/// `"D5 unmeasurable"`: that is a different failure (a too-small census),
+/// and conflating it with a frozen column through the same message would
+/// hide which one actually happened. It does not occur on the live census —
+/// every declared pairing has hundreds of paired worlds — so this is an
+/// unexercised edge case decided on its merits, not a tuned outcome.
 fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
     let mut out = Vec::new();
     for e in exps {
@@ -264,6 +299,30 @@ fn detect_d5(c: &Census, exps: &[Expectation]) -> Vec<Finding> {
             if let (Some(x), Some(y)) = (mx, my) {
                 xs.push(x);
                 ys.push(y);
+            }
+        }
+        if xs.len() >= 2 {
+            let mut frozen_sides = Vec::new();
+            if let Some(v) = constant_value(&xs) {
+                frozen_sides.push(format!("`{}` is frozen at {v}", e.metric));
+            }
+            if let Some(v) = constant_value(&ys) {
+                frozen_sides.push(format!("`{}` is frozen at {v}", e.tracks));
+            }
+            if !frozen_sides.is_empty() {
+                out.push(Finding {
+                    detector: "D5 unmeasurable",
+                    metric: e.metric.clone(),
+                    detail: format!(
+                        "declared {} tracking {}, but {} across {} worlds -- the census \
+                         cannot test this link",
+                        e.declared,
+                        e.tracks,
+                        frozen_sides.join(" and "),
+                        xs.len()
+                    ),
+                });
+                continue;
             }
         }
         if let Some(r) = pearson(&xs, &ys) {
@@ -890,6 +949,75 @@ mod tests {
         assert_eq!(f[0].detector, "D5 strength");
     }
 
+    #[test]
+    fn pearson_returns_none_for_a_constant_column() {
+        // 1000 copies of a value with a long mantissa, so naive left-to-right
+        // summation leaves realistic rounding residue in the mean/variance
+        // (the brief's ~1e-13/~3.4e-22 figures for exactly this shape). The
+        // OLD `var_x <= 0.0` guard does not catch this -- that is the defect
+        // Task 4b exists to fix, and this test is the proof: it must FAIL
+        // before Step 3's exact-equality guard lands.
+        let xs = vec![29.835811; 1000];
+        let ys: Vec<f64> = (0..1000).map(|i| i as f64).collect();
+        assert!(
+            pearson(&xs, &ys).is_none(),
+            "a constant column has no correlation to report, but pearson returned Some(_) \
+             computed from summation noise"
+        );
+    }
+
+    #[test]
+    fn d5_reports_unmeasurable_when_the_metric_is_frozen() {
+        let frozen = vec![29.835811; 1000];
+        let varying: Vec<f64> = (0..1000).map(|i| i as f64).collect();
+        let c = two_numeric_columns("m", &frozen, "d", &varying);
+        let e = expectation("m", "d", "moderate", "positive");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(
+            f.len(),
+            1,
+            "a frozen metric must report exactly one finding"
+        );
+        assert_eq!(f[0].detector, "D5 unmeasurable");
+        assert!(
+            f[0].detail.contains('m') && f[0].detail.contains("29.835811"),
+            "the detail must name the frozen column and its single value: {}",
+            f[0].detail
+        );
+    }
+
+    #[test]
+    fn d5_reports_unmeasurable_when_the_tracked_column_is_frozen() {
+        let varying: Vec<f64> = (0..1000).map(|i| i as f64).collect();
+        let frozen = vec![29.835811; 1000];
+        let c = two_numeric_columns("m", &varying, "d", &frozen);
+        let e = expectation("m", "d", "moderate", "positive");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(
+            f.len(),
+            1,
+            "a frozen tracked column must report exactly one finding"
+        );
+        assert_eq!(f[0].detector, "D5 unmeasurable");
+        assert!(
+            f[0].detail.contains('d') && f[0].detail.contains("29.835811"),
+            "the detail must name the frozen column and its single value: {}",
+            f[0].detail
+        );
+    }
+
+    #[test]
+    fn d5_does_not_report_unmeasurable_when_both_columns_vary() {
+        // A guard against the new branch swallowing an ordinary finding: the
+        // existing strength-mismatch fixture must still report "D5 strength",
+        // not "D5 unmeasurable".
+        let c = two_numeric_columns("m", &[1.0, 2.0, 3.0, 4.0], "d", &[4.0, 3.0, 2.0, 1.0]);
+        let e = expectation("m", "d", "weak", "negative");
+        let f = detect_d5(&c, &[e]);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].detector, "D5 strength");
+    }
+
     // --- D6 ---
 
     #[test]
@@ -1154,18 +1282,53 @@ mod tests {
             "D1 hit count changed; investigate before re-pinning"
         );
 
-        // The Armature's single measurement (Task 4): all thirty frozen
-        // expectations run against the live census for the first time. Of
-        // the 30, 25 fired "D5 strength" (an observed band different from
-        // the declared one) and 0 fired "D5 direction" (right band, sign
-        // backwards) -- five expectations were silent (declared and
-        // observed agree, or the two "none"-declared rows saw no spurious
-        // coupling). These counts are a measurement to investigate, not a
-        // target: if either moves, find out why before updating it.
+        // The Armature's measurement (Task 4), corrected by Task 4b: all
+        // thirty frozen expectations run against the live census. Task 4's
+        // first pass reported 25 "D5 strength" / 0 "D5 direction" / 5
+        // silent, but six of those 25 "strength" hits (the six Biology rows,
+        // #16-21 in studies/expectations.json -- both goblin/kobold
+        // basal-metabolic-rate, pace-of-life-goblin, both reproductive-
+        // tempo, and lifespan-years-goblin) were computed from a Pearson
+        // correlation over a CONSTANT column: `pearson`'s zero-variance
+        // guard tested `var <= 0.0`, but left-to-right summation over 1000
+        // copies of one value leaves ~1e-22 of rounding residue, so the
+        // guard never fired and the "strength" it reported was noise, not a
+        // measurement. Task 4b added an exact-equality guard and a third
+        // detector, "D5 unmeasurable", for exactly this case, so the
+        // corrected split is:
+        //   19 D5 strength    -- a real measurement over two varying
+        //                        columns whose band disagrees with the
+        //                        declared one (25 - 6 reclassified = 19).
+        //    6 D5 unmeasurable -- the six Biology rows above; the census
+        //                        cannot test these links at all.
+        //    0 D5 direction    -- unchanged; of the 30 rows, only 3 were
+        //                        even ELIGIBLE for a direction check
+        //                        (observed band == declared AND observed !=
+        //                        "none": karst-fraction/mean-land-
+        //                        temperature-c, pop-weighted-abs-latitude/
+        //                        mean-land-temperature-c, and climate-
+        //                        displacement-events/habitable-fraction --
+        //                        rows #15, #25, #28), and all 3 also had
+        //                        the declared sign, so "zero backwards
+        //                        links" means zero out of 3, not zero out
+        //                        of 30.
+        //    5 silent          -- unchanged: the 3 eligible-and-matching
+        //                        rows above, plus the 2 rows declared
+        //                        none/none whose observed band was also
+        //                        "none" (mean-land-temperature-c/day-
+        //                        length-hours, total-population/plate-
+        //                        size-gini; rows #4, #29).
+        // These counts are a measurement to investigate, not a target: if
+        // any moves, find out why before updating it.
         let d5_strength = f.iter().filter(|x| x.detector == "D5 strength").count();
         assert_eq!(
-            d5_strength, 25,
+            d5_strength, 19,
             "D5 strength hit count changed; investigate before re-pinning"
+        );
+        let d5_unmeasurable = f.iter().filter(|x| x.detector == "D5 unmeasurable").count();
+        assert_eq!(
+            d5_unmeasurable, 6,
+            "D5 unmeasurable hit count changed; investigate before re-pinning"
         );
         let d5_direction = f.iter().filter(|x| x.detector == "D5 direction").count();
         assert_eq!(
