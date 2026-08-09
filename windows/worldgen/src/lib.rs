@@ -1052,6 +1052,53 @@ pub fn axis_supply(
         .sum()
 }
 
+/// The axis order the two per-cell capacity loops build their `per_axis`
+/// supply arrays in, and therefore the order their hoisted niche weights are
+/// resolved in. A single constant so the two cannot drift apart silently;
+/// `the_supply_axis_order_matches_both_capacity_loops` asserts the loops
+/// really do use it.
+pub const SUPPLY_AXIS_ORDER: [hornvale_kernel::ResourceAxis; 6] = [
+    hornvale_kernel::PHOTOSYNTHATE,
+    hornvale_kernel::PLANT_FORAGE,
+    hornvale_kernel::MINERAL,
+    hornvale_kernel::DETRITUS,
+    hornvale_kernel::ANIMAL_PREY,
+    hornvale_kernel::MARINE_FORAGE,
+];
+
+/// [`axis_supply`] with the niche's weights already resolved — the same dot
+/// product, hoisted.
+///
+/// **Why this exists.** `axis_supply` re-reads all six weights out of the
+/// niche's `BTreeMap` on every call, and its two callers call it *per cell,
+/// per species*. But a niche is a property of the SPECIES: the weights are
+/// loop-invariant, and only the supplies move with the cell. A samply
+/// flamegraph of the heaviest `hornvale-vessel` test attributed **8.6%** of the
+/// whole test to `ResourceVector::weight` — 7.3% of it under
+/// [`per_species_capacity_at`] alone — essentially all of it inside
+/// `BTreeMap::get`. Resolving the weights once per species and passing them in
+/// removes that lookup from the inner loop entirely.
+///
+/// **Bit-identical, by construction, not by tolerance.** `weights[i]` must be
+/// the weight of `per_axis[i].0` — the caller pairs them by building both from
+/// one axis list — so this multiplies the same six products and `sum()`s them
+/// in the same order. Same terms, same order, same `f64`: not "close", equal.
+/// `debug_assert` catches a caller that pairs them wrong; `axis_supply_agrees_
+/// with_the_hoisted_form` pins the agreement.
+/// type-audit: bare-ok(ratio: weights), bare-ok(ratio: per_axis), bare-ok(ratio: return)
+pub fn axis_supply_with(weights: &[f64], per_axis: &[(hornvale_kernel::ResourceAxis, f64)]) -> f64 {
+    debug_assert_eq!(
+        weights.len(),
+        per_axis.len(),
+        "hoisted weights must be paired 1:1 with the supply axes"
+    );
+    weights
+        .iter()
+        .zip(per_axis.iter())
+        .map(|(weight, (_, supply))| weight * supply)
+        .sum()
+}
+
 /// Liebig's law of the minimum over a species' four condition responses: the
 /// **binding** axis limits, exactly as `carrying_capacity` takes
 /// `min(temperature, precipitation)`. Temperature, moisture and insolation are
@@ -1251,6 +1298,12 @@ pub fn per_species_suitability(
         .map(|(tag, bio)| {
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
+            // Loop-invariant: the niche belongs to the SPECIES, so its six
+            // weights are resolved once here rather than re-read out of a
+            // `BTreeMap` on every cell (see `axis_supply_with`). The order
+            // matches `per_axis` inside the closure exactly, which is what
+            // makes the hoisted dot product bit-identical.
+            let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
             let realm = species_realm
                 .get(tag)
                 .copied()
@@ -1279,6 +1332,9 @@ pub fn per_species_suitability(
                 use hornvale_kernel::{
                     ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
+                // ORDER IS LOAD-BEARING: it must equal `SUPPLY_AXIS_ORDER`, so
+                // that entry i's weight is the hoisted `niche_weights[i]`.
+                // `the_supply_axis_order_matches_both_capacity_loops` pins it.
                 let per_axis = [
                     (PHOTOSYNTHATE, base_carrying.at(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
@@ -1287,7 +1343,7 @@ pub fn per_species_suitability(
                     (ANIMAL_PREY, *prey.get(cell)),
                     (MARINE_FORAGE, *marine.get(cell)),
                 ];
-                let supply = axis_supply(&bio.niche, &per_axis);
+                let supply = axis_supply_with(&niche_weights, &per_axis);
                 // THIS LINE IS WHERE THE MAGNITUDE GOES (decision 0103 §4).
                 // Michaelis-Menten saturation maps a supply magnitude onto
                 // `[0, 1)`, so everything below is a *dimensionless suitability*
@@ -1465,11 +1521,15 @@ pub fn per_species_capacity_at(
         .map(|(tag, bio)| {
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
+            // Loop-invariant, as in `per_species_suitability` above: six
+            // `BTreeMap` reads per species instead of six per cell per species.
+            let niche_weights = SUPPLY_AXIS_ORDER.map(|axis| bio.niche.weight(axis));
             let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
                 use hornvale_kernel::{
                     ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
+                // ORDER IS LOAD-BEARING — see the sibling loop.
                 let per_axis = [
                     (PHOTOSYNTHATE, base_carrying.at(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
@@ -1478,7 +1538,7 @@ pub fn per_species_capacity_at(
                     (ANIMAL_PREY, *prey.get(cell)),
                     (MARINE_FORAGE, *hoisted.marine.get(cell)),
                 ];
-                let supply = axis_supply(&bio.niche, &per_axis);
+                let supply = axis_supply_with(&niche_weights, &per_axis);
                 let headcount = CAPACITY_V_MAX * supply / (CAPACITY_K_M + supply);
                 headcount * tolerance_liebig(cn, s, floor_buf)
             });
@@ -8345,6 +8405,86 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[allow(clippy::disallowed_methods)]
 mod tests {
     use super::*;
+
+    /// claim: invariant — the hoisted dot product equals the looked-up one.
+    ///
+    /// [`axis_supply_with`] is only sound because `weights[i]` is the weight of
+    /// `per_axis[i].0`; this builds the weights the way the two capacity loops
+    /// do (map over [`SUPPLY_AXIS_ORDER`]) and asserts BIT equality with
+    /// [`axis_supply`], not approximate agreement — the whole point is that no
+    /// world's bytes move.
+    #[test]
+    fn axis_supply_agrees_with_the_hoisted_form() {
+        use hornvale_kernel::{
+            ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+            ResourceVector,
+        };
+        // A niche that is SPARSE on purpose: `MINERAL` and `MARINE_FORAGE` are
+        // absent, so `weight` returns its 0.0 default for them and the hoisted
+        // array has to reproduce that, not just the recorded entries.
+        let niche = ResourceVector::new(&[
+            (PHOTOSYNTHATE, 0.7),
+            (PLANT_FORAGE, 0.25),
+            (DETRITUS, 0.05),
+            (ANIMAL_PREY, 1.0 / 3.0),
+        ])
+        .expect("finite non-negative weights");
+        let per_axis = [
+            (PHOTOSYNTHATE, 12.5),
+            (PLANT_FORAGE, 0.1),
+            (MINERAL, 3.0),
+            (DETRITUS, 1e-7),
+            (ANIMAL_PREY, 1.0 / 7.0),
+            (MARINE_FORAGE, 4.25),
+        ];
+        let weights = SUPPLY_AXIS_ORDER.map(|axis| niche.weight(axis));
+        assert_eq!(
+            axis_supply_with(&weights, &per_axis).to_bits(),
+            axis_supply(&niche, &per_axis).to_bits(),
+            "the hoist must be bit-identical, not merely close"
+        );
+    }
+
+    /// claim: invariant — both capacity loops build `per_axis` in
+    /// [`SUPPLY_AXIS_ORDER`].
+    ///
+    /// The hoist's one failure mode is a caller whose supply array stops
+    /// matching the order its weights were resolved in — it would keep
+    /// compiling and silently multiply the wrong pairs. The loops build their
+    /// arrays from literal constants, so this reads those literals back out of
+    /// this file's own source and compares the sequence, the same trick
+    /// `hornvale-book` uses to police its render sites.
+    #[test]
+    fn the_supply_axis_order_matches_both_capacity_loops() {
+        let src = include_str!("lib.rs");
+        let expected: Vec<&str> = SUPPLY_AXIS_ORDER.iter().map(|a| a.label).collect();
+        let mut found = 0;
+        for block in src.split("let per_axis = [").skip(1) {
+            let body = block.split("];").next().expect("a closed array literal");
+            // Only the two per-cell capacity loops: they are the arrays whose
+            // entries read a supply field at `cell`.
+            if !body.contains("(cell)") {
+                continue;
+            }
+            let order: Vec<&str> = body
+                .lines()
+                .filter_map(|l| l.trim().strip_prefix('('))
+                .filter_map(|l| l.split(',').next())
+                .map(|ident| match ident {
+                    "PHOTOSYNTHATE" => "photosynthate",
+                    "PLANT_FORAGE" => "plant forage",
+                    "MINERAL" => "mineral",
+                    "DETRITUS" => "detritus",
+                    "ANIMAL_PREY" => "animal prey",
+                    "MARINE_FORAGE" => "marine forage",
+                    other => other,
+                })
+                .collect();
+            assert_eq!(order, expected, "a capacity loop's per_axis order drifted");
+            found += 1;
+        }
+        assert_eq!(found, 2, "expected exactly the two per-cell capacity loops");
+    }
 
     /// The `(wc, terrain, report)` prelude the pressure/report `_from` family
     /// takes as parameters (The Weir, Stage 1b) — a test-only helper so each

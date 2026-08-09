@@ -22,36 +22,58 @@ libm = "0.2"
 inherits = "release"
 debug = true
 
-# TOOL-hot-crate-opt: the kernel noise field (fbm/value-noise/lattice) and
-# seed derivation are the innermost primitive of ALL world generation; a
-# flamegraph of the worldgen test suite attributed ~42% of self time to
-# hornvale_kernel::noise + hornvale_kernel::seed. Every opted domain crate
-# below calls into this hot loop, so leaving the kernel at debug opt-level
-# defeats their optimization. O2 here optimizes the shared inner loop.
-[profile.dev.package.hornvale-kernel]
+# TOOL-hot-crate-opt, THE WHETSTONE: the dev profile is optimized, everywhere.
+#
+# This SUPERSEDES the five per-crate `[profile.dev.package.hornvale-*]` entries
+# that stood here (kernel, language, terrain, climate, worldgen), each added by
+# a campaign that had profiled its own hot crate. That shape had a blind spot
+# nobody could see from inside it: **generics monomorphize into the crate that
+# instantiates them, and are compiled at THAT crate's opt-level.** So a
+# `BTreeMap::get` or a `slice::Iter::next` called from un-opted
+# `hornvale-demography` was compiled unoptimized no matter how well opted the
+# kernel that defined the data was. A samply flamegraph of the heaviest
+# `hornvale-vessel` test attributed **70% of self time to `core` + `alloc`** —
+# iterator `next`, BTree `find_key_index`, slice bounds checks — not to any
+# hornvale frame at all. Opting the callers is what collects that 70%.
+#
+# THE COMPILE COST IS THE SURPRISE, AND IT IS ~ZERO. A full workspace test
+# rebuild measured 771 s here against ~780 s for the per-crate shape: O2 emits
+# far less code than O0 does, and the codegen/link saving pays for the
+# optimizer. Measured on this box, 2026-08-09, whole-workspace
+# `cargo nextest run --workspace --no-run`.
+#
+# What it bought, same box, same day, `cargo nextest run --workspace` (the
+# `ci` profile, 3280 tests, both arms already carrying the libm entry below):
+#
+#     per-crate shape   887 s wall   10558 CPU-s
+#     this shape        595 s wall    7049 CPU-s     -33% CPU
+#
+# hornvale-vessel, the biggest crate in the suite, went 4143 -> 1739 CPU-s
+# (2.38x); its heaviest single test 4.18x.
+#
+# DETERMINISM: opt-level is not a semantic knob — Rust never enables fast-math,
+# and `-ffp-contract` stays off, so no FP result moves. Verified rather than
+# asserted, the way decision 0033 requires: the whole suite (which pins
+# hundreds of literal strings and compares against committed, RELEASE-built
+# artifacts) is green, and `make rebaseline` leaves every generated artifact
+# byte-unchanged.
+[profile.dev]
 opt-level = 2
 
-# TOOL-hot-crate-opt: hornvale-language's tests sweep 1,000-seed language
-# evolution; O2 here buys release-grade test speed while every other crate
-# keeps fast debug compiles.
-[profile.dev.package.hornvale-language]
+# Dependencies are NOT covered by `[profile.dev]` — cargo leaves them at
+# opt-level 0 in dev even when workspace members are opted. serde/serde_json
+# are on every save/load path in the suite.
+[profile.dev.package."*"]
 opt-level = 2
 
-# TOOL-hot-crate-opt: the census probes/guard build full worlds through
-# terrain's tectonic/sculpting math on every seed; measured as the largest
-# single contributor to fixture_staleness wall time (see commit body).
-[profile.dev.package.hornvale-terrain]
-opt-level = 2
-
-# TOOL-hot-crate-opt: climate fields are recomputed per world alongside
-# terrain in every census probe; measurably shaves further wall time on
-# top of the terrain entry (see commit body).
-[profile.dev.package.hornvale-climate]
-opt-level = 2
-
-# TOOL-hot-crate-opt: worldgen is the composition root that drives every
-# domain's world construction; its own glue code adds a small but
-# consistent, reproducible speedup on top of the domain crates above (see
-# commit body).
-[profile.dev.package.hornvale-worldgen]
-opt-level = 2
+# libm gets 3, not 2. Since decision 0041 every transcendental in the sim
+# routes through this crate (kernel/src/math.rs), so it is the innermost loop
+# of the innermost loop: a flamegraph of one `hornvale-book` test attributed
+# 23.7% of the WHOLE TEST to `libm::exp`, essentially all of it inside
+# `scalbn`'s bit-twiddling helpers (`Float::from_parts`, `u64::shl`,
+# `f64::from_bits`) — functions that vanish above opt-level 0. Fixing this
+# alone took that test's CPU from 5.1 s to 2.8 s. The 3 matches `release`, so
+# the debug suite exercises the same libm codegen as the committed artifacts it
+# asserts byte-equality against.
+[profile.dev.package.libm]
+opt-level = 3

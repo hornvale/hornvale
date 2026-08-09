@@ -153,6 +153,35 @@ impl FactIndex {
             .any(|&p| facts[p].object != fact.object)
     }
 
+    /// Positions of every fact with exactly this `(subject, predicate)`, in
+    /// no particular order. The SPO index already keys on the predicate, so
+    /// this ranges straight to the pair instead of walking the subject's whole
+    /// posting set: O(log n + k) in the facts about *that pair*, where
+    /// [`Self::positions_for_subject`] is O(log n + K) in the facts about the
+    /// SUBJECT, plus a `Vec` allocation and a sort.
+    ///
+    /// Callers wanting commit order take `.min()` (first) or `.max()` (latest)
+    /// rather than sorting — the two accessors that need this
+    /// (`Ledger::value_of`, `Ledger::latest_value_of`) want one end, not the
+    /// sequence. Returning the raw iterator keeps that allocation-free.
+    ///
+    /// An un-interned predicate yields an empty iterator: the interner only
+    /// ever grows, so a predicate absent from it has no facts at all.
+    pub(crate) fn positions_for_subject_predicate(
+        &self,
+        subject: EntityId,
+        predicate: &str,
+    ) -> impl Iterator<Item = usize> + '_ {
+        self.interner
+            .get(predicate)
+            .into_iter()
+            .flat_map(move |sym| {
+                self.spo
+                    .range((subject, sym, ObjKey::MIN)..=(subject, sym, ObjKey::MAX))
+            })
+            .flat_map(|(_, ps)| ps.iter().copied())
+    }
+
     /// Ascending positions of all facts about `subject`.
     pub(crate) fn positions_for_subject(&self, subject: EntityId) -> Vec<usize> {
         let mut v: Vec<usize> = self
