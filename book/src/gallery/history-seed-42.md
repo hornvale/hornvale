@@ -7,10 +7,10 @@ today. Nothing here replays the deep-history bake; it is all a
 *present-as-query* over committed occupation facts, with the flesh
 (structures, residue) derived on demand and never committed.
 
-This is a real clearing on the world of seed 42 — cell 5508 — and eleven
+This is a real clearing on the world of seed 42 — cell 5508 — and twelve
 kobold steadings have risen on it, one settling atop the ruins of the
-last, from the year 950 down to the present. Every one of the ten
-completed layers ended at the hands of other kobolds: six fell to a
+last, from the year 625 down to the present. Every one of the eleven
+completed layers ended at the hands of other kobolds: seven fell to a
 rival band, and four were not evictions at all — the occupants had
 just taken better ground from a neighbour and carried the settlement
 there, so the layer closes on a departure rather than a defeat. This
@@ -19,11 +19,11 @@ neighbourhood it had already filled.
 
 The cold is in this column, but never as an ending. Not one layer
 here fell to ice; every founding party instead *arrived* fleeing it,
-driven off one of three neighbouring clearings. Five of the eleven
+driven off one of four neighbouring clearings. Four of the twelve
 layers did not last a single year — founded and put to flight in the
 same year they began, which is what the record looks like when refuge
-and contest are the same ground. The eleventh was founded in 1925 and
-stands yet, seventy-five years on: some fifteen souls, two huts and a
+and contest are the same ground. The twelfth was founded in 1950 and
+stands yet, fifty years on: some thirteen souls, two huts and a
 granary, and no ruin yet to read.
 
 ```text
