@@ -1195,3 +1195,8 @@ make heavy-remote REF=<full-sha>   # a SHA, not a branch name
 - [ ] **Step 5: G6 — present the post-G3 ledger digest to Nathan and STOP.**
 
 Then `closing-a-campaign`, unchanged.
+
+
+---
+
+**STATUS: SHIPPED** (merged 2026-08-08). Three of five heavy-tier reds cleared and confirmed on the canonical box; the two cost gates remain red for a characterized cross-machine calibration defect, half-fixed here (`canonical_host()`) and half deferred to `TOOL-canonical-host-timing-migration`. See `book/src/chronicle/the-assize.md` and `docs/retrospectives/the-assize.md`.

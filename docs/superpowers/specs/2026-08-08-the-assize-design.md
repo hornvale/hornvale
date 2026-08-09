@@ -568,3 +568,8 @@ Authorized by Nathan at G3, 2026-08-08.
   so.
 - No new species, and no touching C2d's surface.
 - No retuning of `NONRAIDER_MAX` to clear 0.333.
+
+
+---
+
+**STATUS: SHIPPED** (merged 2026-08-08). Three of five heavy-tier reds cleared and confirmed on the canonical box; the two cost gates remain red for a characterized cross-machine calibration defect, half-fixed here (`canonical_host()`) and half deferred to `TOOL-canonical-host-timing-migration`. See `book/src/chronicle/the-assize.md` and `docs/retrospectives/the-assize.md`.

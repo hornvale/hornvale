@@ -10,7 +10,7 @@ It turned out to be about the scales rather than the things weighed: no product
 code changed anywhere in it, and the census regen proved it — 194 → 196
 columns, and **zero shared columns moved across all 1000 rows.**
 
-## The headline: nine author predictions, nine refutations, and every measurement held
+## The headline: ten author predictions, ten refutations, and every measurement held
 
 The Delvers ran this count to five and The Confusion sharpened it. This campaign
 ran it to nine, and the author was the controller in every case.
@@ -177,6 +177,39 @@ defect one level up.
   (The Digest). Absorbing first meant the census was baked on the merged tree;
   absorbing after would have meant running it twice, since a generated artifact
   has no merge.
+
+## The name collision was the second, and the first is written down in the book
+
+This campaign was named "The Assize" only at close. It was named **The Tare**,
+and a campaign of that name had merged eleven days earlier — so the chronicle
+and retrospective written here **overwrote that campaign's two pages**, silently,
+because both are keyed by campaign name and to git a rewritten file is an
+ordinary edit.
+
+Three things make this worse than an oversight, and all three are the campaign's
+own subject matter.
+
+1. **The metaphor collided too.** The earlier chronicle opens *"A tare is the
+   weight you subtract to get a true reading."* Independently reinvented, word
+   for word in substance. An evocative name that fits this project's register is
+   exactly the name someone already used.
+2. **`make preflight` cannot see it.** Its collision check is *both-sides-added*
+   — a slug minted on the branch and on main since the merge base. A slug that
+   already existed on main before the campaign began is invisible to it. The
+   check is correct for what it enforces and reads as total.
+3. **It had happened before, and the record is in the book.** `open-questions.md`
+   describes The Reassay hitting "a naming collision with an unrelated,
+   already-shipped campaign that shares this one's title — itself one more claim
+   of absence ('the name is free') nobody checked." That sentence sits in the
+   chapter this campaign was obliged to re-score, which is to say: the lesson was
+   written down, in a document the Definition of Done required reading, and it
+   was hit anyway.
+
+**The scan belongs at the naming moment, not the close.** By close the name had
+reached the spec filename, the plan filename, every in-code campaign
+attribution, three registry rows, and — through metric `doc` strings — the
+committed census `schema.json`, whose correction cost a canonical-box census
+run. At the ledger entry it would have cost one `ls`.
 
 ## Follow-ups
 
