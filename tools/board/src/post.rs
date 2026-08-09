@@ -41,13 +41,20 @@ impl Post {
     /// The bytes this post is addressed by: compact JSON plus a trailing
     /// newline, so the file is a well-behaved text blob.
     ///
+    /// **The invariant this method exists to guarantee: anything
+    /// `canonical_bytes()` emits, `from_json` accepts.** Task 3 content-
+    /// addresses a post by hashing exactly these bytes into an immutable,
+    /// append-only store, so any way of building a `Post` that write-time
+    /// could accept and read-time would reject is permanent corruption, not
+    /// a transient error — every check below exists to close one such gap.
+    ///
     /// `#[serde(flatten)]` does not deduplicate `extra` against the named
     /// `kind`/`by` fields, so a reserved key left in `extra` (e.g. via
     /// `with("kind", ..)`) would otherwise serialize to a literal duplicate
-    /// JSON key — bytes `from_json` then refuses to parse. Since Task 3
-    /// content-addresses a post by hashing exactly these bytes into an
-    /// immutable, append-only store, that defect must be caught here, at
-    /// write time, or it becomes permanent corruption.
+    /// JSON key that `from_json` then refuses to parse. And the named
+    /// `kind`/`by` fields are themselves `pub` and unvalidated, so a blank or
+    /// whitespace-only value would serialize cleanly and then be rejected by
+    /// `from_json`'s own guards on the next read.
     pub fn canonical_bytes(&self) -> Result<Vec<u8>, BoardError> {
         for reserved in ["kind", "by"] {
             if self.extra.contains_key(reserved) {
@@ -55,6 +62,14 @@ impl Post {
                     "extra field \"{reserved}\" is reserved and cannot be set via with()"
                 )));
             }
+        }
+        if self.kind.trim().is_empty() {
+            return Err(BoardError::Json("post has no kind".into()));
+        }
+        if self.by.trim().is_empty() {
+            return Err(BoardError::Json(
+                "post has no by (D7c: attribution is not optional)".into(),
+            ));
         }
         let mut v = serde_json::to_vec(self).map_err(|e| BoardError::Json(e.to_string()))?;
         v.push(b'\n');
@@ -204,16 +219,77 @@ mod tests {
     }
 
     #[test]
-    fn an_ordinary_post_round_trips_through_canonical_bytes() {
-        // Positive form of the invariant Task 3 depends on: anything
-        // `canonical_bytes` emits must be re-readable by `from_json`.
-        let post = Post::new("notice", "campaign/x")
-            .with("subject", json!("elevation"))
-            .with("paths", json!(["kernel/"]));
-        let bytes = post.canonical_bytes().expect("ordinary post serializes");
-        let text = String::from_utf8(bytes).expect("utf8");
-        let reparsed = Post::from_json(&text).expect("canonical_bytes output must always parse");
-        assert_eq!(post, reparsed);
+    fn canonical_bytes_rejects_a_blank_kind() {
+        let post = Post::new("", "campaign/x");
+        let err = post
+            .canonical_bytes()
+            .expect_err("a blank kind must not be allowed to serialize");
+        let BoardError::Json(msg) = err else {
+            panic!("expected BoardError::Json, got {err:?}")
+        };
+        assert!(
+            msg.contains("kind"),
+            "message should name the field; got: {msg}"
+        );
+    }
+
+    #[test]
+    fn canonical_bytes_rejects_a_blank_by() {
+        let post = Post::new("notice", "");
+        let err = post
+            .canonical_bytes()
+            .expect_err("a blank by must not be allowed to serialize");
+        let BoardError::Json(msg) = err else {
+            panic!("expected BoardError::Json, got {err:?}")
+        };
+        assert!(
+            msg.contains("by"),
+            "message should name the field; got: {msg}"
+        );
+    }
+
+    #[test]
+    fn canonical_bytes_rejects_a_whitespace_only_by() {
+        // `.trim()` is there for exactly this: a naive `.is_empty()` would
+        // let a whitespace-only value through.
+        let post = Post::new("notice", "   ");
+        let err = post
+            .canonical_bytes()
+            .expect_err("a whitespace-only by is not attribution");
+        let BoardError::Json(msg) = err else {
+            panic!("expected BoardError::Json, got {err:?}")
+        };
+        assert!(
+            msg.contains("attribution"),
+            "the guard's own message should name attribution; got: {msg}"
+        );
+    }
+
+    #[test]
+    fn canonical_bytes_output_always_reparses_across_a_table_of_posts() {
+        // Positive form of the invariant this module exists to guarantee:
+        // anything `canonical_bytes` emits, `from_json` accepts.
+        let cases: Vec<Post> = vec![
+            Post::new("notice", "campaign/x"),
+            Post::new("notice", "campaign/x")
+                .with("subject", json!("elevation"))
+                .with("paths", json!(["kernel/"])),
+            Post::new("weather-report", "campaign/y").with("cumulus", json!(7)),
+            Post::new("notice", "campaign/z")
+                .with("nested", json!({"a": [1, 2], "b": {"c": true}})),
+            Post::new("notice", "campaign/unicode")
+                .with("subject", json!("caf\u{e9} \u{1f9ed} \u{5730}\u{5f62}")),
+        ];
+        for post in cases {
+            let bytes = post
+                .canonical_bytes()
+                .unwrap_or_else(|e| panic!("post {post:?} failed to serialize: {e}"));
+            let text = String::from_utf8(bytes).expect("utf8");
+            let reparsed = Post::from_json(&text).unwrap_or_else(|e| {
+                panic!("canonical_bytes output for {post:?} did not reparse: {e}")
+            });
+            assert_eq!(post, reparsed, "round trip must be exact for {post:?}");
+        }
     }
 
     #[test]
