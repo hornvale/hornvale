@@ -23,6 +23,7 @@
 use crate::domesday::census::{Census, Column};
 use crate::domesday::detect::Finding;
 use crate::domesday::stats::{categorical, numeric};
+use crate::metrics::Domain;
 use hornvale_kernel::quantize;
 use std::collections::BTreeMap;
 
@@ -33,23 +34,24 @@ const HEADER: &str =
     "<!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab domesday`. -->";
 
 /// The twelve domains a metric may declare (spec §4.1), in the order the
-/// survey presents them. Also the file-stem roster for `book/src/domesday/`:
+/// survey presents them — also the file-stem roster for `book/src/domesday/`:
 /// `cli`'s `domesday` subcommand writes exactly one page per entry here.
-/// type-audit: bare-ok(identifier-text)
-pub const DOMAINS: &[&str] = &[
-    "astronomy",
-    "terrain",
-    "climate",
-    "hydrology",
-    "biology",
-    "settlement",
-    "demography",
-    "society",
-    "religion",
-    "language",
-    "naming",
-    "history",
-];
+///
+/// Derived from [`Domain::all()`] (`metrics.rs`), not a second hand-typed
+/// list. This module used to carry its own `DOMAINS: &[&str]` const,
+/// independently enumerating the same twelve names, with only a one-way
+/// guard (`no_domain_is_currently_empty`, below): every `DOMAINS` entry was
+/// checked to have a column, but nothing checked the reverse — that every
+/// column's domain was one of `DOMAINS`. A 13th [`Domain`] variant would
+/// have compiled, silently gotten no page, and left `render_index`'s header
+/// total (which counts every domained column) larger than the sum of its
+/// own per-domain table. `Domain::all()` already existed as the single
+/// source of truth with zero callers; deriving from it here removes the
+/// fourth roster instead of adding a fifth test.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn domains() -> Vec<&'static str> {
+    Domain::all().iter().map(Domain::as_str).collect()
+}
 
 /// The one authored sentence a domain page is permitted (spec §4.6),
 /// stored as data and merely assembled by [`render_domain`] rather than
@@ -111,7 +113,7 @@ fn framing_line(domain: &str) -> &'static str {
 }
 
 /// Title-case a domain's kebab/lowercase name for a page heading (`"naming"`
-/// -> `"Naming"`). All twelve entries in [`DOMAINS`] are single words, so
+/// -> `"Naming"`). All twelve entries [`domains()`] returns are single words, so
 /// this only needs to capitalize the first character.
 fn title_of(domain: &str) -> String {
     let mut chars = domain.chars();
@@ -505,15 +507,15 @@ pub fn render_index(c: &Census, findings: &[Finding]) -> String {
          produce, and where the instrument finds them wanting.\n\n\
          {} worlds, {total_metrics} metrics across {} domains.\n\n",
         c.rows.len(),
-        DOMAINS.len(),
+        domains().len(),
     );
 
     out.push_str("## Domains\n\n| domain | metrics | weaknesses | |\n|---|---|---|---|\n");
-    for domain in DOMAINS {
+    for domain in domains() {
         let n_metrics = domain_columns(c, domain).len();
         let n_findings = findings
             .iter()
-            .filter(|f| domain_of(c, &f.metric) == Some(*domain))
+            .filter(|f| domain_of(c, &f.metric) == Some(domain))
             .count();
         out.push_str(&format!(
             "| {} | {n_metrics} | {n_findings} | [page](./{domain}.md) |\n",
@@ -583,16 +585,16 @@ mod tests {
         // The full twelve-domain roster (spec §4.1), not the eleven-domain
         // list the brief's own draft test carried — `demography` was
         // missing there, which the "what must render" requirement (all
-        // twelve, `demography` named explicitly) and `DOMAINS` above both
+        // twelve, `demography` named explicitly) and `domains()` above both
         // contradict. Fixed here rather than transcribed.
-        for d in DOMAINS {
+        for d in domains() {
             let page = render_domain(&c, d, &[]);
             assert!(page.len() > 200, "{d} rendered nothing at all");
             // A domain with NO metrics must still render, announcing the gap.
             // An absence that announces itself is a finding; a missing
             // chapter is silence. Do not "fix" the gap by assigning it
             // metrics — render it (campaign principle, Nathan).
-            if c.columns.iter().all(|col| col.domain != *d) {
+            if c.columns.iter().all(|col| col.domain != d) {
                 assert!(
                     page.contains("no metrics"),
                     "{d} has no metrics and must SAY SO on its page"
@@ -611,9 +613,9 @@ mod tests {
         // the "no metrics" branch correctly — this test only pins today's
         // state so a silent future regression is visible here too.
         let c = census();
-        for d in DOMAINS {
+        for d in domains() {
             assert!(
-                c.columns.iter().any(|col| col.domain == *d),
+                c.columns.iter().any(|col| col.domain == d),
                 "{d} has zero metrics on the committed census"
             );
         }
@@ -640,9 +642,8 @@ mod tests {
                 role: "descriptor".to_string(),
             }
         }
-        let other_domains: Vec<&str> = DOMAINS
-            .iter()
-            .copied()
+        let other_domains: Vec<&str> = domains()
+            .into_iter()
             .filter(|d| *d != "hydrology")
             .collect();
         assert_eq!(
@@ -754,7 +755,7 @@ mod tests {
             "D8's paleoclimate finding on the index"
         );
 
-        for d in DOMAINS {
+        for d in domains() {
             let page = render_domain(&c, d, &findings);
             assert!(
                 !page.contains("no census metric measures any quantity"),
@@ -768,7 +769,7 @@ mod tests {
         let c = census();
         let index = render_index(&c, &[]);
         assert!(index.starts_with("<!-- GENERATED FILE — do not edit."));
-        for d in DOMAINS {
+        for d in domains() {
             assert!(
                 index.contains(&format!("(./{d}.md)")),
                 "index must link to {d}'s page"
@@ -935,7 +936,7 @@ mod tests {
         let cmps = load_comparators(&repo_root().join("studies/comparators.json")).unwrap();
         let exps = load_expectations(&repo_root().join("studies/expectations.json")).unwrap();
         let findings = detect(&c, &cmps, &exps);
-        for d in DOMAINS {
+        for d in domains() {
             let page = render_domain(&c, d, &findings);
             for citation in [
                 "SKY-21", "MAP-10", "MAP-22", "BIO-2", "CAP-2", "MEM-7", "LANG-41",

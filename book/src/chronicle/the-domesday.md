@@ -113,7 +113,7 @@ follow-on, to be preregistered before the next run or not at all.
 
 ## What the survey found
 
-113 detector firings over 73 distinct metrics — 38 % of the census. The raw
+114 detector firings over 74 distinct metrics — 38 % of the census. The raw
 count is larger than the metric count because the detectors overlap by
 construction: a frozen metric's median trivially equals its minimum, so every
 frozen finding is also a rail finding. The rendered pages group by metric so
@@ -211,6 +211,6 @@ than noisy: `Terrain` has exactly one weakness across eighteen metrics, and
 `Biology` has one on every metric it has, which is itself the finding about
 biology. The clause is not triggered. The weakness section ships.
 
-Twenty-seven degeneracy findings over 191 metrics is what *make weaknesses
+Twenty-seven degeneracy findings over 193 metrics is what *make weaknesses
 visible* looks like when there are many weaknesses, and a survey that found
 nothing would have been the failure.

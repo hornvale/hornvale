@@ -889,10 +889,17 @@ mod tests {
         // and assert the direct-reference set equals MEASURED_CRATES minus
         // the explicit transitive allowlist. If `alchemy` gains a metric
         // tomorrow this goes red on the "missing" side; if `topology` (the
-        // one transitive entry) loses its indirection this test cannot see
-        // that regression, but `d8_fires_on_exactly_alchemy_and_paleoclimate`
-        // and `the_live_census_reproduces_the_preregistered_findings` both
-        // would, since D8 would then fire on three crates instead of two.
+        // one transitive entry) loses its indirection, THIS test cannot see
+        // that regression, and neither can `d8_fires_on_exactly_alchemy_and_
+        // paleoclimate` or `the_live_census_reproduces_the_preregistered_
+        // findings`: `detect_d8()` only filters DOMAIN_CRATES against the
+        // MEASURED_CRATES const, so deleting `defensibility-capacity-rank-
+        // corr` (topology's only derived metric) leaves D8 emitting exactly
+        // `[alchemy, paleoclimate]` with the suite green while this const
+        // still claims topology is measured. `defensibility_capacity_rank_
+        // corr_still_exists_in_the_registry`, below, is the guard that
+        // actually ties topology's entry here to the metric that makes it
+        // true.
         let mut files = Vec::new();
         rs_files_under(&repo_root().join("windows/lab/src"), &mut files);
         let sources: Vec<String> = files
@@ -936,6 +943,26 @@ mod tests {
         );
     }
 
+    #[test]
+    fn defensibility_capacity_rank_corr_still_exists_in_the_registry() {
+        // `detect_d8()` never reads the census -- it only filters
+        // DOMAIN_CRATES against the frozen MEASURED_CRATES const, so
+        // `topology`'s entry there is a claim, not a derivation. This is the
+        // guard that ties the claim to the fact that makes it true: if
+        // `defensibility-capacity-rank-corr` (topology's only derived
+        // metric, see MEASURED_CRATES' doc comment) is ever deleted from the
+        // registry, this test goes red even though D8 itself would keep
+        // emitting `[alchemy, paleoclimate]` unchanged.
+        let names: Vec<&str> = crate::metrics::registry().iter().map(|m| m.name).collect();
+        assert!(
+            names.contains(&"defensibility-capacity-rank-corr"),
+            "topology's only derived metric was removed from the registry -- \
+             MEASURED_CRATES still lists `topology` as measured, but nothing \
+             derives from it any more; update MEASURED_CRATES and \
+             TRANSITIVELY_MEASURED to match"
+        );
+    }
+
     // --- Live census: S2/S2b/S2c, the campaign's acceptance test ---
 
     fn census() -> Census {
@@ -963,11 +990,11 @@ mod tests {
         // S2 -- SKY-19's climate defect, by the routes the spec names.
         assert!(
             hit("D6", "mean-land-temperature-c"),
-            "median -11.90 vs Earth 14.0"
+            "median -11.988568 vs Earth's 14, a 25.988568 gap exceeding the comparator band"
         );
         assert!(
             hit("D5", "mean-land-temperature-c"),
-            "r = -0.245 vs year-std-days, under the 0.50 dominant-driver floor"
+            "declared dominant tracking year-std-days, but observed |r| = 0.245 is weak"
         );
         assert!(
             !hit("D1", "dominant-land-biome"),

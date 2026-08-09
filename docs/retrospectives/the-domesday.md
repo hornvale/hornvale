@@ -198,7 +198,7 @@ reddens.
   phase-order hazard: doing it now is tuning the count after seeing it.
 - **Mode-bucket statistics.** Specified, unimplemented; blocked on the
   statistics interface, correctly flagged rather than scope-crept.
-- **The 73 ranked findings themselves**, which are the campaign's product and
+- **The 74 ranked findings themselves**, which are the campaign's product and
   are recorded in the close-out report and promoted to registry rows here.
 
 ## Housekeeping found in passing

@@ -1346,7 +1346,8 @@ fn cmd_lab_domesday() -> Result<(), String> {
     )
     .map_err(|e| format!("writing {}: {e}", index_path.display()))?;
 
-    for domain in hornvale_lab::domesday::render::DOMAINS {
+    let domains = hornvale_lab::domesday::render::domains();
+    for domain in &domains {
         let page = hornvale_lab::domesday::render::render_domain(&census, domain, &findings);
         let path = out_dir.join(format!("{domain}.md"));
         std::fs::write(&path, page).map_err(|e| format!("writing {}: {e}", path.display()))?;
@@ -1355,7 +1356,7 @@ fn cmd_lab_domesday() -> Result<(), String> {
     println!(
         "domesday: {} worlds, {} domains, {} findings -> {}",
         census.rows.len(),
-        hornvale_lab::domesday::render::DOMAINS.len(),
+        domains.len(),
         findings.len(),
         out_dir.display()
     );

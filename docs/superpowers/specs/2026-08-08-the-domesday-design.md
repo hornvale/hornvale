@@ -312,8 +312,8 @@ finding, not a failure.
   metric).
 - **S2.** **The detectors find SKY-19's climate defect**, by these exact routes
   (corrected at G3 — the first draft named the wrong detector):
-  - **D6 fires** on `mean-land-temperature-c`: median **−11.90 °C** against
-    Earth's 14.0, a 25.9 °C gap. This is the primary catch.
+  - **D6 fires** on `mean-land-temperature-c`: median **−11.988568 °C** against
+    Earth's 14.0, a 25.99 °C gap. This is the primary catch.
   - **D5 fires** on `mean-land-temperature-c`: the expectation declares
     **dominant**, the observed |r| = 0.245 against `year-std-days` is **weak**.
     The finding is the *class mismatch*, not a threshold crossing.

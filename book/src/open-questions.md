@@ -1333,13 +1333,13 @@ its honest size.
    orbital-period proxy, and the driver itself was never in the dataset. The
    conclusion may well survive measurement — the survey takes no position on
    that — but its current standing is weaker than the sentence it produced, and
-   the first campaign to read all 191 metrics at once is what made that visible.
+   the first campaign to read all 193 metrics at once is what made that visible.
    The same survey found the complementary gap in the other direction: fourteen
    biology metrics are frozen across all thousand worlds because species life
    history is a pure allometric function of authored mass, class and schedule,
    so no world quantity reaches any creature's physiology. Between the two, the
    census's coverage of *what influences what* is materially thinner than its
-   191-metric breadth suggested.
+   193-metric breadth suggested.
 
    That campaign also moved the self-scorable half in both directions at once.
    Sonority sequencing made pronounceability a property held **by
