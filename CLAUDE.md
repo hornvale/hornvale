@@ -267,8 +267,11 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ 
 # change at all.
 # So is clients/game/core/tests/fixtures/ (The Quire, Tasks 3-4): the
 # committed seed-42 session snapshots (one walk-band, one chamber-band) that
-# every hornvale-game-core INTEGRATION test reads instead of paying for
-# genesis. Its in-module unit tests use synthetic data and do not touch them.
+# most hornvale-game-core tests read instead of paying for genesis. The split
+# is by WHAT A TEST NEEDS, not by unit-vs-integration: anything asserting on a
+# real world reads a fixture (including the in-module tests in src/spread.rs),
+# and anything asserting on grid mechanics builds its own cells (including the
+# integration file tests/cell.rs). Do not infer which from a file's location.
 # THE HAZARD THAT ADDING IT EXPOSED: `git diff --exit-code <path>` is silently
 # VACUOUS against a path with no index entry, so the FIRST commit that
 # introduces a new generated directory must `git add` it before the check can
