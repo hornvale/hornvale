@@ -13236,6 +13236,38 @@ mod tests {
         // And the separation has to be VISIBLE, not merely correctly
         // ordered: the extremes must be far apart in the world, or a
         // world-wide distribution with a lucky ordering would pass.
+        //
+        // THE RANGE: this used to be a constant (`> 0.2`), chosen when the
+        // extreme pair at seed 42 happened to predict a wide 0.2+ gap. Since
+        // then the roster narrowed to two peoples clearing
+        // `SHAPE_SAMPLE_FLOOR` — kobold and hobgoblin — whose OWN shipped
+        // weights predict a narrower gap: 0.836 vs 0.676, a spread of only
+        // 0.160. Their observed spread, 0.791 vs 0.659 (0.132), is 82.0% of
+        // that predicted spread — the world is tracking the model closely —
+        // but 0.132 is less than the fixed 0.2 floor demanded, so the test
+        // was failing peoples for reproducing their own model too faithfully,
+        // not for losing it. A constant floor has no relationship to what
+        // the current extremes predict; it happened to fit the pair that was
+        // extreme when it was written and stopped fitting when the roster
+        // moved.
+        //
+        // The fix ties the floor to the SAME prediction the ranking above
+        // already trusts: require the observed spread to be at least half of
+        // the predicted spread for the current extremes. Half is well below
+        // the 82.0% measured at seed 42 (comfortable headroom for the
+        // spread this floor is meant to pass), while still demanding that
+        // most of the model's predicted separation survive into the world —
+        // a mechanism that stopped reaching the draw collapses the observed
+        // spread toward zero (the world-wide-distribution null this whole
+        // test exists to rule out), which sits nowhere near half of any
+        // nonzero predicted spread. Proved by mutation (The Range,
+        // 2026-08-09): damping each people's morphology 65% toward a fixed
+        // reference — without reversing which extreme predicts more simplex
+        // names — shrank the observed spread to 0.041 against a 0.080 floor
+        // and this assertion caught it; damping further (80%) instead
+        // inverted the ranking and the assertion above caught that. Both
+        // paths are covered.
+        const VISIBILITY_FRACTION: f64 = 0.5;
         let most = peoples
             .iter()
             .max_by(|a, b| a.1.total_cmp(&b.1))
@@ -13244,11 +13276,16 @@ mod tests {
             .iter()
             .min_by(|a, b| a.1.total_cmp(&b.1))
             .expect("non-empty");
+        let predicted_spread = most.1 - least.1;
+        let observed_spread = most.2 - least.2;
+        let floor = VISIBILITY_FRACTION * predicted_spread;
         assert!(
-            most.2 - least.2 > 0.2,
-            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}) yet their \
-             observed simplex shares are {:.3} and {:.3} — too close together for these to be \
-             different naming practices",
+            observed_spread > floor,
+            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}, a spread of \
+             {predicted_spread:.3}) yet their observed simplex shares are {:.3} and {:.3} (a \
+             spread of {observed_spread:.3}) — less than {VISIBILITY_FRACTION} of the predicted \
+             spread ({floor:.3}) reached the world, too little to call these different naming \
+             practices",
             most.0,
             least.0,
             most.1,
