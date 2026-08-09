@@ -54,6 +54,33 @@ fn pid_probe_alive(pid: u32, spawned: std::io::Result<std::process::Output>) -> 
     }
 }
 
+/// Resolve `by` to the single, unambiguous ref that answers "does this
+/// branch exist" — preferring the disambiguated `refs/heads/<by>` form, and
+/// falling back to the bare name only if that disambiguated form does not
+/// exist (so a `by` that already names a fully-qualified ref still
+/// resolves). Returns that resolved ref, never the bare name, so a caller
+/// that then asks git a second question about the same branch (e.g.
+/// `merge-base`) asks it about the exact ref this function found — not a
+/// bare name git could re-disambiguate to something else entirely.
+///
+/// This is I1's fix: git's ref-disambiguation order for a bare name is
+/// `refs/<name>`, then `refs/tags/<name>`, then `refs/heads/<name>`
+/// (gitrevisions(7)), so a tag sharing a branch's name can silently steal a
+/// second, independent bare-name lookup even though the first one (this
+/// function) correctly found the branch. Resolving once and reusing the
+/// resolved ref closes that gap structurally: there is no second bare-name
+/// lookup left to go astray.
+fn resolve_branch_ref(repo: &Repo, by: &str) -> Result<Option<String>, BoardError> {
+    let qualified = format!("refs/heads/{by}");
+    if repo.rev_parse_verify(&qualified)?.is_some() {
+        return Ok(Some(qualified));
+    }
+    if repo.rev_parse_verify(by)?.is_some() {
+        return Ok(Some(by.to_string()));
+    }
+    Ok(None)
+}
+
 impl LiveContext {
     /// Probe the world once for a whole render.
     pub fn probe(repo: &Repo, posts: &[StoredPost]) -> Result<Self, BoardError> {
@@ -104,15 +131,18 @@ impl LiveContext {
             if live_branches.contains(&by) {
                 continue;
             }
-            let exists = repo.rev_parse_verify(&by)?.is_some()
-                || repo
-                    .rev_parse_verify(&format!("refs/heads/{by}"))?
-                    .is_some();
-            if !exists {
+            // Resolve once; reuse the resolved ref for the ancestry check
+            // below (I1) rather than asking git a second, bare-name question
+            // it could answer about a different ref entirely.
+            let Some(resolved) = resolve_branch_ref(repo, &by)? else {
                 continue;
-            }
+            };
+            // `main` qualified too, for the same reason as `resolved` above:
+            // a tag named "main" would let the right-hand side of this same
+            // ambiguity steal the answer just as easily as the left-hand
+            // side did before I1's fix.
             let merged = repo
-                .git(&["merge-base", "--is-ancestor", &by, "main"])
+                .git(&["merge-base", "--is-ancestor", &resolved, "refs/heads/main"])
                 .is_ok();
             if !merged {
                 live_branches.insert(by);
@@ -300,5 +330,111 @@ mod tests {
         // from a render.
         let err = std::io::Error::new(std::io::ErrorKind::NotFound, "no such file or directory");
         assert!(pid_probe_alive(1, Err(err)));
+    }
+
+    // --- probe() against a real repo: I1's regression coverage ---
+    //
+    // Every test above drives `liveness()` against a hand-built
+    // `LiveContext`; none of them touch `LiveContext::probe()` itself, which
+    // is exactly how the I1 ambiguous-ref bug (a same-named tag stealing a
+    // bare-name `merge-base` lookup from the branch it should have answered
+    // about) shipped unnoticed. These tests exercise `probe()` against a
+    // real git repository instead.
+
+    use crate::git::test_support::temp_repo;
+
+    /// Write and commit one file on the current branch of `repo`.
+    fn commit_file(repo: &crate::git::Repo, name: &str, contents: &str) {
+        std::fs::write(repo.root().join(name), contents).expect("write file");
+        repo.git(&["add", name]).expect("add");
+        repo.git(&["commit", "-m", &format!("commit {name}")])
+            .expect("commit");
+    }
+
+    fn notice_posts(by: &str) -> Vec<StoredPost> {
+        vec![stored(Post::new("notice", by), "a", 0)]
+    }
+
+    #[test]
+    fn probe_treats_an_unmerged_branch_as_live() {
+        let (_d, repo) = temp_repo();
+        commit_file(&repo, "root.txt", "root");
+        repo.git(&["checkout", "-q", "-b", "campaign/still-live"])
+            .expect("branch");
+        commit_file(&repo, "work.txt", "work");
+        repo.git(&["checkout", "-q", "main"]).expect("back to main");
+
+        let ctx = LiveContext::probe(&repo, &notice_posts("campaign/still-live")).expect("probe");
+        assert!(
+            ctx.live_branches.contains("campaign/still-live"),
+            "an existing, unmerged branch must be live: {:?}",
+            ctx.live_branches
+        );
+    }
+
+    #[test]
+    fn probe_treats_a_merged_branch_as_not_live() {
+        let (_d, repo) = temp_repo();
+        commit_file(&repo, "root.txt", "root");
+        repo.git(&["checkout", "-q", "-b", "campaign/merged-away"])
+            .expect("branch");
+        commit_file(&repo, "work.txt", "work");
+        repo.git(&["checkout", "-q", "main"]).expect("back to main");
+        repo.git(&["merge", "--no-ff", "-m", "merge", "campaign/merged-away"])
+            .expect("merge");
+
+        let ctx = LiveContext::probe(&repo, &notice_posts("campaign/merged-away")).expect("probe");
+        assert!(
+            !ctx.live_branches.contains("campaign/merged-away"),
+            "a merged branch must not be live: {:?}",
+            ctx.live_branches
+        );
+    }
+
+    #[test]
+    fn probe_treats_a_nonexistent_branch_as_not_live() {
+        let (_d, repo) = temp_repo();
+        commit_file(&repo, "root.txt", "root");
+
+        let ctx =
+            LiveContext::probe(&repo, &notice_posts("campaign/never-existed")).expect("probe");
+        assert!(
+            !ctx.live_branches.contains("campaign/never-existed"),
+            "a branch that was never created must not be live: {:?}",
+            ctx.live_branches
+        );
+    }
+
+    #[test]
+    fn probe_is_not_fooled_by_a_same_named_tag_that_is_merged() {
+        // I1's regression test. Sets up the exact collision the reviewer
+        // reproduced: a branch that is genuinely unmerged, plus a tag of the
+        // same name pointing at a commit that IS an ancestor of main. Git's
+        // bare-name disambiguation order (refs/<name>, refs/tags/<name>,
+        // refs/heads/<name>) means a second, independent bare-name lookup
+        // would answer about the TAG, not the branch -- silently expiring a
+        // live notice. `probe()` must resolve the branch ref once and reuse
+        // that resolved ref, never asking a second ambiguous question.
+        let (_d, repo) = temp_repo();
+        commit_file(&repo, "root.txt", "root");
+        let root_commit = repo.git(&["rev-parse", "HEAD"]).expect("root sha");
+
+        repo.git(&["checkout", "-q", "-b", "campaign/collide"])
+            .expect("branch");
+        commit_file(&repo, "work.txt", "work"); // diverges from main; NOT merged
+        repo.git(&["checkout", "-q", "main"]).expect("back to main");
+
+        // A tag with the SAME name as the branch, pointing at a commit that
+        // trivially IS an ancestor of main (main's own root commit).
+        repo.git(&["tag", "campaign/collide", &root_commit])
+            .expect("tag");
+
+        let ctx = LiveContext::probe(&repo, &notice_posts("campaign/collide")).expect("probe");
+        assert!(
+            ctx.live_branches.contains("campaign/collide"),
+            "the genuinely unmerged branch must render as live despite the \
+             same-named merged tag: {:?}",
+            ctx.live_branches
+        );
     }
 }

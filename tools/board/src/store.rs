@@ -219,11 +219,39 @@ impl Board {
                 }
             };
             match Post::from_json(&text) {
-                Ok(post) => out.push(StoredPost {
-                    committed_at: *when.get(&id).unwrap_or(&0),
-                    id,
-                    post,
-                }),
+                Ok(post) => {
+                    // Every id from `post_ids_at_tip()` should have a matching
+                    // entry in `when`: each append is a single-parent commit
+                    // that adds exactly one file, so the `git log
+                    // --diff-filter=A` walk above should attribute every post
+                    // to the commit that added it. This fallback is therefore
+                    // currently unreachable in practice (a corpus of committed
+                    // reasoning: no `--root` needed, and a deletion-only
+                    // commit contributes no line to skew the map either) --
+                    // but if it is ever reached, epoch 0 biases the post
+                    // toward `Expired` (maximally old), the OPPOSITE of this
+                    // crate's fail-open convention elsewhere (`live.rs`'s
+                    // `hostname`/`ps`/`merge-base` fallbacks all fail toward
+                    // `Live`). Warn loudly rather than let that bias through
+                    // silently.
+                    let committed_at = match when.get(&id) {
+                        Some(ts) => *ts,
+                        None => {
+                            eprintln!(
+                                "board: post {id} has no recorded append time; defaulting to \
+                                 epoch 0, which biases it toward Expired rather than Live -- \
+                                 this should be unreachable under the current one-file-per-\
+                                 commit append invariant"
+                            );
+                            0
+                        }
+                    };
+                    out.push(StoredPost {
+                        committed_at,
+                        id,
+                        post,
+                    });
+                }
                 Err(e) => eprintln!("board: skipping malformed post {id}: {e}"),
             }
         }
